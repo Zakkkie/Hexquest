@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useMemo } from 'react';
-import { Group, Path, Shape, Circle, Text, RegularPolygon } from 'react-konva';
+import { Group, Path, Shape, Circle, Text, RegularPolygon, Line } from 'react-konva';
 import Konva from 'konva';
 import { Hex } from '../types.ts';
 import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
@@ -106,7 +106,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const damage = Math.max(0, maxLives - currentLives);
 
   // Geometry Calculation
-  const { topPoints, sortedFaces, selectionPathData, craters, rubble, voidPaths } = useMemo(() => {
+  const { topPoints, sortedFaces, selectionPathData, craters, rubble, spikes, voidPaths } = useMemo(() => {
     const getPoint = (i: number, cy: number, radius: number = HEX_SIZE) => {
         const angle_deg = 60 * i + 30;
         const angle_rad = (angle_deg * Math.PI) / 180 + (rotation * Math.PI) / 180;
@@ -149,27 +149,16 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
 
     const craters = isFragile ? getCraters(hex.q, hex.r, damage, offsetY) : [];
 
-    // --- GENERATE RUBBLE & JAGGED CRATER FOR VOID ---
+    // --- GENERATE RUBBLE & SPIKES FOR VOID ---
     const rubbleData: { x: number, y: number, size: number, color: string, opacity: number, rotation: number }[] = [];
+    const spikesData: { points: number[], fill: string, stroke: string, shade: string }[] = [];
     let voidPaths = { outer: '', inner: '' };
 
     if (isVoid) {
         const seed = Math.abs((hex.q * 9999) ^ (hex.r * 8888));
         const rng = (i: number) => ((seed + i * 12345) % 100) / 100;
         
-        // Debris Generation
-        for(let i=0; i < 8; i++) {
-             rubbleData.push({
-                 x: (rng(i) - 0.5) * HEX_SIZE * 1.3,
-                 y: (rng(i+20) - 0.5) * HEX_SIZE * 0.7,
-                 size: 3 + rng(i+5) * 4,
-                 color: rng(i+10) > 0.85 ? '#78350f' : '#292524', // Mix of brown/dark
-                 opacity: 0.6 + rng(i+30) * 0.4,
-                 rotation: rng(i+40) * 360
-             });
-        }
-
-        // Jagged Path Generation
+        // 1. Jagged Path Generation
         const getP = (angleDeg: number, rad: number) => {
              const angleRad = (angleDeg * Math.PI) / 180 + (rotation * Math.PI) / 180;
              return {
@@ -194,7 +183,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
             if (i===0) outerD += ` ${p1.x} ${p1.y}`;
             else outerD += ` L ${p1.x} ${p1.y}`;
             
-            // Add the jagged mid-point
             outerD += ` L ${pMid.x} ${pMid.y}`;
 
             // Inner Path (Deep Void hole)
@@ -206,9 +194,50 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
         outerD += " Z";
         innerD += " Z";
         voidPaths = { outer: outerD, inner: innerD };
+
+        // 2. Spikes Generation (Impassable Terrain Indicators)
+        const spikeCount = 3 + Math.floor(rng(77) * 4); // 3 to 6 spikes
+        for (let k = 0; k < spikeCount; k++) {
+             const angle = rng(k*99) * Math.PI * 2;
+             // Distribute within the void area
+             const r = rng(k*55) * (HEX_SIZE * 0.5); 
+             const cx = Math.cos(angle) * r;
+             const cy = (Math.sin(angle) * r) * 0.8;
+
+             // Spike dimensions
+             const h = 12 + rng(k*33) * 18; // Height 12-30px
+             const w = 5 + rng(k*11) * 6;   // Width 5-11px
+
+             // Random tilt
+             const tilt = (rng(k*22) - 0.5) * 10;
+             
+             // Base points relative to cx,cy
+             const bl = { x: cx - w/2, y: cy + (rng(k)*3) };
+             const br = { x: cx + w/2, y: cy + (rng(k)*3) };
+             const tip = { x: cx + tilt, y: cy - h };
+
+             spikesData.push({
+                 points: [bl.x, bl.y, br.x, br.y, tip.x, tip.y],
+                 fill: '#57534e', // stone-600 (Lighter side)
+                 stroke: '#1c1917', // stone-900
+                 shade: '#292524' // stone-800 (Darker side for depth)
+             });
+        }
+
+        // 3. Debris/Rubble Generation
+        for(let i=0; i < 6; i++) {
+             rubbleData.push({
+                 x: (rng(i) - 0.5) * HEX_SIZE * 1.3,
+                 y: (rng(i+20) - 0.5) * HEX_SIZE * 0.7,
+                 size: 2 + rng(i+5) * 3,
+                 color: rng(i+10) > 0.85 ? '#78350f' : '#44403c', // Rare brown, mostly dark stone
+                 opacity: 0.5 + rng(i+30) * 0.5,
+                 rotation: rng(i+40) * 360
+             });
+        }
     }
 
-    return { topPoints: topPathPoints, sortedFaces: faces, selectionPathData, craters, rubble: rubbleData, voidPaths };
+    return { topPoints: topPathPoints, sortedFaces: faces, selectionPathData, craters, rubble: rubbleData, spikes: spikesData, voidPaths };
   }, [rotation, offsetY, isVoid, isFragile, damage, hex.q, hex.r]);
 
 
@@ -327,7 +356,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       return '#60a5fa'; 
   }, [tutorialHighlightColor]);
 
-  // --- RENDER VOID (ASH/RUBBLE TEXTURE) ---
+  // --- RENDER VOID (CRATER WITH SPIKES) ---
   if (isVoid) {
       return (
         <Group ref={voidGroupRef} x={x} y={y}>
@@ -347,13 +376,29 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
             <Path
                  data={voidPaths.inner}
                  fill="#000000"
-                 opacity={0.6}
+                 opacity={0.8}
             />
 
-            {/* 3. Scattered Debris/Ash */}
+            {/* 3. Spikes (Impassable indicators) */}
+            {spikes.map((s, i) => (
+                <Line
+                    key={`spike-${i}`}
+                    points={s.points}
+                    closed={true}
+                    fill={s.fill}
+                    stroke={s.stroke}
+                    strokeWidth={1}
+                    shadowColor="black"
+                    shadowBlur={2}
+                    shadowOpacity={0.6}
+                    shadowOffset={{x: 2, y: 2}}
+                />
+            ))}
+
+            {/* 4. Scattered Debris */}
             {rubble.map((r, i) => (
                 <RegularPolygon
-                    key={i}
+                    key={`rubble-${i}`}
                     x={r.x}
                     y={r.y}
                     sides={3 + (i % 3)} 
@@ -362,8 +407,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
                     opacity={r.opacity}
                     rotation={r.rotation}
                     scaleY={0.6}
-                    shadowColor="black"
-                    shadowBlur={2}
                 />
             ))}
         </Group>
