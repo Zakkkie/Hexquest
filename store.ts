@@ -502,7 +502,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             }
                             break;
                         case 'HEX_COLLAPSE':
-                            text = "COLLAPSE";
+                            text = "COLLAPSE -1 RANK"; // Updated text
                             color = "#ef4444";
                             icon = 'DOWN';
                             break;

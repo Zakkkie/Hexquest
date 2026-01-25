@@ -104,13 +104,18 @@ export class MovementSystem implements System {
             // but Visuals in Hexagon.tsx will "fake" delay for animation.
             gridUpdates[oldHexKey] = collapsedHex;
             
+            // --- PENALTY LOGIC: SHOCKWAVE DAMAGE ---
+            if (entity.playerLevel > 0) {
+                entity.playerLevel--;
+            }
+
             events.push(GameEventFactory.create('HEX_COLLAPSE', undefined, entity.id, { q: oldHex.q, r: oldHex.r }));
             
             if (entity.type === EntityType.PLAYER) {
                 state.messageLog.unshift({
                     id: `collapse-${Date.now()}`,
-                    text: `Sector Collapsed Behind You!`,
-                    type: 'WARN',
+                    text: `CRITICAL: Shockwave hit! Rank -1`,
+                    type: 'ERROR',
                     source: 'SYSTEM',
                     timestamp: Date.now()
                 });
