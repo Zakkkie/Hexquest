@@ -213,7 +213,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   togglePlayerGrowth: (intent: 'RECOVER' | 'UPGRADE' = 'RECOVER') => {
       if (!engine) return;
-      const { session } = get();
+      const session = engine.state; // Use authoritative state
       if (!session) return;
 
       if (session.player.state === EntityState.MOVING) {
@@ -235,7 +235,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   rechargeMove: () => {
-      if (!engine) return;
+      if (!engine || !engine.state) return;
+      // CRITICAL: Use engine.state.stateVersion, NOT the potentially stale UI state version.
       const action: RechargeAction = { type: 'RECHARGE_MOVE', stateVersion: engine.state.stateVersion };
       const res = engine.applyAction(engine.state.player.id, action);
       if (res.ok) {
@@ -248,9 +249,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   movePlayer: (tq, tr) => {
-      if (!engine) return;
-      const { session, pendingConfirmation, confirmPendingAction, cancelPendingAction, advanceTutorial } = get();
-      if (!session) return;
+      if (!engine || !engine.state) return;
+      
+      // Use authoritative state from engine to avoid version mismatch errors
+      const session = engine.state; 
+      const { pendingConfirmation, confirmPendingAction, cancelPendingAction, advanceTutorial } = get();
 
       if (session.gameStatus === 'BRIEFING') return;
 
@@ -301,7 +304,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       
       if (!path) {
         audioService.play('ERROR');
-        set({ toast: { message: "Path Blocked", type: 'error', timestamp: Date.now() } });
+        set({ toast: { message: "Path Blocked / Invalid", type: 'error', timestamp: Date.now() } });
         return;
       }
 
@@ -329,8 +332,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return;
       }
 
+      // CRITICAL FIX: Use engine.state.stateVersion, not from potentially stale Zustand store
       const action: MoveAction = { type: 'MOVE', path, stateVersion: session.stateVersion };
       const res = engine.applyAction(session.player.id, action);
+      
       if (res.ok) {
         audioService.play('MOVE');
         if (session.tutorialStep === 'MOVE_1') get().advanceTutorial('ACQUIRE_1');
@@ -344,12 +349,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   confirmPendingAction: () => {
-      if (!engine) return;
-      const { pendingConfirmation, session } = get();
-      if (!pendingConfirmation || !session) return;
+      if (!engine || !engine.state) return;
+      const { pendingConfirmation } = get();
+      if (!pendingConfirmation) return;
+      
       const { path } = pendingConfirmation.data;
-      const action: MoveAction = { type: 'MOVE', path, stateVersion: session.stateVersion };
-      const res = engine.applyAction(session.player.id, action);
+      // CRITICAL FIX: Use engine.state.stateVersion
+      const action: MoveAction = { type: 'MOVE', path, stateVersion: engine.state.stateVersion };
+      const res = engine.applyAction(engine.state.player.id, action);
+      
       if (res.ok) {
         audioService.play('MOVE');
         set({ session: engine.state, pendingConfirmation: null });
@@ -383,7 +391,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   tick: () => {
       // STRICT CHECK: Only process logic if game is actively PLAYING.
-      // This pauses logic during BRIEFING, VICTORY, or DEFEAT screens, saving CPU.
       if (!engine || !engine.state) return;
       if (engine.state.gameStatus !== 'PLAYING') return;
       
@@ -526,14 +533,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // 2. RENDER THROTTLE OPTIMIZATION
       // Update React state normally every 3 frames (20 FPS).
-      // CRITICAL FIX: Force update if player state changed (e.g., MOVING -> IDLE) to allow immediate input interaction.
       const shouldRender = tickCount % 3 === 0;
       const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
       const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
 
       if (shouldRender || hasCriticalEvents || playerStateChanged) {
         set({ 
-            session: engine.state, // Engine state updates are batch-processed here
+            session: engine.state, 
             toast: newToast,
         });
       }

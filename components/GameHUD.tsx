@@ -393,14 +393,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                        </div>
                        {isRankingsOpen && (
                            <div className="flex flex-col p-2 gap-1.5 max-h-[40vh] overflow-y-auto no-scrollbar">
-                               {[player, ...safeBots].sort((a, b) => (b.totalCoinsEarned || 0) - (a.totalCoinsEarned || 0)).map((e) => {
+                               {[player, ...safeBots].sort((a, b) => (b.coins || 0) - (a.coins || 0)).map((e) => {
                                    const isP = e.type === 'PLAYER';
                                    const color = isP ? (user?.avatarColor || '#3b82f6') : (e.avatarColor || '#ef4444');
                                    return (
                                        <div key={e.id} className="grid grid-cols-4 items-center p-2 rounded-lg bg-slate-950/50 border border-slate-800/50">
                                            <div className="col-span-2 flex items-center gap-2 overflow-hidden"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} /><span className={`text-[10px] font-bold truncate ${isP ? 'text-white' : 'text-slate-400'}`}>{isP ? 'YOU' : e.id.toUpperCase()}</span></div>
                                            <div className="col-span-1 text-center font-mono text-[9px] text-indigo-400">L{e.playerLevel}</div>
-                                           <div className="col-span-1 text-right font-mono text-amber-500 font-bold text-[10px]">{e.totalCoinsEarned}</div>
+                                           <div className="col-span-1 text-right font-mono text-amber-500 font-bold text-[10px]">{e.coins}</div>
                                        </div>
                                    );
                                })}
@@ -500,10 +500,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                 <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 border-2 ${gameStatus === 'VICTORY' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-red-500/10 border-red-500/30'}`}>{gameStatus === 'VICTORY' ? <Trophy className="w-8 h-8 text-amber-500" /> : <Shield className="w-8 h-8 text-red-500" />}</div>
                 <h2 className={`text-4xl font-black mb-2 uppercase ${gameStatus === 'VICTORY' ? 'text-amber-400' : 'text-red-500'}`}>{gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}</h2>
                 <p className="text-slate-400 text-sm mb-4">{isCampaignComplete ? t.MISSION_COMPLETE : `${winCondition?.label} ${gameStatus === 'VICTORY' ? '' : t.MISSION_FAILED}`}</p>
-                {gameStatus === 'DEFEAT' && winner && winner.type !== 'PLAYER' && (<div className="bg-red-950/20 border border-red-900/30 p-3 rounded-xl mb-6 flex items-center justify-between px-6"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full" style={{ backgroundColor: winner.avatarColor }} /><div className="text-left"><div className="text-[10px] font-bold text-red-300 uppercase">{t.WINNER}</div><div className="text-white font-bold text-sm">{winner.id.toUpperCase()}</div></div></div><div className="text-right flex flex-col"><span className="text-amber-400 font-mono font-bold text-sm">{winner.totalCoinsEarned} CR</span><span className="text-indigo-400 font-mono font-bold text-sm">L{winner.playerLevel} RANK</span></div></div>)}
+                {gameStatus === 'DEFEAT' && winner && winner.type !== 'PLAYER' && (<div className="bg-red-950/20 border border-red-900/30 p-3 rounded-xl mb-6 flex items-center justify-between px-6"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full" style={{ backgroundColor: winner.avatarColor }} /><div className="text-left"><div className="text-[10px] font-bold text-red-300 uppercase">{t.WINNER}</div><div className="text-white font-bold text-sm">{winner.id.toUpperCase()}</div></div></div><div className="text-right flex flex-col"><span className="text-amber-400 font-mono font-bold text-sm">{winner.coins} CR</span><span className="text-indigo-400 font-mono font-bold text-sm">L{winner.playerLevel} RANK</span></div></div>)}
                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 mb-8 flex justify-around text-left">
                     <div className="flex flex-col"><span className="text-xs font-bold text-slate-500 uppercase">{t.TIME}</span><span className="text-white font-mono font-bold text-lg">{formatTime((Date.now() - sessionStartTime) / 1000)}</span></div>
-                    <div className="flex flex-col"><span className="text-xs font-bold text-slate-500 uppercase">{t.CREDITS}</span><span className="text-amber-400 font-mono font-bold text-lg">{player.totalCoinsEarned}</span></div>
+                    <div className="flex flex-col"><span className="text-xs font-bold text-slate-500 uppercase">{t.CREDITS}</span><span className="text-amber-400 font-mono font-bold text-lg">{player.coins}</span></div>
                     <div className="flex flex-col"><span className="text-xs font-bold text-slate-500 uppercase">{t.RANK}</span><span className="text-indigo-400 font-mono font-bold text-lg">L{player.playerLevel}</span></div>
                 </div>
                 <div className="flex gap-4">

@@ -21,7 +21,8 @@ export class VictorySystem implements System {
 
     const { targetLevel, targetCoins, winType } = state.winCondition;
     const pLevel = state.player.playerLevel;
-    const pCoins = state.player.totalCoinsEarned;
+    // UPDATED: Use current wallet balance instead of total lifetime earnings
+    const pCoins = state.player.coins;
     
     let isVictory = false;
     if (winType === 'AND') {
@@ -50,7 +51,8 @@ export class VictorySystem implements System {
 
     const winningBot = state.bots.find(b => {
          const bLevel = b.playerLevel;
-         const bCoins = b.totalCoinsEarned;
+         // UPDATED: Bots also need to hold the cash to win
+         const bCoins = b.coins;
          if (winType === 'AND') {
              return bLevel >= targetLevel && bCoins >= targetCoins;
          } else {
@@ -80,7 +82,8 @@ export class VictorySystem implements System {
         nickname: 'Player', 
         avatarColor: '#000', 
         avatarIcon: 'user',
-        maxCoins: state.player.totalCoinsEarned,
+        // Update: Store current wallet balance (coins) instead of totalCoinsEarned
+        maxCoins: state.player.coins, 
         maxLevel: state.player.playerLevel,
         difficulty: state.difficulty,
         timestamp: Date.now()
