@@ -18,7 +18,7 @@ interface HexagonVisualProps {
   onHexClick: (q: number, r: number) => void;
   onHover: (id: string | null) => void;
   isTutorialTarget?: boolean;
-  tutorialHighlightColor?: 'blue' | 'amber' | 'cyan';
+  tutorialHighlightColor?: 'blue' | 'amber' | 'cyan' | 'emerald';
 }
 
 const LEVEL_COLORS: Record<number, { fill: string; stroke: string; side: string }> = {
@@ -157,19 +157,20 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
         const seed = Math.abs((hex.q * 9999) ^ (hex.r * 8888));
         const rng = (i: number) => ((seed + i * 12345) % 100) / 100;
         
-        // Debris
+        // Debris Generation
         for(let i=0; i < 8; i++) {
              rubbleData.push({
                  x: (rng(i) - 0.5) * HEX_SIZE * 1.3,
                  y: (rng(i+20) - 0.5) * HEX_SIZE * 0.7,
                  size: 3 + rng(i+5) * 4,
-                 color: rng(i+10) > 0.85 ? '#78350f' : '#292524', 
+                 color: rng(i+10) > 0.85 ? '#78350f' : '#292524', // Mix of brown/dark
                  opacity: 0.6 + rng(i+30) * 0.4,
                  rotation: rng(i+40) * 360
              });
         }
 
         // Jagged Path Generation
+        // Helper to calculate rotated points
         const getP = (angleDeg: number, rad: number) => {
              const angleRad = (angleDeg * Math.PI) / 180 + (rotation * Math.PI) / 180;
              return {
@@ -187,15 +188,17 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
             const r1 = HEX_SIZE * (0.85 + rng(i) * 0.2); 
             const p1 = getP(angle, r1);
             
-            // Midpoint Jitter (inward "bite")
+            // Midpoint Jitter (inward "bite" for jagged look)
             const rMid = HEX_SIZE * (0.6 + rng(i+10) * 0.2);
             const pMid = getP(angle + 30, rMid);
 
             if (i===0) outerD += ` ${p1.x} ${p1.y}`;
             else outerD += ` L ${p1.x} ${p1.y}`;
+            
+            // Add the jagged mid-point
             outerD += ` L ${pMid.x} ${pMid.y}`;
 
-            // Inner Path (Deep Void)
+            // Inner Path (Deep Void hole)
             const rInner = r1 * 0.55;
             const pInner = getP(angle + (rng(i+50)*10), rInner);
             if (i===0) innerD += ` ${pInner.x} ${pInner.y}`;
@@ -321,6 +324,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const tutorialColorHex = useMemo(() => {
       if (tutorialHighlightColor === 'amber') return '#fbbf24';
       if (tutorialHighlightColor === 'cyan') return '#22d3ee';
+      if (tutorialHighlightColor === 'emerald') return '#34d399';
       return '#60a5fa'; 
   }, [tutorialHighlightColor]);
 
@@ -579,7 +583,7 @@ interface SmartHexagonProps {
   onHexClick: (q: number, r: number) => void;
   onHover: (id: string | null) => void;
   isTutorialTarget?: boolean;
-  tutorialHighlightColor?: 'blue' | 'amber' | 'cyan';
+  tutorialHighlightColor?: 'blue' | 'amber' | 'cyan' | 'emerald';
 }
 
 const SmartHexagon: React.FC<SmartHexagonProps> = React.memo((props) => {
