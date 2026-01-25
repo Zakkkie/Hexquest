@@ -38,7 +38,7 @@ const LEVEL_COLORS: Record<number, { fill: string; stroke: string; side: string 
 
 const LOCK_PATH = "M12 1a5 5 0 0 0-5 5v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v2H9V6a3 3 0 0 1 3-3z";
 
-// Determine crater positions based on damage (0 to 6)
+// Determine crater positions based on damage (0 to 6) for Level 1 hexes
 const getCraters = (q: number, r: number, damage: number, offsetY: number) => {
     if (damage <= 0) return [];
     
@@ -149,7 +149,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
 
     const craters = isFragile ? getCraters(hex.q, hex.r, damage, offsetY) : [];
 
-    // --- GENERATE RUBBLE & CRATER FOR VOID ---
+    // --- GENERATE RUBBLE & JAGGED CRATER FOR VOID ---
     const rubbleData: { x: number, y: number, size: number, color: string, opacity: number, rotation: number }[] = [];
     let voidPaths = { outer: '', inner: '' };
 
@@ -170,7 +170,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
         }
 
         // Jagged Path Generation
-        // Helper to calculate rotated points
         const getP = (angleDeg: number, rad: number) => {
              const angleRad = (angleDeg * Math.PI) / 180 + (rotation * Math.PI) / 180;
              return {

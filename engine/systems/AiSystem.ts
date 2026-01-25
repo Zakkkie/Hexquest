@@ -1,5 +1,4 @@
 
-
 import { System } from './System';
 import { GameState, GameEvent, EntityState, EntityType, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
@@ -22,7 +21,10 @@ export class AiSystem implements System {
     // We only use state.lastBotActionTime for high-level debug or fallback
     // if (now - state.lastBotActionTime < GAME_CONFIG.BOT_ACTION_INTERVAL_MS) { return; }
 
-    index.syncGrid(state.grid);
+    // CRITICAL: Sync full state (Grid + Entities) here.
+    // We removed the unconditional sync from GameEngine to optimize performance.
+    // The AI needs accurate entity references (coins, moves, level) to make decisions.
+    index.syncState(state);
     
     const tickObstacles = index.getOccupiedHexesList();
     const tickReservedKeys = new Set<string>();

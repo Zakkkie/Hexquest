@@ -1,5 +1,5 @@
 
-import { GameState, GameAction, GameEvent, ValidationResult, SessionState, EntityState, TutorialStep, LeaderboardEntry } from '../types';
+import { GameState, GameAction, GameEvent, ValidationResult, SessionState, EntityState, TutorialStep, LeaderboardEntry, Hex } from '../types';
 import { WorldIndex } from './WorldIndex';
 import { System } from './systems/System';
 import { MovementSystem } from './systems/MovementSystem';
@@ -40,6 +40,29 @@ export class GameEngine {
     return this._state;
   }
 
+  /**
+   * Safe Grid Update Helper
+   * Ensures the grid container is copied (Copy-On-Write) before applying updates.
+   * This preserves the immutability of the previous state while batching updates efficiently.
+   */
+  public static safeGridUpdate(state: SessionState, updates: Record<string, Partial<Hex>>) {
+      const keys = Object.keys(updates);
+      if (keys.length === 0) return;
+      
+      // Copy container (O(1) reference copy of the dictionary, effectively)
+      // Actually spread syntax { ...grid } is O(N) where N is number of keys in grid.
+      const nextGrid = { ...state.grid };
+      
+      for (const key of keys) {
+          const old = nextGrid[key];
+          if (old) {
+              nextGrid[key] = { ...old, ...updates[key] };
+          }
+      }
+      
+      state.grid = nextGrid;
+  }
+
   private cloneState(source: SessionState): SessionState {
     return {
       ...source,
@@ -65,7 +88,10 @@ export class GameEngine {
       messageLog: source.messageLog.map(l => ({ ...l })),
       botActivityLog: source.botActivityLog.map(l => ({ ...l })),
       growingBotIds: [...source.growingBotIds],
-      telemetry: source.telemetry ? [...source.telemetry] : undefined,
+      // OPTIMIZATION: Use reference copy for telemetry to avoid massive GC pressure.
+      // Only the array reference is shared; if we need to modify history, we must be careful,
+      // but typically we only append to the end.
+      telemetry: source.telemetry,
       effects: source.effects.map(e => ({ ...e }))
     };
   }
@@ -149,7 +175,10 @@ export class GameEngine {
     if (!this._state || !this._index) return { state: {} as any, events: [] };
 
     const nextState = this.cloneState(this._state);
-    this._index.syncState(nextState);
+    // PERFORMANCE OPTIMIZATION: 
+    // Removed unconditional `this._index.syncState(nextState)` from here.
+    // AiSystem will now handle synchronization when needed, avoiding O(N) rebuilds every tick.
+    this._index.syncGrid(nextState.grid); // Still sync grid structure for pathfinding safety
 
     const tickEvents: GameEvent[] = [];
 
@@ -180,6 +209,11 @@ export class GameEngine {
       if (state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
           state.botActivityLog = state.botActivityLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
       }
+      // Cleanup telemetry to prevent infinite growth
+      if (state.telemetry && state.telemetry.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
+          state.telemetry = state.telemetry.slice(state.telemetry.length - SAFETY_CONFIG.MAX_LOG_SIZE);
+      }
+
       const entities = [state.player, ...state.bots];
       for (const ent of entities) {
           if (ent.movementQueue.length > SAFETY_CONFIG.MAX_MOVEMENT_QUEUE) {
