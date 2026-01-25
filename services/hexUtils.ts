@@ -1,4 +1,3 @@
-
 import { Hex, HexCoord } from '../types';
 import { GAME_CONFIG, getLevelConfig, SAFETY_CONFIG } from '../rules/config';
 
@@ -40,6 +39,25 @@ export const hexToPixel = (q: number, r: number, rotationDegrees: number = 0): {
   };
 };
 
+// --- HELPER MOVED UP TO FIX REFERENCE ERROR ---
+const axialRound = (q: number, r: number): HexCoord => {
+    let rq = Math.round(q);
+    let rr = Math.round(r);
+    let rs = Math.round(-q - r);
+
+    const qDiff = Math.abs(rq - q);
+    const rDiff = Math.abs(rr - r);
+    const sDiff = Math.abs(rs - (-q - r));
+
+    if (qDiff > rDiff && qDiff > sDiff) {
+        rq = -rr - rs;
+    } else if (rDiff > sDiff) {
+        rr = -rq - rs;
+    }
+    
+    return { q: rq, r: rr };
+};
+
 export const pixelToHex = (x: number, y: number, rotationDegrees: number = 0): HexCoord => {
     const size = GAME_CONFIG.HEX_SIZE;
     
@@ -63,24 +81,6 @@ export const pixelToHex = (x: number, y: number, rotationDegrees: number = 0): H
     const r = (2/3 * unsquashedY) / size;
 
     return axialRound(q, r);
-};
-
-const axialRound = (q: number, r: number): HexCoord => {
-    let rq = Math.round(q);
-    let rr = Math.round(r);
-    let rs = Math.round(-q - r);
-
-    const qDiff = Math.abs(rq - q);
-    const rDiff = Math.abs(rr - r);
-    const sDiff = Math.abs(rs - (-q - r));
-
-    if (qDiff > rDiff && qDiff > sDiff) {
-        rq = -rr - rs;
-    } else if (rDiff > sDiff) {
-        rr = -rq - rs;
-    }
-    
-    return { q: rq, r: rr };
 };
 
 export const cubeDistance = (a: HexCoord, b: HexCoord): number => {
@@ -186,7 +186,7 @@ export const findPath = (
   const startKey = getHexKey(start.q, start.r);
   const endKey = getHexKey(end.q, end.r);
   
-  // 1. Immediate checks - FIX: Return null if already at destination
+  // 1. Immediate checks - Return null if already at destination
   if (startKey === endKey) return null;
   
   // DESTINATION VALIDITY CHECK
