@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { Group, Path, Shape, Circle, Text, RegularPolygon, Line } from 'react-konva';
 import Konva from 'konva';
-import { Hex } from '../types';
-import { HEX_SIZE, GAME_CONFIG } from '../rules/config';
-import { getSecondsToGrow, hexToPixel } from '../services/hexUtils';
-import { useGameStore } from '../store';
+import { Hex } from '../types.ts';
+import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
+import { getSecondsToGrow, hexToPixel } from '../services/hexUtils.ts';
+import { useGameStore } from '../store.ts';
 
 interface HexagonVisualProps {
   hex: Hex;
@@ -80,30 +81,45 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const tutorialHighlightRef = useRef<Konva.Path>(null);
   
   const prevStructureRef = useRef(hex.structureType);
+  // State to handle the visual delay of destruction (The "Wile E. Coyote" effect)
+  const [isDelayedCollapse, setIsDelayedCollapse] = useState(false);
   
   const { x, y } = hexToPixel(hex.q, hex.r, rotation);
-  const isVoid = hex.structureType === 'VOID';
-  const levelIndex = isVoid ? 0 : Math.min(hex.maxLevel, 11);
+  
+  // LOGIC VS VISUAL STATE
+  // If we are in "Delayed Collapse" mode, we force the visuals to look like a Level 1 hex
+  // even though the logical state is already VOID.
+  const isRealVoid = hex.structureType === 'VOID';
+  const showVoid = isRealVoid && !isDelayedCollapse;
+  
+  // Visual Level: If collapsing, fake it as L1 (index 1), otherwise real level
+  const levelIndex = showVoid ? 0 : (isDelayedCollapse ? 1 : Math.min(hex.maxLevel, 11));
   const colorSet = LEVEL_COLORS[levelIndex] || LEVEL_COLORS[0];
 
-  let fillColor = isVoid ? '#020617' : colorSet.fill;
-  let strokeColor = isVoid ? '#0f172a' : colorSet.stroke;
-  let sideColor = isVoid ? '#000000' : colorSet.side;
-  let strokeWidth = isVoid ? 0 : 1;
+  let fillColor = showVoid ? '#020617' : colorSet.fill;
+  let strokeColor = showVoid ? '#0f172a' : colorSet.stroke;
+  let sideColor = showVoid ? '#000000' : colorSet.side;
+  let strokeWidth = showVoid ? 0 : 1;
 
-  const hexHeight = isVoid ? 2 : (10 + (hex.maxLevel * 6));
+  // HEX HEIGHT CONFIG
+  // Level 0 is ~10px high. 
+  // User wants Crater (VOID) to be "slightly below Level 0". 
+  // So we set Void height to 8 (y = -8), which is visibly lower than L0 (y = -10).
+  const heightMult = isDelayedCollapse ? 1 : hex.maxLevel; // Force L1 height if collapsing
+  const hexHeight = showVoid ? 8 : (10 + (heightMult * 6));
   const offsetY = -hexHeight;
 
-  const isGrowing = hex.progress > 0 && !isVoid;
+  const isGrowing = hex.progress > 0 && !showVoid;
   const targetLevel = hex.currentLevel + 1;
   const neededTicks = getSecondsToGrow(targetLevel) || 30;
   const progressPercent = Math.min(1, hex.progress / neededTicks);
   const isLocked = hex.maxLevel > playerRank;
   
-  const isFragile = hex.maxLevel === 1 && !isVoid;
-  const maxLives = GAME_CONFIG.L1_HEX_MAX_DURABILITY || 3;
+  const isFragile = hex.maxLevel === 1 && !showVoid;
+  const maxLives = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
   const currentLives = hex.durability !== undefined ? hex.durability : maxLives;
-  const damage = Math.max(0, maxLives - currentLives);
+  // If collapsing, force max damage visual
+  const damage = isDelayedCollapse ? 6 : Math.max(0, maxLives - currentLives);
 
   // Geometry Calculation
   const { topPoints, sortedFaces, selectionPathData, craters, rubble, spikes, voidPaths } = useMemo(() => {
@@ -128,7 +144,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
         selectionTops.push(getPoint(i, offsetY, selRadius));
     }
 
-    if (!isVoid) {
+    if (!showVoid) {
         for (let i = 0; i < 6; i++) {
             const next = (i + 1) % 6;
             const facePoints = [
@@ -154,7 +170,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     const spikesData: { points: number[], fill: string, stroke: string, shade: string }[] = [];
     let voidPaths = { outer: '', inner: '' };
 
-    if (isVoid) {
+    if (showVoid) {
         const seed = Math.abs((hex.q * 9999) ^ (hex.r * 8888));
         const rng = (i: number) => ((seed + i * 12345) % 100) / 100;
         
@@ -238,12 +254,12 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     }
 
     return { topPoints: topPathPoints, sortedFaces: faces, selectionPathData, craters, rubble: rubbleData, spikes: spikesData, voidPaths };
-  }, [rotation, offsetY, isVoid, isFragile, damage, hex.q, hex.r]);
+  }, [rotation, offsetY, showVoid, isFragile, damage, hex.q, hex.r]);
 
 
   // CLICK HANDLER
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
-    if (isVoid) return;
+    if (showVoid) return;
     if ('button' in e.evt) {
         if (e.evt.button !== 0) return; 
     }
@@ -251,43 +267,91 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     onHexClick(hex.q, hex.r);
   };
 
-  // --- BITMAP CACHING LOGIC (PERFORMANCE FIX) ---
-  // We separate static geometry (walls, cap, craters) from dynamic geometry (selection, progress bar).
-  // The static part is cached as a bitmap.
-
-  // 1. Static Group Cache
+  // --- BITMAP CACHING LOGIC ---
   useEffect(() => {
     const node = staticGroupRef.current;
     if (node) {
         node.clearCache();
-        // Caching as bitmap prevents recalculating paths every frame
-        // Note: We avoid caching dynamic props (isPendingConfirm, growing status) here if they change often.
-        // But for static hex geometry, it's perfect.
         node.cache({ pixelRatio: 1 }); 
     }
   }, [
       hex.maxLevel, 
-      hex.structureType, 
+      showVoid, // Depend on visual void state, not logical
       hex.durability, 
       rotation, 
-      isLocked, // Affects Lock Icon
-      isPendingConfirm, // Affects Top Cap shadow (prop driven)
+      isLocked,
+      isPendingConfirm,
       isFragile,
-      damage
+      damage,
+      isDelayedCollapse // Cache needs to update if we switch visual modes
   ]);
 
   // 2. Void Group Cache
   useEffect(() => {
       const node = voidGroupRef.current;
-      if (isVoid && node) {
+      if (showVoid && node) {
           node.clearCache();
           node.cache({ pixelRatio: 1 });
       }
-  }, [isVoid, hex.q, hex.r, rotation, hex.structureType]);
+  }, [showVoid, hex.q, hex.r, rotation, hex.structureType]);
 
-  // ANIMATIONS (Dynamic - Outside Cache)
+
+  // --- ANIMATIONS ---
+
+  // 1. COLLAPSE SEQUENCE (Shake -> Crumble -> Void)
+  useEffect(() => {
+      const wasVoid = prevStructureRef.current === 'VOID';
+      const nowVoid = hex.structureType === 'VOID';
+      
+      // TRIGGER COLLAPSE ANIMATION
+      if (!wasVoid && nowVoid) {
+          setIsDelayedCollapse(true);
+          
+          const node = groupRef.current;
+          if (node) {
+               // A. SHAKE (0-400ms)
+               const shakeAnim = new Konva.Animation((frame) => {
+                   const t = frame!.time;
+                   if (t > 400) {
+                       shakeAnim.stop();
+                       return;
+                   }
+                   // Violet shake
+                   const dx = Math.sin(t * 0.5) * 3; 
+                   const dy = Math.cos(t * 0.3) * 3;
+                   node.offset({ x: dx, y: dy });
+               }, node.getLayer());
+               
+               shakeAnim.start();
+
+               // B. FALL (400-500ms)
+               const fallTween = new Konva.Tween({
+                   node: node,
+                   duration: 0.1,
+                   y: y + 50,
+                   opacity: 0,
+                   easing: Konva.Easings.EaseIn,
+                   delay: 0.4,
+                   onFinish: () => {
+                       // End visual fake, switch to real VOID render
+                       setIsDelayedCollapse(false);
+                       node.opacity(1);
+                       node.offset({x:0, y:0});
+                       node.y(y); // Reset pos
+                   }
+               });
+               fallTween.play();
+          }
+      } else if (!nowVoid) {
+          // Reset if healed/spawned
+          setIsDelayedCollapse(false);
+      }
+      
+      prevStructureRef.current = hex.structureType;
+  }, [hex.structureType, y]);
+
   
-  // GROWING
+  // GROWING ANIMATION
   useEffect(() => {
     if (!groupRef.current) return;
     const node = groupRef.current;
@@ -357,33 +421,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       }
   }, [isSelected]);
 
-  // COLLAPSE ANIMATION
-  useEffect(() => {
-      const wasVoid = prevStructureRef.current === 'VOID';
-      const nowVoid = hex.structureType === 'VOID';
-      
-      if (!wasVoid && nowVoid) {
-          const node = voidGroupRef.current;
-          if (node) {
-              node.scale({ x: 1, y: 1 });
-              node.y(y); 
-              node.opacity(1);
-
-              const tween = new Konva.Tween({
-                  node: node,
-                  duration: 0.6,
-                  y: y + 30, // Drop down
-                  scaleX: 0.8,
-                  scaleY: 0.8,
-                  opacity: 0.5,
-                  easing: Konva.Easings.EaseIn
-              });
-              tween.play();
-          }
-      }
-      prevStructureRef.current = hex.structureType;
-  }, [hex.structureType, y]);
-
   // Map tutorial prop to colors
   const tutorialColorHex = useMemo(() => {
       if (tutorialHighlightColor === 'amber') return '#fbbf24';
@@ -393,7 +430,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   }, [tutorialHighlightColor]);
 
   // --- RENDER VOID (CRATER WITH SPIKES) ---
-  if (isVoid) {
+  if (showVoid) {
       return (
         <Group ref={voidGroupRef} x={x} y={y}>
             {/* 1. Dark Base Ground (The Crater) */}
@@ -452,7 +489,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       );
   }
 
-  // --- RENDER STANDARD HEX ---
+  // --- RENDER STANDARD HEX (OR COLLAPSING FAKE) ---
   return (
     <Group 
       ref={groupRef}
@@ -653,9 +690,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     </Group>
   );
 }, (prev, next) => {
-    // FIX: Deleted explicit reference check (prev.hex !== next.hex)
-    // Rely ONLY on primitive checks to avoid re-rendering when parent object is cloned but data is same.
-    
     if (prev.hex.currentLevel !== next.hex.currentLevel) return false;
     if (prev.hex.maxLevel !== next.hex.maxLevel) return false;
     if (prev.hex.structureType !== next.hex.structureType) return false;
@@ -671,7 +705,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     return true;
 });
 
-// WRAPPER to connect to store by ID
 interface SmartHexagonProps {
   id: string;
   rotation: number;

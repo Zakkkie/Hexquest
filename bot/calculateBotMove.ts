@@ -12,9 +12,10 @@ export interface AiResult {
 }
 
 // PERFORMANCE CONFIGURATION
-// Radius 50 provides global map awareness (~7500 hexes) to prevent bots from getting lost.
-const SCAN_RADIUS = 50; 
-const CONTEXT_RADIUS = 50;
+// Radius 15 is enough for tactics (~700 hexes). 
+// Radius 50 allows bots to see across the map, causing them to run away.
+const SCAN_RADIUS = 15; 
+const CONTEXT_RADIUS = 15;
 
 /**
  * AI V13: "The Architect" (Vertical Rush Focus) with Crash Fixes
@@ -342,6 +343,7 @@ export const calculateBotMove = (
   }
 
   // 4. Fallback: Generic Scoring
+  // This runs if "Master Plan" failed (e.g. recursion limit reached or too complex).
   const candidates = index.getHexesInRange({q:bot.q, r:bot.r}, SCAN_RADIUS);
   const potentialGoals: { hex: Hex, score: number }[] = [];
   
@@ -356,14 +358,35 @@ export const calculateBotMove = (
 
       let score = 100;
 
+      // RNG only for very early game to spread out
       if (isEarlyGame) {
           score += (Math.random() - 0.5) * 30;
       }
       
       const dist = cubeDistance(bot, h);
-      score -= dist * 4;
+      
+      // FIX: INCREASE DISTANCE PENALTY
+      // Was 4. Now 10. This forces bots to act locally.
+      // Dist 1 = -10. Dist 10 = -100.
+      score -= dist * 10; 
 
-      if (!h.ownerId) score += 50; 
+      // FIX: REDUCE EXPANSION BONUS
+      // Was 50. Now 25.
+      // Expanding is good, but not if we have to walk 10 tiles for it.
+      if (!h.ownerId) {
+          score += 25;
+          // Small bonus for expanding NEXT to our territory (Clustering)
+          const nbs = getNeighbors(h.q, h.r);
+          const hasFriend = nbs.some(n => grid[getHexKey(n.q, n.r)]?.ownerId === bot.id);
+          if (hasFriend) score += 15;
+      }
+      
+      // Bonus for upgrading existing terrain (Consolidation)
+      if (h.ownerId === bot.id) {
+          score += 10;
+          // Prefer higher levels to keep momentum
+          score += h.maxLevel * 5;
+      }
       
       potentialGoals.push({ hex: h, score });
   }

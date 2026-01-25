@@ -1,3 +1,4 @@
+
 import { System } from './System';
 import { GameState, GameEvent, EntityState, Entity, SessionState, Hex, EntityType } from '../../types';
 import { WorldIndex } from '../WorldIndex';
@@ -99,6 +100,8 @@ export class MovementSystem implements System {
             };
             
             // Записываем в буфер
+            // Logic becomes VOID immediately to prevent back-tracking,
+            // but Visuals in Hexagon.tsx will "fake" delay for animation.
             gridUpdates[oldHexKey] = collapsedHex;
             
             events.push(GameEventFactory.create('HEX_COLLAPSE', undefined, entity.id, { q: oldHex.q, r: oldHex.r }));

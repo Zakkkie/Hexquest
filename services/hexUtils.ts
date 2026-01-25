@@ -1,3 +1,4 @@
+
 import { Hex, HexCoord } from '../types';
 import { GAME_CONFIG, getLevelConfig, SAFETY_CONFIG } from '../rules/config';
 
@@ -12,6 +13,25 @@ const SQRT_3 = Math.sqrt(3);
 const SQRT_3_DIV_2 = SQRT_3 / 2;
 const ONE_POINT_FIVE = 1.5;
 const DEG_TO_RAD = Math.PI / 180;
+
+// MOVED UP: Must be defined before pixelToHex uses it
+const axialRound = (q: number, r: number): HexCoord => {
+    let rq = Math.round(q);
+    let rr = Math.round(r);
+    let rs = Math.round(-q - r);
+
+    const qDiff = Math.abs(rq - q);
+    const rDiff = Math.abs(rr - r);
+    const sDiff = Math.abs(rs - (-q - r));
+
+    if (qDiff > rDiff && qDiff > sDiff) {
+        rq = -rr - rs;
+    } else if (rDiff > sDiff) {
+        rr = -rq - rs;
+    }
+    
+    return { q: rq, r: rr };
+};
 
 export const hexToPixel = (q: number, r: number, rotationDegrees: number = 0): { x: number, y: number } => {
   const size = GAME_CONFIG.HEX_SIZE;
@@ -37,25 +57,6 @@ export const hexToPixel = (q: number, r: number, rotationDegrees: number = 0): {
     x: rawX * cos - rawY * sin, 
     y: (rawX * sin + rawY * cos) * 0.8 
   };
-};
-
-// --- HELPER MOVED UP TO FIX REFERENCE ERROR ---
-const axialRound = (q: number, r: number): HexCoord => {
-    let rq = Math.round(q);
-    let rr = Math.round(r);
-    let rs = Math.round(-q - r);
-
-    const qDiff = Math.abs(rq - q);
-    const rDiff = Math.abs(rr - r);
-    const sDiff = Math.abs(rs - (-q - r));
-
-    if (qDiff > rDiff && qDiff > sDiff) {
-        rq = -rr - rs;
-    } else if (rDiff > sDiff) {
-        rr = -rq - rs;
-    }
-    
-    return { q: rq, r: rr };
 };
 
 export const pixelToHex = (x: number, y: number, rotationDegrees: number = 0): HexCoord => {
