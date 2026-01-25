@@ -1,4 +1,3 @@
-
 import { GameState, GameAction, EntityType, EntityState, ValidationResult, SessionState } from '../types';
 import { WorldIndex } from './WorldIndex';
 import { getHexKey } from '../services/hexUtils';
@@ -70,7 +69,7 @@ export class ActionProcessor {
             
             // Logic: Calculate move deficit. If we don't have enough moves, we pay in coins.
             const movesDeficit = Math.max(0, totalMoveCost - actor.moves);
-            const costCoins = Math.ceil(movesDeficit * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
+            const costCoins = movesDeficit * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE;
 
             if (actor.coins < costCoins) {
                 return { ok: false, reason: `Insufficient credits. Need ${costCoins}, have ${actor.coins}.` };
@@ -130,25 +129,20 @@ export class ActionProcessor {
 
         // Apply simplified cost logic
         const movesDeficit = Math.max(0, totalMoveCost - actor.moves);
-        const costCoins = Math.ceil(movesDeficit * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
+        const costCoins = movesDeficit * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE;
         const costMoves = totalMoveCost - movesDeficit;
 
-        // Ensure non-negative balances
-        if (actor.coins >= costCoins) {
-            actor.moves = Math.max(0, actor.moves - costMoves);
-            actor.coins = Math.max(0, actor.coins - costCoins);
-            actor.movementQueue = action.path;
-        } else {
-            // Should be caught by validation, but just in case
-            return { ok: false, reason: 'Insufficient funds during execution' };
-        }
+        actor.moves -= costMoves;
+        actor.coins -= costCoins;
+        
+        actor.movementQueue = action.path;
         break;
       }
       case 'UPGRADE':
         actor.movementQueue = [{ q: action.coord.q, r: action.coord.r, upgrade: true, intent: action.intent }];
         break;
       case 'RECHARGE_MOVE':
-        actor.coins = Math.max(0, actor.coins - GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
+        actor.coins -= GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE;
         actor.moves += 1;
         break;
       case 'WAIT':

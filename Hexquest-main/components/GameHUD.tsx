@@ -230,7 +230,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [isRankingsOpen, setIsRankingsOpen] = useState(false);
-  const [helpTopic, setHelpTopic] = useState<'RANK' | 'CYCLE' | 'COINS' | 'MOVES' | null>(null);
+  const [helpTopic, setHelpTopic] = useState<'RANK' | 'QUEUE' | 'COINS' | 'MOVES' | null>(null);
 
   const t = TEXT[language].HUD;
   const tt = TEXT[language].TOOLTIP; 
@@ -285,70 +285,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
     return { totalNeeded, remainingSeconds, percent, mode };
   }, [currentHex, isPlayerGrowing, canUpgrade, playerGrowthIntent]);
 
-  const tooltipData = useMemo(() => {
-    if (!hoveredHexId || !grid || !player) return null;
-    const hex = grid[hoveredHexId];
-    if (!hex) return null;
-
-    const obstacles = safeBots.map(b => ({ q: b.q, r: b.r }));
-    const isBlockedByBot = obstacles.some(o => o.q === hex.q && o.r === hex.r);
-    const isPlayerPos = hex.q === player.q && hex.r === player.r;
-    
-    let label: string | null = null;
-    let costMoves = 0;
-    let costCoins = 0;
-    let isReachable = false;
-    let moveCost = 0;
-    let canAffordCoins = true;
-    
-    if (isPlayerPos) {
-        label = tt.CURRENT_LOC;
-        isReachable = true;
-    } else if (isBlockedByBot) {
-        label = tt.BLOCKED;
-    } else {
-        const path = findPath({ q: player.q, r: player.r }, { q: hex.q, r: hex.r }, grid, player.playerLevel, obstacles);
-        if (path) {
-            isReachable = true;
-            for (const step of path) {
-                const stepHex = grid[getHexKey(step.q, step.r)];
-                moveCost += (stepHex && stepHex.maxLevel >= 2) ? stepHex.maxLevel : 1;
-            }
-            const availableMoves = player.moves;
-            const movesToSpend = Math.min(moveCost, availableMoves);
-            const deficit = moveCost - movesToSpend;
-            const coinsToSpend = deficit * EXCHANGE_RATE_COINS_PER_MOVE;
-
-            costMoves = movesToSpend;
-            costCoins = coinsToSpend;
-            canAffordCoins = player.coins >= coinsToSpend;
-        } else {
-            label = tt.NA;
-        }
-    }
-
-    const isLocked = hex.maxLevel > player.playerLevel;
-    let statusText = "OK";
-    let statusColor = "text-emerald-400";
-    let Icon = CheckCircle2;
-
-    if (isLocked) {
-        statusText = `${tt.REQ} L${hex.maxLevel}`;
-        statusColor = "text-red-400";
-        Icon = Lock;
-    } else if (isBlockedByBot) {
-        statusText = tt.OCCUPIED;
-        statusColor = "text-amber-400";
-        Icon = AlertCircle;
-    } else if (isPlayerPos) {
-        statusText = tt.PLAYER;
-        statusColor = "text-blue-400";
-        Icon = MapPin;
-    }
-
-    return { hex, label, costMoves, costCoins, canAffordCoins, isReachable, isLocked, statusText, statusColor, Icon };
-  }, [hoveredHexId, grid, player?.q, player?.r, player?.playerLevel, player?.moves, player?.coins, safeBots, tt]);
-
   const formatTime = (seconds: number) => {
     const totalSeconds = Math.ceil(seconds);
     if (totalSeconds < 60) return `${totalSeconds}s`;
@@ -390,68 +326,58 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       {/* HEADER */}
       <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-30 pt-[max(0.5rem,env(safe-area-inset-top))]">
           <div className="w-full flex justify-between items-start gap-2 max-w-7xl mx-auto">
-               
-               {/* STATS BAR: Redesigned for better spacing and visibility */}
-               <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-xl px-3 py-2 md:px-6 md:py-3 gap-3 md:gap-8 w-auto max-w-full transition-all duration-300 hover:border-slate-600/50">
-                   
+               <div className="pointer-events-auto flex items-center bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-lg overflow-hidden px-2 md:px-3 py-2 gap-1 md:gap-2 h-14 md:h-16 flex-1 min-w-0 max-w-fit">
                    {/* Rank Progress */}
-                   <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="flex items-center gap-2 md:gap-3 cursor-pointer group shrink-0">
-                       <div className="p-1.5 md:p-2 rounded-lg bg-indigo-500/10 group-hover:bg-indigo-500/20 transition-colors">
-                           <Crown className="w-4 h-4 md:w-5 md:h-5 text-indigo-400" />
-                       </div>
+                   <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="flex items-center gap-1 md:gap-2 cursor-pointer md:cursor-help opacity-90 hover:opacity-100 group shrink-0 px-2 md:px-4 md:bg-slate-800/30 md:rounded-xl md:h-full transition-colors">
+                       <Crown className="w-4 h-4 text-indigo-400" />
                        <div className="flex flex-col justify-center">
-                           <span className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1 group-hover:text-indigo-300 transition-colors">{t.RANK}</span>
+                           <span className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">{t.RANK}</span>
                            <div className="flex items-baseline leading-none">
-                             <span className="text-sm md:text-xl font-black text-white">{player.playerLevel}</span>
-                             <span className="text-[10px] md:text-xs text-slate-600 font-bold ml-px md:ml-1">/{winCondition?.targetLevel || '?'}</span>
+                             <span className="text-sm md:text-lg font-black text-white">{player.playerLevel}</span>
+                             <span className="text-[10px] md:text-xs text-slate-500 font-bold ml-px md:ml-0.5">/{winCondition?.targetLevel || '?'}</span>
                            </div>
                        </div>
                    </div>
 
-                   <div className="w-px h-6 md:h-10 bg-slate-800 shrink-0"></div>
+                   <div className="w-px h-6 md:h-8 bg-slate-700/50 shrink-0"></div>
 
-                   {/* Upgrade (Cycle) Status */}
-                   <div onClick={() => { setHelpTopic('CYCLE'); playUiSound('CLICK'); }} className="flex items-center gap-2 md:gap-3 cursor-pointer group shrink-0">
-                       <div className="p-1.5 md:p-2 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
-                           <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" />
-                       </div>
+                   {/* Cycle/Queue Status */}
+                   <div onClick={() => { setHelpTopic('QUEUE'); playUiSound('CLICK'); }} className="flex items-center gap-1 md:gap-2 cursor-pointer md:cursor-help opacity-90 hover:opacity-100 group shrink-0 px-2 md:px-4 md:bg-slate-800/30 md:rounded-xl md:h-full transition-colors">
+                       <TrendingUp className="w-4 h-4 text-emerald-400" />
                        <div className="flex flex-col justify-center">
-                           <span className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1 group-hover:text-emerald-300 transition-colors">{t.CYCLE}</span>
-                           <div className="flex gap-1 md:gap-1.5 h-3 md:h-5 items-center">
+                           <span className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">{t.CYCLE}</span>
+                           <div className="flex gap-1">
                                {Array.from({length: queueSize}).map((_, i) => (
-                                  <div key={i} className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all duration-500 ${player.recentUpgrades.length > i ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] scale-110' : 'bg-slate-800'}`} />
+                                  <div key={i} className={`w-1.5 h-3 md:w-2 md:h-2 rounded-[1px] transition-all duration-300 ${player.recentUpgrades.length > i ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-slate-700/50'}`} />
                                ))}
                            </div>
                        </div>
                    </div>
 
-                   <div className="w-px h-6 md:h-10 bg-slate-800 shrink-0"></div>
+                   <div className="w-px h-6 md:h-8 bg-slate-700/50 shrink-0"></div>
 
-                   {/* Mission Credits */}
-                   <div onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }} className="flex items-center gap-2 md:gap-3 cursor-pointer group shrink-0">
-                       <div className="p-1.5 md:p-2 rounded-lg bg-amber-500/10 group-hover:bg-amber-500/20 transition-colors">
-                           <Wallet className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
-                       </div>
+                   {/* Mission Credits Progress */}
+                   <div onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }} className="flex items-center gap-1 md:gap-2 cursor-pointer md:cursor-help opacity-90 hover:opacity-100 group shrink-0 px-2 md:px-4 md:bg-slate-800/30 md:rounded-xl md:h-full transition-colors">
+                       <Wallet className="w-4 h-4 text-amber-400" />
                        <div className="flex flex-col justify-center">
-                           <span className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1 group-hover:text-amber-300 transition-colors">{t.CREDITS}</span>
+                           <span className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">{t.CREDITS}</span>
                            <div className="flex items-baseline leading-none">
-                             <span className="text-sm md:text-xl font-black text-white">{player.coins}</span>
-                             {/* Hide target on tiny screens, show on md */}
-                             <span className="hidden md:inline text-xs text-slate-600 font-bold ml-1">/{winCondition?.targetCoins || '?'}</span>
+                             {/* SHOW ACTUAL AVAILABLE COINS FOR SPENDING */}
+                             <span className="text-sm md:text-lg font-black text-white">{player.coins}</span>
+                             {/* Small indicator of target progress */}
+                             <span className="text-[10px] md:text-xs text-slate-500 font-bold ml-px md:ml-0.5" title="Goal"> / {winCondition?.targetCoins || '?'}</span>
                            </div>
                        </div>
                    </div>
 
-                   <div className="w-px h-6 md:h-10 bg-slate-800 shrink-0"></div>
+                   <div className="w-px h-6 md:h-8 bg-slate-700/50 shrink-0"></div>
 
                    {/* Current Moves */}
-                   <div onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }} className="flex items-center gap-2 md:gap-3 cursor-pointer group shrink-0">
-                       <div className={`p-1.5 md:p-2 rounded-lg transition-colors ${isMoving ? 'bg-blue-500/20' : 'bg-blue-500/10 group-hover:bg-blue-500/20'}`}>
-                           <Footprints className={`w-4 h-4 md:w-5 md:h-5 ${isMoving ? 'text-blue-300 animate-pulse' : 'text-blue-400'}`} />
-                       </div>
+                   <div onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }} className="flex items-center gap-1 md:gap-2 cursor-pointer md:cursor-help opacity-90 hover:opacity-100 group shrink-0 px-2 md:px-4 md:bg-slate-800/30 md:rounded-xl md:h-full transition-colors pr-2">
+                       <Footprints className={`w-4 h-4 ${isMoving ? 'text-slate-200 animate-pulse' : 'text-blue-400'}`} />
                        <div className="flex flex-col justify-center">
-                           <span className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1 group-hover:text-blue-300 transition-colors">{t.MOVES}</span>
-                           <span className="text-sm md:text-xl font-black text-white leading-none">{player.moves}</span>
+                           <span className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">{t.MOVES}</span>
+                           <span className="text-sm md:text-lg font-black text-white leading-none">{player.moves}</span>
                        </div>
                    </div>
                </div>
@@ -471,11 +397,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                    const isP = e.type === 'PLAYER';
                                    const color = isP ? (user?.avatarColor || '#3b82f6') : (e.avatarColor || '#ef4444');
                                    return (
-                                       <div key={e.id} className="grid grid-cols-5 items-center p-2 rounded-lg bg-slate-950/50 border border-slate-800/50 gap-1">
+                                       <div key={e.id} className="grid grid-cols-4 items-center p-2 rounded-lg bg-slate-950/50 border border-slate-800/50">
                                            <div className="col-span-2 flex items-center gap-2 overflow-hidden"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} /><span className={`text-[10px] font-bold truncate ${isP ? 'text-white' : 'text-slate-400'}`}>{isP ? 'YOU' : e.id.toUpperCase()}</span></div>
                                            <div className="col-span-1 text-center font-mono text-[9px] text-indigo-400">L{e.playerLevel}</div>
                                            <div className="col-span-1 text-right font-mono text-amber-500 font-bold text-[10px]">{e.coins}</div>
-                                           <div className="col-span-1 text-right font-mono text-blue-400 font-bold text-[9px] flex items-center justify-end gap-0.5"><Footprints className="w-2 h-2 opacity-70" />{e.moves}</div>
                                        </div>
                                    );
                                })}
@@ -515,16 +440,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                 <div className="flex flex-col items-center text-center">
                     <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-4">
                         {helpTopic === 'RANK' && <Crown className="w-6 h-6 text-indigo-500" />}
-                        {/* CHANGED: helpTopic === 'CYCLE' */}
-                        {helpTopic === 'CYCLE' && <TrendingUp className="w-6 h-6 text-emerald-500" />}
+                        {helpTopic === 'QUEUE' && <TrendingUp className="w-6 h-6 text-emerald-500" />}
                         {helpTopic === 'COINS' && <Wallet className="w-6 h-6 text-amber-500" />}
                         {helpTopic === 'MOVES' && <Footprints className="w-6 h-6 text-blue-500" />}
                     </div>
                     <h3 className="text-xl font-black text-white mb-2 uppercase">{helpTopic && t[helpTopic]}</h3>
                     <div className="text-sm text-slate-400 leading-relaxed">
                         {helpTopic === 'RANK' && (<><p>{t.HELP_RANK_DESC}</p><p className="text-indigo-400 font-bold">{t.HELP_RANK_GOAL} {winCondition?.targetLevel}</p></>)}
-                        {/* CHANGED: helpTopic === 'CYCLE' */}
-                        {helpTopic === 'CYCLE' && (<><p>{t.HELP_QUEUE_DESC.replace('{0}', queueSize.toString())}</p><p className="text-emerald-400 font-bold">{t.HELP_QUEUE_HINT}</p></>)}
+                        {helpTopic === 'QUEUE' && (<><p>{t.HELP_QUEUE_DESC.replace('{0}', queueSize.toString())}</p><p className="text-emerald-400 font-bold">{t.HELP_QUEUE_HINT}</p></>)}
                         {helpTopic === 'COINS' && (<><p>{t.HELP_COINS_DESC}</p><p className="text-amber-500 font-bold">{t.HELP_COINS_GOAL.replace('{0}', (winCondition?.targetCoins || 0).toString())}</p><p className="text-[10px] mt-2 text-slate-500">(Current wallet balance shown in HUD)</p></>)}
                         {helpTopic === 'MOVES' && (<><p>{t.HELP_MOVES_DESC}</p><p className="text-blue-400 font-bold">{t.HELP_MOVES_HINT}</p></>)}
                     </div>

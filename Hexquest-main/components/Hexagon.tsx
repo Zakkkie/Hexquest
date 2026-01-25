@@ -39,24 +39,32 @@ const LEVEL_COLORS: Record<number, { fill: string; stroke: string; side: string 
 const LOCK_PATH = "M12 1a5 5 0 0 0-5 5v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v2H9V6a3 3 0 0 1 3-3z";
 
 // Determine crater positions based on damage (0 to 6)
+// Deterministic random to ensure craters don't move between renders
 const getCraters = (q: number, r: number, damage: number, offsetY: number) => {
     if (damage <= 0) return [];
     
+    // Simple deterministic seed
     const seed = Math.abs((q * 73856093) ^ (r * 19349663));
     const rand = (index: number, mod: number) => ((seed + index * 12345) % mod) / mod;
     
     const craters: { x: number, y: number, r: number, opacity: number }[] = [];
-    const maxRadius = HEX_SIZE * 0.7; 
+    const maxRadius = HEX_SIZE * 0.7; // Stay within hex bounds
 
+    // Generate N craters where N corresponds roughly to damage level
+    // We add more randomness to positions
     const count = Math.ceil(damage * 1.5); 
 
     for (let i = 0; i < count; i++) {
         const angle = rand(i, 360) * Math.PI * 2;
+        // Distribute craters randomly but biased towards center as damage increases? 
+        // Actually random spread is better for "wear and tear".
         const dist = rand(i + 10, 100) * maxRadius * 0.8;
         
         const x = Math.cos(angle) * dist;
-        const y = offsetY + (Math.sin(angle) * dist * 0.7); 
+        const y = offsetY + (Math.sin(angle) * dist * 0.7); // Squash Y for perspective
 
+        // Size grows slightly with damage level to indicate severity
+        // Base size 2-4, plus up to 3 based on damage
         const sizeBase = 2 + rand(i + 50, 3); 
         const sizeBonus = (damage > 3) ? (damage - 3) : 0;
         
@@ -64,7 +72,7 @@ const getCraters = (q: number, r: number, damage: number, offsetY: number) => {
             x,
             y,
             r: sizeBase + sizeBonus,
-            opacity: 0.3 + (rand(i + 20, 4) * 0.3)
+            opacity: 0.3 + (rand(i + 20, 4) * 0.3) // Varying depth
         });
     }
     
@@ -79,6 +87,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const confirmRef = useRef<Konva.Group>(null);
   const tutorialHighlightRef = useRef<Konva.Path>(null);
   
+  // Track previous state to trigger animations
   const prevStructureRef = useRef(hex.structureType);
   
   const { x, y } = hexToPixel(hex.q, hex.r, rotation);
@@ -96,17 +105,18 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
 
   const isGrowing = hex.progress > 0 && !isVoid;
   const targetLevel = hex.currentLevel + 1;
-  const neededTicks = getSecondsToGrow(targetLevel) || 30;
+  const neededTicks = getSecondsToGrow(targetLevel) || 30; // Use ticks (30 = 3s)
   const progressPercent = Math.min(1, hex.progress / neededTicks);
   const isLocked = hex.maxLevel > playerRank;
   
+  // Durability Logic
   const isFragile = hex.maxLevel === 1 && !isVoid;
-  const maxLives = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
+  const maxLives = GAME_CONFIG.L1_HEX_MAX_DURABILITY; // Now 6
   const currentLives = hex.durability !== undefined ? hex.durability : maxLives;
   const damage = Math.max(0, maxLives - currentLives);
 
   // Geometry Calculation
-  const { topPoints, sortedFaces, selectionPathData, craters, rubble, voidPaths } = useMemo(() => {
+  const { topPoints, sortedFaces, selectionPathData, craters, rubble } = useMemo(() => {
     const getPoint = (i: number, cy: number, radius: number = HEX_SIZE) => {
         const angle_deg = 60 * i + 30;
         const angle_rad = (angle_deg * Math.PI) / 180 + (rotation * Math.PI) / 180;
@@ -120,6 +130,8 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     const bottoms = [];
     const faces = [];
     const selectionTops = [];
+    // Ensure selection/highlight is strictly inside the hex borders
+    // HEX_SIZE is 35. Radius 29 ensures stroke width 3-4 is contained.
     const selRadius = Math.max(0, HEX_SIZE - 6); 
 
     for (let i = 0; i < 6; i++) {
@@ -149,64 +161,27 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
 
     const craters = isFragile ? getCraters(hex.q, hex.r, damage, offsetY) : [];
 
-    // --- GENERATE RUBBLE & CRATER FOR VOID ---
+    // --- GENERATE RUBBLE FOR VOID ---
     const rubbleData: { x: number, y: number, size: number, color: string, opacity: number, rotation: number }[] = [];
-    let voidPaths = { outer: '', inner: '' };
-
     if (isVoid) {
         const seed = Math.abs((hex.q * 9999) ^ (hex.r * 8888));
         const rng = (i: number) => ((seed + i * 12345) % 100) / 100;
         
-        // Debris
-        for(let i=0; i < 8; i++) {
+        // Generate random debris pieces
+        for(let i=0; i < 10; i++) {
              rubbleData.push({
-                 x: (rng(i) - 0.5) * HEX_SIZE * 1.3,
-                 y: (rng(i+20) - 0.5) * HEX_SIZE * 0.7,
-                 size: 3 + rng(i+5) * 4,
-                 color: rng(i+10) > 0.85 ? '#78350f' : '#292524', 
-                 opacity: 0.6 + rng(i+30) * 0.4,
+                 x: (rng(i) - 0.5) * HEX_SIZE * 1.4,
+                 y: (rng(i+20) - 0.5) * HEX_SIZE * 0.8, // Squashed Y
+                 size: 3 + rng(i+5) * 5,
+                 // Mix of dark ash and occasional burnt amber
+                 color: rng(i+10) > 0.9 ? '#451a03' : '#292524', 
+                 opacity: 0.5 + rng(i+30) * 0.5,
                  rotation: rng(i+40) * 360
              });
         }
-
-        // Jagged Path Generation
-        const getP = (angleDeg: number, rad: number) => {
-             const angleRad = (angleDeg * Math.PI) / 180 + (rotation * Math.PI) / 180;
-             return {
-                 x: rad * Math.cos(angleRad),
-                 y: offsetY + rad * Math.sin(angleRad) * 0.8 
-             };
-        };
-
-        let outerD = "M";
-        let innerD = "M";
-
-        for (let i = 0; i < 6; i++) {
-            const angle = 60 * i + 30;
-            // Vertex Jitter
-            const r1 = HEX_SIZE * (0.85 + rng(i) * 0.2); 
-            const p1 = getP(angle, r1);
-            
-            // Midpoint Jitter (inward "bite")
-            const rMid = HEX_SIZE * (0.6 + rng(i+10) * 0.2);
-            const pMid = getP(angle + 30, rMid);
-
-            if (i===0) outerD += ` ${p1.x} ${p1.y}`;
-            else outerD += ` L ${p1.x} ${p1.y}`;
-            outerD += ` L ${pMid.x} ${pMid.y}`;
-
-            // Inner Path (Deep Void)
-            const rInner = r1 * 0.55;
-            const pInner = getP(angle + (rng(i+50)*10), rInner);
-            if (i===0) innerD += ` ${pInner.x} ${pInner.y}`;
-            else innerD += ` L ${pInner.x} ${pInner.y}`;
-        }
-        outerD += " Z";
-        innerD += " Z";
-        voidPaths = { outer: outerD, inner: innerD };
     }
 
-    return { topPoints: topPathPoints, sortedFaces: faces, selectionPathData, craters, rubble: rubbleData, voidPaths };
+    return { topPoints: topPathPoints, sortedFaces: faces, selectionPathData, craters, rubble: rubbleData };
   }, [rotation, offsetY, isVoid, isFragile, damage, hex.q, hex.r]);
 
 
@@ -216,6 +191,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     if ('button' in e.evt) {
         if (e.evt.button !== 0) return; 
     }
+    // STOP PROPAGATION to prevent GameView background click from cancelling immediately
     e.cancelBubble = true;
     onHexClick(hex.q, hex.r);
   };
@@ -268,6 +244,9 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   useEffect(() => {
       const shape = progressShapeRef.current;
       if (shape && isGrowing) {
+          // Duration of the TWEEN is not the grow time, but the speed at which the bar updates per tick.
+          // Since tick updates occur every 100ms, a duration of ~0.1s would be smoothest, but 0.95 acts as a buffer.
+          // We set it to match tick interval roughly for responsiveness.
           const tween = new Konva.Tween({
               node: shape, duration: 0.2, visualProgress: progressPercent, easing: Konva.Easings.Linear
           });
@@ -299,9 +278,10 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
           const node = voidGroupRef.current;
           if (node) {
               node.scale({ x: 1, y: 1 });
-              node.y(y); 
+              node.y(y); // Start at normal position
               node.opacity(1);
 
+              // Fall down effect
               const tween = new Konva.Tween({
                   node: node,
                   duration: 0.6,
@@ -321,48 +301,45 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const tutorialColorHex = useMemo(() => {
       if (tutorialHighlightColor === 'amber') return '#fbbf24';
       if (tutorialHighlightColor === 'cyan') return '#22d3ee';
-      return '#60a5fa'; 
+      return '#60a5fa'; // blue
   }, [tutorialHighlightColor]);
 
   // --- RENDER VOID (ASH/RUBBLE TEXTURE) ---
   if (isVoid) {
       return (
         <Group ref={voidGroupRef} x={x} y={y}>
-            {/* 1. Dark Base Ground (The Crater) */}
+            {/* 1. Dark Base Ground */}
             <Path
-                 data={voidPaths.outer}
-                 fill="#1c1917" // stone-900
+                 data={`M ${topPoints[0]} ${topPoints[1]} L ${topPoints[2]} ${topPoints[3]} L ${topPoints[4]} ${topPoints[5]} L ${topPoints[6]} ${topPoints[7]} L ${topPoints[8]} ${topPoints[9]} L ${topPoints[10]} ${topPoints[11]} Z`}
+                 fill="#1c1917" // stone-900 (Dark Ash)
                  stroke="#0c0a09" // stone-950
                  strokeWidth={1}
                  perfectDrawEnabled={false}
                  opacity={1}
-                 shadowColor="black"
-                 shadowBlur={5}
             />
             
-            {/* 2. Deep Inner Void (The Hole) */}
-            <Path
-                 data={voidPaths.inner}
-                 fill="#000000"
-                 opacity={0.6}
-            />
-
-            {/* 3. Scattered Debris/Ash */}
+            {/* 2. Scattered Debris/Ash */}
             {rubble.map((r, i) => (
                 <RegularPolygon
                     key={i}
                     x={r.x}
                     y={r.y}
-                    sides={3 + (i % 3)} 
+                    sides={4 + (i % 3)} // Random shapes
                     radius={r.size}
                     fill={r.color}
                     opacity={r.opacity}
                     rotation={r.rotation}
-                    scaleY={0.6}
-                    shadowColor="black"
-                    shadowBlur={2}
+                    scaleY={0.6} // Match perspective
                 />
             ))}
+
+            {/* 3. Subtle Inner Shadow / Depression feel */}
+            <Path
+                 data={`M ${topPoints[0]} ${topPoints[1]} L ${topPoints[2]} ${topPoints[3]} L ${topPoints[4]} ${topPoints[5]} L ${topPoints[6]} ${topPoints[7]} L ${topPoints[8]} ${topPoints[9]} L ${topPoints[10]} ${topPoints[11]} Z`}
+                 fill="rgba(0,0,0,0.3)"
+                 scaleX={0.9}
+                 scaleY={0.9}
+            />
         </Group>
       );
   }
@@ -417,10 +394,10 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
             fill="rgba(0,0,0,0.4)" // Dark pockmark
             shadowColor="white"
             shadowBlur={0}
-            shadowOffset={{x: 0, y: 1}} 
+            shadowOffset={{x: 0, y: 1}} // Fake highlight at bottom edge (embossed look)
             shadowOpacity={0.1}
             opacity={c.opacity}
-            scaleY={0.6}
+            scaleY={0.6} // Squash to match perspective
           />
       ))}
 
@@ -462,8 +439,8 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
             {/* Coin Body */}
             <Circle 
                 radius={16}
-                fill="#fbbf24"
-                stroke="#92400e"
+                fill="#fbbf24" // Amber-400
+                stroke="#92400e" // Amber-800
                 strokeWidth={3}
                 shadowColor="black"
                 shadowBlur={8}
@@ -487,7 +464,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
                 fontSize={13}
                 fontStyle="bold"
                 fontFamily="monospace"
-                fill="#78350f" 
+                fill="#78350f" // Amber-900 contrast
                 align="center"
                 width={32}
                 offsetX={16}
@@ -556,15 +533,29 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     </Group>
   );
 }, (prev, next) => {
+    // MEMOIZATION COMPARATOR
+    // Returns true if props are equivalent (no re-render needed)
+    // Returns false if re-render is needed
+
+    // 1. Data Integrity: Check Hex Object Reference
+    // Since GameEngine uses Copy-On-Write, if the hex changed logic (progress, level, etc),
+    // the reference will be different.
     if (prev.hex !== next.hex) return false;
+
+    // 2. Visual State Props
     if (prev.rotation !== next.rotation) return false;
     if (prev.isOccupied !== next.isOccupied) return false;
     if (prev.isSelected !== next.isSelected) return false;
     if (prev.isPendingConfirm !== next.isPendingConfirm) return false;
     if (prev.pendingCost !== next.pendingCost) return false;
-    if (prev.playerRank !== next.playerRank) return false; 
+    if (prev.playerRank !== next.playerRank) return false; // Affects Lock Icon
+
+    // 3. Tutorial Highlighting
     if (prev.isTutorialTarget !== next.isTutorialTarget) return false;
     if (prev.tutorialHighlightColor !== next.tutorialHighlightColor) return false;
+
+    // Note: We deliberately ignore function prop changes (onHexClick, onHover)
+    // assuming they are functionally stable from the parent container.
     return true;
 });
 
@@ -583,8 +574,17 @@ interface SmartHexagonProps {
 }
 
 const SmartHexagon: React.FC<SmartHexagonProps> = React.memo((props) => {
+  // Select the specific hex from the store. 
+  // Because GameEngine uses Copy-on-Write, if this specific hex hasn't changed, 
+  // the reference `hex` returned here will be stable, preventing SmartHexagon 
+  // from re-rendering due to store updates of *other* hexes.
   const hex = useGameStore(state => state.session?.grid[props.id]);
+  
   if (!hex) return null;
+  
+  // Pass to the memoized visual component.
+  // Even if SmartHexagon re-renders (e.g. parent passed new props), 
+  // HexagonVisual will bail out if the relevant props + hex data haven't changed.
   return <HexagonVisual hex={hex} {...props} />;
 });
 

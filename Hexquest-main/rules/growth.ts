@@ -1,4 +1,5 @@
-import { Hex, Entity, HexCoord } from '../types';
+
+import { Hex, Entity, HexCoord, EntityType } from '../types';
 
 export type GrowthCheckResult = {
   canGrow: boolean;
@@ -24,16 +25,25 @@ export function checkGrowthCondition(
 
   // RECOVERY RULE: If current level is below max level (damaged/decayed), allow free growth
   if (targetLevel <= hex.maxLevel) {
-     // FIX: Cannot recover sectors owned by others (unless capturing via L0->L1 logic)
      if (hex.ownerId && hex.ownerId !== entity.id && targetLevel > 1) {
         return { canGrow: false, reason: 'HOSTILE SECTOR' };
      }
      return { canGrow: true };
   }
 
+  // CHEAT RULE FOR BOTS:
+  // Bots are unrestricted by zoning laws (Cycle, Rank, Staircase).
+  // They only need to afford the cost (checked in ActionProcessor/AI) and own the hex (checked below).
+  if (entity.type === EntityType.BOT) {
+      // Still prevent upgrading other bot's hexes if logic ever attempts it
+      if (hex.ownerId && hex.ownerId !== entity.id && targetLevel > 1) {
+          return { canGrow: false, reason: 'HOSTILE SECTOR' };
+      }
+      return { canGrow: true };
+  }
+
   // CRITICAL: ACQUISITION RULE (Level 0 -> 1)
   // Always allow taking control of a neutral/empty sector if it's not maxed out.
-  // This bypasses Cycle Lock and Staircase rules which are for vertical growth.
   if (targetLevel === 1) {
       return { canGrow: true };
   }

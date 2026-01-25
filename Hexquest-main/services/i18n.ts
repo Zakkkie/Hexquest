@@ -158,7 +158,7 @@ export const TEXT: Record<Language, Dictionary> = {
         },
         HUD: {
             RANK: "Rank",
-            CYCLE: "Upgrade",
+            CYCLE: "Cycle",
             CREDITS: "Credits",
             MOVES: "Moves",
             LEADERBOARD_TITLE: "Rankings",
@@ -184,13 +184,13 @@ export const TEXT: Record<Language, Dictionary> = {
             HELP_RANK_DESC: "Your Rank determines your maximum clearance level.",
             HELP_RANK_GOAL: "Goal: Rank",
             HELP_QUEUE_DESC: "You must rotate between {0} different sectors.",
-            HELP_QUEUE_HINT: "Green dots show available upgrade points.",
+            HELP_QUEUE_HINT: "Green dots show momentum.",
             HELP_COINS_DESC: "Credits fund upgrades and can refuel movement.",
             HELP_COINS_GOAL: "Goal: {0} Credits",
             HELP_MOVES_DESC: "Moves are replenished by upgrading or recovering.",
             HELP_MOVES_HINT: "Tip: High levels cost more.",
             MINI_LB_COMMANDER: "Commander",
-            MINI_LB_CYCLE: "Upgrade",
+            MINI_LB_CYCLE: "Cycle",
             MINI_LB_CREDITS: "Credits"
         },
         TOOLTIP: {
@@ -219,8 +219,8 @@ export const TEXT: Record<Language, Dictionary> = {
             FOUNDATION_TASK: "Build 3x Level 2 Hexes",
             FINAL_TITLE: "Foundation Ready!",
             FINAL_DESC: "Return to the center and upgrade to Level 3 to complete mission.",
-            NO_POINTS_TITLE: "No Upgrades",
-            NO_POINTS_DESC: "No upgrade points. Capture new sectors (L0->L1) to gain upgrade points.",
+            NO_POINTS_TITLE: "Cycle Empty",
+            NO_POINTS_DESC: "Continue upgrading other hexes to L2, but don't forget upgrade points!",
             NO_POINTS_HINT: "Look for highlighted empty hexes."
         },
         LEADERBOARD: {
@@ -273,7 +273,7 @@ export const TEXT: Record<Language, Dictionary> = {
         },
         HUD: {
             RANK: "Ранг",
-            CYCLE: "Апгрейд",
+            CYCLE: "Цикл",
             CREDITS: "Кредиты",
             MOVES: "Ходы",
             LEADERBOARD_TITLE: "Рейтинг",
@@ -299,13 +299,13 @@ export const TEXT: Record<Language, Dictionary> = {
             HELP_RANK_DESC: "Ранг определяет максимальный уровень доступа.",
             HELP_RANK_GOAL: "Цель: Ранг",
             HELP_QUEUE_DESC: "Необходимо чередовать {0} разных сектора для апгрейда.",
-            HELP_QUEUE_HINT: "Зеленые точки показывают доступные очки.",
+            HELP_QUEUE_HINT: "Зеленые точки показывают импульс.",
             HELP_COINS_DESC: "Кредиты нужны для улучшений и экстренного топлива.",
             HELP_COINS_GOAL: "Цель: {0} Кредитов",
             HELP_MOVES_DESC: "Ходы восполняются при улучшении или восстановлении.",
             HELP_MOVES_HINT: "Совет: Высокие уровни дороже в обслуживании.",
             MINI_LB_COMMANDER: "Командир",
-            MINI_LB_CYCLE: "Апгрейд",
+            MINI_LB_CYCLE: "Цикл",
             MINI_LB_CREDITS: "Кр"
         },
         TOOLTIP: {
@@ -335,7 +335,7 @@ export const TEXT: Record<Language, Dictionary> = {
             FINAL_TITLE: "Фундамент Готов!",
             FINAL_DESC: "Вернитесь в центр и улучшите его до Уровня 3.",
             NO_POINTS_TITLE: "Нет Очков",
-            NO_POINTS_DESC: "Нет очков апгрейда. Захватывай новые территории (L0->L1), чтобы получить очки апгрейда.",
+            NO_POINTS_DESC: "Нет заряда цикла. Захватывай новые территории (L0->L1), чтобы получить очки апгрейда.",
             NO_POINTS_HINT: "Иди на подсветку за очками."
         },
         LEADERBOARD: {

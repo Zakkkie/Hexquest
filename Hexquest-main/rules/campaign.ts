@@ -20,7 +20,7 @@ export const CAMPAIGN_LEVELS: WinCondition[] = [
     botCount: 1, 
     queueSize: 1, 
     targetLevel: 3, 
-    targetCoins: 30, // Reduced from 60 (Holding balance is harder)
+    targetCoins: 60, // Снижено со 125 до 60 (легче достичь за счет апгрейдов и пары циклов сбора)
     winType: 'AND',
     difficulty: 'EASY',
     label: 'Sector Patrol'
@@ -31,7 +31,7 @@ export const CAMPAIGN_LEVELS: WinCondition[] = [
     botCount: 1, 
     queueSize: 1, 
     targetLevel: 4, 
-    targetCoins: 75, // Reduced from 125
+    targetCoins: 125,  
     winType: 'AND',
     difficulty: 'EASY',
     label: 'Expansion'
@@ -42,7 +42,7 @@ export const CAMPAIGN_LEVELS: WinCondition[] = [
     botCount: 2, 
     queueSize: 1, 
     targetLevel: 5, 
-    targetCoins: 120, // Reduced from 200
+    targetCoins: 200,  
     winType: 'AND',
     difficulty: 'MEDIUM',
     label: 'Escalation'
@@ -53,7 +53,7 @@ export const CAMPAIGN_LEVELS: WinCondition[] = [
     botCount: 2, 
     queueSize: 2, 
     targetLevel: 5, 
-    targetCoins: 150, // Reduced from 250
+    targetCoins: 250,  
     winType: 'AND',
     difficulty: 'MEDIUM',
     label: 'Conflict'
@@ -64,7 +64,7 @@ export const CAMPAIGN_LEVELS: WinCondition[] = [
     botCount: 3, 
     queueSize: 2, 
     targetLevel: 7, 
-    targetCoins: 300, // Reduced from 500
+    targetCoins: 500,  
     winType: 'AND',
     difficulty: 'HARD',
     label: 'Total Domination'
