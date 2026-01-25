@@ -236,7 +236,8 @@ export interface GameState {
   // Cross-session state
   leaderboard: LeaderboardEntry[];
   hasActiveSession: boolean;
-  isMuted: boolean;
+  isMusicMuted: boolean;
+  isSfxMuted: boolean;
   language: Language;
 }
 

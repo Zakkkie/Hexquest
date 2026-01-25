@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe } from 'lucide-react';
+import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
+import { audioService } from '../services/audioService.ts';
 
 const AVATAR_COLORS = [
   '#ef4444', // Red
@@ -25,11 +26,47 @@ const AVATAR_ICONS = [
 
 type AuthMode = 'GUEST' | 'LOGIN' | 'REGISTER' | null;
 
+const MenuButton: React.FC<{ 
+  onClick: () => void; 
+  icon: React.ReactNode; 
+  label: string; 
+  subLabel?: string; 
+  primary?: boolean; 
+  danger?: boolean; 
+}> = ({ onClick, icon, label, subLabel, primary, danger }) => (
+  <button 
+    onClick={onClick}
+    className={`
+      group w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 relative overflow-hidden
+      ${primary 
+        ? 'bg-amber-500/10 border-amber-500/50 hover:bg-amber-500/20 hover:border-amber-500 text-white' 
+        : danger
+          ? 'bg-red-900/10 border-red-900/30 hover:bg-red-900/30 hover:border-red-500 text-red-200'
+          : 'bg-slate-900/40 border-slate-700/50 hover:bg-slate-800/60 hover:border-slate-500 text-slate-200'}
+    `}
+  >
+    <div className={`
+      p-3 rounded-full transition-colors relative z-10
+      ${primary ? 'bg-amber-500 text-slate-900' : danger ? 'bg-red-500/20 text-red-400 group-hover:bg-red-500 group-hover:text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-white group-hover:text-slate-900'}
+    `}>
+      {icon}
+    </div>
+    <div className="flex flex-col items-start relative z-10">
+      <span className={`text-sm font-bold uppercase tracking-wider ${primary ? 'text-amber-400' : ''}`}>{label}</span>
+      {subLabel && <span className="text-[10px] text-slate-500 font-mono group-hover:text-slate-400">{subLabel}</span>}
+    </div>
+    
+    {/* Hover Effect */}
+    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer" />
+  </button>
+);
+
 const MainMenu: React.FC = () => {
   // Use granular selectors to prevent unnecessary re-renders and ensure stable function references
   const user = useGameStore(state => state.user);
   const hasActiveSession = useGameStore(state => state.hasActiveSession);
-  const isMuted = useGameStore(state => state.isMuted);
+  const isMusicMuted = useGameStore(state => state.isMusicMuted);
+  const isSfxMuted = useGameStore(state => state.isSfxMuted);
   const language = useGameStore(state => state.language);
   
   const startNewGame = useGameStore(state => state.startNewGame);
@@ -41,7 +78,8 @@ const MainMenu: React.FC = () => {
   const loginUser = useGameStore(state => state.loginUser);
   const registerUser = useGameStore(state => state.registerUser);
   const abandonSession = useGameStore(state => state.abandonSession);
-  const toggleMute = useGameStore(state => state.toggleMute);
+  const toggleMusic = useGameStore(state => state.toggleMusic);
+  const toggleSfx = useGameStore(state => state.toggleSfx);
   const playUiSound = useGameStore(state => state.playUiSound);
 
   const [authMode, setAuthMode] = useState<AuthMode>(null);
@@ -51,6 +89,10 @@ const MainMenu: React.FC = () => {
   const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[5]); 
   const [selectedIconId, setSelectedIconId] = useState('user');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Sound Menu
+  const [showSoundMenu, setShowSoundMenu] = useState(false);
+  const soundMenuRef = useRef<HTMLDivElement>(null);
 
   // Mission Config State
   const [selectedTier, setSelectedTier] = useState<1 | 2 | 3>(1);
@@ -64,6 +106,24 @@ const MainMenu: React.FC = () => {
     2: { level: 7, coins: 500, label: language === 'RU' ? 'Штаб Региона' : 'Regional Command' },
     3: { level: 10, coins: 1000, label: language === 'RU' ? 'Доминация' : 'Global Domination' }
   };
+
+  useEffect(() => {
+      // Ensure music is playing in Menu
+      audioService.startMusic();
+      // Simulate "wealth" (250 credits) so the menu music has medium intensity
+      audioService.updateMusic(250, 500); 
+  }, []);
+
+  // Close sound menu on click outside
+  useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+          if (soundMenuRef.current && !soundMenuRef.current.contains(event.target as Node)) {
+              setShowSoundMenu(false);
+          }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const resetForm = () => {
     setInputName('');
@@ -189,13 +249,33 @@ const MainMenu: React.FC = () => {
         <div className="w-full flex justify-between items-start">
             
             {/* LEFT: SETTINGS */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 relative">
                 <button 
-                  onClick={() => { toggleMute(); playUiSound('CLICK'); }}
-                  className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-slate-900/50 hover:bg-slate-800 backdrop-blur rounded-full text-slate-400 hover:text-white transition-all border border-slate-800"
+                  onClick={() => { setShowSoundMenu(!showSoundMenu); playUiSound('CLICK'); }}
+                  className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur rounded-full transition-all border border-slate-800 bg-slate-900/50 text-slate-400 hover:text-white`}
+                  title="Sound Settings"
                 >
-                  {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  <Volume2 className="w-5 h-5" />
                 </button>
+
+                {showSoundMenu && (
+                    <div ref={soundMenuRef} className="absolute top-full left-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[140px] z-[60]">
+                        <button 
+                            onClick={() => { toggleMusic(); playUiSound('CLICK'); }}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isMusicMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-indigo-400 bg-indigo-900/20 hover:bg-indigo-900/30'}`}
+                        >
+                            {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
+                            <span className="text-xs font-bold uppercase">Music</span>
+                        </button>
+                        <button 
+                            onClick={() => { toggleSfx(); playUiSound('CLICK'); }}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isSfxMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-emerald-400 bg-emerald-900/20 hover:bg-emerald-900/30'}`}
+                        >
+                            {isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                            <span className="text-xs font-bold uppercase">SFX</span>
+                        </button>
+                    </div>
+                )}
                 
                 <button 
                   onClick={() => setLanguage(language === 'EN' ? 'RU' : 'EN')}
@@ -328,8 +408,7 @@ const MainMenu: React.FC = () => {
         </div>
       </div>
 
-      {/* AUTH MODAL & MISSION CONFIG MODAL (Existing code omitted for brevity as it remains same) */}
-      {/* ... keeping existing auth/mission modals ... */}
+      {/* MODALS */}
       {authMode && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-sm relative">
@@ -427,118 +506,87 @@ const MainMenu: React.FC = () => {
               <button 
                 onClick={handleAuthSubmit}
                 onMouseEnter={() => playUiSound('HOVER')}
-                className="cursor-pointer w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 mt-4"
+                className="cursor-pointer w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
               >
-                {authMode === 'LOGIN' ? t.BTN_LOGIN : (authMode === 'GUEST' ? t.BTN_GUEST : t.BTN_REGISTER)}
+                {authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MISSION CONFIG MODAL */}
+      {/* CONFIG MODAL */}
       {showMissionConfig && (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-lg relative overflow-hidden flex flex-col gap-6">
-             {/* Decorative header line */}
-             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-indigo-500 to-amber-500"></div>
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-sm relative">
+             <button onClick={() => { setShowMissionConfig(false); playUiSound('CLICK'); }} className="cursor-pointer absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
+             <h2 className="text-2xl font-bold text-white mb-1">{t.CONFIG_TITLE}</h2>
+             <p className="text-xs text-slate-500 mb-6 uppercase tracking-wider">{t.CONFIG_SUB}</p>
+             
+             <div className="space-y-6">
+                {/* Mission Tier */}
+                <div>
+                   <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 block">Mission Objective</label>
+                   <div className="flex flex-col gap-2">
+                      {[1, 2, 3].map(id => {
+                        const tier = MISSION_TIERS[id as 1|2|3];
+                        return (
+                          <button 
+                            key={id} 
+                            onClick={() => { setSelectedTier(id as 1|2|3); playUiSound('CLICK'); }}
+                            className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all ${selectedTier === id ? 'bg-amber-500/10 border-amber-500' : 'bg-slate-950 border-slate-800 opacity-70 hover:opacity-100'}`}
+                          >
+                             <div className="text-left">
+                               <div className={`text-xs font-bold ${selectedTier === id ? 'text-amber-400' : 'text-slate-300'}`}>{tier.label}</div>
+                               <div className="text-[10px] text-slate-500 font-mono">Rank {tier.level} • {tier.coins} Credits</div>
+                             </div>
+                             {selectedTier === id && <Target className="w-4 h-4 text-amber-500" />}
+                          </button>
+                        );
+                      })}
+                   </div>
+                </div>
 
-             <div className="text-center">
-                <h2 className="text-3xl font-black text-white mb-1 uppercase tracking-tight flex items-center justify-center gap-3">
-                  <Target className="w-8 h-8 text-amber-500" /> {t.CONFIG_TITLE}
-                </h2>
-                <p className="text-slate-500 font-mono text-xs uppercase tracking-widest">{t.CONFIG_SUB}</p>
+                {/* Difficulty */}
+                <div>
+                   <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 block">Parameters</label>
+                   <div className="flex gap-2">
+                      {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => (
+                         <button 
+                           key={d} 
+                           onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
+                           className={`flex-1 py-2 rounded-lg border text-[10px] font-bold uppercase ${difficulty === d ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300'}`}
+                         >
+                           {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
+                         </button>
+                      ))}
+                   </div>
+                </div>
+                
+                {/* Bot Count */}
+                <div>
+                   <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 block">Rivals</label>
+                   <div className="flex gap-2">
+                      {[1, 2, 3, 4].map(c => (
+                         <button 
+                           key={c} 
+                           onClick={() => { setBotCount(c); playUiSound('CLICK'); }}
+                           className={`flex-1 py-2 rounded-lg border text-[10px] font-bold uppercase ${botCount === c ? 'bg-red-900/40 border-red-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300'}`}
+                         >
+                           {c} AI
+                         </button>
+                      ))}
+                   </div>
+                </div>
+
+                <button 
+                  onClick={confirmMissionStart}
+                  onMouseEnter={() => playUiSound('HOVER')}
+                  className="w-full py-4 bg-white hover:bg-slate-200 text-slate-900 font-black rounded-xl uppercase tracking-widest shadow-lg active:scale-95 transition-all mt-4"
+                >
+                  {t.BTN_START}
+                </button>
              </div>
-
-             {/* DIFFICULTY SELECTOR */}
-             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-               <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-3 block text-center flex items-center justify-center gap-2">
-                 <Signal className="w-3 h-3"/> Difficulty (Cycle Requirement)
-               </label>
-               <div className="flex gap-2">
-                   <button 
-                     onClick={() => { setDifficulty('EASY'); playUiSound('CLICK'); }}
-                     className={`flex-1 py-3 px-2 rounded-xl border flex flex-col items-center gap-1 transition-all ${difficulty === 'EASY' ? 'bg-emerald-900/30 border-emerald-500 text-emerald-100' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-600'}`}
-                   >
-                      <span className="font-bold text-xs uppercase">{t.DIFF_EASY}</span>
-                      <span className="text-[9px] opacity-70">1 Upgrade Point</span>
-                   </button>
-                   <button 
-                     onClick={() => { setDifficulty('MEDIUM'); playUiSound('CLICK'); }}
-                     className={`flex-1 py-3 px-2 rounded-xl border flex flex-col items-center gap-1 transition-all ${difficulty === 'MEDIUM' ? 'bg-amber-900/30 border-amber-500 text-amber-100' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-600'}`}
-                   >
-                      <span className="font-bold text-xs uppercase">{t.DIFF_MEDIUM}</span>
-                      <span className="text-[9px] opacity-70">2 Upgrade Points</span>
-                   </button>
-                   <button 
-                     onClick={() => { setDifficulty('HARD'); playUiSound('CLICK'); }}
-                     className={`flex-1 py-3 px-2 rounded-xl border flex flex-col items-center gap-1 transition-all ${difficulty === 'HARD' ? 'bg-red-900/30 border-red-500 text-red-100' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-600'}`}
-                   >
-                      <span className="font-bold text-xs uppercase">{t.DIFF_HARD}</span>
-                      <span className="text-[9px] opacity-70">3 Upgrade Points</span>
-                   </button>
-               </div>
-             </div>
-
-             {/* TIER SELECTOR */}
-             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-               <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-3 block text-center flex items-center justify-center gap-2">
-                 <Gem className="w-3 h-3"/> Objective Tier (Level + Coins)
-               </label>
-               <div className="flex flex-col gap-2">
-                   {[1, 2, 3].map((t) => {
-                     const tier = MISSION_TIERS[t as 1|2|3];
-                     return (
-                       <button 
-                        key={t}
-                        onClick={() => { setSelectedTier(t as 1|2|3); playUiSound('CLICK'); }}
-                        className={`w-full py-3 px-4 rounded-xl flex items-center justify-between border transition-all ${selectedTier === t ? 'bg-indigo-900/30 border-indigo-500 text-indigo-100' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-600'}`}
-                       >
-                         <span className="font-bold text-xs uppercase">{tier.label}</span>
-                         <div className="flex items-center gap-3 text-xs font-mono">
-                            <span className="flex items-center gap-1"><Crown className="w-3 h-3" /> L{tier.level}</span>
-                            <span className="text-slate-600">+</span>
-                            <span className="flex items-center gap-1"><Gem className="w-3 h-3" /> {tier.coins}</span>
-                         </div>
-                       </button>
-                     )
-                   })}
-               </div>
-             </div>
-
-             {/* BOT COUNT */}
-             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-               <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-3 block text-center flex items-center justify-center gap-2">
-                 <Bot className="w-3 h-3"/> Threat Density (Bots)
-               </label>
-               <div className="flex justify-between gap-2">
-                   {[1, 2, 3].map(val => (
-                     <button 
-                      key={val}
-                      onClick={() => { setBotCount(val); playUiSound('CLICK'); }}
-                      className={`flex-1 py-2 rounded-xl font-mono font-bold border transition-all ${botCount === val ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700'}`}
-                     >
-                       {val}
-                     </button>
-                   ))}
-               </div>
-             </div>
-
-             <div className="flex gap-4 mt-2">
-               <button 
-                 onClick={() => { setShowMissionConfig(false); playUiSound('CLICK'); }}
-                 className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-colors uppercase text-xs tracking-wider"
-               >
-                 {t.BTN_CANCEL}
-               </button>
-               <button 
-                 onClick={confirmMissionStart}
-                 className="flex-1 py-4 bg-white hover:bg-slate-200 text-slate-900 font-bold rounded-xl shadow-lg transition-colors uppercase text-xs tracking-wider"
-               >
-                 {t.BTN_START}
-               </button>
-             </div>
-
           </div>
         </div>
       )}
@@ -546,37 +594,5 @@ const MainMenu: React.FC = () => {
     </div>
   );
 };
-
-// Sub-component for Menu Buttons
-const MenuButton = ({ onClick, icon, label, subLabel, primary, danger }: any) => {
-  const playUiSound = useGameStore(state => state.playUiSound);
-  
-  return (
-  <button 
-    onClick={onClick}
-    onMouseEnter={() => playUiSound('HOVER')}
-    className={`cursor-pointer group w-full text-left px-6 py-4 rounded-2xl border transition-all duration-300 relative overflow-hidden
-      ${primary 
-        ? 'bg-amber-500 border-amber-400 text-slate-900 shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:shadow-[0_0_50px_rgba(245,158,11,0.5)]' 
-        : danger 
-          ? 'bg-red-950/30 border-red-900/50 hover:bg-red-900/50 hover:border-red-500/50 text-red-200'
-          : 'bg-slate-900/50 border-slate-800 hover:bg-slate-800/80 hover:border-slate-600 text-slate-300'
-      }
-    `}
-  >
-    <div className="flex items-center justify-between relative z-10">
-      <div className="flex items-center gap-4">
-        <div className={`p-2 rounded-lg ${primary ? 'bg-black/10' : 'bg-slate-950/50'}`}>
-          {icon}
-        </div>
-        <div>
-          <div className={`font-black uppercase tracking-wider text-sm ${primary ? 'text-slate-900' : 'text-white'}`}>{label}</div>
-          {subLabel && <div className={`text-[10px] font-mono mt-0.5 ${primary ? 'text-slate-800/70' : 'text-slate-500 group-hover:text-slate-400'}`}>{subLabel}</div>}
-        </div>
-      </div>
-      <ArrowRight className={`w-4 h-4 transition-transform group-hover:translate-x-1 ${primary ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
-    </div>
-  </button>
-)};
 
 export default MainMenu;

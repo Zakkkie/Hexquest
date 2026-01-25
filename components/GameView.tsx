@@ -10,6 +10,8 @@ import Background from './Background.tsx';
 import GameHUD from './GameHUD.tsx';
 import { EXCHANGE_RATE_COINS_PER_MOVE, GAME_CONFIG } from '../rules/config.ts';
 import { Hex, EntityType, EntityState, FloatingText } from '../types.ts';
+import { checkGrowthCondition } from '../rules/growth.ts';
+import { audioService } from '../services/audioService.ts';
 
 const VIEWPORT_PADDING = 100; // Reduced padding for tighter culling
 
@@ -174,6 +176,20 @@ const GameView: React.FC = () => {
   // Interaction State
   const [hoveredHexId, setHoveredHexId] = useState<string | null>(null);
   const [selectedHexId, setSelectedHexId] = useState<string | null>(null);
+
+  // DYNAMIC MUSIC HOOK
+  useEffect(() => {
+      // Start music on mount
+      audioService.startMusic();
+      
+      // Update intensity based on wallet (Low money = Anxiety, High money = Epic)
+      audioService.updateMusic(player.coins, winCondition?.targetCoins || 500);
+
+      // Stop on unmount
+      return () => {
+          audioService.stopMusic();
+      };
+  }, [player.coins, winCondition]);
 
   // Game Loop
   useEffect(() => {
@@ -366,6 +382,34 @@ const GameView: React.FC = () => {
       return getHexKey(target.q, target.r);
   }, [pendingConfirmation]);
 
+  // --- GHOST BUILDING CALCULATION ---
+  // Identify missing supports for the hovered hex if the player is blocked
+  const missingSupportSet = useMemo(() => {
+      if (!hoveredHexId || !player) return new Set<string>();
+      const hoveredHex = grid[hoveredHexId];
+      // Only show ghosts if player is ON the hex and trying to upgrade it
+      if (hoveredHex && hoveredHex.q === player.q && hoveredHex.r === player.r) {
+          const occupied = safeBots.map(b => ({q:b.q, r:b.r}));
+          const queueSize = winCondition?.queueSize || 3;
+          
+          const result = checkGrowthCondition(
+              hoveredHex, 
+              player, 
+              getNeighbors(player.q, player.r), 
+              grid, 
+              occupied, 
+              queueSize
+          );
+          
+          if (!result.canGrow && result.missingSupports) {
+              const keys = new Set<string>();
+              result.missingSupports.forEach(c => keys.add(getHexKey(c.q, c.r)));
+              return keys;
+          }
+      }
+      return new Set<string>();
+  }, [hoveredHexId, player, grid, safeBots, winCondition]);
+
   // --- CRITICAL PERFORMANCE OPTIMIZATION ---
   // Instead of iterating Object.values(grid), we calculate the visible range in hex coordinates
   // and only loop through those potentially visible hexes.
@@ -547,6 +591,7 @@ const GameView: React.FC = () => {
                 if (item.type === 'HEX') {
                     const isOccupied = (item.q === player.q && item.r === player.r) || safeBots.some(b => b.q === item.q && b.r === item.r);
                     const isPending = item.id === pendingTargetKey;
+                    const isMissingSupport = missingSupportSet.has(item.id);
                     
                     let isTutorialTarget = false;
                     let tutorialHighlightColor: 'blue' | 'amber' | 'cyan' | 'emerald' = 'blue';
@@ -601,6 +646,7 @@ const GameView: React.FC = () => {
                             onHover={setHoveredHexId}
                             isTutorialTarget={isTutorialTarget}
                             tutorialHighlightColor={tutorialHighlightColor as any}
+                            isMissingSupport={isMissingSupport}
                         />
                     );
                 } else if (item.type === 'UNIT') {

@@ -11,7 +11,7 @@ import { TEXT } from '../services/i18n.ts';
 import { 
   AlertCircle, Pause, Trophy, Coins, Footprints, AlertTriangle, LogOut,
   Crown, TrendingUp, ChevronUp, ChevronDown, Shield, MapPin,
-  RotateCcw, RotateCw, CheckCircle2, ChevronsUp, Lock, Volume2, VolumeX, XCircle, Zap, RefreshCw, X, ArrowRight, MousePointer2, Move3d, ArrowDown, PlusCircle, Target, Skull, Wallet
+  RotateCcw, RotateCw, CheckCircle2, ChevronsUp, Lock, Volume2, VolumeX, XCircle, Zap, RefreshCw, X, ArrowRight, MousePointer2, Move3d, ArrowDown, PlusCircle, Target, Skull, Wallet, Music
 } from 'lucide-react';
 
 // FIREWORKS COMPONENT
@@ -218,11 +218,15 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const advanceTutorial = useGameStore(state => state.advanceTutorial);
   const language = useGameStore(state => state.language);
   const user = useGameStore(state => state.user);
-  const isMuted = useGameStore(state => state.isMuted);
+  
+  const isMusicMuted = useGameStore(state => state.isMusicMuted);
+  const isSfxMuted = useGameStore(state => state.isSfxMuted);
+  
   const setUIState = useGameStore(state => state.setUIState);
   const abandonSession = useGameStore(state => state.abandonSession);
   const togglePlayerGrowth = useGameStore(state => state.togglePlayerGrowth);
-  const toggleMute = useGameStore(state => state.toggleMute);
+  const toggleMusic = useGameStore(state => state.toggleMusic);
+  const toggleSfx = useGameStore(state => state.toggleSfx);
   const playUiSound = useGameStore(state => state.playUiSound);
   const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
   const startMission = useGameStore(state => state.startMission);
@@ -231,6 +235,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [isRankingsOpen, setIsRankingsOpen] = useState(false);
   const [helpTopic, setHelpTopic] = useState<'RANK' | 'CYCLE' | 'COINS' | 'MOVES' | null>(null);
+  
+  // Sound Menu
+  const [showSoundMenu, setShowSoundMenu] = useState(false);
+  const soundMenuRef = useRef<HTMLDivElement>(null);
 
   const t = TEXT[language].HUD;
   const tt = TEXT[language].TOOLTIP; 
@@ -242,6 +250,16 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const botPositions = useMemo(() => safeBots.map(b => ({ q: b.q, r: b.r })), [safeBots]);
   const isMoving = player?.state === EntityState.MOVING;
   const canRecover = player ? !player.recoveredCurrentHex : false;
+
+  useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+          if (soundMenuRef.current && !soundMenuRef.current.contains(event.target as Node)) {
+              setShowSoundMenu(false);
+          }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const growthCondition = useMemo(() => {
     if (!currentHex || !player || !grid) return { canGrow: false, reason: 'Invalid Hex' };
@@ -457,10 +475,31 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                </div>
 
                {/* SYSTEM CONTROLS */}
-               <div className="pointer-events-auto flex items-start gap-1 md:gap-2 shrink-0">
-                   <button onClick={() => { toggleMute(); playUiSound('CLICK'); }} className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl text-slate-400 hover:text-white transition-all shadow-lg active:scale-95">
-                      {isMuted ? <VolumeX className="w-4 h-4 md:w-5 md:h-5" /> : <Volume2 className="w-4 h-4 md:w-5 md:h-5" />}
-                   </button>
+               <div className="pointer-events-auto flex items-start gap-1 md:gap-2 shrink-0 relative">
+                   <div className="relative">
+                        <button onClick={() => { setShowSoundMenu(!showSoundMenu); playUiSound('CLICK'); }} className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl text-slate-400 hover:text-white transition-all shadow-lg active:scale-95">
+                            <Volume2 className="w-4 h-4 md:w-5 md:h-5" />
+                        </button>
+                        {showSoundMenu && (
+                            <div ref={soundMenuRef} className="absolute top-full left-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[140px] z-[60]">
+                                <button 
+                                    onClick={() => { toggleMusic(); playUiSound('CLICK'); }}
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isMusicMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-indigo-400 bg-indigo-900/20 hover:bg-indigo-900/30'}`}
+                                >
+                                    {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
+                                    <span className="text-xs font-bold uppercase">Music</span>
+                                </button>
+                                <button 
+                                    onClick={() => { toggleSfx(); playUiSound('CLICK'); }}
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isSfxMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-emerald-400 bg-emerald-900/20 hover:bg-emerald-900/30'}`}
+                                >
+                                    {isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                                    <span className="text-xs font-bold uppercase">SFX</span>
+                                </button>
+                            </div>
+                        )}
+                   </div>
+
                    <div className={`flex flex-col bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 origin-top-right ${isRankingsOpen ? 'w-56 md:w-80' : 'w-10 md:w-14 h-10 md:h-14'}`}>
                        <div onClick={() => { setIsRankingsOpen(!isRankingsOpen); playUiSound('CLICK'); }} className="flex items-center justify-center w-full h-10 md:h-14 cursor-pointer hover:bg-white/5 transition-colors">
                            {isRankingsOpen ? <div className="flex items-center justify-between w-full px-3"><div className="flex items-center gap-2"><Trophy className="w-4 h-4 text-amber-500" /><span className="text-[10px] font-bold text-slate-300 uppercase">{t.LEADERBOARD_TITLE}</span></div><ChevronUp className="w-3 h-3 text-slate-500" /></div> : <Trophy className="w-4 h-4 md:w-5 md:h-5 text-amber-500" />}

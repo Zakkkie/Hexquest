@@ -34,7 +34,7 @@ export class MovementSystem implements System {
     const now = Date.now();
     if (entity.state === EntityState.MOVING) {
         const lastMove = entity.lastMoveTime || 0;
-        // Убедитесь, что эта константа в конфиге (например, 300) совпадает с duration анимации Unit.tsx
+        // Ensure this constant (e.g., 300) matches animation duration in Unit.tsx
         if (now - lastMove < (GAME_CONFIG.MOVEMENT_LOGIC_INTERVAL_MS || 300)) {
             return; 
         }
@@ -43,6 +43,28 @@ export class MovementSystem implements System {
     const nextStep = entity.movementQueue[0];
 
     if (nextStep.upgrade) return; 
+
+    // --- TARGET VALIDATION: VOID CHECK ---
+    // If the hex we are trying to step into is destroyed, stop immediately.
+    const targetKey = getHexKey(nextStep.q, nextStep.r);
+    const targetHex = state.grid[targetKey];
+    if (targetHex && targetHex.structureType === 'VOID') {
+        entity.movementQueue = []; // Clear path
+        entity.state = EntityState.IDLE;
+        
+        const msg = "Path Collapsed: Destination is Void";
+        if (entity.type === EntityType.PLAYER) {
+            state.messageLog.unshift({
+                id: `void-stop-${Date.now()}`,
+                text: msg,
+                type: 'WARN',
+                source: 'SYSTEM',
+                timestamp: Date.now()
+            });
+        }
+        events.push(GameEventFactory.create('ACTION_DENIED', msg, entity.id));
+        return;
+    }
 
     // 2. Collision Check
     if (index.isOccupied(nextStep.q, nextStep.r)) {
@@ -80,12 +102,11 @@ export class MovementSystem implements System {
     index.updateEntityPosition(entity.id, oldQ, oldR, entity.q, entity.r);
 
     // --- BATCH GRID UPDATES START ---
-    // Собираем все изменения в один объект, чтобы не копировать grid 3 раза
     const gridUpdates: Record<string, Hex> = {};
 
     // A. HEX COLLAPSE (ON EXIT)
     const oldHex = state.grid[oldHexKey];
-    // Проверка: L1 и не VOID
+    
     if (oldHex && oldHex.maxLevel === 1 && oldHex.structureType !== 'VOID') {
         const d = oldHex.durability !== undefined ? oldHex.durability : 3;
         if (d <= 0) {
@@ -99,14 +120,35 @@ export class MovementSystem implements System {
                 structureType: 'VOID'
             };
             
-            // Записываем в буфер
-            // Logic becomes VOID immediately to prevent back-tracking,
-            // but Visuals in Hexagon.tsx will "fake" delay for animation.
             gridUpdates[oldHexKey] = collapsedHex;
             
             // --- PENALTY LOGIC: SHOCKWAVE DAMAGE ---
             if (entity.playerLevel > 0) {
                 entity.playerLevel--;
+                
+                // STUMBLE CHECK: If user lost rank while climbing, they fall/stop.
+                const currentHexKey = getHexKey(entity.q, entity.r);
+                const currentHex = gridUpdates[currentHexKey] || state.grid[currentHexKey];
+                
+                // If we moved to a hex that is now higher than our *previous* position (ascending),
+                // and we just lost a rank, we likely aren't qualified or are stumbling.
+                const isAscending = currentHex && currentHex.maxLevel > oldHex.maxLevel;
+                
+                if (isAscending) {
+                    entity.movementQueue = [];
+                    entity.state = EntityState.IDLE;
+                    
+                    const stumbleMsg = "Stumbled by Shockwave! Movement Halted.";
+                    if (entity.type === EntityType.PLAYER) {
+                        state.messageLog.unshift({
+                            id: `stumble-${Date.now()}`,
+                            text: stumbleMsg,
+                            type: 'WARN',
+                            source: 'SYSTEM',
+                            timestamp: Date.now()
+                        });
+                    }
+                }
             }
 
             events.push(GameEventFactory.create('HEX_COLLAPSE', undefined, entity.id, { q: oldHex.q, r: oldHex.r }));
@@ -125,14 +167,13 @@ export class MovementSystem implements System {
 
     // B. HEX DAMAGE (ON ENTRY)
     const newHexKey = getHexKey(entity.q, entity.r);
-    // Берем hex из updates если он там уже есть (редкий случай), иначе из state
+    // Take from updates if available, else state
     const newHex = gridUpdates[newHexKey] || state.grid[newHexKey];
     
     if (newHex && newHex.maxLevel === 1 && newHex.structureType !== 'VOID') {
         const currentDurability = newHex.durability !== undefined ? newHex.durability : 3;
         const newDurability = currentDurability - 1;
         
-        // Записываем в буфер (объединяя с возможными предыдущими изменениями)
         gridUpdates[newHexKey] = { ...newHex, durability: newDurability };
     }
 
@@ -140,8 +181,6 @@ export class MovementSystem implements System {
     const neighbors = getNeighbors(entity.q, entity.r);
     [...neighbors, { q: entity.q, r: entity.r }].forEach(n => {
       const k = getHexKey(n.q, n.r);
-      
-      // Сначала смотрим в буфер updates, потом в реальный грид
       const existingHex = gridUpdates[k] || state.grid[k];
       
       if (!existingHex) {
@@ -156,7 +195,6 @@ export class MovementSystem implements System {
     });
 
     // --- APPLY BATCH UPDATE ---
-    // Применяем все изменения за один раз (Copy-On-Write)
     if (Object.keys(gridUpdates).length > 0) {
         state.grid = { ...state.grid, ...gridUpdates };
     }

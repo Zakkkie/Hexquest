@@ -1,8 +1,10 @@
+
 import { Hex, Entity, HexCoord } from '../types';
 
 export type GrowthCheckResult = {
   canGrow: boolean;
   reason?: string;
+  missingSupports?: HexCoord[]; // Coordinates of neighbors causing the block
 };
 
 export function checkGrowthCondition(
@@ -24,7 +26,6 @@ export function checkGrowthCondition(
 
   // RECOVERY RULE: If current level is below max level (damaged/decayed), allow free growth
   if (targetLevel <= hex.maxLevel) {
-     // FIX: Cannot recover sectors owned by others (unless capturing via L0->L1 logic)
      if (hex.ownerId && hex.ownerId !== entity.id && targetLevel > 1) {
         return { canGrow: false, reason: 'HOSTILE SECTOR' };
      }
@@ -32,14 +33,11 @@ export function checkGrowthCondition(
   }
 
   // CRITICAL: ACQUISITION RULE (Level 0 -> 1)
-  // Always allow taking control of a neutral/empty sector if it's not maxed out.
-  // This bypasses Cycle Lock and Staircase rules which are for vertical growth.
   if (targetLevel === 1) {
       return { canGrow: true };
   }
 
-  // CYCLE LOCK RULE: Must have gathered enough L1 sectors (momentum) to upgrade to L2+
-  // targetLevel > 1 means we are upgrading FROM L1 or higher.
+  // CYCLE LOCK RULE
   if (targetLevel > 1) {
     if (entity.recentUpgrades.length < requiredQueueSize) {
       return { 
@@ -60,9 +58,6 @@ export function checkGrowthCondition(
   // STAIRCASE SUPPORT RULE
   if (targetLevel > 1) {
     // 1. SATURATION CHECK ("The Valley Rule")
-    // If a hex is surrounded by superior infrastructure (5+ neighbors strictly higher level),
-    // it lifts up automatically without needing specific same-level supports.
-    // This prevents "dead zones" inside developed territory.
     const highLevelNeighborsCount = neighbors.filter(n => {
        const neighborHex = grid[`${n.q},${n.r}`];
        return neighborHex && neighborHex.maxLevel > hex.maxLevel;
@@ -72,21 +67,28 @@ export function checkGrowthCondition(
 
     // Only apply strict support rules if NOT in a valley
     if (!isValley) {
+        // Find existing supports
         const supports = neighbors.filter(n => {
            const neighborHex = grid[`${n.q},${n.r}`];
-           // Strict Equality: Neighbors must be exactly the same maxLevel as current hex to support climb.
            return neighborHex && neighborHex.maxLevel === hex.maxLevel;
         });
 
         if (supports.length < 2) {
+          // Identify missing supports (neighbors that are too low level)
+          // We prioritize owned neighbors or neutral ones that make sense to upgrade
+          const potentialSupports = neighbors.filter(n => {
+              const h = grid[`${n.q},${n.r}`];
+              // It's a missing support if it exists and is lower level
+              return h && h.maxLevel < hex.maxLevel;
+          });
+
           return {
             canGrow: false, 
-            reason: `NEED 2 SUPPORTS (L${hex.maxLevel}) OR ENCIRCLEMENT`
+            reason: `NEED 2 SUPPORTS (L${hex.maxLevel})`,
+            missingSupports: potentialSupports
           };
         }
 
-        // Occupancy Check: Max 1 support can be occupied by units
-        // Note: The player attempting to grow does NOT count as blocking support because they are on the target hex, not the support hex.
         const occupiedSupportCount = supports.filter(s => 
             occupiedHexes.some(o => o.q === s.q && o.r === s.r)
         ).length;

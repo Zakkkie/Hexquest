@@ -19,6 +19,7 @@ interface HexagonVisualProps {
   onHover: (id: string | null) => void;
   isTutorialTarget?: boolean;
   tutorialHighlightColor?: 'blue' | 'amber' | 'cyan' | 'emerald';
+  isMissingSupport?: boolean; // New Prop for Ghost Build
 }
 
 const LEVEL_COLORS: Record<number, { fill: string; stroke: string; side: string }> = {
@@ -37,6 +38,7 @@ const LEVEL_COLORS: Record<number, { fill: string; stroke: string; side: string 
 };
 
 const LOCK_PATH = "M12 1a5 5 0 0 0-5 5v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v2H9V6a3 3 0 0 1 3-3z";
+const ARROW_UP_PATH = "M12 4l-8 8h6v8h4v-8h6z"; // Simple Up Arrow
 
 // Determine crater positions based on damage (0 to 6) for Level 1 hexes
 const getCraters = (q: number, r: number, damage: number, offsetY: number) => {
@@ -71,7 +73,7 @@ const getCraters = (q: number, r: number, damage: number, offsetY: number) => {
     return craters;
 };
 
-const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation, playerRank, isOccupied, isSelected, isPendingConfirm, pendingCost, onHexClick, onHover, isTutorialTarget, tutorialHighlightColor = 'blue' }) => {
+const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation, playerRank, isOccupied, isSelected, isPendingConfirm, pendingCost, onHexClick, onHover, isTutorialTarget, tutorialHighlightColor = 'blue', isMissingSupport }) => {
   const groupRef = useRef<Konva.Group>(null);
   const staticGroupRef = useRef<Konva.Group>(null); // NEW: For caching static parts
   const progressShapeRef = useRef<Konva.Shape>(null);
@@ -87,8 +89,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const { x, y } = hexToPixel(hex.q, hex.r, rotation);
   
   // LOGIC VS VISUAL STATE
-  // If we are in "Delayed Collapse" mode, we force the visuals to look like a Level 1 hex
-  // even though the logical state is already VOID.
   const isRealVoid = hex.structureType === 'VOID';
   const showVoid = isRealVoid && !isDelayedCollapse;
   
@@ -101,11 +101,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   let sideColor = showVoid ? '#000000' : colorSet.side;
   let strokeWidth = showVoid ? 0 : 1;
 
-  // HEX HEIGHT CONFIG
-  // Level 0 is ~10px high. 
-  // User wants Crater (VOID) to be "slightly below Level 0". 
-  // So we set Void height to 8 (y = -8), which is visibly lower than L0 (y = -10).
-  const heightMult = isDelayedCollapse ? 1 : hex.maxLevel; // Force L1 height if collapsing
+  const heightMult = isDelayedCollapse ? 1 : hex.maxLevel; 
   const hexHeight = showVoid ? 8 : (10 + (heightMult * 6));
   const offsetY = -hexHeight;
 
@@ -171,85 +167,45 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     let voidPaths = { outer: '', inner: '' };
 
     if (showVoid) {
+        // ... (Existing Void Gen Logic retained)
         const seed = Math.abs((hex.q * 9999) ^ (hex.r * 8888));
         const rng = (i: number) => ((seed + i * 12345) % 100) / 100;
-        
-        // 1. Jagged Path Generation
         const getP = (angleDeg: number, rad: number) => {
              const angleRad = (angleDeg * Math.PI) / 180 + (rotation * Math.PI) / 180;
-             return {
-                 x: rad * Math.cos(angleRad),
-                 y: offsetY + rad * Math.sin(angleRad) * 0.8 
-             };
+             return { x: rad * Math.cos(angleRad), y: offsetY + rad * Math.sin(angleRad) * 0.8 };
         };
-
         let outerD = "M";
         let innerD = "M";
-
         for (let i = 0; i < 6; i++) {
             const angle = 60 * i + 30;
-            // Vertex Jitter
             const r1 = HEX_SIZE * (0.85 + rng(i) * 0.2); 
             const p1 = getP(angle, r1);
-            
-            // Midpoint Jitter (inward "bite" for jagged look)
             const rMid = HEX_SIZE * (0.6 + rng(i+10) * 0.2);
             const pMid = getP(angle + 30, rMid);
-
-            if (i===0) outerD += ` ${p1.x} ${p1.y}`;
-            else outerD += ` L ${p1.x} ${p1.y}`;
-            
+            if (i===0) outerD += ` ${p1.x} ${p1.y}`; else outerD += ` L ${p1.x} ${p1.y}`;
             outerD += ` L ${pMid.x} ${pMid.y}`;
-
-            // Inner Path (Deep Void hole)
             const rInner = r1 * 0.55;
             const pInner = getP(angle + (rng(i+50)*10), rInner);
-            if (i===0) innerD += ` ${pInner.x} ${pInner.y}`;
-            else innerD += ` L ${pInner.x} ${pInner.y}`;
+            if (i===0) innerD += ` ${pInner.x} ${pInner.y}`; else innerD += ` L ${pInner.x} ${pInner.y}`;
         }
-        outerD += " Z";
-        innerD += " Z";
+        outerD += " Z"; innerD += " Z";
         voidPaths = { outer: outerD, inner: innerD };
-
-        // 2. Spikes Generation (Impassable Terrain Indicators)
-        const spikeCount = 3 + Math.floor(rng(77) * 4); // 3 to 6 spikes
+        const spikeCount = 3 + Math.floor(rng(77) * 4); 
         for (let k = 0; k < spikeCount; k++) {
              const angle = rng(k*99) * Math.PI * 2;
-             // Distribute within the void area
              const r = rng(k*55) * (HEX_SIZE * 0.5); 
              const cx = Math.cos(angle) * r;
              const cy = (Math.sin(angle) * r) * 0.8;
-
-             // Spike dimensions
-             const h = 12 + rng(k*33) * 18; // Height 12-30px
-             const w = 5 + rng(k*11) * 6;   // Width 5-11px
-
-             // Random tilt
+             const h = 12 + rng(k*33) * 18; 
+             const w = 5 + rng(k*11) * 6;   
              const tilt = (rng(k*22) - 0.5) * 10;
-             
-             // Base points relative to cx,cy
              const bl = { x: cx - w/2, y: cy + (rng(k)*3) };
              const br = { x: cx + w/2, y: cy + (rng(k)*3) };
              const tip = { x: cx + tilt, y: cy - h };
-
-             spikesData.push({
-                 points: [bl.x, bl.y, br.x, br.y, tip.x, tip.y],
-                 fill: '#57534e', // stone-600 (Lighter side)
-                 stroke: '#1c1917', // stone-900
-                 shade: '#292524' // stone-800 (Darker side for depth)
-             });
+             spikesData.push({ points: [bl.x, bl.y, br.x, br.y, tip.x, tip.y], fill: '#57534e', stroke: '#1c1917', shade: '#292524' });
         }
-
-        // 3. Debris/Rubble Generation
         for(let i=0; i < 6; i++) {
-             rubbleData.push({
-                 x: (rng(i) - 0.5) * HEX_SIZE * 1.3,
-                 y: (rng(i+20) - 0.5) * HEX_SIZE * 0.7,
-                 size: 2 + rng(i+5) * 3,
-                 color: rng(i+10) > 0.85 ? '#78350f' : '#44403c', // Rare brown, mostly dark stone
-                 opacity: 0.5 + rng(i+30) * 0.5,
-                 rotation: rng(i+40) * 360
-             });
+             rubbleData.push({ x: (rng(i) - 0.5) * HEX_SIZE * 1.3, y: (rng(i+20) - 0.5) * HEX_SIZE * 0.7, size: 2 + rng(i+5) * 3, color: rng(i+10) > 0.85 ? '#78350f' : '#44403c', opacity: 0.5 + rng(i+30) * 0.5, rotation: rng(i+40) * 360 });
         }
     }
 
@@ -276,14 +232,14 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     }
   }, [
       hex.maxLevel, 
-      showVoid, // Depend on visual void state, not logical
+      showVoid, 
       hex.durability, 
       rotation, 
       isLocked,
       isPendingConfirm,
       isFragile,
       damage,
-      isDelayedCollapse // Cache needs to update if we switch visual modes
+      isDelayedCollapse 
   ]);
 
   // 2. Void Group Cache
@@ -298,55 +254,34 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
 
   // --- ANIMATIONS ---
 
-  // 1. COLLAPSE SEQUENCE (Shake -> Crumble -> Void)
+  // 1. COLLAPSE SEQUENCE
   useEffect(() => {
       const wasVoid = prevStructureRef.current === 'VOID';
       const nowVoid = hex.structureType === 'VOID';
-      
-      // TRIGGER COLLAPSE ANIMATION
       if (!wasVoid && nowVoid) {
           setIsDelayedCollapse(true);
-          
           const node = groupRef.current;
           if (node) {
-               // A. SHAKE (0-400ms)
                const shakeAnim = new Konva.Animation((frame) => {
                    const t = frame!.time;
-                   if (t > 400) {
-                       shakeAnim.stop();
-                       return;
-                   }
-                   // Violet shake
+                   if (t > 400) { shakeAnim.stop(); return; }
                    const dx = Math.sin(t * 0.5) * 3; 
                    const dy = Math.cos(t * 0.3) * 3;
                    node.offset({ x: dx, y: dy });
                }, node.getLayer());
-               
                shakeAnim.start();
-
-               // B. FALL (400-500ms)
                const fallTween = new Konva.Tween({
-                   node: node,
-                   duration: 0.1,
-                   y: y + 50,
-                   opacity: 0,
-                   easing: Konva.Easings.EaseIn,
-                   delay: 0.4,
+                   node: node, duration: 0.1, y: y + 50, opacity: 0, easing: Konva.Easings.EaseIn, delay: 0.4,
                    onFinish: () => {
-                       // End visual fake, switch to real VOID render
                        setIsDelayedCollapse(false);
-                       node.opacity(1);
-                       node.offset({x:0, y:0});
-                       node.y(y); // Reset pos
+                       node.opacity(1); node.offset({x:0, y:0}); node.y(y);
                    }
                });
                fallTween.play();
           }
       } else if (!nowVoid) {
-          // Reset if healed/spawned
           setIsDelayedCollapse(false);
       }
-      
       prevStructureRef.current = hex.structureType;
   }, [hex.structureType, y]);
 
@@ -355,7 +290,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   useEffect(() => {
     if (!groupRef.current) return;
     const node = groupRef.current;
-    
     if (isGrowing) {
        const anim = new Konva.Animation((frame) => {
           const scale = 1 + (Math.sin(frame!.time / 200) * 0.05);
@@ -373,7 +307,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     if (isPendingConfirm && confirmRef.current) {
          const node = confirmRef.current;
          const anim = new Konva.Animation((frame) => {
-            const scale = 1 + (Math.sin(frame!.time / 150) * 0.1); // Fast pulse
+            const scale = 1 + (Math.sin(frame!.time / 150) * 0.1); 
             node.scale({ x: scale, y: scale });
          }, node.getLayer());
          anim.start();
@@ -421,7 +355,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       }
   }, [isSelected]);
 
-  // Map tutorial prop to colors
   const tutorialColorHex = useMemo(() => {
       if (tutorialHighlightColor === 'amber') return '#fbbf24';
       if (tutorialHighlightColor === 'cyan') return '#22d3ee';
@@ -429,67 +362,21 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       return '#60a5fa'; 
   }, [tutorialHighlightColor]);
 
-  // --- RENDER VOID (CRATER WITH SPIKES) ---
   if (showVoid) {
       return (
         <Group ref={voidGroupRef} x={x} y={y}>
-            {/* 1. Dark Base Ground (The Crater) */}
-            <Path
-                 data={voidPaths.outer}
-                 fill="#1c1917" // stone-900
-                 stroke="#0c0a09" // stone-950
-                 strokeWidth={1}
-                 perfectDrawEnabled={false}
-                 opacity={1}
-                 shadowColor="black"
-                 shadowBlur={5}
-            />
-            
-            {/* 2. Deep Inner Void (The Hole) */}
-            <Path
-                 data={voidPaths.inner}
-                 fill="#000000"
-                 opacity={0.8}
-                 perfectDrawEnabled={false}
-            />
-
-            {/* 3. Spikes (Impassable indicators) */}
+            <Path data={voidPaths.outer} fill="#1c1917" stroke="#0c0a09" strokeWidth={1} perfectDrawEnabled={false} opacity={1} shadowColor="black" shadowBlur={5} />
+            <Path data={voidPaths.inner} fill="#000000" opacity={0.8} perfectDrawEnabled={false} />
             {spikes.map((s, i) => (
-                <Line
-                    key={`spike-${i}`}
-                    points={s.points}
-                    closed={true}
-                    fill={s.fill}
-                    stroke={s.stroke}
-                    strokeWidth={1}
-                    shadowColor="black"
-                    shadowBlur={2}
-                    shadowOpacity={0.6}
-                    shadowOffset={{x: 2, y: 2}}
-                    perfectDrawEnabled={false}
-                />
+                <Line key={`spike-${i}`} points={s.points} closed={true} fill={s.fill} stroke={s.stroke} strokeWidth={1} shadowColor="black" shadowBlur={2} shadowOpacity={0.6} shadowOffset={{x: 2, y: 2}} perfectDrawEnabled={false} />
             ))}
-
-            {/* 4. Scattered Debris */}
             {rubble.map((r, i) => (
-                <RegularPolygon
-                    key={`rubble-${i}`}
-                    x={r.x}
-                    y={r.y}
-                    sides={3 + (i % 3)} 
-                    radius={r.size}
-                    fill={r.color}
-                    opacity={r.opacity}
-                    rotation={r.rotation}
-                    scaleY={0.6}
-                    perfectDrawEnabled={false}
-                />
+                <RegularPolygon key={`rubble-${i}`} x={r.x} y={r.y} sides={3 + (i % 3)} radius={r.size} fill={r.color} opacity={r.opacity} rotation={r.rotation} scaleY={0.6} perfectDrawEnabled={false} />
             ))}
         </Group>
       );
   }
 
-  // --- RENDER STANDARD HEX (OR COLLAPSING FAKE) ---
   return (
     <Group 
       ref={groupRef}
@@ -503,22 +390,12 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       onTouchEnd={() => onHover(null)}
       listening={true}
     >
-      {/* STATIC GEOMETRY (CACHED AS BITMAP) */}
+      {/* STATIC GEOMETRY */}
       <Group ref={staticGroupRef}>
-          {/* 1. WALLS */}
           {sortedFaces.map((face, i) => (
-              <Path
-                key={i}
-                data={`M ${face.points[0]} ${face.points[1]} L ${face.points[2]} ${face.points[3]} L ${face.points[4]} ${face.points[5]} L ${face.points[6]} ${face.points[7]} Z`}
-                fill={sideColor}
-                stroke={sideColor}
-                strokeWidth={1}
-                closed={true}
-                perfectDrawEnabled={false}
-              />
+              <Path key={i} data={`M ${face.points[0]} ${face.points[1]} L ${face.points[2]} ${face.points[3]} L ${face.points[4]} ${face.points[5]} L ${face.points[6]} ${face.points[7]} Z`} fill={sideColor} stroke={sideColor} strokeWidth={1} closed={true} perfectDrawEnabled={false} />
           ))}
 
-          {/* 2. TOP CAP */}
           <Path
              data={`M ${topPoints[0]} ${topPoints[1]} L ${topPoints[2]} ${topPoints[3]} L ${topPoints[4]} ${topPoints[5]} L ${topPoints[6]} ${topPoints[7]} L ${topPoints[8]} ${topPoints[9]} L ${topPoints[10]} ${topPoints[11]} Z`}
              fill={fillColor}
@@ -531,158 +408,67 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
              shadowOffset={{x: 0, y: 10}}
           />
 
-          {/* 2.5 CRATERS (Level 1 Damage) */}
           {isFragile && craters.map((c, i) => (
-              <Circle
-                key={`crater-${i}`}
-                x={c.x}
-                y={c.y}
-                radius={c.r}
-                fill="rgba(0,0,0,0.4)" // Dark pockmark
-                shadowColor="white"
-                shadowBlur={0}
-                shadowOffset={{x: 0, y: 1}} 
-                shadowOpacity={0.1}
-                opacity={c.opacity}
-                scaleY={0.6}
-                perfectDrawEnabled={false}
-              />
+              <Circle key={`crater-${i}`} x={c.x} y={c.y} radius={c.r} fill="rgba(0,0,0,0.4)" shadowColor="white" shadowBlur={0} shadowOffset={{x: 0, y: 1}} shadowOpacity={0.1} opacity={c.opacity} scaleY={0.6} perfectDrawEnabled={false} />
           ))}
           
-           {/* LOCK ICON */}
            {isLocked && (
             <Group x={0} y={offsetY - 5} opacity={0.9} listening={false}>
-              <Path
-                data={LOCK_PATH}
-                x={-12}
-                y={-12}
-                scaleX={1.2}
-                scaleY={1.2}
-                fill="white"
-                shadowColor="black"
-                shadowBlur={5}
-                perfectDrawEnabled={false}
-              />
+              <Path data={LOCK_PATH} x={-12} y={-12} scaleX={1.2} scaleY={1.2} fill="white" shadowColor="black" shadowBlur={5} perfectDrawEnabled={false} />
             </Group>
           )}
       </Group>
 
-      {/* DYNAMIC ELEMENTS (UNCACHED, FLOATING) */}
+      {/* DYNAMIC ELEMENTS */}
+      
+      {/* GHOST BUILDING VISUAL (Missing Support Indicator) */}
+      {isMissingSupport && (
+         <Group x={0} y={offsetY} listening={false}>
+             {/* Dashed Red Outline */}
+             <Path 
+                data={selectionPathData} 
+                stroke="#ef4444" 
+                strokeWidth={2} 
+                dash={[5, 5]} 
+                fill="rgba(239, 68, 68, 0.1)"
+                perfectDrawEnabled={false}
+             />
+             {/* Ghost Icon (Up Arrow) */}
+             <Path
+                data={ARROW_UP_PATH}
+                x={-12}
+                y={-12}
+                fill="#ef4444"
+                opacity={0.6}
+                scaleX={1}
+                scaleY={1}
+             />
+         </Group>
+      )}
 
-      {/* 3. SELECTION */}
       {isSelected && (
-          <Path
-            ref={selectionRef}
-            data={selectionPathData}
-            stroke="#22d3ee"
-            strokeWidth={1.5}
-            fillEnabled={false}
-            perfectDrawEnabled={false}
-            shadowColor="#22d3ee"
-            shadowBlur={5}
-            shadowOpacity={1}
-            listening={false}
-          />
+          <Path ref={selectionRef} data={selectionPathData} stroke="#22d3ee" strokeWidth={1.5} fillEnabled={false} perfectDrawEnabled={false} shadowColor="#22d3ee" shadowBlur={5} shadowOpacity={1} listening={false} />
       )}
 
-      {/* 3.5 TUTORIAL HIGHLIGHT */}
       {isTutorialTarget && (
-          <Path
-            ref={tutorialHighlightRef}
-            data={selectionPathData}
-            stroke={tutorialColorHex}
-            strokeWidth={3}
-            fillEnabled={false}
-            perfectDrawEnabled={false}
-            shadowColor={tutorialColorHex}
-            shadowBlur={10}
-            shadowOpacity={0.8}
-            listening={false}
-          />
+          <Path ref={tutorialHighlightRef} data={selectionPathData} stroke={tutorialColorHex} strokeWidth={3} fillEnabled={false} perfectDrawEnabled={false} shadowColor={tutorialColorHex} shadowBlur={10} shadowOpacity={0.8} listening={false} />
       )}
 
-      {/* 4. CONFIRMATION OVERLAY */}
       {isPendingConfirm && (
         <Group ref={confirmRef} y={offsetY - 35} listening={false}>
-            {/* Coin Body */}
-            <Circle 
-                radius={16}
-                fill="#fbbf24"
-                stroke="#92400e"
-                strokeWidth={3}
-                shadowColor="black"
-                shadowBlur={8}
-                shadowOpacity={0.6}
-                shadowOffset={{ x: 0, y: 3 }}
-                perfectDrawEnabled={false}
-            />
-            
-            {/* Simple Reflection Highlight (White Arc) */}
-             <Path 
-                data="M -8 -9 Q 0 -13 8 -9"
-                stroke="white"
-                strokeWidth={2}
-                opacity={0.6}
-                lineCap="round"
-                perfectDrawEnabled={false}
-            />
-
-            {/* Cost Number */}
-            <Text 
-                text={`${pendingCost}`}
-                y={-6}
-                fontSize={13}
-                fontStyle="bold"
-                fontFamily="monospace"
-                fill="#78350f" 
-                align="center"
-                width={32}
-                offsetX={16}
-                shadowColor="white"
-                shadowBlur={0}
-                shadowOffset={{ x: 0, y: 1 }}
-                shadowOpacity={0.5}
-            />
-
-            {/* Confirmation Label */}
-             <Text 
-                text="CONFIRM"
-                y={22}
-                fontSize={9}
-                fontStyle="bold"
-                fill="#f59e0b"
-                align="center"
-                width={80}
-                offsetX={40}
-                shadowColor="black"
-                shadowBlur={4}
-                shadowOpacity={1}
-            />
+            <Circle radius={16} fill="#fbbf24" stroke="#92400e" strokeWidth={3} shadowColor="black" shadowBlur={8} shadowOpacity={0.6} shadowOffset={{ x: 0, y: 3 }} perfectDrawEnabled={false} />
+             <Path data="M -8 -9 Q 0 -13 8 -9" stroke="white" strokeWidth={2} opacity={0.6} lineCap="round" perfectDrawEnabled={false} />
+            <Text text={`${pendingCost}`} y={-6} fontSize={13} fontStyle="bold" fontFamily="monospace" fill="#78350f" align="center" width={32} offsetX={16} shadowColor="white" shadowBlur={0} shadowOffset={{ x: 0, y: 1 }} shadowOpacity={0.5} />
+             <Text text="CONFIRM" y={22} fontSize={9} fontStyle="bold" fill="#f59e0b" align="center" width={80} offsetX={40} shadowColor="black" shadowBlur={4} shadowOpacity={1} />
         </Group>
       )}
 
-      {/* 5. PROGRESS BAR */}
       {isGrowing && (
         <Group x={0} y={offsetY - 15} listening={false}>
-          <Shape
-            ref={progressShapeRef}
-            visualProgress={progressPercent}
-            sceneFunc={(ctx, shape) => {
+          <Shape ref={progressShapeRef} visualProgress={progressPercent} sceneFunc={(ctx, shape) => {
                 const p = shape.getAttr('visualProgress') || 0;
-                ctx.beginPath();
-                ctx.moveTo(-15, 0);
-                ctx.lineTo(15, 0);
-                ctx.strokeStyle = "rgba(0,0,0,0.8)";
-                ctx.lineWidth = 6;
-                ctx.lineCap = "round";
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(-15, 0);
-                ctx.lineTo(-15 + (30 * p), 0);
-                ctx.strokeStyle = isLocked ? "#f59e0b" : "#10b981";
-                ctx.lineWidth = 4;
-                ctx.lineCap = "round";
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-15 + (30 * p), 0); ctx.strokeStyle = isLocked ? "#f59e0b" : "#10b981"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.stroke();
             }}
           />
         </Group>
@@ -702,6 +488,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     if (prev.playerRank !== next.playerRank) return false; 
     if (prev.isTutorialTarget !== next.isTutorialTarget) return false;
     if (prev.tutorialHighlightColor !== next.tutorialHighlightColor) return false;
+    if (prev.isMissingSupport !== next.isMissingSupport) return false; // Check new prop
     return true;
 });
 
@@ -717,6 +504,7 @@ interface SmartHexagonProps {
   onHover: (id: string | null) => void;
   isTutorialTarget?: boolean;
   tutorialHighlightColor?: 'blue' | 'amber' | 'cyan' | 'emerald';
+  isMissingSupport?: boolean; // New Prop
 }
 
 const SmartHexagon: React.FC<SmartHexagonProps> = React.memo((props) => {

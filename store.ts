@@ -48,7 +48,8 @@ interface GameStore extends GameState {
   tick: () => void;
   showToast: (msg: string, type: 'error' | 'success' | 'info') => void;
   hideToast: () => void;
-  toggleMute: () => void;
+  toggleMusic: () => void;
+  toggleSfx: () => void;
   playUiSound: (type: 'HOVER' | 'CLICK') => void;
   setLanguage: (lang: 'EN' | 'RU') => void;
 }
@@ -135,7 +136,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   pendingConfirmation: null,
   leaderboard: loadLeaderboard(),
   hasActiveSession: false,
-  isMuted: false,
+  isMusicMuted: false,
+  isSfxMuted: false,
   session: null,
   language: 'EN',
   
@@ -168,10 +170,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ user: null });
   },
 
-  toggleMute: () => {
-    const newVal = !get().isMuted;
-    audioService.setMuted(newVal);
-    set({ isMuted: newVal });
+  toggleMusic: () => {
+      const newVal = !get().isMusicMuted;
+      audioService.setMusicMuted(newVal);
+      set({ isMusicMuted: newVal });
+  },
+
+  toggleSfx: () => {
+      const newVal = !get().isSfxMuted;
+      audioService.setSfxMuted(newVal);
+      set({ isSfxMuted: newVal });
   },
 
   playUiSound: (type) => {
