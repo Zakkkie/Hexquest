@@ -73,6 +73,7 @@ const getCraters = (q: number, r: number, damage: number, offsetY: number) => {
 
 const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation, playerRank, isOccupied, isSelected, isPendingConfirm, pendingCost, onHexClick, onHover, isTutorialTarget, tutorialHighlightColor = 'blue' }) => {
   const groupRef = useRef<Konva.Group>(null);
+  const staticGroupRef = useRef<Konva.Group>(null); // NEW: For caching static parts
   const progressShapeRef = useRef<Konva.Shape>(null);
   const selectionRef = useRef<Konva.Path>(null);
   const voidGroupRef = useRef<Konva.Group>(null);
@@ -251,7 +252,40 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     onHexClick(hex.q, hex.r);
   };
 
-  // GROWING ANIMATION
+  // --- BITMAP CACHING LOGIC (PERFORMANCE FIX) ---
+  // We separate static geometry (walls, cap, craters) from dynamic geometry (selection, progress bar).
+  // The static part is cached as a bitmap.
+
+  // 1. Static Group Cache
+  useEffect(() => {
+    const node = staticGroupRef.current;
+    if (node) {
+        node.clearCache();
+        node.cache({ pixelRatio: 1 }); // Rasterize static vector paths to image
+    }
+  }, [
+      hex.maxLevel, 
+      hex.structureType, 
+      hex.durability, 
+      rotation, 
+      isLocked, // Affects Lock Icon
+      isPendingConfirm, // Affects Top Cap shadow (prop driven)
+      isFragile,
+      damage
+  ]);
+
+  // 2. Void Group Cache
+  useEffect(() => {
+      const node = voidGroupRef.current;
+      if (isVoid && node) {
+          node.clearCache();
+          node.cache({ pixelRatio: 1 });
+      }
+  }, [isVoid, hex.q, hex.r, rotation, hex.structureType]);
+
+  // ANIMATIONS (Dynamic - Outside Cache)
+  
+  // GROWING
   useEffect(() => {
     if (!groupRef.current) return;
     const node = groupRef.current;
@@ -268,7 +302,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     }
   }, [isGrowing]);
 
-  // PENDING CONFIRMATION ANIMATION
+  // PENDING CONFIRM
   useEffect(() => {
     if (isPendingConfirm && confirmRef.current) {
          const node = confirmRef.current;
@@ -281,7 +315,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     }
   }, [isPendingConfirm]);
 
-  // TUTORIAL TARGET ANIMATION
+  // TUTORIAL TARGET
   useEffect(() => {
       if (isTutorialTarget && tutorialHighlightRef.current) {
           const node = tutorialHighlightRef.current;
@@ -321,7 +355,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       }
   }, [isSelected]);
 
-  // COLLAPSE ANIMATION (Transition to VOID)
+  // COLLAPSE ANIMATION
   useEffect(() => {
       const wasVoid = prevStructureRef.current === 'VOID';
       const nowVoid = hex.structureType === 'VOID';
@@ -377,6 +411,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
                  data={voidPaths.inner}
                  fill="#000000"
                  opacity={0.8}
+                 perfectDrawEnabled={false}
             />
 
             {/* 3. Spikes (Impassable indicators) */}
@@ -392,6 +427,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
                     shadowBlur={2}
                     shadowOpacity={0.6}
                     shadowOffset={{x: 2, y: 2}}
+                    perfectDrawEnabled={false}
                 />
             ))}
 
@@ -407,6 +443,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
                     opacity={r.opacity}
                     rotation={r.rotation}
                     scaleY={0.6}
+                    perfectDrawEnabled={false}
                 />
             ))}
         </Group>
@@ -427,48 +464,71 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       onTouchEnd={() => onHover(null)}
       listening={true}
     >
-      {/* 1. WALLS */}
-      {sortedFaces.map((face, i) => (
+      {/* STATIC GEOMETRY (CACHED AS BITMAP) */}
+      <Group ref={staticGroupRef}>
+          {/* 1. WALLS */}
+          {sortedFaces.map((face, i) => (
+              <Path
+                key={i}
+                data={`M ${face.points[0]} ${face.points[1]} L ${face.points[2]} ${face.points[3]} L ${face.points[4]} ${face.points[5]} L ${face.points[6]} ${face.points[7]} Z`}
+                fill={sideColor}
+                stroke={sideColor}
+                strokeWidth={1}
+                closed={true}
+                perfectDrawEnabled={false}
+              />
+          ))}
+
+          {/* 2. TOP CAP */}
           <Path
-            key={i}
-            data={`M ${face.points[0]} ${face.points[1]} L ${face.points[2]} ${face.points[3]} L ${face.points[4]} ${face.points[5]} L ${face.points[6]} ${face.points[7]} Z`}
-            fill={sideColor}
-            stroke={sideColor}
-            strokeWidth={1}
-            closed={true}
-            perfectDrawEnabled={false}
+             data={`M ${topPoints[0]} ${topPoints[1]} L ${topPoints[2]} ${topPoints[3]} L ${topPoints[4]} ${topPoints[5]} L ${topPoints[6]} ${topPoints[7]} L ${topPoints[8]} ${topPoints[9]} L ${topPoints[10]} ${topPoints[11]} Z`}
+             fill={fillColor}
+             stroke={strokeColor}
+             strokeWidth={strokeWidth}
+             perfectDrawEnabled={false}
+             shadowColor={isPendingConfirm ? "#f59e0b" : "black"}
+             shadowBlur={isPendingConfirm ? 20 : 10}
+             shadowOpacity={0.5}
+             shadowOffset={{x: 0, y: 10}}
           />
-      ))}
 
-      {/* 2. TOP CAP */}
-      <Path
-         data={`M ${topPoints[0]} ${topPoints[1]} L ${topPoints[2]} ${topPoints[3]} L ${topPoints[4]} ${topPoints[5]} L ${topPoints[6]} ${topPoints[7]} L ${topPoints[8]} ${topPoints[9]} L ${topPoints[10]} ${topPoints[11]} Z`}
-         fill={fillColor}
-         stroke={strokeColor}
-         strokeWidth={strokeWidth}
-         perfectDrawEnabled={false}
-         shadowColor={isPendingConfirm ? "#f59e0b" : "black"}
-         shadowBlur={isPendingConfirm ? 20 : 10}
-         shadowOpacity={0.5}
-         shadowOffset={{x: 0, y: 10}}
-      />
+          {/* 2.5 CRATERS (Level 1 Damage) */}
+          {isFragile && craters.map((c, i) => (
+              <Circle
+                key={`crater-${i}`}
+                x={c.x}
+                y={c.y}
+                radius={c.r}
+                fill="rgba(0,0,0,0.4)" // Dark pockmark
+                shadowColor="white"
+                shadowBlur={0}
+                shadowOffset={{x: 0, y: 1}} 
+                shadowOpacity={0.1}
+                opacity={c.opacity}
+                scaleY={0.6}
+                perfectDrawEnabled={false}
+              />
+          ))}
+          
+           {/* LOCK ICON */}
+           {isLocked && (
+            <Group x={0} y={offsetY - 5} opacity={0.9} listening={false}>
+              <Path
+                data={LOCK_PATH}
+                x={-12}
+                y={-12}
+                scaleX={1.2}
+                scaleY={1.2}
+                fill="white"
+                shadowColor="black"
+                shadowBlur={5}
+                perfectDrawEnabled={false}
+              />
+            </Group>
+          )}
+      </Group>
 
-      {/* 2.5 CRATERS (Level 1 Damage) */}
-      {isFragile && craters.map((c, i) => (
-          <Circle
-            key={`crater-${i}`}
-            x={c.x}
-            y={c.y}
-            radius={c.r}
-            fill="rgba(0,0,0,0.4)" // Dark pockmark
-            shadowColor="white"
-            shadowBlur={0}
-            shadowOffset={{x: 0, y: 1}} 
-            shadowOpacity={0.1}
-            opacity={c.opacity}
-            scaleY={0.6}
-          />
-      ))}
+      {/* DYNAMIC ELEMENTS (UNCACHED, FLOATING) */}
 
       {/* 3. SELECTION */}
       {isSelected && (
@@ -515,6 +575,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
                 shadowBlur={8}
                 shadowOpacity={0.6}
                 shadowOffset={{ x: 0, y: 3 }}
+                perfectDrawEnabled={false}
             />
             
             {/* Simple Reflection Highlight (White Arc) */}
@@ -524,6 +585,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
                 strokeWidth={2}
                 opacity={0.6}
                 lineCap="round"
+                perfectDrawEnabled={false}
             />
 
             {/* Cost Number */}
@@ -560,20 +622,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
         </Group>
       )}
 
-      {isLocked && (
-        <Group x={0} y={offsetY - 5} opacity={0.9} listening={false}>
-          <Path
-            data={LOCK_PATH}
-            x={-12}
-            y={-12}
-            scaleX={1.2}
-            scaleY={1.2}
-            fill="white"
-            shadowColor="black"
-            shadowBlur={5}
-          />
-        </Group>
-      )}
+      {/* 5. PROGRESS BAR */}
       {isGrowing && (
         <Group x={0} y={offsetY - 15} listening={false}>
           <Shape
