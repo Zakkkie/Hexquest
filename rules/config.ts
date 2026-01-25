@@ -10,7 +10,7 @@ export const GAME_CONFIG = {
   L1_HEX_MAX_DURABILITY: 6, 
   
   // Movement & Animation Speeds
-  // Tuned for smoother transitions
+  // Tuned for smoother transitions (0.5s = 40% slower than 0.3s)
   MOVEMENT_ANIMATION_DURATION: 0.5, // Seconds (Visual Tween)
   MOVEMENT_LOGIC_INTERVAL_MS: 500,  // Milliseconds (Logic Throttle - matches animation)
 

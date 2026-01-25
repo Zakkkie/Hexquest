@@ -160,11 +160,14 @@ const GameView: React.FC = () => {
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [viewState, setViewState] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2, scale: 1 });
   const [cameraRotation, setCameraRotation] = useState(0);
+  const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 }); // Camera Shake
+  
   const targetRotationRef = useRef(0); 
   const isRotating = useRef(false);
   const lastMouseX = useRef(0);
   const movementTracker = useRef<Record<string, { lastQ: number; lastR: number; fromQ: number; fromR: number; startTime: number }>>({});
-  
+  const lastEffectIdRef = useRef<string | null>(null);
+
   // Local Particle State (Ephemeral)
   const [particles, setParticles] = useState<VisualParticle[]>([]);
 
@@ -190,6 +193,43 @@ const GameView: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Camera Shake Trigger
+  const triggerShake = useCallback(() => {
+    let start = Date.now();
+    const duration = 300;
+    const intensity = 8;
+    
+    const animate = () => {
+        const now = Date.now();
+        const elapsed = now - start;
+        if (elapsed > duration) {
+            setShakeOffset({ x: 0, y: 0 });
+            return;
+        }
+        const progress = elapsed / duration;
+        const decay = 1 - progress;
+        const dx = (Math.random() - 0.5) * intensity * decay;
+        const dy = (Math.random() - 0.5) * intensity * decay;
+        setShakeOffset({ x: dx, y: dy });
+        requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, []);
+
+  // Watch for HEX_COLLAPSE event
+  useEffect(() => {
+    if (!effects || effects.length === 0) return;
+    const latest = effects[effects.length - 1];
+    
+    // Check if new and is a collapse (icon is DOWN)
+    if (latest.id !== lastEffectIdRef.current) {
+        lastEffectIdRef.current = latest.id;
+        if (latest.icon === 'DOWN') { 
+            triggerShake();
+        }
+    }
+  }, [effects, triggerShake]);
 
   const spawnDust = useCallback((x: number, y: number, color: string) => {
       const id = Date.now() + Math.random();
@@ -467,7 +507,11 @@ const GameView: React.FC = () => {
           onTap={handleStageClick}
           onDragStart={() => setHoveredHexId(null)}
           onDragEnd={handleDragEnd}
-          onContextMenu={(e) => e.evt.preventDefault()} x={viewState.x} y={viewState.y} scaleX={viewState.scale} scaleY={viewState.scale}
+          onContextMenu={(e) => e.evt.preventDefault()} 
+          x={viewState.x + shakeOffset.x} 
+          y={viewState.y + shakeOffset.y} 
+          scaleX={viewState.scale} 
+          scaleY={viewState.scale}
         >
           <Layer>
             {renderList.map((item) => {
