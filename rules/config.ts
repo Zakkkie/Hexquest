@@ -11,8 +11,8 @@ export const GAME_CONFIG = {
   
   // Movement & Animation Speeds
   // Tuned for smoother transitions
-  MOVEMENT_ANIMATION_DURATION: 0.3, // Seconds (Visual Tween)
-  MOVEMENT_LOGIC_INTERVAL_MS: 300,  // Milliseconds (Logic Throttle - matches animation)
+  MOVEMENT_ANIMATION_DURATION: 0.5, // Seconds (Visual Tween)
+  MOVEMENT_LOGIC_INTERVAL_MS: 500,  // Milliseconds (Logic Throttle - matches animation)
 
   // Growth Time in TICKS (1 tick = 100ms). So 30 ticks = 3 seconds.
   LEVELS: {
