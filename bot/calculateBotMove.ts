@@ -12,9 +12,9 @@ export interface AiResult {
 }
 
 // PERFORMANCE CONFIGURATION
-// Radius 25 = ~2000 hexes. Radius 12 = ~470 hexes.
-const SCAN_RADIUS = 12; 
-const CONTEXT_RADIUS = 15;
+// Radius 50 provides global map awareness (~7500 hexes) to prevent bots from getting lost.
+const SCAN_RADIUS = 50; 
+const CONTEXT_RADIUS = 50;
 
 /**
  * AI V13: "The Architect" (Vertical Rush Focus) with Crash Fixes

@@ -1,11 +1,10 @@
-
 import React, { useEffect, useRef, useMemo } from 'react';
 import { Group, Path, Shape, Circle, Text, RegularPolygon, Line } from 'react-konva';
 import Konva from 'konva';
-import { Hex } from '../types.ts';
-import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
-import { getSecondsToGrow, hexToPixel } from '../services/hexUtils.ts';
-import { useGameStore } from '../store.ts';
+import { Hex } from '../types';
+import { HEX_SIZE, GAME_CONFIG } from '../rules/config';
+import { getSecondsToGrow, hexToPixel } from '../services/hexUtils';
+import { useGameStore } from '../store';
 
 interface HexagonVisualProps {
   hex: Hex;
@@ -102,7 +101,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const isLocked = hex.maxLevel > playerRank;
   
   const isFragile = hex.maxLevel === 1 && !isVoid;
-  const maxLives = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
+  const maxLives = GAME_CONFIG.L1_HEX_MAX_DURABILITY || 3;
   const currentLives = hex.durability !== undefined ? hex.durability : maxLives;
   const damage = Math.max(0, maxLives - currentLives);
 
@@ -261,7 +260,10 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     const node = staticGroupRef.current;
     if (node) {
         node.clearCache();
-        node.cache({ pixelRatio: 1 }); // Rasterize static vector paths to image
+        // Caching as bitmap prevents recalculating paths every frame
+        // Note: We avoid caching dynamic props (isPendingConfirm, growing status) here if they change often.
+        // But for static hex geometry, it's perfect.
+        node.cache({ pixelRatio: 1 }); 
     }
   }, [
       hex.maxLevel, 
@@ -651,18 +653,25 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     </Group>
   );
 }, (prev, next) => {
-    if (prev.hex !== next.hex) return false;
+    // FIX: Deleted explicit reference check (prev.hex !== next.hex)
+    // Rely ONLY on primitive checks to avoid re-rendering when parent object is cloned but data is same.
+    
+    if (prev.hex.currentLevel !== next.hex.currentLevel) return false;
+    if (prev.hex.maxLevel !== next.hex.maxLevel) return false;
+    if (prev.hex.structureType !== next.hex.structureType) return false;
+    if (prev.hex.durability !== next.hex.durability) return false;
+    if (prev.hex.progress !== next.hex.progress) return false;
     if (prev.rotation !== next.rotation) return false;
     if (prev.isOccupied !== next.isOccupied) return false;
     if (prev.isSelected !== next.isSelected) return false;
     if (prev.isPendingConfirm !== next.isPendingConfirm) return false;
-    if (prev.pendingCost !== next.pendingCost) return false;
     if (prev.playerRank !== next.playerRank) return false; 
     if (prev.isTutorialTarget !== next.isTutorialTarget) return false;
     if (prev.tutorialHighlightColor !== next.tutorialHighlightColor) return false;
     return true;
 });
 
+// WRAPPER to connect to store by ID
 interface SmartHexagonProps {
   id: string;
   rotation: number;
