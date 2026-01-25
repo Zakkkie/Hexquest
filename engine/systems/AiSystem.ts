@@ -66,7 +66,8 @@ export class AiSystem implements System {
           action: aiResult.action ? aiResult.action.type : 'WAIT',
           reason: aiResult.debug,
           timestamp: now,
-          target: aiResult.action && aiResult.action.type === 'MOVE' 
+          // FIX: Guard against empty path logging which caused crashes
+          target: aiResult.action && aiResult.action.type === 'MOVE' && aiResult.action.path.length > 0
               ? `${aiResult.action.path[aiResult.action.path.length-1].q},${aiResult.action.path[aiResult.action.path.length-1].r}`
               : undefined
       });
@@ -89,7 +90,9 @@ export class AiSystem implements System {
          } else {
              if (aiResult.action.type === 'MOVE') {
                  const target = aiResult.action.path[aiResult.action.path.length - 1];
-                 tickReservedKeys.add(getHexKey(target.q, target.r));
+                 if (target) {
+                     tickReservedKeys.add(getHexKey(target.q, target.r));
+                 }
              }
              // Reset stuck counter on success
              if (bot.memory) bot.memory.stuckCounter = 0;

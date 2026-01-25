@@ -3,7 +3,7 @@ import React, { useEffect, useCallback, useState, useMemo, useRef, useLayoutEffe
 import { Stage, Layer, Line, Group, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
-import { getHexKey, getNeighbors, hexToPixel } from '../services/hexUtils.ts';
+import { getHexKey, getNeighbors, hexToPixel, pixelToHex } from '../services/hexUtils.ts';
 import Hexagon from './Hexagon.tsx'; 
 import Unit from './Unit.tsx';
 import Background from './Background.tsx';
@@ -11,7 +11,7 @@ import GameHUD from './GameHUD.tsx';
 import { EXCHANGE_RATE_COINS_PER_MOVE, GAME_CONFIG } from '../rules/config.ts';
 import { Hex, EntityType, EntityState, FloatingText } from '../types.ts';
 
-const VIEWPORT_PADDING = 300; 
+const VIEWPORT_PADDING = 100; // Reduced padding for tighter culling
 
 // Render Item Type for Z-Sorting
 type RenderItem = 
@@ -366,29 +366,54 @@ const GameView: React.FC = () => {
       return getHexKey(target.q, target.r);
   }, [pendingConfirmation]);
 
+  // --- CRITICAL PERFORMANCE OPTIMIZATION ---
+  // Instead of iterating Object.values(grid), we calculate the visible range in hex coordinates
+  // and only loop through those potentially visible hexes.
   const renderList = useMemo(() => {
      const items: RenderItem[] = [];
-     const allHexes = Object.values(grid) as Hex[];
-
-     // Viewport Culling
+     
+     // 1. Calculate Viewport Bounds in Hex Coordinates
+     // Convert screen corners to world space, then to axial coords
      const inverseScale = 1 / viewState.scale;
-     const visibleMinX = -viewState.x * inverseScale - VIEWPORT_PADDING;
-     const visibleMaxX = (dimensions.width - viewState.x) * inverseScale + VIEWPORT_PADDING;
-     const visibleMinY = -viewState.y * inverseScale - VIEWPORT_PADDING;
-     const visibleMaxY = (dimensions.height - viewState.y) * inverseScale + VIEWPORT_PADDING;
+     
+     // Corners of viewport in "Stage" space (pixels)
+     const x0 = -viewState.x * inverseScale - VIEWPORT_PADDING;
+     const y0 = -viewState.y * inverseScale - VIEWPORT_PADDING;
+     const x1 = (dimensions.width - viewState.x) * inverseScale + VIEWPORT_PADDING;
+     const y1 = (dimensions.height - viewState.y) * inverseScale + VIEWPORT_PADDING;
 
-     for (const hex of allHexes) {
-        if (!hex) continue;
-        const { x, y } = hexToPixel(hex.q, hex.r, cameraRotation);
-        if (x < visibleMinX || x > visibleMaxX || y < visibleMinY || y > visibleMaxY) continue; 
-        
-        items.push({ 
-            type: 'HEX', 
-            id: hex.id, 
-            depth: y, 
-            q: hex.q, 
-            r: hex.r
-        });
+     // Convert corners to Hex Q/R to find range
+     // We check 4 corners to find min/max Q and R
+     const c1 = pixelToHex(x0, y0, cameraRotation);
+     const c2 = pixelToHex(x1, y0, cameraRotation);
+     const c3 = pixelToHex(x1, y1, cameraRotation);
+     const c4 = pixelToHex(x0, y1, cameraRotation);
+
+     const minQ = Math.min(c1.q, c2.q, c3.q, c4.q);
+     const maxQ = Math.max(c1.q, c2.q, c3.q, c4.q);
+     const minR = Math.min(c1.r, c2.r, c3.r, c4.r);
+     const maxR = Math.max(c1.r, c2.r, c3.r, c4.r);
+
+     // 2. Iterate only visible range
+     for (let q = minQ; q <= maxQ; q++) {
+         for (let r = minR; r <= maxR; r++) {
+             const key = getHexKey(q, r);
+             const hex = grid[key];
+             if (!hex) continue;
+
+             const { x, y } = hexToPixel(q, r, cameraRotation);
+             
+             // Double check pixel bounds (optional but safer for rotation edge cases)
+             if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+
+             items.push({ 
+                 type: 'HEX', 
+                 id: hex.id, 
+                 depth: y, 
+                 q: hex.q, 
+                 r: hex.r
+             });
+         }
      }
 
      const allUnits = [{ ...player, isPlayer: true }, ...safeBots.map(b => ({ ...b, isPlayer: false }))];
@@ -410,7 +435,9 @@ const GameView: React.FC = () => {
              track.lastR = u.r;
          }
          const currentPixel = hexToPixel(u.q, u.r, cameraRotation);
-         if (currentPixel.x < visibleMinX || currentPixel.x > visibleMaxX || currentPixel.y < visibleMinY || currentPixel.y > visibleMaxY) continue;
+         // Viewport culling for units
+         if (currentPixel.x < x0 || currentPixel.x > x1 || currentPixel.y < y0 || currentPixel.y > y1) continue;
+         
          let sortY = currentPixel.y;
          
          // Smooth Z-Sorting during jump
@@ -458,8 +485,10 @@ const GameView: React.FC = () => {
             if (!isBot && isReachableHeight) {
                 const start = hexToPixel(player.q, player.r, cameraRotation);
                 const end = hexToPixel(neighbor.q, neighbor.r, cameraRotation);
-                if ((start.x > visibleMinX && start.x < visibleMaxX && start.y > visibleMinY && start.y < visibleMaxY) ||
-                    (end.x > visibleMinX && end.x < visibleMaxX && end.y > visibleMinY && end.y < visibleMaxY)) {
+                // Culling for connections
+                if ((start.x > x0 && start.x < x1 && start.y > y0 && start.y < y1) ||
+                    (end.x > x0 && end.x < x1 && end.y > y0 && end.y < y1)) {
+                    
                     const startH = grid[getHexKey(player.q, player.r)] ? (10 + grid[getHexKey(player.q, player.r)].maxLevel * 6) : 10;
                     const endH = hex ? (10 + hex.maxLevel * 6) : 10;
                     const sY = start.y - startH;

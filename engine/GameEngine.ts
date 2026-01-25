@@ -64,35 +64,31 @@ export class GameEngine {
   }
 
   private cloneState(source: SessionState): SessionState {
+    // PERFORMANCE OPTIMIZATION:
+    // Use shallow copies for arrays where possible to avoid mapping new objects every tick.
+    // Systems must create new object references if they mutate individual items.
     return {
       ...source,
-      // COPY-ON-WRITE OPTIMIZATION:
-      // We copy the reference to the grid object, NOT the object itself.
-      // Systems (Growth, Movement) must ensure they copy the grid container 
-      // before modifying specific hexes (e.g., state.grid = { ...state.grid, [key]: newHex }).
-      // This prevents the engine from allocating a new 1000+ key object every single tick.
+      // COPY-ON-WRITE:
+      // We copy the reference to the grid object. Systems handle grid updates via COW.
       grid: source.grid, 
       
-      player: {
-        ...source.player,
-        movementQueue: [...source.player.movementQueue],
-        recentUpgrades: [...source.player.recentUpgrades],
-        memory: source.player.memory ? { ...source.player.memory } : undefined
-      },
-      bots: source.bots.map(b => ({
-        ...b,
-        movementQueue: [...b.movementQueue],
-        recentUpgrades: [...b.recentUpgrades],
-        memory: b.memory ? { ...b.memory } : undefined
-      })),
-      messageLog: source.messageLog.map(l => ({ ...l })),
-      botActivityLog: source.botActivityLog.map(l => ({ ...l })),
+      player: { ...source.player }, // Shallow copy
+      
+      // OPTIMIZATION: Shallow copy bots array.
+      // NOTE: Systems must treat bot objects as immutable if they change properties.
+      bots: [...source.bots], 
+      
+      // Shallow copy logs
+      messageLog: source.messageLog, // Log is usually append-only or replace, reference is fine until modification
+      botActivityLog: source.botActivityLog,
+      
       growingBotIds: [...source.growingBotIds],
-      // OPTIMIZATION: Use reference copy for telemetry to avoid massive GC pressure.
-      // Only the array reference is shared; if we need to modify history, we must be careful,
-      // but typically we only append to the end.
+      
       telemetry: source.telemetry,
-      effects: source.effects.map(e => ({ ...e }))
+      
+      // Shallow copy effects
+      effects: [...source.effects]
     };
   }
 
@@ -122,13 +118,15 @@ export class GameEngine {
       nextState.gameStatus = 'VICTORY';
       
       const msg = 'Tutorial Complete: Sector Secured';
-      nextState.messageLog.unshift({
+      
+      // Mutate new log array safely
+      nextState.messageLog = [{
           id: `win-manual-${Date.now()}`,
           text: msg,
           type: 'SUCCESS',
           source: 'SYSTEM',
           timestamp: Date.now()
-      });
+      }, ...nextState.messageLog];
       
       // Генерируем события вручную, так как VictorySystem может быть уже пройдена в этом тике
       const winEvent = GameEventFactory.create('VICTORY', msg, nextState.player.id);
@@ -184,7 +182,10 @@ export class GameEngine {
 
     // 1. Очистка старых эффектов (Floating Text)
     const now = Date.now();
-    nextState.effects = nextState.effects.filter(e => now - e.startTime < e.lifetime);
+    const activeEffects = nextState.effects.filter(e => now - e.startTime < e.lifetime);
+    if (activeEffects.length !== nextState.effects.length) {
+        nextState.effects = activeEffects;
+    }
 
     // 2. Обновление систем
     for (const system of this._systems) {

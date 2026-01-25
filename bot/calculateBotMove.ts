@@ -1,3 +1,4 @@
+
 import { Entity, Hex, HexCoord, WinCondition, BotAction, Difficulty, BotMemory } from '../types';
 import { getLevelConfig, GAME_CONFIG, DIFFICULTY_SETTINGS } from '../rules/config';
 import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hexUtils';
@@ -12,22 +13,11 @@ export interface AiResult {
 
 // PERFORMANCE CONFIGURATION
 // Radius 25 = ~2000 hexes. Radius 12 = ~470 hexes.
-// Reducing this drastically lowers CPU usage per bot tick.
 const SCAN_RADIUS = 12; 
 const CONTEXT_RADIUS = 15;
 
 /**
- * AI V13: "The Architect" (Vertical Rush Focus)
- * 
- * Strategy:
- * 1. Find the "Apex Hex" (Highest level owned hex).
- * 2. If no Apex, Expand.
- * 3. If Apex exists:
- *    - Can upgrade? -> UPGRADE.
- *    - Blocked by Support? -> Target Neighbor to upgrade.
- *    - Blocked by Cycle? -> Expand to cheapest L0.
- *    - Blocked by Rank? -> Upgrade second best hex.
- *    - Blocked by Money? -> RECOVER (Farm).
+ * AI V13: "The Architect" (Vertical Rush Focus) with Crash Fixes
  */
 export const calculateBotMove = (
   bot: Entity, 
@@ -54,11 +44,9 @@ export const calculateBotMove = (
   };
 
   // === 0. PANIC MODE (Anti-Stuck) ===
-  // If we have failed or waited 3 times in a row, force a move to break the loop.
   if (nextMemory.stuckCounter >= 3) {
       const neighbors = getNeighbors(bot.q, bot.r);
       
-      // Find valid escape routes (exists, rank ok, not blocked)
       const escapeRoutes = neighbors.filter(n => {
           const k = getHexKey(n.q, n.r);
           const h = grid[k];
@@ -69,33 +57,31 @@ export const calculateBotMove = (
       });
 
       if (escapeRoutes.length > 0) {
-          // Priority: Attack Player if adjacent (Suicide Run)
           const attackMove = escapeRoutes.find(n => n.q === player.q && n.r === player.r);
+          // Safety check for random selection
           const target = attackMove || escapeRoutes[Math.floor(Math.random() * escapeRoutes.length)];
           
-          // CRITICAL FIX: Affordability Check
-          // Calculate cost before attempting move to avoid infinite error loops in Engine
-          const targetHex = grid[getHexKey(target.q, target.r)];
-          const moveCost = (targetHex && targetHex.maxLevel >= 2) ? targetHex.maxLevel : 1;
-          const maxPossibleMoves = bot.moves + Math.floor(bot.coins / GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
+          if (target) {
+              const targetHex = grid[getHexKey(target.q, target.r)];
+              const moveCost = (targetHex && targetHex.maxLevel >= 2) ? targetHex.maxLevel : 1;
+              const maxPossibleMoves = bot.moves + Math.floor(bot.coins / GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
 
-          if (maxPossibleMoves < moveCost) {
-             // We are trapped and broke. Just wait and reset counter to stop spamming.
-             // Try to recover here as a last resort if owned
-             return { 
-                 action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, 
-                 debug: 'PANIC: RECOVER', 
-                 memory: { ...nextMemory, stuckCounter: 0 } 
-             };
+              if (maxPossibleMoves < moveCost) {
+                 return { 
+                     action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, 
+                     debug: 'PANIC: RECOVER', 
+                     memory: { ...nextMemory, stuckCounter: 0 } 
+                 };
+              }
+
+              return {
+                  action: { type: 'MOVE', path: [target], stateVersion },
+                  debug: attackMove ? 'PANIC: ATTACK!' : 'PANIC: WANDER',
+                  memory: { ...nextMemory, stuckCounter: 0, masterGoalId: null }
+              };
           }
-
-          return {
-              action: { type: 'MOVE', path: [target], stateVersion },
-              debug: attackMove ? 'PANIC: ATTACK!' : 'PANIC: WANDER',
-              memory: { ...nextMemory, stuckCounter: 0, masterGoalId: null }
-          };
       }
-      // If we are completely trapped and stuck, we just have to wait, but reset counter to avoid infinite processing overhead
+      
       return { 
           action: { type: 'WAIT', stateVersion }, 
           debug: 'PANIC: TRAPPED', 
@@ -118,7 +104,6 @@ export const calculateBotMove = (
   };
 
   const getFarmingAction = (targetCost: number, reason: string): AiResult => {
-       // 1. If we are on an owned hex that needs recovery, do it.
        const curHex = grid[currentHexKey];
        if (curHex && curHex.ownerId === bot.id && !bot.recoveredCurrentHex) {
             return {
@@ -128,23 +113,33 @@ export const calculateBotMove = (
             };
        }
 
-       // 2. Find nearest farmable hex
        const candidates = index.getHexesInRange({q:bot.q, r:bot.r}, CONTEXT_RADIUS)
           .filter(h => h.ownerId === bot.id && (h.id !== currentHexKey || !bot.recoveredCurrentHex))
           .filter(h => !reservedHexKeys?.has(h.id));
        
        candidates.sort((a,b) => {
-           // Prioritize closer, then higher level
            if (b.maxLevel - a.maxLevel > 1) return b.maxLevel - a.maxLevel;
            return cubeDistance(bot, a) - cubeDistance(bot, b);
        });
        
-       // FAILURE CASE 1: No farms available
        if (candidates.length === 0) {
-           // Desperation: Find nearest L0 to acquire and then recover? 
            const desperates = index.getHexesInRange({q:bot.q, r:bot.r}, 5).filter(h => !h.ownerId);
            if (desperates.length > 0) {
-               const path = findPath({q:bot.q, r:bot.r}, {q:desperates[0].q, r:desperates[0].r}, grid, bot.playerLevel, otherUnitObstacles);
+               // Fallback Logic: Try to claim/move to neutral hex even if broke
+               const target = desperates[0];
+               if (target.id === currentHexKey) {
+                   // We are standing on neutral ground, try to claim if we have funds
+                   const config = getLevelConfig(1);
+                   if (bot.coins >= config.cost) {
+                        return { 
+                            action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, 
+                            debug: 'Desperate Claim', 
+                            memory: { ...nextMemory, stuckCounter: 0 } 
+                        };
+                   }
+               }
+               
+               const path = findPath({q:bot.q, r:bot.r}, {q:target.q, r:target.r}, grid, bot.playerLevel, otherUnitObstacles);
                if (path) return { action: { type: 'MOVE', path, stateVersion }, debug: 'Desperate Expand', memory: nextMemory };
            }
 
@@ -155,9 +150,6 @@ export const calculateBotMove = (
            };
        }
 
-       // 3. Try top candidates (Anti-block logic)
-       // Iterate through top 3 candidates to find a reachable one.
-       // This fixes "Tunnel Vision" where a bot would stare at a blocked best-candidate forever.
        for (const candidate of candidates.slice(0, 3)) {
            const path = findPath(
                {q:bot.q, r:bot.r}, 
@@ -169,8 +161,6 @@ export const calculateBotMove = (
            
            if (path) {
                const tripCost = calculatePathCost(path);
-               // We only move if we can afford it (roughly)
-               // Even if we have to burn last coins to get there, it's worth it to recover
                if (bot.coins >= tripCost.coins) {
                    return { 
                        action: { type: 'MOVE', path, stateVersion }, 
@@ -181,7 +171,6 @@ export const calculateBotMove = (
            }
        }
        
-       // FAILURE CASE 2: No reachable farms or too poor
        return { 
            action: { type: 'WAIT', stateVersion }, 
            debug: 'Trapped & Broke', 
@@ -190,15 +179,14 @@ export const calculateBotMove = (
   };
 
   // --- RECURSIVE GOAL SOLVER ---
-  // Returns: { target: Hex, actionType: 'UPGRADE' | 'CYCLE' | 'SUPPORT' }
   const resolveBottleneck = (targetHex: Hex, depth: number = 0): { hex: Hex, strategy: string } | null => {
       if (depth > 3) return null; 
+      if (!targetHex) return null; // Safety check
 
       const targetLevel = targetHex.currentLevel + 1;
 
-      // 1. CYCLE BLOCK? (Need momentum)
+      // 1. CYCLE BLOCK?
       if (targetLevel > 1 && bot.recentUpgrades.length < queueSize && !bot.recentUpgrades.includes(targetHex.id)) {
-          // Find cheap L0 to grab
           const expanses = index.getHexesInRange({q:bot.q, r:bot.r}, CONTEXT_RADIUS)
               .filter(h => h.maxLevel === 0 && !h.ownerId && !reservedHexKeys?.has(h.id))
               .sort((a,b) => cubeDistance(bot, a) - cubeDistance(bot, b));
@@ -217,8 +205,7 @@ export const calculateBotMove = (
           return null; 
       }
 
-      // 3. SUPPORT BLOCK? (Staircase Rule)
-      // Check Valley Rule first
+      // 3. SUPPORT BLOCK?
       const nbs = getNeighbors(targetHex.q, targetHex.r);
       const highNeighbors = nbs.filter(n => (grid[getHexKey(n.q, n.r)]?.maxLevel || 0) > targetHex.maxLevel).length;
       
@@ -232,9 +219,11 @@ export const calculateBotMove = (
                  .map(n => grid[getHexKey(n.q, n.r)])
                  .filter(h => h !== undefined)
                  .filter(h => h.maxLevel < targetHex.maxLevel)
-                 .sort((a, b) => b.maxLevel - a.maxLevel); // Closest to target level first
+                 .sort((a, b) => b.maxLevel - a.maxLevel);
               
-              if (potentialSupports.length > 0) return resolveBottleneck(potentialSupports[0], depth + 1);
+              if (potentialSupports.length > 0 && potentialSupports[0]) {
+                  return resolveBottleneck(potentialSupports[0], depth + 1);
+              }
           }
       }
 
@@ -244,8 +233,6 @@ export const calculateBotMove = (
 
   // --- MAIN DECISION LOGIC ---
 
-  // 1. Try Existing Master Goal (Goal Stickiness)
-  // If we have a valid goal, stick to it to prevent oscillation
   let apexHex: Hex | null = null;
   
   if (nextMemory.masterGoalId) {
@@ -255,7 +242,6 @@ export const calculateBotMove = (
       }
   }
 
-  // Find new Apex if needed
   if (!apexHex) {
       const myHexes = index.getHexesInRange({q:bot.q, r:bot.r}, 50)
           .filter(h => h.ownerId === bot.id && h.maxLevel < 99);
@@ -268,7 +254,6 @@ export const calculateBotMove = (
       if (myHexes.length > 0) apexHex = myHexes[0];
   }
 
-  // 2. No Land -> Expand
   if (!apexHex) {
        const expanses = index.getHexesInRange({q:bot.q, r:bot.r}, CONTEXT_RADIUS)
           .filter(h => !h.ownerId && h.maxLevel === 0 && !reservedHexKeys?.has(h.id))
@@ -276,6 +261,25 @@ export const calculateBotMove = (
 
        if (expanses.length > 0) {
            const target = expanses[0];
+           
+           // Fix for Startup: If we are standing on the target (neutral hex), acquire it!
+           if (target.id === currentHexKey) {
+               const config = getLevelConfig(1);
+               if (bot.coins >= config.cost) {
+                   return { 
+                        action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, 
+                        debug: 'Init Claim', 
+                        memory: { ...nextMemory, stuckCounter: 0 } 
+                    };
+               } else {
+                   return { 
+                       action: { type: 'WAIT', stateVersion }, 
+                       debug: 'Broke at Start', 
+                       memory: { ...nextMemory, stuckCounter: nextMemory.stuckCounter + 1 }
+                   };
+               }
+           }
+
            const path = findPath({q:bot.q, r:bot.r}, {q:target.q, r:target.r}, grid, bot.playerLevel, otherUnitObstacles);
            if (path) {
                const cost = calculatePathCost(path);
@@ -284,23 +288,19 @@ export const calculateBotMove = (
                }
            }
        }
-       // Fallback to random scan if stuck
   }
 
-  // 3. Solve for Apex
   if (apexHex) {
       const plan = resolveBottleneck(apexHex);
       
       if (plan) {
           const { hex: target, strategy } = plan;
           
-          // A. Are we there?
           if (target.id === currentHexKey) {
               const nextLvl = target.currentLevel + 1;
               const config = getLevelConfig(nextLvl);
               
               if (bot.coins >= config.cost) {
-                   // Check rules final time
                    const occupied = index.getOccupiedHexesList();
                    const growCheck = checkGrowthCondition(target, bot, getNeighbors(bot.q, bot.r), grid, occupied, queueSize);
                    if (growCheck.canGrow) {
@@ -316,7 +316,6 @@ export const calculateBotMove = (
                   return getFarmingAction(config.cost - bot.coins, `Need for L${nextLvl}`);
               }
           } 
-          // B. Travel
           else {
               const path = findPath({q: bot.q, r: bot.r}, {q: target.q, r: target.r}, grid, bot.playerLevel, otherUnitObstacles);
               
@@ -329,8 +328,6 @@ export const calculateBotMove = (
                           memory: { ...nextMemory, masterGoalId: apexHex.id, stuckCounter: 0 }
                       };
                   } else {
-                      // Inchworm strategy or farm
-                      // If we can't afford trip, farm cost
                       return getFarmingAction(trip.coins - bot.coins, 'Travel Money');
                   }
               } else {
@@ -344,9 +341,7 @@ export const calculateBotMove = (
       }
   }
 
-  // 4. Fallback: Generic Scoring (Expansion/Survival)
-  // This runs if we have no Apex logic or logic failed completely.
-  
+  // 4. Fallback: Generic Scoring
   const candidates = index.getHexesInRange({q:bot.q, r:bot.r}, SCAN_RADIUS);
   const potentialGoals: { hex: Hex, score: number }[] = [];
   
@@ -361,14 +356,14 @@ export const calculateBotMove = (
 
       let score = 100;
 
-      // RNG for early game spread
-      if (isEarlyGame) score += (Math.random() - 0.5) * 30;
+      if (isEarlyGame) {
+          score += (Math.random() - 0.5) * 30;
+      }
       
       const dist = cubeDistance(bot, h);
       score -= dist * 4;
 
-      // Simple heuristics
-      if (!h.ownerId) score += 50; // Grab land
+      if (!h.ownerId) score += 50; 
       
       potentialGoals.push({ hex: h, score });
   }
@@ -377,7 +372,7 @@ export const calculateBotMove = (
 
   for (let i = 0; i < Math.min(potentialGoals.length, 5); i++) {
       const target = potentialGoals[i].hex;
-      if (target.id === currentHexKey) continue; // Should be handled above
+      if (target.id === currentHexKey) continue;
 
       const path = findPath({q:bot.q, r:bot.r}, {q:target.q, r:target.r}, grid, bot.playerLevel, otherUnitObstacles);
       if (path) {
@@ -388,7 +383,6 @@ export const calculateBotMove = (
       }
   }
 
-  // 5. Absolute Failure
   return { 
       action: { type: 'WAIT', stateVersion }, 
       debug: 'Idle', 

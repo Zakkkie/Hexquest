@@ -1,6 +1,4 @@
 
-
-
 import { Hex, HexCoord } from '../types';
 import { GAME_CONFIG, getLevelConfig, SAFETY_CONFIG } from '../rules/config';
 
@@ -40,6 +38,49 @@ export const hexToPixel = (q: number, r: number, rotationDegrees: number = 0): {
     x: rawX * cos - rawY * sin, 
     y: (rawX * sin + rawY * cos) * 0.8 
   };
+};
+
+export const pixelToHex = (x: number, y: number, rotationDegrees: number = 0): HexCoord => {
+    const size = GAME_CONFIG.HEX_SIZE;
+    
+    // Reverse Rotate
+    let rx = x;
+    let ry = y;
+    
+    if (rotationDegrees !== 0) {
+        const angleRad = -rotationDegrees * DEG_TO_RAD; // Negative for reverse
+        const cos = Math.cos(angleRad);
+        const sin = Math.sin(angleRad);
+        rx = x * cos - y * sin;
+        ry = x * sin + y * cos;
+    }
+
+    // Reverse Squash
+    const unsquashedY = ry / 0.8;
+
+    // Pixel to Axial
+    const q = (Math.sqrt(3)/3 * rx - 1/3 * unsquashedY) / size;
+    const r = (2/3 * unsquashedY) / size;
+
+    return axialRound(q, r);
+};
+
+const axialRound = (q: number, r: number): HexCoord => {
+    let rq = Math.round(q);
+    let rr = Math.round(r);
+    let rs = Math.round(-q - r);
+
+    const qDiff = Math.abs(rq - q);
+    const rDiff = Math.abs(rr - r);
+    const sDiff = Math.abs(rs - (-q - r));
+
+    if (qDiff > rDiff && qDiff > sDiff) {
+        rq = -rr - rs;
+    } else if (rDiff > sDiff) {
+        rr = -rq - rs;
+    }
+    
+    return { q: rq, r: rr };
 };
 
 export const cubeDistance = (a: HexCoord, b: HexCoord): number => {
@@ -145,8 +186,8 @@ export const findPath = (
   const startKey = getHexKey(start.q, start.r);
   const endKey = getHexKey(end.q, end.r);
   
-  // 1. Immediate checks
-  if (startKey === endKey) return [];
+  // 1. Immediate checks - FIX: Return null if already at destination
+  if (startKey === endKey) return null;
   
   // DESTINATION VALIDITY CHECK
   const endHex = grid[endKey];
