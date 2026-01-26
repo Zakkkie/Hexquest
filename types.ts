@@ -1,4 +1,6 @@
 
+// Using any for the config to avoid circular dependency with campaign/types.ts which imports SessionState
+// In a stricter setup, we would move shared types to a 'core' module.
 export type HexCoord = { q: number; r: number; upgrade?: boolean; intent?: 'UPGRADE' | 'RECOVER' };
 
 // Read-only view of a Hex for the Bot (Architecture Requirement)
@@ -98,8 +100,7 @@ export type GameEventType =
   | 'BOT_LOG'
   | 'LEADERBOARD_UPDATE'
   | 'RECOVERY_USED'
-  | 'HEX_COLLAPSE'
-  | 'TUTORIAL_STEP'; // Added event type
+  | 'HEX_COLLAPSE';
 
 export interface GameEvent {
   type: GameEventType;
@@ -187,35 +188,25 @@ export interface FloatingText {
   icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN';
 }
 
-export type TutorialStep = 
-  | 'NONE' 
-  | 'WELCOME' 
-  | 'CAMERA_ROTATE'
-  | 'MOVE_1' 
-  | 'ACQUIRE_1' 
-  | 'MOVE_2' 
-  | 'ACQUIRE_2'
-  | 'MOVE_3' 
-  | 'ACQUIRE_3'
-  | 'UPGRADE_CENTER_2' 
-  | 'BUILD_FOUNDATION' 
-  | 'UPGRADE_CENTER_3'
-  | 'VICTORY_ANIMATION' 
-  | 'FREE_PLAY';
-
 // Authoritative state for a single game session, managed by GameEngine
 export interface SessionState {
   stateVersion: number;
   sessionId: string; 
   sessionStartTime: number; 
+  
+  // Legacy WinCondition kept for Skirmish compatibility
   winCondition: WinCondition | null;
+  
+  // NEW: Campaign Configuration (Injected)
+  activeLevelConfig?: any; // typed as 'any' to avoid circular dependency with campaign/types
+
   difficulty: Difficulty;
   grid: Record<string, Hex>; 
   player: Entity;
   bots: Entity[]; 
   currentTurn: number;
   gameStatus: 'BRIEFING' | 'PLAYING' | 'VICTORY' | 'DEFEAT';
-  messageLog: LogEntry[]; // UPDATED: Structured log
+  messageLog: LogEntry[]; 
   botActivityLog: BotLogEntry[];
   lastBotActionTime: number; 
   isPlayerGrowing: boolean; 
@@ -223,7 +214,6 @@ export interface SessionState {
   growingBotIds: string[]; 
   telemetry?: GameEvent[];
   effects: FloatingText[]; // Visual effects layer
-  tutorialStep: TutorialStep; // Tracks tutorial progress
 }
 
 // State for the entire application, managed by Zustand
@@ -246,7 +236,6 @@ export type UpgradeAction = { type: 'UPGRADE'; coord: { q: number; r: number }; 
 export type WaitAction = { type: 'WAIT'; stateVersion?: number };
 export type RechargeAction = { type: 'RECHARGE_MOVE'; stateVersion?: number };
 
-// FIX: Added missing BotAction type, which is a subset of actions the AI can take.
 export type BotAction = MoveAction | UpgradeAction | WaitAction | RechargeAction;
 export type GameAction = BotAction | RechargeAction;
 

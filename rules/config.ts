@@ -15,17 +15,18 @@ export const GAME_CONFIG = {
   MOVEMENT_LOGIC_INTERVAL_MS: 500,  // Milliseconds (Logic Throttle - matches animation)
 
   // Growth Time in TICKS (1 tick = 100ms). So 30 ticks = 3 seconds.
+  // UPDATED: Level 1 now has a cost of 100 to reinforce economic model in tutorial.
   LEVELS: {
-    0: { cost: 0,  growthTime: 30,  income: 1,   reqRank: 0 },
-    1: { cost: 0,  growthTime: 30,  income: 5,   reqRank: 0 }, 
-    2: { cost: 0,  growthTime: 30,  income: 10,  reqRank: 1 }, 
-    3: { cost: 0,  growthTime: 30,  income: 25,  reqRank: 2 }, 
-    4: { cost: 0,  growthTime: 30,  income: 50,  reqRank: 3 }, 
-    5: { cost: 0,  growthTime: 30,  income: 100, reqRank: 4 }, 
-    6: { cost: 0,  growthTime: 30,  income: 200, reqRank: 5 },
-    7: { cost: 0,  growthTime: 30,  income: 400, reqRank: 6 },
-    8: { cost: 0,  growthTime: 30,  income: 800, reqRank: 7 },
-    9: { cost: 0,  growthTime: 30,  income: 1500, reqRank: 8 },
+    0: { cost: 0,    growthTime: 30,  income: 1,   reqRank: 0 },
+    1: { cost: 100,  growthTime: 30,  income: 5,   reqRank: 0 }, // Changed from 0 to 100
+    2: { cost: 300,  growthTime: 30,  income: 10,  reqRank: 1 }, 
+    3: { cost: 600,  growthTime: 30,  income: 25,  reqRank: 2 }, 
+    4: { cost: 1000, growthTime: 30,  income: 50,  reqRank: 3 }, 
+    5: { cost: 2000, growthTime: 30,  income: 100, reqRank: 4 }, 
+    6: { cost: 4000, growthTime: 30,  income: 200, reqRank: 5 },
+    7: { cost: 8000, growthTime: 30,  income: 400, reqRank: 6 },
+    8: { cost: 15000, growthTime: 30, income: 800, reqRank: 7 },
+    9: { cost: 30000, growthTime: 30, income: 1500, reqRank: 8 },
   } as Record<number, { cost: number, growthTime: number, income: number, reqRank: number }>,
 
   STRUCTURES: {
@@ -55,7 +56,7 @@ export const EXCHANGE_RATE_COINS_PER_MOVE = GAME_CONFIG.EXCHANGE_RATE_COINS_PER_
 
 export const getLevelConfig = (level: number) => {
   return GAME_CONFIG.LEVELS[level] || { 
-    cost: 0, 
+    cost: level * 1000, 
     growthTime: 30, // Default 3s 
     income: Math.pow(level, 2), 
     reqRank: level - 1 

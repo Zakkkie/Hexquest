@@ -1,5 +1,5 @@
 
-import { GameState, GameAction, GameEvent, ValidationResult, SessionState, EntityState, TutorialStep, LeaderboardEntry, Hex } from '../types';
+import { GameState, GameAction, GameEvent, ValidationResult, SessionState, EntityState, LeaderboardEntry, Hex } from '../types';
 import { WorldIndex } from './WorldIndex';
 import { System } from './systems/System';
 import { MovementSystem } from './systems/MovementSystem';
@@ -22,8 +22,11 @@ export class GameEngine {
   private _actionProcessor: ActionProcessor | null;
 
   constructor(initialState: SessionState) {
-    this._state = JSON.parse(JSON.stringify(initialState));
-    this._state!.stateVersion = this._state!.stateVersion || 0;
+    // CRITICAL: Use object spread (shallow copy) for the top-level session state
+    // instead of JSON serialization to preserve function references in activeLevelConfig.
+    // Deep properties (grid, player, bots) will be cloned separately if modified by systems via Copy-On-Write.
+    this._state = { ...initialState };
+    this._state.stateVersion = this._state.stateVersion || 0;
     
     this._index = new WorldIndex(this._state!.grid, [this._state!.player, ...this._state!.bots]);
     this._actionProcessor = new ActionProcessor();
@@ -49,8 +52,6 @@ export class GameEngine {
       const keys = Object.keys(updates);
       if (keys.length === 0) return;
       
-      // Copy container (O(1) reference copy of the dictionary, effectively)
-      // Actually spread syntax { ...grid } is O(N) where N is number of keys in grid.
       const nextGrid = { ...state.grid };
       
       for (const key of keys) {
@@ -64,9 +65,6 @@ export class GameEngine {
   }
 
   private cloneState(source: SessionState): SessionState {
-    // PERFORMANCE OPTIMIZATION:
-    // Use shallow copies for arrays where possible to avoid mapping new objects every tick.
-    // Systems must create new object references if they mutate individual items.
     return {
       ...source,
       // COPY-ON-WRITE:
@@ -76,11 +74,10 @@ export class GameEngine {
       player: { ...source.player }, // Shallow copy
       
       // OPTIMIZATION: Shallow copy bots array.
-      // NOTE: Systems must treat bot objects as immutable if they change properties.
       bots: [...source.bots], 
       
       // Shallow copy logs
-      messageLog: source.messageLog, // Log is usually append-only or replace, reference is fine until modification
+      messageLog: source.messageLog, 
       botActivityLog: source.botActivityLog,
       
       growingBotIds: [...source.growingBotIds],
@@ -88,7 +85,10 @@ export class GameEngine {
       telemetry: source.telemetry,
       
       // Shallow copy effects
-      effects: [...source.effects]
+      effects: [...source.effects],
+      
+      // Preserve activeLevelConfig reference (it contains functions)
+      activeLevelConfig: source.activeLevelConfig 
     };
   }
 
@@ -97,54 +97,6 @@ export class GameEngine {
       const nextState = this.cloneState(this._state);
       nextState.isPlayerGrowing = isGrowing;
       nextState.playerGrowthIntent = intent;
-      nextState.stateVersion++;
-      this._state = nextState;
-  }
-
-  public setTutorialStep(step: TutorialStep) {
-      if (!this._state) return;
-      const nextState = this.cloneState(this._state);
-      nextState.tutorialStep = step;
-      nextState.stateVersion++;
-      this._state = nextState;
-  }
-
-  /**
-   * Завершает туториал и генерирует необходимые события для UI
-   */
-  public triggerVictory() {
-      if (!this._state) return;
-      const nextState = this.cloneState(this._state);
-      nextState.gameStatus = 'VICTORY';
-      
-      const msg = 'Tutorial Complete: Sector Secured';
-      
-      // Mutate new log array safely
-      nextState.messageLog = [{
-          id: `win-manual-${Date.now()}`,
-          text: msg,
-          type: 'SUCCESS',
-          source: 'SYSTEM',
-          timestamp: Date.now()
-      }, ...nextState.messageLog];
-      
-      // Генерируем события вручную, так как VictorySystem может быть уже пройдена в этом тике
-      const winEvent = GameEventFactory.create('VICTORY', msg, nextState.player.id);
-      
-      const statsEntry: LeaderboardEntry = {
-          nickname: 'Commander', 
-          avatarColor: '#000', 
-          avatarIcon: 'user',
-          maxCoins: nextState.player.totalCoinsEarned,
-          maxLevel: nextState.player.playerLevel,
-          difficulty: nextState.difficulty,
-          timestamp: Date.now()
-      };
-      const lbEvent = GameEventFactory.create('LEADERBOARD_UPDATE', 'Tutorial stats synchronized', nextState.player.id, { entry: statsEntry });
-
-      if (!nextState.telemetry) nextState.telemetry = [];
-      nextState.telemetry.push(winEvent, lbEvent);
-
       nextState.stateVersion++;
       this._state = nextState;
   }
@@ -173,21 +125,18 @@ export class GameEngine {
     if (!this._state || !this._index) return { state: {} as any, events: [] };
 
     const nextState = this.cloneState(this._state);
-    // PERFORMANCE OPTIMIZATION: 
-    // Removed unconditional `this._index.syncState(nextState)` from here.
-    // AiSystem will now handle synchronization when needed, avoiding O(N) rebuilds every tick.
     this._index.syncGrid(nextState.grid); // Still sync grid structure for pathfinding safety
 
     const tickEvents: GameEvent[] = [];
 
-    // 1. Очистка старых эффектов (Floating Text)
+    // 1. Cleanup old effects
     const now = Date.now();
     const activeEffects = nextState.effects.filter(e => now - e.startTime < e.lifetime);
     if (activeEffects.length !== nextState.effects.length) {
         nextState.effects = activeEffects;
     }
 
-    // 2. Обновление систем
+    // 2. Update Systems
     for (const system of this._systems) {
         system.update(nextState, this._index, tickEvents);
     }
@@ -210,7 +159,6 @@ export class GameEngine {
       if (state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
           state.botActivityLog = state.botActivityLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
       }
-      // Cleanup telemetry to prevent infinite growth
       if (state.telemetry && state.telemetry.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
           state.telemetry = state.telemetry.slice(state.telemetry.length - SAFETY_CONFIG.MAX_LOG_SIZE);
       }

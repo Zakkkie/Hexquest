@@ -14,14 +14,52 @@ export class VictorySystem implements System {
         return;
     }
 
+    // --- CHECK CAMPAIGN HOOKS ---
+    if (state.activeLevelConfig && state.activeLevelConfig.hooks) {
+        // 1. Victory Check
+        if (state.activeLevelConfig.hooks.checkWinCondition) {
+            const isCampaignWin = state.activeLevelConfig.hooks.checkWinCondition(state);
+            if (isCampaignWin) {
+                 state.gameStatus = 'VICTORY';
+                 const msg = 'Campaign Objective Achieved';
+                 state.messageLog.unshift({
+                    id: `win-camp-${Date.now()}`,
+                    text: msg,
+                    type: 'SUCCESS',
+                    source: 'SYSTEM',
+                    timestamp: Date.now()
+                 });
+                 events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
+                 this.generateLeaderboardEvent(state, events);
+                 return;
+            }
+        }
+
+        // 2. Loss Check
+        if (state.activeLevelConfig.hooks.checkLossCondition) {
+            const isCampaignLoss = state.activeLevelConfig.hooks.checkLossCondition(state);
+            if (isCampaignLoss) {
+                 state.gameStatus = 'DEFEAT';
+                 const msg = 'Critical Mission Failure';
+                 state.messageLog.unshift({
+                    id: `lose-camp-${Date.now()}`,
+                    text: msg,
+                    type: 'ERROR',
+                    source: 'SYSTEM',
+                    timestamp: Date.now()
+                 });
+                 events.push(GameEventFactory.create('DEFEAT', msg, state.player.id));
+                 this.generateLeaderboardEvent(state, events);
+                 return;
+            }
+        }
+    }
+
+    // --- LEGACY/SKIRMISH WIN CONDITION ---
     if (!state.winCondition) return;
-    
-    // REMOVED: Tutorial guard. We now allow the tutorial to finish naturally via objectives.
-    // if (state.winCondition.isTutorial) return;
 
     const { targetLevel, targetCoins, winType } = state.winCondition;
     const pLevel = state.player.playerLevel;
-    // UPDATED: Use current wallet balance instead of total lifetime earnings
     const pCoins = state.player.coins;
     
     let isVictory = false;
@@ -43,7 +81,6 @@ export class VictorySystem implements System {
             timestamp: Date.now()
         });
 
-        // Pass player ID to identify it as player victory
         events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
         this.generateLeaderboardEvent(state, events);
         return;
@@ -51,7 +88,6 @@ export class VictorySystem implements System {
 
     const winningBot = state.bots.find(b => {
          const bLevel = b.playerLevel;
-         // UPDATED: Bots also need to hold the cash to win
          const bCoins = b.coins;
          if (winType === 'AND') {
              return bLevel >= targetLevel && bCoins >= targetCoins;
@@ -82,7 +118,6 @@ export class VictorySystem implements System {
         nickname: 'Player', 
         avatarColor: '#000', 
         avatarIcon: 'user',
-        // Update: Store current wallet balance (coins) instead of totalCoinsEarned
         maxCoins: state.player.coins, 
         maxLevel: state.player.playerLevel,
         difficulty: state.difficulty,

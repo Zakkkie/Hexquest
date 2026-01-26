@@ -18,12 +18,15 @@ const HexButton: React.FC<HexButtonProps> = ({
   onClick, children, active, disabled, dimmed, variant = 'slate', size = 'md', progress = 0, className = '', pulsate = false
 }) => {
   
-  const sizeMap = {
-    sm: 48,
-    md: 72,
-    lg: 88 
+  // RESPONSIVE SIZE MAPPING
+  // Uses Tailwind classes to adapt to screen size (default is mobile, md: is desktop)
+  const sizeClasses = {
+    sm: 'w-10 h-10 md:w-12 md:h-12', // Rotation buttons: Small on mobile
+    md: 'w-14 h-14 md:w-[72px] md:h-[72px]', // Standard
+    lg: 'w-20 h-20 md:w-24 md:h-24'  // Action buttons: Big enough for thumb on mobile, larger on desktop
   };
-  const s = sizeMap[size];
+  
+  const sClass = sizeClasses[size];
   
   // NEON / GLASS Configuration
   const colors = {
@@ -52,8 +55,7 @@ const HexButton: React.FC<HexButtonProps> = ({
 
   return (
     <div 
-      className={`${baseClasses} ${interactClasses} ${glowClass}`}
-      style={{ width: s, height: s }}
+      className={`${baseClasses} ${interactClasses} ${glowClass} ${sClass}`}
       onClick={(!disabled && !dimmed) ? onClick : undefined}
     >
       <div 

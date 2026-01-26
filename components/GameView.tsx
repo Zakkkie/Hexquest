@@ -13,9 +13,8 @@ import { Hex, EntityType, EntityState, FloatingText } from '../types.ts';
 import { checkGrowthCondition } from '../rules/growth.ts';
 import { audioService } from '../services/audioService.ts';
 
-const VIEWPORT_PADDING = 100; // Reduced padding for tighter culling
+const VIEWPORT_PADDING = 100;
 
-// Render Item Type for Z-Sorting
 type RenderItem = 
   | { type: 'HEX'; id: string; depth: number; q: number; r: number }
   | { type: 'UNIT'; id: string; depth: number; q: number; r: number; isPlayer: boolean }
@@ -36,14 +35,12 @@ const DustCloud: React.FC<VisualParticle & { onComplete: (id: number) => void }>
         const node = groupRef.current;
         if (!node) return;
 
-        // Spawn 4 puffs
         const puffs = node.find('Circle');
         puffs.forEach((puff, i) => {
-             // Random Scatter
              const angle = Math.random() * Math.PI * 2;
              const dist = 10 + Math.random() * 10;
              const tx = Math.cos(angle) * dist;
-             const ty = Math.sin(angle) * dist * 0.6; // Squash Y for isometric look
+             const ty = Math.sin(angle) * dist * 0.6; 
 
              const tween = new Konva.Tween({
                  node: puff,
@@ -58,7 +55,6 @@ const DustCloud: React.FC<VisualParticle & { onComplete: (id: number) => void }>
              tween.play();
         });
 
-        // Cleanup timer
         const t = setTimeout(() => {
             onComplete(id);
         }, 600);
@@ -90,15 +86,13 @@ const FloatingEffect: React.FC<{ effect: FloatingText; rotation: number }> = Rea
         const node = animRef.current;
         if (!node) return;
 
-        // Init State
         node.y(0);
         node.opacity(0);
         node.scale({ x: 0.5, y: 0.5 });
 
-        // Animation
         const tween = new Konva.Tween({
             node: node,
-            y: -80, // Float up relative to hex center
+            y: -80, 
             opacity: 0,
             scaleX: 1.2,
             scaleY: 1.2,
@@ -106,13 +100,12 @@ const FloatingEffect: React.FC<{ effect: FloatingText; rotation: number }> = Rea
             easing: Konva.Easings.EaseOut,
         });
         
-        // Initial pop
         node.to({ opacity: 1, scaleX: 1, scaleY: 1, duration: 0.2 });
 
         tween.play();
 
         return () => tween.destroy();
-    }, []); // Run once on mount. Position updates are handled by parent Group props.
+    }, []); 
 
     return (
         <Group x={x} y={y - 20} listening={false}>
@@ -137,16 +130,14 @@ const FloatingEffect: React.FC<{ effect: FloatingText; rotation: number }> = Rea
 });
 
 const GameView: React.FC = () => {
-  // --- STATE SELECTION ---
   const grid = useGameStore(state => state.session?.grid);
   const player = useGameStore(state => state.session?.player);
   const bots = useGameStore(state => state.session?.bots);
-  const effects = useGameStore(state => state.session?.effects); // Visual Effects
+  const effects = useGameStore(state => state.session?.effects); 
   const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
-  const tutorialStep = useGameStore(state => state.session?.tutorialStep);
   const winCondition = useGameStore(state => state.session?.winCondition);
+  const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
   
-  // Pending Confirmation Logic
   const pendingConfirmation = useGameStore(state => state.pendingConfirmation);
   const cancelPendingAction = useGameStore(state => state.cancelPendingAction);
 
@@ -158,11 +149,10 @@ const GameView: React.FC = () => {
   
   if (!grid || !player || !bots) return null;
   
-  // Dimensions & Viewport
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [viewState, setViewState] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2, scale: 1 });
   const [cameraRotation, setCameraRotation] = useState(0);
-  const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 }); // Camera Shake
+  const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 }); 
   
   const targetRotationRef = useRef(0); 
   const isRotating = useRef(false);
@@ -170,30 +160,25 @@ const GameView: React.FC = () => {
   const movementTracker = useRef<Record<string, { lastQ: number; lastR: number; fromQ: number; fromR: number; startTime: number }>>({});
   const lastEffectIdRef = useRef<string | null>(null);
 
-  // Local Particle State (Ephemeral)
+  // Level Flags
+  const isLevel1_1 = activeLevelConfig?.id === '1.1';
+  const isLevel1_2 = activeLevelConfig?.id === '1.2';
+
   const [particles, setParticles] = useState<VisualParticle[]>([]);
 
-  // Interaction State
   const [hoveredHexId, setHoveredHexId] = useState<string | null>(null);
   const [selectedHexId, setSelectedHexId] = useState<string | null>(null);
 
-  // DYNAMIC MUSIC HOOK
   useEffect(() => {
-      // Start music on mount
       audioService.startMusic();
-      
-      // Update intensity based on wallet (Low money = Anxiety, High money = Epic)
       audioService.updateMusic(player.coins, winCondition?.targetCoins || 500);
-
-      // Stop on unmount
       return () => {
           audioService.stopMusic();
       };
   }, [player.coins, winCondition]);
 
-  // Game Loop
   useEffect(() => {
-    const interval = setInterval(tick, 100); // 100ms tick for responsive updates
+    const interval = setInterval(tick, 100); 
     return () => clearInterval(interval);
   }, [tick]);
 
@@ -210,7 +195,6 @@ const GameView: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Camera Shake Trigger
   const triggerShake = useCallback(() => {
     let start = Date.now();
     const duration = 300;
@@ -233,12 +217,10 @@ const GameView: React.FC = () => {
     requestAnimationFrame(animate);
   }, []);
 
-  // Watch for HEX_COLLAPSE event
   useEffect(() => {
     if (!effects || effects.length === 0) return;
     const latest = effects[effects.length - 1];
     
-    // Check if new and is a collapse (icon is DOWN)
     if (latest.id !== lastEffectIdRef.current) {
         lastEffectIdRef.current = latest.id;
         if (latest.icon === 'DOWN') { 
@@ -249,7 +231,6 @@ const GameView: React.FC = () => {
 
   const spawnDust = useCallback((x: number, y: number, color: string) => {
       const id = Date.now() + Math.random();
-      // Use a light grey/white for generic dust, or color tinted
       setParticles(prev => [...prev, { id, x, y, color: '#94a3b8' }]); 
   }, []);
 
@@ -277,7 +258,6 @@ const GameView: React.FC = () => {
       };
       requestAnimationFrame(animate);
       
-      // Advance tutorial if needed
       checkTutorialCamera(100); 
   }, [cameraRotation, checkTutorialCamera]);
 
@@ -316,9 +296,7 @@ const GameView: React.FC = () => {
     setViewState({ x: newPos.x, y: newPos.y, scale: newScale });
   }, [viewState]);
 
-  // STAGE INTERACTIONS (BACKGROUND)
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
-     // If clicking on background (not a shape/hex), cancel pending confirmation
      if (e.target === e.target.getStage()) {
          cancelPendingAction();
          setSelectedHexId(null);
@@ -375,19 +353,15 @@ const GameView: React.FC = () => {
   const safeBots = useMemo(() => (bots || []).filter(b => b && typeof b.q === 'number' && typeof b.r === 'number'), [bots]);
   const isMoving = player.state === EntityState.MOVING;
   
-  // Pending Target for Highlight
   const pendingTargetKey = useMemo(() => {
       if (!pendingConfirmation) return null;
       const target = pendingConfirmation.data.path[pendingConfirmation.data.path.length - 1];
       return getHexKey(target.q, target.r);
   }, [pendingConfirmation]);
 
-  // --- GHOST BUILDING CALCULATION ---
-  // Identify missing supports for the hovered hex if the player is blocked
   const missingSupportSet = useMemo(() => {
       if (!hoveredHexId || !player) return new Set<string>();
       const hoveredHex = grid[hoveredHexId];
-      // Only show ghosts if player is ON the hex and trying to upgrade it
       if (hoveredHex && hoveredHex.q === player.q && hoveredHex.r === player.r) {
           const occupied = safeBots.map(b => ({q:b.q, r:b.r}));
           const queueSize = winCondition?.queueSize || 3;
@@ -410,24 +384,16 @@ const GameView: React.FC = () => {
       return new Set<string>();
   }, [hoveredHexId, player, grid, safeBots, winCondition]);
 
-  // --- CRITICAL PERFORMANCE OPTIMIZATION ---
-  // Instead of iterating Object.values(grid), we calculate the visible range in hex coordinates
-  // and only loop through those potentially visible hexes.
   const renderList = useMemo(() => {
      const items: RenderItem[] = [];
      
-     // 1. Calculate Viewport Bounds in Hex Coordinates
-     // Convert screen corners to world space, then to axial coords
      const inverseScale = 1 / viewState.scale;
      
-     // Corners of viewport in "Stage" space (pixels)
      const x0 = -viewState.x * inverseScale - VIEWPORT_PADDING;
      const y0 = -viewState.y * inverseScale - VIEWPORT_PADDING;
      const x1 = (dimensions.width - viewState.x) * inverseScale + VIEWPORT_PADDING;
      const y1 = (dimensions.height - viewState.y) * inverseScale + VIEWPORT_PADDING;
 
-     // Convert corners to Hex Q/R to find range
-     // We check 4 corners to find min/max Q and R
      const c1 = pixelToHex(x0, y0, cameraRotation);
      const c2 = pixelToHex(x1, y0, cameraRotation);
      const c3 = pixelToHex(x1, y1, cameraRotation);
@@ -438,7 +404,6 @@ const GameView: React.FC = () => {
      const minR = Math.min(c1.r, c2.r, c3.r, c4.r);
      const maxR = Math.max(c1.r, c2.r, c3.r, c4.r);
 
-     // 2. Iterate only visible range
      for (let q = minQ; q <= maxQ; q++) {
          for (let r = minR; r <= maxR; r++) {
              const key = getHexKey(q, r);
@@ -447,7 +412,6 @@ const GameView: React.FC = () => {
 
              const { x, y } = hexToPixel(q, r, cameraRotation);
              
-             // Double check pixel bounds (optional but safer for rotation edge cases)
              if (x < x0 || x > x1 || y < y0 || y > y1) continue;
 
              items.push({ 
@@ -462,7 +426,7 @@ const GameView: React.FC = () => {
 
      const allUnits = [{ ...player, isPlayer: true }, ...safeBots.map(b => ({ ...b, isPlayer: false }))];
      const now = Date.now();
-     const zSortThreshold = GAME_CONFIG.MOVEMENT_LOGIC_INTERVAL_MS + 50; // Buffer slightly longer than movement
+     const zSortThreshold = GAME_CONFIG.MOVEMENT_LOGIC_INTERVAL_MS + 50; 
 
      for (const u of allUnits) {
          if (!u || typeof u.q !== 'number' || typeof u.r !== 'number') continue;
@@ -479,15 +443,12 @@ const GameView: React.FC = () => {
              track.lastR = u.r;
          }
          const currentPixel = hexToPixel(u.q, u.r, cameraRotation);
-         // Viewport culling for units
          if (currentPixel.x < x0 || currentPixel.x > x1 || currentPixel.y < y0 || currentPixel.y > y1) continue;
          
          let sortY = currentPixel.y;
          
-         // Smooth Z-Sorting during jump
          if (now - track.startTime < zSortThreshold) {
              const fromPixel = hexToPixel(track.fromQ, track.fromR, cameraRotation);
-             // Sort by the 'lowest' (closest to screen bottom) point between start and end to avoid clipping
              sortY = Math.max(sortY, fromPixel.y);
          }
          items.push({ type: 'UNIT', id: u.id, depth: sortY + 25, q: u.q, r: u.r, isPlayer: u.isPlayer });
@@ -529,7 +490,6 @@ const GameView: React.FC = () => {
             if (!isBot && isReachableHeight) {
                 const start = hexToPixel(player.q, player.r, cameraRotation);
                 const end = hexToPixel(neighbor.q, neighbor.r, cameraRotation);
-                // Culling for connections
                 if ((start.x > x0 && start.x < x1 && start.y > y0 && start.y < y1) ||
                     (end.x > x0 && end.x < x1 && end.y > y0 && end.y < y1)) {
                     
@@ -550,9 +510,8 @@ const GameView: React.FC = () => {
         });
      }
      return items.sort((a, b) => a.depth - b.depth);
-  }, [grid, player, safeBots, cameraRotation, isMoving, isPlayerGrowing, viewState, dimensions, neighbors, movementTracker, tutorialStep, winCondition]);
+  }, [grid, player, safeBots, cameraRotation, isMoving, isPlayerGrowing, viewState, dimensions, neighbors, movementTracker, winCondition]);
 
-  // --- RENDER ---
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#020617]" onContextMenu={(e) => e.preventDefault()}>
       <style>{`
@@ -593,45 +552,18 @@ const GameView: React.FC = () => {
                     const isPending = item.id === pendingTargetKey;
                     const isMissingSupport = missingSupportSet.has(item.id);
                     
+                    // TUTORIAL HIGHLIGHT: Level 1.1 - Highlight unowned L0 neighbors
+                    const hex = grid[item.id];
                     let isTutorialTarget = false;
-                    let tutorialHighlightColor: 'blue' | 'amber' | 'cyan' | 'emerald' = 'blue';
-
-                    if (tutorialStep) {
-                        const q = item.q;
-                        const r = item.r;
-                        if (tutorialStep === 'MOVE_1' && q === 1 && r === -1) { isTutorialTarget = true; tutorialHighlightColor = 'blue'; }
-                        else if (tutorialStep === 'ACQUIRE_1' && q === 1 && r === -1) { isTutorialTarget = true; tutorialHighlightColor = 'amber'; }
-                        else if (tutorialStep === 'MOVE_2' && q === 0 && r === -1) { isTutorialTarget = true; tutorialHighlightColor = 'blue'; }
-                        else if (tutorialStep === 'ACQUIRE_2' && q === 0 && r === -1) { isTutorialTarget = true; tutorialHighlightColor = 'amber'; }
-                        else if (tutorialStep === 'MOVE_3' && q === 0 && r === 0) { isTutorialTarget = true; tutorialHighlightColor = 'blue'; }
-                        else if (tutorialStep === 'ACQUIRE_3' && q === 0 && r === 0) { isTutorialTarget = true; tutorialHighlightColor = 'amber'; }
-                        else if (tutorialStep === 'UPGRADE_CENTER_2' && q === 0 && r === 0) { isTutorialTarget = true; tutorialHighlightColor = 'amber'; }
-                        else if (tutorialStep === 'UPGRADE_CENTER_3' && q === 0 && r === 0) { isTutorialTarget = true; tutorialHighlightColor = 'cyan'; }
-                        
-                        if (tutorialStep === 'BUILD_FOUNDATION') {
-                            const queueSize = winCondition?.queueSize || 1;
-                            const hex = grid[item.id];
-                            const isNeighbor = getNeighbors(player.q, player.r).some(n => n.q === q && n.r === r);
-                            const isCurrent = player.q === q && player.r === r;
-
-                            if (player.recentUpgrades.length >= queueSize) {
-                                if (hex && hex.maxLevel === 1 && (isNeighbor || isCurrent)) {
-                                    isTutorialTarget = true; 
-                                    tutorialHighlightColor = 'amber';
-                                }
-                                if (hex && hex.maxLevel === 2 && (isNeighbor || isCurrent)) {
-                                    isTutorialTarget = true;
-                                    tutorialHighlightColor = 'cyan';
-                                }
-                            } else {
-                                if (hex && hex.maxLevel === 0 && isNeighbor) {
-                                    isTutorialTarget = true; 
-                                    tutorialHighlightColor = 'emerald';
-                                }
-                            }
-                        }
+                    if (isLevel1_1 && !isMoving && !isPlayerGrowing && hex && hex.maxLevel === 0 && !hex.ownerId) {
+                        // Check if it's a neighbor of player
+                        const isNeighbor = neighbors.some(n => n.q === item.q && n.r === item.r);
+                        if (isNeighbor) isTutorialTarget = true;
                     }
-                    
+
+                    // LEVEL 1.2: Highlight Mission Objective
+                    const isObjective = isLevel1_2 && item.q === 0 && item.r === -8;
+
                     return (
                         <Hexagon 
                             key={item.id} 
@@ -645,8 +577,9 @@ const GameView: React.FC = () => {
                             onHexClick={handleHexClick} 
                             onHover={setHoveredHexId}
                             isTutorialTarget={isTutorialTarget}
-                            tutorialHighlightColor={tutorialHighlightColor as any}
+                            tutorialHighlightColor='emerald'
                             isMissingSupport={isMissingSupport}
+                            isObjective={isObjective}
                         />
                     );
                 } else if (item.type === 'UNIT') {
@@ -664,7 +597,7 @@ const GameView: React.FC = () => {
                             rotation={cameraRotation} 
                             hexLevel={hLevel} 
                             totalCoinsEarned={unit.totalCoinsEarned}
-                            upgradePointCount={unit.recentUpgrades.length} // Pass upgrade points for +1 popup
+                            upgradePointCount={unit.recentUpgrades.length} 
                             onMoveComplete={spawnDust}
                         />
                     );
@@ -674,7 +607,6 @@ const GameView: React.FC = () => {
                 return null;
             })}
             
-            {/* Visual Effects Layer (Particles & Text) */}
             {particles.map(p => (
                 <DustCloud key={p.id} {...p} onComplete={removeParticle} />
             ))}
@@ -686,7 +618,6 @@ const GameView: React.FC = () => {
         </Stage>
       </div>
 
-      {/* INDEPENDENT HUD LAYER */}
       <GameHUD 
         hoveredHexId={hoveredHexId} 
         onRotateCamera={rotateCamera} 

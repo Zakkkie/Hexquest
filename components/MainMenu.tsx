@@ -150,10 +150,10 @@ const MainMenu: React.FC = () => {
      playUiSound('CLICK');
      if (hasActiveSession) {
          if (window.confirm(t.ABANDON_CONFIRM)) {
-             startCampaignLevel(0); // Level 0 is Tutorial
+             startCampaignLevel('1.1'); 
          }
      } else {
-         startCampaignLevel(0);
+         startCampaignLevel('1.1');
      }
   };
 
@@ -369,11 +369,11 @@ const MainMenu: React.FC = () => {
       </div>
 
       {/* CENTER MENU */}
-      <div className="flex flex-col gap-6 w-full max-w-sm px-6 z-10">
+      <div className="flex flex-col gap-6 w-full max-w-sm px-6 z-10 max-h-screen overflow-y-auto no-scrollbar py-20 md:py-0">
         
         {/* Title */}
         <div className="text-center mb-6"> 
-          <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-amber-400 to-amber-600 italic tracking-tighter drop-shadow-[0_0_25px_rgba(245,158,11,0.4)]">
+          <h1 className="text-3xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-amber-400 to-amber-600 italic tracking-tighter drop-shadow-[0_0_25px_rgba(245,158,11,0.4)]">
             {t.TITLE}
           </h1>
           <p className="text-[10px] md:text-xs text-slate-500 font-mono tracking-[0.6em] uppercase mt-2 opacity-60">
@@ -446,7 +446,7 @@ const MainMenu: React.FC = () => {
       {/* MODALS */}
       {authMode && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-sm relative">
+          <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-sm relative max-h-[85vh] overflow-y-auto">
             <button 
               onClick={() => { setAuthMode(null); playUiSound('CLICK'); }}
               className="cursor-pointer absolute top-4 right-4 text-slate-500 hover:text-white"
@@ -553,7 +553,7 @@ const MainMenu: React.FC = () => {
       {/* CONFIG MODAL */}
       {showMissionConfig && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-sm relative">
+          <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-sm relative max-h-[85vh] overflow-y-auto">
              <button onClick={() => { setShowMissionConfig(false); playUiSound('CLICK'); }} className="cursor-pointer absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
              <h2 className="text-2xl font-bold text-white mb-1">{t.CONFIG_TITLE}</h2>
              <p className="text-xs text-slate-500 mb-6 uppercase tracking-wider">{t.CONFIG_SUB}</p>

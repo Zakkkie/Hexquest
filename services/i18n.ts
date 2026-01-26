@@ -75,6 +75,27 @@ interface Dictionary {
         MINI_LB_COMMANDER: string;
         MINI_LB_CYCLE: string;
         MINI_LB_CREDITS: string;
+        // NEW HINTS
+        HINT_RANK: string;
+        HINT_CREDITS: string;
+        HINT_MOVES: string;
+        HINT_CYCLE: string;
+        BTN_CLAIM: string;
+        BTN_REWARD: string;
+        BTN_READY: string;
+        // TUTORIAL 1.1 SPECIFIC
+        TUT_1_1_TASK: string;
+        TUT_1_1_COST: string;
+        TUT_1_1_REWARD: string;
+        TUT_1_1_GUIDE: string;
+        // TUTORIAL 1.2 SPECIFIC
+        TUT_1_2_TASK: string;
+        TUT_1_2_INTRO_TITLE: string;
+        TUT_1_2_INTRO_DESC: string;
+        TUT_1_2_LEGEND_SAFE: string;
+        TUT_1_2_LEGEND_RISK: string;
+        TUT_1_2_DIST: string;
+        TUT_1_2_GOAL: string;
     };
     TOOLTIP: {
         CURRENT_LOC: string;
@@ -158,7 +179,7 @@ export const TEXT: Record<Language, Dictionary> = {
         },
         HUD: {
             RANK: "Rank",
-            CYCLE: "Upgrade",
+            CYCLE: "Cycle",
             CREDITS: "Credits",
             MOVES: "Moves",
             LEADERBOARD_TITLE: "Rankings",
@@ -191,7 +212,25 @@ export const TEXT: Record<Language, Dictionary> = {
             HELP_MOVES_HINT: "Tip: High levels cost more.",
             MINI_LB_COMMANDER: "Commander",
             MINI_LB_CYCLE: "Upgrade",
-            MINI_LB_CREDITS: "Credits"
+            MINI_LB_CREDITS: "Credits",
+            HINT_RANK: "Clearance Lvl",
+            HINT_CREDITS: "Money (Costs)",
+            HINT_MOVES: "Fuel (Movement)",
+            HINT_CYCLE: "Cooldowns",
+            BTN_CLAIM: "CLAIM SECTOR",
+            BTN_REWARD: "Reward: +Income & +1 Move",
+            BTN_READY: "READY",
+            TUT_1_1_TASK: "Objective: Expand Control",
+            TUT_1_1_COST: "Cost: 100 Credits",
+            TUT_1_1_REWARD: "Yields: +5 Income/Tick",
+            TUT_1_1_GUIDE: "Move to highlighted zones",
+            TUT_1_2_TASK: "Reach the Pyramid Apex",
+            TUT_1_2_INTRO_TITLE: "STRUCTURAL HAZARD WARNING",
+            TUT_1_2_INTRO_DESC: "The terrain ahead is critically unstable. You must navigate a path to the extraction point.\n\nOnly step on STABLE sectors. Damaged sectors will collapse instantly under your weight.",
+            TUT_1_2_LEGEND_SAFE: "Stable (Safe)",
+            TUT_1_2_LEGEND_RISK: "Critical (Do Not Step)",
+            TUT_1_2_DIST: "Distance to Apex",
+            TUT_1_2_GOAL: "Reach the Signal",
         },
         TOOLTIP: {
             CURRENT_LOC: "Current Location",
@@ -273,7 +312,7 @@ export const TEXT: Record<Language, Dictionary> = {
         },
         HUD: {
             RANK: "Ранг",
-            CYCLE: "Апгрейд",
+            CYCLE: "Цикл",
             CREDITS: "Кредиты",
             MOVES: "Ходы",
             LEADERBOARD_TITLE: "Рейтинг",
@@ -306,7 +345,25 @@ export const TEXT: Record<Language, Dictionary> = {
             HELP_MOVES_HINT: "Совет: Высокие уровни дороже в обслуживании.",
             MINI_LB_COMMANDER: "Командир",
             MINI_LB_CYCLE: "Апгрейд",
-            MINI_LB_CREDITS: "Кр"
+            MINI_LB_CREDITS: "Кр",
+            HINT_RANK: "Уровень Доступа",
+            HINT_CREDITS: "Валюта (Оплата)",
+            HINT_MOVES: "Топливо (Движение)",
+            HINT_CYCLE: "Откат Апгрейда",
+            BTN_CLAIM: "ЗАХВАТИТЬ",
+            BTN_REWARD: "Награда: +Доход и +1 Ход",
+            BTN_READY: "ГОТОВ",
+            TUT_1_1_TASK: "Задача: Расширение",
+            TUT_1_1_COST: "Цена: 100 Кредитов",
+            TUT_1_1_REWARD: "Доход: +5 Кр/Тик",
+            TUT_1_1_GUIDE: "Идите в подсвеченные зоны",
+            TUT_1_2_TASK: "Цель: Вершина Пирамиды",
+            TUT_1_2_INTRO_TITLE: "ОПАСНОСТЬ ОБРУШЕНИЯ",
+            TUT_1_2_INTRO_DESC: "Впереди нестабильная зона. Вы должны добраться до точки эвакуации.\n\nНаступайте только на ЦЕЛЫЕ сектора. Поврежденные сектора не выдержат ваш вес.",
+            TUT_1_2_LEGEND_SAFE: "Стабильно (Безопасно)",
+            TUT_1_2_LEGEND_RISK: "Критично (Не наступать)",
+            TUT_1_2_DIST: "Дистанция",
+            TUT_1_2_GOAL: "Цель: Сигнал",
         },
         TOOLTIP: {
             CURRENT_LOC: "Текущая позиция",

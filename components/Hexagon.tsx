@@ -20,6 +20,7 @@ interface HexagonVisualProps {
   isTutorialTarget?: boolean;
   tutorialHighlightColor?: 'blue' | 'amber' | 'cyan' | 'emerald';
   isMissingSupport?: boolean; // New Prop for Ghost Build
+  isObjective?: boolean; // New Prop for Mission Goal (1.2)
 }
 
 const LEVEL_COLORS: Record<number, { fill: string; stroke: string; side: string }> = {
@@ -39,6 +40,7 @@ const LEVEL_COLORS: Record<number, { fill: string; stroke: string; side: string 
 
 const LOCK_PATH = "M12 1a5 5 0 0 0-5 5v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v2H9V6a3 3 0 0 1 3-3z";
 const ARROW_UP_PATH = "M12 4l-8 8h6v8h4v-8h6z"; // Simple Up Arrow
+const TARGET_ICON_PATH = "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z"; // Simple Target
 
 // Determine crater positions based on damage (0 to 6) for Level 1 hexes
 const getCraters = (q: number, r: number, damage: number, offsetY: number) => {
@@ -73,7 +75,7 @@ const getCraters = (q: number, r: number, damage: number, offsetY: number) => {
     return craters;
 };
 
-const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation, playerRank, isOccupied, isSelected, isPendingConfirm, pendingCost, onHexClick, onHover, isTutorialTarget, tutorialHighlightColor = 'blue', isMissingSupport }) => {
+const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation, playerRank, isOccupied, isSelected, isPendingConfirm, pendingCost, onHexClick, onHover, isTutorialTarget, tutorialHighlightColor = 'blue', isMissingSupport, isObjective }) => {
   const groupRef = useRef<Konva.Group>(null);
   const staticGroupRef = useRef<Konva.Group>(null); // NEW: For caching static parts
   const progressShapeRef = useRef<Konva.Shape>(null);
@@ -81,6 +83,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const voidGroupRef = useRef<Konva.Group>(null);
   const confirmRef = useRef<Konva.Group>(null);
   const tutorialHighlightRef = useRef<Konva.Path>(null);
+  const objectiveRef = useRef<Konva.Group>(null);
   
   const prevStructureRef = useRef(hex.structureType);
   // State to handle the visual delay of destruction (The "Wile E. Coyote" effect)
@@ -239,7 +242,8 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       isPendingConfirm,
       isFragile,
       damage,
-      isDelayedCollapse 
+      isDelayedCollapse,
+      isObjective 
   ]);
 
   // 2. Void Group Cache
@@ -328,6 +332,20 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
           return () => { anim.stop(); };
       }
   }, [isTutorialTarget]);
+
+  // OBJECTIVE PULSE (For Level 1.2)
+  useEffect(() => {
+      if (isObjective && objectiveRef.current) {
+          const node = objectiveRef.current;
+          const anim = new Konva.Animation((frame) => {
+              const scale = 1 + (Math.sin(frame!.time / 200) * 0.1);
+              node.scale({ x: scale, y: scale });
+              node.opacity(0.8 + (Math.sin(frame!.time / 200) * 0.2));
+          }, node.getLayer());
+          anim.start();
+          return () => { anim.stop(); };
+      }
+  }, [isObjective]);
 
   // PROGRESS BAR
   useEffect(() => {
@@ -421,6 +439,21 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
 
       {/* DYNAMIC ELEMENTS */}
       
+      {/* MISSION OBJECTIVE INDICATOR */}
+      {isObjective && (
+          <Group ref={objectiveRef} x={0} y={offsetY} listening={false}>
+              {/* Pulsing Target Ring */}
+              <Circle radius={25} stroke="#ef4444" strokeWidth={2} opacity={0.6} scaleY={0.6} shadowColor="#ef4444" shadowBlur={15} />
+              <Circle radius={15} stroke="#f87171" strokeWidth={1} opacity={0.8} scaleY={0.6} />
+              
+              {/* Target Icon Floating Above */}
+              <Group y={-20}>
+                  <Circle radius={12} fill="#ef4444" shadowColor="red" shadowBlur={10} />
+                  <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="white" scaleX={1} scaleY={1} />
+              </Group>
+          </Group>
+      )}
+
       {/* GHOST BUILDING VISUAL (Missing Support Indicator) */}
       {isMissingSupport && (
          <Group x={0} y={offsetY} listening={false}>
@@ -489,6 +522,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     if (prev.isTutorialTarget !== next.isTutorialTarget) return false;
     if (prev.tutorialHighlightColor !== next.tutorialHighlightColor) return false;
     if (prev.isMissingSupport !== next.isMissingSupport) return false; // Check new prop
+    if (prev.isObjective !== next.isObjective) return false; // Check new prop
     return true;
 });
 
@@ -505,6 +539,7 @@ interface SmartHexagonProps {
   isTutorialTarget?: boolean;
   tutorialHighlightColor?: 'blue' | 'amber' | 'cyan' | 'emerald';
   isMissingSupport?: boolean; // New Prop
+  isObjective?: boolean;
 }
 
 const SmartHexagon: React.FC<SmartHexagonProps> = React.memo((props) => {

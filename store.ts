@@ -1,11 +1,12 @@
 
 import { create } from 'zustand';
-import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, TutorialStep } from './types.ts';
+import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText } from './types.ts';
 import { GAME_CONFIG } from './rules/config.ts';
 import { getHexKey, getNeighbors, findPath } from './services/hexUtils.ts';
 import { GameEngine } from './engine/GameEngine.ts';
 import { audioService } from './services/audioService.ts';
-import { CAMPAIGN_LEVELS } from './rules/campaign.ts';
+import { CAMPAIGN_LEVELS } from './campaign/levels.ts';
+import { LevelConfig } from './campaign/types.ts';
 
 const MOCK_USER_DB: Record<string, { password: string; avatarColor: string; avatarIcon: string }> = {};
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899']; 
@@ -34,8 +35,8 @@ interface GameStore extends GameState {
   registerUser: (n: string, p: string, c: string, i: string) => AuthResponse;
   loginUser: (n: string, p: string) => AuthResponse;
   logout: () => void;
-  startNewGame: (win: WinCondition) => void;
-  startCampaignLevel: (levelId: number) => void;
+  startNewGame: (win?: WinCondition, levelConfig?: LevelConfig) => void;
+  startCampaignLevel: (levelId: string) => void;
   startMission: () => void;
   abandonSession: () => void;
   togglePlayerGrowth: (intent?: 'RECOVER' | 'UPGRADE') => void;
@@ -43,7 +44,6 @@ interface GameStore extends GameState {
   movePlayer: (q: number, r: number) => void;
   confirmPendingAction: () => void;
   cancelPendingAction: () => void;
-  advanceTutorial: (step: TutorialStep) => void;
   checkTutorialCamera: (deltaX: number) => void;
   tick: () => void;
   showToast: (msg: string, type: 'error' | 'success' | 'info') => void;
@@ -57,19 +57,175 @@ interface GameStore extends GameState {
 let engine: GameEngine | null = null;
 let tickCount = 0;
 
-const createInitialSessionData = (winCondition: WinCondition): SessionState => {
-  const startHex = { id: getHexKey(0,0), q:0, r:0, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true };
-  const initialGrid: Record<string, Hex> = { [getHexKey(0,0)]: startHex };
-  getNeighbors(0, 0).forEach(n => { initialGrid[getHexKey(n.q, n.r)] = { id: getHexKey(n.q,n.r), q:n.q, r:n.r, currentLevel:0, maxLevel:0, progress:0, revealed:true }; });
+const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig): SessionState => {
+  // Map Generation Logic
+  const initialGrid: Record<string, Hex> = {};
   
-  const botCount = winCondition.botCount || 0;
+  if (levelConfig && levelConfig.id === '1.2') {
+      // --- LEVEL 1.2: PYRAMID RUN (GUARANTEED PATH, MINIMAL VOID) ---
+      
+      // 1. Define all coordinate sets first
+      const walkableCoords = new Map<string, { q: number, r: number, isSafe: boolean, type?: string }>();
+      
+      // Start Platform (Safe)
+      walkableCoords.set(getHexKey(0,0), { q:0, r:0, isSafe: true });
+
+      // Corridor Generation
+      let currentQ = 0;
+      const validQs = [-1, 0, 1]; 
+      const safePathCoords: {q: number, r: number}[] = [];
+
+      for (let r = -1; r >= -6; r--) {
+          const candidates = [currentQ, currentQ + 1];
+          const validMoves = candidates.filter(q => validQs.includes(q));
+          currentQ = validMoves.length > 0 ? validMoves[Math.floor(Math.random() * validMoves.length)] : 0;
+          safePathCoords.push({ q: currentQ, r });
+      }
+
+      // Populate Corridor
+      for (let r = -1; r >= -6; r--) {
+          const safeHex = safePathCoords.find(c => c.r === r);
+          const safeQ = safeHex ? safeHex.q : 0;
+
+          validQs.forEach(q => {
+              const isSafe = q === safeQ;
+              walkableCoords.set(getHexKey(q,r), { q, r, isSafe });
+          });
+      }
+
+      // Pyramid Base (L2) at Row -7
+      // Connect to the safe path exit at row -6
+      [-1, 0, 1].forEach(q => {
+          walkableCoords.set(getHexKey(q, -7), { q, r: -7, isSafe: true, type: 'BASE' });
+      });
+
+      // Apex (L3) at Row -8
+      walkableCoords.set(getHexKey(0, -8), { q: 0, r: -8, isSafe: true, type: 'APEX' });
+
+      // 2. Build the Grid from Walkable Coords
+      walkableCoords.forEach((data, key) => {
+          let level = 1;
+          let durability = data.isSafe ? 3 : 1;
+          let structureType: 'CAPITAL' | undefined = undefined;
+
+          if (data.type === 'BASE') { level = 2; durability = 3; }
+          if (data.type === 'APEX') { level = 3; durability = 3; structureType = 'CAPITAL'; }
+
+          initialGrid[key] = {
+              id: key, q: data.q, r: data.r,
+              currentLevel: level, maxLevel: level,
+              progress: 0, revealed: true,
+              ownerId: (data.q === 0 && data.r === 0) ? 'player-1' : undefined,
+              durability,
+              structureType
+          };
+      });
+
+      // 3. Generate Bordering VOID
+      // Only generate void for neighbors of walkable hexes that are NOT themselves walkable
+      const voidCoords = new Set<string>();
+      
+      walkableCoords.forEach((data) => {
+          getNeighbors(data.q, data.r).forEach(n => {
+              const nKey = getHexKey(n.q, n.r);
+              if (!walkableCoords.has(nKey)) {
+                  voidCoords.add(nKey);
+              }
+          });
+      });
+
+      voidCoords.forEach(key => {
+          const [q, r] = key.split(',').map(Number);
+          initialGrid[key] = {
+              id: key, q, r,
+              currentLevel: 0, maxLevel: 0, progress: 0, revealed: true,
+              structureType: 'VOID'
+          };
+      });
+
+  } else {
+      // --- STANDARD RADIAL GENERATION ---
+      const mapRadius = levelConfig ? levelConfig.mapConfig.size : 1; 
+      const shouldGenerateWalls = levelConfig ? levelConfig.mapConfig.generateWalls : false;
+      const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? mapRadius;
+      const wallStartLevel = levelConfig?.mapConfig.wallStartLevel ?? 9;
+      const wallType = levelConfig?.mapConfig.wallType ?? 'classic';
+
+      for (let q = -mapRadius; q <= mapRadius; q++) {
+          const r1 = Math.max(-mapRadius, -q - mapRadius);
+          const r2 = Math.min(mapRadius, -q + mapRadius);
+          for (let r = r1; r <= r2; r++) {
+              const key = getHexKey(q, r);
+              
+              const dist = Math.max(Math.abs(q), Math.abs(r), Math.abs(-q-r));
+              const isWall = shouldGenerateWalls && dist >= wallStartRadius;
+              
+              let level = 0;
+              let structureType: 'BARRIER' | 'VOID' | undefined = undefined;
+
+              if (isWall) {
+                  if (wallType === 'void_shatter') {
+                      if (dist === wallStartRadius) {
+                          // Immediate boundary is a Void Moat
+                          structureType = 'VOID';
+                          level = 0;
+                      } else {
+                          // Outer rings: Shattered Ruins
+                          // Use noise to create scattered terrain of various heights (0-5)
+                          const noise = Math.abs(Math.sin(q * 12.9898 + r * 78.233) * 43758.5453) % 1;
+                          
+                          if (noise > 0.4) {
+                              // Create solid "ruins" with random levels from 1 to 5
+                              level = 1 + Math.floor((noise - 0.4) * 10); 
+                              if (level > 5) level = 5;
+                          } else {
+                              // Empty space / deep void
+                              level = 0;
+                          }
+                          structureType = undefined;
+                      }
+                  } else {
+                      // Classic increasing wall
+                      level = Math.min(99, wallStartLevel + (dist - wallStartRadius));
+                      structureType = 'BARRIER';
+                  }
+              }
+
+              initialGrid[key] = { 
+                  id: key, 
+                  q, 
+                  r, 
+                  currentLevel: level, 
+                  maxLevel: level, 
+                  progress: 0, 
+                  revealed: true,
+                  structureType: structureType
+              };
+          }
+      }
+  }
+
+  // Ensure center exists if not created (e.g. sparse map gen issues)
+  if (!initialGrid[getHexKey(0,0)]) {
+      initialGrid[getHexKey(0,0)] = { id: getHexKey(0,0), q:0, r:0, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true };
+  }
+  
+  // Use LevelConfig if provided, otherwise fallback to WinCondition or defaults
+  const botCount = levelConfig ? (levelConfig.aiMode === 'none' ? 0 : 1) : (winCondition?.botCount || 0);
+  const startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;
+  const startMoves = levelConfig ? levelConfig.startState.moves : GAME_CONFIG.INITIAL_MOVES;
+  const startRank = levelConfig ? levelConfig.startState.rank : 0;
+  
   const bots: Entity[] = [];
+  // Spawn points at edge of radius 2
   const spawnPoints = [{ q: 0, r: -2 }, { q: 2, r: -2 }, { q: 2, r: 0 }, { q: 0, r: 2 }, { q: -2, r: 2 }, { q: -2, r: 0 }];
 
   for (let i = 0; i < Math.min(botCount, spawnPoints.length); i++) {
     const sp = spawnPoints[i];
+    // Ensure bot spawn hex exists (expand map if necessary for bots)
     if (!initialGrid[getHexKey(sp.q, sp.r)]) {
         initialGrid[getHexKey(sp.q, sp.r)] = { id: getHexKey(sp.q,sp.r), q:sp.q, r:sp.r, currentLevel:0, maxLevel:0, progress:0, revealed:true };
+        // Add neighbors for bot movement space
         getNeighbors(sp.q, sp.r).forEach(n => {
             const k = getHexKey(n.q, n.r);
             if (!initialGrid[k]) initialGrid[k] = { id:k, q:n.q, r:n.r, currentLevel:0, maxLevel:0, progress:0, revealed:true };
@@ -85,10 +241,7 @@ const createInitialSessionData = (winCondition: WinCondition): SessionState => {
     });
   }
   
-  let initialText = `Mission: Rank ${winCondition.targetLevel} ${winCondition.winType} ${winCondition.targetCoins} Credits.`;
-  if (winCondition.isTutorial) {
-      initialText = "TUTORIAL: Follow the on-screen instructions.";
-  }
+  let initialText = levelConfig ? levelConfig.description : `Mission: Rank ${winCondition?.targetLevel} ${winCondition?.winType} ${winCondition?.targetCoins} Credits.`;
 
   const initialLog: LogEntry = {
     id: 'init-0',
@@ -98,19 +251,18 @@ const createInitialSessionData = (winCondition: WinCondition): SessionState => {
     timestamp: Date.now()
   };
 
-  const initialMoves = winCondition.isTutorial ? 1 : GAME_CONFIG.INITIAL_MOVES;
-
   return {
     stateVersion: 0,
     sessionId: Math.random().toString(36).substring(2, 15),
     sessionStartTime: Date.now(),
     winCondition,
-    difficulty: winCondition.difficulty,
+    activeLevelConfig: levelConfig,
+    difficulty: winCondition?.difficulty || 'MEDIUM',
     grid: initialGrid,
     player: {
       id: 'player-1', type: EntityType.PLAYER, state: EntityState.IDLE, q: 0, r: 0,
-      playerLevel: 0, coins: GAME_CONFIG.INITIAL_COINS, 
-      moves: initialMoves,
+      playerLevel: startRank, coins: startCredits, 
+      moves: startMoves,
       totalCoinsEarned: 0, recentUpgrades: [], movementQueue: [],
       recoveredCurrentHex: false
     },
@@ -118,14 +270,13 @@ const createInitialSessionData = (winCondition: WinCondition): SessionState => {
     currentTurn: 0,
     messageLog: [initialLog],
     botActivityLog: [], 
-    gameStatus: 'BRIEFING',
+    gameStatus: 'PLAYING', // Starts immediately
     lastBotActionTime: Date.now(),
     isPlayerGrowing: false,
     playerGrowthIntent: null,
     growingBotIds: [],
     telemetry: [],
     effects: [],
-    tutorialStep: winCondition.isTutorial ? 'WELCOME' : 'NONE'
   };
 };
 
@@ -187,17 +338,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (type === 'CLICK') audioService.play('UI_CLICK');
   },
 
-  startNewGame: (winCondition) => {
+  startNewGame: (winCondition, levelConfig) => {
       audioService.play('UI_CLICK');
       get().abandonSession();
-      const initialSessionState = createInitialSessionData(winCondition);
+      // Use fallback wincondition if not provided but level config is present
+      const effectiveWin = winCondition || (levelConfig ? {
+          levelId: -1,
+          targetLevel: 99,
+          targetCoins: 9999,
+          label: levelConfig.title,
+          botCount: 0,
+          difficulty: 'MEDIUM',
+          queueSize: 1,
+          winType: 'AND'
+      } : null);
+
+      const initialSessionState = createInitialSessionData(effectiveWin, levelConfig);
       engine = new GameEngine(initialSessionState); 
       set({ session: engine.state, hasActiveSession: true, uiState: 'GAME' });
+
+      // Show objective popup
+      const startMsg = initialSessionState.messageLog[0]?.text;
+      if (startMsg) get().showToast(startMsg, 'info');
   },
 
   startCampaignLevel: (levelId) => {
-     const config = CAMPAIGN_LEVELS.find(l => l.levelId === levelId) || CAMPAIGN_LEVELS[0];
-     get().startNewGame(config);
+     // Check new campaign levels first
+     const levelConfig = CAMPAIGN_LEVELS.find(l => l.id === levelId);
+     if (levelConfig) {
+         get().startNewGame(undefined, levelConfig);
+     } else {
+         console.warn(`Level ${levelId} not found`);
+     }
   },
 
   startMission: () => {
@@ -261,39 +433,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       
       // Use authoritative state from engine to avoid version mismatch errors
       const session = engine.state; 
-      const { pendingConfirmation, confirmPendingAction, cancelPendingAction, advanceTutorial } = get();
+      const { pendingConfirmation, confirmPendingAction, cancelPendingAction } = get();
 
+      // IF LEVEL 1.2: Check if briefing is active or game is not ready
+      // Actually, HUD handles UI blocking. Engine just receives move.
       if (session.gameStatus === 'BRIEFING') return;
-
-      if (session.tutorialStep !== 'FREE_PLAY' && session.tutorialStep !== 'NONE') {
-          const moveSteps = ['MOVE_1', 'MOVE_2', 'MOVE_3', 'BUILD_FOUNDATION', 'UPGRADE_CENTER_3']; 
-          if (!moveSteps.includes(session.tutorialStep)) {
-              audioService.play('ERROR');
-              return;
-          }
-          
-          if (session.tutorialStep === 'MOVE_1') {
-              if (tq !== 1 || tr !== -1) { 
-                  audioService.play('ERROR'); 
-                  set({ toast: { message: "Wrong Sector. Target marked in BLUE (1, -1)", type: 'error', timestamp: Date.now() } });
-                  return; 
-              }
-          }
-          if (session.tutorialStep === 'MOVE_2') {
-              if (tq !== 0 || tr !== -1) { 
-                  audioService.play('ERROR'); 
-                  set({ toast: { message: "Wrong Sector. Target marked in BLUE (0, -1)", type: 'error', timestamp: Date.now() } });
-                  return; 
-              }
-          }
-          if (session.tutorialStep === 'MOVE_3') {
-              if (tq !== 0 || tr !== 0) { 
-                  audioService.play('ERROR'); 
-                  set({ toast: { message: "Return to Center (0, 0)", type: 'error', timestamp: Date.now() } });
-                  return; 
-              }
-          }
-      }
 
       if (pendingConfirmation) {
           const target = pendingConfirmation.data.path[pendingConfirmation.data.path.length - 1];
@@ -346,9 +490,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       
       if (res.ok) {
         audioService.play('MOVE');
-        if (session.tutorialStep === 'MOVE_1') get().advanceTutorial('ACQUIRE_1');
-        else if (session.tutorialStep === 'MOVE_2') get().advanceTutorial('ACQUIRE_2');
-        else if (session.tutorialStep === 'MOVE_3') get().advanceTutorial('ACQUIRE_3');
         set({ session: engine.state });
       } else {
         audioService.play('ERROR');
@@ -382,19 +523,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  advanceTutorial: (step) => {
-    if (!engine) return;
-    engine.setTutorialStep(step);
-    set({ session: engine.state });
-  },
-
   checkTutorialCamera: (deltaX: number) => {
-      const { session, advanceTutorial } = get();
-      if (session?.tutorialStep === 'CAMERA_ROTATE') {
-          if (Math.abs(deltaX) > 50) { 
-              advanceTutorial('MOVE_1');
-          }
-      }
+      // Legacy tutorial function retained to prevent breakages, but does nothing now
   },
 
   tick: () => {
@@ -423,32 +553,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
                  case 'HEX_COLLAPSE': audioService.play('COLLAPSE'); break;
                  case 'VICTORY': audioService.play('SUCCESS'); break;
                  case 'DEFEAT': audioService.play('ERROR'); break;
-               }
-
-               if (event.type === 'SECTOR_ACQUIRED' && isPlayer) {
-                   const step = result.state.tutorialStep;
-                   if (step === 'ACQUIRE_1') get().advanceTutorial('MOVE_2');
-                   if (step === 'ACQUIRE_2') get().advanceTutorial('MOVE_3');
-                   if (step === 'ACQUIRE_3') get().advanceTutorial('UPGRADE_CENTER_2');
-                   
-                   if (step === 'BUILD_FOUNDATION') {
-                        const neighbors = getNeighbors(0,0);
-                        const l2Count = neighbors.filter(n => result.state.grid[getHexKey(n.q, n.r)]?.maxLevel >= 2).length;
-                        if (l2Count >= 3) get().advanceTutorial('UPGRADE_CENTER_3');
-                   }
-               }
-               if (event.type === 'LEVEL_UP' && isPlayer) {
-                   const step = result.state.tutorialStep;
-                   if (step === 'UPGRADE_CENTER_2') get().advanceTutorial('BUILD_FOUNDATION');
-                   if (step === 'BUILD_FOUNDATION') {
-                        const neighbors = getNeighbors(0,0);
-                        const l2Count = neighbors.filter(n => result.state.grid[getHexKey(n.q, n.r)]?.maxLevel >= 2).length;
-                        if (l2Count >= 3) get().advanceTutorial('UPGRADE_CENTER_3');
-                   }
-                   if (step === 'UPGRADE_CENTER_3') {
-                        get().advanceTutorial('VICTORY_ANIMATION');
-                        engine?.triggerVictory(); 
-                   }
                }
             }
 
@@ -544,6 +648,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const shouldRender = tickCount % 3 === 0;
       const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
       const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
+
+      // LOSS CHECK: Now handled by VictorySystem via hooks
 
       if (shouldRender || hasCriticalEvents || playerStateChanged) {
         set({ 
