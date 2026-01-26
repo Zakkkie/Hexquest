@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders } from 'lucide-react';
+import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -92,6 +92,8 @@ const MainMenu: React.FC = () => {
   
   // Sound Menu
   const [showSoundMenu, setShowSoundMenu] = useState(false);
+  // Track name is no longer displayed, but kept for internal consistency if needed
+  const [trackName, setTrackName] = useState("Loading...");
   const soundMenuRef = useRef<HTMLDivElement>(null);
 
   // Mission Config State
@@ -112,6 +114,7 @@ const MainMenu: React.FC = () => {
       audioService.startMusic();
       // Simulate "wealth" (250 credits) so the menu music has medium intensity
       audioService.updateMusic(250, 500); 
+      setTrackName(audioService.getCurrentTrackName());
   }, []);
 
   // Close sound menu on click outside
@@ -124,6 +127,18 @@ const MainMenu: React.FC = () => {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleNextTrack = () => {
+      audioService.nextTrack();
+      setTrackName(audioService.getCurrentTrackName());
+      playUiSound('CLICK');
+  };
+
+  const handlePrevTrack = () => {
+      audioService.prevTrack();
+      setTrackName(audioService.getCurrentTrackName());
+      playUiSound('CLICK');
+  };
 
   const resetForm = () => {
     setInputName('');
@@ -251,7 +266,7 @@ const MainMenu: React.FC = () => {
             {/* LEFT: SETTINGS */}
             <div className="flex gap-2 relative">
                 <button 
-                  onClick={() => { setShowSoundMenu(!showSoundMenu); playUiSound('CLICK'); }}
+                  onClick={() => { setShowSoundMenu(!showSoundMenu); playUiSound('CLICK'); setTrackName(audioService.getCurrentTrackName()); }}
                   className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur rounded-full transition-all border border-slate-800 bg-slate-900/50 text-slate-400 hover:text-white`}
                   title="Sound Settings"
                 >
@@ -259,14 +274,34 @@ const MainMenu: React.FC = () => {
                 </button>
 
                 {showSoundMenu && (
-                    <div ref={soundMenuRef} className="absolute top-full left-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[140px] z-[60]">
-                        <button 
-                            onClick={() => { toggleMusic(); playUiSound('CLICK'); }}
-                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isMusicMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-indigo-400 bg-indigo-900/20 hover:bg-indigo-900/30'}`}
-                        >
-                            {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
-                            <span className="text-xs font-bold uppercase">Music</span>
-                        </button>
+                    <div ref={soundMenuRef} className="absolute top-full left-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[200px] z-[60]">
+                        
+                        {/* Music Section with Track Controls */}
+                        <div className={`flex items-center justify-between pr-1 pl-0 py-0 rounded-lg transition-colors w-full select-none ${isMusicMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-indigo-400 bg-indigo-900/20 hover:bg-indigo-900/30'}`}>
+                            <button 
+                                onClick={() => { toggleMusic(); playUiSound('CLICK'); }}
+                                className="flex items-center gap-3 flex-1 text-left px-3 py-2"
+                            >
+                                {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
+                                <span className="text-xs font-bold uppercase">Music</span>
+                            </button>
+                            
+                            <div className="flex items-center gap-0.5 border-l border-white/10 pl-1 my-1">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handlePrevTrack(); }} 
+                                    className="p-1.5 hover:bg-white/20 rounded-md transition-colors"
+                                >
+                                    <ChevronLeft className="w-3 h-3" />
+                                </button>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handleNextTrack(); }} 
+                                    className="p-1.5 hover:bg-white/20 rounded-md transition-colors"
+                                >
+                                    <ChevronRight className="w-3 h-3" />
+                                </button>
+                            </div>
+                        </div>
+
                         <button 
                             onClick={() => { toggleSfx(); playUiSound('CLICK'); }}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isSfxMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-emerald-400 bg-emerald-900/20 hover:bg-emerald-900/30'}`}

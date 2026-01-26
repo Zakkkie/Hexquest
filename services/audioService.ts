@@ -25,7 +25,8 @@ const SCALES = {
     MINOR_7: [0, 3, 7, 10],
     DORIAN: [0, 2, 3, 5, 7, 9, 10],
     PHRYGIAN: [0, 1, 3, 5, 7, 8, 10],
-    DEEP_TECH: [0, 3, 5, 7, 10]
+    DEEP_TECH: [0, 3, 5, 7, 10],
+    MELODIC: [0, 2, 3, 5, 7, 8, 10] // Natural Minor for melodies
 };
 
 // Base Frequencies (Roots)
@@ -36,8 +37,12 @@ const ROOTS = {
     F2: 87.31,
     G2: 98.00,
     A2: 110.00,
-    Bb2: 116.54
+    Bb2: 116.54,
+    E2: 82.41
 };
+
+// Rhythm Types defining the "Feel" at 128 BPM
+type RhythmType = 'STRAIGHT' | 'BROKEN' | 'DUB' | 'MINIMAL' | 'HALF_TIME' | 'URGENT';
 
 interface TrackPreset {
     id: string;
@@ -45,24 +50,62 @@ interface TrackPreset {
     bpm: number;
     root: number;
     scale: number[];
-    vibe: 'DUB' | 'DEEP' | 'FLOAT' | 'ACID';
+    vibe: 'DUB' | 'DEEP' | 'FLOAT' | 'ACID' | 'MINIMAL';
+    rhythm: RhythmType;
     seed: number; // Determines rhythmic patterns
+    bassSequence?: number[]; // Optional override for melody (Scale indices)
 }
 
-// 12 Chill Techno Presets
+// 12 "Parody" Dub Techno Presets
 const TRACK_LIBRARY: TrackPreset[] = [
-    { id: 't1', title: "Sector 7 Mist", bpm: 110, root: ROOTS.C2, scale: SCALES.MINOR_7, vibe: 'DUB', seed: 101 },
-    { id: 't2', title: "Carbon Cycle", bpm: 112, root: ROOTS.G2, scale: SCALES.DEEP_TECH, vibe: 'DEEP', seed: 202 },
-    { id: 't3', title: "Neon Rain", bpm: 108, root: ROOTS.F2, scale: SCALES.DORIAN, vibe: 'FLOAT', seed: 303 },
-    { id: 't4', title: "Void Echoes", bpm: 105, root: ROOTS.Eb2, scale: SCALES.PHRYGIAN, vibe: 'DUB', seed: 404 },
-    { id: 't5', title: "Orbital Lounge", bpm: 115, root: ROOTS.Bb2, scale: SCALES.MINOR_7, vibe: 'FLOAT', seed: 505 },
-    { id: 't6', title: "Deep Core", bpm: 118, root: ROOTS.D2, scale: SCALES.DEEP_TECH, vibe: 'DEEP', seed: 606 },
-    { id: 't7', title: "Silicon Dreams", bpm: 110, root: ROOTS.A2, scale: SCALES.DORIAN, vibe: 'ACID', seed: 707 },
-    { id: 't8', title: "Midnight Protocol", bpm: 113, root: ROOTS.C2, scale: SCALES.MINOR_7, vibe: 'DEEP', seed: 808 },
-    { id: 't9', title: "Aurora Systems", bpm: 106, root: ROOTS.G2, scale: SCALES.DORIAN, vibe: 'FLOAT', seed: 909 },
-    { id: 't10', title: "Sub-Level 1", bpm: 109, root: ROOTS.F2, scale: SCALES.DEEP_TECH, vibe: 'DUB', seed: 1010 },
-    { id: 't11', title: "Hex Grid Blues", bpm: 111, root: ROOTS.Eb2, scale: SCALES.MINOR_7, vibe: 'DEEP', seed: 1111 },
-    { id: 't12', title: "Isotope Decay", bpm: 114, root: ROOTS.C2, scale: SCALES.PHRYGIAN, vibe: 'ACID', seed: 1212 }
+    { 
+        id: 't1', title: "Sand Sector", bpm: 128, root: ROOTS.E2, scale: SCALES.MELODIC, vibe: 'ACID', rhythm: 'URGENT', seed: 101,
+        bassSequence: [7,7,7,7,7,-1,7,-1,7,7,7,7,7,-1,9,-1] // "Sandstorm"ish
+    },
+    { 
+        id: 't2', title: "Seven Bits", bpm: 128, root: ROOTS.E2, scale: SCALES.MELODIC, vibe: 'DEEP', rhythm: 'HALF_TIME', seed: 202,
+        bassSequence: [7, -1, 7, 10, 7, 5, 3, 2, 7, -1, 7, 10, 7, 5, 3, -1] // "Seven Nation Army"
+    },
+    { 
+        id: 't3', title: "Sweet Threads", bpm: 128, root: ROOTS.C2, scale: SCALES.MELODIC, vibe: 'DUB', rhythm: 'STRAIGHT', seed: 303,
+        bassSequence: [0, 0, 2, 2, 4, 4, 2, 2, 5, 5, 4, 4, 3, 3, 2, 2] // "Sweet Dreams"
+    },
+    { 
+        id: 't4', title: "Blue Screen", bpm: 128, root: ROOTS.G2, scale: SCALES.MINOR_7, vibe: 'FLOAT', rhythm: 'STRAIGHT', seed: 404,
+        bassSequence: [0, -1, 2, -1, 4, -1, 5, -1, 4, -1, 2, -1, 0, -1, 2, -1] // "Blue"
+    },
+    { 
+        id: 't5', title: "Around the Grid", bpm: 128, root: ROOTS.A2, scale: SCALES.DORIAN, vibe: 'DEEP', rhythm: 'BROKEN', seed: 505,
+        bassSequence: [0, -1, 0, -1, 2, -1, 2, -1, 4, -1, 4, -1, 5, -1, 5, -1] // "Around the World"
+    },
+    { 
+        id: 't6', title: "Sleep Mode", bpm: 128, root: ROOTS.C2, scale: SCALES.MELODIC, vibe: 'ACID', rhythm: 'URGENT', seed: 606,
+        bassSequence: [9, -1, -1, -1, 2, -1, -1, -1, 5, -1, -1, -1, 4, -1, 7, -1] // "Insomnia"
+    },
+    { 
+        id: 't7', title: "Calibration", bpm: 128, root: ROOTS.E2, scale: SCALES.MELODIC, vibe: 'MINIMAL', rhythm: 'MINIMAL', seed: 707,
+        bassSequence: [0, 0, -1, 0, 0, -1, 1, -1, 0, 0, -1, 0, 0, -1, -1, -1] // "Satisfaction"
+    },
+    { 
+        id: 't8', title: "Kern Grid 400", bpm: 128, root: ROOTS.A2, scale: SCALES.MELODIC, vibe: 'ACID', rhythm: 'STRAIGHT', seed: 808,
+        bassSequence: [2, 2, 2, -1, 5, -1, 4, -1, 2, -1, 1, -1, 0, -1, -1, -1] // "Kernkraft 400"
+    },
+    { 
+        id: 't9', title: "Pop Kernel", bpm: 128, root: ROOTS.Bb2, scale: SCALES.MELODIC, vibe: 'FLOAT', rhythm: 'BROKEN', seed: 909,
+        bassSequence: [0, -1, 2, -1, 0, -1, 4, -1, 2, -1, 0, -1, 7, -1, -1, -1] // "Popcorn"
+    },
+    { 
+        id: 't10', title: "Bot F", bpm: 128, root: ROOTS.F2, scale: SCALES.MELODIC, vibe: 'FLOAT', rhythm: 'BROKEN', seed: 1010,
+        bassSequence: [0, -1, 2, -1, 0, 0, 4, 0, 2, -1, -1, -1, 0, 4, 9, 2] // "Axel F"
+    },
+    { 
+        id: 't11', title: "Offline Alone", bpm: 128, root: ROOTS.E2, scale: SCALES.MELODIC, vibe: 'DUB', rhythm: 'DUB', seed: 1111,
+        bassSequence: [4, -1, 3, -1, 4, -1, -1, -1, 4, -1, 3, -1, 4, -1, 0, -1] // "Better Off Alone"
+    },
+    { 
+        id: 't12', title: "Child Process", bpm: 128, root: ROOTS.F2, scale: SCALES.MELODIC, vibe: 'DUB', rhythm: 'DUB', seed: 1212,
+        bassSequence: [0, -1, -1, -1, 4, -1, -1, -1, 5, -1, -1, -1, 4, -1, 2, -1] // "Children"
+    }
 ];
 
 class AudioService {
@@ -122,7 +165,7 @@ class AudioService {
       // --- DUB TECHNO FX CHAIN ---
       // 1. Delay (Stereo Ping Pong simulation via mono for simplicity + pan later)
       this.delayNode = this.ctx.createDelay(2.0);
-      this.delayNode.delayTime.value = 0.375; // Dotted 8th approx at 120bpm, dynamically updated
+      this.delayNode.delayTime.value = 0.351; // ~dotted 8th at 128
       const delayFeedback = this.ctx.createGain();
       delayFeedback.gain.value = 0.4;
       const delayFilter = this.ctx.createBiquadFilter();
@@ -218,8 +261,8 @@ class AudioService {
 
   private loadTrack(index: number) {
       const track = this.playlist[index];
-      console.log(`[Audio] Playing: ${track.title} (${track.bpm} BPM)`);
-      this.generatePatterns(track.seed);
+      console.log(`[Audio] Playing: ${track.title} (${track.bpm} BPM) - ${track.rhythm}`);
+      this.generatePatterns(track);
       this.currentTrackStartTime = this.ctx?.currentTime || 0;
       
       // Update delay time to sync with BPM
@@ -230,11 +273,33 @@ class AudioService {
       }
   }
 
-  // Pseudo-random generator for patterns
-  private generatePatterns(seed: number) {
+  public nextTrack() {
+      // Ensure playlist is ready even if not running
+      if (this.playlist.length === 0) this.shufflePlaylist();
+      if (!this.ctx) this.init();
+      
+      this.currentTrackIndex = (this.currentTrackIndex + 1) % this.playlist.length;
+      this.loadTrack(this.currentTrackIndex);
+  }
+
+  public prevTrack() {
+      if (this.playlist.length === 0) this.shufflePlaylist();
+      if (!this.ctx) this.init();
+
+      this.currentTrackIndex = (this.currentTrackIndex - 1 + this.playlist.length) % this.playlist.length;
+      this.loadTrack(this.currentTrackIndex);
+  }
+
+  public getCurrentTrackName(): string {
+      if (this.playlist.length === 0) return "Loading...";
+      return this.playlist[this.currentTrackIndex].title;
+  }
+
+  // Pseudo-random generator for patterns based on Rhythm Type
+  private generatePatterns(track: TrackPreset) {
       const rng = (mod: number) => {
-          seed = (seed * 9301 + 49297) % 233280;
-          return Math.floor((seed / 233280) * mod);
+          let s = track.seed + Math.random() * 1000;
+          return Math.floor((s % 100000 / 100000) * mod);
       };
 
       // 16-step patterns
@@ -245,25 +310,104 @@ class AudioService {
           hat: Array(16).fill(false)
       };
 
-      // Kick: Four-on-the-floor
-      for(let i=0; i<16; i+=4) this.currentPatterns.kick[i] = true;
+      // 1. Kick Generator based on Rhythm Type
+      switch (track.rhythm) {
+          case 'STRAIGHT':
+          case 'URGENT':
+              // Classic 4/4: 0, 4, 8, 12
+              [0, 4, 8, 12].forEach(i => this.currentPatterns.kick[i] = true);
+              break;
+          
+          case 'HALF_TIME':
+              // Dubstep/Trap feel: Kick on 1. Snare would be on 3 (step 8).
+              // We put kick on 0. Maybe a syncopated kick on step 10 or 11.
+              this.currentPatterns.kick[0] = true;
+              if (rng(10) > 4) this.currentPatterns.kick[10] = true;
+              // Snare will be handled by high hat or special noise in playStep
+              break;
 
-      // Hat: Off-beats + random 16ths
-      for(let i=0; i<16; i++) {
-          if (i % 2 !== 0) this.currentPatterns.hat[i] = true; // Main open hat
-          else if (rng(10) > 7) this.currentPatterns.hat[i] = true; // Random ticks
+          case 'BROKEN':
+              // Breakbeat / Garage: 0, 3 (maybe), 10
+              this.currentPatterns.kick[0] = true;
+              this.currentPatterns.kick[10] = true;
+              if (Math.random() > 0.5) this.currentPatterns.kick[3] = true; 
+              if (Math.random() > 0.7) this.currentPatterns.kick[14] = true;
+              break;
+
+          case 'DUB':
+              // Sparse, emphasized 1st beat, maybe syncopated later
+              this.currentPatterns.kick[0] = true;
+              if (Math.random() > 0.3) this.currentPatterns.kick[10] = true;
+              if (Math.random() > 0.6) this.currentPatterns.kick[14] = true;
+              break;
+
+          case 'MINIMAL':
+              // Very sparse or just 1 and 9
+              this.currentPatterns.kick[0] = true;
+              this.currentPatterns.kick[8] = true;
+              break;
       }
 
-      // Bass: Off-beat groove + some random fills
+      // 2. Hat Generator
       for(let i=0; i<16; i++) {
-          if (i % 4 === 2) this.currentPatterns.bass[i] = 0; // Standard Techno Off-beat
-          else if (rng(10) > 8) this.currentPatterns.bass[i] = rng(3); // Variation (Root, or +1, +2 scale degrees)
+          if (track.rhythm === 'URGENT') {
+              // 16th note hats driving the beat
+              this.currentPatterns.hat[i] = true;
+          }
+          else if (track.rhythm === 'HALF_TIME') {
+              // Accentuate the 'Snare' beat (step 8) with a hat if we don't have a snare sample
+              if (i === 8) this.currentPatterns.hat[i] = true;
+              // Fast rolling hats in between?
+              if (i % 2 !== 0 && rng(10) > 3) this.currentPatterns.hat[i] = true;
+          }
+          else if (track.rhythm === 'MINIMAL') {
+              // Minimal: Short noise ticks on random steps
+              if (rng(10) > 6) this.currentPatterns.hat[i] = true;
+          } else {
+              // Standard: Open Hat on off-beats (2, 6, 10, 14) + random shaker
+              if (i % 4 === 2) this.currentPatterns.hat[i] = true; // Main open hat
+              else if (rng(10) > 7) this.currentPatterns.hat[i] = true; // Ghost ticks
+          }
       }
 
-      // Chords: Dub stabs (Sparse)
-      // Usually step 0, 7, 14 etc.
+      // 3. Bass Generator (Use provided sequence if available)
+      if (track.bassSequence) {
+          // Loop or fit 16 step sequence
+          for(let i=0; i<16; i++) {
+              if (i < track.bassSequence.length) {
+                  this.currentPatterns.bass[i] = track.bassSequence[i];
+              }
+          }
+      } else {
+          // Procedural Fallback
+          for(let i=0; i<16; i++) {
+              if (this.currentPatterns.kick[i]) continue;
+
+              if (track.rhythm === 'STRAIGHT' || track.rhythm === 'URGENT') {
+                  if (i % 2 !== 0) this.currentPatterns.bass[i] = 0; 
+              } else if (track.rhythm === 'BROKEN') {
+                  if (rng(10) > 5) this.currentPatterns.bass[i] = rng(3);
+              } else if (track.rhythm === 'HALF_TIME') {
+                  if (i === 4 || i === 12) this.currentPatterns.bass[i] = 0;
+              } else {
+                  if (i === 4 || i === 7 || i === 11) {
+                      if (rng(10) > 3) this.currentPatterns.bass[i] = 0;
+                  }
+              }
+          }
+      }
+
+      // 4. Chord Generator (Dub Stabs)
+      // Usually sparse: 7, 11, or 13
       for(let i=0; i<16; i++) {
-          if (rng(100) > 85) this.currentPatterns.chord[i] = true;
+          // Less chords in minimal
+          const threshold = track.rhythm === 'MINIMAL' ? 95 : 85;
+          if (rng(100) > threshold) this.currentPatterns.chord[i] = true;
+          
+          // Force a chord on a typical dub spot if DUB vibe
+          if (track.vibe === 'DUB' && (i === 3 || i === 6)) {
+              if (rng(10) > 2) this.currentPatterns.chord[i] = true;
+          }
       }
   }
 
@@ -276,8 +420,12 @@ class AudioService {
 
       this.resumeContext();
       this.musicRunning = true;
-      this.shufflePlaylist();
-      this.loadTrack(0);
+      
+      // Shuffle only if not yet populated
+      if (this.playlist.length === 0) {
+          this.shufflePlaylist();
+      }
+      this.loadTrack(this.currentTrackIndex);
       
       this.nextNoteTime = this.ctx.currentTime + 0.1;
       this.beatCount = 0;
@@ -332,17 +480,30 @@ class AudioService {
 
       // 2. Bass (Deep, Rolling)
       if (patterns.bass[step] !== -1) {
-          // Map index to scale frequency
-          const scaleIdx = patterns.bass[step] % track.scale.length;
-          const semitones = track.scale[scaleIdx];
+          // Calculate Frequency with Octave support
+          // Note value from pattern is assumed to be scale index + octave offset logic if we want,
+          // but here we just map index to scale.
+          const rawNote = patterns.bass[step];
+          const len = track.scale.length;
+          const octave = Math.floor(rawNote / len);
+          const scaleIdx = rawNote % len;
+          
+          // Safety
+          const safeScaleIdx = Math.max(0, Math.min(scaleIdx, len - 1));
+          
+          const semitones = track.scale[safeScaleIdx] + (octave * 12);
           const freq = track.root * Math.pow(2, semitones / 12);
+          
           this.playBass(time, freq, track.vibe);
       }
 
       // 3. Hi-Hats (Shakers/Noise)
       if (patterns.hat[step]) {
-          const isOpen = step % 2 !== 0; // Off-beats usually open
-          this.playHat(time, isOpen);
+          // For HALF_TIME, step 8 acts as a snare accent (louder hat)
+          const isAccent = (track.rhythm === 'HALF_TIME' && step === 8);
+          // Standard off-beat open hat
+          const isOpen = (step % 4 === 2) || isAccent; 
+          this.playHat(time, isOpen, isAccent);
       }
 
       // 4. Dub Chords (Stabs)
@@ -400,7 +561,7 @@ class AudioService {
       osc.stop(time + 0.25);
   }
 
-  private playHat(time: number, open: boolean) {
+  private playHat(time: number, open: boolean, accent: boolean = false) {
       if (!this.ctx || !this.musicBus) return;
       
       // Noise burst
@@ -414,12 +575,20 @@ class AudioService {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'highpass';
-      filter.frequency.value = 6000;
+      filter.frequency.value = accent ? 3000 : 6000; // Lower freq for accent ("Snare" feel)
 
       const gain = this.ctx.createGain();
-      // Louder if open
-      const vol = open ? 0.15 : 0.05; 
-      const dur = open ? 0.1 : 0.03;
+      
+      let vol = 0.05;
+      let dur = 0.03;
+      
+      if (accent) {
+          vol = 0.25;
+          dur = 0.15;
+      } else if (open) {
+          vol = 0.15;
+          dur = 0.1;
+      }
 
       gain.gain.setValueAtTime(vol, time);
       gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
