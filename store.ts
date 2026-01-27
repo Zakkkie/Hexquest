@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText } from './types.ts';
+import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language } from './types.ts';
 import { GAME_CONFIG } from './rules/config.ts';
 import { getHexKey, getNeighbors, findPath } from './services/hexUtils.ts';
 import { GameEngine } from './engine/GameEngine.ts';
@@ -11,6 +11,7 @@ import { LevelConfig } from './campaign/types.ts';
 const MOCK_USER_DB: Record<string, { password: string; avatarColor: string; avatarIcon: string }> = {};
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899']; 
 const LEADERBOARD_STORAGE_KEY = 'hexquest_leaderboard_v3'; 
+const CAMPAIGN_PROGRESS_KEY = 'hexquest_campaign_progress_v1';
 
 const loadLeaderboard = (): LeaderboardEntry[] => {
   try {
@@ -24,6 +25,19 @@ const loadLeaderboard = (): LeaderboardEntry[] => {
 
 const saveLeaderboard = (entries: LeaderboardEntry[]) => {
     localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(entries));
+};
+
+const loadCampaignProgress = (): number => {
+    try {
+        const stored = localStorage.getItem(CAMPAIGN_PROGRESS_KEY);
+        return stored ? parseInt(stored, 10) : 0;
+    } catch (e) {
+        return 0;
+    }
+};
+
+const saveCampaignProgress = (levelIndex: number) => {
+    localStorage.setItem(CAMPAIGN_PROGRESS_KEY, levelIndex.toString());
 };
 
 interface AuthResponse { success: boolean; message?: string; }
@@ -57,11 +71,29 @@ interface GameStore extends GameState {
 let engine: GameEngine | null = null;
 let tickCount = 0;
 
-const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig): SessionState => {
+const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig, language: Language = 'EN'): SessionState => {
   // Map Generation Logic
   const initialGrid: Record<string, Hex> = {};
   
-  if (levelConfig && levelConfig.id === '1.2') {
+  if (levelConfig && levelConfig.mapConfig.customLayout) {
+      // --- CUSTOM FIXED LAYOUT ---
+      levelConfig.mapConfig.customLayout.forEach(hexDef => {
+          if (hexDef.q === undefined || hexDef.r === undefined) return;
+          const key = getHexKey(hexDef.q, hexDef.r);
+          initialGrid[key] = {
+              id: key,
+              q: hexDef.q,
+              r: hexDef.r,
+              currentLevel: hexDef.currentLevel ?? 0,
+              maxLevel: hexDef.maxLevel ?? 0,
+              progress: 0,
+              revealed: true,
+              ownerId: hexDef.ownerId,
+              structureType: hexDef.structureType,
+              durability: hexDef.durability
+          };
+      });
+  } else if (levelConfig && levelConfig.id === '1.2') {
       // --- LEVEL 1.2: PYRAMID RUN (GUARANTEED PATH, MINIMAL VOID) ---
       
       // 1. Define all coordinate sets first
@@ -144,9 +176,11 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       });
 
   } else {
-      // --- STANDARD RADIAL GENERATION ---
-      const mapRadius = levelConfig ? levelConfig.mapConfig.size : 1; 
-      const shouldGenerateWalls = levelConfig ? levelConfig.mapConfig.generateWalls : false;
+      // --- STANDARD RADIAL GENERATION (Skirmish / Default) ---
+      // For Skirmish (no levelConfig), we use a small radius (2) and NO walls
+      // to simulate an infinite procedural world that expands as you move.
+      const mapRadius = levelConfig ? levelConfig.mapConfig.size : 2; 
+      const shouldGenerateWalls = levelConfig ? levelConfig.mapConfig.generateWalls : false; 
       const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? mapRadius;
       const wallStartLevel = levelConfig?.mapConfig.wallStartLevel ?? 9;
       const wallType = levelConfig?.mapConfig.wallType ?? 'classic';
@@ -166,55 +200,75 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
               if (isWall) {
                   if (wallType === 'void_shatter') {
                       if (dist === wallStartRadius) {
-                          // Immediate boundary is a Void Moat
                           structureType = 'VOID';
                           level = 0;
                       } else {
-                          // Outer rings: Shattered Ruins
-                          // Use noise to create scattered terrain of various heights (0-5)
                           const noise = Math.abs(Math.sin(q * 12.9898 + r * 78.233) * 43758.5453) % 1;
-                          
                           if (noise > 0.4) {
-                              // Create solid "ruins" with random levels from 1 to 5
                               level = 1 + Math.floor((noise - 0.4) * 10); 
                               if (level > 5) level = 5;
                           } else {
-                              // Empty space / deep void
                               level = 0;
                           }
                           structureType = undefined;
                       }
                   } else {
-                      // Classic increasing wall
                       level = Math.min(99, wallStartLevel + (dist - wallStartRadius));
                       structureType = 'BARRIER';
                   }
+              }
+
+              // Determine Owner for Skirmish Start
+              let ownerId: string | undefined = undefined;
+              let maxLevel = level;
+              let currentLevel = level;
+              let durability: number | undefined = undefined;
+
+              // If Skirmish (no levelConfig) and Center Hex
+              // UPDATED: Start at 0/0 resources, so map must be L0 and Unowned
+              if (!levelConfig && q === 0 && r === 0) {
+                  ownerId = undefined; // No owner initially
+                  maxLevel = 0;        // Level 0
+                  currentLevel = 0;    // Level 0
+                  durability = undefined;
+              }
+
+              // Apply correct durability if hex is Level 1 (e.g. from walls or noise)
+              if (!durability && maxLevel === 1) {
+                  durability = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
               }
 
               initialGrid[key] = { 
                   id: key, 
                   q, 
                   r, 
-                  currentLevel: level, 
-                  maxLevel: level, 
+                  currentLevel, 
+                  maxLevel, 
                   progress: 0, 
                   revealed: true,
-                  structureType: structureType
+                  structureType,
+                  ownerId,
+                  durability
               };
           }
       }
   }
 
-  // Ensure center exists if not created (e.g. sparse map gen issues)
+  // Ensure center exists if not created (Fallback)
   if (!initialGrid[getHexKey(0,0)]) {
-      initialGrid[getHexKey(0,0)] = { id: getHexKey(0,0), q:0, r:0, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true };
+      initialGrid[getHexKey(0,0)] = { 
+          id: getHexKey(0,0), q:0, r:0, 
+          currentLevel: 0, maxLevel: 0, progress: 0, revealed: true 
+      };
   }
   
-  // Use LevelConfig if provided, otherwise fallback to WinCondition or defaults
   const botCount = levelConfig ? (levelConfig.aiMode === 'none' ? 0 : 1) : (winCondition?.botCount || 0);
-  const startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;
-  const startMoves = levelConfig ? levelConfig.startState.moves : GAME_CONFIG.INITIAL_MOVES;
-  const startRank = levelConfig ? levelConfig.startState.rank : 0;
+  
+  // Skirmish Defaults vs Level Config
+  // UPDATED: Start with 0 in Skirmish to force acquisition loop
+  const startCredits = levelConfig ? levelConfig.startState.credits : 0;
+  const startMoves = levelConfig ? levelConfig.startState.moves : 0;
+  const startRank = levelConfig ? levelConfig.startState.rank : 1;
   
   const bots: Entity[] = [];
   // Spawn points at edge of radius 2
@@ -225,7 +279,6 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     // Ensure bot spawn hex exists (expand map if necessary for bots)
     if (!initialGrid[getHexKey(sp.q, sp.r)]) {
         initialGrid[getHexKey(sp.q, sp.r)] = { id: getHexKey(sp.q,sp.r), q:sp.q, r:sp.r, currentLevel:0, maxLevel:0, progress:0, revealed:true };
-        // Add neighbors for bot movement space
         getNeighbors(sp.q, sp.r).forEach(n => {
             const k = getHexKey(n.q, n.r);
             if (!initialGrid[k]) initialGrid[k] = { id:k, q:n.q, r:n.r, currentLevel:0, maxLevel:0, progress:0, revealed:true };
@@ -233,7 +286,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     }
     bots.push({
       id: `bot-${i+1}`, type: EntityType.BOT, state: EntityState.IDLE, q: sp.q, r: sp.r,
-      playerLevel: 0, coins: GAME_CONFIG.INITIAL_COINS, moves: GAME_CONFIG.INITIAL_MOVES,
+      playerLevel: 0, coins: startCredits, moves: startMoves,
       totalCoinsEarned: 0, recentUpgrades: [], movementQueue: [],
       memory: { lastPlayerPos: null, currentGoal: null, stuckCounter: 0 },
       avatarColor: BOT_PALETTE[i % BOT_PALETTE.length],
@@ -277,6 +330,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     growingBotIds: [],
     telemetry: [],
     effects: [],
+    language
   };
 };
 
@@ -286,6 +340,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   toast: null,
   pendingConfirmation: null,
   leaderboard: loadLeaderboard(),
+  campaignProgress: loadCampaignProgress(),
   hasActiveSession: false,
   isMusicMuted: false,
   isSfxMuted: false,
@@ -353,7 +408,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           winType: 'AND'
       } : null);
 
-      const initialSessionState = createInitialSessionData(effectiveWin, levelConfig);
+      const initialSessionState = createInitialSessionData(effectiveWin, levelConfig, get().language);
       engine = new GameEngine(initialSessionState); 
       set({ session: engine.state, hasActiveSession: true, uiState: 'GAME' });
 
@@ -530,7 +585,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   tick: () => {
       // STRICT CHECK: Only process logic if game is actively PLAYING.
       if (!engine || !engine.state) return;
-      if (engine.state.gameStatus !== 'PLAYING') return;
+      if (engine.state.gameStatus !== 'PLAYING' && engine.state.gameStatus !== 'VICTORY') return;
       
       const prevState = get().session;
       
@@ -554,6 +609,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
                  case 'VICTORY': audioService.play('SUCCESS'); break;
                  case 'DEFEAT': audioService.play('ERROR'); break;
                }
+            }
+
+            if (event.type === 'VICTORY' && engine?.state?.activeLevelConfig) {
+                // AUTO UNLOCK NEXT CAMPAIGN LEVEL
+                const currentId = engine.state.activeLevelConfig.id;
+                const currentIdx = CAMPAIGN_LEVELS.findIndex(l => l.id === currentId);
+                const progress = get().campaignProgress;
+                
+                if (currentIdx !== -1 && currentIdx >= progress) {
+                    const nextProgress = Math.min(CAMPAIGN_LEVELS.length - 1, currentIdx + 1);
+                    if (nextProgress > progress) {
+                        saveCampaignProgress(nextProgress);
+                        set({ campaignProgress: nextProgress });
+                        // Add notification about unlock?
+                    }
+                }
             }
 
             if (event.type === 'LEADERBOARD_UPDATE' && event.data?.entry) {

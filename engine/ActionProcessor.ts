@@ -16,6 +16,14 @@ export class ActionProcessor {
     const actor = state.player.id === actorId ? state.player : state.bots.find(b => b.id === actorId);
     if (!actor) return { ok: false, reason: 'Entity not found' };
 
+    // CAMPAIGN HOOK: Check if the current level has custom validation rules
+    if (state.activeLevelConfig?.hooks?.onBeforeAction) {
+        const hookResult = state.activeLevelConfig.hooks.onBeforeAction(state, action);
+        if (hookResult && !hookResult.ok) {
+            return hookResult;
+        }
+    }
+
     if (action.stateVersion !== undefined && action.stateVersion !== state.stateVersion) {
          return { ok: false, reason: `STALE STATE (v${action.stateVersion} vs v${state.stateVersion})` };
     }

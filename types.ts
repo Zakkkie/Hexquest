@@ -132,7 +132,7 @@ export interface ToastMessage {
   timestamp: number;
 }
 
-export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD';
+export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP';
 
 export interface UserProfile {
   isAuthenticated: boolean;
@@ -214,6 +214,7 @@ export interface SessionState {
   growingBotIds: string[]; 
   telemetry?: GameEvent[];
   effects: FloatingText[]; // Visual effects layer
+  language: Language; // Language setting for session-level localization (e.g. hooks)
 }
 
 // State for the entire application, managed by Zustand
@@ -225,6 +226,7 @@ export interface GameState {
   
   // Cross-session state
   leaderboard: LeaderboardEntry[];
+  campaignProgress: number; // Highest unlocked level index (0-based)
   hasActiveSession: boolean;
   isMusicMuted: boolean;
   isSfxMuted: boolean;

@@ -1,10 +1,10 @@
 
-
 import React, { useEffect } from 'react';
 import { useGameStore } from './store.ts';
 import GameView from './components/GameView.tsx';
 import MainMenu from './components/MainMenu.tsx';
 import Leaderboard from './components/Leaderboard.tsx';
+import CampaignMap from './components/CampaignMap.tsx';
 import Background from './components/Background.tsx';
 
 const App: React.FC = () => {
@@ -45,6 +45,7 @@ const App: React.FC = () => {
             ensuring all local state (camera, animations) is reset. */}
         {uiState === 'GAME' && <GameView key={sessionId} />}
         {uiState === 'LEADERBOARD' && <Leaderboard />}
+        {uiState === 'CAMPAIGN_MAP' && <CampaignMap />}
       </div>
 
     </div>

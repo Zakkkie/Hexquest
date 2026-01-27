@@ -94,8 +94,17 @@ interface Dictionary {
         TUT_1_2_INTRO_DESC: string;
         TUT_1_2_LEGEND_SAFE: string;
         TUT_1_2_LEGEND_RISK: string;
-        TUT_1_2_DIST: string;
-        TUT_1_2_GOAL: string;
+        // TUTORIAL 1.3 SPECIFIC
+        TUT_1_3_TASK: string;
+        TUT_1_3_INTRO_TITLE: string;
+        TUT_1_3_INTRO_DESC: string;
+        TUT_1_3_REQ_LABEL: string;
+        TUT_1_3_ERROR_STAIRCASE: string;
+        // TUTORIAL 1.4 SPECIFIC
+        TUT_1_4_TASK: string;
+        TUT_1_4_INTRO_TITLE: string;
+        TUT_1_4_INTRO_DESC: string;
+        TUT_1_4_COUNTER: string;
     };
     TOOLTIP: {
         CURRENT_LOC: string;
@@ -125,6 +134,7 @@ interface Dictionary {
         FINAL_DESC: string;
         NO_POINTS_TITLE: string;
         NO_POINTS_DESC: string;
+        NO_POINTS_DESC_HINT: string;
         NO_POINTS_HINT: string;
     };
     LEADERBOARD: {
@@ -229,8 +239,15 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_2_INTRO_DESC: "The terrain ahead is critically unstable. You must navigate a path to the extraction point.\n\nOnly step on STABLE sectors. Damaged sectors will collapse instantly under your weight.",
             TUT_1_2_LEGEND_SAFE: "Stable (Safe)",
             TUT_1_2_LEGEND_RISK: "Critical (Do Not Step)",
-            TUT_1_2_DIST: "Distance to Apex",
-            TUT_1_2_GOAL: "Reach the Signal",
+            TUT_1_3_TASK: "Upgrade ANY to Level 2",
+            TUT_1_3_INTRO_TITLE: "Construction Protocol: Verticality",
+            TUT_1_3_INTRO_DESC: "You are isolated on a floating platform.\n\nObjective: Reinforce the foundation. Expand your territory, then upgrade ANY sector to Level 2.\n\nWARNING: Do not step into the Void.",
+            TUT_1_3_REQ_LABEL: "L1 Supports Ready",
+            TUT_1_3_ERROR_STAIRCASE: "UNSTABLE STRUCTURE! To build Level 2, you need 1 more neighbor at Level 1+.",
+            TUT_1_4_TASK: "Reinforce The Bridge",
+            TUT_1_4_INTRO_TITLE: "Protocol: Resource Cycle",
+            TUT_1_4_INTRO_DESC: "Objective: UPGRADE the 3 HIGHLIGHTED bridge sectors to Level 2.\n\nPROBLEM: 'Cycle Lock' prevents rapid upgrades, and the bridge lacks structural support.\n\nSOLUTION: Use the widened bridge area to build supporting structures, and capture Debris Fields (L0) to charge your Cycle.",
+            TUT_1_4_COUNTER: "Reinforced",
         },
         TOOLTIP: {
             CURRENT_LOC: "Current Location",
@@ -260,6 +277,7 @@ export const TEXT: Record<Language, Dictionary> = {
             FINAL_DESC: "Return to the center and upgrade to Level 3 to complete mission.",
             NO_POINTS_TITLE: "No Upgrades",
             NO_POINTS_DESC: "No upgrade points. Capture new sectors (L0->L1) to gain upgrade points.",
+            NO_POINTS_DESC_HINT: "Look for highlighted empty hexes.",
             NO_POINTS_HINT: "Look for highlighted empty hexes."
         },
         LEADERBOARD: {
@@ -362,8 +380,15 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_2_INTRO_DESC: "Впереди нестабильная зона. Вы должны добраться до точки эвакуации.\n\nНаступайте только на ЦЕЛЫЕ сектора. Поврежденные сектора не выдержат ваш вес.",
             TUT_1_2_LEGEND_SAFE: "Стабильно (Безопасно)",
             TUT_1_2_LEGEND_RISK: "Критично (Не наступать)",
-            TUT_1_2_DIST: "Дистанция",
-            TUT_1_2_GOAL: "Цель: Сигнал",
+            TUT_1_3_TASK: "Цель: Любой до Уровня 2",
+            TUT_1_3_INTRO_TITLE: "Протокол: Вертикальность",
+            TUT_1_3_INTRO_DESC: "Вы изолированы на платформе.\n\nЦель: Укрепить фундамент. Расширьте территорию, затем улучшите ЛЮБОЙ сектор до 2 уровня.\n\nВНИМАНИЕ: Не наступайте в Пустоту (VOID).",
+            TUT_1_3_REQ_LABEL: "Готовые опоры (L1)",
+            TUT_1_3_ERROR_STAIRCASE: "НЕСТАБИЛЬНОСТЬ! Для Уровня 2 нужен еще 1 сосед уровня 1+.",
+            TUT_1_4_TASK: "Укрепить Мост",
+            TUT_1_4_INTRO_TITLE: "Протокол: Цикл Ресурсов",
+            TUT_1_4_INTRO_DESC: "Цель: УЛУЧШИТЬ 3 ПОДСВЕЧЕННЫХ сектора моста до 2 уровня.\n\nПРОБЛЕМА: 'Блокировка Цикла' мешает быстрому апгрейду, а мост слишком узок для опор.\n\nРЕШЕНИЕ: Используйте расширенный мост для постройки опор и захватите Обломки (L0) для зарядки цикла.",
+            TUT_1_4_COUNTER: "Укреплено",
         },
         TOOLTIP: {
             CURRENT_LOC: "Текущая позиция",
@@ -393,6 +418,7 @@ export const TEXT: Record<Language, Dictionary> = {
             FINAL_DESC: "Вернитесь в центр и улучшите его до Уровня 3.",
             NO_POINTS_TITLE: "Нет Очков",
             NO_POINTS_DESC: "Нет очков апгрейда. Захватывай новые территории (L0->L1), чтобы получить очки апгрейда.",
+            NO_POINTS_DESC_HINT: "Иди на подсветку за очками.",
             NO_POINTS_HINT: "Иди на подсветку за очками."
         },
         LEADERBOARD: {

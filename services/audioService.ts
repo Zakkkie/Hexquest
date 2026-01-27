@@ -295,6 +295,33 @@ class AudioService {
       return this.playlist[this.currentTrackIndex].title;
   }
 
+  public playRandomTrack() {
+      // Ensure init
+      if (!this.ctx) this.init();
+      
+      // If playlist empty, standard start will shuffle it
+      if (this.playlist.length === 0) {
+          this.startMusic();
+          return;
+      }
+      
+      // Pick random index distinct from current
+      let newIndex = Math.floor(Math.random() * this.playlist.length);
+      if (this.playlist.length > 1 && newIndex === this.currentTrackIndex) {
+          newIndex = (newIndex + 1) % this.playlist.length;
+      }
+      
+      this.currentTrackIndex = newIndex;
+      this.loadTrack(this.currentTrackIndex);
+      
+      // Ensure running
+      if (!this.musicRunning && !this.isMusicMuted) {
+          this.resumeContext();
+          this.musicRunning = true;
+          this.scheduler();
+      }
+  }
+
   // Pseudo-random generator for patterns based on Rhythm Type
   private generatePatterns(track: TrackPreset) {
       const rng = (mod: number) => {

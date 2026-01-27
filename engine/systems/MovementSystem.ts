@@ -108,7 +108,7 @@ export class MovementSystem implements System {
     const oldHex = state.grid[oldHexKey];
     
     if (oldHex && oldHex.maxLevel === 1 && oldHex.structureType !== 'VOID') {
-        const d = oldHex.durability !== undefined ? oldHex.durability : 3;
+        const d = oldHex.durability !== undefined ? oldHex.durability : GAME_CONFIG.L1_HEX_MAX_DURABILITY;
         if (d <= 0) {
              const collapsedHex: Hex = {
                 ...oldHex,
@@ -171,7 +171,7 @@ export class MovementSystem implements System {
     const newHex = gridUpdates[newHexKey] || state.grid[newHexKey];
     
     if (newHex && newHex.maxLevel === 1 && newHex.structureType !== 'VOID') {
-        const currentDurability = newHex.durability !== undefined ? newHex.durability : 3;
+        const currentDurability = newHex.durability !== undefined ? newHex.durability : GAME_CONFIG.L1_HEX_MAX_DURABILITY;
         const newDurability = currentDurability - 1;
         
         gridUpdates[newHexKey] = { ...newHex, durability: newDurability };

@@ -70,7 +70,6 @@ const MainMenu: React.FC = () => {
   const language = useGameStore(state => state.language);
   
   const startNewGame = useGameStore(state => state.startNewGame);
-  const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
   const setUIState = useGameStore(state => state.setUIState);
   const setLanguage = useGameStore(state => state.setLanguage);
   const logout = useGameStore(state => state.logout);
@@ -150,10 +149,11 @@ const MainMenu: React.FC = () => {
      playUiSound('CLICK');
      if (hasActiveSession) {
          if (window.confirm(t.ABANDON_CONFIRM)) {
-             startCampaignLevel('1.1'); 
+             abandonSession();
+             setUIState('CAMPAIGN_MAP');
          }
      } else {
-         startCampaignLevel('1.1');
+         setUIState('CAMPAIGN_MAP');
      }
   };
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { getHexKey, getNeighbors, getSecondsToGrow, cubeDistance } from '../services/hexUtils.ts';
+import { getHexKey, getNeighbors, getSecondsToGrow } from '../services/hexUtils.ts';
 import { checkGrowthCondition } from '../rules/growth.ts';
 import { EntityState, Hex } from '../types.ts';
 import HexButton from './HexButton.tsx';
@@ -10,7 +10,7 @@ import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, TrendingUp, ChevronUp, MapPin,
-  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, RefreshCcw
+  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, Layers, Zap
 } from 'lucide-react';
 
 // FIREWORKS COMPONENT
@@ -114,6 +114,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const language = useGameStore(state => state.language);
   const user = useGameStore(state => state.user);
   
+  const telemetry = useGameStore(state => state.session?.telemetry);
+
   const isMusicMuted = useGameStore(state => state.isMusicMuted);
   const isSfxMuted = useGameStore(state => state.isSfxMuted);
   
@@ -132,7 +134,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const [showSoundMenu, setShowSoundMenu] = useState(false);
   const soundMenuRef = useRef<HTMLDivElement>(null);
 
-  // Level 1.2 State: Show Intro Briefing (Blocking)
+  // Level 1.2 / 1.3 / 1.4 State: Show Intro Briefing (Blocking)
   const [showLevelBriefing, setShowLevelBriefing] = useState(false);
 
   // New state for collapsible mission HUD
@@ -151,19 +153,31 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   // Level Tutorial Flags
   const isLevel1_1 = activeLevelConfig?.id === '1.1';
   const isLevel1_2 = activeLevelConfig?.id === '1.2';
+  const isLevel1_3 = activeLevelConfig?.id === '1.3';
+  const isLevel1_4 = activeLevelConfig?.id === '1.4';
 
-  // Level 1.1 Progress
+  // Calculate Owned Sectors for Tutorial 1.1
   const ownedCount = useMemo(() => {
     if (!grid || !player) return 0;
     return Object.values(grid).filter((h: Hex) => h.ownerId === player.id).length;
   }, [grid, player]);
 
-  // Level 1.2 Progress (Distance to Goal)
-  const distanceToGoal = useMemo(() => {
-      if (!player) return 99;
-      // Goal is at 0, -8
-      return cubeDistance({ q: player.q, r: player.r }, { q: 0, r: -8 });
-  }, [player]);
+  // Calculate Supports for Tutorial 1.3
+  const supportCount = useMemo(() => {
+      if (!isLevel1_3 || !grid) return 0;
+      const centerNeighbors = getNeighbors(-1,0);
+      return centerNeighbors.filter(n => {
+          const h = grid[getHexKey(n.q, n.r)];
+          return h && h.maxLevel >= 1;
+      }).length;
+  }, [grid, isLevel1_3]);
+
+  // Track Bridge Status for 1.4
+  const bridgeReinforcedCount = useMemo(() => {
+      if (!isLevel1_4 || !grid) return 0;
+      const bridgeKeys = [getHexKey(1,0), getHexKey(2,0), getHexKey(3,0)];
+      return bridgeKeys.filter(k => grid[k] && grid[k].maxLevel >= 2).length;
+  }, [grid, isLevel1_4]);
 
   // Determine Next Level
   const nextLevelId = useMemo(() => {
@@ -185,12 +199,12 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // TRIGGER LEVEL 1.2 BRIEFING
+  // TRIGGER LEVEL 1.2, 1.3, 1.4 BRIEFING
   useEffect(() => {
-      if (isLevel1_2 && gameStatus === 'PLAYING') {
+      if ((isLevel1_2 || isLevel1_3 || isLevel1_4) && gameStatus === 'PLAYING') {
           setShowLevelBriefing(true);
       }
-  }, [isLevel1_2, gameStatus]);
+  }, [isLevel1_2, isLevel1_3, isLevel1_4, gameStatus]);
 
   const upgradeCondition = useMemo(() => {
     if (!currentHex || !player || !grid) return { canGrow: false, reason: 'Invalid Hex' };
@@ -263,9 +277,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-30 pt-[max(0.5rem,env(safe-area-inset-top))]">
           <div className="w-full flex justify-between items-start gap-2 max-w-7xl mx-auto relative">
                
-               {/* STATS BAR: Uses w-fit to clamp width to content (MOVES) */}
+               {/* STATS BAR */}
                <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-xl px-2 py-2 md:px-6 md:py-3 gap-3 md:gap-8 w-fit transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade shrink-0">
-                   
                    {/* Rank */}
                    <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-2 md:gap-3 cursor-pointer group shrink-0">
                        <div className="p-1.5 md:p-2 rounded-lg bg-indigo-500/10 group-hover:bg-indigo-500/20 transition-colors">
@@ -278,11 +291,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                              <span className="text-[10px] md:text-xs text-slate-600 font-bold ml-px md:ml-1">/{winCondition?.targetLevel || '?'}</span>
                            </div>
                        </div>
-                       {isLevel1_1 && (
-                           <div className="absolute top-full left-0 mt-2 bg-indigo-900/90 text-indigo-200 text-[9px] px-2 py-1 rounded whitespace-nowrap font-bold shadow-lg animate-pulse border border-indigo-500/30">
-                               {t.HINT_RANK}
-                           </div>
-                       )}
                    </div>
 
                    <div className="w-px h-6 md:h-10 bg-slate-800 shrink-0"></div>
@@ -300,11 +308,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                ))}
                            </div>
                        </div>
-                       {isLevel1_1 && (
-                           <div className="absolute top-full left-0 mt-2 bg-emerald-900/90 text-emerald-200 text-[9px] px-2 py-1 rounded whitespace-nowrap font-bold shadow-lg animate-pulse border border-emerald-500/30">
-                               {t.HINT_CYCLE}
-                           </div>
-                       )}
                    </div>
 
                    <div className="w-px h-6 md:h-10 bg-slate-800 shrink-0"></div>
@@ -321,11 +324,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                              <span className="hidden md:inline text-xs text-slate-600 font-bold ml-1">/{winCondition?.targetCoins || '?'}</span>
                            </div>
                        </div>
-                       {isLevel1_1 && (
-                           <div className="absolute top-full left-0 mt-2 bg-amber-900/90 text-amber-200 text-[9px] px-2 py-1 rounded whitespace-nowrap font-bold shadow-lg animate-pulse border border-amber-500/30">
-                               {t.HINT_CREDITS}
-                           </div>
-                       )}
                    </div>
 
                    <div className="w-px h-6 md:h-10 bg-slate-800 shrink-0"></div>
@@ -339,11 +337,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                            <span className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1 group-hover:text-blue-300 transition-colors">{t.MOVES}</span>
                            <span className="text-sm md:text-xl font-black text-white leading-none">{player.moves}</span>
                        </div>
-                       {isLevel1_1 && (
-                           <div className="absolute top-full left-0 mt-2 bg-blue-900/90 text-blue-200 text-[9px] px-2 py-1 rounded whitespace-nowrap font-bold shadow-lg animate-pulse border border-blue-500/30">
-                               {t.HINT_MOVES}
-                           </div>
-                       )}
                    </div>
                </div>
 
@@ -401,7 +394,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       </div>
 
-      {/* LEVEL 1.1 TUTORIAL DASHBOARD (Optimized Pill Style) */}
+      {/* LEVEL 1.1 TUTORIAL DASHBOARD */}
       {isLevel1_1 && (
           <div 
             className="absolute top-[80px] md:top-[120px] right-2 md:right-auto md:left-1/2 md:-translate-x-1/2 pointer-events-auto z-20 flex flex-col items-end md:items-center group"
@@ -413,7 +406,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   bg-slate-900/60 backdrop-blur-md border border-indigo-500/30 shadow-2xl transition-all duration-300 ease-out overflow-hidden
                   ${isMissionExpanded ? 'rounded-2xl p-4 w-[240px]' : 'rounded-full px-4 py-2 w-auto'}
               `}>
-                  {/* Collapsed View (Pill) */}
                   {!isMissionExpanded && (
                       <div className="flex items-center gap-2 cursor-pointer">
                           <div className={`w-2 h-2 rounded-full ${ownedCount >= 6 ? 'bg-emerald-500' : 'bg-indigo-500 animate-pulse'}`} />
@@ -421,8 +413,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           <ChevronDown className="w-3 h-3 text-indigo-400" />
                       </div>
                   )}
-
-                  {/* Expanded View */}
                   {isMissionExpanded && (
                       <div className="flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200">
                           <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-1">
@@ -432,7 +422,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               </div>
                               <div className="text-xs font-mono font-bold text-white bg-indigo-900/50 px-2 py-0.5 rounded">{ownedCount} / 6</div>
                           </div>
-                          
                           <div className="space-y-1.5">
                               <div className="flex items-center justify-between text-[10px] text-slate-300">
                                   <span>{t.TUT_1_1_COST}</span>
@@ -443,7 +432,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                   <span className="font-mono text-emerald-400 font-bold">+5</span>
                               </div>
                           </div>
-
                           <div className="mt-2 pt-2 border-t border-white/5 text-[10px] text-indigo-300 italic text-center">
                               "{t.TUT_1_1_GUIDE}"
                           </div>
@@ -453,88 +441,99 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* LEVEL 1.2 DASHBOARD */}
-      {isLevel1_2 && !showLevelBriefing && (
-          <div 
-            className="absolute top-[80px] md:top-[120px] right-2 md:right-auto md:left-1/2 md:-translate-x-1/2 pointer-events-auto z-20 flex flex-col items-end md:items-center group"
-            onMouseEnter={() => setIsMissionExpanded(true)}
-            onMouseLeave={() => setIsMissionExpanded(false)}
-            onClick={() => setIsMissionExpanded(!isMissionExpanded)}
-          >
-              <div className={`
-                  bg-slate-900/60 backdrop-blur-md border border-red-500/30 shadow-2xl transition-all duration-300 ease-out overflow-hidden
-                  ${isMissionExpanded ? 'rounded-2xl p-4 w-[240px]' : 'rounded-full px-4 py-2 w-auto'}
-              `}>
-                  {/* Collapsed View (Pill) */}
-                  {!isMissionExpanded && (
-                      <div className="flex items-center gap-2 cursor-pointer">
-                          <div className={`w-2 h-2 rounded-full ${distanceToGoal <= 0 ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`} />
-                          <span className="text-xs font-bold text-red-100 whitespace-nowrap">{t.TUT_1_2_DIST}: <span className="font-mono text-white">{distanceToGoal}</span></span>
-                          <ChevronDown className="w-3 h-3 text-red-400" />
+      {/* LEVEL 1.3 DASHBOARD */}
+      {isLevel1_3 && (
+          <div className="absolute top-[80px] md:top-[120px] right-2 md:right-auto md:left-1/2 md:-translate-x-1/2 pointer-events-auto z-20 flex flex-col items-end md:items-center">
+              <div className="bg-slate-900/60 backdrop-blur-md border border-indigo-500/30 shadow-2xl rounded-full px-4 py-2 w-auto flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-indigo-400" />
+                      <span className="text-xs font-bold text-indigo-100 whitespace-nowrap uppercase">{t.TUT_1_3_TASK}</span>
+                  </div>
+                  <div className="h-4 w-px bg-white/20"></div>
+                  <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold">{t.TUT_1_3_REQ_LABEL}</span>
+                      <div className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${supportCount >= 2 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                          {supportCount}/2
                       </div>
-                  )}
-
-                  {/* Expanded View */}
-                  {isMissionExpanded && (
-                      <div className="flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200">
-                          <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-1">
-                              <div className="flex items-center gap-2">
-                                  <Target className="w-4 h-4 text-red-400" />
-                                  <span className="text-xs font-bold text-white uppercase tracking-wider">{t.TUT_1_2_TASK}</span>
-                              </div>
-                          </div>
-                          
-                          <div className="space-y-1.5">
-                              <div className="flex items-center justify-between text-[10px] text-slate-300">
-                                  <span>{t.TUT_1_2_DIST}</span>
-                                  <span className="font-mono text-white font-bold">{distanceToGoal}</span>
-                              </div>
-                          </div>
-
-                          <div className="mt-2 pt-2 border-t border-white/5 text-[10px] text-red-300 italic text-center">
-                              "{t.TUT_1_2_GOAL}"
-                          </div>
-                      </div>
-                  )}
+                  </div>
               </div>
           </div>
       )}
 
-      {/* LEVEL 1.2: PRE-GAME BRIEFING (Blocking) */}
-      {isLevel1_2 && showLevelBriefing && (
+      {/* LEVEL 1.4 DASHBOARD (BRIDGE TRACKER) */}
+      {isLevel1_4 && (
+          <div className="absolute top-[80px] md:top-[120px] right-2 md:right-auto md:left-1/2 md:-translate-x-1/2 pointer-events-auto z-20 flex flex-col items-end md:items-center">
+              <div className="bg-slate-900/60 backdrop-blur-md border border-cyan-500/30 shadow-2xl rounded-full px-4 py-2 w-auto flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-cyan-400" />
+                      <span className="text-xs font-bold text-cyan-100 whitespace-nowrap uppercase">{t.TUT_1_4_TASK}</span>
+                  </div>
+                  <div className="h-4 w-px bg-white/20"></div>
+                  <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold">{t.TUT_1_4_COUNTER}</span>
+                      <div className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${bridgeReinforcedCount >= 3 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
+                          {bridgeReinforcedCount}/3
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* LEVEL 1.2, 1.3, 1.4: PRE-GAME BRIEFING (Blocking) */}
+      {(isLevel1_2 || isLevel1_3 || isLevel1_4) && showLevelBriefing && (
           <div className="absolute inset-0 z-[80] bg-black/90 backdrop-blur-md flex items-center justify-center pointer-events-auto p-6 animate-in fade-in duration-500">
               <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl max-w-md w-full relative overflow-hidden flex flex-col gap-6">
                   {/* Warning Strip */}
-                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-600 via-amber-500 to-red-600 animate-pulse"></div>
+                  <div className={`absolute top-0 left-0 right-0 h-2 animate-pulse 
+                      ${isLevel1_2 ? 'bg-gradient-to-r from-red-600 via-amber-500 to-red-600' : ''}
+                      ${isLevel1_3 ? 'bg-gradient-to-r from-indigo-600 via-cyan-500 to-indigo-600' : ''}
+                      ${isLevel1_4 ? 'bg-gradient-to-r from-cyan-600 via-emerald-500 to-cyan-600' : ''}
+                  `}></div>
                   
                   <div className="flex flex-col items-center text-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-red-950 border border-red-500 flex items-center justify-center">
-                          <AlertTriangle className="w-8 h-8 text-red-500 animate-pulse" />
+                      <div className={`w-16 h-16 rounded-full border flex items-center justify-center 
+                          ${isLevel1_2 ? 'bg-red-950 border-red-500' : ''}
+                          ${isLevel1_3 ? 'bg-indigo-950 border-indigo-500' : ''}
+                          ${isLevel1_4 ? 'bg-cyan-950 border-cyan-500' : ''}
+                      `}>
+                          {isLevel1_2 && <AlertTriangle className="w-8 h-8 text-red-500 animate-pulse" />}
+                          {isLevel1_3 && <Layers className="w-8 h-8 text-indigo-500 animate-bounce" />}
+                          {isLevel1_4 && <Zap className="w-8 h-8 text-cyan-500 animate-pulse" />}
                       </div>
                       
                       <div>
-                          <h2 className="text-2xl font-black text-white uppercase tracking-wider mb-2">{t.TUT_1_2_INTRO_TITLE}</h2>
-                          <p className="text-slate-300 text-sm leading-relaxed">{t.TUT_1_2_INTRO_DESC}</p>
+                          <h2 className="text-2xl font-black text-white uppercase tracking-wider mb-2">
+                              {isLevel1_2 ? t.TUT_1_2_INTRO_TITLE : ''}
+                              {isLevel1_3 ? t.TUT_1_3_INTRO_TITLE : ''}
+                              {isLevel1_4 ? t.TUT_1_4_INTRO_TITLE : ''}
+                          </h2>
+                          <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                              {isLevel1_2 ? t.TUT_1_2_INTRO_DESC : ''}
+                              {isLevel1_3 ? t.TUT_1_3_INTRO_DESC : ''}
+                              {isLevel1_4 ? t.TUT_1_4_INTRO_DESC : ''}
+                          </p>
                       </div>
                   </div>
 
-                  {/* Legend */}
-                  <div className="bg-black/40 rounded-xl p-4 border border-white/5 flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded bg-blue-900 border border-blue-500 flex items-center justify-center shrink-0">
-                              <div className="w-3 h-3 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></div>
+                  {/* Legend (Only for 1.2) */}
+                  {isLevel1_2 && (
+                      <div className="bg-black/40 rounded-xl p-4 border border-white/5 flex flex-col gap-3">
+                          <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded bg-blue-900 border border-blue-500 flex items-center justify-center shrink-0">
+                                  <div className="w-3 h-3 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></div>
+                              </div>
+                              <span className="text-sm font-bold text-white">{t.TUT_1_2_LEGEND_SAFE}</span>
                           </div>
-                          <span className="text-sm font-bold text-white">{t.TUT_1_2_LEGEND_SAFE}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded bg-blue-900 border border-blue-500 flex items-center justify-center shrink-0 relative overflow-hidden">
-                              <div className="absolute inset-0 bg-black/40"></div>
-                              <div className="absolute top-2 left-2 w-2 h-2 bg-black rounded-full"></div>
-                              <div className="absolute bottom-2 right-3 w-3 h-3 bg-black rounded-full"></div>
+                          <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded bg-blue-900 border border-blue-500 flex items-center justify-center shrink-0 relative overflow-hidden">
+                                  <div className="absolute inset-0 bg-black/40"></div>
+                                  <div className="absolute top-2 left-2 w-2 h-2 bg-black rounded-full"></div>
+                                  <div className="absolute bottom-2 right-3 w-3 h-3 bg-black rounded-full"></div>
+                              </div>
+                              <span className="text-sm font-bold text-red-400">{t.TUT_1_2_LEGEND_RISK}</span>
                           </div>
-                          <span className="text-sm font-bold text-red-400">{t.TUT_1_2_LEGEND_RISK}</span>
                       </div>
-                  </div>
+                  )}
 
                   <button 
                       onClick={() => { setShowLevelBriefing(false); playUiSound('CLICK'); }}
@@ -634,8 +633,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
         </div>
       )}
 
-      {/* BRIEFING MODAL REMOVED - REPLACED BY TOAST NOTIFICATION IN STORE */}
-
       { (gameStatus === 'VICTORY' || gameStatus === 'DEFEAT') && (
         <div className="absolute inset-0 z-[80] bg-black/80 backdrop-blur-lg flex items-center justify-center pointer-events-auto p-4 animate-in fade-in duration-500">
             {gameStatus === 'VICTORY' && <FireworksOverlay />}
@@ -655,12 +652,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                         <button onClick={() => startCampaignLevel(nextLevelId)} className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all">
                             <span>{t.BTN_NEXT}</span> <ArrowRight className="w-4 h-4" />
                         </button>
-                    ) : gameStatus === 'DEFEAT' && activeLevelConfig ? (
-                        <button onClick={() => startCampaignLevel(activeLevelConfig.id)} className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 transition-all">
-                            <span>{t.BTN_RETRY}</span> <RefreshCcw className="w-4 h-4" />
-                        </button>
                     ) : (
-                        <button onClick={() => { abandonSession(); setUIState('LEADERBOARD'); }} className="flex-1 py-4 bg-indigo-600 rounded-xl text-white font-bold text-xs uppercase">{t.BTN_VIEW_LEADERBOARD}</button>
+                        gameStatus === 'DEFEAT' && activeLevelConfig ? (
+                            <button onClick={() => startCampaignLevel(activeLevelConfig.id)} className="flex-1 py-4 bg-red-600 hover:bg-red-500 rounded-xl text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all">
+                                <span>{t.BTN_RETRY}</span> <RefreshCw className="w-4 h-4" />
+                            </button>
+                        ) : (
+                            <button onClick={() => { abandonSession(); setUIState('LEADERBOARD'); }} className="flex-1 py-4 bg-indigo-600 rounded-xl text-white font-bold text-xs uppercase">{t.BTN_VIEW_LEADERBOARD}</button>
+                        )
                     )}
                 </div>
             </div>

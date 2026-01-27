@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 import { System } from './System';
 import { GameState, GameEvent, EntityState, Entity, EntityType, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
@@ -187,6 +181,24 @@ export class GrowthSystem implements System {
       const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
 
       if (targetLevel > hex.maxLevel) {
+        // CHECK FUNDS BEFORE COMPLETION
+        if (entity.coins < config.cost) {
+            if (entity.type === EntityType.PLAYER) {
+                state.messageLog.unshift({
+                    id: `fund-fail-${Date.now()}`,
+                    text: `Insufficient Funds for L${targetLevel}`,
+                    type: 'ERROR',
+                    source: 'SYSTEM',
+                    timestamp: Date.now()
+                });
+                events.push(GameEventFactory.create('ERROR', 'Insufficient Funds', entity.id));
+                state.isPlayerGrowing = false;
+            }
+            if (hasUpgradeCmd) entity.movementQueue.shift(); // Bot command fails
+            entity.state = EntityState.IDLE;
+            return false;
+        }
+
         newMaxLevel = targetLevel;
         didMaxIncrease = true;
         entity.playerLevel = Math.max(entity.playerLevel, targetLevel);
@@ -197,7 +209,7 @@ export class GrowthSystem implements System {
         if (targetLevel === 1) {
              // ACQUISITION
              newOwnerId = entity.id;
-             newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY; // Set durability to 3
+             newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY; // Set durability
              
              // Cycle Management
              const q = [...entity.recentUpgrades, hex.id];

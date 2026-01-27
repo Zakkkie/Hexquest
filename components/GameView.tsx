@@ -163,6 +163,8 @@ const GameView: React.FC = () => {
   // Level Flags
   const isLevel1_1 = activeLevelConfig?.id === '1.1';
   const isLevel1_2 = activeLevelConfig?.id === '1.2';
+  // 1.3 flag no longer used for highlighting
+  const isLevel1_4 = activeLevelConfig?.id === '1.4';
 
   const [particles, setParticles] = useState<VisualParticle[]>([]);
 
@@ -552,17 +554,30 @@ const GameView: React.FC = () => {
                     const isPending = item.id === pendingTargetKey;
                     const isMissingSupport = missingSupportSet.has(item.id);
                     
-                    // TUTORIAL HIGHLIGHT: Level 1.1 - Highlight unowned L0 neighbors
                     const hex = grid[item.id];
                     let isTutorialTarget = false;
+                    let highlightColor: 'blue' | 'amber' | 'cyan' | 'emerald' = 'emerald';
+
+                    // TUTORIAL HIGHLIGHT: Level 1.1 - Highlight unowned L0 neighbors
                     if (isLevel1_1 && !isMoving && !isPlayerGrowing && hex && hex.maxLevel === 0 && !hex.ownerId) {
                         // Check if it's a neighbor of player
                         const isNeighbor = neighbors.some(n => n.q === item.q && n.r === item.r);
                         if (isNeighbor) isTutorialTarget = true;
                     }
 
-                    // LEVEL 1.2: Highlight Mission Objective
-                    const isObjective = isLevel1_2 && item.q === 0 && item.r === -8;
+                    // LEVEL 1.2: Highlight Mission Objective (Pyramid)
+                    let isObjective = isLevel1_2 && item.q === 0 && item.r === -8;
+                    
+                    // LEVEL 1.4: Highlight Target Bridge Segments
+                    if (isLevel1_4) {
+                        const isBridge = (item.q === 1 || item.q === 2 || item.q === 3) && item.r === 0;
+                        if (isBridge && hex && hex.maxLevel < 2) {
+                            isTutorialTarget = true;
+                            highlightColor = 'cyan';
+                        }
+                        // Also highlight End Base just as a visual marker (optional, but requested previously)
+                        if (item.q === 4 && item.r === 0) isObjective = true;
+                    }
 
                     return (
                         <Hexagon 
@@ -577,7 +592,7 @@ const GameView: React.FC = () => {
                             onHexClick={handleHexClick} 
                             onHover={setHoveredHexId}
                             isTutorialTarget={isTutorialTarget}
-                            tutorialHighlightColor='emerald'
+                            tutorialHighlightColor={highlightColor}
                             isMissingSupport={isMissingSupport}
                             isObjective={isObjective}
                         />
