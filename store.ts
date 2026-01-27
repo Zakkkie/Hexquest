@@ -64,7 +64,7 @@ interface GameStore extends GameState {
   hideToast: () => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
-  playUiSound: (type: 'HOVER' | 'CLICK') => void;
+  playUiSound: (type: 'HOVER' | 'CLICK' | 'ERROR') => void;
   setLanguage: (lang: 'EN' | 'RU') => void;
 }
 
@@ -391,6 +391,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   playUiSound: (type) => {
     if (type === 'HOVER') audioService.play('UI_HOVER');
     if (type === 'CLICK') audioService.play('UI_CLICK');
+    if (type === 'ERROR') audioService.play('ERROR');
   },
 
   startNewGame: (winCondition, levelConfig) => {
