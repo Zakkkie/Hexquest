@@ -171,13 +171,21 @@ const GameView: React.FC = () => {
   const [hoveredHexId, setHoveredHexId] = useState<string | null>(null);
   const [selectedHexId, setSelectedHexId] = useState<string | null>(null);
 
+  // --- AUDIO LOGIC ---
+  // 1. Lifecycle: Start/Stop music when GameView mounts/unmounts
   useEffect(() => {
       audioService.startMusic();
-      audioService.updateMusic(player.coins, winCondition?.targetCoins || 500);
       return () => {
           audioService.stopMusic();
       };
-  }, [player.coins, winCondition]);
+  }, []);
+
+  // 2. Dynamic Update: Adjust intensity based on player progress without restarting the track
+  useEffect(() => {
+      if (player && winCondition) {
+          audioService.updateMusic(player.coins, winCondition.targetCoins || 500);
+      }
+  }, [player.coins, winCondition]); // This runs often but updateMusic is lightweight
 
   useEffect(() => {
     const interval = setInterval(tick, 100); 
@@ -558,10 +566,12 @@ const GameView: React.FC = () => {
                     let isTutorialTarget = false;
                     let highlightColor: 'blue' | 'amber' | 'cyan' | 'emerald' = 'emerald';
 
+                    // Check if neighbor
+                    const isNeighbor = neighbors.some(n => n.q === item.q && n.r === item.r);
+
                     // TUTORIAL HIGHLIGHT: Level 1.1 - Highlight unowned L0 neighbors
                     if (isLevel1_1 && !isMoving && !isPlayerGrowing && hex && hex.maxLevel === 0 && !hex.ownerId) {
                         // Check if it's a neighbor of player
-                        const isNeighbor = neighbors.some(n => n.q === item.q && n.r === item.r);
                         if (isNeighbor) isTutorialTarget = true;
                     }
 
@@ -595,6 +605,7 @@ const GameView: React.FC = () => {
                             tutorialHighlightColor={highlightColor}
                             isMissingSupport={isMissingSupport}
                             isObjective={isObjective}
+                            isNeighbor={isNeighbor}
                         />
                     );
                 } else if (item.type === 'UNIT') {

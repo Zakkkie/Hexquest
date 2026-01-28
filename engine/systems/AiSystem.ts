@@ -32,6 +32,7 @@ export class AiSystem implements System {
     const shuffledBots = [...state.bots].sort(() => Math.random() - 0.5);
 
     for (const bot of shuffledBots) {
+      if (!bot) continue; // Safety check for undefined entities
       if (bot.state !== EntityState.IDLE) continue;
       
       // --- SPEED THROTTLE ---

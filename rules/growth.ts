@@ -1,5 +1,7 @@
 
 import { Hex, Entity, HexCoord } from '../types';
+import { getLevelConfig } from './config';
+import { getHexKey } from '../services/hexUtils';
 
 export type GrowthCheckResult = {
   canGrow: boolean;
@@ -26,40 +28,33 @@ export function checkGrowthCondition(
 
   // RECOVERY RULE: If current level is below max level (damaged/decayed), allow free growth
   if (targetLevel <= hex.maxLevel) {
-     if (hex.ownerId && hex.ownerId !== entity.id && targetLevel > 1) {
-        return { canGrow: false, reason: 'HOSTILE SECTOR' };
-     }
      return { canGrow: true };
   }
 
   // CRITICAL: ACQUISITION RULE (Level 0 -> 1)
+  // Always allowed. Does not check supports.
   if (targetLevel === 1) {
       return { canGrow: true };
   }
 
-  // CYCLE LOCK RULE
+  // CONDITION 1: UPGRADE POINTS (CYCLE LOCK)
+  // Rule: You cannot upgrade a hex that is currently in your "Recent Upgrades" queue.
   if (targetLevel > 1) {
-    if (entity.recentUpgrades.length < requiredQueueSize) {
+    if (entity.recentUpgrades.includes(hex.id)) {
       return { 
         canGrow: false, 
-        reason: `CYCLE INCOMPLETE (${entity.recentUpgrades.length}/${requiredQueueSize})` 
+        reason: "CYCLE LOCKED" 
       };
     }
   }
 
-  // RANK LIMIT RULE
-  if (entity.playerLevel < targetLevel - 1) {
-    return { 
-      canGrow: false, 
-      reason: `RANK TOO LOW (NEED L${targetLevel - 1})` 
-    };
-  }
-
-  // STAIRCASE SUPPORT RULE
+  // CONDITION 2: STAIRCASE SUPPORT RULE
+  // To reach Level L+1, you need neighbors that are at least Level L.
   if (targetLevel > 1) {
     // 1. SATURATION CHECK ("The Valley Rule")
+    // Exception: If surrounded by high walls (5 or more neighbors are STRICTLY HIGHER level), you can fill the valley.
     const highLevelNeighborsCount = neighbors.filter(n => {
-       const neighborHex = grid[`${n.q},${n.r}`];
+       const neighborHex = grid[getHexKey(n.q, n.r)];
        return neighborHex && neighborHex.maxLevel > hex.maxLevel;
     }).length;
 
@@ -68,18 +63,18 @@ export function checkGrowthCondition(
     // Only apply strict support rules if NOT in a valley
     if (!isValley) {
         // Find existing supports
+        // STRICT RULE: Support MUST be exactly the same level.
+        // Neighbors that are Higher Level do NOT count as supports (unless Valley rule triggers).
         const supports = neighbors.filter(n => {
-           const neighborHex = grid[`${n.q},${n.r}`];
+           const neighborHex = grid[getHexKey(n.q, n.r)];
            return neighborHex && neighborHex.maxLevel === hex.maxLevel;
         });
 
         if (supports.length < 2) {
-          // Identify missing supports (neighbors that are too low level)
-          // We prioritize owned neighbors or neutral ones that make sense to upgrade
+          // Identify missing supports for UI hints (neighbors that are not equal level)
           const potentialSupports = neighbors.filter(n => {
-              const h = grid[`${n.q},${n.r}`];
-              // It's a missing support if it exists and is lower level
-              return h && h.maxLevel < hex.maxLevel;
+              const h = grid[getHexKey(n.q, n.r)];
+              return h && h.maxLevel !== hex.maxLevel;
           });
 
           return {
@@ -87,17 +82,6 @@ export function checkGrowthCondition(
             reason: `NEED 2 SUPPORTS (L${hex.maxLevel})`,
             missingSupports: potentialSupports
           };
-        }
-
-        const occupiedSupportCount = supports.filter(s => 
-            occupiedHexes.some(o => o.q === s.q && o.r === s.r)
-        ).length;
-
-        if (occupiedSupportCount > 1) {
-            return {
-                canGrow: false,
-                reason: "SUPPORTS BLOCKED"
-            };
         }
     }
   }

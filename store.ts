@@ -323,7 +323,8 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     currentTurn: 0,
     messageLog: [initialLog],
     botActivityLog: [], 
-    gameStatus: 'PLAYING', // Starts immediately
+    // IF SKIRMISH (No Level Config), START IN BRIEFING. IF CAMPAIGN, START PLAYING (Campaign HUD handles intro).
+    gameStatus: levelConfig ? 'PLAYING' : 'BRIEFING',
     lastBotActionTime: Date.now(),
     isPlayerGrowing: false,
     playerGrowthIntent: null,
@@ -413,9 +414,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       engine = new GameEngine(initialSessionState); 
       set({ session: engine.state, hasActiveSession: true, uiState: 'GAME' });
 
-      // Show objective popup
-      const startMsg = initialSessionState.messageLog[0]?.text;
-      if (startMsg) get().showToast(startMsg, 'info');
+      // Show objective popup if campaign
+      if (levelConfig) {
+          const startMsg = initialSessionState.messageLog[0]?.text;
+          if (startMsg) get().showToast(startMsg, 'info');
+      }
   },
 
   startCampaignLevel: (levelId) => {

@@ -16,17 +16,18 @@ export const GAME_CONFIG = {
 
   // Growth Time in TICKS (1 tick = 100ms). So 30 ticks = 3 seconds.
   // UPDATED: Income formula = 5 * Level^2
+  // UPDATED: All costs set to 0.
   LEVELS: {
     0: { cost: 0,    growthTime: 30,  income: 1,   reqRank: 0 },
-    1: { cost: 0,    growthTime: 30,  income: 5,   reqRank: 0 },   // Cost 0 to allow start from 0 resources
-    2: { cost: 300,  growthTime: 30,  income: 20,  reqRank: 1 },   // 5 * 2^2 = 20
-    3: { cost: 600,  growthTime: 30,  income: 45,  reqRank: 2 },   // 5 * 3^2 = 45
-    4: { cost: 1000, growthTime: 30,  income: 80,  reqRank: 3 },   // 5 * 4^2 = 80
-    5: { cost: 2000, growthTime: 30,  income: 125, reqRank: 4 },   // 5 * 5^2 = 125
-    6: { cost: 4000, growthTime: 30,  income: 180, reqRank: 5 },   // 5 * 6^2 = 180
-    7: { cost: 8000, growthTime: 30,  income: 245, reqRank: 6 },   // 5 * 7^2 = 245
-    8: { cost: 15000, growthTime: 30, income: 320, reqRank: 7 },   // 5 * 8^2 = 320
-    9: { cost: 30000, growthTime: 30, income: 405, reqRank: 8 },   // 5 * 9^2 = 405
+    1: { cost: 0,    growthTime: 30,  income: 5,   reqRank: 0 },   
+    2: { cost: 0,    growthTime: 30,  income: 20,  reqRank: 1 },   
+    3: { cost: 0,    growthTime: 30,  income: 45,  reqRank: 2 },   
+    4: { cost: 0,    growthTime: 30,  income: 80,  reqRank: 3 },   
+    5: { cost: 0,    growthTime: 30,  income: 125, reqRank: 4 },   
+    6: { cost: 0,    growthTime: 30,  income: 180, reqRank: 5 },   
+    7: { cost: 0,    growthTime: 30,  income: 245, reqRank: 6 },   
+    8: { cost: 0,    growthTime: 30,  income: 320, reqRank: 7 },   
+    9: { cost: 0,    growthTime: 30,  income: 405, reqRank: 8 },   
   } as Record<number, { cost: number, growthTime: number, income: number, reqRank: number }>,
 
   STRUCTURES: {
@@ -56,7 +57,7 @@ export const EXCHANGE_RATE_COINS_PER_MOVE = GAME_CONFIG.EXCHANGE_RATE_COINS_PER_
 
 export const getLevelConfig = (level: number) => {
   return GAME_CONFIG.LEVELS[level] || { 
-    cost: level * 1000, 
+    cost: 0, // Fallback cost 0
     growthTime: 30, // Default 3s 
     income: 5 * level * level, // Dynamic Formula fallback
     reqRank: level - 1 

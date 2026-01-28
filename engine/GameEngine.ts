@@ -76,13 +76,13 @@ export class GameEngine {
       // OPTIMIZATION: Shallow copy bots array.
       bots: [...source.bots], 
       
-      // Shallow copy logs
-      messageLog: source.messageLog, 
-      botActivityLog: source.botActivityLog,
+      // Shallow copy logs to prevent mutation of history
+      messageLog: [...source.messageLog], 
+      botActivityLog: [...source.botActivityLog],
       
       growingBotIds: [...source.growingBotIds],
       
-      telemetry: source.telemetry,
+      telemetry: source.telemetry ? [...source.telemetry] : undefined,
       
       // Shallow copy effects
       effects: [...source.effects],

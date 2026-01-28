@@ -37,13 +37,10 @@ export class ActionProcessor {
             const hex = state.grid[key];
             if (!hex) return { ok: false, reason: 'Invalid Coord' };
 
-            // Special Case: RECOVER intent on owned hex is always allowed (skips growth rules)
+            // Special Case: RECOVER intent.
+            // MODIFIED: Allowed on ANY hex (Common ownership concept).
             if (action.intent === 'RECOVER') {
-                if (hex.ownerId === actor.id) {
-                    return { ok: true };
-                } else {
-                    return { ok: false, reason: 'Cannot recover neutral/hostile hex' };
-                }
+                return { ok: true };
             }
 
             const neighbors = index.getValidNeighbors(action.coord.q, action.coord.r).map(h => ({q:h.q, r:h.r}));

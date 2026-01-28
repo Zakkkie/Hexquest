@@ -10,7 +10,7 @@ import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, TrendingUp, ChevronUp, MapPin,
-  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, Layers, Zap, Settings, Globe, X, Menu
+  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, Layers, Zap, Settings, Globe, X, Menu, Swords
 } from 'lucide-react';
 
 // FIREWORKS COMPONENT
@@ -127,6 +127,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const toggleSfx = useGameStore(state => state.toggleSfx);
   const playUiSound = useGameStore(state => state.playUiSound);
   const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
+  const startMission = useGameStore(state => state.startMission);
 
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [isRankingsOpen, setIsRankingsOpen] = useState(false);
@@ -521,6 +522,58 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
+      {/* SKIRMISH BRIEFING MODAL (NEW) */}
+      {!activeLevelConfig && gameStatus === 'BRIEFING' && (
+          <div className="absolute inset-0 z-[80] bg-black/90 backdrop-blur-md flex items-center justify-center pointer-events-auto p-6 animate-in fade-in duration-500">
+              <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl max-w-md w-full relative overflow-hidden flex flex-col gap-6">
+                  {/* Header */}
+                  <div className="flex flex-col items-center text-center gap-2">
+                      <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center mb-2">
+                          <Swords className="w-8 h-8 text-amber-500" />
+                      </div>
+                      <h2 className="text-2xl font-black text-white uppercase tracking-wider">{t.SKIRMISH_OBJ}</h2>
+                      <p className="text-slate-400 text-xs uppercase tracking-[0.2em]">{t.SKIRMISH_COND}</p>
+                  </div>
+
+                  {/* Conditions List */}
+                  <div className="flex flex-col gap-3 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                          <div className="flex items-center gap-2 text-indigo-400">
+                              <Crown className="w-4 h-4" />
+                              <span className="text-xs font-bold uppercase">{t.BRIEFING_TARGET_RANK}</span>
+                          </div>
+                          <span className="text-lg font-mono font-bold text-white">{winCondition?.targetLevel || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                          <div className="flex items-center gap-2 text-amber-400">
+                              <Wallet className="w-4 h-4" />
+                              <span className="text-xs font-bold uppercase">{t.BRIEFING_TARGET_FUNDS}</span>
+                          </div>
+                          <span className="text-lg font-mono font-bold text-white">{winCondition?.targetCoins || 'N/A'}</span>
+                      </div>
+                  </div>
+
+                  {/* Rivals */}
+                  {(winCondition?.botCount || 0) > 0 && (
+                      <div className="bg-red-950/20 border border-red-900/30 p-3 rounded-xl flex items-center gap-3">
+                          <Skull className="w-5 h-5 text-red-500" />
+                          <div className="flex flex-col">
+                              <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">{t.BRIEFING_RIVAL}</span>
+                              <span className="text-xs text-white">{winCondition?.botCount} AI Sentinels Active</span>
+                          </div>
+                      </div>
+                  )}
+
+                  <button 
+                      onClick={() => { startMission(); playUiSound('CLICK'); }}
+                      className="w-full py-4 bg-white hover:bg-slate-200 text-slate-900 font-black rounded-xl uppercase tracking-widest shadow-lg active:scale-95 transition-all mt-2"
+                  >
+                      {t.BRIEFING_BTN_START}
+                  </button>
+              </div>
+          </div>
+      )}
+
       {/* LEVEL 1.2, 1.3, 1.4: PRE-GAME BRIEFING (Blocking) */}
       {(isLevel1_2 || isLevel1_3 || isLevel1_4) && showLevelBriefing && (
           <div className="absolute inset-0 z-[80] bg-black/90 backdrop-blur-md flex items-center justify-center pointer-events-auto p-6 animate-in fade-in duration-500">
@@ -567,10 +620,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               <span className="text-sm font-bold text-white">{t.TUT_1_2_LEGEND_SAFE}</span>
                           </div>
                           <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded bg-blue-900 border border-blue-500 flex items-center justify-center shrink-0 relative overflow-hidden">
-                                  <div className="absolute inset-0 bg-black/40"></div>
-                                  <div className="absolute top-2 left-2 w-2 h-2 bg-black rounded-full"></div>
-                                  <div className="absolute bottom-2 right-3 w-3 h-3 bg-black rounded-full"></div>
+                              <div className="w-10 h-10 rounded bg-[#475569] border border-slate-500 flex items-center justify-center shrink-0 relative overflow-hidden bg-gradient-to-br from-[#475569] to-[#334155]">
+                                  {/* Updated Legend Icon: Segmented Integrity Ring with Red Glow (NO CENTER CIRCLE) */}
+                                  <svg width="40" height="40" viewBox="0 0 40 40" className="absolute inset-0">
+                                     {/* Broken Ring Segments */}
+                                     <path d="M 20 5 L 35 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+                                     <path d="M 35 28 L 20 35" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+                                     <path d="M 5 28 L 5 12" stroke="#4b5563" strokeWidth="2" strokeLinecap="round" /> {/* Dark/Broken Segment */}
+                                  </svg>
                               </div>
                               <span className="text-sm font-bold text-red-400">{t.TUT_1_2_LEGEND_RISK}</span>
                           </div>

@@ -83,6 +83,9 @@ interface Dictionary {
         BTN_CLAIM: string;
         BTN_REWARD: string;
         BTN_READY: string;
+        // SKIRMISH BRIEFING
+        SKIRMISH_OBJ: string;
+        SKIRMISH_COND: string;
         // TUTORIAL 1.1 SPECIFIC
         TUT_1_1_TASK: string;
         TUT_1_1_COST: string;
@@ -230,6 +233,8 @@ export const TEXT: Record<Language, Dictionary> = {
             BTN_CLAIM: "CLAIM SECTOR",
             BTN_REWARD: "Reward: +Income & +1 Move",
             BTN_READY: "READY",
+            SKIRMISH_OBJ: "Skirmish Objectives",
+            SKIRMISH_COND: "Win Conditions",
             TUT_1_1_TASK: "Objective: Expand Control",
             TUT_1_1_COST: "Cost: 100 Credits",
             TUT_1_1_REWARD: "Yields: +5 Income/Tick",
@@ -371,6 +376,8 @@ export const TEXT: Record<Language, Dictionary> = {
             BTN_CLAIM: "ЗАХВАТИТЬ",
             BTN_REWARD: "Награда: +Доход и +1 Ход",
             BTN_READY: "ГОТОВ",
+            SKIRMISH_OBJ: "Задачи Схватки",
+            SKIRMISH_COND: "Условия Победы",
             TUT_1_1_TASK: "Задача: Расширение",
             TUT_1_1_COST: "Цена: 100 Кредитов",
             TUT_1_1_REWARD: "Доход: +5 Кр/Тик",

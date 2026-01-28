@@ -45,19 +45,12 @@ export class GrowthSystem implements System {
     let isUserIntentActive = entity.type === EntityType.PLAYER && state.isPlayerGrowing;
     let userIntentType = entity.type === EntityType.PLAYER ? state.playerGrowthIntent : null;
     
-    // REMOVED AUTO-TRIGGER LOGIC HERE
-    // Players must explicitly click to upgrade/acquire now.
-
     const shouldBeGrowing = hasUpgradeCmd || (entity.type === EntityType.PLAYER && isUserIntentActive);
 
     // FSM: Transition out of GROWING if not actively growing
     if (!shouldBeGrowing) {
       if (entity.state === EntityState.GROWING) {
         entity.state = EntityState.IDLE;
-        // Reset progress if we stopped mid-way? 
-        // Strategy: We keep progress on the hex to allow pausing/resuming, 
-        // BUT if the intent flips (Upgrade <-> Recover), we must handle that reset.
-        // For now, we rely on the check below to reset if needed.
       }
       return false;
     }
@@ -78,7 +71,6 @@ export class GrowthSystem implements System {
     if (entity.type === EntityType.PLAYER) {
         effectiveIntent = userIntentType || 'RECOVER';
     } else {
-        // Bots: Use queued intent if available, otherwise default to UPGRADE unless queue logic forces otherwise
         effectiveIntent = queuedIntent || 'UPGRADE';
     }
 
@@ -87,7 +79,6 @@ export class GrowthSystem implements System {
         if (entity.recoveredCurrentHex) {
              // Already done for this visit/turn
              if (entity.type === EntityType.PLAYER) {
-                // Stop automatically
                 state.isPlayerGrowing = false;
              }
              if (hasUpgradeCmd) entity.movementQueue.shift();
@@ -95,7 +86,7 @@ export class GrowthSystem implements System {
              return false;
         }
 
-        const config = getLevelConfig(hex.maxLevel); // Recovery time depends on current max level
+        const config = getLevelConfig(hex.maxLevel); 
         const needed = config.growthTime;
 
         if (hex.progress + 1 >= needed) {
@@ -122,7 +113,6 @@ export class GrowthSystem implements System {
             // Reset Progress and Stop (Copy-On-Write)
             state.grid = { ...state.grid, [key]: { ...hex, progress: 0 } };
             
-            // For Player, toggle off. For Bot, they will rethink next tick.
             if (entity.type === EntityType.PLAYER) {
                  state.isPlayerGrowing = false;
             }
@@ -143,7 +133,7 @@ export class GrowthSystem implements System {
     
     const condition = checkGrowthCondition(hex, entity, neighbors, state.grid, occupied, queueSize);
     
-    // Validation Failed
+    // Validation Failed (Now covers Funds Check too)
     if (!condition.canGrow) {
       if (hasUpgradeCmd) entity.movementQueue.shift(); 
       entity.state = EntityState.IDLE;
@@ -181,40 +171,19 @@ export class GrowthSystem implements System {
       const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
 
       if (targetLevel > hex.maxLevel) {
-        // CHECK FUNDS BEFORE COMPLETION
-        if (entity.coins < config.cost) {
-            if (entity.type === EntityType.PLAYER) {
-                state.messageLog.unshift({
-                    id: `fund-fail-${Date.now()}`,
-                    text: `Insufficient Funds for L${targetLevel}`,
-                    type: 'ERROR',
-                    source: 'SYSTEM',
-                    timestamp: Date.now()
-                });
-                events.push(GameEventFactory.create('ERROR', 'Insufficient Funds', entity.id));
-                state.isPlayerGrowing = false;
-            }
-            if (hasUpgradeCmd) entity.movementQueue.shift(); // Bot command fails
-            entity.state = EntityState.IDLE;
-            return false;
-        }
-
         newMaxLevel = targetLevel;
         didMaxIncrease = true;
         entity.playerLevel = Math.max(entity.playerLevel, targetLevel);
         
-        // DEDUCT UPGRADE COST
-        entity.coins -= config.cost;
+        // UPGRADE COST REMOVED AS REQUESTED
 
         if (targetLevel === 1) {
              // ACQUISITION
              newOwnerId = entity.id;
              newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY; // Set durability
              
-             // Cycle Management
-             const q = [...entity.recentUpgrades, hex.id];
-             if (q.length > queueSize) q.shift(); 
-             entity.recentUpgrades = q;
+             // NOTE: We do NOT add to cycle queue on acquisition (L1).
+             // This allows player to immediately start building L1->L2 if they have supports.
              
              const msg = `${prefix} Sector L1 Acquired (Cost: ${config.cost})`;
              state.messageLog.unshift({
@@ -228,10 +197,14 @@ export class GrowthSystem implements System {
              events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id));
         } else {
              // LEVEL UP
-             // When upgrading beyond L1 (to L2+), remove durability limitation
              newDurability = undefined;
 
-             const msg = `${prefix} Reached Rank L${targetLevel} (Cost: ${config.cost})`;
+             // CYCLE LOCK MANAGEMENT (Queue Rotation)
+             const q = [...entity.recentUpgrades, hex.id];
+             while (q.length > queueSize) q.shift(); // Keep queue at max size
+             entity.recentUpgrades = q;
+
+             const msg = `${prefix} Reached Rank L${targetLevel}`;
              
              state.messageLog.unshift({
                 id: `lvl-${Date.now()}-${entity.id}`,
@@ -242,9 +215,6 @@ export class GrowthSystem implements System {
              });
 
              events.push(GameEventFactory.create('LEVEL_UP', msg, entity.id));
-
-             // CONSUME CYCLE POINTS
-             entity.recentUpgrades = [];
         }
       }
 

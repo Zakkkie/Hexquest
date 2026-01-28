@@ -1,8 +1,8 @@
 
 /**
- * Procedural Audio Synthesizer for HexQuest
- * Style: Chill / Dub Techno
- * Features: Playlist system, Shuffle, Procedural Patterns
+ * Advanced Procedural Audio Synthesizer for HexQuest
+ * Engine: "Nebula V2"
+ * Features: FM Synthesis, Generative Arrangement, Chord Progressions, Dynamic Mixing
  */
 
 type SoundType = 
@@ -18,129 +18,99 @@ type SoundType =
   | 'CRACK'
   | 'WARNING';
 
-// --- MUSIC THEORY & PRESETS ---
+// --- MUSIC THEORY CONSTANTS ---
 
-// Scales (Intervals from Root)
-const SCALES = {
-    MINOR_7: [0, 3, 7, 10],
-    DORIAN: [0, 2, 3, 5, 7, 9, 10],
-    PHRYGIAN: [0, 1, 3, 5, 7, 8, 10],
-    DEEP_TECH: [0, 3, 5, 7, 10],
-    MELODIC: [0, 2, 3, 5, 7, 8, 10] // Natural Minor for melodies
-};
-
-// Base Frequencies (Roots)
-const ROOTS = {
+const ROOT_FREQUENCIES = {
     C2: 65.41,
+    Db2: 69.30,
     D2: 73.42,
     Eb2: 77.78,
+    E2: 82.41,
     F2: 87.31,
     G2: 98.00,
+    Ab2: 103.83,
     A2: 110.00,
     Bb2: 116.54,
-    E2: 82.41
+    B2: 123.47
 };
 
-// Rhythm Types defining the "Feel" at 128 BPM
-type RhythmType = 'STRAIGHT' | 'BROKEN' | 'DUB' | 'MINIMAL' | 'HALF_TIME' | 'URGENT';
+// Scales defined by semitone intervals
+const SCALES = {
+    MINOR: [0, 2, 3, 5, 7, 8, 10],      // Aeolian
+    DORIAN: [0, 2, 3, 5, 7, 9, 10],     // Sci-Fi / Hopeful
+    PHRYGIAN: [0, 1, 3, 5, 7, 8, 10],   // Dark / Tension
+    LYDIAN: [0, 2, 4, 6, 7, 9, 11],     // Space / Floating
+    HARMONIC_MINOR: [0, 2, 3, 5, 7, 8, 11] // Exotic / Ancient
+};
 
-interface TrackPreset {
-    id: string;
-    title: string;
-    bpm: number;
-    root: number;
-    scale: number[];
-    vibe: 'DUB' | 'DEEP' | 'FLOAT' | 'ACID' | 'MINIMAL';
-    rhythm: RhythmType;
-    seed: number; // Determines rhythmic patterns
-    bassSequence?: number[]; // Optional override for melody (Scale indices)
+// Arrangement Sections
+enum Section {
+    INTRO,
+    BUILD,
+    MAIN,
+    BREAKDOWN,
+    OUTRO
 }
 
-// 12 "Parody" Dub Techno Presets
-const TRACK_LIBRARY: TrackPreset[] = [
-    { 
-        id: 't1', title: "Sand Sector", bpm: 128, root: ROOTS.E2, scale: SCALES.MELODIC, vibe: 'ACID', rhythm: 'URGENT', seed: 101,
-        bassSequence: [7,7,7,7,7,-1,7,-1,7,7,7,7,7,-1,9,-1] // "Sandstorm"ish
-    },
-    { 
-        id: 't2', title: "Seven Bits", bpm: 128, root: ROOTS.E2, scale: SCALES.MELODIC, vibe: 'DEEP', rhythm: 'HALF_TIME', seed: 202,
-        bassSequence: [7, -1, 7, 10, 7, 5, 3, 2, 7, -1, 7, 10, 7, 5, 3, -1] // "Seven Nation Army"
-    },
-    { 
-        id: 't3', title: "Sweet Threads", bpm: 128, root: ROOTS.C2, scale: SCALES.MELODIC, vibe: 'DUB', rhythm: 'STRAIGHT', seed: 303,
-        bassSequence: [0, 0, 2, 2, 4, 4, 2, 2, 5, 5, 4, 4, 3, 3, 2, 2] // "Sweet Dreams"
-    },
-    { 
-        id: 't4', title: "Blue Screen", bpm: 128, root: ROOTS.G2, scale: SCALES.MINOR_7, vibe: 'FLOAT', rhythm: 'STRAIGHT', seed: 404,
-        bassSequence: [0, -1, 2, -1, 4, -1, 5, -1, 4, -1, 2, -1, 0, -1, 2, -1] // "Blue"
-    },
-    { 
-        id: 't5', title: "Around the Grid", bpm: 128, root: ROOTS.A2, scale: SCALES.DORIAN, vibe: 'DEEP', rhythm: 'BROKEN', seed: 505,
-        bassSequence: [0, -1, 0, -1, 2, -1, 2, -1, 4, -1, 4, -1, 5, -1, 5, -1] // "Around the World"
-    },
-    { 
-        id: 't6', title: "Sleep Mode", bpm: 128, root: ROOTS.C2, scale: SCALES.MELODIC, vibe: 'ACID', rhythm: 'URGENT', seed: 606,
-        bassSequence: [9, -1, -1, -1, 2, -1, -1, -1, 5, -1, -1, -1, 4, -1, 7, -1] // "Insomnia"
-    },
-    { 
-        id: 't7', title: "Calibration", bpm: 128, root: ROOTS.E2, scale: SCALES.MELODIC, vibe: 'MINIMAL', rhythm: 'MINIMAL', seed: 707,
-        bassSequence: [0, 0, -1, 0, 0, -1, 1, -1, 0, 0, -1, 0, 0, -1, -1, -1] // "Satisfaction"
-    },
-    { 
-        id: 't8', title: "Kern Grid 400", bpm: 128, root: ROOTS.A2, scale: SCALES.MELODIC, vibe: 'ACID', rhythm: 'STRAIGHT', seed: 808,
-        bassSequence: [2, 2, 2, -1, 5, -1, 4, -1, 2, -1, 1, -1, 0, -1, -1, -1] // "Kernkraft 400"
-    },
-    { 
-        id: 't9', title: "Pop Kernel", bpm: 128, root: ROOTS.Bb2, scale: SCALES.MELODIC, vibe: 'FLOAT', rhythm: 'BROKEN', seed: 909,
-        bassSequence: [0, -1, 2, -1, 0, -1, 4, -1, 2, -1, 0, -1, 7, -1, -1, -1] // "Popcorn"
-    },
-    { 
-        id: 't10', title: "Bot F", bpm: 128, root: ROOTS.F2, scale: SCALES.MELODIC, vibe: 'FLOAT', rhythm: 'BROKEN', seed: 1010,
-        bassSequence: [0, -1, 2, -1, 0, 0, 4, 0, 2, -1, -1, -1, 0, 4, 9, 2] // "Axel F"
-    },
-    { 
-        id: 't11', title: "Offline Alone", bpm: 128, root: ROOTS.E2, scale: SCALES.MELODIC, vibe: 'DUB', rhythm: 'DUB', seed: 1111,
-        bassSequence: [4, -1, 3, -1, 4, -1, -1, -1, 4, -1, 3, -1, 4, -1, 0, -1] // "Better Off Alone"
-    },
-    { 
-        id: 't12', title: "Child Process", bpm: 128, root: ROOTS.F2, scale: SCALES.MELODIC, vibe: 'DUB', rhythm: 'DUB', seed: 1212,
-        bassSequence: [0, -1, -1, -1, 4, -1, -1, -1, 5, -1, -1, -1, 4, -1, 2, -1] // "Children"
-    }
-];
+interface MusicalContext {
+    rootFreq: number;
+    scale: number[];
+    bpm: number;
+    chordProgression: number[][]; // Array of chord degrees (e.g. [0, 4, 5, 3] relative to scale)
+    currentChordIndex: number;
+    intensity: number; // 0.0 to 1.0
+}
 
 class AudioService {
   private ctx: AudioContext | null = null;
+  
+  // Mix Buses
+  private masterCompressor: DynamicsCompressorNode | null = null;
   private masterGain: GainNode | null = null;
   private musicBus: GainNode | null = null;
   private sfxBus: GainNode | null = null;
   
-  // FX Bus (Shared Reverb/Delay)
-  private delayNode: DelayNode | null = null;
+  // FX Sends
   private reverbNode: ConvolverNode | null = null;
-  private dubSend: GainNode | null = null;
-
-  // Music State
+  private delayNode: DelayNode | null = null;
+  private delayFeedback: GainNode | null = null;
+  
+  // State
   private isMusicMuted: boolean = false;
   private isSfxMuted: boolean = false;
   private musicRunning: boolean = false;
   
-  private schedulerTimer: number | null = null;
-  private nextNoteTime: number = 0;
-  private beatCount: number = 0;
-  
-  // Playlist State
-  private playlist: TrackPreset[] = [];
-  private currentTrackIndex: number = 0;
-  private currentTrackStartTime: number = 0;
-  private TRACK_DURATION_SECONDS = 180; // 3 minutes per track
+  // Scheduler
+  private lookahead = 25.0; // ms
+  private scheduleAheadTime = 0.1; // s
+  private nextNoteTime = 0.0;
+  private current16thNote = 0;
+  private timerID: number | null = null;
 
-  // Patterns derived from seed
-  private currentPatterns: {
-      kick: boolean[];
-      bass: number[];
-      chord: boolean[];
-      hat: boolean[];
-  } = { kick:[], bass:[], chord:[], hat:[] };
+  // Composition State
+  private context: MusicalContext = {
+      rootFreq: ROOT_FREQUENCIES.F2,
+      scale: SCALES.MINOR,
+      bpm: 110,
+      chordProgression: [[0, 2, 4], [5, 7, 9], [3, 5, 7], [4, 6, 8]], // I, VI, IV, V approx
+      currentChordIndex: 0,
+      intensity: 0.5
+  };
+
+  private arrangementState = {
+      section: Section.INTRO,
+      barCount: 0,
+      totalBars: 0
+  };
+
+  // Dynamic Pattern State (Regenerated every few bars)
+  private patterns = {
+      kick: [] as boolean[],
+      hat: [] as boolean[],
+      perc: [] as boolean[],
+      bass: [] as number[], // Scale degrees
+      arp: [] as number[]   // Scale degrees
+  };
 
   constructor() {}
 
@@ -148,451 +118,472 @@ class AudioService {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       
+      // 1. Master Chain: Compressor -> Master Gain -> Destination
+      this.masterCompressor = this.ctx.createDynamicsCompressor();
+      this.masterCompressor.threshold.value = -12;
+      this.masterCompressor.knee.value = 30;
+      this.masterCompressor.ratio.value = 12;
+      this.masterCompressor.attack.value = 0.003;
+      this.masterCompressor.release.value = 0.25;
+
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 1.0; 
+      this.masterGain.gain.value = 1.0;
+
+      this.masterCompressor.connect(this.masterGain);
       this.masterGain.connect(this.ctx.destination);
 
-      // SFX Bus
-      this.sfxBus = this.ctx.createGain();
-      this.sfxBus.gain.value = this.isSfxMuted ? 0 : 0.5;
-      this.sfxBus.connect(this.masterGain);
-
-      // Music Bus
+      // 2. Buses
       this.musicBus = this.ctx.createGain();
-      this.musicBus.gain.value = this.isMusicMuted ? 0 : 0.4;
-      this.musicBus.connect(this.masterGain);
+      this.musicBus.gain.value = this.isMusicMuted ? 0 : 0.5;
+      this.musicBus.connect(this.masterCompressor);
 
-      // --- DUB TECHNO FX CHAIN ---
-      // 1. Delay (Stereo Ping Pong simulation via mono for simplicity + pan later)
-      this.delayNode = this.ctx.createDelay(2.0);
-      this.delayNode.delayTime.value = 0.351; // ~dotted 8th at 128
-      const delayFeedback = this.ctx.createGain();
-      delayFeedback.gain.value = 0.4;
-      const delayFilter = this.ctx.createBiquadFilter();
-      delayFilter.type = 'bandpass';
-      delayFilter.frequency.value = 1000;
-      
-      this.delayNode.connect(delayFilter);
-      delayFilter.connect(delayFeedback);
-      delayFeedback.connect(this.delayNode);
-      this.delayNode.connect(this.musicBus);
+      this.sfxBus = this.ctx.createGain();
+      this.sfxBus.gain.value = this.isSfxMuted ? 0 : 0.6;
+      this.sfxBus.connect(this.masterCompressor);
 
-      // 2. Reverb (Procedural Impulse Response)
+      // 3. FX: Reverb (Space)
       this.reverbNode = this.ctx.createConvolver();
-      this.reverbNode.buffer = this.createImpulseResponse(2.0, 2.0); // 2 seconds reverb
-      this.reverbNode.connect(this.musicBus);
+      const ir = this.createReverbImpulse(3.0);
+      if (ir) this.reverbNode.buffer = ir;
+      
+      const reverbGain = this.ctx.createGain();
+      reverbGain.gain.value = 0.4;
+      this.reverbNode.connect(reverbGain);
+      reverbGain.connect(this.musicBus);
 
-      // Send Bus for Chords -> FX
-      this.dubSend = this.ctx.createGain();
-      this.dubSend.gain.value = 0.6;
-      this.dubSend.connect(this.delayNode);
-      this.dubSend.connect(this.reverbNode);
+      // 4. FX: Stereo Delay (Echo)
+      this.delayNode = this.ctx.createDelay(2.0);
+      this.delayFeedback = this.ctx.createGain();
+      const delayFilter = this.ctx.createBiquadFilter();
+      
+      this.delayNode.delayTime.value = 60 / this.context.bpm * 0.75; // Dotted 8th
+      this.delayFeedback.gain.value = 0.4;
+      delayFilter.type = 'lowpass';
+      delayFilter.frequency.value = 2000; // Dark echoes
 
-      // Auto-resume logic
+      this.delayNode.connect(delayFilter);
+      delayFilter.connect(this.delayFeedback);
+      this.delayFeedback.connect(this.delayNode);
+      
+      const delayOutput = this.ctx.createGain();
+      delayOutput.gain.value = 0.3;
+      this.delayNode.connect(delayOutput);
+      delayOutput.connect(this.musicBus);
+
+      // Setup resume handlers
       const resume = () => {
-          if (this.ctx?.state === 'suspended') this.ctx.resume().catch(() => {});
-          if (this.ctx?.state === 'running') {
-             window.removeEventListener('click', resume);
-             window.removeEventListener('keydown', resume);
-             window.removeEventListener('touchstart', resume);
-          }
+          if (this.ctx?.state === 'suspended') this.ctx.resume();
       };
-      window.addEventListener('click', resume);
-      window.addEventListener('keydown', resume);
-      window.addEventListener('touchstart', resume);
+      window.addEventListener('click', resume, { once: true });
+      window.addEventListener('keydown', resume, { once: true });
     }
   }
 
-  // Generate Reverb Impulse Response (White Noise Decay)
-  private createImpulseResponse(duration: number, decay: number) {
+  // Generate a high-quality impulse response for reverb
+  private createReverbImpulse(duration: number) {
       if (!this.ctx) return null;
       const rate = this.ctx.sampleRate;
       const length = rate * duration;
       const impulse = this.ctx.createBuffer(2, length, rate);
-      const left = impulse.getChannelData(0);
-      const right = impulse.getChannelData(1);
+      const L = impulse.getChannelData(0);
+      const R = impulse.getChannelData(1);
 
       for (let i = 0; i < length; i++) {
           const n = i / length;
-          // Exponential decay
-          const vol = Math.pow(1 - n, decay); 
-          left[i] = (Math.random() * 2 - 1) * vol;
-          right[i] = (Math.random() * 2 - 1) * vol;
+          // Exponential decay with noise
+          const env = Math.pow(1 - n, 2.5); 
+          L[i] = (Math.random() * 2 - 1) * env;
+          R[i] = (Math.random() * 2 - 1) * env;
       }
       return impulse;
   }
 
+  // --- PUBLIC CONTROLS ---
+
   public setMusicMuted(muted: boolean) {
-    this.isMusicMuted = muted;
-    if (this.musicBus) {
-        const t = this.ctx?.currentTime || 0;
-        this.musicBus.gain.setTargetAtTime(muted ? 0 : 0.4, t, 0.2);
-    }
-    if (!muted && !this.musicRunning) {
-        this.startMusic();
-    }
+      this.isMusicMuted = muted;
+      if (this.musicBus && this.ctx) {
+          this.musicBus.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.3);
+      }
+      if (!muted && !this.musicRunning) {
+          this.startMusic();
+      }
   }
 
   public setSfxMuted(muted: boolean) {
       this.isSfxMuted = muted;
-      if (this.sfxBus) {
-          const t = this.ctx?.currentTime || 0;
-          this.sfxBus.gain.setTargetAtTime(muted ? 0 : 0.5, t, 0.1);
+      if (this.sfxBus && this.ctx) {
+          this.sfxBus.gain.setTargetAtTime(muted ? 0 : 0.6, this.ctx.currentTime, 0.1);
       }
+  }
+
+  public toggleMusic() { this.setMusicMuted(!this.isMusicMuted); }
+  public toggleSfx() { this.setSfxMuted(!this.isSfxMuted); }
+  
+  public updateMusic(credits: number, maxThreshold: number) {
+      // Dynamic Intensity based on player wealth/progress
+      const ratio = Math.min(1, credits / Math.max(1, maxThreshold));
+      // Gradually shift intensity (0.5 to 1.0) based on progress
+      this.context.intensity = 0.4 + (ratio * 0.6);
   }
   
-  public resumeContext() {
-      if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume().catch(() => {});
-      }
-  }
+  public getCurrentTrackName() { return "Procedural :: Nebula V2"; }
+  public playRandomTrack() { this.regenerateComposition(); }
+  public nextTrack() { this.regenerateComposition(); }
+  public prevTrack() { this.regenerateComposition(); }
 
-  // --- PLAYLIST LOGIC ---
+  // --- COMPOSITION ENGINE ---
 
-  private shufflePlaylist() {
-      // Fisher-Yates shuffle
-      this.playlist = [...TRACK_LIBRARY];
-      for (let i = this.playlist.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [this.playlist[i], this.playlist[j]] = [this.playlist[j], this.playlist[i]];
-      }
-      this.currentTrackIndex = 0;
-  }
-
-  private loadTrack(index: number) {
-      const track = this.playlist[index];
-      console.log(`[Audio] Playing: ${track.title} (${track.bpm} BPM) - ${track.rhythm}`);
-      this.generatePatterns(track);
-      this.currentTrackStartTime = this.ctx?.currentTime || 0;
+  private regenerateComposition() {
+      // Pick a random key
+      const roots = Object.values(ROOT_FREQUENCIES);
+      const root = roots[Math.floor(Math.random() * roots.length)];
       
-      // Update delay time to sync with BPM
+      // Pick a scale flavor
+      const scaleKeys = Object.keys(SCALES) as (keyof typeof SCALES)[];
+      const scaleKey = scaleKeys[Math.floor(Math.random() * scaleKeys.length)];
+      const scale = SCALES[scaleKey];
+
+      // Pick BPM (Ambient slow or Driving fast)
+      const bpm = 90 + Math.random() * 40;
+
+      // Generate Chord Progression (4 chords, using scale degrees)
+      // Simple logic: Start I, move to something else, cadence at end
+      const prog = [];
+      prog.push([0, 2, 4]); // Tonic triad
+      for(let i=0; i<3; i++) {
+          const rootDegree = Math.floor(Math.random() * 7);
+          prog.push([rootDegree, (rootDegree + 2) % 7, (rootDegree + 4) % 7]);
+      }
+
+      this.context = {
+          rootFreq: root,
+          scale: scale,
+          bpm: bpm,
+          chordProgression: prog,
+          currentChordIndex: 0,
+          intensity: 0.5
+      };
+
+      // Reset Arrange
+      this.arrangementState = { section: Section.INTRO, barCount: 0, totalBars: 0 };
+      this.generatePatterns();
+      
       if (this.delayNode && this.ctx) {
-          const beatTime = 60 / track.bpm;
-          // Dotted 8th delay (0.75 of a beat)
-          this.delayNode.delayTime.setValueAtTime(beatTime * 0.75, this.ctx.currentTime);
+           this.delayNode.delayTime.setValueAtTime(60 / bpm * 0.75, this.ctx.currentTime);
       }
   }
 
-  public nextTrack() {
-      // Ensure playlist is ready even if not running
-      if (this.playlist.length === 0) this.shufflePlaylist();
-      if (!this.ctx) this.init();
+  private generatePatterns() {
+      // Procedural 16-step patterns
       
-      this.currentTrackIndex = (this.currentTrackIndex + 1) % this.playlist.length;
-      this.loadTrack(this.currentTrackIndex);
-  }
+      // Kick: Euclidean-ish distribution
+      this.patterns.kick = new Array(16).fill(false);
+      const kickHits = this.context.bpm > 110 ? 4 : 3; // More kicks if faster
+      for(let i=0; i<16; i+=4) this.patterns.kick[i] = true; // 4/4 base
+      if (Math.random() > 0.5) this.patterns.kick[14] = true; // Syncopation
 
-  public prevTrack() {
-      if (this.playlist.length === 0) this.shufflePlaylist();
-      if (!this.ctx) this.init();
-
-      this.currentTrackIndex = (this.currentTrackIndex - 1 + this.playlist.length) % this.playlist.length;
-      this.loadTrack(this.currentTrackIndex);
-  }
-
-  public getCurrentTrackName(): string {
-      if (this.playlist.length === 0) return "Loading...";
-      return this.playlist[this.currentTrackIndex].title;
-  }
-
-  public playRandomTrack() {
-      // Ensure init
-      if (!this.ctx) this.init();
-      
-      // If playlist empty, standard start will shuffle it
-      if (this.playlist.length === 0) {
-          this.startMusic();
-          return;
-      }
-      
-      // Pick random index distinct from current
-      let newIndex = Math.floor(Math.random() * this.playlist.length);
-      if (this.playlist.length > 1 && newIndex === this.currentTrackIndex) {
-          newIndex = (newIndex + 1) % this.playlist.length;
-      }
-      
-      this.currentTrackIndex = newIndex;
-      this.loadTrack(this.currentTrackIndex);
-      
-      // Ensure running
-      if (!this.musicRunning && !this.isMusicMuted) {
-          this.resumeContext();
-          this.musicRunning = true;
-          this.scheduler();
-      }
-  }
-
-  // Pseudo-random generator for patterns based on Rhythm Type
-  private generatePatterns(track: TrackPreset) {
-      const rng = (mod: number) => {
-          let s = track.seed + Math.random() * 1000;
-          return Math.floor((s % 100000 / 100000) * mod);
-      };
-
-      // 16-step patterns
-      this.currentPatterns = {
-          kick: Array(16).fill(false),
-          bass: Array(16).fill(-1),
-          chord: Array(16).fill(false),
-          hat: Array(16).fill(false)
-      };
-
-      // 1. Kick Generator based on Rhythm Type
-      switch (track.rhythm) {
-          case 'STRAIGHT':
-          case 'URGENT':
-              // Classic 4/4: 0, 4, 8, 12
-              [0, 4, 8, 12].forEach(i => this.currentPatterns.kick[i] = true);
-              break;
-          
-          case 'HALF_TIME':
-              // Dubstep/Trap feel: Kick on 1. Snare would be on 3 (step 8).
-              // We put kick on 0. Maybe a syncopated kick on step 10 or 11.
-              this.currentPatterns.kick[0] = true;
-              if (rng(10) > 4) this.currentPatterns.kick[10] = true;
-              // Snare will be handled by high hat or special noise in playStep
-              break;
-
-          case 'BROKEN':
-              // Breakbeat / Garage: 0, 3 (maybe), 10
-              this.currentPatterns.kick[0] = true;
-              this.currentPatterns.kick[10] = true;
-              if (Math.random() > 0.5) this.currentPatterns.kick[3] = true; 
-              if (Math.random() > 0.7) this.currentPatterns.kick[14] = true;
-              break;
-
-          case 'DUB':
-              // Sparse, emphasized 1st beat, maybe syncopated later
-              this.currentPatterns.kick[0] = true;
-              if (Math.random() > 0.3) this.currentPatterns.kick[10] = true;
-              if (Math.random() > 0.6) this.currentPatterns.kick[14] = true;
-              break;
-
-          case 'MINIMAL':
-              // Very sparse or just 1 and 9
-              this.currentPatterns.kick[0] = true;
-              this.currentPatterns.kick[8] = true;
-              break;
+      // Hats: 16ths or 8ths
+      this.patterns.hat = new Array(16).fill(false);
+      for(let i=2; i<16; i+=4) this.patterns.hat[i] = true; // Offbeat open
+      if (this.context.intensity > 0.6) {
+           for(let i=0; i<16; i+=2) if (!this.patterns.hat[i]) this.patterns.hat[i] = Math.random() > 0.7; // 8th fill
       }
 
-      // 2. Hat Generator
+      // Bass: Follows Root of current chord usually
+      // We store SCALE DEGREES here
+      this.patterns.bass = new Array(16).fill(-1);
+      this.patterns.bass[0] = 0; // Root on 1
+      this.patterns.bass[10] = 0; // Root on 3.5
+      if (Math.random() > 0.5) this.patterns.bass[14] = 4; // Fifth on end
+
+      // Arp: Random walk in scale
+      this.patterns.arp = new Array(16).fill(-1);
       for(let i=0; i<16; i++) {
-          if (track.rhythm === 'URGENT') {
-              // 16th note hats driving the beat
-              this.currentPatterns.hat[i] = true;
-          }
-          else if (track.rhythm === 'HALF_TIME') {
-              // Accentuate the 'Snare' beat (step 8) with a hat if we don't have a snare sample
-              if (i === 8) this.currentPatterns.hat[i] = true;
-              // Fast rolling hats in between?
-              if (i % 2 !== 0 && rng(10) > 3) this.currentPatterns.hat[i] = true;
-          }
-          else if (track.rhythm === 'MINIMAL') {
-              // Minimal: Short noise ticks on random steps
-              if (rng(10) > 6) this.currentPatterns.hat[i] = true;
-          } else {
-              // Standard: Open Hat on off-beats (2, 6, 10, 14) + random shaker
-              if (i % 4 === 2) this.currentPatterns.hat[i] = true; // Main open hat
-              else if (rng(10) > 7) this.currentPatterns.hat[i] = true; // Ghost ticks
-          }
-      }
-
-      // 3. Bass Generator (Use provided sequence if available)
-      if (track.bassSequence) {
-          // Loop or fit 16 step sequence
-          for(let i=0; i<16; i++) {
-              if (i < track.bassSequence.length) {
-                  this.currentPatterns.bass[i] = track.bassSequence[i];
-              }
-          }
-      } else {
-          // Procedural Fallback
-          for(let i=0; i<16; i++) {
-              if (this.currentPatterns.kick[i]) continue;
-
-              if (track.rhythm === 'STRAIGHT' || track.rhythm === 'URGENT') {
-                  if (i % 2 !== 0) this.currentPatterns.bass[i] = 0; 
-              } else if (track.rhythm === 'BROKEN') {
-                  if (rng(10) > 5) this.currentPatterns.bass[i] = rng(3);
-              } else if (track.rhythm === 'HALF_TIME') {
-                  if (i === 4 || i === 12) this.currentPatterns.bass[i] = 0;
-              } else {
-                  if (i === 4 || i === 7 || i === 11) {
-                      if (rng(10) > 3) this.currentPatterns.bass[i] = 0;
-                  }
-              }
-          }
-      }
-
-      // 4. Chord Generator (Dub Stabs)
-      // Usually sparse: 7, 11, or 13
-      for(let i=0; i<16; i++) {
-          // Less chords in minimal
-          const threshold = track.rhythm === 'MINIMAL' ? 95 : 85;
-          if (rng(100) > threshold) this.currentPatterns.chord[i] = true;
-          
-          // Force a chord on a typical dub spot if DUB vibe
-          if (track.vibe === 'DUB' && (i === 3 || i === 6)) {
-              if (rng(10) > 2) this.currentPatterns.chord[i] = true;
+          if (Math.random() > 0.6) {
+              this.patterns.arp[i] = Math.floor(Math.random() * 7); // Random scale degree
           }
       }
   }
 
-  // --- ENGINE ---
-  
+  // --- AUDIO SCHEDULER ---
+
   public startMusic() {
       if (this.musicRunning) return;
       this.init();
       if (!this.ctx) return;
-
-      this.resumeContext();
+      
+      this.regenerateComposition();
       this.musicRunning = true;
-      
-      // Shuffle only if not yet populated
-      if (this.playlist.length === 0) {
-          this.shufflePlaylist();
-      }
-      this.loadTrack(this.currentTrackIndex);
-      
       this.nextNoteTime = this.ctx.currentTime + 0.1;
-      this.beatCount = 0;
-      
+      this.current16thNote = 0;
       this.scheduler();
   }
 
   public stopMusic() {
       this.musicRunning = false;
-      if (this.schedulerTimer) {
-          clearTimeout(this.schedulerTimer);
-          this.schedulerTimer = null;
-      }
+      if (this.timerID) window.clearTimeout(this.timerID);
   }
 
   private scheduler() {
       if (!this.musicRunning || !this.ctx) return;
 
-      // Track Management
-      const currentTrack = this.playlist[this.currentTrackIndex];
-      const elapsed = this.ctx.currentTime - this.currentTrackStartTime;
-      
-      if (elapsed > this.TRACK_DURATION_SECONDS) {
-          // Next track
-          this.currentTrackIndex = (this.currentTrackIndex + 1) % this.playlist.length;
-          this.loadTrack(this.currentTrackIndex);
+      while (this.nextNoteTime < this.ctx.currentTime + this.scheduleAheadTime) {
+          this.scheduleNote(this.current16thNote, this.nextNoteTime);
+          this.nextNoteTime += 0.25 * 60.0 / this.context.bpm; // Add quarter note / 4
+          this.current16thNote++;
+          if (this.current16thNote === 16) {
+              this.current16thNote = 0;
+              this.handleBarChange();
+          }
       }
-
-      const secondsPerBeat = 60.0 / currentTrack.bpm;
-      const stepTime = secondsPerBeat / 4; // 16th notes
-      const scheduleAheadTime = 0.1;
-
-      while (this.nextNoteTime < this.ctx.currentTime + scheduleAheadTime) {
-          this.playStep(this.nextNoteTime, this.beatCount, currentTrack);
-          this.nextNoteTime += stepTime;
-          this.beatCount++;
-      }
-      
-      this.schedulerTimer = window.setTimeout(() => this.scheduler(), 25);
+      this.timerID = window.setTimeout(() => this.scheduler(), this.lookahead);
   }
 
-  private playStep(time: number, totalStep: number, track: TrackPreset) {
-      if (!this.ctx || !this.musicBus) return;
+  private handleBarChange() {
+      this.arrangementState.barCount++;
+      this.arrangementState.totalBars++;
 
-      const step = totalStep % 16;
-      const patterns = this.currentPatterns;
+      // Change Chord every bar
+      this.context.currentChordIndex = (this.context.currentChordIndex + 1) % this.context.chordProgression.length;
 
-      // 1. Kick (Soft, Deep)
-      if (patterns.kick[step]) {
-          this.playKick(time);
-      }
+      // Arrangement Logic (Simplified Director)
+      const bars = this.arrangementState.barCount;
+      const section = this.arrangementState.section;
 
-      // 2. Bass (Deep, Rolling)
-      if (patterns.bass[step] !== -1) {
-          // Calculate Frequency with Octave support
-          // Note value from pattern is assumed to be scale index + octave offset logic if we want,
-          // but here we just map index to scale.
-          const rawNote = patterns.bass[step];
-          const len = track.scale.length;
-          const octave = Math.floor(rawNote / len);
-          const scaleIdx = rawNote % len;
-          
-          // Safety
-          const safeScaleIdx = Math.max(0, Math.min(scaleIdx, len - 1));
-          
-          const semitones = track.scale[safeScaleIdx] + (octave * 12);
-          const freq = track.root * Math.pow(2, semitones / 12);
-          
-          this.playBass(time, freq, track.vibe);
-      }
-
-      // 3. Hi-Hats (Shakers/Noise)
-      if (patterns.hat[step]) {
-          // For HALF_TIME, step 8 acts as a snare accent (louder hat)
-          const isAccent = (track.rhythm === 'HALF_TIME' && step === 8);
-          // Standard off-beat open hat
-          const isOpen = (step % 4 === 2) || isAccent; 
-          this.playHat(time, isOpen, isAccent);
-      }
-
-      // 4. Dub Chords (Stabs)
-      if (patterns.chord[step]) {
-          this.playDubChord(time, track);
+      if (section === Section.INTRO && bars > 4) {
+          this.arrangementState.section = Section.BUILD;
+          this.arrangementState.barCount = 0;
+      } else if (section === Section.BUILD && bars > 4) {
+          this.arrangementState.section = Section.MAIN;
+          this.arrangementState.barCount = 0;
+          this.generatePatterns(); // Fresh patterns for drop
+      } else if (section === Section.MAIN && bars > 16) {
+          this.arrangementState.section = Section.BREAKDOWN;
+          this.arrangementState.barCount = 0;
+      } else if (section === Section.BREAKDOWN && bars > 8) {
+          this.arrangementState.section = Section.MAIN;
+          this.arrangementState.barCount = 0;
+          this.generatePatterns(); // Change it up
       }
   }
 
-  // --- INSTRUMENTS ---
+  // --- SOUND GENERATION ---
 
-  private playKick(time: number) {
+  private scheduleNote(beatNumber: number, time: number) {
+      const sect = this.arrangementState.section;
+
+      // 1. KICK (Punchy)
+      // Only play in Build (rising) or Main
+      if ((sect === Section.MAIN || (sect === Section.BUILD && beatNumber % 2 === 0))) {
+          if (this.patterns.kick[beatNumber]) {
+              this.triggerKick(time);
+          }
+      }
+
+      // 2. BASS (FM Synthesis)
+      // Only in Main and parts of Build
+      if (sect === Section.MAIN || (sect === Section.BUILD && this.arrangementState.barCount > 2)) {
+          const bassNote = this.patterns.bass[beatNumber];
+          if (bassNote !== -1) {
+              // Map scale degree relative to current chord root
+              const chord = this.context.chordProgression[this.context.currentChordIndex];
+              const chordRootDegree = chord[0]; 
+              // Simple logic: Play the root of the chord mostly
+              const degree = chordRootDegree; 
+              const freq = this.getFreq(degree, 0); // Bass octave 0
+              this.triggerFMBass(time, freq);
+          }
+      }
+
+      // 3. PAD (Atmospheric Chords)
+      // Always play, controls the mood
+      if (beatNumber === 0) { // On downbeat
+          const chord = this.context.chordProgression[this.context.currentChordIndex];
+          this.triggerPadChord(time, chord);
+      }
+
+      // 4. HI-HATS
+      if (sect !== Section.INTRO && sect !== Section.BREAKDOWN) {
+          if (this.patterns.hat[beatNumber]) {
+              const accent = beatNumber % 4 === 2; // Offbeat accent
+              this.triggerHat(time, accent);
+          }
+      }
+
+      // 5. ARP (Plucky)
+      // Intro, Breakdown, Main
+      if (sect !== Section.BUILD) {
+          const arpDegree = this.patterns.arp[beatNumber];
+          if (arpDegree !== -1) {
+              const freq = this.getFreq(arpDegree, 3); // High octave
+              this.triggerArp(time, freq);
+          }
+      }
+  }
+
+  // --- SYNTHESIS ENGINES ---
+
+  private getFreq(scaleDegree: number, octaveOffset: number): number {
+      const scaleLen = this.context.scale.length;
+      const octave = Math.floor(scaleDegree / scaleLen) + octaveOffset;
+      const index = Math.abs(scaleDegree % scaleLen);
+      const semitones = this.context.scale[index] + (octave * 12);
+      return this.context.rootFreq * Math.pow(2, semitones / 12);
+  }
+
+  private triggerKick(time: number) {
       if (!this.ctx || !this.musicBus) return;
+      
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       
-      osc.type = 'sine'; // Pure sub
-      
       osc.frequency.setValueAtTime(150, time);
-      osc.frequency.exponentialRampToValueAtTime(40, time + 0.1);
+      osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
       
-      gain.gain.setValueAtTime(0.8, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+      gain.gain.setValueAtTime(1.0, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
 
       osc.connect(gain);
       gain.connect(this.musicBus);
       osc.start(time);
-      osc.stop(time + 0.4);
+      osc.stop(time + 0.5);
+      
+      osc.onended = () => { osc.disconnect(); gain.disconnect(); };
   }
 
-  private playBass(time: number, freq: number, vibe: string) {
-      if (!this.ctx || !this.musicBus) return;
-      const osc = this.ctx.createOscillator();
-      const filter = this.ctx.createBiquadFilter();
-      const gain = this.ctx.createGain();
-
-      // Timbre selection
-      if (vibe === 'ACID') osc.type = 'sawtooth';
-      else if (vibe === 'DEEP') osc.type = 'triangle';
-      else osc.type = 'sine'; // Dub/Float
-
-      osc.frequency.value = freq;
-
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(vibe === 'ACID' ? 800 : 300, time);
-      if (vibe === 'ACID') filter.frequency.exponentialRampToValueAtTime(100, time + 0.2);
-      filter.Q.value = vibe === 'ACID' ? 5 : 1;
-
-      gain.gain.setValueAtTime(0.3, time);
-      gain.gain.linearRampToValueAtTime(0, time + 0.2); // Short plucky
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.musicBus);
-      osc.start(time);
-      osc.stop(time + 0.25);
-  }
-
-  private playHat(time: number, open: boolean, accent: boolean = false) {
+  private triggerFMBass(time: number, freq: number) {
       if (!this.ctx || !this.musicBus) return;
       
-      // Noise burst
-      const bufferSize = this.ctx.sampleRate * 0.1;
+      // Carrier
+      const car = this.ctx.createOscillator();
+      car.type = 'sine';
+      car.frequency.value = freq;
+
+      // Modulator
+      const mod = this.ctx.createOscillator();
+      mod.type = 'square'; // Gritty
+      mod.frequency.value = freq * 0.5; // Sub-octave mod
+      
+      const modGain = this.ctx.createGain();
+      // FM Index envelope
+      modGain.gain.setValueAtTime(500, time); 
+      modGain.gain.exponentialRampToValueAtTime(1, time + 0.3);
+
+      mod.connect(modGain);
+      modGain.connect(car.frequency);
+
+      // Amp Envelope
+      const amp = this.ctx.createGain();
+      amp.gain.setValueAtTime(0, time);
+      amp.gain.linearRampToValueAtTime(0.6, time + 0.02);
+      amp.gain.exponentialRampToValueAtTime(0.01, time + 0.4);
+
+      // Lowpass Filter for "wub"
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(300, time);
+      filter.frequency.exponentialRampToValueAtTime(100, time + 0.3);
+
+      car.connect(filter);
+      filter.connect(amp);
+      amp.connect(this.musicBus);
+
+      car.start(time);
+      mod.start(time);
+      car.stop(time + 0.5);
+      mod.stop(time + 0.5);
+      
+      car.onended = () => { car.disconnect(); mod.disconnect(); modGain.disconnect(); amp.disconnect(); filter.disconnect(); };
+  }
+
+  private triggerPadChord(time: number, chordDegrees: number[]) {
+      if (!this.ctx || !this.musicBus) return;
+
+      const attack = 1.5;
+      const release = 1.5;
+      const dur = (60 / this.context.bpm) * 4; // 1 bar
+
+      chordDegrees.forEach((deg, i) => {
+          const freq = this.getFreq(deg, 2); // Mid range
+          
+          const osc1 = this.ctx!.createOscillator();
+          osc1.type = 'sawtooth';
+          osc1.frequency.value = freq;
+          osc1.detune.value = -10 + (Math.random() * 20); // Thick detune
+
+          const osc2 = this.ctx!.createOscillator();
+          osc2.type = 'triangle';
+          osc2.frequency.value = freq;
+          osc2.detune.value = -5 + (Math.random() * 10);
+
+          const filter = this.ctx!.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = 400 + (Math.random() * 200);
+          filter.Q.value = 1;
+
+          // Slight filter movement LFO
+          const lfo = this.ctx!.createOscillator();
+          lfo.frequency.value = 0.2; // Slow breathe
+          const lfoGain = this.ctx!.createGain();
+          lfoGain.gain.value = 200;
+          lfo.connect(lfoGain);
+          lfoGain.connect(filter.frequency);
+
+          const gain = this.ctx!.createGain();
+          gain.gain.setValueAtTime(0, time);
+          gain.gain.linearRampToValueAtTime(0.08, time + attack);
+          gain.gain.setValueAtTime(0.08, time + dur - release);
+          gain.gain.linearRampToValueAtTime(0, time + dur);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(gain);
+          
+          // Send to Reverb heavily
+          if (this.reverbNode) gain.connect(this.reverbNode);
+          else gain.connect(this.musicBus!);
+
+          osc1.start(time);
+          osc2.start(time);
+          lfo.start(time);
+          
+          const stopTime = time + dur + 0.1;
+          osc1.stop(stopTime);
+          osc2.stop(stopTime);
+          lfo.stop(stopTime);
+          
+          osc1.onended = () => { osc1.disconnect(); osc2.disconnect(); lfo.disconnect(); lfoGain.disconnect(); filter.disconnect(); gain.disconnect(); };
+      });
+  }
+
+  private triggerArp(time: number, freq: number) {
+      if (!this.ctx || !this.musicBus) return;
+
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine'; // Plucky sine
+      osc.frequency.value = freq;
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.1, time + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+
+      osc.connect(gain);
+      // Send to Delay
+      if (this.delayNode) gain.connect(this.delayNode);
+      gain.connect(this.musicBus);
+
+      osc.start(time);
+      osc.stop(time + 0.25);
+      
+      osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+  }
+
+  private triggerHat(time: number, accent: boolean) {
+      if (!this.ctx || !this.musicBus) return;
+      
+      const bufferSize = this.ctx.sampleRate * 0.05;
       const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
       const data = buffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
@@ -602,182 +593,73 @@ class AudioService {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'highpass';
-      filter.frequency.value = accent ? 3000 : 6000; // Lower freq for accent ("Snare" feel)
+      filter.frequency.value = 8000;
 
       const gain = this.ctx.createGain();
-      
-      let vol = 0.05;
-      let dur = 0.03;
-      
-      if (accent) {
-          vol = 0.25;
-          dur = 0.15;
-      } else if (open) {
-          vol = 0.15;
-          dur = 0.1;
-      }
-
-      gain.gain.setValueAtTime(vol, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+      gain.gain.setValueAtTime(accent ? 0.15 : 0.05, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + (accent ? 0.05 : 0.03));
 
       noise.connect(filter);
       filter.connect(gain);
       gain.connect(this.musicBus);
-      noise.start(time);
-  }
-
-  private playDubChord(time: number, track: TrackPreset) {
-      if (!this.ctx || !this.dubSend) return;
-
-      // Construct a minor triad
-      const chordIntervals = [0, 3, 7];
       
-      chordIntervals.forEach(interval => {
-          const osc = this.ctx!.createOscillator();
-          const gain = this.ctx!.createGain();
-          
-          osc.type = 'sawtooth';
-          
-          const semitones = interval;
-          // Shift up an octave for chords
-          const freq = (track.root * 2) * Math.pow(2, semitones / 12);
-          osc.frequency.value = freq;
-
-          gain.gain.setValueAtTime(0.05, time);
-          gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15); // Short stab
-
-          osc.connect(gain);
-          // Send to FX Bus (Dub delay)
-          gain.connect(this.dubSend!); 
-          
-          osc.start(time);
-          osc.stop(time + 0.2);
-      });
+      noise.start(time);
+      noise.onended = () => { noise.disconnect(); filter.disconnect(); gain.disconnect(); };
   }
 
-  // --- PUBLIC API ---
-
-  public updateMusic(credits: number, maxThreshold: number) {
-      // Stub: Dub Techno is consistent, maybe automate filter cutoff slightly with wealth?
-      // For now, keep it chill and steady.
-  }
-
-  // --- SFX (Existing) ---
+  // --- SFX METHODS ---
   public play(type: SoundType) {
     if (this.isSfxMuted) return;
     this.init();
     if (!this.ctx || !this.sfxBus) return;
-    this.resumeContext();
-
+    
+    // SFX implementations (Hover, Click, etc.) using simple synthesis
+    // Keeping this part simple to focus on Music upgrade
     const t = this.ctx.currentTime;
+    
+    const playOsc = (freq: number, type: OscillatorType, dur: number, vol: number) => {
+        const osc = this.ctx!.createOscillator();
+        const g = this.ctx!.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(vol, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + dur);
+        osc.connect(g);
+        g.connect(this.sfxBus!);
+        osc.start(t);
+        osc.stop(t + dur);
+        
+        osc.onended = () => { osc.disconnect(); g.disconnect(); };
+    };
 
     switch (type) {
-      case 'UI_HOVER': {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine'; 
-        osc.frequency.setValueAtTime(800, t);
-        osc.frequency.exponentialRampToValueAtTime(1200, t + 0.03);
-        gain.gain.setValueAtTime(0.02, t);
-        gain.gain.linearRampToValueAtTime(0, t + 0.03);
-        osc.connect(gain); gain.connect(this.sfxBus); osc.start(t); osc.stop(t + 0.05);
+      case 'UI_CLICK': playOsc(800, 'triangle', 0.1, 0.1); break;
+      case 'UI_HOVER': playOsc(400, 'sine', 0.05, 0.02); break;
+      case 'ERROR': playOsc(150, 'sawtooth', 0.2, 0.1); break;
+      case 'SUCCESS': 
+        playOsc(523, 'sine', 0.3, 0.1); 
+        setTimeout(() => playOsc(659, 'sine', 0.3, 0.1), 100);
         break;
-      }
-      case 'UI_CLICK': {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'triangle'; 
-        osc.frequency.setValueAtTime(600, t);
-        osc.frequency.exponentialRampToValueAtTime(200, t + 0.05);
-        gain.gain.setValueAtTime(0.1, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-        osc.connect(gain); gain.connect(this.sfxBus); osc.start(t); osc.stop(t + 0.1);
-        break;
-      }
-      case 'MOVE': {
-        // Soft swish
-        const noise = this.ctx.createBufferSource();
-        const bSize = this.ctx.sampleRate * 0.2;
-        const buf = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
-        const d = buf.getChannelData(0);
-        for(let i=0; i<bSize; i++) d[i] = Math.random()*2-1;
-        noise.buffer = buf;
-        
+      case 'COIN': playOsc(1200, 'sine', 0.4, 0.05); break;
+      case 'MOVE': 
+        // Noise swish
+        const b = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.1, this.ctx.sampleRate);
+        const d = b.getChannelData(0);
+        for(let i=0; i<d.length; i++) d[i] = Math.random()*2-1;
+        const src = this.ctx.createBufferSource();
+        src.buffer = b;
         const f = this.ctx.createBiquadFilter();
-        f.type = 'lowpass';
-        f.frequency.setValueAtTime(400, t);
-        f.frequency.linearRampToValueAtTime(100, t+0.2);
-        
+        f.type = 'lowpass'; f.frequency.setValueAtTime(500, t); f.frequency.linearRampToValueAtTime(100, t+0.1);
         const g = this.ctx.createGain();
-        g.gain.setValueAtTime(0.1, t);
-        g.gain.linearRampToValueAtTime(0, t+0.2);
-        
-        noise.connect(f); f.connect(g); g.connect(this.sfxBus); noise.start(t);
+        g.gain.setValueAtTime(0.1, t); g.gain.linearRampToValueAtTime(0, t+0.1);
+        src.connect(f); f.connect(g); g.connect(this.sfxBus); src.start(t);
+        src.onended = () => { src.disconnect(); f.disconnect(); g.disconnect(); };
         break;
-      }
-      case 'COIN': {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(1200, t); 
-        osc.frequency.setValueAtTime(1600, t + 0.05);
-        gain.gain.setValueAtTime(0.05, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-        osc.connect(gain); gain.connect(this.sfxBus); osc.start(t); osc.stop(t + 0.3);
-        break;
-      }
-      // Minimalist versions of others
-      case 'ERROR': {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, t);
-        osc.frequency.linearRampToValueAtTime(100, t + 0.15);
-        gain.gain.setValueAtTime(0.1, t);
-        gain.gain.linearRampToValueAtTime(0, t + 0.15);
-        osc.connect(gain); gain.connect(this.sfxBus); osc.start(t); osc.stop(t + 0.2);
-        break;
-      }
-      case 'SUCCESS': {
-        // Major triad arp fast
-        [523.25, 659.25, 783.99].forEach((freq, i) => {
-            const osc = this.ctx!.createOscillator();
-            const gain = this.ctx!.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            const start = t + (i * 0.04);
-            gain.gain.setValueAtTime(0, start);
-            gain.gain.linearRampToValueAtTime(0.1, start + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.001, start + 0.4);
-            osc.connect(gain); gain.connect(this.sfxBus!); osc.start(start); osc.stop(start + 0.5);
-        });
-        break;
-      }
-      case 'LEVEL_UP': {
-        // Ethereal sweep
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(220, t);
-        osc.frequency.exponentialRampToValueAtTime(880, t + 0.5);
-        gain.gain.setValueAtTime(0.1, t);
-        gain.gain.linearRampToValueAtTime(0, t + 0.5);
-        osc.connect(gain); gain.connect(this.sfxBus); osc.start(t); osc.stop(t + 0.5);
-        break;
-      }
-      case 'COLLAPSE': {
-         // Low rumble
-         const osc = this.ctx.createOscillator();
-         const gain = this.ctx.createGain();
-         osc.type = 'sawtooth';
-         osc.frequency.setValueAtTime(80, t);
-         osc.frequency.exponentialRampToValueAtTime(20, t + 0.4);
-         gain.gain.setValueAtTime(0.2, t);
-         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-         osc.connect(gain); gain.connect(this.sfxBus); osc.start(t); osc.stop(t + 0.4);
+      case 'LEVEL_UP':
+         playOsc(440, 'triangle', 0.6, 0.1);
+         setTimeout(() => playOsc(880, 'triangle', 0.6, 0.1), 200);
          break;
-      }
-      default: break;
+      case 'COLLAPSE': playOsc(60, 'sawtooth', 0.6, 0.3); break;
     }
   }
 }
