@@ -10,7 +10,7 @@ import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, TrendingUp, ChevronUp, MapPin,
-  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, Layers, Zap, Settings, Menu, Globe, X
+  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, Layers, Zap, Settings, Globe, X, Menu
 } from 'lucide-react';
 
 // FIREWORKS COMPONENT
@@ -129,10 +129,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
 
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
-  const [isRankingsOpen, setIsRankingsOpen] = useState(false); // Controls the leaderboard visibility
+  const [isRankingsOpen, setIsRankingsOpen] = useState(false);
   const [helpTopic, setHelpTopic] = useState<'RANK' | 'CYCLE' | 'COINS' | 'MOVES' | null>(null);
   
-  // Replaced individual states with a single menu state
+  // Unified Menu State
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
   const systemMenuRef = useRef<HTMLDivElement>(null);
 
@@ -184,9 +184,12 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   // Determine Next Level
   const nextLevelId = useMemo(() => {
       if (!activeLevelConfig) return null;
-      const idx = CAMPAIGN_LEVELS.findIndex(l => l.id === activeLevelConfig.id);
+      // Robust lookup by ID string
+      const idx = CAMPAIGN_LEVELS.findIndex(l => String(l.id) === String(activeLevelConfig.id));
+      
       if (idx !== -1 && idx < CAMPAIGN_LEVELS.length - 1) {
-          return CAMPAIGN_LEVELS[idx + 1].id;
+          const next = CAMPAIGN_LEVELS[idx + 1];
+          return next ? next.id : null;
       }
       return null;
   }, [activeLevelConfig]);
