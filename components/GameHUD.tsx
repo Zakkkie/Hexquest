@@ -10,7 +10,7 @@ import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, TrendingUp, ChevronUp, MapPin,
-  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, Layers, Zap
+  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, Layers, Zap, Settings, Menu, Globe, X
 } from 'lucide-react';
 
 // FIREWORKS COMPONENT
@@ -120,6 +120,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const isSfxMuted = useGameStore(state => state.isSfxMuted);
   
   const setUIState = useGameStore(state => state.setUIState);
+  const setLanguage = useGameStore(state => state.setLanguage);
   const abandonSession = useGameStore(state => state.abandonSession);
   const togglePlayerGrowth = useGameStore(state => state.togglePlayerGrowth);
   const toggleMusic = useGameStore(state => state.toggleMusic);
@@ -128,11 +129,12 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
 
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
-  const [isRankingsOpen, setIsRankingsOpen] = useState(false);
+  const [isRankingsOpen, setIsRankingsOpen] = useState(false); // Controls the leaderboard visibility
   const [helpTopic, setHelpTopic] = useState<'RANK' | 'CYCLE' | 'COINS' | 'MOVES' | null>(null);
   
-  const [showSoundMenu, setShowSoundMenu] = useState(false);
-  const soundMenuRef = useRef<HTMLDivElement>(null);
+  // Replaced individual states with a single menu state
+  const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
+  const systemMenuRef = useRef<HTMLDivElement>(null);
 
   // Level 1.2 / 1.3 / 1.4 State: Show Intro Briefing (Blocking)
   const [showLevelBriefing, setShowLevelBriefing] = useState(false);
@@ -191,8 +193,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
-          if (soundMenuRef.current && !soundMenuRef.current.contains(event.target as Node)) {
-              setShowSoundMenu(false);
+          if (systemMenuRef.current && !systemMenuRef.current.contains(event.target as Node)) {
+              setIsSystemMenuOpen(false);
           }
       };
       document.addEventListener("mousedown", handleClickOutside);
@@ -278,7 +280,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           <div className="w-full flex justify-between items-start gap-2 max-w-7xl mx-auto relative">
                
                {/* STATS BAR */}
-               <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-xl px-2 py-2 md:px-6 md:py-3 gap-3 md:gap-8 w-fit transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade shrink-0">
+               <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-xl px-2 py-2 md:px-6 md:py-3 gap-3 md:gap-8 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade min-w-0 flex-1 md:flex-none md:w-fit md:shrink-0">
                    {/* Rank */}
                    <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-2 md:gap-3 cursor-pointer group shrink-0">
                        <div className="p-1.5 md:p-2 rounded-lg bg-indigo-500/10 group-hover:bg-indigo-500/20 transition-colors">
@@ -340,59 +342,96 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                    </div>
                </div>
 
-               {/* SYSTEM CONTROLS */}
-               <div className="pointer-events-auto flex items-start gap-1 md:gap-2 shrink-0 relative z-50">
+               {/* SYSTEM CONTROLS (UNIFIED MENU) */}
+               <div className="pointer-events-auto flex items-start shrink-0 relative z-50">
                    <div className="relative">
-                        <button onClick={() => { setShowSoundMenu(!showSoundMenu); playUiSound('CLICK'); }} className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl text-slate-400 hover:text-white transition-all shadow-lg active:scale-95">
-                            <Volume2 className="w-4 h-4 md:w-5 md:h-5" />
+                        <button 
+                            onClick={() => { setIsSystemMenuOpen(!isSystemMenuOpen); playUiSound('CLICK'); }} 
+                            className={`w-10 h-10 md:w-14 md:h-14 flex items-center justify-center backdrop-blur-xl border rounded-2xl transition-all shadow-lg active:scale-95 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'}`}
+                        >
+                            {isSystemMenuOpen ? <X className="w-5 h-5 md:w-6 md:h-6" /> : <Settings className="w-5 h-5 md:w-6 md:h-6" />}
                         </button>
-                        {showSoundMenu && (
-                            <div ref={soundMenuRef} className="absolute top-full right-0 md:left-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[140px] z-[60]">
+
+                        {isSystemMenuOpen && (
+                            <div ref={systemMenuRef} className="absolute top-full right-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[180px] z-[60] animate-in slide-in-from-top-2 duration-200">
+                                {/* Audio Controls */}
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => { toggleMusic(); playUiSound('CLICK'); }}
+                                        className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isMusicMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-indigo-900/40 border-indigo-500/50 text-indigo-400'}`}
+                                        title="Toggle Music"
+                                    >
+                                        {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
+                                    </button>
+                                    <button 
+                                        onClick={() => { toggleSfx(); playUiSound('CLICK'); }}
+                                        className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isSfxMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-emerald-900/40 border-emerald-500/50 text-emerald-400'}`}
+                                        title="Toggle SFX"
+                                    >
+                                        {isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                                    </button>
+                                </div>
+
+                                {/* Language */}
                                 <button 
-                                    onClick={() => { toggleMusic(); playUiSound('CLICK'); }}
-                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isMusicMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-indigo-400 bg-indigo-900/20 hover:bg-indigo-900/30'}`}
+                                    onClick={() => { setLanguage(language === 'EN' ? 'RU' : 'EN'); playUiSound('CLICK'); }}
+                                    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600"
                                 >
-                                    {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
-                                    <span className="text-xs font-bold uppercase">Music</span>
+                                    <Globe className="w-4 h-4 text-sky-400" />
+                                    <span className="text-xs font-bold uppercase">{language === 'EN' ? 'English' : 'Русский'}</span>
                                 </button>
+
+                                {/* Leaderboard Toggle */}
                                 <button 
-                                    onClick={() => { toggleSfx(); playUiSound('CLICK'); }}
-                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isSfxMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-emerald-400 bg-emerald-900/20 hover:bg-emerald-900/30'}`}
+                                    onClick={() => { setIsRankingsOpen(!isRankingsOpen); setIsSystemMenuOpen(false); playUiSound('CLICK'); }}
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border ${isRankingsOpen ? 'bg-amber-900/20 border-amber-500/50 text-amber-400' : 'bg-slate-800/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white'}`}
                                 >
-                                    {isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                                    <span className="text-xs font-bold uppercase">SFX</span>
+                                    <Trophy className="w-4 h-4 text-amber-500" />
+                                    <span className="text-xs font-bold uppercase">{isRankingsOpen ? 'Hide Ranks' : t.LEADERBOARD_TITLE}</span>
+                                </button>
+
+                                {/* Abort Mission */}
+                                <div className="h-px bg-slate-700/50 my-1"></div>
+                                <button 
+                                    onClick={() => { setShowExitConfirmation(true); setIsSystemMenuOpen(false); playUiSound('CLICK'); }}
+                                    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-900/10 hover:bg-red-900/30 text-red-400 hover:text-red-200 border border-red-900/30 hover:border-red-500/50 transition-colors w-full text-left"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    <span className="text-xs font-bold uppercase">{t.BTN_CONFIRM}</span>
                                 </button>
                             </div>
                         )}
                    </div>
-
-                   <div className={`flex flex-col bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 origin-top-right absolute right-[48px] md:static md:right-auto ${isRankingsOpen ? 'w-56 md:w-80' : 'w-10 md:w-14 h-10 md:h-14'}`}>
-                       <div onClick={() => { setIsRankingsOpen(!isRankingsOpen); playUiSound('CLICK'); }} className="flex items-center justify-center w-full h-10 md:h-14 cursor-pointer hover:bg-white/5 transition-colors">
-                           {isRankingsOpen ? <div className="flex items-center justify-between w-full px-3"><div className="flex items-center gap-2"><Trophy className="w-4 h-4 text-amber-500" /><span className="text-[10px] font-bold text-slate-300 uppercase">{t.LEADERBOARD_TITLE}</span></div><ChevronUp className="w-3 h-3 text-slate-500" /></div> : <Trophy className="w-4 h-4 md:w-5 md:h-5 text-amber-500" />}
-                       </div>
-                       {isRankingsOpen && (
-                           <div className="flex flex-col p-2 gap-1.5 max-h-[40vh] overflow-y-auto no-scrollbar">
-                               {[player, ...safeBots].sort((a, b) => (b.coins || 0) - (a.coins || 0)).map((e) => {
-                                   const isP = e.type === 'PLAYER';
-                                   const color = isP ? (user?.avatarColor || '#3b82f6') : (e.avatarColor || '#ef4444');
-                                   return (
-                                       <div key={e.id} className="grid grid-cols-5 items-center p-2 rounded-lg bg-slate-950/50 border border-slate-800/50 gap-1">
-                                           <div className="col-span-2 flex items-center gap-2 overflow-hidden"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} /><span className={`text-[10px] font-bold truncate ${isP ? 'text-white' : 'text-slate-400'}`}>{isP ? 'YOU' : e.id.toUpperCase()}</span></div>
-                                           <div className="col-span-1 text-center font-mono text-[9px] text-indigo-400">L{e.playerLevel}</div>
-                                           <div className="col-span-1 text-right font-mono text-amber-500 font-bold text-[10px]">{e.coins}</div>
-                                           <div className="col-span-1 text-right font-mono text-blue-400 font-bold text-[9px] flex items-center justify-end gap-0.5"><Footprints className="w-2 h-2 opacity-70" />{e.moves}</div>
-                                       </div>
-                                   );
-                               })}
-                           </div>
-                       )}
-                   </div>
-                   <button onClick={() => { setShowExitConfirmation(true); playUiSound('CLICK'); }} className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl text-slate-400 hover:text-white transition-all shadow-lg active:scale-95">
-                      <LogOut className="w-4 h-4 md:w-5 md:h-5" />
-                   </button>
                </div>
           </div>
       </div>
+
+      {/* FLOATING LEADERBOARD (Controlled by Menu) */}
+      {isRankingsOpen && (
+           <div className="absolute top-[80px] right-4 md:right-[max(2rem,env(safe-area-inset-right))] z-40 flex flex-col bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden w-64 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
+               <div className="flex items-center justify-between p-3 border-b border-slate-700/50 bg-slate-950/30">
+                   <div className="flex items-center gap-2">
+                       <Trophy className="w-4 h-4 text-amber-500" />
+                       <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">{t.LEADERBOARD_TITLE}</span>
+                   </div>
+                   <button onClick={() => setIsRankingsOpen(false)} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+               </div>
+               <div className="flex flex-col p-2 gap-1.5 max-h-[40vh] overflow-y-auto no-scrollbar">
+                   {[player, ...safeBots].sort((a, b) => (b.coins || 0) - (a.coins || 0)).map((e) => {
+                       const isP = e.type === 'PLAYER';
+                       const color = isP ? (user?.avatarColor || '#3b82f6') : (e.avatarColor || '#ef4444');
+                       return (
+                           <div key={e.id} className="grid grid-cols-5 items-center p-2 rounded-lg bg-slate-950/50 border border-slate-800/50 gap-1">
+                               <div className="col-span-2 flex items-center gap-2 overflow-hidden"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} /><span className={`text-[10px] font-bold truncate ${isP ? 'text-white' : 'text-slate-400'}`}>{isP ? 'YOU' : e.id.toUpperCase()}</span></div>
+                               <div className="col-span-1 text-center font-mono text-[9px] text-indigo-400">L{e.playerLevel}</div>
+                               <div className="col-span-1 text-right font-mono text-amber-500 font-bold text-[10px]">{e.coins}</div>
+                               <div className="col-span-1 text-right font-mono text-blue-400 font-bold text-[9px] flex items-center justify-end gap-0.5"><Footprints className="w-2 h-2 opacity-70" />{e.moves}</div>
+                           </div>
+                       );
+                   })}
+               </div>
+           </div>
+      )}
 
       {/* LEVEL 1.1 TUTORIAL DASHBOARD */}
       {isLevel1_1 && (
