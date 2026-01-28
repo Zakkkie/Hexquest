@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { Group, Path, Shape, Circle, Text, Line, Arc } from 'react-konva';
 import Konva from 'konva';
@@ -385,7 +384,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
           });
       }, layer);
       anim.start();
-      return () => anim.stop();
+      return () => { anim.stop(); };
   }, [isExploding]);
 
   // --- CRITICAL ALERT ANIMATION (Integrity Meter) ---
@@ -400,7 +399,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       }, node.getLayer());
 
       anim.start();
-      return () => anim.stop();
+      return () => { anim.stop(); };
   }, [integrityVisuals?.isCritical]);
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
