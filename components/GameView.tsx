@@ -3,7 +3,7 @@ import React, { useEffect, useCallback, useState, useMemo, useRef, useLayoutEffe
 import { Stage, Layer, Line, Group, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
-import { getHexKey, getNeighbors, hexToPixel, pixelToHex } from '../services/hexUtils.ts';
+import { getHexKey, getNeighbors, hexToPixel, pixelToHex, getCoordinatesFromKey } from '../services/hexUtils.ts';
 import Hexagon from './Hexagon.tsx'; 
 import Unit from './Unit.tsx';
 import Background from './Background.tsx';
@@ -17,7 +17,7 @@ const VIEWPORT_PADDING = 100;
 
 type RenderItem = 
   | { type: 'HEX'; id: string; depth: number; q: number; r: number }
-  | { type: 'UNIT'; id: string; depth: number; q: number; r: number; isPlayer: boolean }
+  | { type: 'UNIT'; id: string; depth: number; q: number; r: number; isPlayer: boolean; avatarColor?: string; totalCoinsEarned: number; upgradePointCount: number }
   | { type: 'CONN'; id: string; depth: number; points: number[]; color: string; dash: number[]; opacity: number };
 
 // --- PARTICLES ---
@@ -130,10 +130,40 @@ const FloatingEffect: React.FC<{ effect: FloatingText; rotation: number }> = Rea
 });
 
 const GameView: React.FC = () => {
+  // ATOMIC STATE OPTIMIZATION:
+  // Use simple selectors to avoid type errors with custom comparators.
   const grid = useGameStore(state => state.session?.grid);
+
+  // Separate selectors for units to avoid creating new object wrapper on every render,
+  // though some re-renders are expected with standard Zustand selectors.
   const player = useGameStore(state => state.session?.player);
   const bots = useGameStore(state => state.session?.bots);
-  const effects = useGameStore(state => state.session?.effects); 
+  const effects = useGameStore(state => state.session?.effects);
+
+  // Derived state for rendering
+  const playerPos = useMemo(() => player ? { 
+      q: player.q, 
+      r: player.r, 
+      id: player.id,
+      state: player.state,
+      totalCoinsEarned: player.totalCoinsEarned,
+      recentUpgrades: player.recentUpgrades
+  } : null, [player]);
+
+  const botPositions = useMemo(() => bots?.map(b => ({ 
+      q: b.q, r: b.r, id: b.id, 
+      movementQueue: b.movementQueue, 
+      avatarColor: b.avatarColor,
+      totalCoinsEarned: b.totalCoinsEarned,
+      recentUpgrades: b.recentUpgrades
+  })) || [], [bots]);
+
+  const playerStats = useMemo(() => player ? { 
+      moves: player.moves, 
+      coins: player.coins,
+      playerLevel: player.playerLevel 
+  } : null, [player]);
+
   const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
   const winCondition = useGameStore(state => state.session?.winCondition);
   const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
@@ -147,7 +177,7 @@ const GameView: React.FC = () => {
   const toast = useGameStore(state => state.toast);
   const checkTutorialCamera = useGameStore(state => state.checkTutorialCamera);
   
-  if (!grid || !player || !bots) return null;
+  if (!grid || !playerPos) return null;
   
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [viewState, setViewState] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2, scale: 1 });
@@ -163,7 +193,6 @@ const GameView: React.FC = () => {
   // Level Flags
   const isLevel1_1 = activeLevelConfig?.id === '1.1';
   const isLevel1_2 = activeLevelConfig?.id === '1.2';
-  // 1.3 flag no longer used for highlighting
   const isLevel1_4 = activeLevelConfig?.id === '1.4';
 
   const [particles, setParticles] = useState<VisualParticle[]>([]);
@@ -172,7 +201,6 @@ const GameView: React.FC = () => {
   const [selectedHexId, setSelectedHexId] = useState<string | null>(null);
 
   // --- AUDIO LOGIC ---
-  // 1. Lifecycle: Start/Stop music when GameView mounts/unmounts
   useEffect(() => {
       audioService.startMusic();
       return () => {
@@ -180,12 +208,11 @@ const GameView: React.FC = () => {
       };
   }, []);
 
-  // 2. Dynamic Update: Adjust intensity based on player progress without restarting the track
   useEffect(() => {
-      if (player && winCondition) {
-          audioService.updateMusic(player.coins, winCondition.targetCoins || 500);
+      if (playerStats && winCondition) {
+          audioService.updateMusic(playerStats.coins, winCondition.targetCoins || 500);
       }
-  }, [player.coins, winCondition]); // This runs often but updateMusic is lightweight
+  }, [playerStats?.coins, winCondition]);
 
   useEffect(() => {
     const interval = setInterval(tick, 100); 
@@ -272,13 +299,14 @@ const GameView: React.FC = () => {
   }, [cameraRotation, checkTutorialCamera]);
 
   const centerOnPlayer = useCallback(() => {
-    const { x: px, y: py } = hexToPixel(player.q, player.r, cameraRotation);
+    if (!playerPos) return;
+    const { x: px, y: py } = hexToPixel(playerPos.q, playerPos.r, cameraRotation);
     setViewState(prev => ({
       ...prev,
       x: (dimensions.width / 2) - (px * prev.scale),
       y: (dimensions.height / 2) - (py * prev.scale)
     }));
-  }, [player.q, player.r, dimensions, cameraRotation]);
+  }, [playerPos?.q, playerPos?.r, dimensions, cameraRotation]);
 
   const handleHexClick = useCallback((q: number, r: number) => {
       setSelectedHexId(getHexKey(q, r));
@@ -358,10 +386,9 @@ const GameView: React.FC = () => {
      }
   };
 
-  const neighbors = useMemo(() => getNeighbors(player.q, player.r), [player.q, player.r]);
+  const neighbors = useMemo(() => playerPos ? getNeighbors(playerPos.q, playerPos.r) : [], [playerPos?.q, playerPos?.r]);
 
-  const safeBots = useMemo(() => (bots || []).filter(b => b && typeof b.q === 'number' && typeof b.r === 'number'), [bots]);
-  const isMoving = player.state === EntityState.MOVING;
+  const isMoving = playerPos?.state === EntityState.MOVING;
   
   const pendingTargetKey = useMemo(() => {
       if (!pendingConfirmation) return null;
@@ -369,17 +396,24 @@ const GameView: React.FC = () => {
       return getHexKey(target.q, target.r);
   }, [pendingConfirmation]);
 
+  // Memoize Missing Support Calculation
   const missingSupportSet = useMemo(() => {
-      if (!hoveredHexId || !player) return new Set<string>();
+      if (!hoveredHexId || !playerPos) return new Set<string>();
       const hoveredHex = grid[hoveredHexId];
-      if (hoveredHex && hoveredHex.q === player.q && hoveredHex.r === player.r) {
-          const occupied = safeBots.map(b => ({q:b.q, r:b.r}));
+      if (hoveredHex && hoveredHex.q === playerPos.q && hoveredHex.r === playerPos.r) {
+          const occupied = botPositions.map(b => ({q:b.q, r:b.r}));
           const queueSize = winCondition?.queueSize || 3;
+          
+          const mockEntity: any = { 
+              ...playerPos, 
+              recentUpgrades: [], 
+              type: EntityType.PLAYER 
+          };
           
           const result = checkGrowthCondition(
               hoveredHex, 
-              player, 
-              getNeighbors(player.q, player.r), 
+              mockEntity, 
+              getNeighbors(playerPos.q, playerPos.r), 
               grid, 
               occupied, 
               queueSize
@@ -392,7 +426,7 @@ const GameView: React.FC = () => {
           }
       }
       return new Set<string>();
-  }, [hoveredHexId, player, grid, safeBots, winCondition]);
+  }, [hoveredHexId, playerPos, grid, botPositions, winCondition]);
 
   const renderList = useMemo(() => {
      const items: RenderItem[] = [];
@@ -434,7 +468,7 @@ const GameView: React.FC = () => {
          }
      }
 
-     const allUnits = [{ ...player, isPlayer: true }, ...safeBots.map(b => ({ ...b, isPlayer: false }))];
+     const allUnits = [{ ...playerPos, isPlayer: true, avatarColor: undefined }, ...botPositions.map(b => ({ ...b, isPlayer: false }))];
      const now = Date.now();
      const zSortThreshold = GAME_CONFIG.MOVEMENT_LOGIC_INTERVAL_MS + 50; 
 
@@ -461,11 +495,22 @@ const GameView: React.FC = () => {
              const fromPixel = hexToPixel(track.fromQ, track.fromR, cameraRotation);
              sortY = Math.max(sortY, fromPixel.y);
          }
-         items.push({ type: 'UNIT', id: u.id, depth: sortY + 25, q: u.q, r: u.r, isPlayer: u.isPlayer });
+         // Add offset to ensure units render on top of hexes
+         items.push({ 
+             type: 'UNIT', 
+             id: u.id, 
+             depth: sortY + 25, 
+             q: u.q, 
+             r: u.r, 
+             isPlayer: u.isPlayer,
+             avatarColor: (u as any).avatarColor,
+             totalCoinsEarned: (u as any).totalCoinsEarned || 0,
+             upgradePointCount: (u as any).recentUpgrades?.length || 0
+         });
      }
 
-     for (const b of safeBots) {
-         if (b.movementQueue.length > 0) {
+     for (const b of botPositions) {
+         if (b.movementQueue && b.movementQueue.length > 0) {
              const startHex = grid[getHexKey(b.q, b.r)];
              const startH = startHex ? 10 + (startHex.maxLevel * 6) : 10;
              const startPos = hexToPixel(b.q, b.r, cameraRotation);
@@ -486,30 +531,30 @@ const GameView: React.FC = () => {
          }
      }
 
-     if (!isMoving && !isPlayerGrowing) {
-        const startHex = grid[getHexKey(player.q, player.r)];
+     if (!isMoving && !isPlayerGrowing && playerPos && playerStats) {
+        const startHex = grid[getHexKey(playerPos.q, playerPos.r)];
         const startLevel = startHex ? startHex.maxLevel : 0;
         neighbors.forEach(neighbor => {
             const key = getHexKey(neighbor.q, neighbor.r);
             const hex = grid[key];
-            const isBot = safeBots.some(b => b.q === neighbor.q && b.r === neighbor.r);
-            const isLocked = hex && hex.maxLevel > player.playerLevel;
+            const isBot = botPositions.some(b => b.q === neighbor.q && b.r === neighbor.r);
+            const isLocked = hex && hex.maxLevel > (playerStats.playerLevel || 0);
             const endLevel = hex ? hex.maxLevel : 0;
             const isReachableHeight = Math.abs(startLevel - endLevel) <= 1;
 
             if (!isBot && isReachableHeight) {
-                const start = hexToPixel(player.q, player.r, cameraRotation);
+                const start = hexToPixel(playerPos.q, playerPos.r, cameraRotation);
                 const end = hexToPixel(neighbor.q, neighbor.r, cameraRotation);
                 if ((start.x > x0 && start.x < x1 && start.y > y0 && start.y < y1) ||
                     (end.x > x0 && end.x < x1 && end.y > y0 && end.y < y1)) {
                     
-                    const startH = grid[getHexKey(player.q, player.r)] ? (10 + grid[getHexKey(player.q, player.r)].maxLevel * 6) : 10;
+                    const startH = startHex ? (10 + startHex.maxLevel * 6) : 10;
                     const endH = hex ? (10 + hex.maxLevel * 6) : 10;
                     const sY = start.y - startH;
                     const eY = end.y - endH;
                     let cost = 1;
                     if (hex && hex.maxLevel >= 2) cost = hex.maxLevel;
-                    const canAfford = player.moves >= cost || player.coins >= (cost * EXCHANGE_RATE_COINS_PER_MOVE);
+                    const canAfford = playerStats.moves >= cost || playerStats.coins >= (cost * EXCHANGE_RATE_COINS_PER_MOVE);
                     items.push({
                         type: 'CONN', id: `conn-${key}`, depth: Math.min(start.y, end.y),
                         points: [start.x, sY, end.x, eY], color: canAfford ? '#3b82f6' : '#ef4444',
@@ -520,7 +565,7 @@ const GameView: React.FC = () => {
         });
      }
      return items.sort((a, b) => a.depth - b.depth);
-  }, [grid, player, safeBots, cameraRotation, isMoving, isPlayerGrowing, viewState, dimensions, neighbors, movementTracker, winCondition]);
+  }, [grid, playerPos, playerStats, botPositions, cameraRotation, isMoving, isPlayerGrowing, viewState, dimensions, neighbors, movementTracker, winCondition]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#020617]" onContextMenu={(e) => e.preventDefault()}>
@@ -558,7 +603,7 @@ const GameView: React.FC = () => {
           <Layer>
             {renderList.map((item) => {
                 if (item.type === 'HEX') {
-                    const isOccupied = (item.q === player.q && item.r === player.r) || safeBots.some(b => b.q === item.q && b.r === item.r);
+                    const isOccupied = (item.q === playerPos?.q && item.r === playerPos?.r) || botPositions.some(b => b.q === item.q && b.r === item.r);
                     const isPending = item.id === pendingTargetKey;
                     const isMissingSupport = missingSupportSet.has(item.id);
                     
@@ -594,7 +639,7 @@ const GameView: React.FC = () => {
                             key={item.id} 
                             id={item.id} 
                             rotation={cameraRotation} 
-                            playerRank={player.playerLevel} 
+                            playerRank={playerStats?.playerLevel || 1} 
                             isOccupied={isOccupied} 
                             isSelected={item.id === selectedHexId}
                             isPendingConfirm={isPending}
@@ -609,21 +654,19 @@ const GameView: React.FC = () => {
                         />
                     );
                 } else if (item.type === 'UNIT') {
-                    const unit = item.isPlayer ? player : safeBots.find(b => b.id === item.id);
-                    if (!unit) return null;
-                    const hexKey = getHexKey(unit.q, unit.r);
-                    const hLevel = grid[hexKey]?.maxLevel || 0;
+                    const hLevel = grid[getHexKey(item.q, item.r)]?.maxLevel || 0;
                     return (
                         <Unit 
                             key={item.id} 
-                            q={unit.q} 
-                            r={unit.r} 
-                            type={item.isPlayer ? EntityType.PLAYER : EntityType.BOT} 
-                            color={unit.avatarColor} 
+                            id={item.id}
+                            q={item.q} 
+                            r={item.r} 
+                            type={item.isPlayer ? EntityType.PLAYER : EntityType.BOT}
+                            color={item.avatarColor}
                             rotation={cameraRotation} 
                             hexLevel={hLevel} 
-                            totalCoinsEarned={unit.totalCoinsEarned}
-                            upgradePointCount={unit.recentUpgrades.length} 
+                            totalCoinsEarned={item.totalCoinsEarned}
+                            upgradePointCount={item.upgradePointCount}
                             onMoveComplete={spawnDust}
                         />
                     );

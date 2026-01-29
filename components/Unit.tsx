@@ -8,6 +8,7 @@ import { EntityType } from '../types.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 
 interface UnitProps {
+  id?: string;
   q: number;
   r: number;
   type: EntityType;
@@ -281,8 +282,6 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
         // --- CASE 2: CAMERA ROTATION (Snap) ---
         // When rotating, the projected x/y changes instantly. We snap to avoid units "drifting" visually.
         node.position({ x, y });
-        // Ensure elevation matches in case it was tweening
-        // elevationNode.y(zOffset); // Optional: keep smooth elevation if rotating during jump? Better to snap for consistency.
     } else if (isElevationChange) {
         // --- CASE 3: GROWTH UNDER UNIT (Elevate) ---
         // Unit stays on same hex (q,r) but hex grows (zOffset changes).
@@ -291,10 +290,6 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
             duration: 0.6,
             easing: Konva.Easings.EaseInOut
         });
-    } else {
-        // --- CASE 4: RE-RENDER (Coins, Points, etc) ---
-        // Do NOT touch node.position() here.
-        // Doing so would interrupt any active tweens and cause "jitter" or "snapping".
     }
 
   }, [q, r, rotation, zOffset, x, y, finalColor, onMoveComplete]);
@@ -309,11 +304,27 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
         <Group ref={elevationGroupRef}>
             <Ellipse x={0} y={0} radiusX={10} radiusY={6} fill="rgba(0,0,0,0.4)" blurRadius={2} />
 
-            <Group y={-8} ref={bodyRef}>
-              <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowColor="black" shadowBlur={5} shadowOpacity={0.3} />
-              <Circle y={-14} radius={8} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} />
-              <Circle y={-14} x={-2} radius={2} fill="white" opacity={0.5} />
-            </Group>
+            {isPlayer ? (
+              <Group y={-8} ref={bodyRef}>
+                {/* Player: Humanoid/Pawn Shape - Round Head */}
+                <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowColor="black" shadowBlur={5} shadowOpacity={0.3} />
+                <Circle y={-14} radius={8} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} />
+                <Circle y={-14} x={-2} radius={2} fill="white" opacity={0.5} />
+              </Group>
+            ) : (
+              <Group y={-8} ref={bodyRef}>
+                {/* Bot: Humanoid/Pawn Shape - Square Head (Robotic) */}
+                {/* Body (Same as Player) */}
+                <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowColor="black" shadowBlur={5} shadowOpacity={0.3} />
+                
+                {/* Head (Square) */}
+                <Rect x={-7} y={-21} width={14} height={14} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} cornerRadius={3} />
+                
+                {/* Visor/Eye */}
+                <Rect x={-4} y={-16} width={8} height={4} fill="#0f172a" opacity={0.8} cornerRadius={1} />
+                <Rect x={-2} y={-15} width={4} height={2} fill="#ef4444" shadowColor="#ef4444" shadowBlur={4} />
+              </Group>
+            )}
 
             {isPlayer && (
               <Ellipse y={0} radiusX={16} radiusY={10} stroke="white" strokeWidth={1} opacity={0.6} dash={[4, 4]} />

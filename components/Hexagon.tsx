@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { Group, Path, Shape, Circle, Text, Line, Arc } from 'react-konva';
 import Konva from 'konva';
@@ -20,7 +21,7 @@ interface HexagonVisualProps {
   tutorialHighlightColor?: 'blue' | 'amber' | 'cyan' | 'emerald';
   isMissingSupport?: boolean; 
   isObjective?: boolean; 
-  isNeighbor?: boolean; // Kept for prop compatibility/memo
+  isNeighbor?: boolean; 
 }
 
 // --- COLOR THEMES (GRADIENTS) ---
@@ -69,10 +70,8 @@ const generateVoidSpikes3D = (q: number, r: number, size: number, rotation: numb
     const spikes: VoidSpike3D[] = [];
 
     const rad = (rotation * Math.PI) / 180;
-    // Spikes originate deep in the void hole
     const baseDepth = offsetY + 30; 
 
-    // Helper to rotate points
     const rot = (x: number, y: number) => {
         const rx = x * Math.cos(rad) - y * Math.sin(rad);
         const ry = (x * Math.sin(rad) + y * Math.cos(rad)) * 0.8; // Squash Y
@@ -81,38 +80,27 @@ const generateVoidSpikes3D = (q: number, r: number, size: number, rotation: numb
 
     for (let i = 0; i < numSpikes; i++) {
         const rng = (o: number) => seededRandom(seedBase + i * 20 + o);
-        
-        // Random Position within the hex (clustering towards center slightly)
         const angle = rng(1) * Math.PI * 2;
-        const dist = size * (0.1 + rng(2) * 0.5); // Spread out but keep inside bounds
+        const dist = size * (0.1 + rng(2) * 0.5); 
         
         const cx = Math.cos(angle) * dist;
         const cy = Math.sin(angle) * dist;
 
-        // Spike geometry
-        const height = 25 + rng(3) * 25; // Tall spikes
-        const width = 6 + rng(4) * 8;    // Thickness at base
-        const leanX = (rng(5) - 0.5) * 15; // Lean direction
+        const height = 25 + rng(3) * 25; 
+        const width = 6 + rng(4) * 8;    
+        const leanX = (rng(5) - 0.5) * 15; 
         const leanY = (rng(6) - 0.5) * 15;
 
-        // Base points (Triangular base footprint)
-        // We simulate a cone/pyramid by drawing two triangles sharing a spine
-        
-        // The Base Center (Deep)
         const baseCenter = rot(cx, cy);
         const bX = baseCenter.x;
         const bY = baseDepth + baseCenter.y;
 
-        // The Tip (High up)
         const tipRawX = cx + leanX;
         const tipRawY = cy + leanY;
         const tipPos = rot(tipRawX, tipRawY);
-        // Tip Y is relative to surface, so negative relative to baseDepth
         const tX = tipPos.x;
-        const tY = offsetY - 5 + tipPos.y; // Poke out slightly above ground level
+        const tY = offsetY - 5 + tipPos.y; 
 
-        // Base Left and Right corners (Relative to center, rotated)
-        // We create a perpendicular vector to the lean direction for width
         const dx = tX - bX;
         const dy = tY - bY;
         const len = Math.sqrt(dx*dx + dy*dy);
@@ -120,29 +108,25 @@ const generateVoidSpikes3D = (q: number, r: number, size: number, rotation: numb
         const perpY = dx / len || 0;
 
         const leftBaseX = bX - perpX * width;
-        const leftBaseY = bY - perpY * width * 0.5; // Squash Y for perspective
+        const leftBaseY = bY - perpY * width * 0.5; 
         
         const rightBaseX = bX + perpX * width;
         const rightBaseY = bY + perpY * width * 0.5;
 
-        // Colors
-        // Obsidian / Dark Crystal look
-        const baseHue = 220 + rng(7) * 20; // Dark Blue/Slate range
-        const isReddish = rng(8) > 0.7; // Occasional red magma spike
+        const baseHue = 220 + rng(7) * 20; 
+        const isReddish = rng(8) > 0.7; 
         
-        const colorDark = isReddish ? '#450a0a' : '#020617'; // Almost black
-        const colorLight = isReddish ? '#7f1d1d' : '#1e293b'; // Slate highlight
+        const colorDark = isReddish ? '#450a0a' : '#020617'; 
+        const colorLight = isReddish ? '#7f1d1d' : '#1e293b'; 
 
         spikes.push({
             leftFace: `M ${tX} ${tY} L ${leftBaseX} ${leftBaseY} L ${bX} ${bY} Z`,
             rightFace: `M ${tX} ${tY} L ${rightBaseX} ${rightBaseY} L ${bX} ${bY} Z`,
             leftColor: colorDark,
             rightColor: colorLight,
-            highlightPath: `M ${tX} ${tY} L ${bX} ${bY}` // The spine
+            highlightPath: `M ${tX} ${tY} L ${bX} ${bY}` 
         });
     }
-    
-    // Sort spikes by Y (depth) to render correctly (painter's algorithm)
     return spikes.sort((a,b) => 0); 
 };
 
@@ -182,28 +166,23 @@ const generateShatterDebris = (count: number, yOffset: number): DebrisParticle[]
 
 // --- INTEGRITY METER GENERATOR ---
 const generateIntegritySegments = (durability: number, max: number, size: number, rotation: number, offsetY: number) => {
-    // NEW RULE: Only show visual damage indicators if 2 or fewer steps remain.
-    // This reduces clutter and emphasizes critical danger.
     if (durability > 2) return null;
 
     const segments = [];
-    const radius = size * 0.75; // Bring it in from the edge
+    const radius = size * 0.75; 
     
-    // Always critical red color when <= 2
     const color = '#ef4444';
     const shadowColor = '#f87171';
 
     for (let i = 0; i < max; i++) {
         const isActive = i < durability;
         
-        // Calculate corner points for this segment of the hex
         const angleStart = (60 * i) + 30 + rotation;
         const angleEnd = (60 * (i+1)) + 30 + rotation;
         
         const radStart = (angleStart * Math.PI) / 180;
         const radEnd = (angleEnd * Math.PI) / 180;
 
-        // Interpolate a line slightly inset from the edge
         const p1 = {
             x: radius * Math.cos(radStart),
             y: offsetY + radius * Math.sin(radStart) * 0.8
@@ -213,7 +192,6 @@ const generateIntegritySegments = (durability: number, max: number, size: number
             y: offsetY + radius * Math.sin(radEnd) * 0.8
         };
 
-        // If active, draw bright line. If inactive, draw dark slot.
         segments.push({
             points: [p1.x, p1.y, p2.x, p2.y],
             color: isActive ? color : 'rgba(0,0,0,0.3)',
@@ -236,7 +214,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const tutorialHighlightRef = useRef<Konva.Path>(null);
   const objectiveRef = useRef<Konva.Group>(null);
   
-  // Animation States
   const prevStructureRef = useRef(hex.structureType);
   const [isExploding, setIsExploding] = useState(false);
   const [debris, setDebris] = useState<DebrisParticle[]>([]);
@@ -246,16 +223,13 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const isRealVoid = hex.structureType === 'VOID';
   const showVoid = isRealVoid && !isExploding;
   
-  // Visual Levels
   const visualLevel = (isRealVoid && !isExploding) ? 0 : Math.min(hex.maxLevel, 11);
   const theme = getTheme(visualLevel);
 
-  // Colors
   const sideColor = showVoid ? '#000000' : theme.dark;
   const strokeColor = showVoid ? '#334155' : theme.stroke;
   
   const heightMult = isExploding ? 1 : hex.maxLevel;
-  // Void sinks into the ground slightly
   const hexHeight = showVoid ? 2 : (10 + (heightMult * 6));
   const offsetY = -hexHeight;
 
@@ -263,15 +237,12 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   const neededTicks = getSecondsToGrow(hex.currentLevel + 1) || 30;
   const progressPercent = Math.min(1, hex.progress / neededTicks);
   
-  // RANK LOCK
   const isRankLocked = hex.maxLevel > playerRank;
   
-  // Damage Calculation
   const isFragile = hex.maxLevel === 1 && !isRealVoid;
   const maxLives = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
   const currentLives = hex.durability !== undefined ? hex.durability : maxLives;
   
-  // Geometry
   const { topPoints, sortedFaces, selectionPathData, integrityVisuals, voidPaths, voidSpikes, topFacePath } = useMemo(() => {
     const getPoint = (i: number, cy: number, radius: number = HEX_SIZE) => {
         const angle_deg = 60 * i + 30;
@@ -286,9 +257,8 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     const bottoms = [];
     const faces = [];
     
-    // For Void: Irregular "Burnt" edges. We use a jagged path instead of smooth hex.
     const voidSeed = (hex.q * 999) ^ (hex.r * 777);
-    const getVoidRadius = (i: number) => HEX_SIZE * (0.85 + seededRandom(voidSeed + i) * 0.15); // Slight randomness
+    const getVoidRadius = (i: number) => HEX_SIZE * (0.85 + seededRandom(voidSeed + i) * 0.15); 
 
     for (let i = 0; i < 6; i++) {
         const r = showVoid ? getVoidRadius(i) : HEX_SIZE;
@@ -312,21 +282,17 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     }
 
     const topPathPoints = tops.flatMap(p => [p.x, p.y]);
-    // Construct Path String for reuse
     const topFacePath = `M ${tops[0].x} ${tops[0].y} L ${tops[1].x} ${tops[1].y} L ${tops[2].x} ${tops[2].y} L ${tops[3].x} ${tops[3].y} L ${tops[4].x} ${tops[4].y} L ${tops[5].x} ${tops[5].y} Z`;
     
-    // Selection Path
     const sp = [];
     const selRadius = Math.max(0, HEX_SIZE - 6);
     for(let i=0; i<6; i++) sp.push(getPoint(i, offsetY, selRadius));
     const selectionPathData = `M ${sp[0].x} ${sp[0].y} L ${sp[1].x} ${sp[1].y} L ${sp[2].x} ${sp[2].y} L ${sp[3].x} ${sp[3].y} L ${sp[4].x} ${sp[4].y} L ${sp[5].x} ${sp[5].y} Z`;
 
-    // Integrity Meter (Replaces Cracks)
     const integrityVisuals = isFragile 
         ? generateIntegritySegments(currentLives, maxLives, HEX_SIZE, rotation, offsetY)
         : null;
 
-    // Void Visuals
     let vpOuter = "M";
     let spikes: VoidSpike3D[] = [];
     
@@ -387,14 +353,14 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       return () => { anim.stop(); };
   }, [isExploding]);
 
-  // --- CRITICAL ALERT ANIMATION (Integrity Meter) ---
+  // --- CRITICAL ALERT ANIMATION ---
   useEffect(() => {
       const node = integrityRef.current;
       if (!node || !integrityVisuals?.isCritical) return;
 
       const anim = new Konva.Animation((frame) => {
           if (!frame) return;
-          const opacity = 0.5 + Math.sin(frame.time / 100) * 0.5; // Fast blink
+          const opacity = 0.5 + Math.sin(frame.time / 100) * 0.5; 
           node.opacity(opacity);
       }, node.getLayer());
 
@@ -409,7 +375,6 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     onHexClick(hex.q, hex.r);
   };
 
-  // CACHING
   useEffect(() => {
     const node = staticGroupRef.current;
     if (node && !isExploding && !integrityVisuals?.isCritical) {
@@ -420,23 +385,11 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     }
   }, [hex.maxLevel, showVoid, hex.durability, rotation, isExploding, integrityVisuals?.isCritical, isRankLocked]);
 
-  // --- RENDER ---
-
   if (isExploding) {
       return (
           <Group x={x} y={y}>
               {debris.map((p, i) => (
-                  <Path 
-                    key={i}
-                    data={p.path}
-                    x={p.x}
-                    y={p.y}
-                    fill={p.color}
-                    rotation={p.rot}
-                    scaleX={p.scale}
-                    scaleY={p.scale}
-                    perfectDrawEnabled={false}
-                  />
+                  <Path key={i} data={p.path} x={p.x} y={p.y} fill={p.color} rotation={p.rot} scaleX={p.scale} scaleY={p.scale} perfectDrawEnabled={false} />
               ))}
           </Group>
       );
@@ -445,18 +398,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   if (showVoid) {
       return (
         <Group x={x} y={y}>
-            <Path 
-                data={voidPaths.outer} 
-                fillLinearGradientStartPoint={{x: -HEX_SIZE, y: -HEX_SIZE}}
-                fillLinearGradientEndPoint={{x: HEX_SIZE, y: HEX_SIZE}}
-                fillLinearGradientColorStops={[0, '#000000', 0.5, '#0f172a', 1, '#1e1b4b']} 
-                stroke="#1e293b" 
-                strokeWidth={1}
-                shadowColor="#000"
-                shadowBlur={10}
-                shadowOpacity={0.8}
-                perfectDrawEnabled={false}
-            />
+            <Path data={voidPaths.outer} fillLinearGradientStartPoint={{x: -HEX_SIZE, y: -HEX_SIZE}} fillLinearGradientEndPoint={{x: HEX_SIZE, y: HEX_SIZE}} fillLinearGradientColorStops={[0, '#000000', 0.5, '#0f172a', 1, '#1e1b4b']} stroke="#1e293b" strokeWidth={1} shadowColor="#000" shadowBlur={10} shadowOpacity={0.8} perfectDrawEnabled={false} />
             <Group>
                 {voidSpikes.map((spike, i) => (
                     <React.Fragment key={i}>
@@ -472,104 +414,31 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
   }
 
   return (
-    <Group 
-      ref={groupRef}
-      x={x} 
-      y={y} 
-      onClick={handleClick}
-      onTap={handleClick}
-      onMouseEnter={() => onHover(hex.id)}
-      onMouseLeave={() => onHover(null)}
-      onTouchStart={() => onHover(hex.id)}
-      onTouchEnd={() => onHover(null)}
-      listening={true}
-    >
-      {/* STATIC GEOMETRY */}
+    <Group ref={groupRef} x={x} y={y} onClick={handleClick} onTap={handleClick} onMouseEnter={() => onHover(hex.id)} onMouseLeave={() => onHover(null)} onTouchStart={() => onHover(hex.id)} onTouchEnd={() => onHover(null)} listening={true}>
       <Group ref={staticGroupRef}>
-          {/* SIDES (Flat Color) */}
           {sortedFaces.map((face, i) => (
               <Path key={i} data={`M ${face.points[0]} ${face.points[1]} L ${face.points[2]} ${face.points[3]} L ${face.points[4]} ${face.points[5]} L ${face.points[6]} ${face.points[7]} Z`} fill={sideColor} stroke={sideColor} strokeWidth={1} closed={true} perfectDrawEnabled={false} />
           ))}
-
-          {/* TOP SURFACE (Gradient) */}
-          <Path
-             data={topFacePath}
-             fillLinearGradientStartPoint={{x: -HEX_SIZE, y: -HEX_SIZE}}
-             fillLinearGradientEndPoint={{x: HEX_SIZE, y: HEX_SIZE}}
-             fillLinearGradientColorStops={[0, theme.light, 0.5, theme.main, 1, theme.dark]}
-             stroke={strokeColor}
-             strokeWidth={1}
-             perfectDrawEnabled={false}
-             shadowColor={isPendingConfirm ? "#f59e0b" : "black"}
-             shadowBlur={isPendingConfirm ? 20 : 10}
-             shadowOpacity={0.5}
-             shadowOffset={{x: 0, y: 10}}
-          />
-
-           {/* RANK LOCK BARRIER - NO ICON */}
+          <Path data={topFacePath} fillLinearGradientStartPoint={{x: -HEX_SIZE, y: -HEX_SIZE}} fillLinearGradientEndPoint={{x: HEX_SIZE, y: HEX_SIZE}} fillLinearGradientColorStops={[0, theme.light, 0.5, theme.main, 1, theme.dark]} stroke={strokeColor} strokeWidth={1} perfectDrawEnabled={false} shadowColor={isPendingConfirm ? "#f59e0b" : "black"} shadowBlur={isPendingConfirm ? 20 : 10} shadowOpacity={0.5} shadowOffset={{x: 0, y: 10}} />
            {isRankLocked && (
             <Group listening={false}>
-              {/* Dark Overlay to indicate inactivity */}
-              <Path 
-                data={topFacePath} 
-                fill="#000000" 
-                opacity={0.6} 
-              />
-              {/* "Forcefield" Crosshatch */}
-              <Line
-                 points={[topPoints[0], topPoints[1], topPoints[6], topPoints[7]]}
-                 stroke="#f59e0b"
-                 strokeWidth={2}
-                 opacity={0.3}
-                 listening={false}
-              />
-              <Line
-                 points={[topPoints[2], topPoints[3], topPoints[8], topPoints[9]]}
-                 stroke="#f59e0b"
-                 strokeWidth={2}
-                 opacity={0.3}
-                 listening={false}
-              />
-              <Line
-                 points={[topPoints[4], topPoints[5], topPoints[10], topPoints[11]]}
-                 stroke="#f59e0b"
-                 strokeWidth={2}
-                 opacity={0.3}
-                 listening={false}
-              />
-              {/* Warning Border */}
-              <Path 
-                data={topFacePath} 
-                stroke="#f59e0b" 
-                strokeWidth={2} 
-                dash={[4, 4]} 
-                opacity={0.8}
-                shadowColor="#f59e0b"
-                shadowBlur={5}
-              />
+              <Path data={topFacePath} fill="#000000" opacity={0.6} />
+              <Line points={[topPoints[0], topPoints[1], topPoints[6], topPoints[7]]} stroke="#f59e0b" strokeWidth={2} opacity={0.3} listening={false} />
+              <Line points={[topPoints[2], topPoints[3], topPoints[8], topPoints[9]]} stroke="#f59e0b" strokeWidth={2} opacity={0.3} listening={false} />
+              <Line points={[topPoints[4], topPoints[5], topPoints[10], topPoints[11]]} stroke="#f59e0b" strokeWidth={2} opacity={0.3} listening={false} />
+              <Path data={topFacePath} stroke="#f59e0b" strokeWidth={2} dash={[4, 4]} opacity={0.8} shadowColor="#f59e0b" shadowBlur={5} />
             </Group>
           )}
       </Group>
 
-      {/* INTEGRITY METER (HEALTH BARS - Only show when <= 2) */}
       {integrityVisuals && (
           <Group ref={integrityRef}>
               {integrityVisuals.segments.map((seg, i) => (
-                  <Line 
-                      key={`seg-${i}`}
-                      points={seg.points}
-                      stroke={seg.color}
-                      strokeWidth={seg.width}
-                      lineCap="round"
-                      shadowColor={seg.shadowColor || 'black'}
-                      shadowBlur={seg.shadowBlur}
-                      perfectDrawEnabled={false}
-                  />
+                  <Line key={`seg-${i}`} points={seg.points} stroke={seg.color} strokeWidth={seg.width} lineCap="round" shadowColor={seg.shadowColor || 'black'} shadowBlur={seg.shadowBlur} perfectDrawEnabled={false} />
               ))}
           </Group>
       )}
 
-      {/* DYNAMIC OVERLAYS */}
       {isObjective && (
           <Group ref={objectiveRef} x={0} y={offsetY} listening={false}>
               <Circle radius={25} stroke="#ef4444" strokeWidth={2} opacity={0.6} scaleY={0.6} shadowColor="#ef4444" shadowBlur={15} />
@@ -582,14 +451,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
 
       {isMissingSupport && (
          <Group x={0} y={offsetY} listening={false}>
-             <Path 
-                data={selectionPathData} 
-                stroke="#ef4444" 
-                strokeWidth={2} 
-                dash={[5, 5]} 
-                fill="rgba(239, 68, 68, 0.1)"
-                perfectDrawEnabled={false}
-             />
+             <Path data={selectionPathData} stroke="#ef4444" strokeWidth={2} dash={[5, 5]} fill="rgba(239, 68, 68, 0.1)" perfectDrawEnabled={false} />
              <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="#ef4444" opacity={0.6} />
          </Group>
       )}
@@ -624,6 +486,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     </Group>
   );
 }, (prev, next) => {
+    // VISUAL COMPARATOR (Used by React.memo on HexagonVisual)
     if (prev.hex.currentLevel !== next.hex.currentLevel) return false;
     if (prev.hex.maxLevel !== next.hex.maxLevel) return false;
     if (prev.hex.structureType !== next.hex.structureType) return false;
@@ -641,6 +504,7 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
     return true;
 });
 
+// PROPS FOR ATOMIC CONTAINER
 interface SmartHexagonProps {
   id: string;
   rotation: number;
@@ -658,10 +522,36 @@ interface SmartHexagonProps {
   isNeighbor?: boolean;
 }
 
+// ATOMIC CONTAINER COMPONENT
 const SmartHexagon: React.FC<SmartHexagonProps> = React.memo((props) => {
+  // ATOMIC SUBSCRIPTION: Only re-renders when THIS SPECIFIC hex updates.
+  // Using selector with ID to pick the specific hex object from the grid.
   const hex = useGameStore(state => state.session?.grid[props.id]);
+  
   if (!hex) return null;
+  
+  // Pass dynamic hex data + parent visual props to the pure visual component
   return <HexagonVisual hex={hex} {...props} />;
+}, (prev, next) => {
+    // CONTAINER COMPARATOR
+    // Since this component is responsible for Fetching data, it should only update if:
+    // 1. The ID changes (unlikely for a stable grid list)
+    // 2. The external props (rotation, selection, occupancy) change.
+    // Changes to the HEX DATA itself are handled by the zustand hook inside.
+    return (
+      prev.id === next.id &&
+      prev.rotation === next.rotation &&
+      prev.playerRank === next.playerRank &&
+      prev.isOccupied === next.isOccupied &&
+      prev.isSelected === next.isSelected &&
+      prev.isPendingConfirm === next.isPendingConfirm &&
+      prev.pendingCost === next.pendingCost &&
+      prev.isTutorialTarget === next.isTutorialTarget &&
+      prev.isMissingSupport === next.isMissingSupport &&
+      prev.isObjective === next.isObjective &&
+      prev.isNeighbor === next.isNeighbor &&
+      prev.tutorialHighlightColor === next.tutorialHighlightColor
+    );
 });
 
 export default SmartHexagon;
