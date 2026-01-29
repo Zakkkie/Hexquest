@@ -198,13 +198,15 @@ export class GrowthSystem implements System {
              events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id));
         } else {
              // UPGRADE (L1 -> L2+)
-             // Rule: SPEND ALL Upgrade Points (RESET QUEUE)
+             // Rule: SPEND 1 Upgrade Point (Was: Spend All)
              newDurability = undefined;
 
-             // RESET QUEUE COMPLETELY
-             entity.recentUpgrades = [];
+             // Consume 1 point
+             if (entity.recentUpgrades.length > 0) {
+                 entity.recentUpgrades.shift();
+             }
 
-             const msg = `${prefix} Reached Rank L${targetLevel} (Cycle Consumed)`;
+             const msg = `${prefix} Reached Rank L${targetLevel} (-1 Point)`;
              
              state.messageLog.unshift({
                 id: `lvl-${Date.now()}-${entity.id}`,
