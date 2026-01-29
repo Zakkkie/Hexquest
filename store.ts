@@ -42,6 +42,9 @@ const saveCampaignProgress = (levelIndex: number) => {
 
 interface AuthResponse { success: boolean; message?: string; }
 
+// Expanded UI Sound Types
+export type UiSoundType = 'HOVER' | 'CLICK' | 'ERROR' | 'WARNING' | 'SUCCESS';
+
 interface GameStore extends GameState {
   session: SessionState | null;
   setUIState: (state: UIState) => void;
@@ -64,7 +67,7 @@ interface GameStore extends GameState {
   hideToast: () => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
-  playUiSound: (type: 'HOVER' | 'CLICK' | 'ERROR') => void;
+  playUiSound: (type: UiSoundType) => void;
   setLanguage: (lang: 'EN' | 'RU') => void;
 }
 
@@ -390,9 +393,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   playUiSound: (type) => {
-    if (type === 'HOVER') audioService.play('UI_HOVER');
-    if (type === 'CLICK') audioService.play('UI_CLICK');
-    if (type === 'ERROR') audioService.play('ERROR');
+    switch (type) {
+        case 'HOVER': audioService.play('UI_HOVER'); break;
+        case 'CLICK': audioService.play('UI_CLICK'); break;
+        case 'ERROR': audioService.play('ERROR'); break;
+        case 'WARNING': audioService.play('WARNING'); break;
+        case 'SUCCESS': audioService.play('SUCCESS'); break;
+        default: break;
+    }
   },
 
   startNewGame: (winCondition, levelConfig) => {
@@ -685,52 +693,4 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             if (isPlayer) {
                                 text = "+MOVES";
                                 color = "#34d399";
-                                icon = 'COIN';
-                            }
-                            break;
-                        case 'HEX_COLLAPSE':
-                            text = "COLLAPSE -1 RANK"; // Updated text
-                            color = "#ef4444";
-                            icon = 'DOWN';
-                            break;
-                    }
-
-                    if (text) {
-                        result.state.effects.push({
-                            id: `fx-${Date.now()}-${Math.random()}`,
-                            q: targetQ,
-                            r: targetR,
-                            text,
-                            color,
-                            icon,
-                            startTime: Date.now(),
-                            lifetime: 1200 
-                        });
-                    }
-                 }
-            }
-          });
-      }
-
-      let newToast = get().toast;
-      const error = result.events.find(e => e.type === 'ACTION_DENIED' || e.type === 'ERROR');
-      if (error && error.entityId === engine?.state?.player.id) {
-          newToast = { message: error.message || 'Error', type: 'error', timestamp: Date.now() };
-      }
-
-      // 2. RENDER THROTTLE OPTIMIZATION
-      // Update React state normally every 3 frames (20 FPS).
-      const shouldRender = tickCount % 3 === 0;
-      const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
-      const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
-
-      // LOSS CHECK: Now handled by VictorySystem via hooks
-
-      if (shouldRender || hasCriticalEvents || playerStateChanged) {
-        set({ 
-            session: engine.state, 
-            toast: newToast,
-        });
-      }
-  }
-}));
+                                icon = 'CO
