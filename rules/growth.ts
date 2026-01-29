@@ -32,12 +32,19 @@ export function checkGrowthCondition(
   }
 
   // CRITICAL: ACQUISITION RULE (Level 0 -> 1)
-  // Always allowed. Does not check supports.
+  // Always allowed. Does not check supports or points (it GIVES points).
   if (targetLevel === 1) {
       return { canGrow: true };
   }
 
-  // CONDITION: STAIRCASE SUPPORT RULE
+  // CONDITION 1: CYCLE POINTS (UPGRADE AMMO)
+  // To upgrade past Level 1, you must have at least one Cycle Point (from capturing L0s).
+  // The action will consume ALL points, so we just check if we have > 0.
+  if (entity.recentUpgrades.length === 0) {
+      return { canGrow: false, reason: "NEED UPGRADE POINT (CAPTURE L0)" };
+  }
+
+  // CONDITION 2: STAIRCASE SUPPORT RULE
   // To reach Level L+1, you need neighbors that are at least Level L.
   if (targetLevel > 1) {
     // 1. SATURATION CHECK ("The Valley Rule")

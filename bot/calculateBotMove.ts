@@ -179,20 +179,19 @@ export const calculateBotMove = (
 
       const targetLevel = targetHex.currentLevel + 1;
 
-      // 1. CYCLE BLOCK -> Touch ANY fresh hex
-      // We need to upgrade hexes not in our queue.
-      if (targetLevel > 1 && bot.recentUpgrades.length < queueSize && !bot.recentUpgrades.includes(targetHex.id)) {
-          // Find any hex NOT in our queue to "dump" the cycle requirement
-          // Prefer nearby L0s for cheap cycle cycling
+      // 1. POINT FAMINE -> Gather Points (Capture L0)
+      // Logic: If we want to upgrade (Level > 1) but have no points (recentUpgrades empty), we must acquire first.
+      if (targetLevel > 1 && bot.recentUpgrades.length === 0) {
+          // Find any fresh L0 hex to capture and gain a point
           const expanses = index.getHexesInRange({q:bot.q, r:bot.r}, CONTEXT_RADIUS)
-              .filter(h => !bot.recentUpgrades.includes(h.id) && !reservedHexKeys?.has(h.id))
+              .filter(h => h.maxLevel === 0 && !reservedHexKeys?.has(h.id))
               .sort((a,b) => {
-                  // Prefer L0 first, then distance
-                  if (a.maxLevel !== b.maxLevel) return a.maxLevel - b.maxLevel;
                   return cubeDistance(bot, a) - cubeDistance(bot, b)
               });
           
-          if (expanses.length > 0) return { hex: expanses[0], strategy: 'CYCLE_DUMP' };
+          if (expanses.length > 0) return { hex: expanses[0], strategy: 'GATHER_POINT' };
+          
+          // If no L0s nearby, fallback to whatever (likely stuck or map full)
           return null;
       }
 

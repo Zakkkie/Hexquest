@@ -175,17 +175,18 @@ export class GrowthSystem implements System {
         didMaxIncrease = true;
         entity.playerLevel = Math.max(entity.playerLevel, targetLevel);
         
-        // UPGRADE COST REMOVED AS REQUESTED
-
         if (targetLevel === 1) {
-             // ACQUISITION
+             // ACQUISITION (L0 -> L1)
+             // Rule: GAIN an Upgrade Point (Fill queue)
              newOwnerId = entity.id;
-             newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY; // Set durability
+             newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY; 
              
-             // NOTE: We do NOT add to cycle queue on acquisition (L1).
-             // This allows player to immediately start building L1->L2 if they have supports.
+             // Add to queue (points)
+             const q = [...entity.recentUpgrades, hex.id];
+             while (q.length > queueSize) q.shift(); // Enforce Max Points
+             entity.recentUpgrades = q;
              
-             const msg = `${prefix} Sector L1 Acquired (Cost: ${config.cost})`;
+             const msg = `${prefix} Sector L1 Acquired (+1 Point)`;
              state.messageLog.unshift({
                 id: `acq-${Date.now()}-${entity.id}`,
                 text: msg,
@@ -196,15 +197,14 @@ export class GrowthSystem implements System {
              
              events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id));
         } else {
-             // LEVEL UP
+             // UPGRADE (L1 -> L2+)
+             // Rule: SPEND ALL Upgrade Points (RESET QUEUE)
              newDurability = undefined;
 
-             // CYCLE LOCK MANAGEMENT (Queue Rotation)
-             const q = [...entity.recentUpgrades, hex.id];
-             while (q.length > queueSize) q.shift(); // Keep queue at max size
-             entity.recentUpgrades = q;
+             // RESET QUEUE COMPLETELY
+             entity.recentUpgrades = [];
 
-             const msg = `${prefix} Reached Rank L${targetLevel}`;
+             const msg = `${prefix} Reached Rank L${targetLevel} (Cycle Consumed)`;
              
              state.messageLog.unshift({
                 id: `lvl-${Date.now()}-${entity.id}`,
