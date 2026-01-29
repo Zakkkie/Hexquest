@@ -37,18 +37,7 @@ export function checkGrowthCondition(
       return { canGrow: true };
   }
 
-  // CONDITION 1: UPGRADE POINTS (CYCLE LOCK)
-  // Rule: You cannot upgrade a hex that is currently in your "Recent Upgrades" queue.
-  if (targetLevel > 1) {
-    if (entity.recentUpgrades.includes(hex.id)) {
-      return { 
-        canGrow: false, 
-        reason: "CYCLE LOCKED" 
-      };
-    }
-  }
-
-  // CONDITION 2: STAIRCASE SUPPORT RULE
+  // CONDITION: STAIRCASE SUPPORT RULE
   // To reach Level L+1, you need neighbors that are at least Level L.
   if (targetLevel > 1) {
     // 1. SATURATION CHECK ("The Valley Rule")
@@ -79,7 +68,7 @@ export function checkGrowthCondition(
 
           return {
             canGrow: false, 
-            reason: `NEED 2 SUPPORTS (L${hex.maxLevel})`,
+            reason: `NEED 2 SUPPORTS (EXACTLY L${hex.maxLevel})`,
             missingSupports: potentialSupports
           };
         }

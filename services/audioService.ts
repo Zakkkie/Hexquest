@@ -13,9 +13,9 @@ type SoundType =
   | 'SUCCESS' 
   | 'LEVEL_UP' 
   | 'COIN' 
-  | 'GROWTH_START'
-  | 'COLLAPSE'
-  | 'CRACK'
+  | 'GROWTH_START' 
+  | 'COLLAPSE' 
+  | 'CRACK' 
   | 'WARNING';
 
 // --- MUSIC THEORY CONSTANTS ---
@@ -112,11 +112,28 @@ class AudioService {
       arp: [] as number[]   // Scale degrees
   };
 
-  constructor() {}
+  constructor() {
+      this.handleUnlock = this.handleUnlock.bind(this);
+  }
+
+  // IOS AUDIO UNLOCK HANDLER
+  private handleUnlock() {
+      if (this.ctx && this.ctx.state !== 'running') {
+          this.ctx.resume().then(() => {
+              // Play a silent buffer to physically wake up the iOS audio thread
+              const buffer = this.ctx!.createBuffer(1, 1, 22050);
+              const source = this.ctx!.createBufferSource();
+              source.buffer = buffer;
+              source.connect(this.ctx!.destination);
+              source.start(0);
+          }).catch(e => console.error("Audio resume failed", e));
+      }
+  }
 
   private init() {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.ctx = new AudioContextClass();
       
       // 1. Master Chain: Compressor -> Master Gain -> Destination
       this.masterCompressor = this.ctx.createDynamicsCompressor();
@@ -170,12 +187,11 @@ class AudioService {
       this.delayNode.connect(delayOutput);
       delayOutput.connect(this.musicBus);
 
-      // Setup resume handlers
-      const resume = () => {
-          if (this.ctx?.state === 'suspended') this.ctx.resume();
-      };
-      window.addEventListener('click', resume, { once: true });
-      window.addEventListener('keydown', resume, { once: true });
+      // Attach Unlock Listeners for iOS
+      const events = ['click', 'touchstart', 'touchend', 'keydown'];
+      events.forEach(event => {
+          window.addEventListener(event, this.handleUnlock, { passive: true, capture: true });
+      });
     }
   }
 

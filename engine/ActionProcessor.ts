@@ -4,6 +4,7 @@ import { WorldIndex } from './WorldIndex';
 import { getHexKey } from '../services/hexUtils';
 import { checkGrowthCondition } from '../rules/growth';
 import { GAME_CONFIG, SAFETY_CONFIG, DIFFICULTY_SETTINGS } from '../rules/config';
+import { calculateMovementCost } from '../rules/movement';
 
 /**
  * ActionProcessor is now a STATELESS service.
@@ -38,7 +39,7 @@ export class ActionProcessor {
             if (!hex) return { ok: false, reason: 'Invalid Coord' };
 
             // Special Case: RECOVER intent.
-            // MODIFIED: Allowed on ANY hex (Common ownership concept).
+            // Allowed on ANY hex (Common ownership concept).
             if (action.intent === 'RECOVER') {
                 return { ok: true };
             }
@@ -67,18 +68,10 @@ export class ActionProcessor {
                 return { ok: false, reason: `Destination (${destination.q},${destination.r}) is occupied by ${entityAtDest.id}` };
             }
 
-            let totalMoveCost = 0;
-            for (const step of action.path) {
-                const hex = state.grid[getHexKey(step.q, step.r)];
-                totalMoveCost += (hex && hex.maxLevel >= 2) ? hex.maxLevel : 1;
-            }
-            
-            // Logic: Calculate move deficit. If we don't have enough moves, we pay in coins.
-            const movesDeficit = Math.max(0, totalMoveCost - actor.moves);
-            const costCoins = Math.ceil(movesDeficit * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
-
-            if (actor.coins < costCoins) {
-                return { ok: false, reason: `Insufficient credits. Need ${costCoins}, have ${actor.coins}.` };
+            // CENTRALIZED COST CHECK
+            const costResult = calculateMovementCost(actor, action.path, state.grid);
+            if (!costResult.canAfford) {
+                return { ok: false, reason: costResult.reason || 'Insufficient funds' };
             }
             break;
         }
@@ -127,26 +120,22 @@ export class ActionProcessor {
 
     switch (action.type) {
       case 'MOVE': {
-        let totalMoveCost = 0;
-        for (const step of action.path) {
-            const hex = state.grid[getHexKey(step.q, step.r)];
-            totalMoveCost += (hex && hex.maxLevel >= 2) ? hex.maxLevel : 1;
-        }
-
-        // Apply simplified cost logic
-        const movesDeficit = Math.max(0, totalMoveCost - actor.moves);
-        const costCoins = Math.ceil(movesDeficit * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
-        const costMoves = totalMoveCost - movesDeficit;
-
-        // Ensure non-negative balances
-        if (actor.coins >= costCoins) {
-            actor.moves = Math.max(0, actor.moves - costMoves);
-            actor.coins = Math.max(0, actor.coins - costCoins);
-            actor.movementQueue = action.path;
-        } else {
-            // Should be caught by validation, but just in case
+        // CENTRALIZED COST DEDUCTION
+        const costResult = calculateMovementCost(actor, action.path, state.grid);
+        
+        // This should have been caught by validateAction, but acts as a double safety
+        if (!costResult.canAfford) {
             return { ok: false, reason: 'Insufficient funds during execution' };
         }
+
+        actor.moves -= costResult.deductMoves;
+        actor.coins -= costResult.deductCoins;
+        
+        // Sanity clamp (should not be needed if logic is correct)
+        actor.moves = Math.max(0, actor.moves);
+        actor.coins = Math.max(0, actor.coins);
+
+        actor.movementQueue = action.path;
         break;
       }
       case 'UPGRADE':

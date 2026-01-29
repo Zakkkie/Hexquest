@@ -7,21 +7,54 @@ import { TEXT } from '../services/i18n';
 export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '1.1',
-    title: 'Simulation 1.1: Initialization',
-    description: 'Objective: Capture 5 neutral sectors. \n\nBoundaries have collapsed. A void moat surrounds the playable area, followed by unstable fragments of high-level terrain. Watch your step.',
+    title: 'Simulation 1.1: Expansion',
+    description: 'Objective: Secure the 3 highlighted sectors.\n\nThe navigation system needs calibration. Capture the marked adjacent sectors to establish a perimeter.',
     
     mapConfig: {
-      size: 7, // Radius 7 to fit the shattered outskirts
-      type: 'procedural',
-      generateWalls: true,
-      wallStartRadius: 3, // Playable area radius 2. Void moat at 3.
-      wallStartLevel: 6,
-      wallType: 'void_shatter' // New "ragged" boundary style
+      size: 5, 
+      type: 'fixed',
+      generateWalls: false,
+      customLayout: [
+          // Player Start
+          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          
+          // 3 Specific Targets (L0)
+          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+
+          // --- VOID PERIMETER (TIGHT SEAL) ---
+          
+          // Ring 1 (Immediate Neighbors of Playable Area)
+          { q: -1, r: 0, structureType: 'VOID', revealed: true },
+          { q: -1, r: 1, structureType: 'VOID', revealed: true },
+          { q: 0, r: -1, structureType: 'VOID', revealed: true },
+          { q: 2, r: -1, structureType: 'VOID', revealed: true },
+          { q: 2, r: 0, structureType: 'VOID', revealed: true },
+          { q: 1, r: 1, structureType: 'VOID', revealed: true },
+          { q: -1, r: 2, structureType: 'VOID', revealed: true },
+          
+          // Added to close gaps:
+          { q: 1, r: -2, structureType: 'VOID', revealed: true }, 
+          { q: 2, r: -2, structureType: 'VOID', revealed: true }, 
+          { q: 0, r: 2, structureType: 'VOID', revealed: true },  
+
+          // Ring 2 (Outer Visual Buffer for "Floating Island" look)
+          { q: -2, r: 0, structureType: 'VOID', revealed: true },
+          { q: -2, r: 1, structureType: 'VOID', revealed: true },
+          { q: -2, r: 2, structureType: 'VOID', revealed: true },
+          { q: -1, r: -1, structureType: 'VOID', revealed: true },
+          { q: 0, r: -2, structureType: 'VOID', revealed: true },
+          { q: 3, r: -1, structureType: 'VOID', revealed: true },
+          { q: 3, r: -2, structureType: 'VOID', revealed: true },
+          { q: 2, r: 1, structureType: 'VOID', revealed: true },
+          { q: 1, r: 2, structureType: 'VOID', revealed: true },
+      ]
     },
 
     startState: {
-      credits: 5000, 
-      moves: 50,     
+      credits: 1000, 
+      moves: 10,     
       rank: 1        
     },
 
@@ -29,14 +62,15 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     hooks: {
       checkWinCondition: (state) => {
-        // Win Condition: Player must own at least 6 hexes 
-        // (1 starting hex + 5 captured neutral hexes)
-        const ownedCount = Object.values(state.grid).filter(h => h.ownerId === state.player.id).length;
-        return ownedCount >= 6;
-      },
-      
-      onAfterAction: (state) => {
-          // Hooks remain passive for now
+        // Win Condition: Player must own the 3 specific target hexes
+        const targets = [
+            getHexKey(1, -1),
+            getHexKey(1, 0),
+            getHexKey(0, 1)
+        ];
+        
+        const allOwned = targets.every(k => state.grid[k]?.ownerId === state.player.id);
+        return allOwned;
       }
     }
   },
@@ -61,9 +95,9 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     hooks: {
       checkWinCondition: (state) => {
-        // Target: Reaching the Pyramid Apex at (0, -7) which is L3
-        // Only win if actually standing on it
-        if (state.player.q === 0 && state.player.r === -7) {
+        // Target: Reaching the Pyramid Apex (marked as CAPITAL in mapGenerator)
+        const playerHex = state.grid[getHexKey(state.player.q, state.player.r)];
+        if (playerHex && playerHex.structureType === 'CAPITAL') {
             return true;
         }
         return false;
@@ -79,7 +113,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '1.3',
     title: 'Simulation 1.3: The Foundation',
-    description: 'Vertical construction protocol. \nObjective: Upgrade ANY sector to Level 2. \nTheory: "The Staircase Rule" - A structure cannot rise higher than its supports. Requires 2 neighbors of equal or lower tier.',
+    description: 'Vertical construction protocol. \nObjective: Upgrade ANY sector to Level 2. \n\nProblem: You lack supports. \nSolution: Upgrade 2 neighbors to Level 1 first, then build Level 2.',
     
     mapConfig: {
       size: 5,
@@ -87,28 +121,26 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       generateWalls: false,
       customLayout: [
           // --- PLAYABLE AREA (Triangle) ---
-          // NOTE: Player spawns at (0,0) by default in engine.
           
           // 1. START (Edge Support): L1. Player starts here.
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true, durability: 6 },
           
-          // 2. CENTER (Target Candidate): L1.
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true, durability: 6 },
+          // 2. CENTER: Was L1, Now L0 (Neutral/Empty).
+          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           
-          // 3. LEFT (Broken Support): L0. Needs to become L1 to support Center.
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+          // 3. LEFT: L0 (Neutral/Empty).
+          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           
           // --- BOUNDARIES (Void Ring surrounding the 3 hexes) ---
-          
-          { q: 1, r: -1, structureType: 'VOID', revealed: true }, // Right of Start
-          { q: 1, r: 0, structureType: 'VOID', revealed: true },  // Bottom Right of Start
-          { q: 0, r: 1, structureType: 'VOID', revealed: true },  // Bottom of Start / Right of L0
-          { q: -1, r: 2, structureType: 'VOID', revealed: true }, // Bottom of L0
-          { q: -2, r: 2, structureType: 'VOID', revealed: true }, // Left of L0
-          { q: -2, r: 1, structureType: 'VOID', revealed: true }, // Left of Center
-          { q: -2, r: 0, structureType: 'VOID', revealed: true }, // Top Left of Center
-          { q: -1, r: -1, structureType: 'VOID', revealed: true }, // Top of Center
-          { q: 0, r: -1, structureType: 'VOID', revealed: true }, // Top of Start
+          { q: 1, r: -1, structureType: 'VOID', revealed: true }, 
+          { q: 1, r: 0, structureType: 'VOID', revealed: true },  
+          { q: 0, r: 1, structureType: 'VOID', revealed: true },  
+          { q: -1, r: 2, structureType: 'VOID', revealed: true }, 
+          { q: -2, r: 2, structureType: 'VOID', revealed: true }, 
+          { q: -2, r: 1, structureType: 'VOID', revealed: true }, 
+          { q: -2, r: 0, structureType: 'VOID', revealed: true }, 
+          { q: -1, r: -1, structureType: 'VOID', revealed: true }, 
+          { q: 0, r: -1, structureType: 'VOID', revealed: true }, 
       ]
     },
 

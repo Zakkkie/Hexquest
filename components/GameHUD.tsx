@@ -143,6 +143,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   // New state for collapsible mission HUD
   const [isMissionExpanded, setIsMissionExpanded] = useState(false);
 
+  // IDLE HINT STATE
+  const [idleTime, setIdleTime] = useState(0);
+
   const t = TEXT[language].HUD;
   
   const queueSize = winCondition?.queueSize || 3;
@@ -159,11 +162,34 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const isLevel1_3 = activeLevelConfig?.id === '1.3';
   const isLevel1_4 = activeLevelConfig?.id === '1.4';
 
+  // --- IDLE TIMER LOGIC ---
+  useEffect(() => {
+      // Only track idle in tutorial levels where player might get stuck
+      if (!isLevel1_1 && !isLevel1_3 && !isLevel1_4) return;
+      if (gameStatus !== 'PLAYING') return;
+
+      // Reset idle time whenever player state changes (coins spent, moved, etc)
+      setIdleTime(0);
+  }, [player?.coins, player?.moves, player?.q, player?.r, isPlayerGrowing, gameStatus, isLevel1_1, isLevel1_3, isLevel1_4]);
+
+  useEffect(() => {
+      if (!isLevel1_1 && !isLevel1_3 && !isLevel1_4) return;
+      if (gameStatus !== 'PLAYING') return;
+
+      const interval = setInterval(() => {
+          setIdleTime(prev => prev + 1);
+      }, 1000);
+
+      return () => clearInterval(interval);
+  }, [gameStatus, isLevel1_1, isLevel1_3, isLevel1_4]);
+
   // Calculate Owned Sectors for Tutorial 1.1
   const ownedCount = useMemo(() => {
-    if (!grid || !player) return 0;
-    return Object.values(grid).filter((h: Hex) => h.ownerId === player.id).length;
-  }, [grid, player]);
+    if (!grid || !player || !isLevel1_1) return 0;
+    // Count specific target hexes for 1.1
+    const targets = [getHexKey(1, -1), getHexKey(1, 0), getHexKey(0, 1)];
+    return targets.filter(k => grid[k]?.ownerId === player.id).length;
+  }, [grid, player, isLevel1_1]);
 
   // Calculate Supports for Tutorial 1.3
   const supportCount = useMemo(() => {
@@ -451,8 +477,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
               `}>
                   {!isMissionExpanded && (
                       <div className="flex items-center gap-2 cursor-pointer">
-                          <div className={`w-2 h-2 rounded-full ${ownedCount >= 6 ? 'bg-emerald-500' : 'bg-indigo-500 animate-pulse'}`} />
-                          <span className="text-xs font-bold text-indigo-100 whitespace-nowrap">Captured: <span className="font-mono text-white">{ownedCount}/6</span></span>
+                          <div className={`w-2 h-2 rounded-full ${ownedCount >= 3 ? 'bg-emerald-500' : 'bg-indigo-500 animate-pulse'}`} />
+                          <span className="text-xs font-bold text-indigo-100 whitespace-nowrap">Captured: <span className="font-mono text-white">{ownedCount}/3</span></span>
                           <ChevronDown className="w-3 h-3 text-indigo-400" />
                       </div>
                   )}
@@ -463,7 +489,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                   <Info className="w-4 h-4 text-indigo-400" />
                                   <span className="text-xs font-bold text-white uppercase tracking-wider">{t.TUT_1_1_TASK}</span>
                               </div>
-                              <div className="text-xs font-mono font-bold text-white bg-indigo-900/50 px-2 py-0.5 rounded">{ownedCount} / 6</div>
+                              <div className="text-xs font-mono font-bold text-white bg-indigo-900/50 px-2 py-0.5 rounded">{ownedCount} / 3</div>
                           </div>
                           <div className="space-y-1.5">
                               <div className="flex items-center justify-between text-[10px] text-slate-300">
@@ -666,6 +692,16 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                         </div>
                         <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-amber-500 mt-[-1px]"></div>
                     </div>
+            )}
+
+            {/* IDLE HINT (1.1, 1.3, 1.4) - Shows if user is confused/stuck */}
+            {idleTime > 15 && !isMoving && !isPlayerGrowing && canUpgrade && (
+                <div className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce z-50">
+                    <div className="bg-white text-indigo-900 text-[10px] font-black px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(255,255,255,0.6)] border-2 border-indigo-500 uppercase whitespace-nowrap flex items-center gap-1">
+                        <Zap className="w-3 h-3 fill-current text-amber-500" /> PRESS UPGRADE
+                    </div>
+                    <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white mt-[-1px]"></div>
+                </div>
             )}
 
             {isPlayerGrowing ? (

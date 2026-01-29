@@ -7,6 +7,8 @@ import { GameEngine } from './engine/GameEngine.ts';
 import { audioService } from './services/audioService.ts';
 import { CAMPAIGN_LEVELS } from './campaign/levels.ts';
 import { LevelConfig } from './campaign/types.ts';
+import { calculateMovementCost } from './rules/movement.ts';
+import { generateMap } from './services/mapGenerator.ts';
 
 const MOCK_USER_DB: Record<string, { password: string; avatarColor: string; avatarIcon: string }> = {};
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899']; 
@@ -75,195 +77,8 @@ let engine: GameEngine | null = null;
 let tickCount = 0;
 
 const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig, language: Language = 'EN'): SessionState => {
-  // Map Generation Logic
-  const initialGrid: Record<string, Hex> = {};
-  
-  if (levelConfig && levelConfig.mapConfig.customLayout) {
-      // --- CUSTOM FIXED LAYOUT ---
-      levelConfig.mapConfig.customLayout.forEach(hexDef => {
-          if (hexDef.q === undefined || hexDef.r === undefined) return;
-          const key = getHexKey(hexDef.q, hexDef.r);
-          initialGrid[key] = {
-              id: key,
-              q: hexDef.q,
-              r: hexDef.r,
-              currentLevel: hexDef.currentLevel ?? 0,
-              maxLevel: hexDef.maxLevel ?? 0,
-              progress: 0,
-              revealed: true,
-              ownerId: hexDef.ownerId,
-              structureType: hexDef.structureType,
-              durability: hexDef.durability
-          };
-      });
-  } else if (levelConfig && levelConfig.id === '1.2') {
-      // --- LEVEL 1.2: PYRAMID RUN (GUARANTEED PATH, MINIMAL VOID) ---
-      
-      // 1. Define all coordinate sets first
-      const walkableCoords = new Map<string, { q: number, r: number, isSafe: boolean, type?: string }>();
-      
-      // Start Platform (Safe)
-      walkableCoords.set(getHexKey(0,0), { q:0, r:0, isSafe: true });
-
-      // Corridor Generation
-      let currentQ = 0;
-      const validQs = [-1, 0, 1]; 
-      const safePathCoords: {q: number, r: number}[] = [];
-
-      for (let r = -1; r >= -6; r--) {
-          const candidates = [currentQ, currentQ + 1];
-          const validMoves = candidates.filter(q => validQs.includes(q));
-          currentQ = validMoves.length > 0 ? validMoves[Math.floor(Math.random() * validMoves.length)] : 0;
-          safePathCoords.push({ q: currentQ, r });
-      }
-
-      // Populate Corridor
-      for (let r = -1; r >= -6; r--) {
-          const safeHex = safePathCoords.find(c => c.r === r);
-          const safeQ = safeHex ? safeHex.q : 0;
-
-          validQs.forEach(q => {
-              const isSafe = q === safeQ;
-              walkableCoords.set(getHexKey(q,r), { q, r, isSafe });
-          });
-      }
-
-      // Pyramid Base (L2) at Row -7
-      // Connect to the safe path exit at row -6
-      [-1, 0, 1].forEach(q => {
-          walkableCoords.set(getHexKey(q, -7), { q, r: -7, isSafe: true, type: 'BASE' });
-      });
-
-      // Apex (L3) at Row -8
-      walkableCoords.set(getHexKey(0, -8), { q: 0, r: -8, isSafe: true, type: 'APEX' });
-
-      // 2. Build the Grid from Walkable Coords
-      walkableCoords.forEach((data, key) => {
-          let level = 1;
-          let durability = data.isSafe ? 3 : 1;
-          let structureType: 'CAPITAL' | undefined = undefined;
-
-          if (data.type === 'BASE') { level = 2; durability = 3; }
-          if (data.type === 'APEX') { level = 3; durability = 3; structureType = 'CAPITAL'; }
-
-          initialGrid[key] = {
-              id: key, q: data.q, r: data.r,
-              currentLevel: level, maxLevel: level,
-              progress: 0, revealed: true,
-              ownerId: (data.q === 0 && data.r === 0) ? 'player-1' : undefined,
-              durability,
-              structureType
-          };
-      });
-
-      // 3. Generate Bordering VOID
-      // Only generate void for neighbors of walkable hexes that are NOT themselves walkable
-      const voidCoords = new Set<string>();
-      
-      walkableCoords.forEach((data) => {
-          getNeighbors(data.q, data.r).forEach(n => {
-              const nKey = getHexKey(n.q, n.r);
-              if (!walkableCoords.has(nKey)) {
-                  voidCoords.add(nKey);
-              }
-          });
-      });
-
-      voidCoords.forEach(key => {
-          const [q, r] = key.split(',').map(Number);
-          initialGrid[key] = {
-              id: key, q, r,
-              currentLevel: 0, maxLevel: 0, progress: 0, revealed: true,
-              structureType: 'VOID'
-          };
-      });
-
-  } else {
-      // --- STANDARD RADIAL GENERATION (Skirmish / Default) ---
-      // For Skirmish (no levelConfig), we use a small radius (2) and NO walls
-      // to simulate an infinite procedural world that expands as you move.
-      const mapRadius = levelConfig ? levelConfig.mapConfig.size : 2; 
-      const shouldGenerateWalls = levelConfig ? levelConfig.mapConfig.generateWalls : false; 
-      const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? mapRadius;
-      const wallStartLevel = levelConfig?.mapConfig.wallStartLevel ?? 9;
-      const wallType = levelConfig?.mapConfig.wallType ?? 'classic';
-
-      for (let q = -mapRadius; q <= mapRadius; q++) {
-          const r1 = Math.max(-mapRadius, -q - mapRadius);
-          const r2 = Math.min(mapRadius, -q + mapRadius);
-          for (let r = r1; r <= r2; r++) {
-              const key = getHexKey(q, r);
-              
-              const dist = Math.max(Math.abs(q), Math.abs(r), Math.abs(-q-r));
-              const isWall = shouldGenerateWalls && dist >= wallStartRadius;
-              
-              let level = 0;
-              let structureType: 'BARRIER' | 'VOID' | undefined = undefined;
-
-              if (isWall) {
-                  if (wallType === 'void_shatter') {
-                      if (dist === wallStartRadius) {
-                          structureType = 'VOID';
-                          level = 0;
-                      } else {
-                          const noise = Math.abs(Math.sin(q * 12.9898 + r * 78.233) * 43758.5453) % 1;
-                          if (noise > 0.4) {
-                              level = 1 + Math.floor((noise - 0.4) * 10); 
-                              if (level > 5) level = 5;
-                          } else {
-                              level = 0;
-                          }
-                          structureType = undefined;
-                      }
-                  } else {
-                      level = Math.min(99, wallStartLevel + (dist - wallStartRadius));
-                      structureType = 'BARRIER';
-                  }
-              }
-
-              // Determine Owner for Skirmish Start
-              let ownerId: string | undefined = undefined;
-              let maxLevel = level;
-              let currentLevel = level;
-              let durability: number | undefined = undefined;
-
-              // If Skirmish (no levelConfig) and Center Hex
-              // UPDATED: Start at 0/0 resources, so map must be L0 and Unowned
-              if (!levelConfig && q === 0 && r === 0) {
-                  ownerId = undefined; // No owner initially
-                  maxLevel = 0;        // Level 0
-                  currentLevel = 0;    // Level 0
-                  durability = undefined;
-              }
-
-              // Apply correct durability if hex is Level 1 (e.g. from walls or noise)
-              if (!durability && maxLevel === 1) {
-                  durability = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
-              }
-
-              initialGrid[key] = { 
-                  id: key, 
-                  q, 
-                  r, 
-                  currentLevel, 
-                  maxLevel, 
-                  progress: 0, 
-                  revealed: true,
-                  structureType,
-                  ownerId,
-                  durability
-              };
-          }
-      }
-  }
-
-  // Ensure center exists if not created (Fallback)
-  if (!initialGrid[getHexKey(0,0)]) {
-      initialGrid[getHexKey(0,0)] = { 
-          id: getHexKey(0,0), q:0, r:0, 
-          currentLevel: 0, maxLevel: 0, progress: 0, revealed: true 
-      };
-  }
+  // Map Generation Logic (Delegate to service)
+  const initialGrid = generateMap(levelConfig);
   
   const botCount = levelConfig ? (levelConfig.aiMode === 'none' ? 0 : 1) : (winCondition?.botCount || 0);
   
@@ -503,7 +318,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const { pendingConfirmation, confirmPendingAction, cancelPendingAction } = get();
 
       // IF LEVEL 1.2: Check if briefing is active or game is not ready
-      // Actually, HUD handles UI blocking. Engine just receives move.
       if (session.gameStatus === 'BRIEFING') return;
 
       if (pendingConfirmation) {
@@ -527,31 +341,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return;
       }
 
-      let totalMoveCost = 0;
-      for (const step of path) {
-        const hex = session.grid[getHexKey(step.q, step.r)];
-        totalMoveCost += (hex && hex.maxLevel >= 2) ? hex.maxLevel : 1;
-      }
+      // --- CENTRALIZED COST CALCULATION ---
+      const costResult = calculateMovementCost(session.player, path, session.grid);
 
-      const costMoves = Math.min(session.player.moves, totalMoveCost);
-      const costCoins = (totalMoveCost - costMoves) * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE;
-
-      if (session.player.coins < costCoins) {
+      if (!costResult.canAfford) {
         audioService.play('ERROR');
-        set({ toast: { message: `Need ${costCoins} credits`, type: 'error', timestamp: Date.now() } });
+        set({ toast: { message: costResult.reason || `Need ${costResult.deductCoins} credits`, type: 'error', timestamp: Date.now() } });
         return;
       }
       
-      if (costCoins > 0) {
+      // Warning for coin usage
+      if (costResult.deductCoins > 0) {
         audioService.play('WARNING');
         set({ 
-             pendingConfirmation: { type: 'MOVE_WITH_COINS', data: { path, costMoves, costCoins } },
-             toast: { message: `Click again to confirm (${costCoins}cr)`, type: 'info', timestamp: Date.now() } 
+             pendingConfirmation: { type: 'MOVE_WITH_COINS', data: { path, costMoves: costResult.deductMoves, costCoins: costResult.deductCoins } },
+             toast: { message: `Click again to confirm (${costResult.deductCoins}cr)`, type: 'info', timestamp: Date.now() } 
         });
         return;
       }
 
-      // CRITICAL FIX: Use engine.state.stateVersion, not from potentially stale Zustand store
       const action: MoveAction = { type: 'MOVE', path, stateVersion: session.stateVersion };
       const res = engine.applyAction(session.player.id, action);
       
@@ -634,7 +442,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     if (nextProgress > progress) {
                         saveCampaignProgress(nextProgress);
                         set({ campaignProgress: nextProgress });
-                        // Add notification about unlock?
                     }
                 }
             }
@@ -693,4 +500,48 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             if (isPlayer) {
                                 text = "+MOVES";
                                 color = "#34d399";
-                                icon = 'CO
+                                icon = 'COIN';
+                            }
+                            break;
+                        case 'HEX_COLLAPSE':
+                            text = "COLLAPSE -1 RANK"; 
+                            color = "#ef4444";
+                            icon = 'DOWN';
+                            break;
+                    }
+
+                    if (text) {
+                        result.state.effects.push({
+                            id: `fx-${Date.now()}-${Math.random()}`,
+                            q: targetQ,
+                            r: targetR,
+                            text,
+                            color,
+                            icon,
+                            startTime: Date.now(),
+                            lifetime: 1200 
+                        });
+                    }
+                 }
+            }
+          });
+      }
+
+      let newToast = get().toast;
+      const error = result.events.find(e => e.type === 'ACTION_DENIED' || e.type === 'ERROR');
+      if (error && error.entityId === engine?.state?.player.id) {
+          newToast = { message: error.message || 'Error', type: 'error', timestamp: Date.now() };
+      }
+
+      const shouldRender = tickCount % 3 === 0;
+      const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
+      const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
+
+      if (shouldRender || hasCriticalEvents || playerStateChanged) {
+        set({ 
+            session: engine.state, 
+            toast: newToast,
+        });
+      }
+  }
+}));

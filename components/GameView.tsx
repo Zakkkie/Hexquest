@@ -575,8 +575,8 @@ const GameView: React.FC = () => {
                         if (isNeighbor) isTutorialTarget = true;
                     }
 
-                    // LEVEL 1.2: Highlight Mission Objective (Pyramid)
-                    let isObjective = isLevel1_2 && item.q === 0 && item.r === -8;
+                    // LEVEL 1.2: Highlight Mission Objective (Dynamic CAPITAL)
+                    let isObjective = isLevel1_2 && hex && hex.structureType === 'CAPITAL';
                     
                     // LEVEL 1.4: Highlight Target Bridge Segments
                     if (isLevel1_4) {

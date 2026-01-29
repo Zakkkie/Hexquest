@@ -4,6 +4,7 @@ import { getLevelConfig, GAME_CONFIG, DIFFICULTY_SETTINGS } from '../rules/confi
 import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hexUtils';
 import { checkGrowthCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
+import { calculateMovementCost } from '../rules/movement';
 
 export interface AiResult {
     action: BotAction | null;
@@ -81,11 +82,11 @@ export const calculateBotMove = (
 
       if (escapeRoutes.length > 0) {
           const target = escapeRoutes[Math.floor(Math.random() * escapeRoutes.length)];
-          const targetHex = grid[getHexKey(target.q, target.r)];
-          const moveCost = (targetHex && targetHex.maxLevel >= 2) ? targetHex.maxLevel : 1;
-          const totalFunds = bot.moves + Math.floor(bot.coins / GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
+          
+          // Use centralized cost check for escape
+          const cost = calculateMovementCost(bot, [target], grid);
 
-          if (totalFunds < moveCost) {
+          if (!cost.canAfford) {
              // Если не можем бежать - восстанавливаемся там где стоим
              return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'PANIC: RECOVER', memory: { ...nextMemory, stuckCounter: 0 } };
           }
@@ -96,24 +97,13 @@ export const calculateBotMove = (
 
   // --- Helpers ---
 
-  const calculatePathCost = (path: HexCoord[]) => {
-      let moves = 0;
-      for (const p of path) {
-           const h = grid[getHexKey(p.q, p.r)];
-           moves += (h && h.maxLevel >= 2) ? h.maxLevel : 1;
-      }
-      const deficit = Math.max(0, moves - bot.moves);
-      const coins = deficit * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE;
-      return { moves, coins };
-  };
-
   const getFarmingAction = (targetAmount: number, reason: string, isUrgent: boolean): AiResult => {
-       // 1. Recover HERE if needed (and if valid)
+       // 1. Recover HERE if possible (Always prioritized if we haven't done it yet)
        if (currentHex && !bot.recoveredCurrentHex) {
             return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: `Farming: ${reason}`, memory: { ...nextMemory, stuckCounter: 0 } };
        }
 
-       // 2. Find nearest farm (Any high level hex not occupied)
+       // 2. Find High Value Farms
        const candidates = index.getHexesInRange({q:bot.q, r:bot.r}, CONTEXT_RADIUS)
           .filter(h => h.id !== currentHexKey || !bot.recoveredCurrentHex)
           .filter(h => !reservedHexKeys?.has(h.id));
@@ -125,36 +115,58 @@ export const calculateBotMove = (
            return valB - valA;
        });
        
-       // Fallback: Expand to L0 if no farms
-       if (candidates.length === 0) {
-           const desperates = index.getHexesInRange({q:bot.q, r:bot.r}, 5);
-           if (desperates.length > 0) {
-               const target = desperates[0];
-               if (target.id === currentHexKey) { 
-                   return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Desperate Claim', memory: { ...nextMemory, stuckCounter: 0 } };
-               }
-               const path = findPath({q:bot.q, r:bot.r}, {q:target.q, r:target.r}, grid, bot.playerLevel, otherUnitObstacles);
-               if (path) {
-                   const trip = calculatePathCost(path);
-                   if (bot.coins >= trip.coins) return { action: { type: 'MOVE', path, stateVersion }, debug: 'Desperate Expand', memory: nextMemory };
-               }
-           }
-           return { action: { type: 'WAIT', stateVersion }, debug: 'Bankrupt', memory: { ...nextMemory, stuckCounter: nextMemory.stuckCounter + 1 } };
-       }
-
-       // Try to reach a farm
-       for (const candidate of candidates.slice(0, 3)) {
+       // Try to reach a GOOD farm
+       for (const candidate of candidates.slice(0, 5)) {
            const path = findPath({q:bot.q, r:bot.r}, {q:candidate.q, r:candidate.r}, grid, bot.playerLevel, otherUnitObstacles);
            if (path) {
-               const tripCost = calculatePathCost(path);
+               const cost = calculateMovementCost(bot, path, grid);
                
                const currentHexCost = (currentHex && currentHex.maxLevel >= 2) ? currentHex.maxLevel : 1;
+               // Extra buffer logic: Bot wants to have some coins left after moving
                const buffer = isUrgent ? 0 : (currentHexCost >= 5 ? 50 : 0); 
 
-               if (bot.coins >= tripCost.coins + buffer) {
+               if (cost.canAfford && bot.coins >= cost.deductCoins + buffer) {
                    return { action: { type: 'MOVE', path, stateVersion }, debug: `Go Farm (${reason})`, memory: { ...nextMemory, stuckCounter: 0 } };
                }
            }
+       }
+
+       // 3. SCROUNGING (Emergency Farming)
+       // If we are here, we either found no farms or couldn't afford/reach any of them.
+       // Fallback: Look for ANY immediate neighbor we can afford to step on to recover.
+       // This prevents the bot from just waiting when it could at least do something.
+       
+       const neighbors = getNeighbors(bot.q, bot.r);
+       const affordableOptions: { path: HexCoord[], hex: Hex }[] = [];
+
+       for (const n of neighbors) {
+           const nKey = getHexKey(n.q, n.r);
+           
+           // Check Reservation & Physical Obstacles
+           if (reservedHexKeys?.has(nKey) || otherUnitObstacles.some(o => o.q === n.q && o.r === n.r)) continue;
+
+           const nHex = grid[nKey];
+           // Check Validity (Not Void, Not Rank Locked)
+           if (!nHex || nHex.structureType === 'VOID' || nHex.maxLevel > bot.playerLevel) continue;
+
+           // Check Cost
+           const path = [{ q: n.q, r: n.r }];
+           const cost = calculateMovementCost(bot, path, grid);
+
+           if (cost.canAfford) {
+               affordableOptions.push({ path, hex: nHex });
+           }
+       }
+
+       if (affordableOptions.length > 0) {
+           // Pick the best of the cheap options (Highest Level -> Better Recovery yield)
+           affordableOptions.sort((a, b) => b.hex.maxLevel - a.hex.maxLevel);
+           
+           return { 
+               action: { type: 'MOVE', path: affordableOptions[0].path, stateVersion }, 
+               debug: 'Scrounging', // "Побираться" / Low level farming
+               memory: { ...nextMemory, stuckCounter: 0 } 
+           };
        }
        
        return { action: { type: 'WAIT', stateVersion }, debug: 'Trapped/Poor', memory: { ...nextMemory, stuckCounter: nextMemory.stuckCounter + 1 } };
@@ -282,29 +294,23 @@ export const calculateBotMove = (
       if (check.canGrow) {
            return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: `Build L${targetHex.currentLevel+1}`, memory: { ...nextMemory, stuckCounter: 0 } };
       } else {
-           // We are here but can't grow? Maybe recovered? 
-           // If we can't grow due to funds or move points, ActionProcessor validation will fail and we handle it via stuckCounter or farming.
-           
            // If funding issue:
            const config = getLevelConfig(targetHex.maxLevel + 1);
-           // We need to have moved here, so we might be low on funds.
            return getFarmingAction(config.cost || 50, "Need funds for upgrade", true);
       }
   }
 
   // B. Move to target
-  // Check funds for trip
   const path = findPath({q:bot.q, r:bot.r}, {q:targetHex.q, r:targetHex.r}, grid, bot.playerLevel, otherUnitObstacles);
   
   if (!path) {
-       // Path blocked.
        return { action: { type: 'WAIT', stateVersion }, debug: 'Path Blocked', memory: { ...nextMemory, stuckCounter: nextMemory.stuckCounter + 1 } };
   }
 
-  const trip = calculatePathCost(path);
-  if (bot.coins >= trip.coins) {
+  const cost = calculateMovementCost(bot, path, grid);
+  if (cost.canAfford) {
       return { action: { type: 'MOVE', path, stateVersion }, debug: `Moving to ${strategy}`, memory: { ...nextMemory, stuckCounter: 0 } };
   } else {
-      return getFarmingAction(trip.coins, "Need travel funds", true);
+      return getFarmingAction(cost.deductCoins, "Need travel funds", true);
   }
 };
