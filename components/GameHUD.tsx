@@ -10,7 +10,7 @@ import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, TrendingUp, ChevronUp, MapPin,
-  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, Layers, Zap, Settings, Globe, X, Menu, Swords
+  RotateCcw, RotateCw, ChevronsUp, Volume2, VolumeX, XCircle, RefreshCw, ArrowRight, Target, Skull, Wallet, Music, Shield, Info, ChevronDown, AlertTriangle, Hexagon as HexIcon, Layers, Zap, Settings, Globe, X, Menu, Swords, Timer, Coins
 } from 'lucide-react';
 
 // FIREWORKS COMPONENT
@@ -145,6 +145,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   // IDLE HINT STATE
   const [idleTime, setIdleTime] = useState(0);
+  
+  // COUNTDOWN STATE FOR LEVEL 1.5
+  const [timeLeft, setTimeLeft] = useState(60);
 
   const t = TEXT[language].HUD;
   
@@ -161,6 +164,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const isLevel1_2 = activeLevelConfig?.id === '1.2';
   const isLevel1_3 = activeLevelConfig?.id === '1.3';
   const isLevel1_4 = activeLevelConfig?.id === '1.4';
+  const isLevel1_5 = activeLevelConfig?.id === '1.5';
+  const isLevel1_6 = activeLevelConfig?.id === '1.6';
 
   // --- IDLE TIMER LOGIC ---
   useEffect(() => {
@@ -182,6 +187,19 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
       return () => clearInterval(interval);
   }, [gameStatus, isLevel1_1, isLevel1_3, isLevel1_4]);
+
+  // --- LEVEL 1.5 TIMER LOGIC ---
+  useEffect(() => {
+      if (!isLevel1_5 || gameStatus !== 'PLAYING') return;
+      
+      const interval = setInterval(() => {
+          const elapsed = Date.now() - sessionStartTime;
+          const remaining = Math.max(0, 60 - Math.floor(elapsed / 1000));
+          setTimeLeft(remaining);
+      }, 200);
+      
+      return () => clearInterval(interval);
+  }, [isLevel1_5, gameStatus, sessionStartTime]);
 
   // Calculate Owned Sectors for Tutorial 1.1
   const ownedCount = useMemo(() => {
@@ -233,12 +251,12 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // TRIGGER LEVEL 1.2, 1.3, 1.4 BRIEFING
+  // TRIGGER LEVEL 1.2, 1.3, 1.4, 1.5, 1.6 BRIEFING
   useEffect(() => {
-      if ((isLevel1_2 || isLevel1_3 || isLevel1_4) && gameStatus === 'PLAYING') {
+      if ((isLevel1_2 || isLevel1_3 || isLevel1_4 || isLevel1_5 || isLevel1_6) && gameStatus === 'PLAYING') {
           setShowLevelBriefing(true);
       }
-  }, [isLevel1_2, isLevel1_3, isLevel1_4, gameStatus]);
+  }, [isLevel1_2, isLevel1_3, isLevel1_4, isLevel1_5, isLevel1_6, gameStatus]);
 
   const upgradeCondition = useMemo(() => {
     if (!currentHex || !player || !grid) return { canGrow: false, reason: 'Invalid Hex' };
@@ -465,6 +483,63 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
            </div>
       )}
 
+      {/* LEVEL 1.5 TIMER DASHBOARD (UPDATED) */}
+      {isLevel1_5 && (
+          <div className="absolute top-[80px] md:top-[120px] left-1/2 -translate-x-1/2 pointer-events-auto z-20 flex flex-col items-center">
+              <div className={`
+                  backdrop-blur-xl border-2 shadow-2xl rounded-2xl px-6 py-4 flex flex-col gap-2 transition-all duration-300 min-w-[200px]
+                  ${timeLeft <= 10 ? 'bg-red-950/90 border-red-500 animate-pulse shadow-red-900/50' : 'bg-slate-900/80 border-slate-600 shadow-xl'}
+              `}>
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-1">
+                      <div className="flex items-center gap-2">
+                          <Target className={`w-4 h-4 ${timeLeft <= 10 ? 'text-red-300' : 'text-slate-300'}`} />
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${timeLeft <= 10 ? 'text-red-200' : 'text-slate-300'}`}>Objective</span>
+                      </div>
+                      <span className={`font-mono text-xs font-bold ${timeLeft <= 10 ? 'text-red-300' : 'text-slate-400'}`}>Collect 100</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-6">
+                      {/* Timer */}
+                      <div className="flex flex-col items-start">
+                          <div className="flex items-center gap-2 mb-0.5">
+                              <Timer className={`w-4 h-4 ${timeLeft <= 10 ? 'text-white' : 'text-slate-400'}`} />
+                              <span className={`text-[10px] uppercase font-bold ${timeLeft <= 10 ? 'text-red-300' : 'text-slate-500'}`}>Time</span>
+                          </div>
+                          <span className={`text-2xl font-mono font-black leading-none ${timeLeft <= 10 ? 'text-white' : 'text-white'}`}>
+                              {timeLeft}s
+                          </span>
+                      </div>
+
+                      <div className="w-px h-8 bg-white/10"></div>
+
+                      {/* Coins */}
+                      <div className="flex flex-col items-end">
+                          <div className="flex items-center gap-2 mb-0.5">
+                              <span className={`text-[10px] uppercase font-bold ${timeLeft <= 10 ? 'text-red-300' : 'text-slate-500'}`}>Funds</span>
+                              <Coins className={`w-4 h-4 ${timeLeft <= 10 ? 'text-white' : 'text-amber-400'}`} />
+                          </div>
+                          <div className="flex items-baseline gap-1">
+                              <span className="text-2xl font-mono font-black text-amber-400 leading-none">{player.coins}</span>
+                              <span className="text-xs font-mono font-bold text-slate-500">/100</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* LEVEL 1.6 DASHBOARD (CYCLE LOCK) */}
+      {isLevel1_6 && (
+          <div className="absolute top-[80px] md:top-[120px] left-1/2 -translate-x-1/2 pointer-events-auto z-20 flex flex-col items-center">
+              <div className="bg-slate-900/60 backdrop-blur-md border border-indigo-500/30 shadow-2xl rounded-full px-4 py-2 w-auto flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-indigo-400" />
+                      <span className="text-xs font-bold text-indigo-100 whitespace-nowrap uppercase">{t.TUT_1_6_TASK}</span>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* LEVEL 1.1 TUTORIAL DASHBOARD */}
       {isLevel1_1 && (
           <div 
@@ -602,8 +677,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* LEVEL 1.2, 1.3, 1.4: PRE-GAME BRIEFING (Blocking) */}
-      {(isLevel1_2 || isLevel1_3 || isLevel1_4) && showLevelBriefing && (
+      {/* LEVEL 1.2, 1.3, 1.4, 1.5, 1.6: PRE-GAME BRIEFING (Blocking) */}
+      {(isLevel1_2 || isLevel1_3 || isLevel1_4 || isLevel1_5 || isLevel1_6) && showLevelBriefing && (
           <div className="absolute inset-0 z-[80] bg-black/90 backdrop-blur-md flex items-center justify-center pointer-events-auto p-6 animate-in fade-in duration-500">
               <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl max-w-md w-full relative overflow-hidden flex flex-col gap-6">
                   {/* Warning Strip */}
@@ -611,6 +686,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       ${isLevel1_2 ? 'bg-gradient-to-r from-red-600 via-amber-500 to-red-600' : ''}
                       ${isLevel1_3 ? 'bg-gradient-to-r from-indigo-600 via-cyan-500 to-indigo-600' : ''}
                       ${isLevel1_4 ? 'bg-gradient-to-r from-cyan-600 via-emerald-500 to-cyan-600' : ''}
+                      ${isLevel1_5 ? 'bg-gradient-to-r from-red-600 via-white to-red-600' : ''}
+                      ${isLevel1_6 ? 'bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600' : ''}
                   `}></div>
                   
                   <div className="flex flex-col items-center text-center gap-4">
@@ -618,10 +695,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           ${isLevel1_2 ? 'bg-red-950 border-red-500' : ''}
                           ${isLevel1_3 ? 'bg-indigo-950 border-indigo-500' : ''}
                           ${isLevel1_4 ? 'bg-cyan-950 border-cyan-500' : ''}
+                          ${isLevel1_5 ? 'bg-slate-900 border-red-500 animate-spin-slow' : ''}
+                          ${isLevel1_6 ? 'bg-amber-950 border-amber-500' : ''}
                       `}>
                           {isLevel1_2 && <AlertTriangle className="w-8 h-8 text-red-500 animate-pulse" />}
                           {isLevel1_3 && <Layers className="w-8 h-8 text-indigo-500 animate-bounce" />}
                           {isLevel1_4 && <Zap className="w-8 h-8 text-cyan-500 animate-pulse" />}
+                          {isLevel1_5 && <Timer className="w-8 h-8 text-red-500 animate-pulse" />}
+                          {isLevel1_6 && <RefreshCw className="w-8 h-8 text-amber-500 animate-spin-slow" />}
                       </div>
                       
                       <div>
@@ -629,35 +710,50 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               {isLevel1_2 ? t.TUT_1_2_INTRO_TITLE : ''}
                               {isLevel1_3 ? t.TUT_1_3_INTRO_TITLE : ''}
                               {isLevel1_4 ? t.TUT_1_4_INTRO_TITLE : ''}
+                              {isLevel1_5 ? t.TUT_1_5_INTRO_TITLE : ''}
+                              {isLevel1_6 ? t.TUT_1_6_INTRO_TITLE : ''}
                           </h2>
                           <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
                               {isLevel1_2 ? t.TUT_1_2_INTRO_DESC : ''}
                               {isLevel1_3 ? t.TUT_1_3_INTRO_DESC : ''}
                               {isLevel1_4 ? t.TUT_1_4_INTRO_DESC : ''}
+                              {isLevel1_5 ? t.TUT_1_5_INTRO_DESC : ''}
+                              {isLevel1_6 ? t.TUT_1_6_INTRO_DESC : ''}
                           </p>
                       </div>
                   </div>
 
-                  {/* Legend (Only for 1.2) */}
+                  {/* Legend (Only for 1.2) - ANIMATED VISUAL COMPARISON */}
                   {isLevel1_2 && (
-                      <div className="bg-black/40 rounded-xl p-4 border border-white/5 flex flex-col gap-3">
-                          <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded bg-blue-900 border border-blue-500 flex items-center justify-center shrink-0">
-                                  <div className="w-3 h-3 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></div>
-                              </div>
-                              <span className="text-sm font-bold text-white">{t.TUT_1_2_LEGEND_SAFE}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded bg-[#475569] border border-slate-500 flex items-center justify-center shrink-0 relative overflow-hidden bg-gradient-to-br from-[#475569] to-[#334155]">
-                                  {/* Updated Legend Icon: Segmented Integrity Ring with Red Glow (NO CENTER CIRCLE) */}
-                                  <svg width="40" height="40" viewBox="0 0 40 40" className="absolute inset-0">
-                                     {/* Broken Ring Segments */}
-                                     <path d="M 20 5 L 35 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-                                     <path d="M 35 28 L 20 35" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-                                     <path d="M 5 28 L 5 12" stroke="#4b5563" strokeWidth="2" strokeLinecap="round" /> {/* Dark/Broken Segment */}
+                      <div className="grid grid-cols-2 gap-4">
+                          {/* Safe Hex */}
+                          <div className="bg-slate-950/50 rounded-xl p-4 border border-blue-900/50 flex flex-col items-center gap-3">
+                              <div className="relative w-16 h-16 flex items-center justify-center">
+                                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                                      <path d="M50 5 L93 27 L93 73 L50 95 L7 73 L7 27 Z" fill="rgba(30, 58, 138, 0.5)" stroke="#60a5fa" strokeWidth="3" />
                                   </svg>
+                                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]"></div>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]"></div>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]"></div>
+                                  </div>
                               </div>
-                              <span className="text-sm font-bold text-red-400">{t.TUT_1_2_LEGEND_RISK}</span>
+                              <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">{t.TUT_1_2_LEGEND_SAFE}</span>
+                          </div>
+
+                          {/* Critical Hex (Animated) */}
+                          <div className="bg-red-950/20 rounded-xl p-4 border border-red-900/50 flex flex-col items-center gap-3 relative overflow-hidden">
+                              <div className="relative w-16 h-16 flex items-center justify-center animate-[shake_0.5s_ease-in-out_infinite]">
+                                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+                                      <path d="M50 5 L93 27 L93 73 L50 95 L7 73 L7 27 Z" fill="rgba(69, 10, 10, 0.5)" stroke="#ef4444" strokeWidth="3" strokeDasharray="6 4" className="animate-pulse" />
+                                      {/* Cracks */}
+                                      <path d="M50 50 L75 25 M50 50 L20 60 M50 50 L50 80" stroke="#000" strokeWidth="2" opacity="0.6" />
+                                  </svg>
+                                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_#ef4444] animate-ping"></div>
+                                  </div>
+                              </div>
+                              <span className="text-xs font-bold text-red-400 uppercase tracking-wider text-center">{t.TUT_1_2_LEGEND_RISK}</span>
                           </div>
                       </div>
                   )}
@@ -703,6 +799,26 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                         <Zap className="w-3 h-3 fill-current text-amber-500" /> PRESS UPGRADE
                     </div>
                     <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white mt-[-1px]"></div>
+                </div>
+            )}
+
+            {/* LEVEL 1.5 Hint for Recovery Button (Blue) */}
+            {isLevel1_5 && player.moves === 0 && !isMoving && !isPlayerGrowing && (
+                <div className="absolute bottom-full mb-4 left-[20%] flex flex-col items-center animate-bounce z-50">
+                    <div className="bg-blue-600 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-lg border-2 border-blue-400 uppercase whitespace-nowrap">
+                        RECOVER (GET MOVES)
+                    </div>
+                    <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-blue-400 mt-[-1px]"></div>
+                </div>
+            )}
+
+            {/* LEVEL 1.6: HINT FOR CYCLE LOCK (If user clicks failed) */}
+            {isLevel1_6 && !canUpgrade && upgradeCondition.reason?.includes('QUEUE') && !isMoving && !isPlayerGrowing && (
+                 <div className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce z-50">
+                    <div className="bg-amber-600 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-lg border-2 border-amber-400 uppercase whitespace-nowrap flex items-center gap-2">
+                        <RefreshCw className="w-3 h-3 animate-spin" /> {t.TUT_1_6_CYCLE_HINT}
+                    </div>
+                    <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-amber-400 mt-[-1px]"></div>
                 </div>
             )}
 

@@ -108,6 +108,16 @@ interface Dictionary {
         TUT_1_4_INTRO_TITLE: string;
         TUT_1_4_INTRO_DESC: string;
         TUT_1_4_COUNTER: string;
+        // TUTORIAL 1.5 SPECIFIC
+        TUT_1_5_TASK: string;
+        TUT_1_5_INTRO_TITLE: string;
+        TUT_1_5_INTRO_DESC: string;
+        TUT_1_5_TIMER_LABEL: string;
+        // TUTORIAL 1.6 SPECIFIC
+        TUT_1_6_TASK: string;
+        TUT_1_6_INTRO_TITLE: string;
+        TUT_1_6_INTRO_DESC: string;
+        TUT_1_6_CYCLE_HINT: string;
     };
     TOOLTIP: {
         CURRENT_LOC: string;
@@ -242,8 +252,8 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_2_TASK: "Reach the Pyramid Apex",
             TUT_1_2_INTRO_TITLE: "STRUCTURAL HAZARD WARNING",
             TUT_1_2_INTRO_DESC: "The terrain ahead is critically unstable. You must navigate a path to the extraction point.\n\nOnly step on STABLE sectors. Damaged sectors will collapse instantly under your weight.",
-            TUT_1_2_LEGEND_SAFE: "Stable (Safe)",
-            TUT_1_2_LEGEND_RISK: "Critical (Do Not Step)",
+            TUT_1_2_LEGEND_SAFE: "Stable (3 HP)",
+            TUT_1_2_LEGEND_RISK: "Critical (1 HP)",
             TUT_1_3_TASK: "Build Foundation & Reach L2",
             TUT_1_3_INTRO_TITLE: "Construction Protocol: Verticality",
             TUT_1_3_INTRO_DESC: "You are isolated on a floating platform. The supports have collapsed.\n\nObjective: Rebuild the foundation (L1) around you, then upgrade ANY sector to Level 2.\n\nWARNING: Do not step into the Void.",
@@ -253,6 +263,14 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_4_INTRO_TITLE: "Protocol: Resource Cycle",
             TUT_1_4_INTRO_DESC: "Objective: UPGRADE the 3 HIGHLIGHTED bridge sectors to Level 2.\n\nPROBLEM: 'Cycle Lock' prevents rapid upgrades, and the bridge lacks structural support.\n\nSOLUTION: Use the widened bridge area to build supporting structures, and capture Debris Fields (L0) to charge your Cycle.",
             TUT_1_4_COUNTER: "Reinforced",
+            TUT_1_5_TASK: "Deep Recovery Cycle",
+            TUT_1_5_INTRO_TITLE: "Protocol: Rapid Extraction",
+            TUT_1_5_INTRO_DESC: "CRITICAL: Life Support Failing.\n\nGoal: Accumulate 100 Credits in 60 Seconds.\n\nYou have minimal moves. You must exploit the 'Recovery' mechanic on high-level debris to generate movement fuel and credits.",
+            TUT_1_5_TIMER_LABEL: "OXYGEN",
+            TUT_1_6_TASK: "Reach Level 3",
+            TUT_1_6_INTRO_TITLE: "Protocol: Cycle Lock",
+            TUT_1_6_INTRO_DESC: "Objective: Upgrade 1 hex to Level 3.\n\nCONSTRAINT: Queue Size = 1.\n\nPROBLEM: You cannot upgrade the same sector twice in a row.\n\nSOLUTION: Alternate upgrades between two different sectors (Pattern A -> B -> A) to clear the Cycle Queue.",
+            TUT_1_6_CYCLE_HINT: "Cycle Locked! Upgrade another hex first.",
         },
         TOOLTIP: {
             CURRENT_LOC: "Current Location",
@@ -385,8 +403,8 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_2_TASK: "Цель: Вершина Пирамиды",
             TUT_1_2_INTRO_TITLE: "ОПАСНОСТЬ ОБРУШЕНИЯ",
             TUT_1_2_INTRO_DESC: "Впереди нестабильная зона. Вы должны добраться до точки эвакуации.\n\nНаступайте только на ЦЕЛЫЕ сектора. Поврежденные сектора не выдержат ваш вес.",
-            TUT_1_2_LEGEND_SAFE: "Стабильно (Безопасно)",
-            TUT_1_2_LEGEND_RISK: "Критично (Не наступать)",
+            TUT_1_2_LEGEND_SAFE: "Стабильно (3 HP)",
+            TUT_1_2_LEGEND_RISK: "Критично (1 HP)",
             TUT_1_3_TASK: "Построй Фундамент и L2",
             TUT_1_3_INTRO_TITLE: "Протокол: Вертикальность",
             TUT_1_3_INTRO_DESC: "Вы изолированы на платформе. Старые опоры рухнули.\n\nЦель: Постройте новый фундамент (L1) вокруг себя, затем улучшите ЛЮБОЙ сектор до 2 уровня.\n\nВНИМАНИЕ: Не наступайте в Пустоту (VOID).",
@@ -396,6 +414,14 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_4_INTRO_TITLE: "Протокол: Цикл Ресурсов",
             TUT_1_4_INTRO_DESC: "Цель: УЛУЧШИТЬ 3 ПОДСВЕЧЕННЫХ сектора моста до 2 уровня.\n\nПРОБЛЕМА: 'Блокировка Цикла' мешает быстрому апгрейду, а мост слишком узок для опор.\n\nРЕШЕНИЕ: Используйте расширенный мост для постройки опор и захватите Обломки (L0) для зарядки цикла.",
             TUT_1_4_COUNTER: "Укреплено",
+            TUT_1_5_TASK: "Глубокая переработка",
+            TUT_1_5_INTRO_TITLE: "Протокол: Экстренная Добыча",
+            TUT_1_5_INTRO_DESC: "КРИТИЧНО: Отказ жизнеобеспечения.\n\nЦель: Накопить 100 Кредитов за 60 секунд.\n\nУ вас минимум ходов. Используйте механику 'Восстановления' (Recovery) на высоких уровнях для получения топлива и кредитов.",
+            TUT_1_5_TIMER_LABEL: "КИСЛОРОД",
+            TUT_1_6_TASK: "Достигнуть 3 Уровня",
+            TUT_1_6_INTRO_TITLE: "Протокол: Блокировка Цикла",
+            TUT_1_6_INTRO_DESC: "Цель: Улучшить 1 гекс до 3 Уровня.\n\nОГРАНИЧЕНИЕ: Очередь Цикла = 1.\n\nПРОБЛЕМА: Вы не можете улучшать один и тот же сектор дважды подряд.\n\nРЕШЕНИЕ: Чередуйте улучшения между двумя разными секторами (Схема А -> Б -> А), чтобы очистить очередь.",
+            TUT_1_6_CYCLE_HINT: "Цикл Заблокирован! Улучши другой гекс.",
         },
         TOOLTIP: {
             CURRENT_LOC: "Текущая позиция",

@@ -290,5 +290,138 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           return false;
       }
     }
+  },
+  {
+    id: '1.5',
+    title: 'Simulation 1.5: Deep Recovery',
+    description: 'Protocol: Recovery Cycle\nObjective: Accumulate 100 Credits in 60s.\n\nStart with 0 Credits and 3 Moves. Use the "Recovery" action on high-level debris to regenerate moves and gain credits.',
+    
+    mapConfig: {
+      size: 15,
+      type: 'fixed',
+      generateWalls: false,
+      customLayout: [
+          // CENTER (START - Safe Zone)
+          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true, durability: 6 },
+
+          // INNER RING (L1 & L2 Mix - Smooth Start)
+          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          { q: 1, r: 0, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          { q: -1, r: 1, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          { q: 0, r: -1, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+
+          // RING 2 (Climbing to L3)
+          // Ensure valid adjacency (neighbors differ by <= 1 level)
+          { q: 2, r: 0, maxLevel: 3, currentLevel: 3, ownerId: 'player-1', revealed: true }, // Adj to (1,0)L2
+          { q: 2, r: -1, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          { q: 2, r: -2, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true }, // Easy entry point
+          
+          { q: 1, r: 1, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          { q: 0, r: 2, maxLevel: 3, currentLevel: 3, ownerId: 'player-1', revealed: true }, // Adj to (-1,1)L2 or (0,1)L1? Wait (0,1) is L1. Need L2 in between.
+          // Fix: (0,1) is L1. (0,2) is L3 -> too high? (0,2) neighbors (0,1)L1, (1,1)L2, (-1,2), (-1,1)L2.
+          // So (0,2) has L2 neighbors. Accessible via (1,1) or (-1,1).
+
+          { q: -1, r: 2, maxLevel: 3, currentLevel: 3, ownerId: 'player-1', revealed: true },
+          { q: -2, r: 2, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          { q: -2, r: 1, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          
+          { q: -2, r: 0, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          { q: -1, r: -1, maxLevel: 3, currentLevel: 3, ownerId: 'player-1', revealed: true }, // Adj to (-1,0)L1? No, (-1,0) is L1. (-1,-1) needs L2 neighbor. (0,-1) is L2. OK.
+          
+          { q: 0, r: -2, maxLevel: 3, currentLevel: 3, ownerId: 'player-1', revealed: true },
+          { q: 1, r: -2, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+
+          // RING 3 (High Value L4/L5)
+          { q: 3, r: 0, maxLevel: 4, currentLevel: 4, ownerId: 'player-1', revealed: true },
+          { q: 3, r: -1, maxLevel: 4, currentLevel: 4, ownerId: 'player-1', revealed: true },
+          { q: 4, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true }, // The Peak
+
+          { q: -2, r: 3, maxLevel: 4, currentLevel: 4, ownerId: 'player-1', revealed: true },
+          { q: -3, r: 3, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true }, // The Peak
+
+          // EXTRA LOW LEVEL FILLER (For movement currency)
+          { q: 3, r: -2, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          { q: 3, r: -3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          { q: -3, r: 2, maxLevel: 3, currentLevel: 3, ownerId: 'player-1', revealed: true },
+          { q: -3, r: 1, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          
+          // Void border implies rest is empty space (auto-handled)
+      ]
+    },
+
+    startState: {
+      credits: 0,
+      moves: 3,
+      rank: 8 // High rank to allow access to L8 hexes
+    },
+
+    aiMode: 'none',
+
+    hooks: {
+      checkWinCondition: (state) => {
+          return state.player.coins >= 100;
+      },
+      checkLossCondition: (state) => {
+          // TIME LIMIT: 60 Seconds
+          const limit = 60 * 1000; 
+          const elapsed = Date.now() - state.sessionStartTime;
+          
+          if (elapsed > limit) return true;
+
+          // Also lose if fell into void (Rank drop)
+          if (state.player.playerLevel < 8) return true;
+
+          return false;
+      }
+    }
+  },
+  {
+    id: '1.6',
+    title: 'Simulation 1.6: Cycle Protocol',
+    description: 'Objective: Reach Level 3 on ANY sector.\n\nConstraint: QUEUE SIZE = 1.\nYou cannot upgrade the same sector twice in a row. Alternate targets.',
+    
+    mapConfig: {
+      size: 4, 
+      type: 'fixed',
+      generateWalls: true, 
+      wallStartRadius: 4, // Void ring at distance 4
+      customLayout: [
+          // CENTER & IMMEDIATE NEIGHBORS (Safe Zone)
+          // Player starts at (0,0)
+          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          
+          // Primary Alternator Target
+          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          
+          // Backup (L0) in case they mess up
+          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+
+          // Everything else out to Radius 3 is L0/Empty space handled by generateMap default or explicit voids
+          // We let the 'generateWalls: true' handle the outer rim at R=4
+      ]
+    },
+
+    startState: {
+      credits: 500, // Enough for L1->L2 (20) + L2->L3 (45) multiple times
+      moves: 5,
+      rank: 1
+    },
+
+    aiMode: 'none',
+
+    hooks: {
+      checkWinCondition: (state) => {
+          // Win: Player owns any hex >= Level 3
+          return Object.values(state.grid).some(h => 
+              h.ownerId === state.player.id && h.maxLevel >= 3
+          );
+      }
+    }
   }
 ];

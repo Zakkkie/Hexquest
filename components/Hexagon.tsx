@@ -7,7 +7,7 @@ import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { getSecondsToGrow, hexToPixel } from '../services/hexUtils.ts';
 import { useGameStore } from '../store.ts';
 
-interface HexagonVisualProps {
+export interface HexagonVisualProps {
   hex: Hex;
   rotation: number;
   playerRank: number;
@@ -204,7 +204,7 @@ const generateIntegritySegments = (durability: number, max: number, size: number
     return { segments, isCritical: true };
 };
 
-const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation, playerRank, isOccupied, isSelected, isPendingConfirm, pendingCost, onHexClick, onHover, isTutorialTarget, tutorialHighlightColor = 'blue', isMissingSupport, isObjective, isNeighbor }) => {
+export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation, playerRank, isOccupied, isSelected, isPendingConfirm, pendingCost, onHexClick, onHover, isTutorialTarget, tutorialHighlightColor = 'blue', isMissingSupport, isObjective, isNeighbor }) => {
   const groupRef = useRef<Konva.Group>(null);
   
   // STATIC GEOMETRY REF (For Caching)
@@ -581,70 +581,4 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
 }, (prev, next) => {
     // VISUAL COMPARATOR (Used by React.memo on HexagonVisual)
     if (prev.hex.currentLevel !== next.hex.currentLevel) return false;
-    if (prev.hex.maxLevel !== next.hex.maxLevel) return false;
-    if (prev.hex.structureType !== next.hex.structureType) return false;
-    if (prev.hex.durability !== next.hex.durability) return false;
-    if (prev.hex.progress !== next.hex.progress) return false;
-    if (prev.rotation !== next.rotation) return false;
-    if (prev.isOccupied !== next.isOccupied) return false;
-    if (prev.isSelected !== next.isSelected) return false;
-    if (prev.isPendingConfirm !== next.isPendingConfirm) return false;
-    if (prev.playerRank !== next.playerRank) return false; 
-    if (prev.isTutorialTarget !== next.isTutorialTarget) return false;
-    if (prev.isMissingSupport !== next.isMissingSupport) return false; 
-    if (prev.isObjective !== next.isObjective) return false; 
-    if (prev.isNeighbor !== next.isNeighbor) return false; 
-    return true;
-});
-
-// PROPS FOR ATOMIC CONTAINER
-interface SmartHexagonProps {
-  id: string;
-  rotation: number;
-  playerRank: number; 
-  isOccupied: boolean;
-  isSelected: boolean; 
-  isPendingConfirm: boolean;
-  pendingCost: number | null;
-  onHexClick: (q: number, r: number) => void;
-  onHover: (id: string | null) => void;
-  isTutorialTarget?: boolean;
-  tutorialHighlightColor?: 'blue' | 'amber' | 'cyan' | 'emerald';
-  isMissingSupport?: boolean; 
-  isObjective?: boolean;
-  isNeighbor?: boolean;
-}
-
-// ATOMIC CONTAINER COMPONENT
-const SmartHexagon: React.FC<SmartHexagonProps> = React.memo((props) => {
-  // ATOMIC SUBSCRIPTION: Only re-renders when THIS SPECIFIC hex updates.
-  // Using selector with ID to pick the specific hex object from the grid.
-  const hex = useGameStore(state => state.session?.grid[props.id]);
-  
-  if (!hex) return null;
-  
-  // Pass dynamic hex data + parent visual props to the pure visual component
-  return <HexagonVisual hex={hex} {...props} />;
-}, (prev, next) => {
-    // CONTAINER COMPARATOR
-    // Since this component is responsible for Fetching data, it should only update if:
-    // 1. The ID changes (unlikely for a stable grid list)
-    // 2. The external props (rotation, selection, occupancy) change.
-    // Changes to the HEX DATA itself are handled by the zustand hook inside.
-    return (
-      prev.id === next.id &&
-      prev.rotation === next.rotation &&
-      prev.playerRank === next.playerRank &&
-      prev.isOccupied === next.isOccupied &&
-      prev.isSelected === next.isSelected &&
-      prev.isPendingConfirm === next.isPendingConfirm &&
-      prev.pendingCost === next.pendingCost &&
-      prev.isTutorialTarget === next.isTutorialTarget &&
-      prev.isMissingSupport === next.isMissingSupport &&
-      prev.isObjective === next.isObjective &&
-      prev.isNeighbor === next.isNeighbor &&
-      prev.tutorialHighlightColor === next.tutorialHighlightColor
-    );
-});
-
-export default SmartHexagon;
+    if (prev.hex.max

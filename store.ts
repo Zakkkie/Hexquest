@@ -221,17 +221,43 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startNewGame: (winCondition, levelConfig) => {
       audioService.play('UI_CLICK');
       get().abandonSession();
-      // Use fallback wincondition if not provided but level config is present
-      const effectiveWin = winCondition || (levelConfig ? {
-          levelId: -1,
-          targetLevel: 99,
-          targetCoins: 9999,
-          label: levelConfig.title,
-          botCount: 0,
-          difficulty: 'MEDIUM',
-          queueSize: 1,
-          winType: 'AND'
-      } : null);
+      
+      let effectiveWin = winCondition;
+
+      // Handle Campaign Levels Logic
+      if (levelConfig) {
+          let difficulty = 'MEDIUM';
+          let queueSize = 2; // Default Medium
+
+          // For Level 1.6, enforce EASY difficulty (Queue = 1)
+          if (levelConfig.id === '1.6') {
+              difficulty = 'EASY';
+              queueSize = 1;
+          }
+
+          effectiveWin = {
+              levelId: -1,
+              targetLevel: 99,
+              targetCoins: 9999,
+              label: levelConfig.title,
+              botCount: 0,
+              difficulty: difficulty as any,
+              queueSize: queueSize,
+              winType: 'AND'
+          };
+      } else if (!winCondition) {
+          // Fallback if nothing passed
+          effectiveWin = {
+              levelId: -1,
+              targetLevel: 99,
+              targetCoins: 9999,
+              label: "Quick Start",
+              botCount: 0,
+              difficulty: 'MEDIUM',
+              queueSize: 2,
+              winType: 'AND'
+          };
+      }
 
       const initialSessionState = createInitialSessionData(effectiveWin, levelConfig, get().language);
       engine = new GameEngine(initialSessionState); 
@@ -414,6 +440,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (!result || !result.state) return;
 
       tickCount++;
+
+      // --- LEVEL 1.5 AUDIO TIMER ---
+      if (result.state.activeLevelConfig?.id === '1.5' && result.state.gameStatus === 'PLAYING') {
+          const elapsed = Date.now() - result.state.sessionStartTime;
+          const timeLeft = Math.max(0, 60000 - elapsed);
+          
+          if (timeLeft <= 10000 && timeLeft > 0) {
+              // Warning Beeps increasing in tempo
+              // 10s-5s: Every 1s (10 ticks)
+              // 5s-0s: Every 0.5s (5 ticks)
+              const interval = timeLeft < 5000 ? 5 : 10;
+              if (tickCount % interval === 0) {
+                  audioService.play('WARNING');
+              }
+          }
+      }
 
       // Process Events Immediately (Sound, Toast, Tutorial)
       if (result.events.length > 0) {
