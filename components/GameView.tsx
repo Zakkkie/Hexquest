@@ -538,11 +538,13 @@ const GameView: React.FC = () => {
             const key = getHexKey(neighbor.q, neighbor.r);
             const hex = grid[key];
             const isBot = botPositions.some(b => b.q === neighbor.q && b.r === neighbor.r);
+            // FIX: Check for VOID structure type to prevent path visualization
+            const isVoid = hex?.structureType === 'VOID';
             const isLocked = hex && hex.maxLevel > (playerStats.playerLevel || 0);
             const endLevel = hex ? hex.maxLevel : 0;
             const isReachableHeight = Math.abs(startLevel - endLevel) <= 1;
 
-            if (!isBot && isReachableHeight) {
+            if (!isBot && !isVoid && isReachableHeight) {
                 const start = hexToPixel(playerPos.q, playerPos.r, cameraRotation);
                 const end = hexToPixel(neighbor.q, neighbor.r, cameraRotation);
                 if ((start.x > x0 && start.x < x1 && start.y > y0 && start.y < y1) ||
@@ -615,7 +617,8 @@ const GameView: React.FC = () => {
                     const isNeighbor = neighbors.some(n => n.q === item.q && n.r === item.r);
 
                     // TUTORIAL HIGHLIGHT: Level 1.1 - Highlight unowned L0 neighbors
-                    if (isLevel1_1 && !isMoving && !isPlayerGrowing && hex && hex.maxLevel === 0 && !hex.ownerId) {
+                    // FIX: Ensure not highlighting VOID hexes in tutorial
+                    if (isLevel1_1 && !isMoving && !isPlayerGrowing && hex && hex.maxLevel === 0 && !hex.ownerId && hex.structureType !== 'VOID') {
                         // Check if it's a neighbor of player
                         if (isNeighbor) isTutorialTarget = true;
                     }

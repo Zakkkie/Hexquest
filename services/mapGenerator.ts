@@ -31,44 +31,45 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
       const walkableCoords = new Map<string, { q: number, r: number, isSafe: boolean, type?: string }>();
       
       // Start Platform (Safe)
+      let current = { q: 0, r: 0 };
       walkableCoords.set(getHexKey(0,0), { q:0, r:0, isSafe: true });
 
-      // Generate Random Path (Drifting Upwards)
-      // We assume axial coordinates where decreasing R moves "Up".
-      // From (q, r), valid Up-neighbors are (q, r-1) [Top-Left] and (q+1, r-1) [Top-Right].
-      // So at each step we can either keep Q or increment Q.
-      
-      let currentQ = 0;
-      const pathSteps: {q: number, r: number}[] = [{q:0, r:0}];
-      const pathLength = 7; // Reach row -7
+      const pathSteps: {q: number, r: number}[] = [current];
+      const targetLength = 18; // Increased length for a longer run
 
-      for (let i = 1; i <= pathLength; i++) {
-          const r = -i;
-          // Randomly choose direction (0 = Keep Q/Left, 1 = Inc Q/Right)
-          const drift = Math.random() > 0.5 ? 1 : 0;
-          currentQ += drift;
-          pathSteps.push({ q: currentQ, r });
+      // Available moves: Up-Left, Up-Right, Left, Right
+      // We exclude "Down" moves (increasing R) to ensure we eventually reach the top
+      const moves = [
+          { dq: 0, dr: -1 },  // Up-Left
+          { dq: 1, dr: -1 },  // Up-Right
+          { dq: -1, dr: 0 },  // Left
+          { dq: 1, dr: 0 }    // Right
+      ];
+
+      for (let i = 0; i < targetLength; i++) {
+          // Find valid neighbors that haven't been visited yet (prevent loops)
+          const validCandidates = moves
+              .map(m => ({ q: current.q + m.dq, r: current.r + m.dr }))
+              .filter(pos => !walkableCoords.has(getHexKey(pos.q, pos.r)));
+
+          if (validCandidates.length === 0) break; // Should not happen in open void
+
+          // Randomly pick a direction to create a winding path
+          // Since 2/4 moves are "Up" and 2/4 are "Side", it will naturally zig-zag upwards
+          const next = validCandidates[Math.floor(Math.random() * validCandidates.length)];
+          
+          walkableCoords.set(getHexKey(next.q, next.r), { q: next.q, r: next.r, isSafe: true });
+          pathSteps.push(next);
+          current = next;
       }
-
-      // Mark Path as SAFE
-      pathSteps.forEach(p => {
-          walkableCoords.set(getHexKey(p.q, p.r), { q: p.q, r: p.r, isSafe: true });
-      });
 
       // Add Flanking Debris (Unsafe corridor width)
       // Add hexes directly adjacent to the path to make it wider but dangerous
       pathSteps.forEach(p => {
-          // Neighbors: (q-1, r) and (q+1, r) are strictly side neighbors
-          // We can also fill gaps if the path turned.
-          
-          const neighbors = [
-              { q: p.q - 1, r: p.r }, // Left
-              { q: p.q + 1, r: p.r }  // Right
-          ];
-
-          neighbors.forEach(n => {
+          getNeighbors(p.q, p.r).forEach(n => {
               const k = getHexKey(n.q, n.r);
-              if (!walkableCoords.has(k)) {
+              // 60% chance to spawn debris on the side to make the path look organic but hazardous
+              if (!walkableCoords.has(k) && Math.random() > 0.4) {
                   walkableCoords.set(k, { q: n.q, r: n.r, isSafe: false });
               }
           });
@@ -85,12 +86,11 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
           type: 'APEX' 
       });
 
-      // Expand the base around the Apex (at row -7 or wherever end is)
-      const baseNeighbors = getNeighbors(endPos.q, endPos.r);
-      baseNeighbors.forEach(n => {
-          // Add some platform around the goal if not existing
+      // Expand the base around the Apex to give a landing zone
+      getNeighbors(endPos.q, endPos.r).forEach(n => {
           const k = getHexKey(n.q, n.r);
-          if (!walkableCoords.has(k) && n.r === endPos.r) { // Only same row extension
+          // Add a safe platform around the goal
+          if (!walkableCoords.has(k)) { 
                walkableCoords.set(k, { q: n.q, r: n.r, isSafe: true, type: 'BASE' });
           }
       });

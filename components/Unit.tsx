@@ -165,6 +165,7 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
   const groupRef = useRef<Konva.Group>(null);
   const elevationGroupRef = useRef<Konva.Group>(null);
   const bodyRef = useRef<Konva.Group>(null);
+  const breathingGroupRef = useRef<Konva.Group>(null); // New ref for animation to avoid re-caching body
 
   const user = useGameStore(state => state.user);
   
@@ -210,7 +211,8 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
 
   // IDLE ANIMATION
   useEffect(() => {
-    const node = bodyRef.current;
+    // Animate the wrapper group, NOT the cached body
+    const node = breathingGroupRef.current;
     if (!node) return;
 
     const anim = new Konva.Animation((frame) => {
@@ -224,6 +226,20 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
         anim.stop();
     };
   }, []);
+
+  // CACHING THE BODY
+  useEffect(() => {
+      const node = bodyRef.current;
+      if (node) {
+          node.cache({
+              pixelRatio: 2,
+              offset: 10
+          });
+      }
+      return () => {
+          if (node) node.clearCache();
+      }
+  }, [type, finalColor]);
 
   // INITIAL POSITION SETTER (Prevent animation on mount)
   useLayoutEffect(() => {
@@ -302,35 +318,45 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
 
       <Group ref={groupRef} listening={false}>
         <Group ref={elevationGroupRef}>
+            {/* Shadow under unit (NOT Cached) */}
             <Ellipse x={0} y={0} radiusX={10} radiusY={6} fill="rgba(0,0,0,0.4)" blurRadius={2} />
 
-            {isPlayer ? (
-              <Group y={-8} ref={bodyRef}>
-                {/* Player: Humanoid/Pawn Shape - Round Head */}
-                <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowColor="black" shadowBlur={5} shadowOpacity={0.3} />
-                <Circle y={-14} radius={8} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} />
-                <Circle y={-14} x={-2} radius={2} fill="white" opacity={0.5} />
-              </Group>
-            ) : (
-              <Group y={-8} ref={bodyRef}>
-                {/* Bot: Humanoid/Pawn Shape - Square Head (Robotic) */}
-                {/* Body (Same as Player) */}
-                <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowColor="black" shadowBlur={5} shadowOpacity={0.3} />
-                
-                {/* Head (Square) */}
-                <Rect x={-7} y={-21} width={14} height={14} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} cornerRadius={3} />
-                
-                {/* Visor/Eye */}
-                <Rect x={-4} y={-16} width={8} height={4} fill="#0f172a" opacity={0.8} cornerRadius={1} />
-                <Rect x={-2} y={-15} width={4} height={2} fill="#ef4444" shadowColor="#ef4444" shadowBlur={4} />
-              </Group>
-            )}
+            <Group ref={breathingGroupRef} y={-8}>
+                {/* 
+                    CACHED BODY 
+                    We render the shapes once, then cache them as a bitmap.
+                    Animation happens on the 'breathingGroupRef' wrapper above.
+                */}
+                <Group ref={bodyRef}>
+                    {isPlayer ? (
+                    <Group>
+                        {/* Player: Humanoid/Pawn Shape - Round Head */}
+                        <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowColor="black" shadowBlur={5} shadowOpacity={0.3} />
+                        <Circle y={-14} radius={8} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} />
+                        <Circle y={-14} x={-2} radius={2} fill="white" opacity={0.5} />
+                    </Group>
+                    ) : (
+                    <Group>
+                        {/* Bot: Humanoid/Pawn Shape - Square Head (Robotic) */}
+                        {/* Body (Same as Player) */}
+                        <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowColor="black" shadowBlur={5} shadowOpacity={0.3} />
+                        
+                        {/* Head (Square) */}
+                        <Rect x={-7} y={-21} width={14} height={14} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} cornerRadius={3} />
+                        
+                        {/* Visor/Eye */}
+                        <Rect x={-4} y={-16} width={8} height={4} fill="#0f172a" opacity={0.8} cornerRadius={1} />
+                        <Rect x={-2} y={-15} width={4} height={2} fill="#ef4444" shadowColor="#ef4444" shadowBlur={4} />
+                    </Group>
+                    )}
+                </Group>
+            </Group>
 
             {isPlayer && (
               <Ellipse y={0} radiusX={16} radiusY={10} stroke="white" strokeWidth={1} opacity={0.6} dash={[4, 4]} />
             )}
             
-            {/* Popups */}
+            {/* Popups (Dynamic, NOT Cached) */}
             {coinPopups.map(p => (
               <CoinPopup key={p.id} amount={p.amount} y={-35} />
             ))}

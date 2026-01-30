@@ -8,47 +8,38 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '1.1',
     title: 'Simulation 1.1: Expansion',
-    description: 'Objective: Secure the 3 highlighted sectors.\n\nThe navigation system needs calibration. Capture the marked adjacent sectors to establish a perimeter.',
+    description: 'Objective: Secure 3 sectors.\n\nThe navigation system needs calibration. Capture adjacent sectors to establish a perimeter.',
     
     mapConfig: {
       size: 5, 
       type: 'fixed',
       generateWalls: false,
       customLayout: [
-          // Player Start
+          // Player Start (L1)
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
-          // 3 Specific Targets (L0)
+          // Neighbors (L0) - Playable Area
           { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
 
-          // --- VOID PERIMETER (TIGHT SEAL) ---
-          
-          // Ring 1 (Immediate Neighbors of Playable Area)
-          { q: -1, r: 0, structureType: 'VOID', revealed: true },
-          { q: -1, r: 1, structureType: 'VOID', revealed: true },
-          { q: 0, r: -1, structureType: 'VOID', revealed: true },
+          // --- VOID PERIMETER (Ring 2 - Distance 2 from Center) ---
+          // Seals the 7-hex cluster perfectly
+          { q: 0, r: -2, structureType: 'VOID', revealed: true },
+          { q: 1, r: -2, structureType: 'VOID', revealed: true },
+          { q: 2, r: -2, structureType: 'VOID', revealed: true },
           { q: 2, r: -1, structureType: 'VOID', revealed: true },
           { q: 2, r: 0, structureType: 'VOID', revealed: true },
           { q: 1, r: 1, structureType: 'VOID', revealed: true },
+          { q: 0, r: 2, structureType: 'VOID', revealed: true },
           { q: -1, r: 2, structureType: 'VOID', revealed: true },
-          
-          // Added to close gaps:
-          { q: 1, r: -2, structureType: 'VOID', revealed: true }, 
-          { q: 2, r: -2, structureType: 'VOID', revealed: true }, 
-          { q: 0, r: 2, structureType: 'VOID', revealed: true },  
-
-          // Ring 2 (Outer Visual Buffer for "Floating Island" look)
-          { q: -2, r: 0, structureType: 'VOID', revealed: true },
-          { q: -2, r: 1, structureType: 'VOID', revealed: true },
           { q: -2, r: 2, structureType: 'VOID', revealed: true },
+          { q: -2, r: 1, structureType: 'VOID', revealed: true },
+          { q: -2, r: 0, structureType: 'VOID', revealed: true },
           { q: -1, r: -1, structureType: 'VOID', revealed: true },
-          { q: 0, r: -2, structureType: 'VOID', revealed: true },
-          { q: 3, r: -1, structureType: 'VOID', revealed: true },
-          { q: 3, r: -2, structureType: 'VOID', revealed: true },
-          { q: 2, r: 1, structureType: 'VOID', revealed: true },
-          { q: 1, r: 2, structureType: 'VOID', revealed: true },
       ]
     },
 
@@ -62,15 +53,10 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     hooks: {
       checkWinCondition: (state) => {
-        // Win Condition: Player must own the 3 specific target hexes
-        const targets = [
-            getHexKey(1, -1),
-            getHexKey(1, 0),
-            getHexKey(0, 1)
-        ];
-        
-        const allOwned = targets.every(k => state.grid[k]?.ownerId === state.player.id);
-        return allOwned;
+        // Win Condition: Player must own 4 hexes total (1 Start + 3 Captured)
+        // This allows capturing ANY 3 neighbors instead of specific ones.
+        const ownedCount = Object.values(state.grid).filter(h => h.ownerId === state.player.id).length;
+        return ownedCount >= 4;
       }
     }
   },
@@ -225,7 +211,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           // 3. SIDE DEBRIS (L0 - Neutral)
           { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true }, // Top Row
           { q: 2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 3, r: -1, structureType: 'VOID', revealed: true }, // Replaced with VOID as requested
+          { q: 3, r: -1, structureType: 'VOID', revealed: true }, // Void Hole
 
           { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true }, // Bottom Row
           { q: 2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
@@ -239,35 +225,38 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
 
-          // --- VOID BOUNDARIES (TIGHT SEAL) ---
+          // --- VOID BOUNDARIES (COMPREHENSIVE SEAL) ---
           
-          // Top Row Walls (r = -2)
-          { q: -1, r: -2, structureType: 'VOID', revealed: true },
+          // Left Cap (Expanded)
+          { q: -2, r: -1, structureType: 'VOID', revealed: true }, // Top Left Corner
+          { q: -2, r: 0, structureType: 'VOID', revealed: true },
+          { q: -2, r: 1, structureType: 'VOID', revealed: true },
+          { q: -1, r: 1, structureType: 'VOID', revealed: true },
+          { q: -1, r: 2, structureType: 'VOID', revealed: true }, // Bottom Left Seal (Fixes Gap)
+          { q: -1, r: -1, structureType: 'VOID', revealed: true },
+          
+          // Top Edge
           { q: 0, r: -2, structureType: 'VOID', revealed: true },
           { q: 1, r: -2, structureType: 'VOID', revealed: true },
           { q: 2, r: -2, structureType: 'VOID', revealed: true },
           { q: 3, r: -2, structureType: 'VOID', revealed: true },
-          { q: 4, r: -2, structureType: 'VOID', revealed: true },
+          { q: 4, r: -2, structureType: 'VOID', revealed: true }, // Top Right Corner
+          { q: 4, r: -1, structureType: 'VOID', revealed: true },
 
-          // Bottom Row Walls (r = 2)
-          { q: -1, r: 2, structureType: 'VOID', revealed: true },
+          // Bottom Edge
           { q: 0, r: 2, structureType: 'VOID', revealed: true },
           { q: 1, r: 2, structureType: 'VOID', revealed: true },
           { q: 2, r: 2, structureType: 'VOID', revealed: true },
           { q: 3, r: 2, structureType: 'VOID', revealed: true },
-          { q: 4, r: 2, structureType: 'VOID', revealed: true },
+          { q: 4, r: 2, structureType: 'VOID', revealed: true }, // Bottom Right Corner
+          { q: 4, r: 1, structureType: 'VOID', revealed: true },
 
-          // Right Cap
-          { q: 5, r: -1, structureType: 'VOID', revealed: true },
+          // Right Cap (Expanded)
           { q: 5, r: 0, structureType: 'VOID', revealed: true },
+          { q: 5, r: -1, structureType: 'VOID', revealed: true },
           { q: 5, r: 1, structureType: 'VOID', revealed: true },
-          
-          // Left Cap
-          { q: -1, r: -1, structureType: 'VOID', revealed: true },
-          { q: -1, r: 1, structureType: 'VOID', revealed: true },
-          { q: -2, r: 0, structureType: 'VOID', revealed: true },
-          { q: -2, r: 1, structureType: 'VOID', revealed: true }, // Corner fill
-          { q: -2, r: -1, structureType: 'VOID', revealed: true }, // Corner fill
+          { q: 5, r: -2, structureType: 'VOID', revealed: true }, // Cap Padding
+          { q: 5, r: 2, structureType: 'VOID', revealed: true },  // Cap Padding
       ]
     },
 

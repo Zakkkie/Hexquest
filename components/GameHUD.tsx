@@ -186,9 +186,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   // Calculate Owned Sectors for Tutorial 1.1
   const ownedCount = useMemo(() => {
     if (!grid || !player || !isLevel1_1) return 0;
-    // Count specific target hexes for 1.1
-    const targets = [getHexKey(1, -1), getHexKey(1, 0), getHexKey(0, 1)];
-    return targets.filter(k => grid[k]?.ownerId === player.id).length;
+    // Count ANY owned hex excluding the start position (0,0) to track "Captures"
+    const allOwned = Object.values(grid).filter((h: Hex) => h.ownerId === player.id);
+    const startHexId = getHexKey(0,0);
+    // Return count minus the starting hex (assuming it's owned)
+    return Math.max(0, allOwned.filter((h: Hex) => h.id !== startHexId).length);
   }, [grid, player, isLevel1_1]);
 
   // Calculate Supports for Tutorial 1.3

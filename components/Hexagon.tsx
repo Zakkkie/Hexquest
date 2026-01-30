@@ -206,7 +206,10 @@ const generateIntegritySegments = (durability: number, max: number, size: number
 
 const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation, playerRank, isOccupied, isSelected, isPendingConfirm, pendingCost, onHexClick, onHover, isTutorialTarget, tutorialHighlightColor = 'blue', isMissingSupport, isObjective, isNeighbor }) => {
   const groupRef = useRef<Konva.Group>(null);
-  const staticGroupRef = useRef<Konva.Group>(null);
+  
+  // STATIC GEOMETRY REF (For Caching)
+  const cachedGeometryRef = useRef<Konva.Group>(null);
+  
   const integrityRef = useRef<Konva.Group>(null);
   const progressShapeRef = useRef<Konva.Shape>(null);
   const selectionRef = useRef<Konva.Path>(null);
@@ -368,22 +371,37 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       return () => { anim.stop(); };
   }, [integrityVisuals?.isCritical]);
 
+  // --- PERFORMANCE: CACHE STATIC GEOMETRY ---
+  useEffect(() => {
+    const node = cachedGeometryRef.current;
+    if (node && !isExploding) {
+        // Cache the static parts (faces, top, void spikes) to a bitmap
+        // This avoids calculating paths on every render cycle
+        node.cache({
+            pixelRatio: window.devicePixelRatio || 2, // High quality
+            offset: 20 // Padding for shadows/strokes
+        });
+    } else if (node) {
+        node.clearCache();
+    }
+  }, [
+      // Only re-cache when physical properties change
+      hex.maxLevel, 
+      hex.structureType, 
+      hex.durability, 
+      rotation,
+      isExploding, 
+      isRankLocked,
+      isPendingConfirm, // Shadow change
+      theme
+  ]);
+
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (showVoid || isExploding) return;
     if ('button' in e.evt && e.evt.button !== 0) return; 
     e.cancelBubble = true;
     onHexClick(hex.q, hex.r);
   };
-
-  useEffect(() => {
-    const node = staticGroupRef.current;
-    if (node && !isExploding && !integrityVisuals?.isCritical) {
-        node.clearCache();
-        node.cache({ pixelRatio: 1 }); 
-    } else if (node) {
-        node.clearCache(); 
-    }
-  }, [hex.maxLevel, showVoid, hex.durability, rotation, isExploding, integrityVisuals?.isCritical, isRankLocked]);
 
   if (isExploding) {
       return (
@@ -395,50 +413,125 @@ const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation,
       );
   }
 
-  if (showVoid) {
-      return (
-        <Group x={x} y={y}>
-            <Path data={voidPaths.outer} fillLinearGradientStartPoint={{x: -HEX_SIZE, y: -HEX_SIZE}} fillLinearGradientEndPoint={{x: HEX_SIZE, y: HEX_SIZE}} fillLinearGradientColorStops={[0, '#000000', 0.5, '#0f172a', 1, '#1e1b4b']} stroke="#1e293b" strokeWidth={1} shadowColor="#000" shadowBlur={10} shadowOpacity={0.8} perfectDrawEnabled={false} />
-            <Group>
-                {voidSpikes.map((spike, i) => (
-                    <React.Fragment key={i}>
-                        <Path data={spike.leftFace} fill={spike.leftColor} stroke={spike.leftColor} strokeWidth={0.5} />
-                        <Path data={spike.rightFace} fill={spike.rightColor} stroke={spike.rightColor} strokeWidth={0.5} />
-                        <Path data={spike.highlightPath} stroke="#334155" strokeWidth={0.5} opacity={0.5} />
-                    </React.Fragment>
-                ))}
-            </Group>
-            <Path data={voidPaths.outer} stroke="#000" strokeWidth={3} opacity={0.5} perfectDrawEnabled={false} />
-        </Group>
-      );
-  }
-
   return (
     <Group ref={groupRef} x={x} y={y} onClick={handleClick} onTap={handleClick} onMouseEnter={() => onHover(hex.id)} onMouseLeave={() => onHover(null)} onTouchStart={() => onHover(hex.id)} onTouchEnd={() => onHover(null)} listening={true}>
-      <Group ref={staticGroupRef}>
-          {sortedFaces.map((face, i) => (
-              <Path key={i} data={`M ${face.points[0]} ${face.points[1]} L ${face.points[2]} ${face.points[3]} L ${face.points[4]} ${face.points[5]} L ${face.points[6]} ${face.points[7]} Z`} fill={sideColor} stroke={sideColor} strokeWidth={1} closed={true} perfectDrawEnabled={false} />
-          ))}
-          <Path data={topFacePath} fillLinearGradientStartPoint={{x: -HEX_SIZE, y: -HEX_SIZE}} fillLinearGradientEndPoint={{x: HEX_SIZE, y: HEX_SIZE}} fillLinearGradientColorStops={[0, theme.light, 0.5, theme.main, 1, theme.dark]} stroke={strokeColor} strokeWidth={1} perfectDrawEnabled={false} shadowColor={isPendingConfirm ? "#f59e0b" : "black"} shadowBlur={isPendingConfirm ? 20 : 10} shadowOpacity={0.5} shadowOffset={{x: 0, y: 10}} />
-           {isRankLocked && (
-            <Group listening={false}>
-              <Path data={topFacePath} fill="#000000" opacity={0.6} />
-              <Line points={[topPoints[0], topPoints[1], topPoints[6], topPoints[7]]} stroke="#f59e0b" strokeWidth={2} opacity={0.3} listening={false} />
-              <Line points={[topPoints[2], topPoints[3], topPoints[8], topPoints[9]]} stroke="#f59e0b" strokeWidth={2} opacity={0.3} listening={false} />
-              <Line points={[topPoints[4], topPoints[5], topPoints[10], topPoints[11]]} stroke="#f59e0b" strokeWidth={2} opacity={0.3} listening={false} />
-              <Path data={topFacePath} stroke="#f59e0b" strokeWidth={2} dash={[4, 4]} opacity={0.8} shadowColor="#f59e0b" shadowBlur={5} />
+      
+      {/* 
+          STATIC CACHED GROUP 
+          Contains strictly geometry that doesn't change every frame (e.g. selection or hover)
+      */}
+      <Group ref={cachedGeometryRef}>
+          {showVoid ? (
+            <Group>
+                <Path data={voidPaths.outer} fillLinearGradientStartPoint={{x: -HEX_SIZE, y: -HEX_SIZE}} fillLinearGradientEndPoint={{x: HEX_SIZE, y: HEX_SIZE}} fillLinearGradientColorStops={[0, '#000000', 0.5, '#0f172a', 1, '#1e1b4b']} stroke="#1e293b" strokeWidth={1} shadowColor="#000" shadowBlur={10} shadowOpacity={0.8} perfectDrawEnabled={false} />
+                <Group>
+                    {voidSpikes.map((spike, i) => (
+                        <React.Fragment key={i}>
+                            <Path data={spike.leftFace} fill={spike.leftColor} stroke={spike.leftColor} strokeWidth={0.5} />
+                            <Path data={spike.rightFace} fill={spike.rightColor} stroke={spike.rightColor} strokeWidth={0.5} />
+                            <Path data={spike.highlightPath} stroke="#334155" strokeWidth={0.5} opacity={0.5} />
+                        </React.Fragment>
+                    ))}
+                </Group>
+                <Path data={voidPaths.outer} stroke="#000" strokeWidth={3} opacity={0.5} perfectDrawEnabled={false} />
             </Group>
+          ) : (
+            <Group>
+                {sortedFaces.map((face, i) => (
+                    <Path key={i} data={`M ${face.points[0]} ${face.points[1]} L ${face.points[2]} ${face.points[3]} L ${face.points[4]} ${face.points[5]} L ${face.points[6]} ${face.points[7]} Z`} fill={sideColor} stroke={sideColor} strokeWidth={1} closed={true} perfectDrawEnabled={false} />
+                ))}
+                <Path data={topFacePath} fillLinearGradientStartPoint={{x: -HEX_SIZE, y: -HEX_SIZE}} fillLinearGradientEndPoint={{x: HEX_SIZE, y: HEX_SIZE}} fillLinearGradientColorStops={[0, theme.light, 0.5, theme.main, 1, theme.dark]} stroke={strokeColor} strokeWidth={1} perfectDrawEnabled={false} shadowColor={isPendingConfirm ? "#f59e0b" : "black"} shadowBlur={isPendingConfirm ? 20 : 10} shadowOpacity={0.5} shadowOffset={{x: 0, y: 10}} />
+                
+                {/* 
+                    EDGE CHIPS & SCUFFS (Procedural "Worn" Look) 
+                    Replaces random noise with edge-aligned polygons
+                */}
+                <Shape 
+                    sceneFunc={(ctx, shape) => {
+                        const seed = Math.abs((hex.q * 99991) ^ (hex.r * 11119));
+                        const rng = (offset: number) => seededRandom(seed + offset);
+                        
+                        // Calculate Corners locally
+                        const corners = [];
+                        for(let i=0; i<6; i++) {
+                            const angle_deg = 60 * i + 30;
+                            const angle_rad = (angle_deg * Math.PI) / 180 + (rotation * Math.PI) / 180;
+                            corners.push({
+                                x: HEX_SIZE * Math.cos(angle_rad),
+                                y: offsetY + HEX_SIZE * Math.sin(angle_rad) * 0.8
+                            });
+                        }
+
+                        // Iterate Edges
+                        for(let i=0; i<6; i++) {
+                            // 40% Chance for a chip on this edge
+                            if (rng(i) > 0.6) {
+                                const A = corners[i];
+                                const B = corners[(i+1)%6];
+                                
+                                // Position along edge (0.2 to 0.8)
+                                const t = 0.2 + rng(i + 10) * 0.6; 
+                                const px = A.x + (B.x - A.x) * t;
+                                const py = A.y + (B.y - A.y) * t;
+                                
+                                // Chip Dimensions
+                                const chipW = 2 + rng(i+20) * 4;
+                                const chipD = 1 + rng(i+30) * 2;
+                                
+                                // Vector towards center (simplified)
+                                const cx = px * 0.8; 
+                                const cy = offsetY + (py - offsetY) * 0.8;
+                                const dx = cx - px;
+                                const dy = cy - py;
+                                const len = Math.sqrt(dx*dx + dy*dy);
+                                const nx = dx / len;
+                                const ny = dy / len;
+
+                                // Draw Chip Polygon
+                                ctx.beginPath();
+                                ctx.moveTo(px - (B.x-A.x)/HEX_SIZE * chipW, py - (B.y-A.y)/HEX_SIZE * chipW);
+                                ctx.lineTo(px + nx * chipD, py + ny * chipD); // Tip pointing in
+                                ctx.lineTo(px + (B.x-A.x)/HEX_SIZE * chipW, py + (B.y-A.y)/HEX_SIZE * chipW);
+                                ctx.closePath();
+                                
+                                // Dark Fill (Gouge)
+                                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                                ctx.fill();
+                                
+                                // Light Stroke (Edge Catching Light)
+                                ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                                ctx.lineWidth = 0.5;
+                                ctx.stroke();
+                            }
+                        }
+                    }}
+                    listening={false}
+                />
+
+                {isRankLocked && (
+                    <Group listening={false}>
+                        <Path data={topFacePath} fill="#000000" opacity={0.6} />
+                        <Line points={[topPoints[0], topPoints[1], topPoints[6], topPoints[7]]} stroke="#f59e0b" strokeWidth={2} opacity={0.3} listening={false} />
+                        <Line points={[topPoints[2], topPoints[3], topPoints[8], topPoints[9]]} stroke="#f59e0b" strokeWidth={2} opacity={0.3} listening={false} />
+                        <Line points={[topPoints[4], topPoints[5], topPoints[10], topPoints[11]]} stroke="#f59e0b" strokeWidth={2} opacity={0.3} listening={false} />
+                        <Path data={topFacePath} stroke="#f59e0b" strokeWidth={2} dash={[4, 4]} opacity={0.8} shadowColor="#f59e0b" shadowBlur={5} />
+                    </Group>
+                )}
+            </Group>
+          )}
+          
+          {/* Integrity Visuals are also part of static geometry until they change */}
+          {integrityVisuals && (
+              <Group ref={integrityRef}>
+                  {integrityVisuals.segments.map((seg, i) => (
+                      <Line key={`seg-${i}`} points={seg.points} stroke={seg.color} strokeWidth={seg.width} lineCap="round" shadowColor={seg.shadowColor || 'black'} shadowBlur={seg.shadowBlur} perfectDrawEnabled={false} />
+                  ))}
+              </Group>
           )}
       </Group>
 
-      {integrityVisuals && (
-          <Group ref={integrityRef}>
-              {integrityVisuals.segments.map((seg, i) => (
-                  <Line key={`seg-${i}`} points={seg.points} stroke={seg.color} strokeWidth={seg.width} lineCap="round" shadowColor={seg.shadowColor || 'black'} shadowBlur={seg.shadowBlur} perfectDrawEnabled={false} />
-              ))}
-          </Group>
-      )}
-
+      {/* DYNAMIC OVERLAYS (NOT CACHED) */}
+      
       {isObjective && (
           <Group ref={objectiveRef} x={0} y={offsetY} listening={false}>
               <Circle radius={25} stroke="#ef4444" strokeWidth={2} opacity={0.6} scaleY={0.6} shadowColor="#ef4444" shadowBlur={15} />
