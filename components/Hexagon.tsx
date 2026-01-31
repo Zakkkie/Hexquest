@@ -580,5 +580,25 @@ export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, ro
   );
 }, (prev, next) => {
     // VISUAL COMPARATOR (Used by React.memo on HexagonVisual)
+    if (prev.hex.id !== next.hex.id) return false;
     if (prev.hex.currentLevel !== next.hex.currentLevel) return false;
-    if (prev.hex.max
+    if (prev.hex.maxLevel !== next.hex.maxLevel) return false;
+    if (prev.hex.structureType !== next.hex.structureType) return false;
+    if (prev.hex.durability !== next.hex.durability) return false;
+    if (prev.hex.progress !== next.hex.progress) return false;
+    if (prev.hex.ownerId !== next.hex.ownerId) return false;
+    
+    if (prev.rotation !== next.rotation) return false;
+    if (prev.playerRank !== next.playerRank) return false;
+    if (prev.isOccupied !== next.isOccupied) return false;
+    if (prev.isSelected !== next.isSelected) return false;
+    if (prev.isPendingConfirm !== next.isPendingConfirm) return false;
+    if (prev.pendingCost !== next.pendingCost) return false;
+    
+    if (prev.isTutorialTarget !== next.isTutorialTarget) return false;
+    if (prev.tutorialHighlightColor !== next.tutorialHighlightColor) return false;
+    if (prev.isMissingSupport !== next.isMissingSupport) return false;
+    if (prev.isObjective !== next.isObjective) return false;
+    
+    return true;
+});

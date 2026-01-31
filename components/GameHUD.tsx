@@ -7,6 +7,8 @@ import { EntityState, Hex } from '../types.ts';
 import HexButton from './HexButton.tsx';
 import { TEXT } from '../services/i18n.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
+import { Stage, Layer, Group as KonvaGroup } from 'react-konva';
+import { HexagonVisual } from './Hexagon.tsx';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, TrendingUp, ChevronUp, MapPin,
@@ -723,37 +725,63 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       </div>
                   </div>
 
-                  {/* Legend (Only for 1.2) - ANIMATED VISUAL COMPARISON */}
+                  {/* Legend (Only for 1.2) - ANIMATED VISUAL COMPARISON USING REAL GAME COMPONENTS */}
                   {isLevel1_2 && (
                       <div className="grid grid-cols-2 gap-4">
                           {/* Safe Hex */}
                           <div className="bg-slate-950/50 rounded-xl p-4 border border-blue-900/50 flex flex-col items-center gap-3">
-                              <div className="relative w-16 h-16 flex items-center justify-center">
-                                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                                      <path d="M50 5 L93 27 L93 73 L50 95 L7 73 L7 27 Z" fill="rgba(30, 58, 138, 0.5)" stroke="#60a5fa" strokeWidth="3" />
-                                  </svg>
-                                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]"></div>
-                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]"></div>
-                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]"></div>
-                                  </div>
+                              <div className="relative w-24 h-24 flex items-center justify-center">
+                                 <Stage width={100} height={100}>
+                                    <Layer>
+                                       <KonvaGroup x={50} y={55}>
+                                           <HexagonVisual 
+                                              hex={{ 
+                                                  id: 'demo-safe', q:0, r:0, 
+                                                  maxLevel:1, currentLevel:1, progress:0, revealed:true, 
+                                                  durability:3, structureType: undefined 
+                                              } as any}
+                                              rotation={0}
+                                              playerRank={5}
+                                              isOccupied={false}
+                                              isSelected={false}
+                                              isPendingConfirm={false}
+                                              pendingCost={null}
+                                              onHexClick={() => {}}
+                                              onHover={() => {}}
+                                           />
+                                       </KonvaGroup>
+                                    </Layer>
+                                 </Stage>
                               </div>
                               <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">{t.TUT_1_2_LEGEND_SAFE}</span>
                           </div>
 
-                          {/* Critical Hex (Animated) */}
-                          <div className="bg-red-950/20 rounded-xl p-4 border border-red-900/50 flex flex-col items-center gap-3 relative overflow-hidden">
-                              <div className="relative w-16 h-16 flex items-center justify-center animate-[shake_0.5s_ease-in-out_infinite]">
-                                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-                                      <path d="M50 5 L93 27 L93 73 L50 95 L7 73 L7 27 Z" fill="rgba(69, 10, 10, 0.5)" stroke="#ef4444" strokeWidth="3" strokeDasharray="6 4" className="animate-pulse" />
-                                      {/* Cracks */}
-                                      <path d="M50 50 L75 25 M50 50 L20 60 M50 50 L50 80" stroke="#000" strokeWidth="2" opacity="0.6" />
-                                  </svg>
-                                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_#ef4444] animate-ping"></div>
-                                  </div>
+                          {/* Critical Hex */}
+                          <div className="bg-red-950/20 rounded-xl p-4 border border-red-900/50 flex flex-col items-center gap-3">
+                              <div className="relative w-24 h-24 flex items-center justify-center">
+                                 <Stage width={100} height={100}>
+                                    <Layer>
+                                       <KonvaGroup x={50} y={55}>
+                                           <HexagonVisual 
+                                              hex={{ 
+                                                  id: 'demo-crit', q:0, r:0, 
+                                                  maxLevel:1, currentLevel:1, progress:0, revealed:true, 
+                                                  durability:1, structureType: undefined 
+                                              } as any}
+                                              rotation={0}
+                                              playerRank={5}
+                                              isOccupied={false}
+                                              isSelected={false}
+                                              isPendingConfirm={false}
+                                              pendingCost={null}
+                                              onHexClick={() => {}}
+                                              onHover={() => {}}
+                                           />
+                                       </KonvaGroup>
+                                    </Layer>
+                                 </Stage>
                               </div>
-                              <span className="text-xs font-bold text-red-400 uppercase tracking-wider text-center">{t.TUT_1_2_LEGEND_RISK}</span>
+                              <span className="text-xs font-bold text-red-400 uppercase tracking-wider">{t.TUT_1_2_LEGEND_RISK}</span>
                           </div>
                       </div>
                   )}
