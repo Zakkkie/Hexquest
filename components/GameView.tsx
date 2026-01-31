@@ -4,7 +4,7 @@ import { Stage, Layer, Line, Group, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { getHexKey, getNeighbors, hexToPixel, pixelToHex, getCoordinatesFromKey } from '../services/hexUtils.ts';
-import { HexagonVisual as Hexagon } from './Hexagon.tsx'; 
+import Hexagon from './Hexagon.tsx'; 
 import Unit from './Unit.tsx';
 import Background from './Background.tsx';
 import GameHUD from './GameHUD.tsx';

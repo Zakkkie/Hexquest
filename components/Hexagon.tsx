@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { Group, Path, Shape, Circle, Text, Line, Arc } from 'react-konva';
 import Konva from 'konva';
+import { useShallow } from 'zustand/react/shallow';
 import { Hex } from '../types.ts';
 import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { getSecondsToGrow, hexToPixel } from '../services/hexUtils.ts';
@@ -204,6 +205,7 @@ const generateIntegritySegments = (durability: number, max: number, size: number
     return { segments, isCritical: true };
 };
 
+// VISUAL COMPONENT (Dumb, receives raw hex data)
 export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, rotation, playerRank, isOccupied, isSelected, isPendingConfirm, pendingCost, onHexClick, onHover, isTutorialTarget, tutorialHighlightColor = 'blue', isMissingSupport, isObjective, isNeighbor }) => {
   const groupRef = useRef<Konva.Group>(null);
   
@@ -375,24 +377,21 @@ export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, ro
   useEffect(() => {
     const node = cachedGeometryRef.current;
     if (node && !isExploding) {
-        // Cache the static parts (faces, top, void spikes) to a bitmap
-        // This avoids calculating paths on every render cycle
         node.cache({
-            pixelRatio: window.devicePixelRatio || 2, // High quality
-            offset: 20 // Padding for shadows/strokes
+            pixelRatio: window.devicePixelRatio || 2, 
+            offset: 20 
         });
     } else if (node) {
         node.clearCache();
     }
   }, [
-      // Only re-cache when physical properties change
       hex.maxLevel, 
       hex.structureType, 
       hex.durability, 
       rotation,
       isExploding, 
       isRankLocked,
-      isPendingConfirm, // Shadow change
+      isPendingConfirm, 
       theme
   ]);
 
@@ -416,10 +415,6 @@ export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, ro
   return (
     <Group ref={groupRef} x={x} y={y} onClick={handleClick} onTap={handleClick} onMouseEnter={() => onHover(hex.id)} onMouseLeave={() => onHover(null)} onTouchStart={() => onHover(hex.id)} onTouchEnd={() => onHover(null)} listening={true}>
       
-      {/* 
-          STATIC CACHED GROUP 
-          Contains strictly geometry that doesn't change every frame (e.g. selection or hover)
-      */}
       <Group ref={cachedGeometryRef}>
           {showVoid ? (
             <Group>
@@ -442,16 +437,10 @@ export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, ro
                 ))}
                 <Path data={topFacePath} fillLinearGradientStartPoint={{x: -HEX_SIZE, y: -HEX_SIZE}} fillLinearGradientEndPoint={{x: HEX_SIZE, y: HEX_SIZE}} fillLinearGradientColorStops={[0, theme.light, 0.5, theme.main, 1, theme.dark]} stroke={strokeColor} strokeWidth={1} perfectDrawEnabled={false} shadowColor={isPendingConfirm ? "#f59e0b" : "black"} shadowBlur={isPendingConfirm ? 20 : 10} shadowOpacity={0.5} shadowOffset={{x: 0, y: 10}} />
                 
-                {/* 
-                    EDGE CHIPS & SCUFFS (Procedural "Worn" Look) 
-                    Replaces random noise with edge-aligned polygons
-                */}
                 <Shape 
                     sceneFunc={(ctx, shape) => {
                         const seed = Math.abs((hex.q * 99991) ^ (hex.r * 11119));
                         const rng = (offset: number) => seededRandom(seed + offset);
-                        
-                        // Calculate Corners locally
                         const corners = [];
                         for(let i=0; i<6; i++) {
                             const angle_deg = 60 * i + 30;
@@ -461,24 +450,15 @@ export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, ro
                                 y: offsetY + HEX_SIZE * Math.sin(angle_rad) * 0.8
                             });
                         }
-
-                        // Iterate Edges
                         for(let i=0; i<6; i++) {
-                            // 40% Chance for a chip on this edge
                             if (rng(i) > 0.6) {
                                 const A = corners[i];
                                 const B = corners[(i+1)%6];
-                                
-                                // Position along edge (0.2 to 0.8)
                                 const t = 0.2 + rng(i + 10) * 0.6; 
                                 const px = A.x + (B.x - A.x) * t;
                                 const py = A.y + (B.y - A.y) * t;
-                                
-                                // Chip Dimensions
                                 const chipW = 2 + rng(i+20) * 4;
                                 const chipD = 1 + rng(i+30) * 2;
-                                
-                                // Vector towards center (simplified)
                                 const cx = px * 0.8; 
                                 const cy = offsetY + (py - offsetY) * 0.8;
                                 const dx = cx - px;
@@ -486,19 +466,13 @@ export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, ro
                                 const len = Math.sqrt(dx*dx + dy*dy);
                                 const nx = dx / len;
                                 const ny = dy / len;
-
-                                // Draw Chip Polygon
                                 ctx.beginPath();
                                 ctx.moveTo(px - (B.x-A.x)/HEX_SIZE * chipW, py - (B.y-A.y)/HEX_SIZE * chipW);
-                                ctx.lineTo(px + nx * chipD, py + ny * chipD); // Tip pointing in
+                                ctx.lineTo(px + nx * chipD, py + ny * chipD); 
                                 ctx.lineTo(px + (B.x-A.x)/HEX_SIZE * chipW, py + (B.y-A.y)/HEX_SIZE * chipW);
                                 ctx.closePath();
-                                
-                                // Dark Fill (Gouge)
                                 ctx.fillStyle = 'rgba(0,0,0,0.3)';
                                 ctx.fill();
-                                
-                                // Light Stroke (Edge Catching Light)
                                 ctx.strokeStyle = 'rgba(255,255,255,0.15)';
                                 ctx.lineWidth = 0.5;
                                 ctx.stroke();
@@ -520,7 +494,6 @@ export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, ro
             </Group>
           )}
           
-          {/* Integrity Visuals are also part of static geometry until they change */}
           {integrityVisuals && (
               <Group ref={integrityRef}>
                   {integrityVisuals.segments.map((seg, i) => (
@@ -530,7 +503,7 @@ export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, ro
           )}
       </Group>
 
-      {/* DYNAMIC OVERLAYS (NOT CACHED) */}
+      {/* DYNAMIC OVERLAYS */}
       
       {isObjective && (
           <Group ref={objectiveRef} x={0} y={offsetY} listening={false}>
@@ -602,3 +575,35 @@ export const HexagonVisual: React.FC<HexagonVisualProps> = React.memo(({ hex, ro
     
     return true;
 });
+
+// SMART WRAPPER (Connected to Store)
+// This is the component used in the main Game Grid.
+interface SmartHexagonProps {
+  id: string;
+  rotation: number;
+  playerRank: number;
+  isOccupied: boolean;
+  isSelected: boolean;
+  isPendingConfirm: boolean;
+  pendingCost: number | null;
+  onHexClick: (q: number, r: number) => void;
+  onHover: (id: string | null) => void;
+  isTutorialTarget?: boolean;
+  tutorialHighlightColor?: 'blue' | 'amber' | 'cyan' | 'emerald';
+  isMissingSupport?: boolean;
+  isObjective?: boolean;
+  isNeighbor?: boolean;
+}
+
+const SmartHexagon: React.FC<SmartHexagonProps> = React.memo((props) => {
+  // ATOMIC SUBSCRIPTION: Only re-renders if THIS specific hex changes
+  const hex = useGameStore(
+    useShallow((state) => state.session?.grid[props.id])
+  );
+
+  if (!hex) return null;
+
+  return <HexagonVisual hex={hex} {...props} />;
+});
+
+export default SmartHexagon;
