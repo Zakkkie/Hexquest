@@ -5,8 +5,8 @@
 
 Compete against advanced **AI Sentinels**, manage a delicate balance of **Moves vs. Coins**, and master complex zoning rules to dominate the sector.
 
-> **v3.2 Update: The Collapse Protocol**
-> The world is no longer static. Low-level terrain degrades underfoot, and careless movement can lead to catastrophic structural failure.
+> **v3.3 Update: The Cycle Protocol**
+> Growth is no longer free. You must capture territory to fuel vertical expansion. Terrain stability remains critical.
 
 ---
 
@@ -14,28 +14,27 @@ Compete against advanced **AI Sentinels**, manage a delicate balance of **Moves 
 
 *   **Infinite Procedural World**: A living, breathing hex grid that expands as you explore.
 *   **Dynamic Terrain Destruction**: Level 1 sectors are unstable. Heavy traffic causes them to degrade, crack, and eventually collapse into the void.
-*   **Deep Economic Strategy**: Movement isn't free. Growth isn't guaranteed. Manage your **Credits** and **Moves** carefully.
-*   **Competitive AI ("The Survivor" V14)**: Autonomous bots that farm resources, plan expansions, and now react to collapsing terrain.
-*   **Procedural Audio Engine**: A custom-built, asset-free sound synthesizer using the Web Audio API for real-time sci-fi SFX.
+*   **The Cycle Economy**: A unique resource system where horizontal expansion (Acquisition) fuels vertical growth (Upgrades).
+*   **Competitive AI ("Survivor" V17)**: Autonomous bots that farm resources, plan expansions, and react to collapsing terrain.
+*   **Procedural Audio Engine**: A custom-built, asset-free sound synthesizer using the Web Audio API ("Nebula V2").
 *   **Visual Fidelity**: A 2.5D isometric view with neon-glass aesthetics, dynamic lighting, shake effects, and smooth React-Konva animations.
 
 ---
 
 ## ⚠️ Hazard Warning: Terrain Collapse
 
-The unstable nature of the simulation introduces a new threat:
+The unstable nature of the simulation introduces a physical threat:
 
 ### 1. Durability & Degradation
-*   **Fragile Foundation**: All **Level 1** hexes have limited structural integrity (Durability).
+*   **Fragile Foundation**: All **Level 1** hexes have limited structural integrity (6 Durability).
 *   **Wear & Tear**: Every time a unit (Player or Bot) steps **off** a Level 1 hex, its durability decreases.
 *   **Visual Indicators**: As durability drops, the hex will develop visible cracks and craters.
 
 ### 2. The Void & Shockwave Penalty
-*   **Collapse**: When durability reaches zero, the sector collapses instantly, turning into a **Void Crater** filled with spikes and rubble.
-*   **Irreversibility**: A Void hex is impassable and cannot be repaired. It is lost forever.
-*   **Shockwave Damage**: If you are the one to cause the final collapse, the resulting energy discharge hits your suit systems.
+*   **Collapse**: When durability reaches zero, the sector collapses instantly, turning into a **Void Crater**.
+*   **Irreversibility**: A Void hex is impassable and cannot be repaired.
+*   **Shockwave Damage**: If you trigger a collapse (by stepping off the last durability point), the energy discharge hits your suit systems.
     *   **PENALTY**: You immediately lose **1 Rank Level**.
-    *   *Strategy Tip*: Be careful not to be the "straw that breaks the camel's back". Let bots trigger the traps if possible.
 
 ---
 
@@ -45,45 +44,39 @@ Success in HexQuest requires understanding the laws that govern the simulation.
 
 ### 1. Movement & Propulsion
 *   **Basic Movement**: Moving to an adjacent hex costs **1 Move**.
-*   **Terrain Cost**: High-level hexes are harder to traverse. Moving into a **Level 5** hex costs **5 Moves**.
-*   **Emergency Propulsion**: If you lack Moves, you can burn **Credits** to move (Exchange Rate: **2 Credits = 1 Move**).
+*   **Terrain Cost**: High-level hexes are harder to traverse. Cost equals the **Hex Level** (for Level 2+).
+*   **Emergency Propulsion**: If you lack Moves, you can burn **Credits** to move.
+    *   **Exchange Rate**: **5 Credits = 1 Move**.
 *   *Warning*: Running out of both Moves and Credits leaves you stranded.
 
-### 2. Territorial Growth
-You expand by "growing" the hex you are standing on.
+### 2. The Growth Cycle (Points Economy)
+You cannot simply build a single tall tower. Expansion and Elevation are linked.
 
-*   **Acquisition (L0 → L1)**: Taking over a neutral sector is always allowed (provided you can afford the cost). This is how you claim territory and reset durability to max.
-*   **Vertical Expansion (Upgrading)**: Increasing a sector's level (e.g., L2 → L3) increases its value and your income, but requires adhering to strict zoning rules.
+*   **Acquisition (L0 → L1)**: Claiming a neutral sector generates **1 Upgrade Point**.
+*   **Elevation (L1 → L2+)**: Upgrading an owned sector consumes **1 Upgrade Point**.
+*   **Capacity**: You can only store a limited number of Upgrade Points at a time (determined by Difficulty).
+*   *Strategy*: You must oscillate between expanding wide (capturing L0) and building tall (spending points).
 
 ### 3. Structural Integrity Rules
-To prevent "towering" (building a single massive tower), the game enforces structural stability:
+To prevent unrealistic physics, the game enforces structural stability:
 
-*   **The Staircase Rule**: To upgrade a hex to **Level X**, you must have at least **2 neighbors** at **Level X-1** or higher.
-*   **The Valley Rule (Exception)**: If a hex is surrounded by **5 or more** neighbors of a strictly higher level, it lifts the support requirement.
+*   **The Staircase Rule**: To upgrade a hex to **Level L+1**, it must be supported by at least **2 neighbors** at exactly **Level L**.
+*   **The Valley Rule (Exception)**: If a hex is surrounded by **5 or more** neighbors of a strictly higher level, the support requirement is waived.
 
-### 4. The Cycle Lock (Anti-Spam)
-You cannot simply spam upgrades on a single hex to power-level.
-
-*   **The Queue**: The system tracks your last N upgrades. You cannot upgrade a hex that is currently in your "Recent Upgrades" queue.
-*   **Difficulty Scaling**:
-    *   **Cadet (Easy)**: Queue size of 1.
-    *   **Veteran (Medium)**: Queue size of 2.
-    *   **Elite (Hard)**: Queue size of 3. (Complex rotation required).
-
-### 5. Recovery & Farming
-If you are low on resources, you can perform a **Recovery** operation on any hex you own.
-*   Instead of upgrading the level, you harvest supplies.
-*   **Reward**: Grants **+1 Move** and a significant amount of **Credits**.
-*   *Strategy*: High-level hexes yield massive payouts but take longer to recover.
+### 4. Recovery & Farming
+If you are low on resources or need to stall, you can perform a **Recovery** operation on any hex you own.
+*   **Action**: Clicking the "Refresh" (Blue) button.
+*   **Reward**: Grants **+1 Move** and a significant amount of **Credits** based on the hex level.
+*   **Use Case**: Essential for generating the movement fuel needed to cross difficult terrain.
 
 ---
 
 ## 🤖 The AI: "Sentinel"
 
-The world is populated by AI bots running the **"Survivor V14"** logic engine.
+The world is populated by AI bots running the **"Survivor V17"** logic engine.
 
 *   **Behavior**: They prioritize survival and economic efficiency. They will establish "farms" and attempt to cut off your path.
-*   **Panic Mode**: If a bot gets trapped by Void Craters or obstacles, it triggers a "Panic" state, attempting desperate maneuvers to break free.
+*   **Panic Mode**: If a bot gets trapped by Void Craters, it triggers a "Panic" state, attempting desperate maneuvers to break free.
 
 ---
 
@@ -93,12 +86,11 @@ The world is populated by AI bots running the **"Survivor V14"** logic engine.
 | :--- | :--- |
 | **Move / Select** | `Left Click` on a Hex |
 | **Pan Camera** | `Left Click` + Drag background |
-| **Rotate Camera** | `Right Click` + Drag |
+| **Rotate Camera** | `Right Click` + Drag (or UI Buttons) |
 | **Zoom** | `Mouse Wheel` |
-| **Growth / Upgrade** | `Amber Button` (HUD) |
-| **Recover Supplies** | `Blue Button` (HUD) |
-| **Abort / Menu** | `Log Out` Icon (Top Right) |
-| **Mute Audio** | `Speaker` Icon (Top Left) |
+| **Upgrade (Amber)** | Improve Sector Level (Uses Point) |
+| **Recover (Blue)** | Harvest Resources (Gains Move/Credits) |
+| **Menu / Settings** | `Gear` Icon (Top Right) |
 
 ---
 
@@ -108,8 +100,8 @@ The world is populated by AI bots running the **"Survivor V14"** logic engine.
 *   **Graphics**: Konva (HTML5 Canvas) via `react-konva`
 *   **State Management**: Zustand
 *   **Build Tool**: Vite
-*   **Audio**: Web Audio API (Procedural)
+*   **Audio**: Web Audio API (Procedural FM Synthesis)
 
 ---
 
-*HexQuest Economy - v3.2*
+*HexQuest Economy - v3.3*
