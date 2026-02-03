@@ -88,38 +88,45 @@ interface Dictionary {
         // SKIRMISH BRIEFING
         SKIRMISH_OBJ: string;
         SKIRMISH_COND: string;
-        // TUTORIAL 1.1 SPECIFIC
+        
+        // --- CAMPAIGN SPECIFIC ---
         TUT_1_1_TASK: string;
         TUT_1_1_COST: string;
         TUT_1_1_REWARD: string;
         TUT_1_1_GUIDE: string;
-        // TUTORIAL 1.2 SPECIFIC
+        TUT_1_1_COUNTER: string; 
+        
         TUT_1_2_TASK: string;
         TUT_1_2_INTRO_TITLE: string;
         TUT_1_2_INTRO_DESC: string;
         TUT_1_2_LEGEND_SAFE: string;
         TUT_1_2_LEGEND_RISK: string;
-        // TUTORIAL 1.3 SPECIFIC
+        TUT_1_2_COUNTER: string; // Distance
+
         TUT_1_3_TASK: string;
         TUT_1_3_INTRO_TITLE: string;
         TUT_1_3_INTRO_DESC: string;
         TUT_1_3_REQ_LABEL: string;
         TUT_1_3_ERROR_STAIRCASE: string;
-        // TUTORIAL 1.4 SPECIFIC
+        TUT_1_3_COUNTER: string; // Supports
+
         TUT_1_4_TASK: string;
         TUT_1_4_INTRO_TITLE: string;
         TUT_1_4_INTRO_DESC: string;
-        TUT_1_4_COUNTER: string;
-        // TUTORIAL 1.5 SPECIFIC
+        TUT_1_4_COUNTER: string; // Center Level
+
         TUT_1_5_TASK: string;
         TUT_1_5_INTRO_TITLE: string;
         TUT_1_5_INTRO_DESC: string;
         TUT_1_5_TIMER_LABEL: string;
-        // TUTORIAL 1.6 SPECIFIC
+        TUT_1_5_COUNTER: string; // Coins
+
         TUT_1_6_TASK: string;
         TUT_1_6_INTRO_TITLE: string;
         TUT_1_6_INTRO_DESC: string;
         TUT_1_6_CYCLE_HINT: string;
+        TUT_1_6_COUNTER: string; // Race Level
+        TUT_1_6_RIVAL: string;
     };
     TOOLTIP: {
         CURRENT_LOC: string;
@@ -251,28 +258,34 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_1_COST: "Cost: 100 Coins",
             TUT_1_1_REWARD: "Yields: +5 Income/Tick",
             TUT_1_1_GUIDE: "Move to and CLAIM the 3 highlighted hexes.",
+            TUT_1_1_COUNTER: "CAPTURED SECTORS",
             TUT_1_2_TASK: "Reach the Pyramid Apex",
             TUT_1_2_INTRO_TITLE: "STRUCTURAL HAZARD WARNING",
             TUT_1_2_INTRO_DESC: "The terrain ahead is critically unstable. You must navigate a path to the extraction point.\n\nOnly step on STABLE sectors. Damaged sectors will collapse instantly under your weight.\n\nNOTE: Your Rank protects you from shockwaves. Don't let it reach 0.",
             TUT_1_2_LEGEND_SAFE: "Stable (3 HP)",
             TUT_1_2_LEGEND_RISK: "Critical (1 HP)",
+            TUT_1_2_COUNTER: "DISTANCE TO GOAL",
             TUT_1_3_TASK: "Build Foundation & Reach L2",
             TUT_1_3_INTRO_TITLE: "Construction Protocol: Verticality",
             TUT_1_3_INTRO_DESC: "You are isolated on a floating platform. The supports have collapsed.\n\nObjective: Rebuild the foundation (L1) around you, then upgrade ANY sector to Level 2.\n\nWARNING: Do not step into the Void.",
             TUT_1_3_REQ_LABEL: "L1 Supports Ready",
             TUT_1_3_ERROR_STAIRCASE: "UNSTABLE STRUCTURE! To build Level 2, you need 1 more neighbor at Level 1+.",
+            TUT_1_3_COUNTER: "SUPPORTS BUILT",
             TUT_1_4_TASK: "Reinforce The Bridge",
             TUT_1_4_INTRO_TITLE: "Protocol: Resource Cycle",
-            TUT_1_4_INTRO_DESC: "Objective: UPGRADE the 3 HIGHLIGHTED bridge sectors to Level 2.\n\nPROBLEM: 'Cycle Lock' prevents rapid upgrades, and the bridge lacks structural support.\n\nSOLUTION: Use the widened bridge area to build supporting structures, and capture Debris Fields (L0) to charge your Cycle.",
-            TUT_1_4_COUNTER: "Reinforced",
+            TUT_1_4_INTRO_DESC: "Objective: Upgrade Center to Level 3.\n\nPROBLEM: You have 0 Material.\n\nSOLUTION: Use the DIG action on surrounding mounds to harvest material, then build up the center.",
+            TUT_1_4_COUNTER: "CENTER LEVEL",
             TUT_1_5_TASK: "Deep Recovery Cycle",
             TUT_1_5_INTRO_TITLE: "Protocol: Rapid Extraction",
             TUT_1_5_INTRO_DESC: "CRITICAL: Life Support Failing.\n\nGoal: Accumulate 150 Coins in 60 Seconds.\n\nYou have minimal moves. You must exploit the 'Recovery' mechanic on high-level debris to generate movement fuel and credits.",
             TUT_1_5_TIMER_LABEL: "OXYGEN",
+            TUT_1_5_COUNTER: "COINS COLLECTED",
             TUT_1_6_TASK: "Reach Level 3",
             TUT_1_6_INTRO_TITLE: "Protocol: Cycle Lock",
-            TUT_1_6_INTRO_DESC: "Objective: Upgrade 1 hex to Level 3.\n\nCONSTRAINT: Queue Size = 1.\n\nPROBLEM: You cannot upgrade the same sector twice in a row.\n\nSOLUTION: Alternate upgrades between two different sectors (Pattern A -> B -> A) to clear the Cycle Queue.",
+            TUT_1_6_INTRO_DESC: "Objective: Reach Level 4 before the Rival.\n\nThe AI Rival 'Architect' is active. It knows how to dig and build.\n\nDon't let it beat you to the top.",
             TUT_1_6_CYCLE_HINT: "Cycle Locked! Upgrade another hex first.",
+            TUT_1_6_COUNTER: "RACE: MAX LEVEL",
+            TUT_1_6_RIVAL: "RIVAL",
         },
         TOOLTIP: {
             CURRENT_LOC: "Current Location",
@@ -398,32 +411,45 @@ export const TEXT: Record<Language, Dictionary> = {
             BTN_READY: "ПОНЯТНО",
             SKIRMISH_OBJ: "Свободная игра",
             SKIRMISH_COND: "Наберите ресурсы для победы",
+            
+            // --- CAMPAIGN SPECIFIC ---
             TUT_1_1_TASK: "Захватите 3 Сектора",
             TUT_1_1_COST: "Цена: 100 Мон.",
             TUT_1_1_REWARD: "Доход: +5/сек",
             TUT_1_1_GUIDE: "Идите на подсвеченные клетки для захвата.",
+            TUT_1_1_COUNTER: "ЗАХВАЧЕНО СЕКТОРОВ",
+            
             TUT_1_2_TASK: "Добраться до Вершины",
             TUT_1_2_INTRO_TITLE: "ОПАСНОСТЬ ОБРУШЕНИЯ",
             TUT_1_2_INTRO_DESC: "Земля нестабильна. Гексы 1-го уровня разрушаются, когда вы сходите с них.\n\nВысокий ранг служит вам БРОНЕЙ от ударных волн. Не дайте ему упасть до 0.",
             TUT_1_2_LEGEND_SAFE: "Надежно (3 HP)",
             TUT_1_2_LEGEND_RISK: "Опасно (1 HP)",
+            TUT_1_2_COUNTER: "ПУТЬ ДО ЦЕЛИ",
+
             TUT_1_3_TASK: "Построй Фундамент",
             TUT_1_3_INTRO_TITLE: "Правило: Опоры",
             TUT_1_3_INTRO_DESC: "Вы на острове.\n\nЦель: Поднимите любой сектор до 2 уровня.\n\nПРАВИЛО: Чтобы построить 2 этаж, нужно минимум 2 соседа 1 этажа (фундамент). Используйте выданные материалы.",
             TUT_1_3_REQ_LABEL: "Готовые опоры",
             TUT_1_3_ERROR_STAIRCASE: "ОПАСНО! Нужно больше соседей 1 уровня для опоры.",
+            TUT_1_3_COUNTER: "ОПОРЫ ГОТОВЫ",
+
             TUT_1_4_TASK: "Добыча Материалов",
             TUT_1_4_INTRO_TITLE: "Цикл Ресурсов",
-            TUT_1_4_INTRO_DESC: "У вас нет материалов для стройки.\n\nРешение: Используйте РАСКОПКИ (красная кнопка) на высоких холмах, чтобы добыть материал.",
-            TUT_1_4_COUNTER: "Укреплено",
+            TUT_1_4_INTRO_DESC: "У вас нет материалов.\n\nРешение: Используйте РАСКОПКИ (красная кнопка) на высоких холмах, чтобы добыть материал и достроить центр.",
+            TUT_1_4_COUNTER: "УРОВЕНЬ ЦЕНТРА",
+
             TUT_1_5_TASK: "Сбор Ресурсов",
             TUT_1_5_INTRO_TITLE: "Экстренная Ситуация",
             TUT_1_5_INTRO_DESC: "Кислород на исходе. Соберите 150 монет за 60 секунд.\n\nИспользуйте 'Восстановление' (синяя кнопка) на своих клетках, чтобы получить ресурсы.",
             TUT_1_5_TIMER_LABEL: "КИСЛОРОД",
+            TUT_1_5_COUNTER: "СОБРАНО МОНЕТ",
+
             TUT_1_6_TASK: "Достигнуть 3 Уровня",
-            TUT_1_6_INTRO_TITLE: "Блокировка Очереди",
-            TUT_1_6_INTRO_DESC: "Нельзя улучшать одну и ту же клетку дважды подряд.\n\nЧередуйте стройку между двумя клетками, чтобы сбросить блокировку.",
+            TUT_1_6_INTRO_TITLE: "Гонка",
+            TUT_1_6_INTRO_DESC: "Опередите соперника. Кто первый достигнет 4 уровня - тот победил.\n\nИИ умеет копать и строить.",
             TUT_1_6_CYCLE_HINT: "Заблокировано! Улучши другую клетку.",
+            TUT_1_6_COUNTER: "ГОНКА: МАКС УРОВЕНЬ",
+            TUT_1_6_RIVAL: "ВРАГ",
         },
         TOOLTIP: {
             CURRENT_LOC: "Вы здесь",

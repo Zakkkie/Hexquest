@@ -197,6 +197,7 @@ const GameView: React.FC = () => {
 
   const isLevel1_1 = activeLevelConfig?.id === '1.1';
   const isLevel1_2 = activeLevelConfig?.id === '1.2';
+  const isLevel1_3 = activeLevelConfig?.id === '1.3';
   const isLevel1_4 = activeLevelConfig?.id === '1.4';
 
   const [particles, setParticles] = useState<VisualParticle[]>([]);
@@ -535,7 +536,7 @@ const GameView: React.FC = () => {
          items.push({ 
              type: 'UNIT', 
              id: u.id, 
-             depth: sortY + 25, 
+             depth: sortY + 1, // Reduced offset to prevent floating appearance
              q: u.q, 
              r: u.r, 
              isPlayer: u.isPlayer,
@@ -651,21 +652,38 @@ const GameView: React.FC = () => {
                     // Check if neighbor
                     const isNeighbor = neighbors.some(n => n.q === item.q && n.r === item.r);
 
-                    if (isLevel1_1 && !isMoving && !isPlayerGrowing && hex && hex.maxLevel === 0 && !hex.ownerId && hex.structureType !== 'VOID') {
-                        if (isNeighbor) isTutorialTarget = true;
+                    if (!isMoving && !isPlayerGrowing && hex && hex.structureType !== 'VOID') {
+                        // Level 1.1: Highlight neighbors for capture
+                        if (isLevel1_1 && isNeighbor && hex.maxLevel === 0 && !hex.ownerId) {
+                            isTutorialTarget = true;
+                        }
+                        
+                        // Level 1.3: Highlight Center or Potential Supports
+                        if (isLevel1_3) {
+                            const isCenter = item.q === 0 && item.r === 0;
+                            // Target center to upgrade
+                            if (isCenter && hex.maxLevel < 2) {
+                                isTutorialTarget = true;
+                                highlightColor = 'amber';
+                            }
+                            // Or highlight supports if center needs them
+                            if (!isCenter && isNeighbor && hex.maxLevel < 1) {
+                                isTutorialTarget = true;
+                                highlightColor = 'blue';
+                            }
+                        }
+
+                        // Level 1.4: Highlight Mounds to Dig
+                        if (isLevel1_4) {
+                            if (isNeighbor && hex.maxLevel >= 2) {
+                                isTutorialTarget = true;
+                                highlightColor = 'cyan'; // Cyan for Dig hint
+                            }
+                        }
                     }
 
                     let isObjective = isLevel1_2 && hex && hex.structureType === 'CAPITAL';
                     
-                    if (isLevel1_4) {
-                        const isBridge = (item.q === 1 || item.q === 2 || item.q === 3) && item.r === 0;
-                        if (isBridge && hex && hex.maxLevel < 2) {
-                            isTutorialTarget = true;
-                            highlightColor = 'cyan';
-                        }
-                        if (item.q === 4 && item.r === 0) isObjective = true;
-                    }
-
                     return (
                         <Hexagon 
                             key={item.id} 
@@ -730,4 +748,3 @@ const GameView: React.FC = () => {
 };
 
 export default GameView;
-    

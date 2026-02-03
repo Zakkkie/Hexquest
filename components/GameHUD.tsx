@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { getHexKey, getNeighbors, getSecondsToGrow } from '../services/hexUtils.ts';
+import { getHexKey, getNeighbors, getSecondsToGrow, cubeDistance } from '../services/hexUtils.ts';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth.ts';
 import { EntityState, Hex } from '../types.ts';
 import HexButton from './HexButton.tsx';
@@ -68,6 +68,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const isMobile = deviceType === 'MOBILE';
 
   // Level Tutorial Flags
+  const isLevel1_1 = activeLevelConfig?.id === '1.1';
   const isLevel1_2 = activeLevelConfig?.id === '1.2';
   const isLevel1_3 = activeLevelConfig?.id === '1.3';
   const isLevel1_4 = activeLevelConfig?.id === '1.4';
@@ -168,6 +169,41 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       return "Upgrade Sector (Increase Level)";
   }, [isMoving, upgradeCondition]);
 
+  // --- Campaign Objective Metrics ---
+  const campaignMetrics = useMemo(() => {
+      if (!grid || !player) return null;
+      
+      if (isLevel1_1) {
+          const owned = Object.values(grid).filter((h: Hex) => h.ownerId === player.id && h.maxLevel >= 1).length;
+          return { current: Math.max(0, owned - 1), target: 3, label: t.TUT_1_1_COUNTER };
+      }
+      if (isLevel1_2) {
+          const target = { q: 5, r: -1 };
+          const dist = cubeDistance({ q: player.q, r: player.r }, target);
+          return { current: dist, target: 0, label: t.TUT_1_2_COUNTER, inverse: true };
+      }
+      if (isLevel1_3) {
+          const centerNeighbors = getNeighbors(0,0);
+          const supports = centerNeighbors.filter(n => {
+              const h = grid[getHexKey(n.q, n.r)];
+              return h && h.maxLevel >= 1 && h.structureType !== 'VOID';
+          }).length;
+          return { current: supports, target: 2, label: t.TUT_1_3_COUNTER };
+      }
+      if (isLevel1_4) {
+          const center = grid[getHexKey(0,0)];
+          return { current: center ? center.maxLevel : 0, target: 3, label: t.TUT_1_4_COUNTER };
+      }
+      if (isLevel1_5) {
+          return { current: player.coins, target: 150, label: t.TUT_1_5_COUNTER };
+      }
+      if (isLevel1_6) {
+          const botMax = bots ? Math.max(...bots.map(b => b.playerLevel)) : 0;
+          return { current: player.playerLevel, target: 4, label: t.TUT_1_6_COUNTER, rival: botMax };
+      }
+      return null;
+  }, [grid, player, bots, isLevel1_1, isLevel1_2, isLevel1_3, isLevel1_4, isLevel1_5, isLevel1_6, t]);
+
   if (!grid || !player || !bots) return null;
 
   return (
@@ -178,62 +214,95 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           <div className="w-full flex justify-between items-start gap-2 max-w-7xl mx-auto relative">
                
                {/* STATS BAR */}
-               <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-xl px-2.5 py-2 gap-2 md:px-3 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade flex-1 md:flex-none md:w-fit md:shrink-0 max-w-[calc(100vw-70px)] md:max-w-none">
-                   
-                   {/* Rank */}
-                   <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                       <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-                           <Crown className="w-3.5 h-3.5 md:w-5 md:h-5 text-white" />
+               <div className="flex flex-col gap-2">
+                   <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-xl px-2.5 py-2 gap-2 md:px-3 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade flex-1 md:flex-none md:w-fit md:shrink-0 max-w-[calc(100vw-70px)] md:max-w-none">
+                       
+                       {/* Rank */}
+                       <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
+                           <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                               <Crown className="w-3.5 h-3.5 md:w-5 md:h-5 text-white" />
+                           </div>
+                           <div className="flex flex-col justify-center">
+                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.RANK}</span>
+                               <span className="text-base md:text-xl font-black text-white leading-none">{player.playerLevel}</span>
+                           </div>
                        </div>
-                       <div className="flex flex-col justify-center">
-                           <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.RANK}</span>
-                           <span className="text-base md:text-xl font-black text-white leading-none">{player.playerLevel}</span>
-                       </div>
-                   </div>
 
-                   <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
+                       <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
 
-                   {/* Material Storage (Re-designed) */}
-                   <div onClick={() => { setHelpTopic('MATERIAL'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                       <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/20 transition-colors">
-                           <Box className="w-3.5 h-3.5 md:w-5 md:h-5 text-emerald-400" />
+                       {/* Material Storage (Re-designed) */}
+                       <div onClick={() => { setHelpTopic('MATERIAL'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
+                           <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/20 transition-colors">
+                               <Box className="w-3.5 h-3.5 md:w-5 md:h-5 text-emerald-400" />
+                           </div>
+                           <div className="flex flex-col justify-center">
+                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MATERIAL}</span>
+                               <div className="flex items-center gap-0.5 md:gap-1">
+                                   <span className={`text-base md:text-xl font-black leading-none ${player.storage >= player.maxStorage ? 'text-emerald-400' : 'text-white'}`}>
+                                       {player.storage}
+                                   </span>
+                                   <span className="text-[10px] md:text-xs text-slate-500 font-bold self-end mb-0.5">/{player.maxStorage}</span>
+                               </div>
+                           </div>
                        </div>
-                       <div className="flex flex-col justify-center">
-                           <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MATERIAL}</span>
-                           <div className="flex items-center gap-0.5 md:gap-1">
-                               <span className={`text-base md:text-xl font-black leading-none ${player.storage >= player.maxStorage ? 'text-emerald-400' : 'text-white'}`}>
-                                   {player.storage}
-                               </span>
-                               <span className="text-[10px] md:text-xs text-slate-500 font-bold self-end mb-0.5">/{player.maxStorage}</span>
+
+                       <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
+
+                       {/* Coins (Renamed from Credits) */}
+                       <div onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
+                           <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
+                               <Wallet className="w-3.5 h-3.5 md:w-5 md:h-5 text-amber-400" />
+                           </div>
+                           <div className="flex flex-col justify-center">
+                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.CREDITS}</span>
+                               <span className="text-base md:text-xl font-black text-white leading-none">{player.coins}</span>
+                           </div>
+                       </div>
+
+                       <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
+
+                       {/* Moves */}
+                       <div onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0 pr-2">
+                           <div className={`w-7 h-7 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${isMoving ? 'bg-blue-600 animate-pulse' : 'bg-blue-500/10 border border-blue-500/30'}`}>
+                               <Footprints className={`w-3.5 h-3.5 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
+                           </div>
+                           <div className="flex flex-col justify-center">
+                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MOVES}</span>
+                               <span className="text-base md:text-xl font-black text-white leading-none">{player.moves}</span>
                            </div>
                        </div>
                    </div>
 
-                   <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
-
-                   {/* Coins (Renamed from Credits) */}
-                   <div onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                       <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
-                           <Wallet className="w-3.5 h-3.5 md:w-5 md:h-5 text-amber-400" />
+                   {/* CAMPAIGN OBJECTIVE TRACKER */}
+                   {campaignMetrics && gameStatus === 'PLAYING' && (
+                       <div className="bg-slate-900/80 backdrop-blur border border-indigo-500/30 rounded-xl px-4 py-2 self-start flex items-center gap-3 animate-in slide-in-from-top-4 duration-500">
+                           <div className="p-1.5 bg-indigo-500/20 rounded-lg">
+                               <Target className="w-4 h-4 text-indigo-400" />
+                           </div>
+                           <div className="flex flex-col">
+                               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{campaignMetrics.label}</span>
+                               <div className="flex items-center gap-1">
+                                   <span className={`text-lg font-black ${
+                                       (campaignMetrics.inverse ? campaignMetrics.current <= campaignMetrics.target : campaignMetrics.current >= campaignMetrics.target) 
+                                       ? 'text-emerald-400' : 'text-white'
+                                   }`}>
+                                       {campaignMetrics.current}
+                                   </span>
+                                   {!campaignMetrics.inverse && <span className="text-sm font-bold text-slate-500">/ {campaignMetrics.target}</span>}
+                               </div>
+                           </div>
+                           {/* Rival Tracker for 1.6 */}
+                           {campaignMetrics.rival !== undefined && (
+                               <>
+                                   <div className="w-px h-6 bg-slate-700 mx-1"></div>
+                                   <div className="flex flex-col items-end">
+                                       <span className="text-[9px] text-red-400 font-bold uppercase tracking-widest">{t.TUT_1_6_RIVAL}</span>
+                                       <span className="text-lg font-black text-red-500">{campaignMetrics.rival}</span>
+                                   </div>
+                               </>
+                           )}
                        </div>
-                       <div className="flex flex-col justify-center">
-                           <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.CREDITS}</span>
-                           <span className="text-base md:text-xl font-black text-white leading-none">{player.coins}</span>
-                       </div>
-                   </div>
-
-                   <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
-
-                   {/* Moves */}
-                   <div onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0 pr-2">
-                       <div className={`w-7 h-7 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${isMoving ? 'bg-blue-600 animate-pulse' : 'bg-blue-500/10 border border-blue-500/30'}`}>
-                           <Footprints className={`w-3.5 h-3.5 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
-                       </div>
-                       <div className="flex flex-col justify-center">
-                           <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MOVES}</span>
-                           <span className="text-base md:text-xl font-black text-white leading-none">{player.moves}</span>
-                       </div>
-                   </div>
+                   )}
                </div>
 
                {/* SYSTEM CONTROLS (UNIFIED MENU) */}

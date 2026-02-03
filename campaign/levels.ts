@@ -1,15 +1,13 @@
 
 import { LevelConfig } from './types';
-import { GameEventFactory } from '../engine/events';
-import { getHexKey, getNeighbors } from '../services/hexUtils';
-import { TEXT } from '../services/i18n';
+import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils';
 import { GAME_CONFIG } from '../rules/config';
 
 export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '1.1',
     title: 'Sim 1.1: Expansion Protocol',
-    description: 'Mission: Secure the sector.\n\nYour unit needs a foothold. Acquire 3 adjacent Neutral Sectors (L0) to establish a perimeter.\n\nMethod: Move to a Neutral hex, then use the UPGRADE action (Amber Button) to build a Level 1 structure (Cost: 1 Material).',
+    description: 'Mission: Secure 3 NEW sectors.\n\nYour unit needs a foothold. Acquire 3 adjacent Neutral Sectors (L0) to establish a perimeter.\n\nMethod: Move to a Neutral hex, then use the UPGRADE action (Amber Button) to build a Level 1 structure (Cost: 1 Material).\n\nWARNING: You have limited materials. Do not waste them.',
     
     mapConfig: {
       size: 5, 
@@ -47,7 +45,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       credits: 500, 
       moves: 5,     
       rank: 1,
-      materials: 5 // Needed to build 3 L1 sectors
+      materials: 4 // Exact match for default Medium Difficulty storage limit
     },
 
     aiMode: 'none', 
@@ -55,15 +53,20 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     hooks: {
       checkWinCondition: (state) => {
         // Win Condition: Own 4 hexes (Start + 3 captured)
-        const ownedCount = Object.values(state.grid).filter(h => h.ownerId === state.player.id).length;
+        const ownedCount = Object.values(state.grid).filter(h => h.ownerId === state.player.id && h.maxLevel >= 1).length;
         return ownedCount >= 4;
+      },
+      checkLossCondition: (state) => {
+        const ownedCount = Object.values(state.grid).filter(h => h.ownerId === state.player.id && h.maxLevel >= 1).length;
+        // If out of materials AND haven't reached the goal, it's impossible to win.
+        return state.player.storage <= 0 && ownedCount < 4;
       }
     }
   },
   {
     id: '1.2',
     title: 'Sim 1.2: Crumbling Path',
-    description: 'Objective: Reach the Extraction Point (Capital).\n\nWARNING: Terrain Integrity Critical.\nThe path is comprised of damaged Level 1 sectors (1 HP). Every time you step OFF a sector, it takes damage and collapses.\n\nNOTE: Your High Rank acts as Armor against Shockwaves. Don\'t run out.',
+    description: 'Objective: Reach the Capital Sector (Flag).\n\nHAZARD: "The Snake". The path is comprised of unstable Level 1 sectors. Every time you step OFF a sector, it collapses.\n\nSURVIVAL: Your high Rank acts as armor against the shockwaves. If your Rank hits 0, you die.',
     
     mapConfig: {
       size: 7, 
@@ -77,7 +80,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
         { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true, durability: 1 },
         { q: 2, r: 0, maxLevel: 1, currentLevel: 1, revealed: true, durability: 1 },
         { q: 2, r: -1, maxLevel: 1, currentLevel: 1, revealed: true, durability: 1 },
-        { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true, durability: 1 }, // Trap loop possible
+        { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true, durability: 1 }, 
         { q: 2, r: -2, maxLevel: 1, currentLevel: 1, revealed: true, durability: 1 },
         { q: 3, r: -2, maxLevel: 1, currentLevel: 1, revealed: true, durability: 1 },
         { q: 3, r: -1, maxLevel: 1, currentLevel: 1, revealed: true, durability: 1 },
@@ -101,7 +104,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     startState: {
       credits: 0, 
       moves: 15,  
-      rank: 15, // High rank acts as Health against shockwaves (approx 10 steps)
+      rank: 15, 
       materials: 0
     },
 
@@ -113,15 +116,15 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
         return !!(playerHex && playerHex.structureType === 'CAPITAL');
       },
       checkLossCondition: (state) => {
-        // If player falls into void (rank drops to 0)
-        return state.player.playerLevel <= 0;
+        // If player falls into void (rank drops to 0) or stuck
+        return state.player.playerLevel <= 0 || (state.player.moves <= 0 && state.player.coins < 5);
       }
     }
   },
   {
     id: '1.3',
     title: 'Sim 1.3: Structural Support',
-    description: 'Protocol: Vertical Construction.\n\nObjective: Upgrade the Center Sector to Level 2.\n\nRule: You cannot build higher without a foundation. A hex needs at least 2 neighbors at its current level to upgrade.\n\nTask: Build 2 Level 1 neighbors using provided materials, then upgrade the center.',
+    description: 'Protocol: Vertical Construction.\n\nObjective: Upgrade the Center Sector to Level 2.\n\nRULE: "Staircase Support". To build L2, you need at least 2 neighbors at L1.\n\nTASK: Use your limited materials to build 2 supports, then upgrade the center.',
     
     mapConfig: {
       size: 5,
@@ -148,7 +151,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       credits: 300,  
       moves: 10,     
       rank: 2,
-      materials: 5 // Needed to build 2x L1 + 1x L2 = 3 materials total.
+      // EXACTLY 3 materials needed: 2 for supports (L0->L1), 1 for center (L1->L2).
+      materials: 3 
     },
 
     aiMode: 'none',
@@ -158,32 +162,17 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           const center = state.grid[getHexKey(0,0)];
           return center && center.maxLevel >= 2;
       },
-      onBeforeAction: (state, action) => {
-          if (action.type === 'UPGRADE') {
-              const hex = state.grid[getHexKey(action.coord.q, action.coord.r)];
-              if (hex && hex.maxLevel === 1 && action.intent !== 'RECOVER') {
-                  const neighbors = getNeighbors(hex.q, hex.r);
-                  const validSupports = neighbors.filter(n => {
-                      const h = state.grid[getHexKey(n.q, n.r)];
-                      return h && h.maxLevel >= 1 && h.structureType !== 'VOID';
-                  });
-
-                  if (validSupports.length < 2) {
-                      return {
-                          ok: false,
-                          reason: "UNSTABLE! Upgrade 2 neighbors to Level 1 first."
-                      };
-                  }
-              }
-          }
-          return { ok: true };
+      checkLossCondition: (state) => {
+          const center = state.grid[getHexKey(0,0)];
+          // If we ran out of materials and center isn't L2, impossible to win.
+          return state.player.storage <= 0 && center.maxLevel < 2;
       }
     }
   },
   {
     id: '1.4',
     title: 'Sim 1.4: Material Excavation',
-    description: 'Protocol: Resource Cycle.\n\nObjective: Upgrade Center to Level 3.\n\nProblem: You have 0 Material. You cannot build.\n\nSolution: EXCAVATE (Dig) the surrounding Level 2 mounds. Digging grants +1 Material. Use it to build up the center.',
+    description: 'Protocol: Resource Cycle.\n\nObjective: Upgrade Center to Level 3.\n\nPROBLEM: 0 Materials.\n\nSOLUTION: Use the DIG action (Red Button) on the surrounding Level 2 mounds. Digging grants +1 Material. Use it to build up the center.',
     
     mapConfig: {
       size: 5,
@@ -218,7 +207,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     },
 
     startState: {
-      credits: 1000, // Plenty of cash, focusing on Material constraint
+      credits: 1000, 
       moves: 20,
       rank: 3,
       materials: 0 // Enforce digging
@@ -231,12 +220,12 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           const center = state.grid[getHexKey(0,0)];
           return center && center.maxLevel >= 3;
       },
-      onBeforeAction: (state, action) => {
-          // Force player to learn Digging if they try to upgrade without material
-          if (action.type === 'UPGRADE' && state.player.storage === 0 && action.intent !== 'RECOVER') {
-             return { ok: false, reason: "NO MATERIAL! Dig a L2 mound to harvest." };
-          }
-          return { ok: true };
+      checkLossCondition: (state) => {
+          const center = state.grid[getHexKey(0,0)];
+          // Needs 2 upgrades (L1->L2, L2->L3). 
+          // If stuck (no moves, no credits) and not done
+          if (state.player.moves <= 0 && state.player.coins < 5 && center.maxLevel < 3) return true;
+          return false;
       }
     }
   },
@@ -289,6 +278,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           const limit = 60 * 1000; 
           const elapsed = Date.now() - state.sessionStartTime;
           if (elapsed > limit) return true;
+          // Stuck?
+          if (state.player.moves <= 0 && !state.player.recoveredCurrentHex && state.player.coins < 5) return true;
           return false;
       }
     }
@@ -308,8 +299,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           { q: 0, r: 2, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
-          // Bot Side (Will be populated by engine spawn logic or we place here)
-          // We let the engine place the bot, but ensure land exists
+          // Bot Side
           { q: 0, r: -3, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: 0, r: -2, maxLevel: 1, currentLevel: 1, revealed: true },
 
@@ -327,7 +317,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       materials: 5
     },
 
-    aiMode: 'basic', // Enables the bot
+    aiMode: 'basic', 
 
     hooks: {
       checkWinCondition: (state) => {
