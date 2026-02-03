@@ -27,19 +27,22 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
     let lastFrameTime = 0;
 
     const handleResize = () => {
-      if (canvas) {
-        canvas.width = window.innerWidth;
+      const cvs = canvasRef.current; // Access ref directly to ensure freshness
+      if (cvs) {
+        cvs.width = window.innerWidth;
         // Menu needs extra height for the tilt effect, Game fits screen
-        canvas.height = window.innerHeight * (variant === 'MENU' ? 1.5 : 1.0);
+        cvs.height = window.innerHeight * (variant === 'MENU' ? 1.5 : 1.0);
       }
     };
+    
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    const drawHex = (x: number, y: number, size: number, color: string, height: number, strokeColor: string, rotationDeg: number) => {
+    const drawHex = (x: number, y: number, size: number, color: string, height: number, strokeColor: string) => {
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
-        const angle_deg = 60 * i + 30 + rotationDeg;
+        // Fixed rotation (30 degrees offset for pointy-top)
+        const angle_deg = 60 * i + 30;
         const angle_rad = Math.PI / 180 * angle_deg;
         ctx.lineTo(x + size * Math.cos(angle_rad), y + size * Math.sin(angle_rad));
       }
@@ -54,7 +57,7 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
             ctx.beginPath();
             const innerSize = size * (1 - height * 0.5); 
             for (let i = 0; i < 6; i++) {
-              const angle_deg = 60 * i + 30 + rotationDeg;
+              const angle_deg = 60 * i + 30;
               const angle_rad = Math.PI / 180 * angle_deg;
               ctx.lineTo(x + innerSize * Math.cos(angle_rad), y + innerSize * Math.sin(angle_rad));
             }
@@ -103,7 +106,7 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
            const cx = q * HEX_WIDTH + xOffset;
            const cy = r * (HEX_HEIGHT * 0.75) + flyOffset;
 
-           // Noise Function
+           // Noise Function for "Breathing" / Waves
            const h1 = Math.sin(q * 0.3 + time) * Math.cos(r * 0.2 - time);
            const h2 = Math.sin(q * 0.7 - time * 2) * Math.cos(r * 0.5 + time);
            const rawH = (h1 + h2) / 2; 
@@ -123,11 +126,7 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
                if (height > 0.7) color = '#0f172a';
            }
            
-           // HEX ROTATION LOGIC
-           // Rotate based on time and position for a wavelike organic feel
-           const rotation = (time * 10) + (Math.sin(q * 0.5 + time) * 15);
-
-           drawHex(cx, cy, HEX_SIZE, color, height, stroke, rotation);
+           drawHex(cx, cy, HEX_SIZE, color, height, stroke);
         }
       }
     };

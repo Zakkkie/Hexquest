@@ -1,6 +1,6 @@
 
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
-import { Group, Circle, Ellipse, Rect, Text, Shape } from 'react-konva';
+import { Group, Circle, Ellipse, Rect } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { hexToPixel } from '../services/hexUtils.ts';
@@ -30,7 +30,8 @@ const TrailShadow: React.FC<{ x: number; y: number; color: string }> = ({ x, y, 
             opacity: 0,
             scaleX: 0.8, scaleY: 0.8,
             duration: GAME_CONFIG.MOVEMENT_ANIMATION_DURATION,
-            easing: Konva.Easings.EaseOut
+            easing: Konva.Easings.EaseOut,
+            onFinish: () => node.destroy() // Auto-destroy to be safe
         });
         tween.play();
         return () => tween.destroy();
@@ -49,18 +50,18 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
   const breathingGroupRef = useRef<Konva.Group>(null);
 
   const user = useGameStore(state => state.user);
-  const [coinPopups, setCoinPopups] = useState<{ id: number; amount: number }[]>([]);
   const [trails, setTrails] = useState<{ id: number; x: number; y: number }[]>([]);
   
   const { x, y } = hexToPixel(q, r, rotation);
   
-  // Height Configuration (Must match Hexagon.tsx)
+  // Height Configuration (Must match HexNode.tsx)
   const stepHeight = 10;
   const baseHeight = 10;
   
   // Calculate Z (Vertical) Offset
   // L >= 0: -(10 + level*10)
   // L < 0:  (abs(level) - 1)*10
+  // Note: VOID level (-99) handled via floor 0 for units usually, but should not happen if logic is correct
   let zOffset = 0;
   if (hexLevel >= 0) {
       zOffset = -(baseHeight + hexLevel * stepHeight);
@@ -84,11 +85,13 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
     return () => { anim.stop(); };
   }, []);
 
+  // Initial Placement
   useLayoutEffect(() => {
     if (groupRef.current) groupRef.current.position({ x, y });
     if (elevationGroupRef.current) elevationGroupRef.current.y(zOffset);
   }, []);
 
+  // Update Logic
   useLayoutEffect(() => {
     const node = groupRef.current;
     const elevationNode = elevationGroupRef.current;
@@ -102,22 +105,30 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
     prevLogic.current = { q, r, rotation, zOffset };
 
     if (isMove) {
+        // Trigger Trail
         const startX = node.x();
         const startY = node.y();
         const startZ = elevationNode.y();
-        if (startX !== 0 || startY !== 0) {
+        
+        // Only spawn trail if moving a significant distance
+        if (Math.abs(startX - x) > 1 || Math.abs(startY - y) > 1) {
              const tId = Date.now() + Math.random();
              setTrails(prevT => [...prevT, { id: tId, x: startX, y: startY + startZ }]);
-             setTimeout(() => setTrails(prevT => prevT.filter(t => t.id !== tId)), 1000);
+             // Cleanup trail data after animation
+             setTimeout(() => setTrails(prevT => prevT.filter(t => t.id !== tId)), 600);
+             
+             if (onMoveComplete) onMoveComplete(x, y + zOffset, finalColor);
         }
+        
         node.to({ x, y, duration: GAME_CONFIG.MOVEMENT_ANIMATION_DURATION, easing: Konva.Easings.EaseInOut });
         elevationNode.to({ y: zOffset, duration: GAME_CONFIG.MOVEMENT_ANIMATION_DURATION, easing: Konva.Easings.EaseInOut });
     } else if (isRotation) {
+        // Instant snap for rotation to avoid "drifting" arc visual
         node.position({ x, y });
     } else if (isElevationChange) {
         elevationNode.to({ y: zOffset, duration: 0.6, easing: Konva.Easings.EaseInOut });
     }
-  }, [q, r, rotation, zOffset, x, y]);
+  }, [q, r, rotation, zOffset, x, y, finalColor, onMoveComplete]);
 
   return (
     <Group>
