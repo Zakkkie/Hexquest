@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Layer, Group, Line, Circle, Text } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
-import { getHexKey, getNeighbors, hexToPixel, pixelToHex } from '../services/hexUtils.ts';
+import { getHexKey, getNeighbors, hexToPixel } from '../services/hexUtils.ts';
 import { HexNode, HexNodeTheme } from './HexNode.tsx';
 import Unit from './Unit.tsx';
 import { EntityType, EntityState, FloatingText, Hex, Entity } from '../types.ts';
@@ -103,7 +103,6 @@ interface MapRendererProps {
 }
 
 const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotation, onHexClick, onHover, hoveredHexId }) => {
-    // Explicit casting to ensure TypeScript knows these can be undefined initially
     const grid = useGameStore(state => state.session?.grid) as Record<string, Hex> | undefined;
     const player = useGameStore(state => state.session?.player) as Entity | undefined;
     const bots = useGameStore(state => state.session?.bots) as Entity[] | undefined;
@@ -130,7 +129,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         const x1 = (dimensions.width - viewState.x) * inverseScale + VIEWPORT_PADDING;
         const y1 = (dimensions.height - viewState.y) * inverseScale + VIEWPORT_PADDING;
 
-        // Pre-calculations
         const playerNeighbors = getNeighbors(player.q, player.r);
         const playerNeighborKeys = new Set(playerNeighbors.map(n => getHexKey(n.q, n.r)));
         const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
@@ -158,8 +156,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
 
             const neighborLevels = new Array(6);
             const rawN = getNeighbors(hex.q, hex.r);
-            // Map logical neighbors to visual edges. 
-            // Edge i corresponds to Neighbor (5 - i) based on fixed angle alignment
             for(let i=0; i<6; i++) {
                 const neighborIdx = 5 - i;
                 const nHex = grid[getHexKey(rawN[neighborIdx].q, rawN[neighborIdx].r)];
@@ -168,7 +164,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
 
             const isPending = hex.id === pendingKey;
             
-            // Tutorial Highlighting
             let isTutorial = false;
             let tutColor: any = 'emerald';
             const isNeighbor = playerNeighborKeys.has(hex.id);
@@ -183,10 +178,12 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
 
             items.push({
                 type: 'HEX',
-                depth: y, // Z-Index based on Y coordinate
+                depth: y, 
                 props: {
                     x, y,
-                    rotation, // Pass camera rotation to rotate hex geometry
+                    rotation,
+                    q: hex.q,
+                    r: hex.r,
                     offsetY: (hex.structureType as string) === 'VOID' ? -2 : getHeightOffset((hex.structureType as string) === 'VOID' ? 0 : hex.maxLevel),
                     level: hex.currentLevel ?? 0,
                     maxLevel: hex.maxLevel,
@@ -203,6 +200,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                     isGrowing: hex.progress > 0 && (hex.structureType as string) !== 'VOID',
                     isRankLocked: hex.maxLevel > player.playerLevel,
                     progress: hex.progress,
+                    durability: hex.durability,
                     artifactType: hex.artifact?.type,
                     onClick: () => onHexClick(hex.q, hex.r),
                     onHover: () => onHover(hex.id),
@@ -219,10 +217,12 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
             
             const uHex = grid[getHexKey(u.q, u.r)];
             const hLevel = uHex ? uHex.maxLevel : 0;
-            
+            const isMoving = u.state === EntityState.MOVING;
+            const depthBias = isMoving ? 50 : 1; 
+
             items.push({
                 type: 'UNIT',
-                depth: px.y + 1, // Slight bias to draw unit in front of hex center
+                depth: px.y + depthBias, 
                 props: {
                     id: u.id,
                     q: u.q, r: u.r,
@@ -271,26 +271,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
             }
         }
 
-        // 4. Bot Paths
-        for (const b of (bots || [])) {
-            if (b.movementQueue && b.movementQueue.length > 0) {
-                const startPos = hexToPixel(b.q, b.r, rotation);
-                const pathPoints = [startPos.x, startPos.y - 10];
-                for(const step of b.movementQueue) {
-                    if (step.upgrade) continue;
-                    const p = hexToPixel(step.q, step.r, rotation);
-                    pathPoints.push(p.x, p.y - 10);
-                }
-                if (pathPoints.length >= 4) {
-                    items.push({
-                        type: 'CONN',
-                        depth: 99999, // Always on top
-                        props: { points: pathPoints, stroke: b.avatarColor || '#ef4444', dash: [4, 4], opacity: 0.6 }
-                    });
-                }
-            }
-        }
-
         items.sort((a, b) => a.depth - b.depth);
         return items;
 
@@ -299,7 +279,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
     return (
         <Layer>
             {renderList.map((item, i) => {
-                const key = item.type === 'HEX' ? `h-${item.props.x}-${item.props.y}` : 
+                const key = item.type === 'HEX' ? `h-${item.props.q}-${item.props.r}` : 
                             item.type === 'UNIT' ? item.props.id : `c-${i}`;
                             
                 if (item.type === 'HEX') return <HexNode key={key} {...item.props} />;

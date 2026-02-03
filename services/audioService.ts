@@ -136,12 +136,13 @@ class AudioService {
       this.ctx = new AudioContextClass();
       
       // 1. Master Chain: Compressor -> Master Gain -> Destination
+      // CHANGED: Relaxed compression to prevent music "ducking" when UI sounds play
       this.masterCompressor = this.ctx.createDynamicsCompressor();
-      this.masterCompressor.threshold.value = -12;
-      this.masterCompressor.knee.value = 30;
-      this.masterCompressor.ratio.value = 12;
-      this.masterCompressor.attack.value = 0.003;
-      this.masterCompressor.release.value = 0.25;
+      this.masterCompressor.threshold.value = -8; // Was -12, moved up to react less
+      this.masterCompressor.knee.value = 40;
+      this.masterCompressor.ratio.value = 4; // Was 12, reduced significantly
+      this.masterCompressor.attack.value = 0.05; // Slower attack
+      this.masterCompressor.release.value = 0.1;
 
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 1.0;
@@ -155,7 +156,8 @@ class AudioService {
       this.musicBus.connect(this.masterCompressor);
 
       this.sfxBus = this.ctx.createGain();
-      this.sfxBus.gain.value = this.isSfxMuted ? 0 : 0.6;
+      // Reduced SFX bus gain slightly to blend better
+      this.sfxBus.gain.value = this.isSfxMuted ? 0 : 0.5; 
       this.sfxBus.connect(this.masterCompressor);
 
       // 3. FX: Reverb (Space)
@@ -229,7 +231,7 @@ class AudioService {
   public setSfxMuted(muted: boolean) {
       this.isSfxMuted = muted;
       if (this.sfxBus && this.ctx) {
-          this.sfxBus.gain.setTargetAtTime(muted ? 0 : 0.6, this.ctx.currentTime, 0.1);
+          this.sfxBus.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.1);
       }
   }
 
@@ -325,11 +327,18 @@ class AudioService {
   // --- AUDIO SCHEDULER ---
 
   public startMusic() {
-      if (this.musicRunning) return;
+      // Idempotency: Do not restart or regenerate if already running
+      if (this.musicRunning && this.ctx?.state === 'running') return;
+      
       this.init();
       if (!this.ctx) return;
       
-      this.regenerateComposition();
+      // Only generate if we don't have a context yet (first start)
+      // or if we are restarting from a stopped state
+      if (this.arrangementState.totalBars === 0) {
+          this.regenerateComposition();
+      }
+      
       this.musicRunning = true;
       this.nextNoteTime = this.ctx.currentTime + 0.1;
       this.current16thNote = 0;

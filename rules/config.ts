@@ -10,9 +10,10 @@ export const GAME_CONFIG = {
   L1_HEX_MAX_DURABILITY: 6, // Explicitly set to 6 as requested
   
   // Movement & Animation Speeds
-  // Tuned for smoother transitions (0.5s = 40% slower than 0.3s)
-  MOVEMENT_ANIMATION_DURATION: 0.5, // Seconds (Visual Tween)
-  MOVEMENT_LOGIC_INTERVAL_MS: 500,  // Milliseconds (Logic Throttle - matches animation)
+  // Tuned for smoother transitions (0.6s animation provides distinct travel time)
+  // Logic interval slightly larger to ensure animation finishes before next logic tick
+  MOVEMENT_ANIMATION_DURATION: 0.6, // Seconds (Visual Tween)
+  MOVEMENT_LOGIC_INTERVAL_MS: 650,  // Milliseconds (Logic Throttle)
 
   // Growth Time in TICKS (1 tick = 100ms). So 30 ticks = 3 seconds.
   // UPDATED: Income formula = 5 * Level^2

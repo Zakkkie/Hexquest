@@ -21,28 +21,41 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
     let animationFrameId: number;
     let time = 0;
 
-    // OPTIMIZATION: Throttle FPS to save CPU
-    const TARGET_FPS = variant === 'MENU' ? 30 : 20;
+    const TARGET_FPS = variant === 'MENU' ? 60 : 30; 
     const FRAME_INTERVAL = 1000 / TARGET_FPS;
     let lastFrameTime = 0;
 
+    // Starfield for Game Mode
+    const stars: { x: number; y: number; size: number; alpha: number; speed: number }[] = [];
+    if (variant === 'GAME') {
+        const starCount = 150;
+        for(let i=0; i<starCount; i++) {
+            stars.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                size: Math.random() * 2,
+                alpha: Math.random() * 0.8 + 0.2,
+                speed: Math.random() * 0.2
+            });
+        }
+    }
+
     const handleResize = () => {
-      const cvs = canvasRef.current; // Access ref directly to ensure freshness
-      if (cvs) {
-        cvs.width = window.innerWidth;
-        // Menu needs extra height for the tilt effect, Game fits screen
-        cvs.height = window.innerHeight * (variant === 'MENU' ? 1.5 : 1.0);
+      if (canvas) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight * (variant === 'MENU' ? 1.5 : 1.0);
       }
     };
-    
     window.addEventListener('resize', handleResize);
     handleResize();
 
     const drawHex = (x: number, y: number, size: number, color: string, height: number, strokeColor: string) => {
+      // Static rotation 30 degrees for standard pointy top look
+      const rotationDeg = 0; 
+      
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
-        // Fixed rotation (30 degrees offset for pointy-top)
-        const angle_deg = 60 * i + 30;
+        const angle_deg = 60 * i + 30 + rotationDeg;
         const angle_rad = Math.PI / 180 * angle_deg;
         ctx.lineTo(x + size * Math.cos(angle_rad), y + size * Math.sin(angle_rad));
       }
@@ -51,83 +64,79 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
       ctx.fillStyle = color;
       ctx.fill();
 
-      // Highlights
-      if (variant === 'MENU') {
-          if (height > 0.2) {
-            ctx.beginPath();
-            const innerSize = size * (1 - height * 0.5); 
-            for (let i = 0; i < 6; i++) {
-              const angle_deg = 60 * i + 30;
-              const angle_rad = Math.PI / 180 * angle_deg;
-              ctx.lineTo(x + innerSize * Math.cos(angle_rad), y + innerSize * Math.sin(angle_rad));
-            }
-            ctx.closePath();
-            ctx.fillStyle = `rgba(255, 255, 255, ${height * 0.3})`;
-            ctx.fill();
-          }
-      } else {
-          // GAME MODE: Subtle pulse on high activity cells
-          if (height > 0.6) {
-             ctx.fillStyle = `rgba(56, 189, 248, ${ (height - 0.6) * 0.1 })`; // Very faint cyan glow
-             ctx.fill();
-          }
+      // Inner highlight based on height/breathing
+      if (height > 0.2) {
+        ctx.beginPath();
+        const innerSize = size * (1 - height * 0.5); 
+        for (let i = 0; i < 6; i++) {
+          const angle_deg = 60 * i + 30 + rotationDeg;
+          const angle_rad = Math.PI / 180 * angle_deg;
+          ctx.lineTo(x + innerSize * Math.cos(angle_rad), y + innerSize * Math.sin(angle_rad));
+        }
+        ctx.closePath();
+        ctx.fillStyle = `rgba(255, 255, 255, ${height * 0.2})`;
+        ctx.fill();
       }
 
       ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = variant === 'MENU' ? 1 + height * 2 : 1;
+      ctx.lineWidth = 1 + height * 2;
       ctx.stroke();
     };
 
     const render = (timestamp: number) => {
       animationFrameId = requestAnimationFrame(render);
       
-      // Throttle Check
       const elapsed = timestamp - lastFrameTime;
       if (elapsed < FRAME_INTERVAL) return;
 
-      // Adjust lastFrameTime to target interval
       lastFrameTime = timestamp - (elapsed % FRAME_INTERVAL);
+      time += 0.0001 * elapsed; 
       
-      time += 0.0003 * elapsed;
-      
-      // Base Background Color
+      // Neutral Dark Background
       ctx.fillStyle = '#020617'; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const numCols = Math.ceil(canvas.width / HEX_WIDTH) + 2;
-      const numRows = Math.ceil(canvas.height / (HEX_HEIGHT * 0.75)) + 4;
+      if (variant === 'GAME') {
+          // --- GAME MODE: STATIC NEUTRAL STARFIELD ---
+          ctx.fillStyle = '#ffffff';
+          stars.forEach(star => {
+              ctx.globalAlpha = star.alpha;
+              ctx.beginPath();
+              ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+              ctx.fill();
+              
+              // Very slow parallax drift
+              star.y -= star.speed;
+              if (star.y < 0) star.y = canvas.height;
+          });
+          ctx.globalAlpha = 1.0;
+      } else {
+          // --- MENU MODE: BREATHING HEXES (No Rotation) ---
+          const numCols = Math.ceil(canvas.width / HEX_WIDTH) + 2;
+          const numRows = Math.ceil(canvas.height / (HEX_HEIGHT * 0.75)) + 4;
+          const flyOffset = (time * 20) % (HEX_HEIGHT * 1.5);
 
-      // Scroll only in MENU mode
-      const flyOffset = variant === 'MENU' ? (time * 50) % (HEX_HEIGHT * 1.5) : 0;
+          for (let r = -2; r < numRows; r++) {
+            for (let q = -2; q < numCols; q++) {
+               const xOffset = (r % 2) * (HEX_WIDTH / 2);
+               const cx = q * HEX_WIDTH + xOffset;
+               const cy = r * (HEX_HEIGHT * 0.75) + flyOffset;
 
-      for (let r = -2; r < numRows; r++) {
-        for (let q = -2; q < numCols; q++) {
-           const xOffset = (r % 2) * (HEX_WIDTH / 2);
-           const cx = q * HEX_WIDTH + xOffset;
-           const cy = r * (HEX_HEIGHT * 0.75) + flyOffset;
+               const h1 = Math.sin(q * 0.3 + time) * Math.cos(r * 0.2 - time);
+               const h2 = Math.sin(q * 0.7 - time * 2) * Math.cos(r * 0.5 + time);
+               const rawH = (h1 + h2) / 2; 
+               const height = Math.max(0, rawH);
 
-           // Noise Function for "Breathing" / Waves
-           const h1 = Math.sin(q * 0.3 + time) * Math.cos(r * 0.2 - time);
-           const h2 = Math.sin(q * 0.7 - time * 2) * Math.cos(r * 0.5 + time);
-           const rawH = (h1 + h2) / 2; 
-           const height = Math.max(0, rawH);
+               let color = '#0f172a'; 
+               let stroke = `rgba(71, 85, 105, ${0.2 + height * 0.3})`;
 
-           let color = '#020617'; 
-           let stroke = '#1e293b';
-
-           if (variant === 'MENU') {
-               color = '#0f172a';
-               stroke = `rgba(71, 85, 105, ${0.3 + height * 0.5})`;
                if (height > 0.6) color = '#1e3a8a';
                if (height > 0.8) color = '#b45309';
-           } else {
-               // GAME MODE: Darker
-               stroke = `rgba(30, 41, 59, ${0.1 + height * 0.2})`; 
-               if (height > 0.7) color = '#0f172a';
-           }
-           
-           drawHex(cx, cy, HEX_SIZE, color, height, stroke);
-        }
+               
+               // Passed 0 rotation to keep them static
+               drawHex(cx, cy, HEX_SIZE, color, height, stroke);
+            }
+          }
       }
     };
 

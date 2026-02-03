@@ -18,6 +18,32 @@ interface GameHUDProps {
   onCenterPlayer: () => void;
 }
 
+// Visual Component for Storage Blocks
+const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, max }) => {
+    return (
+        <div className="flex items-center gap-0.5 md:gap-1">
+            {Array.from({ length: Math.max(current, max) }).map((_, i) => {
+                const isFilled = i < current;
+                const isOverflow = i >= max;
+                return (
+                    <div 
+                        key={i} 
+                        className={`
+                            w-2 h-3 md:w-3 md:h-4 rounded-[1px] md:rounded-sm transition-all duration-300
+                            ${isOverflow 
+                                ? 'bg-amber-500 shadow-[0_0_4px_#f59e0b]' 
+                                : isFilled 
+                                    ? 'bg-emerald-400 shadow-[0_0_4px_#34d399]' 
+                                    : 'bg-emerald-900/30 border border-emerald-500/30'
+                            }
+                        `}
+                    />
+                );
+            })}
+        </div>
+    );
+};
+
 const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCenterPlayer }) => {
   const grid = useGameStore(state => state.session?.grid);
   const player = useGameStore(state => state.session?.player);
@@ -211,13 +237,12 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const handleNextLevel = () => {
       playUiSound('CLICK');
       if (activeLevelConfig) {
-          // Find next level ID
           const currentIdx = CAMPAIGN_LEVELS.findIndex(l => l.id === activeLevelConfig.id);
           const nextLevel = CAMPAIGN_LEVELS[currentIdx + 1];
           if (nextLevel) {
               startCampaignLevel(nextLevel.id);
           } else {
-              abandonSession(); // End of campaign
+              abandonSession(); 
           }
       } else {
           abandonSession();
@@ -246,80 +271,75 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                
                {/* STATS BAR */}
                <div className="flex flex-col gap-2">
-                   <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-xl px-2.5 py-2 gap-2 md:px-3 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade flex-1 md:flex-none md:w-fit md:shrink-0 max-w-[calc(100vw-70px)] md:max-w-none">
+                   <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-700/50 shadow-xl px-2 py-1.5 md:px-3 md:py-2 gap-2 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade flex-1 md:flex-none md:w-fit md:shrink-0 max-w-[calc(100vw-70px)] md:max-w-none">
                        
                        {/* Rank */}
                        <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                           <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                           <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
                                <Crown className="w-3.5 h-3.5 md:w-5 md:h-5 text-white" />
                            </div>
                            <div className="flex flex-col justify-center">
                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.RANK}</span>
-                               <span className="text-base md:text-xl font-black text-white leading-none">{player.playerLevel}</span>
+                               <span className="text-sm md:text-xl font-black text-white leading-none">{player.playerLevel}</span>
                            </div>
                        </div>
 
                        <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
 
-                       {/* Material Storage (Re-designed) */}
+                       {/* Material Storage (VISUALIZED) */}
                        <div onClick={() => { setHelpTopic('MATERIAL'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                           <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/20 transition-colors">
+                           <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/20 transition-colors">
                                <Box className="w-3.5 h-3.5 md:w-5 md:h-5 text-emerald-400" />
                            </div>
                            <div className="flex flex-col justify-center">
                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MATERIAL}</span>
-                               <div className="flex items-center gap-0.5 md:gap-1">
-                                   <span className={`text-base md:text-xl font-black leading-none ${player.storage >= player.maxStorage ? 'text-emerald-400' : 'text-white'}`}>
-                                       {player.storage}
-                                   </span>
-                                   <span className="text-[10px] md:text-xs text-slate-500 font-bold self-end mb-0.5">/{player.maxStorage}</span>
-                               </div>
+                               <StorageBlocks current={player.storage} max={player.maxStorage} />
                            </div>
                        </div>
 
                        <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
 
-                       {/* Coins (Renamed from Credits) */}
+                       {/* Coins */}
                        <div onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                           <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
+                           <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
                                <Wallet className="w-3.5 h-3.5 md:w-5 md:h-5 text-amber-400" />
                            </div>
                            <div className="flex flex-col justify-center">
                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.CREDITS}</span>
-                               <span className="text-base md:text-xl font-black text-white leading-none">{player.coins}</span>
+                               <span className="text-sm md:text-xl font-black text-white leading-none">{player.coins}</span>
                            </div>
                        </div>
 
                        <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
 
                        {/* Moves */}
-                       <div onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0 pr-2">
-                           <div className={`w-7 h-7 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${isMoving ? 'bg-blue-600 animate-pulse' : 'bg-blue-500/10 border border-blue-500/30'}`}>
+                       <div onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0 pr-1">
+                           <div className={`w-6 h-6 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${isMoving ? 'bg-blue-600 animate-pulse' : 'bg-blue-500/10 border border-blue-500/30'}`}>
                                <Footprints className={`w-3.5 h-3.5 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
                            </div>
                            <div className="flex flex-col justify-center">
                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MOVES}</span>
-                               <span className="text-base md:text-xl font-black text-white leading-none">{player.moves}</span>
+                               <span className="text-sm md:text-xl font-black text-white leading-none">{player.moves}</span>
                            </div>
                        </div>
                    </div>
 
                    {/* CAMPAIGN OBJECTIVE TRACKER */}
                    {campaignMetrics && gameStatus === 'PLAYING' && (
-                       <div className="bg-slate-900/80 backdrop-blur border border-indigo-500/30 rounded-xl px-4 py-2 self-start flex items-center gap-3 animate-in slide-in-from-top-4 duration-500">
-                           <div className="p-1.5 bg-indigo-500/20 rounded-lg">
-                               <Target className="w-4 h-4 text-indigo-400" />
+                       <div className="bg-slate-900/80 backdrop-blur border border-indigo-500/30 rounded-xl px-3 py-1.5 md:px-4 md:py-2 self-start flex items-center gap-3 animate-in slide-in-from-top-4 duration-500">
+                           <div className="p-1 md:p-1.5 bg-indigo-500/20 rounded-lg">
+                               <Target className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-400" />
                            </div>
                            <div className="flex flex-col">
-                               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{campaignMetrics.label}</span>
+                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-widest">{campaignMetrics.label}</span>
                                <div className="flex items-center gap-1">
-                                   <span className={`text-lg font-black ${
+                                   <span className={`text-base md:text-lg font-black ${
                                        (campaignMetrics.inverse ? campaignMetrics.current <= campaignMetrics.target : campaignMetrics.current >= campaignMetrics.target) 
                                        ? 'text-emerald-400' : 'text-white'
                                    }`}>
                                        {campaignMetrics.current}
                                    </span>
-                                   {!campaignMetrics.inverse && <span className="text-sm font-bold text-slate-500">/ {campaignMetrics.target}</span>}
+                                   {!campaignMetrics.inverse && <span className="text-xs md:text-sm font-bold text-slate-500">/ {campaignMetrics.target}</span>}
                                </div>
                            </div>
                            {/* Rival Tracker for 1.6 */}
@@ -327,8 +347,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                <>
                                    <div className="w-px h-6 bg-slate-700 mx-1"></div>
                                    <div className="flex flex-col items-end">
-                                       <span className="text-[9px] text-red-400 font-bold uppercase tracking-widest">{t.TUT_1_6_RIVAL}</span>
-                                       <span className="text-lg font-black text-red-500">{campaignMetrics.rival}</span>
+                                       <span className="text-[8px] md:text-[9px] text-red-400 font-bold uppercase tracking-widest">{t.TUT_1_6_RIVAL}</span>
+                                       <span className="text-base md:text-lg font-black text-red-500">{campaignMetrics.rival}</span>
                                    </div>
                                </>
                            )}
@@ -341,9 +361,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                    <div className="relative">
                         <button 
                             onClick={() => { setIsSystemMenuOpen(!isSystemMenuOpen); playUiSound('CLICK'); }} 
-                            className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'}`}
+                            className={`w-9 h-9 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'}`}
                         >
-                            {isSystemMenuOpen ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+                            {isSystemMenuOpen ? <X className="w-4 h-4 md:w-5 md:h-5" /> : <Settings className="w-4 h-4 md:w-5 md:h-5" />}
                         </button>
 
                         {isSystemMenuOpen && (
@@ -465,7 +485,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
       {/* FLOATING LEADERBOARD (Controlled by Menu) */}
       {isRankingsOpen && (
-           <div className="absolute top-[80px] right-4 md:right-[max(2rem,env(safe-area-inset-right))] z-40 flex flex-col bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden w-64 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
+           <div className="absolute top-[70px] md:top-[80px] right-4 md:right-[max(2rem,env(safe-area-inset-right))] z-40 flex flex-col bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden w-64 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
                <div className="flex items-center justify-between p-3 border-b border-slate-700/50 bg-slate-950/30">
                    <div className="flex items-center gap-2">
                        <Trophy className="w-4 h-4 text-amber-500" />
@@ -651,7 +671,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                         size={isMobile ? "lg" : "md"}
                         title={digTooltip}
                     >
-                        <Pickaxe className="w-6 h-6 md:w-8 md:h-8" />
+                        <Pickaxe className="w-5 h-5 md:w-8 md:h-8" />
                     </HexButton>
 
                     {/* RECOVER BUTTON */}
@@ -662,7 +682,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                         size={isMobile ? "lg" : "md"}
                         title={recoverTooltip}
                     >
-                        <RefreshCw className="w-6 h-6 md:w-8 md:h-8" />
+                        <RefreshCw className="w-5 h-5 md:w-8 md:h-8" />
                     </HexButton>
                     
                     {/* UPGRADE BUTTON */}

@@ -33,14 +33,22 @@ export const calculateMovementCost = (
         totalPoints += stepCost;
     }
 
-    const movesAvailable = entity.moves;
-    const coinsAvailable = entity.coins;
+    const movesAvailable = Math.max(0, entity.moves);
+    const coinsAvailable = Math.max(0, entity.coins);
 
     // Deficit Calculation
     const movesDeficit = Math.max(0, totalPoints - movesAvailable);
     
     // Cost Breakdown
     const deductMoves = totalPoints - movesDeficit;
+    
+    // Safety check for NaN
+    if (isNaN(movesDeficit)) {
+        return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "Calculation Error" };
+    }
+
+    // Exchange Rate: 5 coins per 1 move
+    // Math.ceil ensures we charge integer amounts even if floating point creep occurs
     const deductCoins = Math.ceil(movesDeficit * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
 
     const canAfford = coinsAvailable >= deductCoins;
