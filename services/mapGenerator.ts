@@ -26,7 +26,7 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
           };
       });
   } else if (levelConfig && levelConfig.id === '1.2') {
-      // --- LEVEL 1.2: PYRAMID RUN (DYNAMIC RANDOM PATH) ---
+      // --- LEVEL 1.2: STABLE GROUND (DYNAMIC SAFE PATH) ---
       
       const walkableCoords = new Map<string, { q: number, r: number, isSafe: boolean, type?: string }>();
       
@@ -35,10 +35,9 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
       walkableCoords.set(getHexKey(0,0), { q:0, r:0, isSafe: true });
 
       const pathSteps: {q: number, r: number}[] = [current];
-      const targetLength = 18; // Increased length for a longer run
+      const targetLength = 14; // Minimum 10 steps requested, 14 gives a good puzzle
 
-      // Available moves: Up-Left, Up-Right, Left, Right
-      // We exclude "Down" moves (increasing R) to ensure we eventually reach the top
+      // Moves: Generally upward or sideways to avoid backtracking too much
       const moves = [
           { dq: 0, dr: -1 },  // Up-Left
           { dq: 1, dr: -1 },  // Up-Right
@@ -47,15 +46,14 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
       ];
 
       for (let i = 0; i < targetLength; i++) {
-          // Find valid neighbors that haven't been visited yet (prevent loops)
+          // Find valid neighbors that haven't been visited (prevent loops)
           const validCandidates = moves
               .map(m => ({ q: current.q + m.dq, r: current.r + m.dr }))
               .filter(pos => !walkableCoords.has(getHexKey(pos.q, pos.r)));
 
-          if (validCandidates.length === 0) break; // Should not happen in open void
+          if (validCandidates.length === 0) break; 
 
-          // Randomly pick a direction to create a winding path
-          // Since 2/4 moves are "Up" and 2/4 are "Side", it will naturally zig-zag upwards
+          // Random step
           const next = validCandidates[Math.floor(Math.random() * validCandidates.length)];
           
           walkableCoords.set(getHexKey(next.q, next.r), { q: next.q, r: next.r, isSafe: true });
@@ -63,22 +61,20 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
           current = next;
       }
 
-      // Add Flanking Debris (Unsafe corridor width)
-      // Add hexes directly adjacent to the path to make it wider but dangerous
+      // Add Flanking Debris (Unsafe corridor)
+      // These are the "trap" hexes with 1 HP
       pathSteps.forEach(p => {
           getNeighbors(p.q, p.r).forEach(n => {
               const k = getHexKey(n.q, n.r);
-              // 60% chance to spawn debris on the side to make the path look organic but hazardous
-              if (!walkableCoords.has(k) && Math.random() > 0.4) {
+              // 70% chance to spawn unsafe debris next to path
+              if (!walkableCoords.has(k) && Math.random() > 0.3) {
                   walkableCoords.set(k, { q: n.q, r: n.r, isSafe: false });
               }
           });
       });
 
-      // Construct Pyramid Apex (Goal) at the end of the path
+      // Construct Goal (Apex)
       const endPos = pathSteps[pathSteps.length - 1];
-      
-      // Mark the end as APEX
       walkableCoords.set(getHexKey(endPos.q, endPos.r), { 
           q: endPos.q, 
           r: endPos.r, 
@@ -86,10 +82,9 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
           type: 'APEX' 
       });
 
-      // Expand the base around the Apex to give a landing zone
+      // Safe landing zone around Goal
       getNeighbors(endPos.q, endPos.r).forEach(n => {
           const k = getHexKey(n.q, n.r);
-          // Add a safe platform around the goal
           if (!walkableCoords.has(k)) { 
                walkableCoords.set(k, { q: n.q, r: n.r, isSafe: true, type: 'BASE' });
           }
@@ -103,7 +98,7 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
           let structureType: 'CAPITAL' | undefined = undefined;
 
           if (data.type === 'BASE') { level = 2; durability = 3; }
-          // APEX IS NOW LEVEL 2
+          // APEX
           if (data.type === 'APEX') { level = 2; durability = 5; structureType = 'CAPITAL'; } 
 
           initialGrid[key] = {

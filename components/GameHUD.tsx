@@ -9,7 +9,7 @@ import { TEXT } from '../services/i18n.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
-  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText
+  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon
 } from 'lucide-react';
 
 interface GameHUDProps {
@@ -43,6 +43,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const playUiSound = useGameStore(state => state.playUiSound);
   const startMission = useGameStore(state => state.startMission);
   const downloadBotLog = useGameStore(state => state.downloadBotLog);
+  
+  // New actions for game over
+  const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
+  const startNewGame = useGameStore(state => state.startNewGame);
 
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [isRankingsOpen, setIsRankingsOpen] = useState(false);
@@ -203,6 +207,33 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       }
       return null;
   }, [grid, player, bots, isLevel1_1, isLevel1_2, isLevel1_3, isLevel1_4, isLevel1_5, isLevel1_6, t]);
+
+  const handleNextLevel = () => {
+      playUiSound('CLICK');
+      if (activeLevelConfig) {
+          // Find next level ID
+          const currentIdx = CAMPAIGN_LEVELS.findIndex(l => l.id === activeLevelConfig.id);
+          const nextLevel = CAMPAIGN_LEVELS[currentIdx + 1];
+          if (nextLevel) {
+              startCampaignLevel(nextLevel.id);
+          } else {
+              abandonSession(); // End of campaign
+          }
+      } else {
+          abandonSession();
+      }
+  };
+
+  const handleRetry = () => {
+      playUiSound('CLICK');
+      if (activeLevelConfig) {
+          startCampaignLevel(activeLevelConfig.id);
+      } else if (winCondition) {
+          startNewGame(winCondition);
+      } else {
+          abandonSession();
+      }
+  };
 
   if (!grid || !player || !bots) return null;
 
@@ -457,6 +488,65 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                    })}
                </div>
            </div>
+      )}
+
+      {/* GAME OVER OVERLAY (VICTORY / DEFEAT) */}
+      {(gameStatus === 'VICTORY' || gameStatus === 'DEFEAT') && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 pointer-events-auto">
+              <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl max-w-sm w-full relative overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col items-center text-center">
+                  
+                  {/* ICON */}
+                  <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-lg border-2 ${gameStatus === 'VICTORY' ? 'bg-emerald-500/20 border-emerald-500/50 shadow-emerald-500/20' : 'bg-red-500/20 border-red-500/50 shadow-red-500/20'}`}>
+                      {gameStatus === 'VICTORY' ? <CheckCircle className="w-10 h-10 text-emerald-400" /> : <XCircle className="w-10 h-10 text-red-400" />}
+                  </div>
+
+                  {/* TITLE */}
+                  <h2 className={`text-3xl font-black uppercase tracking-widest mb-2 ${gameStatus === 'VICTORY' ? 'text-white' : 'text-red-100'}`}>
+                      {gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}
+                  </h2>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">
+                      {gameStatus === 'VICTORY' ? t.MISSION_COMPLETE : t.MISSION_FAILED}
+                  </p>
+
+                  {/* STATS SUMMARY */}
+                  <div className="grid grid-cols-2 gap-3 w-full mb-6">
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase">{t.RANK}</span>
+                          <div className="text-xl font-black text-indigo-400">{player.playerLevel}</div>
+                      </div>
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase">{t.CREDITS}</span>
+                          <div className="text-xl font-black text-amber-400">{player.coins}</div>
+                      </div>
+                  </div>
+
+                  {/* ACTIONS */}
+                  <div className="flex flex-col w-full gap-3">
+                      {gameStatus === 'VICTORY' && activeLevelConfig ? (
+                          <button 
+                              onClick={handleNextLevel}
+                              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl uppercase tracking-widest shadow-lg shadow-emerald-900/50 active:scale-95 transition-all flex items-center justify-center gap-2"
+                          >
+                              {t.BTN_NEXT} <ArrowRight className="w-4 h-4" />
+                          </button>
+                      ) : (
+                          <button 
+                              onClick={handleRetry}
+                              className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+                          >
+                              <ReloadIcon className="w-4 h-4" /> {t.BTN_RETRY}
+                          </button>
+                      )}
+                      
+                      <button 
+                          onClick={abandonSession}
+                          className="w-full py-3 bg-transparent hover:bg-slate-800 text-slate-400 hover:text-white font-bold rounded-xl uppercase tracking-widest text-xs transition-all"
+                      >
+                          {t.BTN_MENU}
+                      </button>
+                  </div>
+              </div>
+          </div>
       )}
 
       {/* BRIEFING OVERLAY (SKIRMISH/START) */}
