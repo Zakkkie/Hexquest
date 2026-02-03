@@ -1,4 +1,3 @@
-
 // Using any for the config to avoid circular dependency with campaign/types.ts which imports SessionState
 // In a stricter setup, we would move shared types to a 'core' module.
 export type HexCoord = { q: number; r: number; upgrade?: boolean; intent?: 'UPGRADE' | 'RECOVER' | 'DIG' };
@@ -24,6 +23,7 @@ export interface Hex extends HexView {
   trap?: { active: boolean, potency?: number } | null;
   attackPoint?: number;
   movePoint?: number;
+  artifact?: { type: string };
 }
 
 export enum EntityType {

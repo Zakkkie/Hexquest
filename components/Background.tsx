@@ -22,9 +22,7 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
     let time = 0;
 
     // OPTIMIZATION: Throttle FPS to save CPU
-    // Menu: 30 FPS (Smooth enough for ambience)
-    // Game: 15 FPS (Background is subtle/obscured, high FPS is wasteful)
-    const TARGET_FPS = variant === 'MENU' ? 30 : 15;
+    const TARGET_FPS = variant === 'MENU' ? 30 : 20;
     const FRAME_INTERVAL = 1000 / TARGET_FPS;
     let lastFrameTime = 0;
 
@@ -38,10 +36,10 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    const drawHex = (x: number, y: number, size: number, color: string, height: number, strokeColor: string) => {
+    const drawHex = (x: number, y: number, size: number, color: string, height: number, strokeColor: string, rotationDeg: number) => {
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
-        const angle_deg = 60 * i + 30;
+        const angle_deg = 60 * i + 30 + rotationDeg;
         const angle_rad = Math.PI / 180 * angle_deg;
         ctx.lineTo(x + size * Math.cos(angle_rad), y + size * Math.sin(angle_rad));
       }
@@ -56,7 +54,7 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
             ctx.beginPath();
             const innerSize = size * (1 - height * 0.5); 
             for (let i = 0; i < 6; i++) {
-              const angle_deg = 60 * i + 30;
+              const angle_deg = 60 * i + 30 + rotationDeg;
               const angle_rad = Math.PI / 180 * angle_deg;
               ctx.lineTo(x + innerSize * Math.cos(angle_rad), y + innerSize * Math.sin(angle_rad));
             }
@@ -84,11 +82,9 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
       const elapsed = timestamp - lastFrameTime;
       if (elapsed < FRAME_INTERVAL) return;
 
-      // Adjust lastFrameTime to target interval (avoids drift)
+      // Adjust lastFrameTime to target interval
       lastFrameTime = timestamp - (elapsed % FRAME_INTERVAL);
       
-      // Normalize time increment based on actual elapsed time (approx 0.0003 per ms)
-      // This ensures animation speed is consistent regardless of FPS limit
       time += 0.0003 * elapsed;
       
       // Base Background Color
@@ -122,12 +118,16 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
                if (height > 0.6) color = '#1e3a8a';
                if (height > 0.8) color = '#b45309';
            } else {
-               // GAME MODE: Darker, subtle tech grid
-               stroke = `rgba(30, 41, 59, ${0.1 + height * 0.2})`; // Very faint lines
+               // GAME MODE: Darker
+               stroke = `rgba(30, 41, 59, ${0.1 + height * 0.2})`; 
                if (height > 0.7) color = '#0f172a';
            }
+           
+           // HEX ROTATION LOGIC
+           // Rotate based on time and position for a wavelike organic feel
+           const rotation = (time * 10) + (Math.sin(q * 0.5 + time) * 15);
 
-           drawHex(cx, cy, HEX_SIZE, color, height, stroke);
+           drawHex(cx, cy, HEX_SIZE, color, height, stroke, rotation);
         }
       }
     };

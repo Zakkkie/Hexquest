@@ -37,7 +37,7 @@ const TrailShadow: React.FC<{ x: number; y: number; color: string }> = ({ x, y, 
     }, []);
     return (
         <Group ref={ref} x={x} y={y} opacity={0.4} listening={false}>
-             <Rect x={-6} y={-10} width={12} height={20} fill={color} cornerRadius={4} offsetY={8} />
+             <Rect x={-6} y={-10} width={12} height={20} fill={color} cornerRadius={4} offsetY={8} shadowEnabled={false} />
         </Group>
     );
 };
@@ -126,18 +126,18 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
       ))}
       <Group ref={groupRef} listening={false}>
         <Group ref={elevationGroupRef}>
-            <Ellipse x={0} y={0} radiusX={10} radiusY={6} fill="rgba(0,0,0,0.4)" />
+            <Ellipse x={0} y={0} radiusX={10} radiusY={6} fill="rgba(0,0,0,0.4)" shadowEnabled={false} />
             <Group ref={breathingGroupRef} y={-8}>
                 <Group ref={bodyRef}>
-                    <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowColor="black" shadowBlur={5} shadowOpacity={0.3} />
+                    <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowEnabled={false} />
                     {isPlayer ? (
-                        <Circle y={-14} radius={8} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} />
+                        <Circle y={-14} radius={8} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} shadowEnabled={false} />
                     ) : (
-                        <Rect x={-7} y={-21} width={14} height={14} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} cornerRadius={3} />
+                        <Rect x={-7} y={-21} width={14} height={14} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} cornerRadius={3} shadowEnabled={false} />
                     )}
                 </Group>
             </Group>
-            {isPlayer && <Ellipse y={0} radiusX={16} radiusY={10} stroke="white" strokeWidth={1} opacity={0.6} dash={[4, 4]} />}
+            {isPlayer && <Ellipse y={0} radiusX={16} radiusY={10} stroke="white" strokeWidth={1} opacity={0.6} dash={[4, 4]} shadowEnabled={false} />}
         </Group>
       </Group>
     </Group>

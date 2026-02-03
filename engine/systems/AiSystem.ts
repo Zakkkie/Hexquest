@@ -17,12 +17,7 @@ export class AiSystem implements System {
   update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
     const now = Date.now();
     
-    // Global throttling is now handled per-bot to allow variable speeds
-    // We only use state.lastBotActionTime for high-level debug or fallback
-    // if (now - state.lastBotActionTime < GAME_CONFIG.BOT_ACTION_INTERVAL_MS) { return; }
-
     // CRITICAL: Sync full state (Grid + Entities) here.
-    // We removed the unconditional sync from GameEngine to optimize performance.
     // The AI needs accurate entity references (coins, moves, level) to make decisions.
     index.syncState(state);
     
@@ -31,8 +26,13 @@ export class AiSystem implements System {
 
     const shuffledBots = [...state.bots].sort(() => Math.random() - 0.5);
 
+    // PERFORMANCE: Limit the number of heavy AI calculations per tick.
+    // This prevents lag spikes when multiple bots want to pathfind simultaneously.
+    let aiActionsProcessed = 0;
+    const MAX_AI_ACTIONS_PER_TICK = 1; 
+
     for (const bot of shuffledBots) {
-      if (!bot) continue; // Safety check for undefined entities
+      if (!bot) continue; 
       if (bot.state !== EntityState.IDLE) continue;
       
       // --- SPEED THROTTLE ---
@@ -40,10 +40,26 @@ export class AiSystem implements System {
       const baseInterval = GAME_CONFIG.BOT_ACTION_INTERVAL_MS;
       const interval = bot.playerLevel < 3 ? baseInterval * 2 : baseInterval;
       
-      const lastAct = bot.lastActionTime || 0;
+      // Initialization Stagger:
+      // If a bot has no history, give it a random offset so they don't all align on the same tick.
+      if (!bot.lastActionTime) {
+          bot.lastActionTime = now - Math.floor(Math.random() * interval);
+          continue; // Skip first frame to let stagger take effect
+      }
+      
+      const lastAct = bot.lastActionTime;
       if (now - lastAct < interval) {
           continue; 
       }
+
+      // Load Balancing:
+      // If we've already processed enough bots this tick, defer this bot to the next tick.
+      // Since bots are shuffled every tick, this one will likely get priority soon.
+      if (aiActionsProcessed >= MAX_AI_ACTIONS_PER_TICK) {
+          continue;
+      }
+
+      aiActionsProcessed++;
       
       const aiResult = calculateBotMove(
         bot, 
