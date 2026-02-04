@@ -20,12 +20,12 @@ const HexButton: React.FC<HexButtonProps> = ({
 }) => {
   
   // RESPONSIVE SIZE MAPPING
-  // Updated for better mobile touch targets
+  // Optimized for cleaner UI footprint
   const sizeClasses = {
-    sm: 'w-10 h-10 md:w-12 md:h-12', // Rotation buttons
-    md: 'w-14 h-14 md:w-[72px] md:h-[72px]', // Standard
-    lg: 'w-20 h-20 md:w-24 md:h-24', // Action buttons (Mobile Thumb size)
-    xl: 'w-24 h-24 md:w-28 md:h-28' // Large Active State
+    sm: 'w-9 h-9 md:w-10 md:h-10', // Rotation/Small actions
+    md: 'w-12 h-12 md:w-14 md:h-14', // Standard/Grid items
+    lg: 'w-16 h-16 md:w-20 md:h-20', // Action buttons (Primary)
+    xl: 'w-20 h-20 md:w-24 md:h-24' // Active State (Largest)
   };
   
   const sClass = sizeClasses[size];

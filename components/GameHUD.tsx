@@ -260,6 +260,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       }
   };
 
+  const mainButtonSize = isMobile ? "lg" : "md";
+
   if (!grid || !player || !bots) return null;
 
   return (
@@ -571,43 +573,94 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
       {/* BRIEFING OVERLAY (SKIRMISH/START) */}
       {gameStatus === 'BRIEFING' && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 pointer-events-auto">
-              <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl max-w-md w-full relative overflow-hidden animate-in zoom-in-95 duration-300">
-                  <div className="flex flex-col items-center text-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/50">
-                          <Target className="w-8 h-8 text-indigo-400" />
-                      </div>
-                      <div>
-                          <h2 className="text-2xl font-black text-white uppercase tracking-widest">{t.BRIEFING_TITLE}</h2>
-                          <p className="text-slate-400 text-xs font-mono mt-1 uppercase">{winCondition?.label || t.SKIRMISH_OBJ}</p>
-                      </div>
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6 pointer-events-auto">
+              <div className="relative max-w-md w-full">
+                  
+                  {/* Decorative Tech Borders */}
+                  <div className="absolute -inset-0.5 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-[2rem] opacity-20 blur-md"></div>
+                  
+                  <div className="bg-slate-950 border border-slate-800 p-1 rounded-[1.8rem] relative overflow-hidden shadow-2xl">
                       
-                      <div className="w-full h-px bg-slate-800 my-2"></div>
-                      
-                      <div className="grid grid-cols-2 gap-4 w-full">
-                          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col items-center">
-                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t.BRIEFING_TARGET_RANK}</span>
-                              <span className="text-3xl font-black text-emerald-400">{winCondition?.targetLevel || 99}</span>
+                      {/* Scanline / Grid Background */}
+                      <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.8)_2px,transparent_2px),linear-gradient(90deg,rgba(15,23,42,0.8)_2px,transparent_2px)] bg-[size:20px_20px] opacity-20 pointer-events-none"></div>
+
+                      <div className="relative bg-slate-900/50 rounded-[1.6rem] p-6 md:p-8 flex flex-col items-center text-center gap-6 backdrop-blur-sm">
+                          
+                          {/* Header / Icon */}
+                          <div className="relative">
+                              <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] rotate-3">
+                                  <Target className="w-10 h-10 text-indigo-400 -rotate-3" />
+                              </div>
+                              <div className="absolute -top-2 -right-2 w-6 h-6 bg-slate-900 rounded-full flex items-center justify-center border border-slate-700">
+                                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
+                              </div>
                           </div>
-                          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col items-center">
-                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t.BRIEFING_TARGET_FUNDS}</span>
-                              <span className="text-3xl font-black text-amber-400">{winCondition?.targetCoins || 9999}</span>
+
+                          <div>
+                              <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 uppercase tracking-tighter italic">
+                                  {t.BRIEFING_TITLE}
+                              </h2>
+                              <div className="flex items-center justify-center gap-2 mt-2">
+                                  <div className="h-px w-8 bg-indigo-500/50"></div>
+                                  <p className="text-indigo-400 text-[10px] font-mono uppercase tracking-[0.2em]">{winCondition?.label || t.SKIRMISH_OBJ}</p>
+                                  <div className="h-px w-8 bg-indigo-500/50"></div>
+                              </div>
                           </div>
+                          
+                          {/* Mission Description */}
+                          <div className="w-full text-slate-300 text-xs leading-relaxed font-mono bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                              {t.BRIEFING_DESC_TEMPLATE.replace('{0}', (winCondition?.targetLevel || 99).toString()).replace('{1}', (winCondition?.targetCoins || 9999).toString())}
+                          </div>
+
+                          {/* Objective Cards */}
+                          <div className="grid grid-cols-2 gap-3 w-full">
+                              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80 flex flex-col items-center gap-1 group hover:border-indigo-500/30 transition-colors">
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest group-hover:text-indigo-400 transition-colors">{t.BRIEFING_TARGET_RANK}</span>
+                                  <span className="text-2xl font-black text-white">{winCondition?.targetLevel || 99}</span>
+                              </div>
+                              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80 flex flex-col items-center gap-1 group hover:border-amber-500/30 transition-colors">
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest group-hover:text-amber-400 transition-colors">{t.BRIEFING_TARGET_FUNDS}</span>
+                                  <span className="text-2xl font-black text-white">{winCondition?.targetCoins || 9999}</span>
+                              </div>
+                          </div>
+
+                          {/* Tactical Hints */}
+                          <div className="w-full bg-indigo-900/10 p-4 rounded-xl border border-indigo-500/20 text-left">
+                              <h3 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                  <Info className="w-3 h-3" /> {t.BRIEFING_HINTS_TITLE}
+                              </h3>
+                              <ul className="space-y-1.5">
+                                  <li className="text-xs text-slate-300 flex items-start gap-2">
+                                      <span className="text-indigo-500 font-bold">1.</span> {t.BRIEFING_HINT_1}
+                                  </li>
+                                  <li className="text-xs text-slate-300 flex items-start gap-2">
+                                      <span className="text-indigo-500 font-bold">2.</span> {t.BRIEFING_HINT_2}
+                                  </li>
+                                  <li className="text-xs text-slate-300 flex items-start gap-2">
+                                      <span className="text-indigo-500 font-bold">3.</span> {t.BRIEFING_HINT_3}
+                                  </li>
+                              </ul>
+                          </div>
+
+                          {winCondition?.botCount > 0 && (
+                              <div className="w-full flex items-center justify-center gap-3 text-red-400 bg-red-950/20 px-4 py-2 rounded-lg border border-red-900/30">
+                                  <AlertTriangle className="w-4 h-4 animate-pulse" />
+                                  <span className="text-xs font-bold uppercase tracking-wide">{t.BRIEFING_RIVAL} DETECTED ({winCondition.botCount})</span>
+                              </div>
+                          )}
+
+                          {/* Action */}
+                          <button 
+                              onClick={() => { startMission(); playUiSound('SUCCESS'); }}
+                              className="w-full group relative py-4 bg-white text-slate-950 font-black rounded-xl uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.25)] hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden"
+                          >
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-200/50 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                              <span className="relative flex items-center justify-center gap-2">
+                                  {t.BRIEFING_BTN_START} <ArrowRight className="w-4 h-4" />
+                              </span>
+                          </button>
+
                       </div>
-
-                      {winCondition?.botCount > 0 && (
-                          <div className="flex items-center gap-2 text-red-400 bg-red-950/30 px-3 py-1.5 rounded-lg border border-red-900/50">
-                              <AlertTriangle className="w-4 h-4" />
-                              <span className="text-xs font-bold uppercase">{t.BRIEFING_RIVAL} ({winCondition.botCount})</span>
-                          </div>
-                      )}
-
-                      <button 
-                          onClick={() => { startMission(); playUiSound('SUCCESS'); }}
-                          className="w-full py-4 bg-white hover:bg-slate-200 text-slate-900 font-black rounded-xl uppercase tracking-widest shadow-lg shadow-white/10 active:scale-95 transition-all mt-2"
-                      >
-                          {t.BRIEFING_BTN_START}
-                      </button>
                   </div>
               </div>
           </div>
@@ -656,7 +709,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                     active={true} 
                     variant={timeData.mode === 'RECOVERY' ? 'blue' : (timeData.mode === 'DIG' ? 'red' : 'amber')} 
                     progress={timeData.percent} 
-                    size={isMobile ? "xl" : "lg"} 
+                    size={mainButtonSize} 
                     pulsate={true}
                 >
                     <div className="flex flex-col items-center gap-1"><Pause className="w-6 h-6 md:w-8 md:h-8 fill-current" /><span className="text-[10px] font-mono font-bold">{formatTime(timeData.remainingSeconds)}</span></div>
@@ -668,7 +721,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                         onClick={() => !isMoving && togglePlayerGrowth('DIG')} 
                         disabled={isMoving || !canDig} 
                         variant={(canDig && !isMoving) ? 'red' : 'slate'} 
-                        size={isMobile ? "lg" : "md"}
+                        size={mainButtonSize}
                         title={digTooltip}
                     >
                         <Pickaxe className="w-5 h-5 md:w-8 md:h-8" />
@@ -679,7 +732,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                         onClick={() => !isMoving && togglePlayerGrowth('RECOVER')} 
                         disabled={isMoving} 
                         variant={(canRecover && !isMoving) ? 'blue' : 'slate'} 
-                        size={isMobile ? "lg" : "md"}
+                        size={mainButtonSize}
                         title={recoverTooltip}
                     >
                         <RefreshCw className="w-5 h-5 md:w-8 md:h-8" />
@@ -691,7 +744,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                             onClick={() => !isMoving && togglePlayerGrowth('UPGRADE')} 
                             disabled={isMoving} 
                             variant={(canUpgrade && !isMoving) ? 'amber' : 'slate'} 
-                            size={isMobile ? "xl" : "lg"} 
+                            size={mainButtonSize} 
                             pulsate={canUpgrade}
                             title={upgradeTooltip}
                         >

@@ -38,6 +38,26 @@ interface Dictionary {
         BTN_CANCEL: string;
         LOGOUT_CONFIRM: string;
         ABANDON_CONFIRM: string;
+        
+        // New Layout Keys
+        COL_GOAL_TITLE: string;
+        COL_GOAL_DESC: string;
+        COL_SETUP_TITLE: string;
+        COL_SETUP_DESC: string;
+        LBL_DIFFICULTY: string;
+        LBL_RIVALS: string;
+        
+        // Forecast / Details
+        FORECAST_TITLE: string;
+        STAT_MAP_SIZE: string;
+        STAT_STORAGE: string;
+        STAT_AI_BEHAVIOR: string;
+        VAL_SMALL: string;
+        VAL_MEDIUM: string;
+        VAL_LARGE: string;
+        VAL_PASSIVE: string;
+        VAL_BALANCED: string;
+        VAL_AGGRESSIVE: string;
     };
     HUD: {
         RANK: string;
@@ -64,7 +84,11 @@ interface Dictionary {
         BRIEFING_TARGET_RANK: string;
         BRIEFING_TARGET_FUNDS: string;
         BRIEFING_BTN_START: string;
-        // Help Tooltips
+        BRIEFING_DESC_TEMPLATE: string; // New
+        BRIEFING_HINTS_TITLE: string; // New
+        BRIEFING_HINT_1: string; // New
+        BRIEFING_HINT_2: string; // New
+        BRIEFING_HINT_3: string; // New
         HELP_RANK_DESC: string;
         HELP_RANK_GOAL: string;
         HELP_MAT_DESC: string;
@@ -73,11 +97,9 @@ interface Dictionary {
         HELP_COINS_GOAL: string;
         HELP_MOVES_DESC: string;
         HELP_MOVES_HINT: string;
-        
         MINI_LB_COMMANDER: string;
         MINI_LB_CYCLE: string;
         MINI_LB_CREDITS: string;
-        // NEW HINTS
         HINT_RANK: string;
         HINT_CREDITS: string;
         HINT_MOVES: string;
@@ -85,47 +107,39 @@ interface Dictionary {
         BTN_CLAIM: string;
         BTN_REWARD: string;
         BTN_READY: string;
-        // SKIRMISH BRIEFING
         SKIRMISH_OBJ: string;
         SKIRMISH_COND: string;
-        
-        // --- CAMPAIGN SPECIFIC ---
         TUT_1_1_TASK: string;
         TUT_1_1_COST: string;
         TUT_1_1_REWARD: string;
         TUT_1_1_GUIDE: string;
         TUT_1_1_COUNTER: string; 
-        
         TUT_1_2_TASK: string;
         TUT_1_2_INTRO_TITLE: string;
         TUT_1_2_INTRO_DESC: string;
         TUT_1_2_LEGEND_SAFE: string;
         TUT_1_2_LEGEND_RISK: string;
-        TUT_1_2_COUNTER: string; // Distance
-
+        TUT_1_2_COUNTER: string;
         TUT_1_3_TASK: string;
         TUT_1_3_INTRO_TITLE: string;
         TUT_1_3_INTRO_DESC: string;
         TUT_1_3_REQ_LABEL: string;
         TUT_1_3_ERROR_STAIRCASE: string;
-        TUT_1_3_COUNTER: string; // Supports
-
+        TUT_1_3_COUNTER: string;
         TUT_1_4_TASK: string;
         TUT_1_4_INTRO_TITLE: string;
         TUT_1_4_INTRO_DESC: string;
-        TUT_1_4_COUNTER: string; // Center Level
-
+        TUT_1_4_COUNTER: string;
         TUT_1_5_TASK: string;
         TUT_1_5_INTRO_TITLE: string;
         TUT_1_5_INTRO_DESC: string;
         TUT_1_5_TIMER_LABEL: string;
-        TUT_1_5_COUNTER: string; // Coins
-
+        TUT_1_5_COUNTER: string;
         TUT_1_6_TASK: string;
         TUT_1_6_INTRO_TITLE: string;
         TUT_1_6_INTRO_DESC: string;
         TUT_1_6_CYCLE_HINT: string;
-        TUT_1_6_COUNTER: string; // Race Level
+        TUT_1_6_COUNTER: string;
         TUT_1_6_RIVAL: string;
     };
     TOOLTIP: {
@@ -176,156 +190,179 @@ export const TEXT: Record<Language, Dictionary> = {
             TITLE: "HexQuest",
             SUBTITLE: "Strategic Expansion Protocol",
             CAMPAIGN: "Campaign",
-            CAMPAIGN_SUB: "Start Tutorial & Story",
-            SKIRMISH: "Skirmish",
-            SKIRMISH_SUB: "Custom Simulation",
-            RESUME: "Resume Session",
-            RESUME_SUB: "Return to active command",
-            LEADERBOARD: "Leaderboard",
-            LEADERBOARD_SUB: "Global rankings",
-            END_SESSION: "End Session",
-            END_SESSION_SUB: "Close current map",
-            EXIT: "Exit to Desktop",
+            CAMPAIGN_SUB: "Story & Training",
+            SKIRMISH: "Battle",
+            SKIRMISH_SUB: "Custom Conflict",
+            RESUME: "Resume",
+            RESUME_SUB: "Return to sector",
+            LEADERBOARD: "Rankings",
+            LEADERBOARD_SUB: "Global hall of fame",
+            END_SESSION: "Abort",
+            END_SESSION_SUB: "Close current sector",
+            EXIT: "Exit",
             AUTH_GUEST: "Guest",
             AUTH_LOGIN: "Login",
-            AUTH_REGISTER: "Register",
-            MODAL_LOGIN_TITLE: "Access Terminal",
+            AUTH_REGISTER: "Sign Up",
+            MODAL_LOGIN_TITLE: "Terminal Access",
             MODAL_REGISTER_TITLE: "New Commission",
-            MODAL_GUEST_TITLE: "Guest Identity",
+            MODAL_GUEST_TITLE: "Guest Mode",
             BTN_LOGIN: "Authenticate",
-            BTN_REGISTER: "Establish Link",
-            BTN_GUEST: "Proceed as Guest",
+            BTN_REGISTER: "Join Ranks",
+            BTN_GUEST: "Play as Guest",
             INPUT_NAME: "Callsign",
             INPUT_PASS: "Password",
-            AUTH_AVATAR_COLOR: "Avatar Color",
+            AUTH_AVATAR_COLOR: "Suit Color",
             AUTH_INSIGNIA: "Insignia",
-            CONFIG_TITLE: "Mission Config",
-            CONFIG_SUB: "Select Operational Parameters",
-            DIFF_EASY: "Cadet",
-            DIFF_MEDIUM: "Veteran",
-            DIFF_HARD: "Elite",
-            BTN_START: "Initialize Mission",
+            CONFIG_TITLE: "Battle Configuration",
+            CONFIG_SUB: "Define mission parameters",
+            DIFF_EASY: "Easy",
+            DIFF_MEDIUM: "Medium",
+            DIFF_HARD: "Hard",
+            BTN_START: "Initiate Battle",
             BTN_CANCEL: "Cancel",
-            LOGOUT_CONFIRM: "Logging out will end your current session. All progress is saved to your profile.",
-            ABANDON_CONFIRM: "Are you sure you want to end this session? The map will be closed."
+            LOGOUT_CONFIRM: "Logging out will end your session.",
+            ABANDON_CONFIRM: "Abort mission? Progress will be lost.",
+            
+            COL_GOAL_TITLE: "Mission Objectives",
+            COL_GOAL_DESC: "Select the victory criteria.",
+            COL_SETUP_TITLE: "Simulation Settings",
+            COL_SETUP_DESC: "Configure threats and difficulty.",
+            LBL_DIFFICULTY: "Challenge Level",
+            LBL_RIVALS: "Bots",
+
+            FORECAST_TITLE: "Tactical Forecast",
+            STAT_MAP_SIZE: "Map Radius",
+            STAT_STORAGE: "Storage Cap",
+            STAT_AI_BEHAVIOR: "AI Behavior",
+            VAL_SMALL: "Compact",
+            VAL_MEDIUM: "Standard",
+            VAL_LARGE: "Expansive",
+            VAL_PASSIVE: "Defensive",
+            VAL_BALANCED: "Balanced",
+            VAL_AGGRESSIVE: "Hostile"
         },
         HUD: {
             RANK: "Rank",
             MATERIAL: "Mat.",
             CREDITS: "Coins",
-            MOVES: "Moves",
-            LEADERBOARD_TITLE: "Rankings",
-            ABORT_TITLE: "Abort Mission?",
-            ABORT_DESC: "Terminating the session will disconnect from the current sector.",
+            MOVES: "Fuel",
+            LEADERBOARD_TITLE: "Ranks",
+            ABORT_TITLE: "Abort?",
+            ABORT_DESC: "Close connection to sector?",
             BTN_CANCEL: "Cancel",
-            BTN_CONFIRM: "Confirm Exit",
+            BTN_CONFIRM: "Confirm",
             VICTORY: "VICTORY",
             DEFEAT: "DEFEAT",
-            MISSION_COMPLETE: "Campaign Complete! All sectors secured. You are a legend.",
-            MISSION_FAILED: "Objective Failed.",
+            MISSION_COMPLETE: "Sector Secured.",
+            MISSION_FAILED: "Operation Failed.",
             WINNER: "Winner",
             BTN_MENU: "Main Menu",
             BTN_NEXT: "Next Sector",
-            BTN_RETRY: "Retry Sector",
-            BTN_VIEW_LEADERBOARD: "View Leaderboard",
+            BTN_RETRY: "Retry",
+            BTN_VIEW_LEADERBOARD: "Leaderboard",
             TIME: "Time",
-            BRIEFING_RIVAL: "Rival Presence Detected",
+            BRIEFING_RIVAL: "Rival Presence",
             BRIEFING_TITLE: "Mission Briefing",
             BRIEFING_TARGET_RANK: "Target Rank",
             BRIEFING_TARGET_FUNDS: "Target Coins",
-            BRIEFING_BTN_START: "START MISSION",
-            HELP_RANK_DESC: "Your Rank determines your maximum clearance level. Increase it by upgrading structures.",
+            BRIEFING_BTN_START: "DEPLOY UNIT",
+            BRIEFING_DESC_TEMPLATE: "Establish dominance in the sector. Upgrade your position to Rank {0} and accumulate {1} Credits to complete the mission.",
+            BRIEFING_HINTS_TITLE: "Tactical Advice",
+            BRIEFING_HINT_1: "Move to neutral hexes to claim them.",
+            BRIEFING_HINT_2: "Build a foundation before upgrading vertically.",
+            BRIEFING_HINT_3: "Monitor your material storage.",
+            HELP_RANK_DESC: "Your clearance level. Increased by building higher structures.",
             HELP_RANK_GOAL: "Goal: Reach Rank {0}",
-            HELP_MAT_DESC: "Material is required to build or upgrade structures. Dig ground to gather it.",
-            HELP_MAT_GOAL: "Used for construction",
-            HELP_COINS_DESC: "Coins fund upgrades and can refuel movement (Emergency Propulsion).",
+            HELP_MAT_DESC: "Material is required to build. Dig ground to harvest.",
+            HELP_MAT_GOAL: "Build Resource",
+            HELP_COINS_DESC: "Currency for upgrades and emergency movement.",
             HELP_COINS_GOAL: "Goal: {0} Coins",
-            HELP_MOVES_DESC: "Moves are replenished by upgrading, recovering, or digging.",
-            HELP_MOVES_HINT: "Tip: High levels cost more to traverse.",
-            MINI_LB_COMMANDER: "Commander",
-            MINI_LB_CYCLE: "Upgrade",
+            HELP_MOVES_DESC: "Fuel for actions. Replenished by active operations.",
+            HELP_MOVES_HINT: "Tip: High terrain costs more fuel.",
+            MINI_LB_COMMANDER: "Unit",
+            MINI_LB_CYCLE: "Rank",
             MINI_LB_CREDITS: "Coins",
-            HINT_RANK: "Clearance Lvl",
-            HINT_CREDITS: "Money (Costs)",
-            HINT_MOVES: "Fuel (Movement)",
-            HINT_CYCLE: "Cooldowns",
-            BTN_CLAIM: "CLAIM SECTOR",
-            BTN_REWARD: "Reward: +Income & +1 Move",
-            BTN_READY: "READY",
-            SKIRMISH_OBJ: "Skirmish Objectives",
+            HINT_RANK: "Rank",
+            HINT_CREDITS: "Money",
+            HINT_MOVES: "Fuel",
+            HINT_CYCLE: "Cycle",
+            BTN_CLAIM: "CLAIM",
+            BTN_REWARD: "Reward: +Income",
+            BTN_READY: "UNDERSTOOD",
+            SKIRMISH_OBJ: "Objective",
             SKIRMISH_COND: "Win Conditions",
-            TUT_1_1_TASK: "Objective: Capture 3 Sectors",
-            TUT_1_1_COST: "Cost: 100 Coins",
-            TUT_1_1_REWARD: "Yields: +5 Income/Tick",
-            TUT_1_1_GUIDE: "Move to and CLAIM the 3 highlighted hexes.",
-            TUT_1_1_COUNTER: "CAPTURED SECTORS",
-            TUT_1_2_TASK: "Reach the Pyramid Apex",
-            TUT_1_2_INTRO_TITLE: "STRUCTURAL HAZARD WARNING",
-            TUT_1_2_INTRO_DESC: "The terrain ahead is critically unstable. You must navigate a path to the extraction point.\n\nOnly step on STABLE sectors. Damaged sectors will collapse instantly under your weight.\n\nNOTE: Your Rank protects you from shockwaves. Don't let it reach 0.",
-            TUT_1_2_LEGEND_SAFE: "Stable (3 HP)",
-            TUT_1_2_LEGEND_RISK: "Critical (1 HP)",
-            TUT_1_2_COUNTER: "DISTANCE TO GOAL",
-            TUT_1_3_TASK: "Build Foundation & Reach L2",
-            TUT_1_3_INTRO_TITLE: "Construction Protocol: Verticality",
-            TUT_1_3_INTRO_DESC: "You are isolated on a floating platform. The supports have collapsed.\n\nObjective: Rebuild the foundation (L1) around you, then upgrade ANY sector to Level 2.\n\nWARNING: Do not step into the Void.",
-            TUT_1_3_REQ_LABEL: "L1 Supports Ready",
-            TUT_1_3_ERROR_STAIRCASE: "UNSTABLE STRUCTURE! To build Level 2, you need 1 more neighbor at Level 1+.",
-            TUT_1_3_COUNTER: "SUPPORTS BUILT",
-            TUT_1_4_TASK: "Reinforce The Bridge",
-            TUT_1_4_INTRO_TITLE: "Protocol: Resource Cycle",
-            TUT_1_4_INTRO_DESC: "Objective: Upgrade Center to Level 3.\n\nPROBLEM: You have 0 Material.\n\nSOLUTION: Use the DIG action on surrounding mounds to harvest material, then build up the center.",
-            TUT_1_4_COUNTER: "CENTER LEVEL",
-            TUT_1_5_TASK: "Deep Recovery Cycle",
-            TUT_1_5_INTRO_TITLE: "Protocol: Rapid Extraction",
-            TUT_1_5_INTRO_DESC: "CRITICAL: Life Support Failing.\n\nGoal: Accumulate 150 Coins in 60 Seconds.\n\nYou have minimal moves. You must exploit the 'Recovery' mechanic on high-level debris to generate movement fuel and credits.",
-            TUT_1_5_TIMER_LABEL: "OXYGEN",
-            TUT_1_5_COUNTER: "COINS COLLECTED",
-            TUT_1_6_TASK: "Reach Level 3",
-            TUT_1_6_INTRO_TITLE: "Protocol: Cycle Lock",
-            TUT_1_6_INTRO_DESC: "Objective: Reach Level 4 before the Rival.\n\nThe AI Rival 'Architect' is active. It knows how to dig and build.\n\nDon't let it beat you to the top.",
-            TUT_1_6_CYCLE_HINT: "Cycle Locked! Upgrade another hex first.",
-            TUT_1_6_COUNTER: "RACE: MAX LEVEL",
+            TUT_1_1_TASK: "Capture 3 Sectors",
+            TUT_1_1_COST: "Cost: 100",
+            TUT_1_1_REWARD: "+5 Income",
+            TUT_1_1_GUIDE: "Move to highlighted hexes.",
+            TUT_1_1_COUNTER: "CAPTURED",
+            TUT_1_2_TASK: "Reach Apex",
+            TUT_1_2_INTRO_TITLE: "DANGER",
+            TUT_1_2_INTRO_DESC: "Ground is unstable. Follow the safe path.",
+            TUT_1_2_LEGEND_SAFE: "Stable",
+            TUT_1_2_LEGEND_RISK: "Critical",
+            TUT_1_2_COUNTER: "DISTANCE",
+            TUT_1_3_TASK: "Build Level 2",
+            TUT_1_3_INTRO_TITLE: "Foundation",
+            TUT_1_3_INTRO_DESC: "Build supports before going higher.",
+            TUT_1_3_REQ_LABEL: "Ready",
+            TUT_1_3_ERROR_STAIRCASE: "UNSTABLE",
+            TUT_1_3_COUNTER: "SUPPORTS",
+            TUT_1_4_TASK: "Reach Level 3",
+            TUT_1_4_INTRO_TITLE: "Excavation",
+            TUT_1_4_INTRO_DESC: "Dig mounds for material.",
+            TUT_1_4_COUNTER: "LVL",
+            TUT_1_5_TASK: "Emergency Run",
+            TUT_1_5_INTRO_TITLE: "Oxygen Low",
+            TUT_1_5_INTRO_DESC: "Collect 150 Coins fast!",
+            TUT_1_5_TIMER_LABEL: "ТАЙМЕР",
+            TUT_1_5_COUNTER: "COINS",
+            TUT_1_6_TASK: "Race for L4",
+            TUT_1_6_INTRO_TITLE: "The Rival",
+            TUT_1_6_INTRO_DESC: "Beat the Architect.",
+            TUT_1_6_CYCLE_HINT: "Locked!",
+            TUT_1_6_COUNTER: "RANK",
             TUT_1_6_RIVAL: "RIVAL",
         },
         TOOLTIP: {
-            CURRENT_LOC: "Current Location",
+            CURRENT_LOC: "Location",
             BLOCKED: "BLOCKED",
-            NA: "N/A",
+            NA: "-",
             REQ: "REQ",
             OCCUPIED: "OCCUPIED",
-            PLAYER: "PLAYER"
+            PLAYER: "UNIT"
         },
         TUTORIAL: {
             WELCOME_TITLE: "Training",
-            WELCOME_DESC: "Goal: Reach Level 3. You must improve surrounding hexes to create a foundation for higher levels.",
+            WELCOME_DESC: "Reach Level 3. Expand and build.",
             BTN_START: "Start",
-            CAMERA_DESC: "Camera Control",
-            CAMERA_HINT: "Note the flashing buttons below. Use them or right-click drag to rotate.",
-            MOVE_A: "Walk to the flashing hex using move points by clicking on it.",
-            MOVE_B: "Continue improving hexes to L1!",
-            MOVE_CENTER: "One more upgrade left to reach the next level! Forward!",
-            ACQUIRE: "Upgrade",
-            ACQUIRE_DESC: "Improve the L0 hex to L1!",
-            UPGRADE_L2: "Upgrade to Level 2",
-            UPGRADE_L2_DESC: "Requires L1 Supports",
-            FOUNDATION_TITLE: "Phase 2: Foundation",
-            FOUNDATION_DESC: "Create a foundation of three L2 hexes for L3 growth! Don't forget upgrade points!",
-            FOUNDATION_TASK: "Build 3x Level 2 Hexes",
-            FINAL_TITLE: "Foundation Ready!",
-            FINAL_DESC: "Return to the center and upgrade to Level 3 to complete mission.",
-            NO_POINTS_TITLE: "No Upgrades",
-            NO_POINTS_DESC: "No upgrade points. Capture new sectors (L0->L1) to gain upgrade points.",
-            NO_POINTS_DESC_HINT: "Look for highlighted empty hexes.",
-            NO_POINTS_HINT: "Look for highlighted empty hexes."
+            CAMERA_DESC: "Camera",
+            CAMERA_HINT: "Rotate using buttons below.",
+            MOVE_A: "Click hex to walk.",
+            MOVE_B: "Build L1 foundation.",
+            MOVE_CENTER: "Upgrade to L2!",
+            ACQUIRE: "Build",
+            ACQUIRE_DESC: "Upgrade L0 to L1.",
+            UPGRADE_L2: "Lvl 2",
+            UPGRADE_L2_DESC: "Needs supports.",
+            FOUNDATION_TITLE: "Base",
+            FOUNDATION_DESC: "Build 3x L2 hexes.",
+            FOUNDATION_TASK: "3x L2",
+            FINAL_TITLE: "Ready",
+            FINAL_DESC: "Build L3 center.",
+            NO_POINTS_TITLE: "Empty",
+            NO_POINTS_DESC: "Dig to get mats.",
+            NO_POINTS_DESC_HINT: "Find mounds.",
+            NO_POINTS_HINT: "Dig here."
         },
         LEADERBOARD: {
             TITLE: "Hall of Fame",
-            SUBTITLE: "Best Recorded Performance",
-            BTN_BACK: "Back to Menu",
-            HEADER_COMM: "Commander",
-            HEADER_CREDITS: "Max Coins",
-            HEADER_RANK: "Max Rank",
-            EMPTY: "No records found."
+            SUBTITLE: "Top Battle Records",
+            BTN_BACK: "Menu",
+            HEADER_COMM: "Unit",
+            HEADER_CREDITS: "Coins",
+            HEADER_RANK: "Rank",
+            EMPTY: "Empty."
         }
     },
     RU: {
@@ -333,163 +370,179 @@ export const TEXT: Record<Language, Dictionary> = {
             TITLE: "HexQuest",
             SUBTITLE: "Протокол Расширения",
             CAMPAIGN: "Кампания",
-            CAMPAIGN_SUB: "Сюжетный режим",
-            SKIRMISH: "Схватка",
-            SKIRMISH_SUB: "Быстрая игра",
+            CAMPAIGN_SUB: "Сюжет и обучение",
+            SKIRMISH: "Битва",
+            SKIRMISH_SUB: "Настраиваемое сражение",
             RESUME: "Продолжить",
-            RESUME_SUB: "Вернуться в бой",
-            LEADERBOARD: "Рекорды",
+            RESUME_SUB: "Вернуться в сектор",
+            LEADERBOARD: "Рейтинги",
             LEADERBOARD_SUB: "Зал славы",
-            END_SESSION: "Завершить",
-            END_SESSION_SUB: "Покинуть карту",
+            END_SESSION: "Прервать",
+            END_SESSION_SUB: "Закрыть сектор",
             EXIT: "Выход",
             AUTH_GUEST: "Гость",
             AUTH_LOGIN: "Вход",
             AUTH_REGISTER: "Регистрация",
-            MODAL_LOGIN_TITLE: "Авторизация",
-            MODAL_REGISTER_TITLE: "Создание профиля",
-            MODAL_GUEST_TITLE: "Гостевой вход",
+            MODAL_LOGIN_TITLE: "Доступ к Терминалу",
+            MODAL_REGISTER_TITLE: "Новый Контракт",
+            MODAL_GUEST_TITLE: "Гостевой Режим",
             BTN_LOGIN: "Войти",
-            BTN_REGISTER: "Создать",
+            BTN_REGISTER: "Создать Профиль",
             BTN_GUEST: "Играть как Гость",
             INPUT_NAME: "Позывной",
             INPUT_PASS: "Пароль",
-            AUTH_AVATAR_COLOR: "Цвет интерфейса",
+            AUTH_AVATAR_COLOR: "Цвет Снаряжения",
             AUTH_INSIGNIA: "Эмблема",
-            CONFIG_TITLE: "Параметры Миссии",
-            CONFIG_SUB: "Настройка сложности",
-            DIFF_EASY: "Новичок",
-            DIFF_MEDIUM: "Боец",
-            DIFF_HARD: "Элита",
-            BTN_START: "Начать",
+            CONFIG_TITLE: "Настройка Битвы",
+            CONFIG_SUB: "Параметры симуляции",
+            DIFF_EASY: "Легкий",
+            DIFF_MEDIUM: "Средний",
+            DIFF_HARD: "Сложный",
+            BTN_START: "Начать Битву",
             BTN_CANCEL: "Отмена",
-            LOGOUT_CONFIRM: "Выход завершит текущую сессию. Прогресс будет сохранен.",
-            ABANDON_CONFIRM: "Вы уверены? Весь несохраненный прогресс на карте будет утерян."
+            LOGOUT_CONFIRM: "Выход завершит текущую сессию.",
+            ABANDON_CONFIRM: "Прервать миссию? Прогресс будет потерян.",
+            
+            COL_GOAL_TITLE: "Цели Миссии",
+            COL_GOAL_DESC: "Выберите условия победы.",
+            COL_SETUP_TITLE: "Параметры Симуляции",
+            COL_SETUP_DESC: "Сложность и враждебность.",
+            LBL_DIFFICULTY: "Уровень Сложности",
+            LBL_RIVALS: "Боты",
+
+            FORECAST_TITLE: "Тактический Прогноз",
+            STAT_MAP_SIZE: "Радиус Карты",
+            STAT_STORAGE: "Лимит Склада",
+            STAT_AI_BEHAVIOR: "Поведение ИИ",
+            VAL_SMALL: "Компакт",
+            VAL_MEDIUM: "Стандарт",
+            VAL_LARGE: "Обширный",
+            VAL_PASSIVE: "Защитное",
+            VAL_BALANCED: "Баланс",
+            VAL_AGGRESSIVE: "Агрессия"
         },
         HUD: {
             RANK: "Ранг",
             MATERIAL: "Мат.",
             CREDITS: "Монеты",
-            MOVES: "Ходы",
-            LEADERBOARD_TITLE: "Топ Игроков",
-            ABORT_TITLE: "Покинуть миссию?",
-            ABORT_DESC: "Текущий прогресс в секторе будет потерян.",
+            MOVES: "Топливо",
+            LEADERBOARD_TITLE: "Топ",
+            ABORT_TITLE: "Выход?",
+            ABORT_DESC: "Прервать связь с сектором?",
             BTN_CANCEL: "Отмена",
-            BTN_CONFIRM: "Выйти",
+            BTN_CONFIRM: "Да",
             VICTORY: "ПОБЕДА",
             DEFEAT: "ПОРАЖЕНИЕ",
-            MISSION_COMPLETE: "Сектор зачищен. Отличная работа, командир.",
-            MISSION_FAILED: "Задача провалена. Инициализация отхода...",
+            MISSION_COMPLETE: "Сектор захвачен.",
+            MISSION_FAILED: "Операция провалена.",
             WINNER: "Победитель",
             BTN_MENU: "В Меню",
-            BTN_NEXT: "След. Уровень",
+            BTN_NEXT: "След. Сектор",
             BTN_RETRY: "Заново",
-            BTN_VIEW_LEADERBOARD: "Таблица Рекордов",
+            BTN_VIEW_LEADERBOARD: "Рекорды",
             TIME: "Время",
-            BRIEFING_RIVAL: "ВРАГ ОБНАРУЖЕН",
-            BRIEFING_TITLE: "Брифинг",
-            BRIEFING_TARGET_RANK: "Цель: Ранг",
-            BRIEFING_TARGET_FUNDS: "Цель: Монеты",
-            BRIEFING_BTN_START: "В БОЙ",
-            HELP_RANK_DESC: "Ваш уровень доступа. Повышается при строительстве новых уровней гексов.",
+            BRIEFING_RIVAL: "Враг",
+            BRIEFING_TITLE: "Брифинг Миссии",
+            BRIEFING_TARGET_RANK: "Нужный Ранг",
+            BRIEFING_TARGET_FUNDS: "Нужно Монет",
+            BRIEFING_BTN_START: "ВЫСАДКА",
+            BRIEFING_DESC_TEMPLATE: "Установите контроль над сектором. Достигните Ранга {0} и заработайте {1} Монет для выполнения миссии.",
+            BRIEFING_HINTS_TITLE: "Тактика",
+            BRIEFING_HINT_1: "Захватывайте нейтральные гексы.",
+            BRIEFING_HINT_2: "Создавайте фундамент для роста вверх.",
+            BRIEFING_HINT_3: "Следите за запасом материалов.",
+            HELP_RANK_DESC: "Ваш уровень доступа. Растет при строительстве высоких этажей.",
             HELP_RANK_GOAL: "Цель: Ранг {0}",
-            HELP_MAT_DESC: "Материалы нужны для строительства. Добываются раскопками (Dig) земли.",
+            HELP_MAT_DESC: "Материалы нужны для стройки. Копайте землю, чтобы их добыть.",
             HELP_MAT_GOAL: "Ресурс для стройки",
-            HELP_COINS_DESC: "Монеты оплачивают строительство и позволяют двигаться без ходов (5 мон = 1 ход).",
-            HELP_COINS_GOAL: "Цель: {0} Мон.",
-            HELP_MOVES_DESC: "Энергия движения. Восполняется при Апгрейде, Раскопках или Восстановлении (Recover).",
-            HELP_MOVES_HINT: "Совет: Движение по высоким горам стоит дороже.",
-            MINI_LB_COMMANDER: "Игрок",
-            MINI_LB_CYCLE: "Апгрейд",
-            MINI_LB_CREDITS: "Мон.",
-            HINT_RANK: "Уровень Доступа",
-            HINT_CREDITS: "Валюта",
+            HELP_COINS_DESC: "Валюта для апгрейдов и экстренных перемещений.",
+            HELP_COINS_GOAL: "Цель: {0} Монет",
+            HELP_MOVES_DESC: "Энергия для действий. Восполняется при активных работах.",
+            HELP_MOVES_HINT: "Совет: Горы требуют больше топлива.",
+            MINI_LB_COMMANDER: "Юнит",
+            MINI_LB_CYCLE: "Ранг",
+            MINI_LB_CREDITS: "Монеты",
+            HINT_RANK: "Ранг",
+            HINT_CREDITS: "Деньги",
             HINT_MOVES: "Топливо",
-            HINT_CYCLE: "Перезарядка",
+            HINT_CYCLE: "Цикл",
             BTN_CLAIM: "ЗАХВАТ",
-            BTN_REWARD: "Награда: Ресурсы",
+            BTN_REWARD: "Награда: Доход",
             BTN_READY: "ПОНЯТНО",
-            SKIRMISH_OBJ: "Свободная игра",
-            SKIRMISH_COND: "Наберите ресурсы для победы",
-            
-            // --- CAMPAIGN SPECIFIC ---
-            TUT_1_1_TASK: "Захватите 3 Сектора",
-            TUT_1_1_COST: "Цена: 100 Мон.",
-            TUT_1_1_REWARD: "Доход: +5/сек",
-            TUT_1_1_GUIDE: "Идите на подсвеченные клетки для захвата.",
-            TUT_1_1_COUNTER: "ЗАХВАЧЕНО СЕКТОРОВ",
-            
-            TUT_1_2_TASK: "Добраться до Вершины",
-            TUT_1_2_INTRO_TITLE: "ОПАСНОСТЬ ОБРУШЕНИЯ",
-            TUT_1_2_INTRO_DESC: "Земля нестабильна. Гексы 1-го уровня разрушаются, когда вы сходите с них.\n\nВысокий ранг служит вам БРОНЕЙ от ударных волн. Не дайте ему упасть до 0.",
-            TUT_1_2_LEGEND_SAFE: "Надежно (3 HP)",
-            TUT_1_2_LEGEND_RISK: "Опасно (1 HP)",
-            TUT_1_2_COUNTER: "ПУТЬ ДО ЦЕЛИ",
-
-            TUT_1_3_TASK: "Построй Фундамент",
-            TUT_1_3_INTRO_TITLE: "Правило: Опоры",
-            TUT_1_3_INTRO_DESC: "Вы на острове.\n\nЦель: Поднимите любой сектор до 2 уровня.\n\nПРАВИЛО: Чтобы построить 2 этаж, нужно минимум 2 соседа 1 этажа (фундамент). Используйте выданные материалы.",
-            TUT_1_3_REQ_LABEL: "Готовые опоры",
-            TUT_1_3_ERROR_STAIRCASE: "ОПАСНО! Нужно больше соседей 1 уровня для опоры.",
-            TUT_1_3_COUNTER: "ОПОРЫ ГОТОВЫ",
-
-            TUT_1_4_TASK: "Добыча Материалов",
-            TUT_1_4_INTRO_TITLE: "Цикл Ресурсов",
-            TUT_1_4_INTRO_DESC: "У вас нет материалов.\n\nРешение: Используйте РАСКОПКИ (красная кнопка) на высоких холмах, чтобы добыть материал и достроить центр.",
-            TUT_1_4_COUNTER: "УРОВЕНЬ ЦЕНТРА",
-
-            TUT_1_5_TASK: "Сбор Ресурсов",
-            TUT_1_5_INTRO_TITLE: "Экстренная Ситуация",
-            TUT_1_5_INTRO_DESC: "Кислород на исходе. Соберите 150 монет за 60 секунд.\n\nИспользуйте 'Восстановление' (синяя кнопка) на своих клетках, чтобы получить ресурсы.",
-            TUT_1_5_TIMER_LABEL: "КИСЛОРОД",
-            TUT_1_5_COUNTER: "СОБРАНО МОНЕТ",
-
-            TUT_1_6_TASK: "Достигнуть 3 Уровня",
-            TUT_1_6_INTRO_TITLE: "Гонка",
-            TUT_1_6_INTRO_DESC: "Опередите соперника. Кто первый достигнет 4 уровня - тот победил.\n\nИИ умеет копать и строить.",
-            TUT_1_6_CYCLE_HINT: "Заблокировано! Улучши другую клетку.",
-            TUT_1_6_COUNTER: "ГОНКА: МАКС УРОВЕНЬ",
+            SKIRMISH_OBJ: "Задача",
+            SKIRMISH_COND: "Условия Победы",
+            TUT_1_1_TASK: "Захватите 3 сектора",
+            TUT_1_1_COST: "Цена: 100",
+            TUT_1_1_REWARD: "+5 Доход",
+            TUT_1_1_GUIDE: "Идите на подсвеченные клетки.",
+            TUT_1_1_COUNTER: "ЗАХВАЧЕНО",
+            TUT_1_2_TASK: "Дойти до Пика",
+            TUT_1_2_INTRO_TITLE: "ОПАСНОСТЬ",
+            TUT_1_2_INTRO_DESC: "Земля нестабильна. Идите по безопасному пути.",
+            TUT_1_2_LEGEND_SAFE: "Надежно",
+            TUT_1_2_LEGEND_RISK: "Опасно",
+            TUT_1_2_COUNTER: "ДИСТАНЦИЯ",
+            TUT_1_3_TASK: "Построить L2",
+            TUT_1_3_INTRO_TITLE: "Фундамент",
+            TUT_1_3_INTRO_DESC: "Создайте опоры перед ростом вверх.",
+            TUT_1_3_REQ_LABEL: "Готово",
+            TUT_1_3_ERROR_STAIRCASE: "НЕУСТОЙЧИВО",
+            TUT_1_3_COUNTER: "ОПОРЫ",
+            TUT_1_4_TASK: "Ранг 3",
+            TUT_1_4_INTRO_TITLE: "Раскопки",
+            TUT_1_4_INTRO_DESC: "Копайте холмы для материалов.",
+            TUT_1_4_COUNTER: "УР",
+            TUT_1_5_TASK: "Эвакуация",
+            TUT_1_5_INTRO_TITLE: "Мало Кислорода",
+            TUT_1_5_INTRO_DESC: "Соберите 150 монет быстро!",
+            TUT_1_5_TIMER_LABEL: "ТАЙМЕР",
+            TUT_1_5_COUNTER: "МОНЕТЫ",
+            TUT_1_6_TASK: "Гонка до L4",
+            TUT_1_6_INTRO_TITLE: "Соперник",
+            TUT_1_6_INTRO_DESC: "Опередите Архитектора.",
+            TUT_1_6_CYCLE_HINT: "Блок!",
+            TUT_1_6_COUNTER: "РАНГ",
             TUT_1_6_RIVAL: "ВРАГ",
         },
         TOOLTIP: {
-            CURRENT_LOC: "Вы здесь",
-            BLOCKED: "НЕДОСТУПНО",
+            CURRENT_LOC: "Местоположение",
+            BLOCKED: "БЛОК",
             NA: "-",
-            REQ: "ТРЕБ",
+            REQ: "НУЖНО",
             OCCUPIED: "ЗАНЯТО",
-            PLAYER: "ИГРОК"
+            PLAYER: "ЮНИТ"
         },
         TUTORIAL: {
             WELCOME_TITLE: "Обучение",
-            WELCOME_DESC: "Добро пожаловать, Командир. Следуйте инструкциям для освоения управления.",
+            WELCOME_DESC: "Достигните 3 ранга. Расширяйтесь.",
             BTN_START: "Начать",
             CAMERA_DESC: "Камера",
-            CAMERA_HINT: "Вращайте карту правой кнопкой мыши или кнопками внизу экрана.",
-            MOVE_A: "Нажмите на клетку, чтобы двигаться.",
-            MOVE_B: "Продолжайте движение к цели.",
-            MOVE_CENTER: "Почти у цели. Вперед!",
-            ACQUIRE: "Апгрейд",
-            ACQUIRE_DESC: "Нажмите 'Улучшить', чтобы поднять уровень земли.",
-            UPGRADE_L2: "Уровень 2",
-            UPGRADE_L2_DESC: "Нужен фундамент вокруг.",
-            FOUNDATION_TITLE: "Строительство",
-            FOUNDATION_DESC: "Подготовьте площадку для высокого здания.",
-            FOUNDATION_TASK: "Постройте 3 клетки 2 уровня",
+            CAMERA_HINT: "Вращайте кнопками снизу.",
+            MOVE_A: "Нажмите на гекс.",
+            MOVE_B: "Стройте фундамент L1.",
+            MOVE_CENTER: "Улучшайте до L2!",
+            ACQUIRE: "Стройка",
+            ACQUIRE_DESC: "Поднимите L0 до L1.",
+            UPGRADE_L2: "Ур. 2",
+            UPGRADE_L2_DESC: "Нужна опора.",
+            FOUNDATION_TITLE: "База",
+            FOUNDATION_DESC: "Постройте 3 гекса L2.",
+            FOUNDATION_TASK: "3x L2",
             FINAL_TITLE: "Готово",
-            FINAL_DESC: "Теперь можно строить 3 уровень в центре.",
-            NO_POINTS_TITLE: "Нет Материалов",
-            NO_POINTS_DESC: "Используйте Раскопки (Dig) для добычи.",
-            NO_POINTS_DESC_HINT: "Ищите высокие холмы.",
-            NO_POINTS_HINT: "Копайте здесь."
+            FINAL_DESC: "Стройте L3 в центре.",
+            NO_POINTS_TITLE: "Пусто",
+            NO_POINTS_DESC: "Копайте материалы.",
+            NO_POINTS_DESC_HINT: "Ищите холмы.",
+            NO_POINTS_HINT: "Копать здесь."
         },
         LEADERBOARD: {
             TITLE: "Зал Славы",
-            SUBTITLE: "Лучшие Командиры",
-            BTN_BACK: "Назад",
-            HEADER_COMM: "Игрок",
+            SUBTITLE: "Лучшие Боевые Рекорды",
+            BTN_BACK: "Меню",
+            HEADER_COMM: "Юнит",
             HEADER_CREDITS: "Монеты",
             HEADER_RANK: "Ранг",
-            EMPTY: "Список пуст."
+            EMPTY: "Пусто."
         }
     }
 };
