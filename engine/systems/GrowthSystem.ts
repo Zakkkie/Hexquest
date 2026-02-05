@@ -158,8 +158,12 @@ export class GrowthSystem implements System {
                  entity.storage = entity.storage + 1;
              }
              
-             // Gain Move
-             entity.moves += 1;
+             // Gain Moves: Base 1, but increases with depth (Deep Work Reward)
+             // Level 0 -> -1: abs(-1) = 1 Move
+             // Level -1 -> -2: abs(-2) = 2 Moves
+             // Level 2 -> 1 (Mound): abs(1) = 1 Move
+             const depthReward = Math.max(1, Math.abs(newLevel));
+             entity.moves += depthReward;
              
              // NO COINS FOR DIGGING
 
@@ -185,7 +189,7 @@ export class GrowthSystem implements System {
              };
              
              const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
-             const msg = `${prefix} Excavated to L${newLevel} (+1 Mat, +1 Move)`;
+             const msg = `${prefix} Excavated to L${newLevel} (+1 Mat, +${depthReward} Moves)`;
              
              state.messageLog.unshift({ id: `dig-ok-${Date.now()}`, text: msg, type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now() });
              events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id));

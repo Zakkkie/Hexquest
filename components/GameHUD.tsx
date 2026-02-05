@@ -19,6 +19,7 @@ interface GameHUDProps {
 }
 
 // Visual Component for Storage Blocks
+// UPDATED: Compressed width (w-1 instead of w-2, md:w-1.5 instead of md:w-3)
 const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, max }) => {
     return (
         <div className="flex items-center gap-0.5 md:gap-1">
@@ -29,7 +30,7 @@ const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, ma
                     <div 
                         key={i} 
                         className={`
-                            w-2 h-3 md:w-3 md:h-4 rounded-[1px] md:rounded-sm transition-all duration-300
+                            w-1 h-3 md:w-1.5 md:h-4 rounded-[1px] md:rounded-sm transition-all duration-300
                             ${isOverflow 
                                 ? 'bg-amber-500 shadow-[0_0_4px_#f59e0b]' 
                                 : isFilled 
@@ -696,7 +697,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       )}
 
       {/* BOTTOM CONTROLS */}
-      <div className={`absolute bottom-4 md:bottom-8 w-full flex justify-center items-end gap-2 md:gap-5 pointer-events-none z-40 pb-[env(safe-area-inset-bottom)] origin-bottom`}>
+      {/* UPDATE: Adjusted bottom position and padding to respect safe areas (env) to prevent browser overlay issues */}
+      <div className={`absolute bottom-0 w-full flex justify-center items-end gap-2 md:gap-5 pointer-events-none z-40 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-8 bg-gradient-to-t from-slate-950/80 to-transparent origin-bottom`}>
         <div className="pointer-events-auto mb-1">
             <HexButton size="sm" onClick={() => { onRotateCamera('left'); playUiSound('CLICK'); }} variant='slate'>
                 <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />

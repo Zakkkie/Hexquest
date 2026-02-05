@@ -5,8 +5,8 @@
 
 Compete against advanced **AI Sentinels**, manage a delicate balance of **Moves vs. Coins**, and master complex zoning rules to dominate the sector.
 
-> **v3.3 Update: The Cycle Protocol**
-> Growth is no longer free. You must capture territory to fuel vertical expansion. Terrain stability remains critical.
+> **v3.4 Update: Deep Excavation**
+> Digging now rewards effort based on depth. Excavating deep pits yields significantly more propulsion fuel.
 
 ---
 
@@ -15,7 +15,8 @@ Compete against advanced **AI Sentinels**, manage a delicate balance of **Moves 
 *   **Infinite Procedural World**: A living, breathing hex grid that expands as you explore.
 *   **Dynamic Terrain Destruction**: Level 1 sectors are unstable. Heavy traffic causes them to degrade, crack, and eventually collapse into the void.
 *   **The Cycle Economy**: A unique resource system where horizontal expansion (Acquisition) fuels vertical growth (Upgrades).
-*   **Competitive AI ("Survivor" V17)**: Autonomous bots that farm resources, plan expansions, and react to collapsing terrain.
+*   **Deep Excavation Logic**: Digging operations now grant bonus moves based on the depth of the resulting pit (e.g., Digging to -2 grants +2 Moves).
+*   **Competitive AI ("The Rival")**: Autonomous bots that farm resources, plan expansions, and react to collapsing terrain.
 *   **Procedural Audio Engine**: A custom-built, asset-free sound synthesizer using the Web Audio API ("Nebula V2").
 *   **Visual Fidelity**: A 2.5D isometric view with neon-glass aesthetics, dynamic lighting, shake effects, and smooth React-Konva animations.
 
@@ -57,11 +58,13 @@ You cannot simply build a single tall tower. Expansion and Elevation are linked.
 *   **Capacity**: You can only store a limited number of Upgrade Points at a time (determined by Difficulty).
 *   *Strategy*: You must oscillate between expanding wide (capturing L0) and building tall (spending points).
 
-### 3. Structural Integrity Rules
-To prevent unrealistic physics, the game enforces structural stability:
-
-*   **The Staircase Rule**: To upgrade a hex to **Level L+1**, it must be supported by at least **2 neighbors** at exactly **Level L**.
-*   **The Valley Rule (Exception)**: If a hex is surrounded by **5 or more** neighbors of a strictly higher level, the support requirement is waived.
+### 3. Excavation (Digging)
+*   **Action**: Clicking the "Pickaxe" (Red) button allows you to lower a sector's level.
+*   **Material Gain**: Digging grants **+1 Material** if your storage is not full.
+*   **Propulsion Gain**: Digging grants Moves equal to the **absolute level** of the resulting depth.
+    *   Digging to Level -1: **+1 Move**
+    *   Digging to Level -2: **+2 Moves**
+    *   Digging to Level -5: **+5 Moves**
 
 ### 4. Recovery & Farming
 If you are low on resources or need to stall, you can perform a **Recovery** operation on any hex you own.
@@ -71,11 +74,11 @@ If you are low on resources or need to stall, you can perform a **Recovery** ope
 
 ---
 
-## 🤖 The AI: "Sentinel"
+## 🤖 The AI: "The Rival"
 
-The world is populated by AI bots running the **"Survivor V17"** logic engine.
+The world is populated by AI bots running the **"Survivor V34"** logic engine.
 
-*   **Behavior**: They prioritize survival and economic efficiency. They will establish "farms" and attempt to cut off your path.
+*   **Behavior**: They prioritize survival and economic efficiency. They will establish "farms", build walls to block you, and dig traps near your position.
 *   **Panic Mode**: If a bot gets trapped by Void Craters, it triggers a "Panic" state, attempting desperate maneuvers to break free.
 
 ---
@@ -90,6 +93,7 @@ The world is populated by AI bots running the **"Survivor V17"** logic engine.
 | **Zoom** | `Mouse Wheel` |
 | **Upgrade (Amber)** | Improve Sector Level (Uses Point) |
 | **Recover (Blue)** | Harvest Resources (Gains Move/Credits) |
+| **Dig (Red)** | Lower Level (Gains Material + Deep Move Bonus) |
 | **Menu / Settings** | `Gear` Icon (Top Right) |
 
 ---
@@ -104,4 +108,4 @@ The world is populated by AI bots running the **"Survivor V17"** logic engine.
 
 ---
 
-*HexQuest Economy - v3.3*
+*HexQuest Economy - v3.4*
