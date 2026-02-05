@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon } from 'lucide-react';
+import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -283,6 +283,7 @@ const MainMenu: React.FC = () => {
                   <div className="flex gap-2">
                      <button onClick={() => { setAuthMode('GUEST'); setInputName(''); setErrorMessage(null); playUiSound('CLICK'); }} className="px-3 py-2 bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-600 text-slate-300 text-[10px] md:text-xs font-bold uppercase h-10">{t.AUTH_GUEST}</button>
                      <button onClick={() => { setAuthMode('LOGIN'); setInputName(''); setInputPassword(''); setErrorMessage(null); playUiSound('CLICK'); }} className="px-3 py-2 bg-slate-900/50 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 text-[10px] md:text-xs font-bold uppercase h-10">{t.AUTH_LOGIN}</button>
+                     <button onClick={() => { setAuthMode('REGISTER'); setInputName(''); setInputPassword(''); setErrorMessage(null); playUiSound('CLICK'); }} className="px-3 py-2 bg-indigo-600/80 hover:bg-indigo-500 text-white rounded-lg border border-indigo-500/50 text-[10px] md:text-xs font-bold uppercase h-10 shadow-[0_0_10px_rgba(99,102,241,0.3)]">{t.AUTH_REGISTER}</button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 bg-slate-900/90 p-1.5 pl-4 rounded-full border border-slate-700 shadow-2xl">
@@ -468,7 +469,7 @@ const MainMenu: React.FC = () => {
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-sm relative">
             <button onClick={() => setAuthMode(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5" /></button>
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">{authMode === 'GUEST' ? <Ghost className="w-6 h-6 text-indigo-400" /> : (authMode === 'LOGIN' ? <LogIn className="w-6 h-6 text-indigo-400" /> : <UserCircle className="w-6 h-6 text-indigo-400" />)} {authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">{authMode === 'GUEST' ? <Ghost className="w-6 h-6 text-indigo-400" /> : (authMode === 'LOGIN' ? <LogIn className="w-6 h-6 text-indigo-400" /> : <UserPlus className="w-6 h-6 text-indigo-400" />)} {authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
             <div className="space-y-4">
               {errorMessage && <div className="p-3 bg-red-950/50 border border-red-900 rounded-lg text-red-400 text-xs font-bold text-center">{errorMessage}</div>}
               <div><label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 block">{t.INPUT_NAME}</label><input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder="Enter name..." className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors" maxLength={16} /></div>
