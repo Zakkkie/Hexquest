@@ -12,15 +12,14 @@ export interface AiResult {
     memory: BotMemory;
 }
 
-const SETTLING_TIME_MS = 15000; // Less time thinking, faster to fight
-const AGGRESSION_RADIUS = 8;     // Radius at which bot feels threatened
+const SETTLING_TIME_MS = 10000; 
+const AGGRESSION_RADIUS = 6;
 const MOVE_COST_COINS = 5;
 
 /**
- * AI V34: "The Rival"
- * 1. Base Building: Establishes economy like before.
- * 2. Territory Control: Builds walls/towers to block others.
- * 3. Aggression: If an enemy is nearby, actively tries to dig them into a pit.
+ * AI V35: "The Architect"
+ * Fixes jitter by prioritizing LOCAL actions before movement.
+ * Prioritizes Vertical Growth (Building Supports) over random expansion.
  */
 export const calculateBotMove = (
   bot: Entity, 
@@ -49,43 +48,29 @@ export const calculateBotMove = (
 
   const storage = bot.storage || 0;
   const maxStorage = bot.maxStorage || 4;
-  
-  // Can move via Moves OR Coins
   const canAffordMove = bot.moves >= 1 || bot.coins >= MOVE_COST_COINS;
   const isBroke = !canAffordMove; 
 
-  // Detect nearby threats (Player is the main threat)
+  // --- THREAT ASSESSMENT ---
   const distToPlayer = cubeDistance(bot, player);
-  
-  // AGGRESSION LOGIC UPDATE:
-  // Bot only cares about player if:
-  // 1. Player is effectively a high-rank rival (Rank > 3).
-  // 2. Player is literally breathing down their neck (Distance <= 2, Self Defense).
   const isHighLevelThreat = player.playerLevel > 3;
   const isSelfDefense = distToPlayer <= 2;
-  
   const isThreatened = (distToPlayer <= AGGRESSION_RADIUS && isHighLevelThreat) || isSelfDefense;
 
-  // === 1. IMMEDIATE SABOTAGE (Highest Priority) ===
-  // If we are right next to an enemy, and we can mess them up -> DO IT.
+  // === 1. IMMEDIATE SABOTAGE (Self Defense) ===
+  // If threatened, prioritize messing up the player over building.
   if (canAffordMove || currentHex) {
       const neighbors = getNeighbors(bot.q, bot.r);
       const enemyNeighbor = neighbors.find(n => {
           const ent = index.getEntityAt(n.q, n.r);
-          return ent && ent.id !== bot.id; // Attack anyone, including bots
+          return ent && ent.id !== bot.id; 
       });
 
-      // Only attack if we feel threatened or if it's a golden opportunity (Rank 3+)
       if (enemyNeighbor && isThreatened) {
           const eHex = grid[getHexKey(enemyNeighbor.q, enemyNeighbor.r)];
-          // Rule: Dig enemy if they are NOT in a deep pit yet.
-          // Don't waste time digging -5, but digging 0 or +2 is great.
+          // Only dig if it hurts them (Level > -1)
           if (eHex && eHex.currentLevel > -2 && !bot.recentUpgrades.includes(eHex.id)) {
-              const eNeighbors = getNeighbors(eHex.q, eHex.r);
-              // Check if we can PHYSICALLY dig them
-              if (checkDigCondition(eHex, bot, eNeighbors, grid).canGrow) {
-                  // If we are full on storage, digging wastes material, BUT it hurts the enemy.
-                  // We do it anyway if threatened.
+              if (checkDigCondition(eHex, bot, getNeighbors(eHex.q, eHex.r), grid).canGrow) {
                   return { 
                       action: { type: 'DIG', coord: {q:enemyNeighbor.q, r:enemyNeighbor.r}, stateVersion }, 
                       debug: `ATTACK!`, 
@@ -96,251 +81,216 @@ export const calculateBotMove = (
       }
   }
   
-  // === 2. MIGRATION (Early Game) ===
+  // === 2. MIGRATION (Start of Game) ===
+  // Find a spot away from the center/player to start the base.
   if (!mem.homeBase) {
       if (!mem.migrationAngle) {
           const seed = bot.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-          mem.migrationAngle = ((seed % 8) * (Math.PI / 4)) + ((Math.random() - 0.5) * 0.5);
+          mem.migrationAngle = ((seed % 8) * (Math.PI / 4));
       }
       
       const distFromCenter = cubeDistance(bot, {q:0, r:0});
       const timeUp = timeAlive > SETTLING_TIME_MS;
-      
-      // Check occupied hexes to keep distance
       const occupied = index.getOccupiedHexesList();
-      let nearestDist = 999;
+      
+      // Determine if settled
+      let isCrowded = false;
       for (const o of occupied) {
           if (o.q === bot.q && o.r === bot.r) continue;
-          const d = cubeDistance(bot, o);
-          if (d < nearestDist) nearestDist = d;
+          if (cubeDistance(bot, o) < 3) isCrowded = true;
       }
 
-      // Settling condition logic
-      if ((distFromCenter >= 6 && nearestDist >= 4) || timeUp || mem.stuckCounter > 5) {
+      if ((distFromCenter >= 5 && !isCrowded) || timeUp) {
           mem.homeBase = { q: bot.q, r: bot.r };
-          // Quarry logic...
-          const qQ = Math.round(bot.q + 4 * Math.cos(mem.migrationAngle));
-          const qR = Math.round(bot.r + 4 * Math.sin(mem.migrationAngle));
-          mem.quarrySite = { q: qQ, r: qR };
           mem.mode = 'GATHER';
-          mem.stuckCounter = 0;
           return { action: { type: 'WAIT', stateVersion }, debug: 'Base Founded', memory: mem };
       }
       
-      // Migration movement logic
-      const horizonDist = distFromCenter + 5;
+      // Migration Move
+      const horizonDist = 7;
       const tQ = Math.round(horizonDist * Math.cos(mem.migrationAngle));
       const tR = Math.round(horizonDist * Math.sin(mem.migrationAngle));
-      const neighbors = getNeighbors(bot.q, bot.r);
-      let bestMove = null; let minDst = 9999;
-      for (const n of neighbors) {
-          if (index.isOccupied(n.q, n.r)) continue;
-          const h = grid[getHexKey(n.q, n.r)];
-          if (h && h.structureType === 'VOID') continue;
-          const d = cubeDistance(n, { q: tQ, r: tR });
-          if (d < minDst) { minDst = d; bestMove = n; }
-      }
-      if (bestMove && canAffordMove) {
-          if (calculateMovementCost(bot, [bestMove], grid).canAfford) {
-              return { action: { type: 'MOVE', path: [bestMove], stateVersion }, debug: 'Migrating', memory: mem };
-          }
-      }
       
-      // If broke during migration, dig locally
+      // If we can't move, dig for fuel
       if (isBroke && currentHex) {
-           if (checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
+           if (checkDigCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid).canGrow) {
                return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Gas Money', memory: mem };
            }
+           // Panic wait
+           return { action: { type: 'WAIT', stateVersion }, debug: 'Stranded', memory: mem };
       }
-      mem.stuckCounter++;
-      return { action: { type: 'WAIT', stateVersion }, debug: 'Wait Disp', memory: mem };
+
+      if (canAffordMove) {
+          const path = findPath({q:bot.q, r:bot.r}, {q:tQ, r:tR}, grid, bot.playerLevel, navObstacles);
+          if (path && path.length > 0) {
+               return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: 'Migrating', memory: mem };
+          }
+      }
   }
 
-  // === 3. COMPETITIVE LOOP ===
-  
-  // Mode Switch logic
+  // === 3. STRATEGIC GOAL SELECTION ===
+  // Determine what we WANT to do, then see if we can do it locally or need to move.
+
+  // A. Mode Switching
   if (mem.mode === 'GATHER' && storage >= maxStorage) {
       mem.mode = 'BUILD';
-      mem.targetHexId = undefined;
+      mem.targetHexId = undefined; // Reset target to re-evaluate build priority
   } else if (mem.mode === 'BUILD' && storage <= 0) {
       mem.mode = 'GATHER';
       mem.targetHexId = undefined;
   }
 
-  // Aggressive Mode Override:
-  // If we have SOME storage and are near player, switch to BUILD (to block) or GATHER (to dig under)
-  // Only override if actually threatened.
-  if (isThreatened && storage < maxStorage && Math.random() > 0.5) {
-      mem.mode = 'GATHER'; // "Combat Engineering" - dig traps
-  }
-
-  const isGathering = mem.mode === 'GATHER';
-  const focalPoint = isGathering ? mem.quarrySite! : mem.homeBase!;
-
-  // === 4. POVERTY CHECK ===
-  if (isBroke && currentHex) {
-      const neighbors = getNeighbors(bot.q, bot.r);
-      // Try to dig, but NOT if it destroys our own high ground (unless desperate)
-      const safeToDig = currentHex.maxLevel <= 0 || mem.stuckCounter > 5;
-      if (safeToDig && checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
-           return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Survival Dig', memory: mem };
-      }
-      // If we have mats, build to gain moves
-      if (storage > 0 && checkGrowthCondition(currentHex, bot, neighbors, grid, [], queueSize).canGrow) {
-           return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Survival Build', memory: mem };
-      }
-      // Recover
-      if (!bot.recoveredCurrentHex) {
-           return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Recover', memory: mem };
-      }
-  }
-
-  // === 5. LOCAL WORK (Optimization) ===
-  if (currentHex) {
-      const neighbors = getNeighbors(bot.q, bot.r);
-      
-      // GATHER: Digging
-      if (isGathering && storage < maxStorage) {
-          // Rule: Don't dig own towers (L>0). Dig Pits (L<=0).
-          // Exception: If threatened, dig anything to get mats for combat.
-          if (currentHex.maxLevel <= 0 || isThreatened) {
-              if (checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
-                   return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Mining', memory: { ...mem, stuckCounter: 0 } };
-              }
-          }
-      }
-      
-      // BUILD: Towering
-      if (!isGathering && storage > 0) {
-          if (checkGrowthCondition(currentHex, bot, neighbors, grid, [], queueSize).canGrow) {
-              // Rule: Don't fill own quarry (L<0). Build Towers (L>=0).
-              if (currentHex.currentLevel >= 0) {
-                  return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Towering', memory: { ...mem, stuckCounter: 0 } };
-              }
-          }
-      }
-  }
-
-  // === 6. TARGETING (The Competitive Part) ===
+  // B. Find "The Spire" (Highest owned hex that we should focus on)
+  let bestBuildTarget: Hex | null = null;
+  let highestLevel = -99;
   
-  // Reset stuck target
-  if (mem.targetHexId) {
-      const t = grid[mem.targetHexId];
-      if (!t || t.structureType === 'VOID' || bot.recentUpgrades.includes(t.id) || mem.stuckCounter > 2) {
-          mem.targetHexId = undefined;
-      }
-  }
+  // Get all owned hexes
+  const myHexes = Object.values(grid).filter(h => h.ownerId === bot.id && h.structureType !== 'VOID');
+  
+  // Sort by level descending
+  myHexes.sort((a, b) => b.maxLevel - a.maxLevel);
 
-  if (!mem.targetHexId) {
-      const searchRadius = isThreatened ? 4 : 6; // Focus when threatened
-      const searchCenter = isThreatened ? player : focalPoint; // Look at PLAYER if threatened, else look at BASE
+  if (myHexes.length > 0) {
+      // The Spire is our highest hex
+      const spire = myHexes[0];
+      highestLevel = spire.maxLevel;
 
-      const candidates = index.getHexesInRange({q:searchCenter.q, r:searchCenter.r}, searchRadius);
-      let bestTarget: { hex: Hex, score: number } | null = null;
-      
-      for (const hex of candidates) {
-          if (hex.structureType === 'VOID') continue;
-          if (index.isOccupied(hex.q, hex.r) && hex.id !== currentHexKey) continue;
-          if (bot.recentUpgrades.includes(hex.id)) continue;
+      // Can we upgrade the Spire?
+      const spireNeighbors = getNeighbors(spire.q, spire.r);
+      const condition = checkGrowthCondition(spire, bot, spireNeighbors, grid, [], queueSize);
 
-          const dist = cubeDistance(bot, hex);
-          const distToEnemy = cubeDistance(hex, player); // How close is this tile to the player?
+      if (condition.canGrow) {
+          // Yes! Focus on the Spire
+          bestBuildTarget = spire;
+      } else if (condition.missingSupports && condition.missingSupports.length > 0) {
+          // No! We need supports. Focus on the LOWEST support to bring it up.
+          // Convert coords back to Hex
+          const supportHexes = condition.missingSupports
+              .map(c => grid[getHexKey(c.q, c.r)])
+              .filter(h => h && h.structureType !== 'VOID'); // Ensure valid
           
-          let score = 0;
-          let possible = false;
-
-          // COMBAT LOGIC
-          if (isGathering) {
-              // Looking for a spot to DIG
-              if (checkDigCondition(hex, bot, getNeighbors(hex.q, hex.r), grid).canGrow) {
-                  possible = true;
-                  // If digging, we want materials.
-                  // BUT: If near player, digging creates a TRAP.
-                  // Only prioritize trapping if we are actively threatened.
-                  if (isThreatened && distToEnemy <= 2) {
-                      score += 50; // High priority to dig near player
-                      if (hex.currentLevel === 0) score += 20; // Digging surface creates a hole
-                  } else {
-                      // Normal logic: Dig own quarry
-                      if (hex.currentLevel < 0) score += 20; 
-                      if (hex.currentLevel > 0) score -= 100; // Don't dig towers
-                  }
-              }
-          } else {
-              // Looking for a spot to BUILD
-              if (checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, [], queueSize).canGrow) {
-                  possible = true;
-                  // If building near player, we create WALLS/OBSTACLES.
-                  if (isThreatened && distToEnemy <= 2) {
-                       score += 40; // Block player
-                       // Building on top of player's path?
-                  } else {
-                      // Normal logic: Build own tower
-                      if (hex.maxLevel > 0) score += 20;
-                      if (hex.currentLevel < 0) score -= 100;
-                  }
-              }
-          }
-
-          if (possible) {
-              score -= dist * 1.5; // Travel cost
-              score += Math.random() * 10; // Noise
-              if (!bestTarget || score > bestTarget.score) bestTarget = { hex, score };
-          }
-      }
-      if (bestTarget) mem.targetHexId = bestTarget.hex.id;
-  }
-
-  // === 7. MOVE ===
-  let targetHex = mem.targetHexId ? grid[mem.targetHexId] : null;
-  
-  // Fallback destination
-  const destHex = targetHex || grid[getHexKey(focalPoint.q, focalPoint.r)];
-  const dest = destHex ? { q: destHex.q, r: destHex.r } : focalPoint;
-
-  if (canAffordMove) {
-      const path = findPath({q:bot.q, r:bot.r}, dest, grid, bot.playerLevel, navObstacles);
-      if (path && path.length > 0) {
-          if (calculateMovementCost(bot, path, grid).canAfford) {
-              // Aggressive Move: If moving towards player, log it differently?
-              return { action: { type: 'MOVE', path, stateVersion }, debug: `Moving`, memory: { ...mem, stuckCounter: 0 } };
-          } else {
-              // Try step
-              if (calculateMovementCost(bot, [path[0]], grid).canAfford) {
-                  return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: 'Creep', memory: { ...mem, stuckCounter: 0 } };
-              }
-              mem.stuckCounter++;
+          // Sort supports by level ascending (build from bottom up)
+          supportHexes.sort((a, b) => a.maxLevel - b.maxLevel);
+          
+          if (supportHexes.length > 0) {
+              bestBuildTarget = supportHexes[0]; // Target the weakest support
           }
       } else {
-           // Blind step logic
-           const neighbors = getNeighbors(bot.q, bot.r);
-           let bestStep = null; let minD = 999;
-           for (const n of neighbors) {
-               if (!index.isOccupied(n.q, n.r)) {
-                   const d = cubeDistance(n, dest);
-                   if (d < minD) { minD = d; bestStep = n; }
-               }
-           }
-           if (bestStep && calculateMovementCost(bot, [bestStep], grid).canAfford) {
-                return { action: { type: 'MOVE', path: [bestStep], stateVersion }, debug: 'Scout', memory: { ...mem, stuckCounter: 0 } };
-           }
-           mem.stuckCounter++;
+          // Fallback: Just expand
+          bestBuildTarget = spire;
       }
-  } else {
-      mem.stuckCounter++;
   }
 
-  // === 8. UNSTUCK ===
-  if (mem.stuckCounter > 2) {
-      // Logic from V33
-      if (currentHex && checkDigCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid).canGrow) {
-           return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Panic Dig', memory: { ...mem, stuckCounter: 0 } };
+  // C. Fallback Build Target (Expansion)
+  if (!bestBuildTarget) {
+      const neighbors = getNeighbors(bot.q, bot.r);
+      // Find a neutral or low level neighbor
+      const candidates = neighbors
+          .map(n => grid[getHexKey(n.q, n.r)])
+          .filter(h => h && h.structureType !== 'VOID' && (!h.ownerId || h.ownerId === bot.id));
+      
+      if (candidates.length > 0) {
+          bestBuildTarget = candidates[0];
+      } else {
+          bestBuildTarget = currentHex; // Just build where we stand
       }
-      mem.targetHexId = undefined;
-      // Force switch if really stuck
-      if (mem.stuckCounter > 6) {
-          mem.mode = isGathering ? 'BUILD' : 'GATHER';
-          mem.stuckCounter = 0;
+  }
+
+  // === 4. EXECUTION ===
+
+  // --- CASE: LOCAL ACTION (NO MOVING) ---
+  // If we are standing ON the target, or ON a good spot for the current mode, DO IT.
+  
+  if (currentHex) {
+      const neighbors = getNeighbors(bot.q, bot.r);
+
+      // GATHER LOCAL
+      if (mem.mode === 'GATHER') {
+          // We can dig here if it's safe (not destroying our own tower > 0)
+          // Digging creates pits (level < 0) which is fine for quarry.
+          if (currentHex.maxLevel <= 0) {
+              if (checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
+                  return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Mining Local', memory: mem };
+              }
+          }
+      } 
+      // BUILD LOCAL
+      else if (mem.mode === 'BUILD' && storage > 0) {
+          // If we are standing on the calculated best target, upgrade it!
+          if (bestBuildTarget && bestBuildTarget.id === currentHex.id) {
+              if (checkGrowthCondition(currentHex, bot, neighbors, grid, [], queueSize).canGrow) {
+                  return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Building Up', memory: mem };
+              }
+          }
+          // If we are not on target, but this hex needs recovery?
+          if (!bot.recoveredCurrentHex && currentHex.maxLevel > 0) {
+               return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Recovering', memory: mem };
+          }
+      }
+  }
+
+  // --- CASE: MOVEMENT REQUIRED ---
+  
+  // Determine Destination
+  let dest: HexCoord | null = null;
+  let debugReason = '';
+
+  if (mem.mode === 'BUILD' && bestBuildTarget) {
+      dest = { q: bestBuildTarget.q, r: bestBuildTarget.r };
+      debugReason = `To Build L${bestBuildTarget.maxLevel}`;
+  } else if (mem.mode === 'GATHER') {
+      // Find nearest diggable spot (Level <= 0)
+      const search = index.getHexesInRange({q:bot.q, r:bot.r}, 4);
+      const quarry = search.find(h => h.structureType !== 'VOID' && h.maxLevel <= 0 && !index.isOccupied(h.q, h.r));
+      if (quarry) {
+          dest = { q: quarry.q, r: quarry.r };
+          debugReason = 'To Quarry';
+      } else {
+          // Panic: Dig where we stand if possible, or move random
+          dest = mem.homeBase || { q:0, r:0 };
+      }
+  }
+
+  if (dest && canAffordMove) {
+      // Don't move if we are already there (Logic should have caught this in Local Action, but safety check)
+      if (dest.q === bot.q && dest.r === bot.r) {
+           return { action: { type: 'WAIT', stateVersion }, debug: 'Aligning', memory: mem };
+      }
+
+      const path = findPath({q:bot.q, r:bot.r}, dest, grid, bot.playerLevel, navObstacles);
+      if (path && path.length > 0) {
+          // Only take ONE step to avoid locking into a long outdated path
+          // But ensure we don't jitter back and forth.
+          const nextStep = path[0];
+          
+          // Check previous pos to avoid ping-pong (unless path length is 1, then we must go)
+          if (path.length > 1 && mem.lastPlayerPos && nextStep.q === mem.lastPlayerPos.q && nextStep.r === mem.lastPlayerPos.r) {
+              // We are trying to go back to where we just were. Is it necessary?
+              // Only allow if stuck counter is high
+              if (mem.stuckCounter < 2) {
+                  return { action: { type: 'WAIT', stateVersion }, debug: 'Thinking', memory: { ...mem, stuckCounter: mem.stuckCounter + 1 } };
+              }
+          }
+
+          if (calculateMovementCost(bot, [nextStep], grid).canAfford) {
+              return { 
+                  action: { type: 'MOVE', path: [nextStep], stateVersion }, 
+                  debug: debugReason, 
+                  memory: { ...mem, lastPlayerPos: {q:bot.q, r:bot.r}, stuckCounter: 0 } 
+              };
+          }
+      }
+  }
+
+  // --- FAILSADES ---
+  
+  // If broke and on valid hex -> Recover or Dig
+  if (isBroke && currentHex) {
+      if (checkDigCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid).canGrow) {
+          return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Emergency Dig', memory: mem };
+      }
+      if (!bot.recoveredCurrentHex) {
+          return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Emergency Rec', memory: mem };
       }
   }
 
