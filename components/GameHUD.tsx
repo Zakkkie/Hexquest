@@ -19,7 +19,7 @@ interface GameHUDProps {
 }
 
 // Visual Component for Storage Blocks
-// UPDATED: Compressed width by 2x (w-1 instead of w-2, md:w-1.5 instead of md:w-3)
+// UPDATED: Widened width for better visibility on desktop (w-2 instead of w-1, md:w-3 instead of md:w-1.5)
 const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, max }) => {
     return (
         <div className="flex items-center gap-0.5 md:gap-1">
@@ -30,7 +30,7 @@ const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, ma
                     <div 
                         key={i} 
                         className={`
-                            w-1 h-3 md:w-1.5 md:h-4 rounded-[1px] md:rounded-sm transition-all duration-300
+                            w-1.5 h-3 md:w-2.5 md:h-4 rounded-[1px] md:rounded-sm transition-all duration-300
                             ${isOverflow 
                                 ? 'bg-amber-500 shadow-[0_0_4px_#f59e0b]' 
                                 : isFilled 
@@ -261,7 +261,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       }
   };
 
-  const mainButtonSize = isMobile ? "lg" : "md";
+  // Fixed: Always use "lg" size for main buttons to ensure they aren't narrowed/small on desktop.
+  // The 'lg' size maps to 'w-16' on mobile and 'md:w-20' on desktop.
+  const mainButtonSize = "lg";
 
   if (!grid || !player || !bots) return null;
 
