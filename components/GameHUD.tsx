@@ -573,30 +573,34 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
       {/* BRIEFING OVERLAY (SKIRMISH/START) */}
       {gameStatus === 'BRIEFING' && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6 pointer-events-auto">
-              <div className="relative max-w-md w-full">
+          // Fixed Padding Top/Bottom to 5-7% (py-[7vh]) to fit mobile screens
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md px-4 py-[7vh] pointer-events-auto">
+              {/* Added max-h-full and flex column to allow scrolling */}
+              <div className="relative max-w-md w-full max-h-full flex flex-col">
                   
                   {/* Decorative Tech Borders */}
                   <div className="absolute -inset-0.5 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-[2rem] opacity-20 blur-md"></div>
                   
-                  <div className="bg-slate-950 border border-slate-800 p-1 rounded-[1.8rem] relative overflow-hidden shadow-2xl">
+                  {/* Main Container with flex column */}
+                  <div className="bg-slate-950 border border-slate-800 p-1 rounded-[1.8rem] relative overflow-hidden shadow-2xl flex flex-col max-h-full">
                       
                       {/* Scanline / Grid Background */}
                       <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.8)_2px,transparent_2px),linear-gradient(90deg,rgba(15,23,42,0.8)_2px,transparent_2px)] bg-[size:20px_20px] opacity-20 pointer-events-none"></div>
 
-                      <div className="relative bg-slate-900/50 rounded-[1.6rem] p-6 md:p-8 flex flex-col items-center text-center gap-6 backdrop-blur-sm">
+                      {/* Scrollable Content Area */}
+                      <div className="relative bg-slate-900/50 rounded-[1.6rem] p-6 flex flex-col items-center text-center gap-6 backdrop-blur-sm overflow-y-auto no-scrollbar overscroll-contain">
                           
                           {/* Header / Icon */}
-                          <div className="relative">
-                              <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] rotate-3">
-                                  <Target className="w-10 h-10 text-indigo-400 -rotate-3" />
+                          <div className="relative shrink-0">
+                              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] rotate-3">
+                                  <Target className="w-8 h-8 text-indigo-400 -rotate-3" />
                               </div>
-                              <div className="absolute -top-2 -right-2 w-6 h-6 bg-slate-900 rounded-full flex items-center justify-center border border-slate-700">
-                                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
+                              <div className="absolute -top-2 -right-2 w-5 h-5 bg-slate-900 rounded-full flex items-center justify-center border border-slate-700">
+                                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></div>
                               </div>
                           </div>
 
-                          <div>
+                          <div className="shrink-0">
                               <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 uppercase tracking-tighter italic">
                                   {t.BRIEFING_TITLE}
                               </h2>
@@ -608,12 +612,12 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           </div>
                           
                           {/* Mission Description */}
-                          <div className="w-full text-slate-300 text-xs leading-relaxed font-mono bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                          <div className="w-full text-slate-300 text-xs leading-relaxed font-mono bg-slate-950/50 p-3 rounded-lg border border-slate-800/50 shrink-0">
                               {t.BRIEFING_DESC_TEMPLATE.replace('{0}', (winCondition?.targetLevel || 99).toString()).replace('{1}', (winCondition?.targetCoins || 9999).toString())}
                           </div>
 
                           {/* Objective Cards */}
-                          <div className="grid grid-cols-2 gap-3 w-full">
+                          <div className="grid grid-cols-2 gap-3 w-full shrink-0">
                               <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80 flex flex-col items-center gap-1 group hover:border-indigo-500/30 transition-colors">
                                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest group-hover:text-indigo-400 transition-colors">{t.BRIEFING_TARGET_RANK}</span>
                                   <span className="text-2xl font-black text-white">{winCondition?.targetLevel || 99}</span>
@@ -625,7 +629,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           </div>
 
                           {/* Tactical Hints */}
-                          <div className="w-full bg-indigo-900/10 p-4 rounded-xl border border-indigo-500/20 text-left">
+                          <div className="w-full bg-indigo-900/10 p-4 rounded-xl border border-indigo-500/20 text-left shrink-0">
                               <h3 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                                   <Info className="w-3 h-3" /> {t.BRIEFING_HINTS_TITLE}
                               </h3>
@@ -643,7 +647,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           </div>
 
                           {winCondition?.botCount > 0 && (
-                              <div className="w-full flex items-center justify-center gap-3 text-red-400 bg-red-950/20 px-4 py-2 rounded-lg border border-red-900/30">
+                              <div className="w-full flex items-center justify-center gap-3 text-red-400 bg-red-950/20 px-4 py-2 rounded-lg border border-red-900/30 shrink-0">
                                   <AlertTriangle className="w-4 h-4 animate-pulse" />
                                   <span className="text-xs font-bold uppercase tracking-wide">{t.BRIEFING_RIVAL} DETECTED ({winCondition.botCount})</span>
                               </div>
@@ -652,7 +656,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           {/* Action */}
                           <button 
                               onClick={() => { startMission(); playUiSound('SUCCESS'); }}
-                              className="w-full group relative py-4 bg-white text-slate-950 font-black rounded-xl uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.25)] hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden"
+                              className="w-full group relative py-4 bg-white text-slate-950 font-black rounded-xl uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.25)] hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden shrink-0"
                           >
                               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-200/50 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
                               <span className="relative flex items-center justify-center gap-2">
