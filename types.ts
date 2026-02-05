@@ -1,3 +1,4 @@
+
 // Using any for the config to avoid circular dependency with campaign/types.ts which imports SessionState
 // In a stricter setup, we would move shared types to a 'core' module.
 export type HexCoord = { q: number; r: number; upgrade?: boolean; intent?: 'UPGRADE' | 'RECOVER' | 'DIG' };
@@ -56,6 +57,7 @@ export interface BotMemory {
   stuckCounter: number;
   lastActionFailed?: boolean;
   failReason?: string;
+  scanTimer?: number; // V40 Variable Awareness
   
   // V20 Compatibility (Legacy)
   quarryKey?: string | null;    
