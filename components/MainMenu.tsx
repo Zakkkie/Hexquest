@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box } from 'lucide-react';
+import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -297,9 +297,34 @@ const MainMenu: React.FC = () => {
 
       {/* CENTER MENU */}
       <div className="flex flex-col gap-6 w-full max-w-sm px-6 z-10 max-h-screen overflow-y-auto no-scrollbar py-20 md:py-0">
-        <div className="text-center mb-6"> 
-          <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-indigo-600 italic tracking-tighter drop-shadow-[0_0_25px_rgba(99,102,241,0.4)]">{t.TITLE}</h1>
-          <p className="text-[10px] md:text-xs text-slate-500 font-mono tracking-[0.6em] uppercase mt-2 opacity-60">{t.SUBTITLE}</p>
+        
+        {/* NEW LOGO BLOCK */}
+        <div className="text-center mb-8 relative group cursor-default">
+          {/* Animated Glow Layer */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-indigo-500/20 blur-[50px] rounded-full animate-pulse"></div>
+          
+          {/* Main Visual Composition */}
+          <div className="relative flex flex-col items-center justify-center">
+              {/* Spinning Outer Ring */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border border-indigo-500/30 rounded-full animate-[spin_10s_linear_infinite]"></div>
+              
+              <div className="relative mb-2">
+                  <Hexagon className="w-20 h-20 text-indigo-500 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] fill-indigo-900/20" strokeWidth={1.5} />
+                  <div className="absolute inset-0 flex items-center justify-center animate-pulse">
+                      <Target className="w-8 h-8 text-white drop-shadow-[0_0_10px_#fff]" />
+                  </div>
+              </div>
+
+              <h1 className="relative text-5xl md:text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] z-10">
+                  {t.TITLE}
+              </h1>
+              
+              <div className="flex items-center gap-3 mt-2 opacity-80">
+                  <div className="h-px w-12 bg-indigo-500/50"></div>
+                  <p className="text-[10px] md:text-xs text-indigo-300 font-mono tracking-[0.4em] uppercase whitespace-nowrap">{t.SUBTITLE}</p>
+                  <div className="h-px w-12 bg-indigo-500/50"></div>
+              </div>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">

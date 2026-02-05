@@ -19,7 +19,7 @@ interface GameHUDProps {
 }
 
 // Visual Component for Storage Blocks
-// UPDATED: Compressed width (w-1 instead of w-2, md:w-1.5 instead of md:w-3)
+// UPDATED: Compressed width by 2x (w-1 instead of w-2, md:w-1.5 instead of md:w-3)
 const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, max }) => {
     return (
         <div className="flex items-center gap-0.5 md:gap-1">

@@ -28,6 +28,7 @@ const THEME_PALETTE: Record<string, HexNodeTheme> = {
 
 const getTheme = (level: number): HexNodeTheme => {
     if (level > 6) return THEME_PALETTE['6'];
+    // FIX: Clamp negative levels to -3 so deep pits use the deepest pit theme instead of defaulting to Surface(0)
     if (level < -3) return THEME_PALETTE['-3'];
     return THEME_PALETTE[String(level)] || THEME_PALETTE['0'];
 };

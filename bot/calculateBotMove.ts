@@ -56,7 +56,15 @@ export const calculateBotMove = (
 
   // Detect nearby threats (Player is the main threat)
   const distToPlayer = cubeDistance(bot, player);
-  const isThreatened = distToPlayer <= AGGRESSION_RADIUS;
+  
+  // AGGRESSION LOGIC UPDATE:
+  // Bot only cares about player if:
+  // 1. Player is effectively a high-rank rival (Rank > 3).
+  // 2. Player is literally breathing down their neck (Distance <= 2, Self Defense).
+  const isHighLevelThreat = player.playerLevel > 3;
+  const isSelfDefense = distToPlayer <= 2;
+  
+  const isThreatened = (distToPlayer <= AGGRESSION_RADIUS && isHighLevelThreat) || isSelfDefense;
 
   // === 1. IMMEDIATE SABOTAGE (Highest Priority) ===
   // If we are right next to an enemy, and we can mess them up -> DO IT.
@@ -67,7 +75,8 @@ export const calculateBotMove = (
           return ent && ent.id !== bot.id; // Attack anyone, including bots
       });
 
-      if (enemyNeighbor) {
+      // Only attack if we feel threatened or if it's a golden opportunity (Rank 3+)
+      if (enemyNeighbor && isThreatened) {
           const eHex = grid[getHexKey(enemyNeighbor.q, enemyNeighbor.r)];
           // Rule: Dig enemy if they are NOT in a deep pit yet.
           // Don't waste time digging -5, but digging 0 or +2 is great.
@@ -160,7 +169,7 @@ export const calculateBotMove = (
 
   // Aggressive Mode Override:
   // If we have SOME storage and are near player, switch to BUILD (to block) or GATHER (to dig under)
-  // Let's bias towards GATHER near enemies because Digging is an attack.
+  // Only override if actually threatened.
   if (isThreatened && storage < maxStorage && Math.random() > 0.5) {
       mem.mode = 'GATHER'; // "Combat Engineering" - dig traps
   }
@@ -247,7 +256,8 @@ export const calculateBotMove = (
                   possible = true;
                   // If digging, we want materials.
                   // BUT: If near player, digging creates a TRAP.
-                  if (distToEnemy <= 2) {
+                  // Only prioritize trapping if we are actively threatened.
+                  if (isThreatened && distToEnemy <= 2) {
                       score += 50; // High priority to dig near player
                       if (hex.currentLevel === 0) score += 20; // Digging surface creates a hole
                   } else {
@@ -261,7 +271,7 @@ export const calculateBotMove = (
               if (checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, [], queueSize).canGrow) {
                   possible = true;
                   // If building near player, we create WALLS/OBSTACLES.
-                  if (distToEnemy <= 2) {
+                  if (isThreatened && distToEnemy <= 2) {
                        score += 40; // Block player
                        // Building on top of player's path?
                   } else {
