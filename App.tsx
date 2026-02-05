@@ -31,7 +31,7 @@ const App: React.FC = () => {
   }, [setDeviceType]);
 
   return (
-    <div className="relative w-screen h-screen bg-slate-950 overflow-hidden font-sans select-none">
+    <div className="relative w-screen h-screen supports-[height:100dvh]:h-[100dvh] bg-slate-950 overflow-hidden font-sans select-none">
       
       {/* Background Ambience (Visible in Menu/Leaderboard) */}
       {uiState !== 'GAME' && (

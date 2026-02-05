@@ -698,7 +698,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
       {/* BOTTOM CONTROLS */}
       {/* UPDATE: Adjusted bottom position and padding to respect safe areas (env) to prevent browser overlay issues */}
-      <div className={`absolute bottom-0 w-full flex justify-center items-end gap-2 md:gap-5 pointer-events-none z-40 pb-[max(6rem,env(safe-area-inset-bottom))] md:pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 bg-gradient-to-t from-slate-950/80 to-transparent origin-bottom`}>
+      <div className={`absolute bottom-0 w-full flex justify-center items-end gap-2 md:gap-5 pointer-events-none z-40 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 bg-gradient-to-t from-slate-950/80 to-transparent origin-bottom`}>
         <div className="pointer-events-auto mb-1">
             <HexButton size="sm" onClick={() => { onRotateCamera('left'); playUiSound('CLICK'); }} variant='slate'>
                 <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
