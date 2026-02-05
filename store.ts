@@ -482,6 +482,28 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (!result || !result.state) return;
 
       tickCount++;
+      
+      // --- MEMORY OPTIMIZATION: GARBAGE COLLECTION ---
+      // Runs every 50 ticks (~5 seconds) to keep arrays from growing indefinitely
+      if (tickCount % 50 === 0) {
+          if (result.state.messageLog.length > 50) {
+              result.state.messageLog = result.state.messageLog.slice(0, 50);
+          }
+          if (result.state.botActivityLog.length > 50) {
+              result.state.botActivityLog = result.state.botActivityLog.slice(0, 50);
+          }
+          // MEMORY LEAK FIX: Cap full history too (2000 events max)
+          if (result.state.fullBotHistory.length > 2000) {
+              result.state.fullBotHistory = result.state.fullBotHistory.slice(result.state.fullBotHistory.length - 2000);
+          }
+          // Telemetry cleanup if needed (keep last 100 events)
+          if (result.state.telemetry && result.state.telemetry.length > 100) {
+              result.state.telemetry = result.state.telemetry.slice(result.state.telemetry.length - 100);
+          }
+          // Effects cleanup
+          const now = Date.now();
+          result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
+      }
 
       // --- LEVEL 1.5 AUDIO TIMER ---
       if (result.state.activeLevelConfig?.id === '1.5' && result.state.gameStatus === 'PLAYING') {
@@ -618,13 +640,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
           newToast = { message: error.message || 'Error', type: 'error', timestamp: Date.now() };
       }
 
-      const shouldRender = tickCount % 3 === 0;
+      // --- RENDERING OPTIMIZATION ---
+      // Throttle UI updates to 15-20 FPS (every 2nd tick at 100ms interval is 5Hz logical, 
+      // but logic runs at 10Hz. Actually setInterval is 100ms. 
+      // Updating React every 200ms is perfectly fine for strategy.
+      const shouldRender = tickCount % 2 === 0; 
       const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
       const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
 
       if (shouldRender || hasCriticalEvents || playerStateChanged) {
         set({ 
-            session: engine.state, 
+            session: result.state, // Use the fresh state from tick result
             toast: newToast,
         });
       }

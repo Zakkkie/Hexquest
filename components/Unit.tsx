@@ -35,9 +35,6 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
   const user = useGameStore(state => state.user);
   
   // 1. INITIAL POSITION ONLY
-  // We use useMemo to calculate the START position. We do NOT update this memo 
-  // when q/r changes to prevent React from snapping the group to the new position 
-  // before the tween can run.
   const initialPos = useMemo(() => hexToPixel(q, r, rotation), []); 
 
   // Calculate destination (target)
@@ -48,16 +45,23 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
   const isPlayer = type === EntityType.PLAYER;
   const finalColor = color || (isPlayer ? (user?.avatarColor || '#3b82f6') : '#ef4444');
 
-  // Idle Animation
+  // Idle Animation (Breathing)
   useEffect(() => {
     const node = bodyRef.current;
     if (!node) return;
+    
     const anim = new Konva.Animation((frame) => {
         if (!frame) return;
         const scale = 1 + Math.sin(frame.time / 400) * 0.03;
-        node.scale({ x: scale, y: scale });
+        // Check if node is still valid before applying
+        if (node.getLayer()) {
+            node.scale({ x: scale, y: scale });
+        }
     }, node.getLayer());
+    
     anim.start();
+    
+    // CRITICAL FIX: Cleanup animation on unmount
     return () => { anim.stop(); };
   }, []);
 
@@ -77,21 +81,25 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
 
     prevLogic.current = { q, r, rotation, zOffset: targetZ };
 
+    // Track active animations for cleanup
+    let activeTween: Konva.Tween | null = null;
+    let activeJumpAnim: Konva.Animation | null = null;
+
     if (isMove) {
         // --- JUMP ANIMATION ---
         
         // 1. Move X/Y (Tween)
-        // CRITICAL FIX: We tween the NODE directly. We do not rely on React props for X/Y updates after mount.
-        groupNode.to({ 
+        activeTween = new Konva.Tween({
+            node: groupNode,
             x: targetPos.x, 
             y: targetPos.y, 
             duration: GAME_CONFIG.MOVEMENT_ANIMATION_DURATION, 
-            // Fix: Changed InOutSine (not a property on Konva.Easings) to EaseInOut
-            easing: Konva.Easings.EaseInOut, // Smooth sine wave for movement
+            easing: Konva.Easings.EaseInOut,
             onFinish: () => {
                 if (onMoveComplete) onMoveComplete(targetPos.x, targetPos.y, finalColor);
             }
         });
+        activeTween.play();
 
         // 2. Elevation (Jump Arc)
         const startGroundZ = visualNode.y();
@@ -99,12 +107,14 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
         const startTime = Date.now();
         const jumpPeak = 50; 
 
-        const jumpAnim = new Konva.Animation((frame) => {
+        activeJumpAnim = new Konva.Animation((frame) => {
             if (!frame) return;
             const now = Date.now();
             const elapsed = now - startTime;
             const progress = Math.min(1, elapsed / duration);
             
+            if (!visualNode.getLayer()) return; // Safety check
+
             // Ground Height Interpolation
             const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
             const currentGroundZ = startGroundZ + (targetZ - startGroundZ) * ease;
@@ -125,7 +135,7 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
             }
 
             if (progress >= 1) {
-                jumpAnim.stop();
+                activeJumpAnim?.stop();
                 visualNode.y(targetZ);
                 bodyNode.y(-8);
                 if(shadowNode) {
@@ -135,44 +145,40 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
             }
         }, visualNode.getLayer());
 
-        jumpAnim.start();
+        activeJumpAnim.start();
 
     } else if (isRotation) {
-        // Rotation: Instant Snap (Camera rotation changes coordinates instantly)
         groupNode.position({ x: targetPos.x, y: targetPos.y });
     } else if (isElevationChange) {
-        // Smooth height adjust (Digging/Building under feet)
-        visualNode.to({ y: targetZ, duration: 0.5, easing: Konva.Easings.EaseInOut });
+        activeTween = new Konva.Tween({
+            node: visualNode,
+            y: targetZ,
+            duration: 0.5,
+            easing: Konva.Easings.EaseInOut
+        });
+        activeTween.play();
     } else {
-        // Initialization correction (Snap to correct pos if logic drifted)
-        // Only run if we are significantly off to avoid fighting animation
+        // Drift Correction
         if (Math.abs(groupNode.x() - targetPos.x) > 1 || Math.abs(groupNode.y() - targetPos.y) > 1) {
              groupNode.position({ x: targetPos.x, y: targetPos.y });
         }
         visualNode.y(targetZ);
         bodyNode.y(-8);
     }
-  }, [q, r, rotation, targetZ, targetPos.x, targetPos.y]);
+
+    // CRITICAL FIX: Cleanup movement animations if props change mid-move or component unmounts
+    return () => {
+        if (activeTween) activeTween.destroy();
+        if (activeJumpAnim) activeJumpAnim.stop();
+    };
+
+  }, [q, r, rotation, targetZ, targetPos.x, targetPos.y, finalColor, onMoveComplete]);
 
   return (
     <Group>
-      {/* 
-         CRITICAL: We initialize x/y with initialPos. 
-         We DO NOT pass dynamic x/y here from props. 
-         This prevents React from "snapping" the unit to the destination before the Tween runs.
-      */}
       <Group ref={groupRef} x={initialPos.x} y={initialPos.y} listening={false}>
-        
         <Group ref={visualGroupRef} y={targetZ}>
-            
-            <Ellipse 
-                ref={shadowRef}
-                x={0} y={0} 
-                radiusX={10} radiusY={6} 
-                fill="rgba(0,0,0,0.4)" 
-                shadowEnabled={false} 
-            />
-            
+            <Ellipse ref={shadowRef} x={0} y={0} radiusX={10} radiusY={6} fill="rgba(0,0,0,0.4)" shadowEnabled={false} />
             <Group ref={bodyRef} y={-8}>
                 <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowEnabled={false} />
                 {isPlayer ? (
@@ -181,7 +187,6 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
                     <Rect x={-7} y={-21} width={14} height={14} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} cornerRadius={3} shadowEnabled={false} />
                 )}
             </Group>
-
             {isPlayer && <Ellipse y={0} radiusX={16} radiusY={10} stroke="white" strokeWidth={1} opacity={0.6} dash={[4, 4]} shadowEnabled={false} />}
         </Group>
       </Group>

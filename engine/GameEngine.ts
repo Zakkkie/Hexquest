@@ -79,7 +79,9 @@ export class GameEngine {
       // Shallow copy logs to prevent mutation of history
       messageLog: [...source.messageLog], 
       botActivityLog: [...source.botActivityLog],
-      fullBotHistory: [...source.fullBotHistory], // Ensure full history is carried over
+      
+      // OPTIMIZATION: Do not spread huge history arrays. Reference copy is fine for append-only logs.
+      fullBotHistory: source.fullBotHistory,
       
       growingBotIds: [...source.growingBotIds],
       
@@ -144,6 +146,8 @@ export class GameEngine {
 
     this.enforceSafetyLimits(nextState);
 
+    // CRITICAL FIX: Increment currentTurn so Round-Robin AI scheduling works
+    nextState.currentTurn++; 
     nextState.stateVersion++;
     this._state = nextState;
 

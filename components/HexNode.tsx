@@ -1,7 +1,6 @@
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Group, Path, Circle, Text, Rect, Line } from 'react-konva';
-import Konva from 'konva';
 import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { textureService } from '../services/textureService.ts';
 
@@ -40,9 +39,9 @@ export interface HexNodeProps {
   artifactType?: string;
   q: number;
   r: number;
-  onClick: () => void;
-  onHover: () => void;
-  onHoverEnd: () => void;
+  onHexClick: (q: number, r: number) => void; 
+  onHover: (id: string | null) => void;
+  id: string; 
 }
 
 // Precompute the base (unsquashed) hexagon path centered at 0,0
@@ -65,17 +64,16 @@ const CRACK_PATHS = [
     "M0,15 L-5,8 L5,2"
 ];
 
-export const HexNode = React.memo((props: HexNodeProps) => {
+const HexNodeComponent = (props: HexNodeProps) => {
   const { 
       x, y, offsetY, rotation, level, maxLevel, neighborLevels, structureType,
       theme, isSelected, isPending, pendingCost, 
       isTutorialTarget, tutorialColor, isMissingSupport, 
       isGrowing, isRankLocked, progress, durability, artifactType,
-      q, r, 
-      onClick, onHover, onHoverEnd 
+      q, r, id,
+      onHexClick, onHover
   } = props;
 
-  // 1. Textures
   const topTexture = useMemo(() => textureService.getTexture(maxLevel, q, r), [maxLevel, q, r]);
   const sideTexture = useMemo(() => textureService.getSideTexture(maxLevel), [maxLevel]);
 
@@ -100,28 +98,11 @@ export const HexNode = React.memo((props: HexNodeProps) => {
       if (isRealVoid) return;
       if (e.evt && e.evt.button !== undefined && e.evt.button !== 0) return;
       e.cancelBubble = true;
-      onClick();
+      onHexClick(q, r);
   };
   
-  const voidRef = useRef<Konva.Group>(null);
-  const voidCoreRef = useRef<Konva.Group>(null);
-
-  useEffect(() => {
-    if (isRealVoid && voidRef.current) {
-        const anim = new Konva.Animation((frame) => {
-            const t = frame?.time || 0;
-            if (voidRef.current) voidRef.current.rotation(t * 0.02 % 360);
-            if (voidCoreRef.current) {
-                const s = 0.8 + Math.sin(t * 0.005) * 0.2;
-                voidCoreRef.current.scale({ x: s, y: s });
-                voidCoreRef.current.opacity(0.4 + Math.sin(t * 0.003) * 0.2);
-            }
-        }, voidRef.current.getLayer());
-        anim.start();
-        // Fix: Wrapped anim.stop() in curly braces to ensure return type is void
-        return () => { anim.stop(); };
-    }
-  }, [isRealVoid]);
+  const handleHover = () => onHover(id);
+  const handleHoverEnd = () => onHover(null);
 
   // Damage indicators (Cracks)
   const damageLevel = useMemo(() => {
@@ -131,24 +112,18 @@ export const HexNode = React.memo((props: HexNodeProps) => {
   }, [maxLevel, durability]);
 
   if (isRealVoid) {
+      // OPTIMIZATION: Removed Konva.Animation for Voids.
+      // Replaced with static gradient rendering to save CPU cycles.
       return (
         <Group x={x} y={y}>
              {/* Depth Rim */}
-             <Path data={BASE_PATH_D} scaleY={0.8} fill="#0f172a" stroke="#1e293b" strokeWidth={2} />
+             <Path data={BASE_PATH_D} scaleY={0.8} fill="#020617" stroke="#1e293b" strokeWidth={1} />
              
-             {/* Swirling energy pit */}
-             <Group ref={voidRef} x={0} y={15} scaleY={0.8}>
-                 <Rect width={HEX_SIZE * 1.2} height={HEX_SIZE * 1.2} offsetX={HEX_SIZE * 0.6} offsetY={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{ x: 0, y: 0 }} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{ x: 0, y: 0 }} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, 'rgba(56, 189, 248, 0.4)', 1, 'transparent']} rotation={45} />
-             </Group>
+             {/* Static Abyss - Darker center */}
+             <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} scaleY={0.8} opacity={0.8} />
 
-             {/* Bottomless Core */}
-             <Group ref={voidCoreRef} x={0} y={20} scaleY={0.8} listening={false}>
-                 <Circle radius={HEX_SIZE * 0.5} fill="#020617" stroke="#3b82f6" strokeWidth={1} dash={[10, 5]} />
-                 <Circle radius={HEX_SIZE * 0.2} fill="#3b82f6" opacity={0.6} />
-             </Group>
-             
              {/* Grid overlay for sense of scale */}
-             <Path data={BASE_PATH_D} scaleY={0.8} y={40} fill="rgba(0,0,0,0.5)" opacity={0.3} />
+             <Path data={BASE_PATH_D} scaleY={0.8} scaleX={0.8} stroke="rgba(56, 189, 248, 0.1)" strokeWidth={1} dash={[2, 4]} listening={false} />
         </Group>
       );
   }
@@ -162,7 +137,7 @@ export const HexNode = React.memo((props: HexNodeProps) => {
     <Group 
         x={x} y={y} 
         onClick={handleClick} onTap={handleClick}
-        onMouseEnter={onHover} onMouseLeave={onHoverEnd}
+        onMouseEnter={handleHover} onMouseLeave={handleHoverEnd}
     >
         {/* 1. WALLS */}
         {neighborLevels.map((nLevel, i) => {
@@ -291,4 +266,30 @@ export const HexNode = React.memo((props: HexNodeProps) => {
         )}
     </Group>
   );
-});
+};
+
+// Custom comparison function for React.memo to prevent unnecessary re-renders
+function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
+    if (prev.id !== next.id) return false;
+    if (prev.x !== next.x || prev.y !== next.y) return false;
+    if (prev.rotation !== next.rotation) return false;
+    if (prev.level !== next.level) return false;
+    if (prev.maxLevel !== next.maxLevel) return false;
+    if (prev.isSelected !== next.isSelected) return false;
+    if (prev.isPending !== next.isPending) return false;
+    if (prev.isTutorialTarget !== next.isTutorialTarget) return false;
+    if (prev.isMissingSupport !== next.isMissingSupport) return false;
+    if (prev.isOccupied !== next.isOccupied) return false;
+    if (prev.isGrowing !== next.isGrowing) return false;
+    if (prev.progress !== next.progress) return false;
+    if (prev.durability !== next.durability) return false;
+    
+    // Deep compare neighborLevels (Array of numbers)
+    for (let i = 0; i < 6; i++) {
+        if (prev.neighborLevels[i] !== next.neighborLevels[i]) return false;
+    }
+    
+    return true;
+}
+
+export const HexNode = React.memo(HexNodeComponent, arePropsEqual);

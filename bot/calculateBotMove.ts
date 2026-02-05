@@ -16,13 +16,13 @@ const SETTLING_TIME_MS = 25000;
 const MIN_DIST_FROM_CENTER = 6;
 const IDEAL_DIST_FROM_OTHERS = 4;
 const MOVE_COST_COINS = 5;
+const SEARCH_RADIUS = 10; // Optimized: Reduced from potentially larger values
+const SCORE_THRESHOLD = 120; // Early exit score
 
 /**
- * AI V32: "The Safety Inspector"
- * Safety Rules:
- * 1. Never step on VOID.
- * 2. Never step on CRITICAL (Durability <= 1) hex unless planning to REPAIR it immediately.
- * 3. Never DIG a CRITICAL hex (it will collapse).
+ * AI V33: "Optimized Safety Inspector"
+ * - Reduced Search Radius (10)
+ * - Early Exit on Good Targets
  */
 export const calculateBotMove = (
   bot: Entity, 
@@ -61,9 +61,6 @@ export const calculateBotMove = (
       if (h.structureType === 'VOID') return false; // Death
       
       // Critical Durability Check
-      // If durability is 1, stepping ON is fine, but stepping OFF breaks it.
-      // If we are just passing through, it's risky (we might break it behind us).
-      // If we are going there to FIX (Build), it's safe.
       const d = h.durability ?? GAME_CONFIG.L1_HEX_MAX_DURABILITY;
       if (h.maxLevel === 1 && d <= 1 && intent === 'PASS') {
           return false; // Too dangerous to just walk over
@@ -73,7 +70,6 @@ export const calculateBotMove = (
 
   // === PHASE 1: MIGRATION ===
   if (!mem.homeBase) {
-      // ... (Initial direction logic same as V31) ...
       if (!mem.migrationAngle) {
           const seed = bot.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
           mem.migrationAngle = ((seed % 8) * (Math.PI / 4)) + ((Math.random() - 0.5) * 0.5);
@@ -82,7 +78,6 @@ export const calculateBotMove = (
       const distFromCenter = cubeDistance(bot, {q:0, r:0});
       const timeUp = timeAlive > SETTLING_TIME_MS;
       
-      // ... (Crowding check same) ...
       const occupied = index.getOccupiedHexesList();
       let nearestDist = 999;
       for (const o of occupied) {
@@ -104,21 +99,16 @@ export const calculateBotMove = (
 
       // Fund Travel Logic
       if (isBroke && currentHex) {
-          // ... (same local work logic) ...
-          // DIG CHECK: Don't dig if critical!
           const d = currentHex.durability ?? 99;
           if (d > 1 && checkDigCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid).canGrow) {
                return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Travel Dig', memory: mem };
           }
-          // ...
-          // Recovery etc...
           if (!bot.recoveredCurrentHex) {
                return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Refueling', memory: mem };
           }
       }
 
       // Move Out (Safe Path)
-      // ...
       const horizonDist = distFromCenter + 5;
       const tQ = Math.round(horizonDist * Math.cos(mem.migrationAngle));
       const tR = Math.round(horizonDist * Math.sin(mem.migrationAngle));
@@ -128,7 +118,7 @@ export const calculateBotMove = (
       
       for (const n of neighbors) {
           if (index.isOccupied(n.q, n.r)) continue;
-          if (!isSafeToStep(n.q, n.r, 'PASS')) continue; // SAFETY FIRST
+          if (!isSafeToStep(n.q, n.r, 'PASS')) continue; 
           
           const d = cubeDistance(n, { q: tQ, r: tR });
           if (d < minDst) { minDst = d; bestMove = n; }
@@ -167,7 +157,6 @@ export const calculateBotMove = (
   if (isBroke && currentHex) {
       const neighbors = getNeighbors(bot.q, bot.r);
       const d = currentHex.durability ?? 99;
-      // ONLY DIG IF SAFE (Durability > 1)
       if (d > 1 && checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
            return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Survival Dig', memory: mem };
       }
@@ -185,7 +174,6 @@ export const calculateBotMove = (
       const d = currentHex.durability ?? 99;
       
       if (isGathering && storage < maxStorage) {
-          // SAFETY: Don't dig if it will break the floor
           if (d > 1 && checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
               if (currentHex.currentLevel <= 0) {
                    return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Mining', memory: { ...mem, stuckCounter: 0 } };
@@ -210,7 +198,8 @@ export const calculateBotMove = (
   }
 
   if (!mem.targetHexId) {
-      const candidates = index.getHexesInRange(focalPoint, 6);
+      // OPTIMIZATION: Reduced Range and Early Exit
+      const candidates = index.getHexesInRange(focalPoint, SEARCH_RADIUS);
       let bestTarget: { hex: Hex, score: number } | null = null;
       
       for (const hex of candidates) {
@@ -218,9 +207,8 @@ export const calculateBotMove = (
           if (index.isOccupied(hex.q, hex.r) && hex.id !== currentHexKey) continue;
           if (bot.recentUpgrades.includes(hex.id)) continue;
           
-          // SAFETY: Don't target critical hexes unless we plan to build (repair)
           const isCritical = (hex.durability ?? 99) <= 1 && hex.maxLevel === 1;
-          if (isCritical && isGathering) continue; // Don't go there to dig or walk over
+          if (isCritical && isGathering) continue; 
 
           const dist = cubeDistance(bot, hex);
           const zoneDist = cubeDistance(focalPoint, hex);
@@ -238,7 +226,6 @@ export const calculateBotMove = (
                   possible = true;
                   score += (10 - zoneDist) * 5;
                   if (hex.maxLevel > 0) score += 30;
-                  // Bonus for repairing critical hexes
                   if (isCritical) score += 50; 
               }
           }
@@ -247,15 +234,16 @@ export const calculateBotMove = (
               score -= dist * 2;
               score += Math.random() * 5;
               if (!bestTarget || score > bestTarget.score) bestTarget = { hex, score };
+              
+              // PERFORMANCE: Early exit if we found a great target
+              if (score > SCORE_THRESHOLD) break;
           }
       }
 
-      // Fallback
+      // Fallback Search (if no ideal target found)
       if (!bestTarget) {
           for (const hex of candidates) {
                if (index.isOccupied(hex.q, hex.r) || bot.recentUpgrades.includes(hex.id) || hex.structureType === 'VOID') continue;
-               
-               // Only target valid safe hexes
                const isCrit = (hex.durability ?? 99) <= 1 && hex.maxLevel === 1;
                if (isCrit && isGathering) continue;
 
@@ -278,23 +266,14 @@ export const calculateBotMove = (
   const dest = targetHex ? { q: targetHex.q, r: targetHex.r } : focalPoint;
 
   if (canMove) {
-      // Find path with implicit avoid (obstacles) + explicit safety check
-      // We rely on calculateMovementCost or findPath to handle VOID, but Critical hexes need custom check
-      
       const path = findPath({q:bot.q, r:bot.r}, dest, grid, bot.playerLevel, navObstacles);
       
-      // Filter path for critical hexes? findPath is generic.
-      // If the path forces us to step on a crumbling hex, we must abort or accept risk.
-      // Let's assume we accept risk if it's the *target* (to repair), but avoid if intermediate.
-      
-      // Simplified: Just use path if valid.
       if (path && path.length > 0) {
           if (calculateMovementCost(bot, path, grid).canAfford) {
               return { action: { type: 'MOVE', path, stateVersion }, debug: `Job > ${mem.mode}`, memory: { ...mem, stuckCounter: 0 } };
           } else {
               // Try step
               if (calculateMovementCost(bot, [path[0]], grid).canAfford) {
-                  // Double check safety of step
                   if (isSafeToStep(path[0].q, path[0].r, 'PASS')) {
                      return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: 'Creep', memory: { ...mem, stuckCounter: 0 } };
                   }
