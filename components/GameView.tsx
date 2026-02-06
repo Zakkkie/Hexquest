@@ -8,6 +8,7 @@ import Background from './Background.tsx';
 import GameHUD from './GameHUD.tsx';
 import MapRenderer from './MapRenderer.tsx';
 import { audioService } from '../services/audioService.ts';
+import { XCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 
 const GameView: React.FC = () => {
   const grid = useGameStore(state => state.session?.grid);
@@ -358,6 +359,24 @@ const GameView: React.FC = () => {
           />
         </Stage>
       </div>
+
+      {/* TOAST OVERLAY */}
+      {toast && (
+          <div className="absolute top-[15%] left-0 w-full flex justify-center z-[60] pointer-events-none">
+              <div className={`
+                  flex items-center gap-3 px-6 py-4 rounded-full backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.5)] border
+                  animate-in slide-in-from-top-4 duration-300
+                  ${toast.type === 'error' ? 'bg-red-950/60 border-red-500/50 text-red-100 animate-pulse' : ''}
+                  ${toast.type === 'success' ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-100' : ''}
+                  ${toast.type === 'info' ? 'bg-slate-900/80 border-slate-700 text-white' : ''}
+              `}>
+                  {toast.type === 'error' && <XCircle className="w-8 h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]" />}
+                  {toast.type === 'success' && <CheckCircle className="w-6 h-6 text-emerald-500" />}
+                  {toast.type === 'info' && <Info className="w-6 h-6 text-blue-400" />}
+                  <span className="text-lg font-black uppercase tracking-widest leading-none drop-shadow-md">{toast.message}</span>
+              </div>
+          </div>
+      )}
 
       <GameHUD 
         hoveredHexId={hoveredHexId} 

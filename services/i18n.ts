@@ -141,6 +141,7 @@ interface Dictionary {
         TUT_1_6_CYCLE_HINT: string;
         TUT_1_6_COUNTER: string;
         TUT_1_6_RIVAL: string;
+        ERROR_RANK: string; // New Key
     };
     TOOLTIP: {
         CURRENT_LOC: string;
@@ -203,7 +204,7 @@ export const TEXT: Record<Language, Dictionary> = {
             AUTH_GUEST: "Guest",
             AUTH_LOGIN: "Login",
             AUTH_REGISTER: "Sign Up",
-            MODAL_LOGIN_TITLE: "Login",
+            MODAL_LOGIN_TITLE: "Terminal Access",
             MODAL_REGISTER_TITLE: "New Commission",
             MODAL_GUEST_TITLE: "Guest Mode",
             BTN_LOGIN: "Authenticate",
@@ -307,7 +308,7 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_3_INTRO_DESC: "Build supports before going higher.",
             TUT_1_3_REQ_LABEL: "Ready",
             TUT_1_3_ERROR_STAIRCASE: "UNSTABLE",
-            TUT_1_3_COUNTER: "SUPPORTS",
+            TUT_1_3_COUNTER: "OPPORTS",
             TUT_1_4_TASK: "Reach Level 3",
             TUT_1_4_INTRO_TITLE: "Excavation",
             TUT_1_4_INTRO_DESC: "Dig mounds for material.",
@@ -315,7 +316,7 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_5_TASK: "Emergency Run",
             TUT_1_5_INTRO_TITLE: "Oxygen Low",
             TUT_1_5_INTRO_DESC: "Collect 150 Coins fast!",
-            TUT_1_5_TIMER_LABEL: "ТАЙМЕР",
+            TUT_1_5_TIMER_LABEL: "TIMER",
             TUT_1_5_COUNTER: "COINS",
             TUT_1_6_TASK: "Race for L4",
             TUT_1_6_INTRO_TITLE: "The Rival",
@@ -323,6 +324,7 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_6_CYCLE_HINT: "Locked!",
             TUT_1_6_COUNTER: "RANK",
             TUT_1_6_RIVAL: "RIVAL",
+            ERROR_RANK: "RANK TOO LOW",
         },
         TOOLTIP: {
             CURRENT_LOC: "Location",
@@ -383,7 +385,7 @@ export const TEXT: Record<Language, Dictionary> = {
             AUTH_GUEST: "Гость",
             AUTH_LOGIN: "Вход",
             AUTH_REGISTER: "Регистрация",
-            MODAL_LOGIN_TITLE: "Войти",
+            MODAL_LOGIN_TITLE: "Доступ к Терминалу",
             MODAL_REGISTER_TITLE: "Новый Контракт",
             MODAL_GUEST_TITLE: "Гостевой Режим",
             BTN_LOGIN: "Войти",
@@ -503,6 +505,7 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_6_CYCLE_HINT: "Блок!",
             TUT_1_6_COUNTER: "РАНГ",
             TUT_1_6_RIVAL: "ВРАГ",
+            ERROR_RANK: "РАНГ СЛИШКОМ МАЛ",
         },
         TOOLTIP: {
             CURRENT_LOC: "Местоположение",

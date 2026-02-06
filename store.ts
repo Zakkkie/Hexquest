@@ -9,6 +9,7 @@ import { CAMPAIGN_LEVELS } from './campaign/levels.ts';
 import { LevelConfig } from './campaign/types.ts';
 import { calculateMovementCost } from './rules/movement.ts';
 import { generateMap } from './services/mapGenerator.ts';
+import { TEXT } from './services/i18n.ts';
 
 const MOCK_USER_DB: Record<string, { password: string; avatarColor: string; avatarIcon: string }> = {};
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899']; 
@@ -377,6 +378,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       if (session.player.state === EntityState.MOVING) return;
       
+      // --- NEW: Rank Check ---
+      const targetKey = getHexKey(tq, tr);
+      const targetHex = session.grid[targetKey];
+      
+      // Check if trying to move to a hex with too high level
+      if (targetHex && targetHex.structureType !== 'VOID' && targetHex.maxLevel > session.player.playerLevel) {
+          audioService.play('ERROR');
+          const lang = get().language;
+          const msg = TEXT[lang].HUD.ERROR_RANK || "RANK TOO LOW";
+          set({ toast: { message: msg, type: 'error', timestamp: Date.now() } });
+          return;
+      }
+      // -----------------------
+
       const obstacles = session.bots.map(b => ({ q: b.q, r: b.r }));
       const path = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles);
       
