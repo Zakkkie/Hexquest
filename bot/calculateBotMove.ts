@@ -1,4 +1,3 @@
-
 import { Entity, Hex, HexCoord, WinCondition, BotAction, Difficulty, BotMemory } from '../types';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS } from '../rules/config';
 import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hexUtils';
@@ -13,16 +12,15 @@ export interface AiResult {
 }
 
 const SETTLING_TIME_MS = 20000;
-const LOCAL_SCAN_RADIUS = 4;   // Fast, frequent
-const DEEP_SCAN_RADIUS = 20;   // Slow, occasional
-const DEEP_SCAN_INTERVAL = 15; // Every 15 decisions (~15-30s)
-const ZONE_RADIUS = 6;         // Area size of Base/Quarry
+const LOCAL_SCAN_RADIUS = 4;   // Быстрый поиск
+const DEEP_SCAN_RADIUS = 15;   // Глубокий анализ
+const DEEP_SCAN_INTERVAL = 10; // Как часто делать глубокий анализ (тиков)
+const ZONE_RADIUS = 6;         // Радиус рабочей зоны
+const MOVE_COST_COINS = 5;
 
 /**
- * AI V40: "Variable Awareness Builder"
- * Optimization:
- * 1. Default: Scans LOCAL_SCAN_RADIUS (4) - very cheap.
- * 2. Every N ticks: Performs DEEP_SCAN_RADIUS (20) to find neglected targets or recover from migration.
+ * AI V41: "The Optimized Strategist"
+ * Merges V40 Performance (Variable Awareness) with V37 Logic (Sabotage/Safety).
  */
 export const calculateBotMove = (
   bot: Entity, 
@@ -48,27 +46,33 @@ export const calculateBotMove = (
   
   // --- VARIABLE AWARENESS TIMER ---
   mem.scanTimer = (mem.scanTimer || 0) + 1;
-  const isDeepScan = mem.scanTimer >= DEEP_SCAN_INTERVAL || !mem.targetHexId; // Trigger deep scan if timer hits OR we are idle/lost
+  const isDeepScan = mem.scanTimer >= DEEP_SCAN_INTERVAL || !mem.targetHexId;
 
   if (!mem.spawnTime) mem.spawnTime = now;
   const timeAlive = now - (mem.spawnTime || now);
 
+  // Economy
   const storage = bot.storage || 0;
   const maxStorage = bot.maxStorage || 4;
-  const canAffordMove = bot.moves >= 1 || bot.coins >= 5;
+  const canAffordMove = bot.moves >= 1 || bot.coins >= MOVE_COST_COINS;
   const isBroke = !canAffordMove;
 
   // --- 0. SETTLING (One-time calculation) ---
   if (!mem.homeBase) {
-      // Calculation is cheap, no grid scan needed
       if (!mem.migrationAngle) {
           const seed = bot.id.charCodeAt(bot.id.length-1);
           mem.migrationAngle = ((seed % 8) * (Math.PI / 4));
       }
       
-      // Simple distance check
       const dist = cubeDistance(bot, {q:0, r:0});
-      if (dist > 8 || timeAlive > SETTLING_TIME_MS) {
+      const occupied = index.getOccupiedHexesList();
+      let nearest = 999;
+      for(const o of occupied) {
+          if (o.q !== bot.q) nearest = Math.min(nearest, cubeDistance(bot, o));
+      }
+
+      // Settle condition
+      if ((dist > 8 && nearest > 5) || timeAlive > SETTLING_TIME_MS) {
           mem.homeBase = { q: bot.q, r: bot.r };
           const qQ = Math.round(bot.q + 5 * Math.cos(mem.migrationAngle + Math.PI));
           const qR = Math.round(bot.r + 5 * Math.sin(mem.migrationAngle + Math.PI));
@@ -77,6 +81,14 @@ export const calculateBotMove = (
           return { action: { type: 'WAIT', stateVersion }, debug: 'Settled', memory: mem };
       }
       
+      // If broke during migration -> Work locally
+      if (isBroke && currentHex) {
+           const neighbors = getNeighbors(bot.q, bot.r);
+           if (checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
+               return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Travel Dig', memory: mem };
+           }
+      }
+
       // Move Out Blindly
       const tQ = Math.round(15 * Math.cos(mem.migrationAngle));
       const tR = Math.round(15 * Math.sin(mem.migrationAngle));
@@ -85,11 +97,6 @@ export const calculateBotMove = (
       if (path && path.length > 0 && calculateMovementCost(bot, [path[0]], grid).canAfford) {
           return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: 'Migrating', memory: mem };
       }
-      
-      // Random walk if blocked
-      const neighbors = getNeighbors(bot.q, bot.r);
-      const rnd = neighbors.find(n => !index.isOccupied(n.q, n.r) && grid[getHexKey(n.q, n.r)]?.structureType !== 'VOID');
-      if (rnd) return { action: { type: 'MOVE', path: [rnd], stateVersion }, debug: 'Wander', memory: mem };
       
       return { action: { type: 'WAIT', stateVersion }, debug: 'Stuck', memory: mem };
   }
@@ -109,31 +116,65 @@ export const calculateBotMove = (
   // --- 2. SURVIVAL (Local only) ---
   if (isBroke && currentHex) {
       const neighbors = getNeighbors(bot.q, bot.r);
-      if (checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
+      // Dig only if safe (don't dig own tower if it breaks connection)
+      const isMyTower = currentHex.maxLevel > 0;
+      if (!isMyTower && checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
            return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Survival Dig', memory: mem };
+      }
+      if (storage > 0 && checkGrowthCondition(currentHex, bot, neighbors, grid, [], queueSize).canGrow) {
+           return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Survival Build', memory: mem };
       }
       if (!bot.recoveredCurrentHex) {
            return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Recover', memory: mem };
       }
   }
 
-  // --- 3. IMMEDIATE WORK CHECK (Priority) ---
-  // Before scanning neighbors, check if we are standing on a valid spot.
+  // --- 3. SABOTAGE (The Rival) ---
+  if (canAffordMove) {
+      const neighbors = getNeighbors(bot.q, bot.r);
+      const enemyNeighbor = neighbors.find(n => {
+          const ent = index.getEntityAt(n.q, n.r);
+          return ent && ent.id !== bot.id; 
+      });
+
+      if (enemyNeighbor) {
+          const eHex = grid[getHexKey(enemyNeighbor.q, enemyNeighbor.r)];
+          // Aggression Trigger: Enemy on High Ground (>0) OR we are just mean
+          if (eHex && eHex.currentLevel >= 0 && !bot.recentUpgrades.includes(eHex.id)) {
+              if (checkDigCondition(eHex, bot, getNeighbors(eHex.q, eHex.r), grid).canGrow) {
+                   // If storage full, we might skip unless it's a high threat
+                   if (storage < maxStorage || eHex.maxLevel > 2) {
+                       return { 
+                          action: { type: 'DIG', coord: {q:enemyNeighbor.q, r:enemyNeighbor.r}, stateVersion }, 
+                          debug: `SABOTAGE!`, 
+                          memory: { ...mem, stuckCounter: 0 } 
+                      };
+                   }
+              }
+          }
+      }
+  }
+
+  // --- 4. LOCAL WORK CHECK ---
   if (currentHex) {
       const neighbors = getNeighbors(bot.q, bot.r);
+      
       if (isGathering && storage < maxStorage) {
+          // PROTECT: Don't dig towers
           if (currentHex.maxLevel <= 0 && checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
                return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Mining', memory: { ...mem, stuckCounter: 0 } };
           }
       }
+      
       if (!isGathering && storage > 0) {
+          // PROTECT: Don't fill pits
           if (currentHex.currentLevel >= 0 && checkGrowthCondition(currentHex, bot, neighbors, grid, [], queueSize).canGrow) {
                return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Building', memory: { ...mem, stuckCounter: 0 } };
           }
       }
   }
 
-  // --- 4. TARGETING (Variable Radius) ---
+  // --- 5. TARGETING (Variable Radius) ---
   const currentSearchRadius = isDeepScan ? DEEP_SCAN_RADIUS : LOCAL_SCAN_RADIUS;
   
   let bestTarget: { hex: Hex, score: number } | null = null;
@@ -149,26 +190,33 @@ export const calculateBotMove = (
       
       const zoneDist = cubeDistance(focalPoint, hex);
 
-      // We only care about work that is INSIDE our zone radius
-      // Exception: If Deep Scanning, we might be far from home, so allow finding the way back.
-      if (zoneDist > ZONE_RADIUS) continue; 
+      // Stick to zone unless Deep Scanning
+      if (!isDeepScan && zoneDist > ZONE_RADIUS) continue; 
 
       if (isGathering) {
+          // Look for Pits
           if (hex.maxLevel <= 0 && checkDigCondition(hex, bot, getNeighbors(hex.q, hex.r), grid).canGrow) {
               score = -hex.currentLevel * 10; 
               score += (ZONE_RADIUS - zoneDist) * 2; 
               valid = true;
           }
       } else {
+          // Look for Towers
           if (hex.currentLevel >= 0 && checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, [], queueSize).canGrow) {
               score = hex.maxLevel * 10;
               score += (ZONE_RADIUS - zoneDist) * 2;
+              
+              // Support Logic: Bonus if next to other high tiles
+              const nList = getNeighbors(hex.q, hex.r);
+              const support = nList.filter(n => (grid[getHexKey(n.q, n.r)]?.maxLevel || 0) >= hex.maxLevel).length;
+              score += support * 5;
+
               valid = true;
           }
       }
 
       if (valid) {
-          score -= cubeDistance(bot, hex); // Closer is better
+          score -= cubeDistance(bot, hex); 
           if (!bestTarget || score > bestTarget.score) {
               bestTarget = { hex, score };
           }
@@ -177,25 +225,23 @@ export const calculateBotMove = (
   
   if (bestTarget) {
       mem.targetHexId = bestTarget.hex.id;
-      if (isDeepScan) mem.scanTimer = 0; // Reset timer if we found something during a deep scan
+      if (isDeepScan) mem.scanTimer = 0; 
   } else {
-      mem.targetHexId = undefined; // No local work found
+      mem.targetHexId = undefined; 
   }
 
-  // --- 5. MOVEMENT ---
-  let dest = focalPoint; // Default: Commute to zone center
+  // --- 6. MOVEMENT ---
+  let dest = focalPoint; 
   
   if (mem.targetHexId) {
       const t = grid[mem.targetHexId];
       if (t) dest = { q: t.q, r: t.r };
   }
 
-  // Are we already at destination? (And couldn't work because of check above failed?)
+  // If already at dest but couldn't work (checked above), move random to unstick
   if (bot.q === dest.q && bot.r === dest.r) {
-      // We are at center but can't work. Move random to find spot?
       mem.stuckCounter++;
   } else if (canAffordMove) {
-      // Find path
       const path = findPath({q:bot.q, r:bot.r}, dest, grid, bot.playerLevel, navObstacles);
       if (path && path.length > 0) {
           if (calculateMovementCost(bot, path, grid).canAfford) {
@@ -208,13 +254,13 @@ export const calculateBotMove = (
               }
           }
       } else {
-          // Blind Step towards Focal Point (if map not generated)
+           // Blind Step
            const neighbors = getNeighbors(bot.q, bot.r);
            let bestN = null; let minD = 999;
            for(const n of neighbors) {
                if(!index.isOccupied(n.q, n.r)) {
                    const d = cubeDistance(n, dest);
-                   if(d < minD) { minD=d; bestN=n; }
+                   if(d<minD) { minD=d; bestN=n; }
                }
            }
            if (bestN && calculateMovementCost(bot, [bestN], grid).canAfford) {
@@ -222,13 +268,17 @@ export const calculateBotMove = (
            }
            mem.stuckCounter++;
       }
+  } else {
+      mem.stuckCounter++;
   }
 
-  // --- 6. PANIC ---
+  // --- 7. PANIC ---
   if (mem.stuckCounter > 2) {
       if (currentHex && checkDigCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid).canGrow) {
+           // Allow digging own tower in panic
            return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Panic Dig', memory: { ...mem, stuckCounter: 0 } };
       }
+      mem.targetHexId = undefined;
       mem.mode = isGathering ? 'BUILD' : 'GATHER';
       mem.stuckCounter = 0;
   }
