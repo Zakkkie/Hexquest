@@ -61,15 +61,19 @@ export class TextureService {
         styleMode = 'CORE';
     } else if (level <= -5) {
         // -7 to -5: MAGMA (Flowing Lava)
-        base = '#7f1d1d'; // Dark Red base
+        base = '#450a0a'; // Darker Red base
         detail = '#ef4444'; // Red Lava
         highlight = '#f97316'; // Orange glow
         styleMode = 'LAVA';
     } else if (level <= -1) {
         // -4 to -1: CRUST (Rock with cracks)
-        base = '#1c1917'; // Stone darker
+        // Shift color slightly based on depth
+        if (level === -4) base = '#1a0505'; // Hot rock
+        else if (level === -3) base = '#0c0a09'; // Deep black rock
+        else base = '#1c1917'; // Standard stone
+
         detail = '#292524'; // Stone lighter
-        highlight = '#7f1d1d'; // Deep red cracks
+        highlight = level === -4 ? '#ef4444' : '#7f1d1d'; // Red cracks for deep, dark for shallow
         styleMode = 'ROCK';
     } else if (level === 0) {
         // 0: FOUNDATION (Industrial Floor)
@@ -109,9 +113,9 @@ export class TextureService {
 
     if (type === 'TOP') {
         switch (styleMode) {
-            case 'CORE': this.drawCore(ctx, size, base, detail, highlight, seed); break;
-            case 'LAVA': this.drawLava(ctx, size, base, detail, highlight, seed); break;
-            case 'ROCK': this.drawRock(ctx, size, base, detail, highlight, seed); break;
+            case 'CORE': this.drawCore(ctx, size, base, detail, highlight, seed, level); break;
+            case 'LAVA': this.drawLava(ctx, size, base, detail, highlight, seed, level); break;
+            case 'ROCK': this.drawRock(ctx, size, base, detail, highlight, seed, level); break;
             case 'METAL': this.drawMetal(ctx, size, base, detail, highlight, seed, level); break;
             case 'GEM': this.drawGem(ctx, size, base, detail, highlight, seed, level); break;
             case 'EMERALD': this.drawEmerald(ctx, size, base, detail, highlight, seed, level); break;
@@ -126,26 +130,82 @@ export class TextureService {
 
   // --- DRAWING STRATEGIES ---
 
-  private drawCore(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number) {
-      // Chaotic plasma noise
-      for (let i = 0; i < 200; i++) {
+  private drawCore(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number, level: number) {
+      if (level <= -10) {
+          // Pure Whiteout
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0,0,size,size);
+          return;
+      }
+
+      if (level === -9) {
+          // Singularity Ring
+          const cx = size/2, cy = size/2;
+          ctx.strokeStyle = highlight;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(cx, cy, size*0.3, 0, Math.PI*2);
+          ctx.stroke();
+          
+          ctx.fillStyle = detail;
+          ctx.beginPath();
+          ctx.arc(cx, cy, size*0.15, 0, Math.PI*2);
+          ctx.fill();
+          return;
+      }
+
+      // Level -8: Chaotic Plasma
+      for (let i = 0; i < 20; i++) {
           const x = Math.random() * size;
           const y = Math.random() * size;
-          const s = Math.random() * 4;
-          ctx.fillStyle = Math.random() > 0.5 ? highlight : detail;
-          ctx.globalAlpha = 0.5;
+          ctx.strokeStyle = Math.random() > 0.5 ? highlight : detail;
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(x, y, s, 0, Math.PI*2);
-          ctx.fill();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + (Math.random()-0.5)*20, y + (Math.random()-0.5)*20);
+          ctx.stroke();
       }
-      ctx.globalAlpha = 1.0;
   }
 
-  private drawLava(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number) {
-      // Wavy bands
-      ctx.lineWidth = 4;
+  private drawLava(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number, level: number) {
       ctx.lineCap = 'round';
       
+      if (level === -7) {
+          // Crusted Islands
+          ctx.fillStyle = '#2a0a0a'; // Dark crust
+          for(let i=0; i<3; i++) {
+              const x = (seed * i * 40) % size;
+              const y = (seed * i * 30) % size;
+              const r = 8 + (seed % 10);
+              ctx.beginPath();
+              ctx.arc(x, y, r, 0, Math.PI*2);
+              ctx.fill();
+          }
+          // Glowing cracks between islands
+          ctx.strokeStyle = highlight;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(0, size/2); ctx.lineTo(size, size/2);
+          ctx.stroke();
+          return;
+      }
+
+      if (level === -6) {
+          // Boiling Bubbles
+          for (let i = 0; i < 8; i++) {
+              ctx.fillStyle = i % 2 === 0 ? detail : highlight;
+              ctx.beginPath();
+              const x = (i * 23 + seed) % size;
+              const y = (i * 37 + seed) % size;
+              const r = 4 + (i % 4);
+              ctx.arc(x, y, r, 0, Math.PI*2);
+              ctx.fill();
+          }
+          return;
+      }
+
+      // Level -5: Flowing Waves (Standard)
+      ctx.lineWidth = 3;
       for (let i = 0; i < 5; i++) {
           ctx.strokeStyle = i % 2 === 0 ? detail : highlight;
           ctx.beginPath();
@@ -160,29 +220,57 @@ export class TextureService {
       }
   }
 
-  private drawRock(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number) {
-      // Random angular rocks
+  private drawRock(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number, level: number) {
+      // Base Noise for all rock
       ctx.fillStyle = detail;
-      for(let i=0; i<5; i++) {
-          const w = 10 + (seed * i * 738) % 20;
-          const h = 10 + (seed * i * 991) % 20;
+      for(let i=0; i<6; i++) {
+          const w = 4 + (seed * i * 738) % 12;
+          const h = 4 + (seed * i * 991) % 12;
           const x = (seed * i * 31) % (size - w);
           const y = (seed * i * 47) % (size - h);
           ctx.fillRect(x, y, w, h);
       }
-      
-      // Magma Cracks
-      ctx.strokeStyle = highlight; // Red/Glow
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(size/2, size/2);
-      for(let i=0; i<3; i++) {
-          const angle = ((seed + i) * 123) % 360;
-          const r = size * 0.6;
-          ctx.lineTo(size/2 + Math.cos(angle)*r, size/2 + Math.sin(angle)*r);
+
+      if (level === -4) {
+          // Hot Rock: Glowing Veins
+          ctx.strokeStyle = highlight; // Red/Glow
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(size*0.2, size*0.2);
+          ctx.lineTo(size*0.8, size*0.8);
+          ctx.moveTo(size*0.8, size*0.2);
+          ctx.lineTo(size*0.2, size*0.8);
+          ctx.stroke();
+      } else if (level === -3) {
+          // Deep Shaft: Center Hole
+          ctx.fillStyle = '#000000';
+          const inset = size * 0.3;
+          ctx.fillRect(inset, inset, size - inset*2, size - inset*2);
+          // Ladder/Grid
+          ctx.strokeStyle = '#333';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(size/2, inset); ctx.lineTo(size/2, size-inset);
+          ctx.stroke();
+      } else if (level === -2) {
+          // Reinforced Mine: Beams
+          ctx.strokeStyle = '#b45309'; // Wood/Rust color
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(0, 0); ctx.lineTo(size, size);
+          ctx.moveTo(size, 0); ctx.lineTo(0, size);
+          ctx.stroke();
+      } else {
+          // Level -1: Just simple cracks
+          ctx.strokeStyle = highlight; 
+          ctx.lineWidth = 1;
+          ctx.beginPath();
           ctx.moveTo(size/2, size/2);
+          ctx.lineTo(size/2 + 10, size/2 + 15);
+          ctx.moveTo(size/2, size/2);
+          ctx.lineTo(size/2 - 12, size/2 + 5);
+          ctx.stroke();
       }
-      ctx.stroke();
   }
 
   private drawMetal(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number, level: number) {
