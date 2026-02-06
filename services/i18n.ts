@@ -204,7 +204,7 @@ export const TEXT: Record<Language, Dictionary> = {
             AUTH_GUEST: "Guest",
             AUTH_LOGIN: "Login",
             AUTH_REGISTER: "Sign Up",
-            MODAL_LOGIN_TITLE: "Terminal Access",
+            MODAL_LOGIN_TITLE: "Login",
             MODAL_REGISTER_TITLE: "New Commission",
             MODAL_GUEST_TITLE: "Guest Mode",
             BTN_LOGIN: "Authenticate",

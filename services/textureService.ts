@@ -113,8 +113,8 @@ export class TextureService {
             case 'LAVA': this.drawLava(ctx, size, base, detail, highlight, seed); break;
             case 'ROCK': this.drawRock(ctx, size, base, detail, highlight, seed); break;
             case 'METAL': this.drawMetal(ctx, size, base, detail, highlight, seed, level); break;
-            case 'GEM': this.drawGem(ctx, size, base, detail, highlight, seed); break;
-            case 'EMERALD': this.drawEmerald(ctx, size, base, detail, highlight, seed); break;
+            case 'GEM': this.drawGem(ctx, size, base, detail, highlight, seed, level); break;
+            case 'EMERALD': this.drawEmerald(ctx, size, base, detail, highlight, seed, level); break;
             case 'PURE': this.drawPure(ctx, size, base, detail, highlight, seed); break;
         }
     } else {
@@ -201,8 +201,28 @@ export class TextureService {
           const inset = 4;
           ctx.fillRect(inset, inset, size - inset*2, size - inset*2);
           
+          // Visual Differentiation for Levels 1, 2, 3
+          
+          // Level 2: Reinforced Cross/Stripe
+          if (level === 2) {
+              ctx.strokeStyle = highlight;
+              ctx.globalAlpha = 0.3;
+              ctx.beginPath();
+              // Diagonal hatch
+              for(let i=-size; i<size; i+=8) {
+                  ctx.moveTo(i, 0); ctx.lineTo(i+size, size);
+              }
+              ctx.stroke();
+              ctx.globalAlpha = 1.0;
+              
+              // Inner plate
+              ctx.fillStyle = base; // Darker center
+              ctx.fillRect(inset + 8, inset + 8, size - (inset+8)*2, size - (inset+8)*2);
+          }
+
           // Rivets / Lights
-          ctx.fillStyle = level > 2 ? '#38bdf8' : highlight; // Blue lights for high metal
+          ctx.fillStyle = level > 2 ? '#38bdf8' : highlight; // Blue lights for high metal (L3)
+          
           const s = 3;
           ctx.fillRect(inset + 2, inset + 2, s, s);
           ctx.fillRect(size - inset - 2 - s, inset + 2, s, s);
@@ -211,7 +231,7 @@ export class TextureService {
       }
   }
 
-  private drawGem(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number) {
+  private drawGem(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number, level: number) {
       // Facets
       const cx = size / 2;
       const cy = size / 2;
@@ -227,14 +247,34 @@ export class TextureService {
       ctx.fillStyle = highlight;
       ctx.globalAlpha = 0.4;
       ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      // Random facet based on seed
-      if (seed % 2 === 0) {
-          ctx.lineTo(size, cy);
-          ctx.lineTo(cx, size);
+      
+      // Variation by Level
+      if (level === 6) {
+          // Star Cut
+          for(let i=0; i<8; i+=2) {
+              ctx.moveTo(cx, cy);
+              const angle = (i * Math.PI / 4);
+              ctx.lineTo(cx + size * Math.cos(angle), cy + size * Math.sin(angle));
+          }
+      } else if (level === 5) {
+          // Central Hex Facet
+          const r = size * 0.4;
+          for(let i=0; i<6; i++) {
+              const angle = i * Math.PI / 3;
+              if (i===0) ctx.moveTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+              else ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+          }
+          ctx.closePath();
       } else {
-          ctx.lineTo(0, cy);
-          ctx.lineTo(cx, 0);
+          // Standard Split (Level 4)
+          ctx.moveTo(cx, cy);
+          if (seed % 2 === 0) {
+              ctx.lineTo(size, cy);
+              ctx.lineTo(cx, size);
+          } else {
+              ctx.lineTo(0, cy);
+              ctx.lineTo(cx, 0);
+          }
       }
       ctx.fill();
       ctx.globalAlpha = 1.0;
@@ -245,17 +285,17 @@ export class TextureService {
       ctx.strokeRect(10, 10, size-20, size-20);
   }
 
-  private drawEmerald(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number) {
+  private drawEmerald(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number, level: number) {
       const cx = size / 2;
       const cy = size / 2;
       
       // Glowing Core
       ctx.shadowColor = highlight;
-      ctx.shadowBlur = 15;
-      ctx.fillStyle = detail;
+      ctx.shadowBlur = level === 9 ? 25 : 15; // L9 Brighter
+      ctx.fillStyle = level === 9 ? highlight : detail; // L9 Filled Core
       
       ctx.beginPath();
-      const r = size * 0.3;
+      const r = size * (level === 9 ? 0.4 : 0.3);
       for (let i = 0; i < 6; i++) {
           const angle = i * Math.PI / 3;
           ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
@@ -270,6 +310,19 @@ export class TextureService {
       ctx.moveTo(cx, cy);
       ctx.lineTo(cx + (seed % 2 === 0 ? size : -size), cy);
       ctx.stroke();
+
+      // Level 8: Double Ring
+      if (level >= 8) {
+          ctx.beginPath();
+          const r2 = size * 0.55;
+          for (let i = 0; i < 6; i++) {
+              const angle = i * Math.PI / 3;
+              ctx.lineTo(cx + r2 * Math.cos(angle), cy + r2 * Math.sin(angle));
+          }
+          ctx.closePath();
+          ctx.strokeStyle = detail;
+          ctx.stroke();
+      }
   }
 
   private drawPure(ctx: CanvasRenderingContext2D, size: number, base: string, detail: string, highlight: string, seed: number) {

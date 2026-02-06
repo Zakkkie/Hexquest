@@ -1,3 +1,4 @@
+
 import { Entity, Hex, HexCoord, WinCondition, BotAction, Difficulty, BotMemory } from '../types';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS } from '../rules/config';
 import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hexUtils';
@@ -33,7 +34,7 @@ export const calculateBotMove = (
   reservedHexKeys?: Set<string>
 ): AiResult => {
   
-  if (!bot) return { action: null, debug: 'ERR', memory: { lastPlayerPos: null, stuckCounter: 0 } };
+  if (!bot) return { action: null, debug: 'ERR', memory: { lastPlayerPos: null, currentGoal: null, stuckCounter: 0 } };
 
   const currentHexKey = getHexKey(bot.q, bot.r);
   const currentHex = grid[currentHexKey];
@@ -42,7 +43,7 @@ export const calculateBotMove = (
   const navObstacles = obstacles.filter(o => o.q !== bot.q || o.r !== bot.r);
   
   const now = Date.now();
-  const mem: BotMemory = bot.memory ? { ...bot.memory } : { lastPlayerPos: null, stuckCounter: 0, mode: 'GATHER' };
+  const mem: BotMemory = bot.memory ? { ...bot.memory } : { lastPlayerPos: null, currentGoal: null, stuckCounter: 0, mode: 'GATHER' };
   
   if (!mem.spawnTime) mem.spawnTime = now;
 
