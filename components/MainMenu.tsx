@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus } from 'lucide-react';
+import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -131,14 +131,6 @@ const MainMenu: React.FC = () => {
       return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Sync difficulty when tier changes (Default behavior)
-  useEffect(() => {
-      if (showMissionConfig) {
-          // Reset to default for the tier when opening or switching tier
-          // We can do this in the onClick handler for the tier button to allow manual override afterwards
-      }
-  }, [showMissionConfig]);
-
   const handleCampaignClick = () => {
      playUiSound('CLICK');
      if (hasActiveSession) {
@@ -156,13 +148,11 @@ const MainMenu: React.FC = () => {
     if (hasActiveSession) {
       if (window.confirm(t.ABANDON_CONFIRM)) {
         setShowMissionConfig(true);
-        // Reset defaults
         setSelectedTier(1);
         setDifficulty('EASY');
       }
     } else {
       setShowMissionConfig(true);
-      // Reset defaults
       setSelectedTier(1);
       setDifficulty('EASY');
     }
@@ -280,11 +270,13 @@ const MainMenu: React.FC = () => {
 
             <div className="flex items-center gap-2">
                 {!user ? (
-                  <div className="flex gap-2">
-                     <button onClick={() => { setAuthMode('GUEST'); setInputName(''); setErrorMessage(null); playUiSound('CLICK'); }} className="px-3 py-2 bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-600 text-slate-300 text-[10px] md:text-xs font-bold uppercase h-10">{t.AUTH_GUEST}</button>
-                     <button onClick={() => { setAuthMode('LOGIN'); setInputName(''); setInputPassword(''); setErrorMessage(null); playUiSound('CLICK'); }} className="px-3 py-2 bg-slate-900/50 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 text-[10px] md:text-xs font-bold uppercase h-10">{t.AUTH_LOGIN}</button>
-                     <button onClick={() => { setAuthMode('REGISTER'); setInputName(''); setInputPassword(''); setErrorMessage(null); playUiSound('CLICK'); }} className="px-3 py-2 bg-indigo-600/80 hover:bg-indigo-500 text-white rounded-lg border border-indigo-500/50 text-[10px] md:text-xs font-bold uppercase h-10 shadow-[0_0_10px_rgba(99,102,241,0.3)]">{t.AUTH_REGISTER}</button>
-                  </div>
+                  <button 
+                    onClick={() => { setAuthMode('LOGIN'); setInputName(''); setInputPassword(''); setErrorMessage(null); playUiSound('CLICK'); }} 
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 hover:text-white rounded-xl border border-indigo-500/30 hover:border-indigo-500/50 transition-all shadow-[0_0_10px_rgba(99,102,241,0.1)] group"
+                  >
+                     <Fingerprint className="w-4 h-4 group-hover:text-indigo-300" />
+                     <span className="text-[10px] md:text-xs font-black uppercase tracking-wider">{t.MODAL_LOGIN_TITLE}</span>
+                  </button>
                 ) : (
                   <div className="flex items-center gap-3 bg-slate-900/90 p-1.5 pl-4 rounded-full border border-slate-700 shadow-2xl">
                     <div className="flex flex-col items-end"><span className="text-xs font-bold text-white leading-tight max-w-[100px] truncate">{user.nickname}</span><span className="text-[10px] text-slate-400 uppercase tracking-widest">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span></div>
@@ -299,27 +291,20 @@ const MainMenu: React.FC = () => {
       {/* CENTER MENU */}
       <div className="flex flex-col gap-6 w-full max-w-sm px-6 z-10 max-h-screen overflow-y-auto no-scrollbar py-20 md:py-0">
         
-        {/* NEW LOGO BLOCK */}
+        {/* LOGO BLOCK */}
         <div className="text-center mb-8 relative group cursor-default">
-          {/* Animated Glow Layer */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-indigo-500/20 blur-[50px] rounded-full animate-pulse"></div>
-          
-          {/* Main Visual Composition */}
           <div className="relative flex flex-col items-center justify-center">
-              {/* Spinning Outer Ring */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border border-indigo-500/30 rounded-full animate-[spin_10s_linear_infinite]"></div>
-              
               <div className="relative mb-2">
                   <Hexagon className="w-20 h-20 text-indigo-500 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] fill-indigo-900/20" strokeWidth={1.5} />
                   <div className="absolute inset-0 flex items-center justify-center animate-pulse">
                       <Target className="w-8 h-8 text-white drop-shadow-[0_0_10px_#fff]" />
                   </div>
               </div>
-
               <h1 className="relative text-5xl md:text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] z-10">
                   {t.TITLE}
               </h1>
-              
               <div className="flex items-center gap-3 mt-2 opacity-80">
                   <div className="h-px w-12 bg-indigo-500/50"></div>
                   <p className="text-[10px] md:text-xs text-indigo-300 font-mono tracking-[0.4em] uppercase whitespace-nowrap">{t.SUBTITLE}</p>
@@ -335,6 +320,135 @@ const MainMenu: React.FC = () => {
           <MenuButton onClick={() => { setUIState('LEADERBOARD'); playUiSound('CLICK'); }} icon={<Trophy className="w-5 h-5" />} label={t.LEADERBOARD} subLabel={t.LEADERBOARD_SUB} />
         </div>
       </div>
+
+      {/* AUTH MODAL (UNIFIED) */}
+      {authMode && (
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-[2rem] shadow-2xl w-full max-w-sm relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+            
+            {/* Header Tabs */}
+            <div className="grid grid-cols-2 border-b border-slate-700/50">
+                <button 
+                    onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} 
+                    className={`py-4 text-xs font-black uppercase tracking-widest transition-colors ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}
+                >
+                    {t.AUTH_LOGIN}
+                </button>
+                <button 
+                    onClick={() => { setAuthMode('REGISTER'); playUiSound('CLICK'); }} 
+                    className={`py-4 text-xs font-black uppercase tracking-widest transition-colors ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}
+                >
+                    {t.AUTH_REGISTER}
+                </button>
+            </div>
+
+            <div className="p-6 md:p-8 flex flex-col gap-5">
+              
+              {/* Context Header */}
+              <div className="flex items-center gap-3 mb-1">
+                  <div className={`p-3 rounded-xl border shadow-lg ${authMode === 'GUEST' ? 'bg-slate-800 border-slate-600' : (authMode === 'LOGIN' ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400')}`}>
+                      {authMode === 'GUEST' ? <Ghost className="w-6 h-6 text-slate-300" /> : (authMode === 'LOGIN' ? <LogIn className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />)}
+                  </div>
+                  <div>
+                      <h2 className="text-xl font-bold text-white leading-none">
+                          {authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}
+                      </h2>
+                      <p className="text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider">
+                          {authMode === 'GUEST' ? 'Restricted Access' : (authMode === 'LOGIN' ? 'Identify User' : 'Create Credentials')}
+                      </p>
+                  </div>
+              </div>
+
+              {errorMessage && (
+                  <div className="p-3 bg-red-950/40 border border-red-900/50 rounded-xl flex items-center gap-2 text-red-400 text-xs font-bold animate-in slide-in-from-top-2">
+                      <Shield className="w-4 h-4 shrink-0" /> {errorMessage}
+                  </div>
+              )}
+
+              <div className="space-y-4">
+                  {/* Name Input */}
+                  <div>
+                      <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1.5 block flex items-center gap-1.5">
+                          <User className="w-3 h-3" /> {t.INPUT_NAME}
+                      </label>
+                      <input 
+                          type="text" 
+                          value={inputName} 
+                          onChange={(e) => setInputName(e.target.value)} 
+                          placeholder="Commander Name" 
+                          className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" 
+                          maxLength={16} 
+                      />
+                  </div>
+
+                  {/* Password Input (Hidden for Guest) */}
+                  {authMode !== 'GUEST' && (
+                      <div>
+                          <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1.5 block flex items-center gap-1.5">
+                              <Lock className="w-3 h-3" /> {t.INPUT_PASS}
+                          </label>
+                          <input 
+                              type="password" 
+                              value={inputPassword} 
+                              onChange={(e) => setInputPassword(e.target.value)} 
+                              placeholder="Access Code" 
+                              className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" 
+                          />
+                      </div>
+                  )}
+
+                  {/* Color Picker (Register / Guest Only) */}
+                  {(authMode === 'REGISTER' || authMode === 'GUEST') && (
+                      <div className="pt-2">
+                          <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-2 block flex items-center gap-1.5">
+                              <Palette className="w-3 h-3" /> {t.AUTH_AVATAR_COLOR}
+                          </label>
+                          <div className="flex gap-2 justify-between">
+                              {AVATAR_COLORS.slice(0, 6).map(c => (
+                                  <button 
+                                      key={c}
+                                      onClick={() => setSelectedColor(c)}
+                                      className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor === c ? 'border-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'border-transparent opacity-50 hover:opacity-100 hover:scale-105'}`}
+                                      style={{ backgroundColor: c }}
+                                  />
+                              ))}
+                          </div>
+                      </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <button 
+                      onClick={handleAuthSubmit} 
+                      className={`w-full py-4 mt-2 font-bold rounded-xl uppercase tracking-[0.15em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${authMode === 'GUEST' ? 'bg-slate-700 hover:bg-slate-600 text-white' : (authMode === 'LOGIN' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/30' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30')}`}
+                  >
+                      {authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}
+                      <ArrowRight className="w-4 h-4" />
+                  </button>
+              </div>
+
+              {/* Footer Switcher */}
+              <div className="border-t border-slate-800 pt-4 flex justify-center">
+                  {authMode === 'GUEST' ? (
+                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors">
+                          Back to Secure Login
+                      </button>
+                  ) : (
+                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-2">
+                          <Ghost className="w-3 h-3" /> Bypass Security (Guest Mode)
+                      </button>
+                  )}
+              </div>
+
+            </div>
+            
+            {/* Close Button */}
+            <button onClick={() => setAuthMode(null)} className="absolute top-3 right-3 p-2 text-slate-600 hover:text-white transition-colors rounded-full hover:bg-slate-800">
+                <X className="w-5 h-5" />
+            </button>
+
+          </div>
+        </div>
+      )}
 
       {/* NEW BATTLE CONFIG MODAL (OPTIMIZED COMPACT LAYOUT) */}
       {showMissionConfig && (
@@ -460,22 +574,6 @@ const MainMenu: React.FC = () => {
                  </button>
              </div>
 
-          </div>
-        </div>
-      )}
-
-      {/* AUTH MODAL */}
-      {authMode && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-sm relative">
-            <button onClick={() => setAuthMode(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5" /></button>
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">{authMode === 'GUEST' ? <Ghost className="w-6 h-6 text-indigo-400" /> : (authMode === 'LOGIN' ? <LogIn className="w-6 h-6 text-indigo-400" /> : <UserPlus className="w-6 h-6 text-indigo-400" />)} {authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
-            <div className="space-y-4">
-              {errorMessage && <div className="p-3 bg-red-950/50 border border-red-900 rounded-lg text-red-400 text-xs font-bold text-center">{errorMessage}</div>}
-              <div><label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 block">{t.INPUT_NAME}</label><input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder="Enter name..." className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors" maxLength={16} /></div>
-              {authMode !== 'GUEST' && <div><label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 block">{t.INPUT_PASS}</label><div className="relative"><input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder="******" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors pl-10" /><Lock className="w-4 h-4 text-slate-600 absolute left-3 top-3.5" /></div></div>}
-              <button onClick={handleAuthSubmit} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl uppercase tracking-widest shadow-lg transition-all">{authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}</button>
-            </div>
           </div>
         </div>
       )}
