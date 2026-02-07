@@ -65,7 +65,7 @@ const Leaderboard: React.FC = () => {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const getIconComponent = (id: string) => {
+  const getIconComponent = (id?: string) => {
     switch(id) {
         case 'bot': return Bot;
         case 'zap': return Zap;

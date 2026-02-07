@@ -16,7 +16,6 @@ export class TextureService {
 
   public getTexture(level: number, q: number = 0, r: number = 0): HTMLCanvasElement {
     const clampedLevel = Math.max(-10, Math.min(10, level));
-    // Reduced variations to save memory, focusing on high quality static designs
     const variationCount = 4; 
     const variationIndex = Math.abs((q * 73856093 ^ r * 19349663) % variationCount);
     const key = `${clampedLevel}_${variationIndex}`;
@@ -60,8 +59,23 @@ export class TextureService {
     } else {
         this.drawNeutral(ctx, size);
     }
+    
+    // Add procedural noise to simulate texture file grain
+    this.applyNoise(ctx, size);
 
     return canvas;
+  }
+
+  private applyNoise(ctx: CanvasRenderingContext2D, size: number) {
+      const imgData = ctx.getImageData(0, 0, size, size);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+          const noise = (Math.random() - 0.5) * 10; // +/- 5 value shift
+          data[i] = Math.max(0, Math.min(255, data[i] + noise));
+          data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
+          data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
+      }
+      ctx.putImageData(imgData, 0, 0);
   }
 
   private drawHexagon(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) {
@@ -113,7 +127,6 @@ export class TextureService {
       }
 
       // 3. The "Stroke Along The Edge" (Inner Hex Border)
-      // Radius ~28 fits safely within the hex shape at typical scale
       ctx.strokeStyle = secColor;
       ctx.lineWidth = 3;
       this.drawHexagon(ctx, cx, cy, 28);
@@ -127,43 +140,30 @@ export class TextureService {
 
       // 4. Central Rank Symbol
       ctx.fillStyle = accentColor;
-      ctx.shadowColor = accentColor;
-      ctx.shadowBlur = 10;
-
-      // Glyph Logic
+      // We render crisp symbols, noise will be applied after to settle them in
       if (level === 1) {
-          // Dot
           ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2); ctx.fill();
       } else if (level === 2) {
-          // Square
           ctx.fillRect(cx-5, cy-5, 10, 10);
       } else if (level === 3) {
-          // Triangle
           ctx.beginPath();
           ctx.moveTo(cx, cy-6); ctx.lineTo(cx+6, cy+5); ctx.lineTo(cx-6, cy+5);
           ctx.fill();
       } else if (level <= 6) {
-          // Ring / Target
           ctx.strokeStyle = accentColor;
           ctx.lineWidth = 2;
           ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI*2); ctx.stroke();
-          if (level >= 5) { ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill(); } // Center dot
-          if (level === 6) { ctx.beginPath(); ctx.moveTo(cx-10, cy); ctx.lineTo(cx+10, cy); ctx.moveTo(cx, cy-10); ctx.lineTo(cx, cy+10); ctx.stroke(); } // Crosshair
+          if (level >= 5) { ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill(); } 
+          if (level === 6) { ctx.beginPath(); ctx.moveTo(cx-10, cy); ctx.lineTo(cx+10, cy); ctx.moveTo(cx, cy-10); ctx.lineTo(cx, cy+10); ctx.stroke(); } 
       } else {
-          // High Rank Star
-          ctx.font = '24px monospace';
+          ctx.font = 'bold 24px monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(level >= 9 ? '★' : '◆', cx, cy + 2);
       }
       
-      // Cleanup Shadow
-      ctx.shadowBlur = 0;
-
-      // 5. Tech Decor (Corner Bits)
-      // Only visible if not clipped, positioned strategically
+      // 5. Tech Decor
       ctx.fillStyle = secColor;
-      // Top/Bottom blips
       ctx.fillRect(cx-2, 4, 4, 4);
       ctx.fillRect(cx-2, size-8, 4, 4);
   }
@@ -173,18 +173,15 @@ export class TextureService {
       let base = '#1c1917';
       let stroke = '#44403c';
       
-      if (level <= -4) { base = '#450a0a'; stroke = '#991b1b'; } // Magma
-      if (level <= -8) { base = '#fff7ed'; stroke = '#fb923c'; } // Core
+      if (level <= -4) { base = '#450a0a'; stroke = '#991b1b'; } 
+      if (level <= -8) { base = '#fff7ed'; stroke = '#fb923c'; } 
 
       const cx = size / 2;
       const cy = size / 2;
 
-      // Background
       ctx.fillStyle = base;
       ctx.fillRect(0, 0, size, size);
 
-      // Depth Lines (Concentric Hexagons)
-      // Simulates looking down into a structured mine
       const depth = Math.abs(level);
       const steps = Math.min(4, depth + 1);
       
@@ -192,14 +189,13 @@ export class TextureService {
           const r = 28 - (i * 6);
           if (r < 0) break;
           ctx.strokeStyle = stroke;
-          ctx.lineWidth = i === 0 ? 3 : 1; // Outer rim thick
+          ctx.lineWidth = i === 0 ? 3 : 1; 
           ctx.globalAlpha = 1.0 - (i * 0.15);
           this.drawHexagon(ctx, cx, cy, r);
           ctx.stroke();
       }
       ctx.globalAlpha = 1.0;
 
-      // Center darkness (Void hint)
       const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 20);
       grad.addColorStop(0, 'rgba(0,0,0,0.8)');
       grad.addColorStop(1, 'transparent');
@@ -209,19 +205,17 @@ export class TextureService {
 
   // === NEUTRAL STYLE (L0) ===
   private drawNeutral(ctx: CanvasRenderingContext2D, size: number) {
-      ctx.fillStyle = '#1e293b'; // Slate 800
+      ctx.fillStyle = '#1e293b'; 
       ctx.fillRect(0, 0, size, size);
       
       const cx = size/2;
       const cy = size/2;
 
-      // Subtle Rim
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 2;
       this.drawHexagon(ctx, cx, cy, 28);
       ctx.stroke();
 
-      // Center crosshair
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -232,12 +226,11 @@ export class TextureService {
 
   // === SIDE TEXTURES: Strata ===
   private drawSide(ctx: CanvasRenderingContext2D, size: number, level: number) {
-      // Vertical Gradient
       const grad = ctx.createLinearGradient(0, 0, 0, size);
       
       if (level > 0) {
-          grad.addColorStop(0, '#475569'); // Lighter top
-          grad.addColorStop(1, '#0f172a'); // Darker bottom
+          grad.addColorStop(0, '#475569'); 
+          grad.addColorStop(1, '#0f172a'); 
       } else if (level < 0) {
           if (level <= -4) {
               grad.addColorStop(0, '#b91c1c'); 
@@ -254,12 +247,13 @@ export class TextureService {
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, size, size);
 
-      // Horizontal grooves (Strata)
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.fillRect(0, size * 0.3, size, 2);
       ctx.fillRect(0, size * 0.7, size, 2);
       
-      // Vertical edges highlight
+      this.applyNoise(ctx, size); // Apply noise to sides too
+      
+      // Edge Highlight (Post-noise)
       ctx.fillStyle = 'rgba(255,255,255,0.05)';
       ctx.fillRect(0, 0, 2, size);
       ctx.fillRect(size-2, 0, 2, size);

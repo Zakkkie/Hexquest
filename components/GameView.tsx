@@ -45,6 +45,7 @@ const GameView: React.FC = () => {
   const targetViewRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   
   const [cameraRotation, setCameraRotation] = useState(0);
+  const cameraRotationRef = useRef(0); // Stable ref for callbacks to avoid re-creating functions
   const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 }); 
   
   const targetRotationRef = useRef(0); 
@@ -59,6 +60,11 @@ const GameView: React.FC = () => {
   const lastAngle = useRef<number>(0);
   const isMultitouch = useRef(false);
   
+  // Sync Ref with State
+  useEffect(() => {
+      cameraRotationRef.current = cameraRotation;
+  }, [cameraRotation]);
+
   // Update scale when device type changes
   useEffect(() => {
      setViewState(prev => ({ ...prev, scale: getInitialScale() }));
@@ -122,7 +128,6 @@ const GameView: React.FC = () => {
       anim.start();
       animationRef.current = anim;
 
-      // Fix: Wrapped anim.stop() in curly braces to ensure return type is void
       return () => { anim.stop(); };
   }, []);
 
@@ -145,12 +150,16 @@ const GameView: React.FC = () => {
   }, [player.q, player.r, cameraRotation, dimensions, viewState.scale]);
 
   const rotateCamera = useCallback((direction: 'left' | 'right') => {
+      // Use Ref to get start position without adding dependency
+      const startRot = cameraRotationRef.current;
+      const currentTarget = targetRotationRef.current;
+      
       const step = 60;
-      const currentSnapped = Math.round(targetRotationRef.current / step) * step;
+      // Snap to nearest step relative to target, not current visual rotation
+      const currentSnapped = Math.round(currentTarget / step) * step;
       const nextTarget = direction === 'left' ? currentSnapped - step : currentSnapped + step;
       
       const startTime = performance.now();
-      const startRot = cameraRotation;
       const duration = 400; 
 
       const animate = (time: number) => {
@@ -166,14 +175,20 @@ const GameView: React.FC = () => {
           if (progress < 1) requestAnimationFrame(animate);
       };
       requestAnimationFrame(animate);
-  }, [cameraRotation]);
+  }, []); // Empty dependency array = Stable Function Reference
 
   const centerOnPlayer = useCallback(() => {
-      const { x: px, y: py } = hexToPixel(player.q, player.r, cameraRotation);
+      // Use Ref for calculation to avoid dependency
+      const rot = cameraRotationRef.current;
+      const { x: px, y: py } = hexToPixel(player.q, player.r, rot);
+      // Note: We use current dimensions/scale from closure or ref? 
+      // Ideally these should be refs too if strict stability is needed, 
+      // but re-creating this function on resize/zoom is acceptable compared to rotation loop.
+      // For now, letting it depend on dimensions/scale is fine as they don't change during rotation animation.
       const tx = (dimensions.width / 2) - (px * viewState.scale);
       const ty = (dimensions.height / 2) - (py * viewState.scale);
       targetViewRef.current = { x: tx, y: ty };
-  }, [player.q, player.r, dimensions, cameraRotation, viewState.scale]);
+  }, [player.q, player.r, dimensions, viewState.scale]);
 
   const handleHexClick = useCallback((q: number, r: number) => {
       movePlayer(q, r);

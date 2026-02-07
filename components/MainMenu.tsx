@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User } from 'lucide-react';
+import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User, Smile } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -18,14 +18,94 @@ const AVATAR_COLORS = [
   '#ec4899'  
 ];
 
-const AVATAR_ICONS = [
-  { id: 'user', icon: UserCircle },
-  { id: 'zap', icon: Zap },
-  { id: 'shield', icon: Shield },
-  { id: 'ghost', icon: Ghost },
-];
-
 type AuthMode = 'GUEST' | 'LOGIN' | 'REGISTER' | null;
+
+// Mock Rendering of Character for Preview (Simulates Unit.tsx logic in SVG)
+const CharacterPreview: React.FC<{ head: number, body: number, color: string }> = ({ head, body, color }) => {
+    
+    // Position adjustments for new floating bodies
+    const headY = 25;
+    const bodyY = 45;
+
+    const renderHead = () => {
+        switch(head % 4) {
+            case 0: return <circle cx="50" cy={headY} r="14" fill={color} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />; // Round
+            case 1: return <rect x="38" y={headY - 12} width="24" height="24" rx="4" fill={color} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />; // Block
+            case 2: return <path d={`M50 ${headY-15} L62 ${headY+8} L38 ${headY+8} Z`} fill={color} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />; // Spike
+            case 3: return <rect x="36" y={headY - 10} width="28" height="20" rx="6" fill={color} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />; // Visor
+            default: return <circle cx="50" cy={headY} r="14" fill={color} />;
+        }
+    };
+
+    const renderBody = () => {
+        // Floating Shadow
+        const shadow = <ellipse cx="50" cy="85" rx="15" ry="4" fill="rgba(0,0,0,0.3)" />;
+
+        switch(body % 4) {
+            case 0: // Pod
+                return (
+                    <g>
+                        {shadow}
+                        {/* Glow */}
+                        <circle cx="50" cy="75" r="10" fill="#0ea5e9" opacity="0.6" />
+                        <rect x="35" y={bodyY} width="30" height="35" rx="12" fill={color} />
+                        {/* Stripe */}
+                        <rect x="47" y={bodyY+2} width="6" height="25" fill="rgba(255,255,255,0.3)" />
+                        {/* Bottom Rim */}
+                        <rect x="38" y={bodyY+30} width="24" height="6" fill="#1e293b" />
+                    </g>
+                );
+            case 1: // Shard
+                return (
+                    <g>
+                        {shadow}
+                        <path d="M35 45 L65 45 L50 80 Z" fill={color} />
+                        <path d="M38 45 L62 45 L50 60 Z" fill="#334155" />
+                    </g>
+                );
+            case 2: // Orb
+                return (
+                    <g>
+                        {shadow}
+                        <ellipse cx="50" cy="65" rx="22" ry="7" fill="none" stroke="#475569" strokeWidth="3" />
+                        <circle cx="50" cy="60" r="16" fill={color} />
+                        <circle cx="45" cy="55" r="5" fill="rgba(255,255,255,0.3)" />
+                        <ellipse cx="50" cy="65" rx="22" ry="7" fill="none" stroke="#94a3b8" strokeWidth="3" strokeDasharray="20 40" />
+                    </g>
+                );
+            case 3: // Engine
+                return (
+                    <g>
+                        {shadow}
+                        <path d="M45 75 L55 75 L50 85 Z" fill="#f59e0b" />
+                        <path d="M32 45 L68 45 L60 75 L40 75 Z" fill={color} />
+                        <rect x="36" y="52" width="28" height="5" fill="#1e293b" />
+                        <rect x="38" y="65" width="24" height="5" fill="#1e293b" />
+                    </g>
+                );
+            default: return <rect x="38" y={bodyY} width="24" height="40" rx="8" fill={color} />;
+        }
+    };
+
+    const renderEye = () => {
+        // Simple Eye/Visor overlay
+        switch(head % 4) {
+            case 0: return <rect x="42" y={headY-2} width="16" height="6" rx="2" fill="white" opacity="0.8" />;
+            case 1: return <g><rect x="44" y={headY-4} width="4" height="4" fill="white"/><rect x="52" y={headY-4} width="4" height="4" fill="white"/></g>;
+            case 2: return <circle cx="50" cy={headY+2} r="3" fill="white"/>;
+            case 3: return <rect x="40" y={headY-4} width="20" height="4" fill="cyan" filter="blur(1px)"/>;
+            default: return null;
+        }
+    };
+
+    return (
+        <svg viewBox="0 0 100 100" className="w-24 h-24 drop-shadow-xl">
+            {renderBody()}
+            {renderHead()}
+            {renderEye()}
+        </svg>
+    );
+};
 
 const MenuButton: React.FC<{ 
   onClick: () => void; 
@@ -95,8 +175,12 @@ const MainMenu: React.FC = () => {
   const [showMissionConfig, setShowMissionConfig] = useState(false);
   const [inputName, setInputName] = useState('');
   const [inputPassword, setInputPassword] = useState('');
+  
+  // Customization State
   const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[5]); 
-  const [selectedIconId, setSelectedIconId] = useState('user');
+  const [selectedHead, setSelectedHead] = useState(0);
+  const [selectedBody, setSelectedBody] = useState(0);
+  
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const [showSoundMenu, setShowSoundMenu] = useState(false);
@@ -195,7 +279,7 @@ const MainMenu: React.FC = () => {
     }
 
     if (authMode === 'GUEST') {
-      loginAsGuest(inputName, selectedColor, selectedIconId);
+      loginAsGuest(inputName, selectedColor, selectedHead, selectedBody);
       setAuthMode(null);
     } else if (authMode === 'LOGIN') {
       if (!inputPassword.trim()) {
@@ -213,7 +297,7 @@ const MainMenu: React.FC = () => {
         setErrorMessage("Password is required.");
         return;
       }
-      const res = registerUser(inputName, inputPassword, selectedColor, selectedIconId);
+      const res = registerUser(inputName, inputPassword, selectedColor, selectedHead, selectedBody);
       if (res.success) {
         setAuthMode(null);
       } else {
@@ -222,19 +306,28 @@ const MainMenu: React.FC = () => {
     }
   };
 
-  const renderAvatar = (color: string, iconId: string, size = 'md') => {
-    const IconComponent = AVATAR_ICONS.find(i => i.id === iconId)?.icon || UserCircle;
+  const renderAvatar = (color: string, head: number, body: number, size = 'md') => {
     let dims = size === 'lg' ? 'w-16 h-16' : (size === 'sm' ? 'w-6 h-6' : 'w-8 h-8');
-    let iconSize = size === 'lg' ? 'w-8 h-8' : (size === 'sm' ? 'w-3 h-3' : 'w-4 h-4');
+    // Mini visual representation for Top Bar
     return (
-      <div className={`${dims} rounded-full flex items-center justify-center border-2 border-white/20 shadow-lg`} style={{ backgroundColor: color }}>
-        <IconComponent className={`${iconSize} text-white`} />
+      <div className={`${dims} rounded-full flex items-center justify-center border-2 border-white/20 shadow-lg bg-slate-900 overflow-hidden relative`}>
+         <div className="scale-50 translate-y-1">
+            <CharacterPreview head={head} body={body} color={color} />
+         </div>
       </div>
     );
   };
 
   const currentTierData = MISSION_TIERS[selectedTier as 1|2|3];
   const currentMaterialLimit = DIFFICULTY_SETTINGS[difficulty].maxStorage;
+
+  const cycleOption = (setter: (v: number) => void, current: number, direction: 1 | -1, max: number) => {
+      let next = current + direction;
+      if (next < 0) next = max - 1;
+      if (next >= max) next = 0;
+      setter(next);
+      playUiSound('CLICK');
+  };
 
   return (
     <div className="relative w-full h-full flex items-center justify-center pointer-events-auto">
@@ -280,7 +373,7 @@ const MainMenu: React.FC = () => {
                 ) : (
                   <div className="flex items-center gap-3 bg-slate-900/90 p-1.5 pl-4 rounded-full border border-slate-700 shadow-2xl">
                     <div className="flex flex-col items-end"><span className="text-xs font-bold text-white leading-tight max-w-[100px] truncate">{user.nickname}</span><span className="text-[10px] text-slate-400 uppercase tracking-widest">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span></div>
-                    {renderAvatar(user.avatarColor, user.avatarIcon, 'sm')}
+                    {renderAvatar(user.avatarColor, user.headIndex, user.bodyIndex, 'sm')}
                     <button onClick={handleLogout} className="p-2 hover:bg-red-500/20 rounded-full text-slate-400 hover:text-red-400 transition-colors"><LogOut className="w-4 h-4" /></button>
                   </div>
                 )}
@@ -321,7 +414,7 @@ const MainMenu: React.FC = () => {
         </div>
       </div>
 
-      {/* AUTH MODAL (UNIFIED) */}
+      {/* AUTH MODAL (WITH CHARACTER EDITOR) */}
       {authMode && (
         <div className="absolute inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-700/80 rounded-[2rem] shadow-2xl w-full max-w-sm relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
@@ -342,7 +435,7 @@ const MainMenu: React.FC = () => {
                 </button>
             </div>
 
-            <div className="p-6 md:p-8 flex flex-col gap-5">
+            <div className="p-6 md:p-8 flex flex-col gap-5 overflow-y-auto no-scrollbar max-h-[80vh]">
               
               {/* Context Header */}
               <div className="flex items-center gap-3 mb-1">
@@ -366,6 +459,49 @@ const MainMenu: React.FC = () => {
               )}
 
               <div className="space-y-4">
+                  {/* CHARACTER EDITOR (Register / Guest Only) */}
+                  {(authMode === 'REGISTER' || authMode === 'GUEST') && (
+                      <div className="bg-slate-950/50 rounded-2xl border border-slate-800 p-4 flex flex-col items-center gap-4">
+                          <span className="text-[9px] font-bold uppercase text-slate-500 tracking-widest w-full text-center">Unit Configuration</span>
+                          
+                          {/* PREVIEW */}
+                          <div className="w-24 h-24 flex items-center justify-center bg-slate-900 rounded-full border-2 border-slate-800 shadow-inner">
+                              <CharacterPreview head={selectedHead} body={selectedBody} color={selectedColor} />
+                          </div>
+
+                          {/* CONTROLS */}
+                          <div className="flex gap-2 w-full justify-between items-center">
+                              {/* Head Cycle */}
+                              <div className="flex flex-col items-center gap-1">
+                                  <span className="text-[8px] uppercase text-slate-500">Head</span>
+                                  <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
+                                      <button onClick={() => cycleOption(setSelectedHead, selectedHead, -1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronLeft className="w-4 h-4"/></button>
+                                      <button onClick={() => cycleOption(setSelectedHead, selectedHead, 1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronRight className="w-4 h-4"/></button>
+                                  </div>
+                              </div>
+
+                              {/* Color Picker */}
+                              <div className="flex flex-col items-center gap-1">
+                                  <span className="text-[8px] uppercase text-slate-500">Hull</span>
+                                  <div className="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                                      {AVATAR_COLORS.slice(0, 4).map(c => (
+                                          <button key={c} onClick={() => setSelectedColor(c)} style={{backgroundColor: c}} className={`w-4 h-4 rounded-full ${selectedColor === c ? 'ring-1 ring-white' : 'opacity-50'}`} />
+                                      ))}
+                                  </div>
+                              </div>
+
+                              {/* Body Cycle */}
+                              <div className="flex flex-col items-center gap-1">
+                                  <span className="text-[8px] uppercase text-slate-500">Chassis</span>
+                                  <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
+                                      <button onClick={() => cycleOption(setSelectedBody, selectedBody, -1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronLeft className="w-4 h-4"/></button>
+                                      <button onClick={() => cycleOption(setSelectedBody, selectedBody, 1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronRight className="w-4 h-4"/></button>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  )}
+
                   {/* Name Input */}
                   <div>
                       <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1.5 block flex items-center gap-1.5">
@@ -394,25 +530,6 @@ const MainMenu: React.FC = () => {
                               placeholder="Access Code" 
                               className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" 
                           />
-                      </div>
-                  )}
-
-                  {/* Color Picker (Register / Guest Only) */}
-                  {(authMode === 'REGISTER' || authMode === 'GUEST') && (
-                      <div className="pt-2">
-                          <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-2 block flex items-center gap-1.5">
-                              <Palette className="w-3 h-3" /> {t.AUTH_AVATAR_COLOR}
-                          </label>
-                          <div className="flex gap-2 justify-between">
-                              {AVATAR_COLORS.slice(0, 6).map(c => (
-                                  <button 
-                                      key={c}
-                                      onClick={() => setSelectedColor(c)}
-                                      className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor === c ? 'border-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'border-transparent opacity-50 hover:opacity-100 hover:scale-105'}`}
-                                      style={{ backgroundColor: c }}
-                                  />
-                              ))}
-                          </div>
                       </div>
                   )}
 
@@ -448,8 +565,8 @@ const MainMenu: React.FC = () => {
 
           </div>
         </div>
+      
       )}
-
       {/* NEW BATTLE CONFIG MODAL (OPTIMIZED COMPACT LAYOUT) */}
       {showMissionConfig && (
         <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">

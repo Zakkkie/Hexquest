@@ -230,7 +230,12 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                         if (hex.q===0 && hex.r===0 && hex.maxLevel<2) { isTutorial=true; tutColor='amber'; }
                         if (isNeighbor && hex.maxLevel<1) { isTutorial=true; tutColor='blue'; }
                     }
-                    if (activeLevelConfig?.id === '1.4' && isNeighbor && hex.maxLevel>=2) { isTutorial=true; tutColor='cyan'; }
+                    if (activeLevelConfig?.id === '1.4') {
+                        // Highlight Mounds (Source)
+                        if (isNeighbor && hex.maxLevel>=2) { isTutorial=true; tutColor='cyan'; }
+                        // Highlight Center (Goal)
+                        if (hex.q === 0 && hex.r === 0 && hex.maxLevel < 3) { isTutorial=true; tutColor='amber'; }
+                    }
                 }
 
                 items.push({
@@ -291,7 +296,9 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                     hexLevel: hLevel,
                     totalCoinsEarned: u.totalCoinsEarned,
                     upgradePointCount: u.recentUpgrades?.length || 0,
-                    onMoveComplete: spawnDust // NOW STABLE
+                    headIndex: u.headIndex,
+                    bodyIndex: u.bodyIndex,
+                    onMoveComplete: spawnDust 
                 }
             });
         }

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, memo } from 'react';
 import { useGameStore } from '../store.ts';
 import { getHexKey, getNeighbors, getSecondsToGrow, cubeDistance } from '../services/hexUtils.ts';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth.ts';
@@ -9,7 +9,7 @@ import { TEXT } from '../services/i18n.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
-  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon
+  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 interface GameHUDProps {
@@ -19,7 +19,6 @@ interface GameHUDProps {
 }
 
 // Visual Component for Storage Blocks
-// UPDATED: Widened width for better visibility on desktop (w-2 instead of w-1, md:w-3 instead of md:w-1.5)
 const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, max }) => {
     return (
         <div className="flex items-center gap-0.5 md:gap-1">
@@ -82,8 +81,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   // Unified Menu State
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
   const systemMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Mission Details Modal
+  const [showMissionDetails, setShowMissionDetails] = useState(false);
 
-  const [showLevelBriefing, setShowLevelBriefing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
 
   const t = TEXT[language].HUD;
@@ -106,6 +107,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const isLevel1_5 = activeLevelConfig?.id === '1.5';
   const isLevel1_6 = activeLevelConfig?.id === '1.6';
 
+  // Explicitly check for briefing status
+  const isBriefingActive = gameStatus === 'BRIEFING' && !!activeLevelConfig;
+
   // --- LEVEL 1.5 TIMER LOGIC ---
   useEffect(() => {
       if (!isLevel1_5 || gameStatus !== 'PLAYING') return;
@@ -126,12 +130,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-      if ((isLevel1_2 || isLevel1_3 || isLevel1_4 || isLevel1_5 || isLevel1_6) && gameStatus === 'PLAYING') {
-          setShowLevelBriefing(true);
-      }
-  }, [isLevel1_2, isLevel1_3, isLevel1_4, isLevel1_5, isLevel1_6, gameStatus]);
 
   const upgradeCondition = useMemo(() => {
     if (!currentHex || !player || !grid) return { canGrow: false, reason: 'Invalid Hex' };
@@ -261,9 +259,48 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       }
   };
 
+  const handleStartMission = () => {
+      playUiSound('SUCCESS');
+      startMission();
+  };
+
   // Fixed: Always use "lg" size for main buttons to ensure they aren't narrowed/small on desktop.
   // The 'lg' size maps to 'w-16' on mobile and 'md:w-20' on desktop.
   const mainButtonSize = "lg";
+
+  const renderMissionStatus = () => {
+      if (isLevel1_5 && timeLeft !== null) {
+           const isCrit = timeLeft < 10;
+           return (
+               <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
+                   <span className="text-slate-400">COINS:</span>
+                   <span className={player.coins >= 150 ? "text-emerald-400" : "text-white"}>{player.coins}/150</span>
+                   <span className={`ml-1 ${isCrit ? "text-red-500 animate-pulse" : "text-amber-400"}`}>{timeLeft}s</span>
+               </div>
+           );
+      }
+      
+      if (campaignMetrics) {
+          const isDone = campaignMetrics.current >= campaignMetrics.target;
+          return (
+               <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
+                   <span className="text-slate-400 uppercase">{campaignMetrics.label}:</span>
+                   <span className={isDone ? "text-emerald-400" : "text-white"}>
+                      {campaignMetrics.current}/{campaignMetrics.target}
+                   </span>
+               </div>
+          );
+      }
+      
+      // Skirmish / Generic
+      return (
+           <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
+               <span className="text-slate-400">GOAL:</span>
+               <span className="text-white">L{winCondition?.targetLevel}</span>
+               <span className="text-amber-400">{winCondition?.targetCoins}cr</span>
+           </div>
+      );
+  };
 
   if (!grid || !player || !bots) return null;
 
@@ -329,34 +366,24 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                        </div>
                    </div>
 
-                   {/* CAMPAIGN OBJECTIVE TRACKER */}
-                   {campaignMetrics && gameStatus === 'PLAYING' && (
-                       <div className="bg-slate-900/80 backdrop-blur border border-indigo-500/30 rounded-xl px-3 py-1.5 md:px-4 md:py-2 self-start flex items-center gap-3 animate-in slide-in-from-top-4 duration-500">
-                           <div className="p-1 md:p-1.5 bg-indigo-500/20 rounded-lg">
-                               <Target className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-400" />
+                   {/* MISSION OBJECTIVE PANEL (SINGLE LINE COMPACT) */}
+                   {gameStatus === 'PLAYING' && (
+                       <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-xl overflow-hidden self-start flex items-center px-2 py-1.5 gap-2 mt-1 pointer-events-auto max-w-fit">
+                           <div className="p-1 bg-indigo-500/10 rounded-lg">
+                               <Target className="w-3.5 h-3.5 text-indigo-400" />
                            </div>
-                           <div className="flex flex-col">
-                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-widest">{campaignMetrics.label}</span>
-                               <div className="flex items-center gap-1">
-                                   <span className={`text-base md:text-lg font-black ${
-                                       (campaignMetrics.inverse ? campaignMetrics.current <= campaignMetrics.target : campaignMetrics.current >= campaignMetrics.target) 
-                                       ? 'text-emerald-400' : 'text-white'
-                                   }`}>
-                                       {campaignMetrics.current}
-                                   </span>
-                                   {!campaignMetrics.inverse && <span className="text-xs md:text-sm font-bold text-slate-500">/ {campaignMetrics.target}</span>}
-                               </div>
-                           </div>
-                           {/* Rival Tracker for 1.6 */}
-                           {campaignMetrics.rival !== undefined && (
-                               <>
-                                   <div className="w-px h-6 bg-slate-700 mx-1"></div>
-                                   <div className="flex flex-col items-end">
-                                       <span className="text-[8px] md:text-[9px] text-red-400 font-bold uppercase tracking-widest">{t.TUT_1_6_RIVAL}</span>
-                                       <span className="text-base md:text-lg font-black text-red-500">{campaignMetrics.rival}</span>
-                                   </div>
-                               </>
-                           )}
+                           
+                           {renderMissionStatus()}
+
+                           <div className="h-4 w-px bg-slate-700 mx-1" />
+
+                           <button 
+                              onClick={() => { setShowMissionDetails(true); playUiSound('CLICK'); }}
+                              className="p-1 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-white transition-colors"
+                              title="Mission Briefing"
+                           >
+                              <Info className="w-3.5 h-3.5" />
+                           </button>
                        </div>
                    )}
                </div>
@@ -506,67 +533,59 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                            <div key={e.id} className="grid grid-cols-5 items-center p-2 rounded-lg bg-slate-950/50 border border-slate-800/50 gap-1">
                                <div className="col-span-2 flex items-center gap-2 overflow-hidden"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} /><span className={`text-[10px] font-bold truncate ${isP ? 'text-white' : 'text-slate-400'}`}>{isP ? 'YOU' : e.id.toUpperCase()}</span></div>
                                <div className="col-span-1 text-center font-mono text-[9px] text-indigo-400">L{e.playerLevel}</div>
-                               <div className="col-span-1 text-right font-mono text-amber-500 font-bold text-[10px]">{e.coins}</div>
-                               <div className="col-span-1 text-right font-mono text-blue-400 font-bold text-[9px] flex items-center justify-end gap-0.5"><Footprints className="w-2 h-2 opacity-70" />{e.moves}</div>
+                               <div className="col-span-2 text-right font-mono text-[9px] text-amber-400">{e.coins}</div>
                            </div>
-                       );
+                       )
                    })}
                </div>
            </div>
       )}
 
-      {/* GAME OVER OVERLAY (VICTORY / DEFEAT) */}
-      {(gameStatus === 'VICTORY' || gameStatus === 'DEFEAT') && (
-          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 pointer-events-auto">
-              <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl max-w-sm w-full relative overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col items-center text-center">
-                  
-                  {/* ICON */}
-                  <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-lg border-2 ${gameStatus === 'VICTORY' ? 'bg-emerald-500/20 border-emerald-500/50 shadow-emerald-500/20' : 'bg-red-500/20 border-red-500/50 shadow-red-500/20'}`}>
-                      {gameStatus === 'VICTORY' ? <CheckCircle className="w-10 h-10 text-emerald-400" /> : <XCircle className="w-10 h-10 text-red-400" />}
+      {/* ABORT CONFIRMATION */}
+      {showExitConfirmation && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-auto p-4">
+              <div className="bg-slate-900 border border-red-900/50 p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center animate-in zoom-in-95 duration-200">
+                  <div className="w-12 h-12 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                      <AlertTriangle className="w-6 h-6 text-red-500" />
                   </div>
+                  <h3 className="text-xl font-bold text-white mb-2 uppercase">{t.ABORT_TITLE}</h3>
+                  <p className="text-sm text-slate-400 mb-6">{t.ABORT_DESC}</p>
+                  <div className="flex gap-3">
+                      <button onClick={() => setShowExitConfirmation(false)} className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider text-xs transition-colors">{t.BTN_CANCEL}</button>
+                      <button onClick={() => { abandonSession(); playUiSound('ERROR'); }} className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold uppercase tracking-wider text-xs shadow-lg shadow-red-900/20 transition-colors">{t.BTN_CONFIRM}</button>
+                  </div>
+              </div>
+          </div>
+      )}
 
-                  {/* TITLE */}
-                  <h2 className={`text-3xl font-black uppercase tracking-widest mb-2 ${gameStatus === 'VICTORY' ? 'text-white' : 'text-red-100'}`}>
+      {/* VICTORY / DEFEAT SCREEN */}
+      {(gameStatus === 'VICTORY' || gameStatus === 'DEFEAT') && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-700 pointer-events-auto p-4">
+              <div className="flex flex-col items-center max-w-md w-full">
+                  <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-[0_0_50px_currentColor] animate-bounce ${gameStatus === 'VICTORY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-500'}`}>
+                      {gameStatus === 'VICTORY' ? <Trophy className="w-12 h-12" /> : <XCircle className="w-12 h-12" />}
+                  </div>
+                  
+                  <h1 className={`text-4xl md:text-5xl font-black uppercase tracking-tighter mb-2 text-transparent bg-clip-text ${gameStatus === 'VICTORY' ? 'bg-gradient-to-b from-emerald-300 to-emerald-600' : 'bg-gradient-to-b from-red-300 to-red-600'}`}>
                       {gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}
-                  </h2>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">
+                  </h1>
+                  
+                  <p className="text-slate-400 font-mono text-sm tracking-widest uppercase mb-8">
                       {gameStatus === 'VICTORY' ? t.MISSION_COMPLETE : t.MISSION_FAILED}
                   </p>
 
-                  {/* STATS SUMMARY */}
-                  <div className="grid grid-cols-2 gap-3 w-full mb-6">
-                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                          <span className="text-[10px] text-slate-500 font-bold uppercase">{t.RANK}</span>
-                          <div className="text-xl font-black text-indigo-400">{player.playerLevel}</div>
-                      </div>
-                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                          <span className="text-[10px] text-slate-500 font-bold uppercase">{t.CREDITS}</span>
-                          <div className="text-xl font-black text-amber-400">{player.coins}</div>
-                      </div>
-                  </div>
-
-                  {/* ACTIONS */}
-                  <div className="flex flex-col w-full gap-3">
-                      {gameStatus === 'VICTORY' && activeLevelConfig ? (
-                          <button 
-                              onClick={handleNextLevel}
-                              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl uppercase tracking-widest shadow-lg shadow-emerald-900/50 active:scale-95 transition-all flex items-center justify-center gap-2"
-                          >
-                              {t.BTN_NEXT} <ArrowRight className="w-4 h-4" />
-                          </button>
-                      ) : (
-                          <button 
-                              onClick={handleRetry}
-                              className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
-                          >
-                              <ReloadIcon className="w-4 h-4" /> {t.BTN_RETRY}
+                  <div className="w-full flex flex-col gap-3">
+                      {gameStatus === 'VICTORY' && (
+                          <button onClick={handleNextLevel} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-900/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                              {t.BTN_NEXT} <ArrowRight className="w-5 h-5" />
                           </button>
                       )}
                       
-                      <button 
-                          onClick={abandonSession}
-                          className="w-full py-3 bg-transparent hover:bg-slate-800 text-slate-400 hover:text-white font-bold rounded-xl uppercase tracking-widest text-xs transition-all"
-                      >
+                      <button onClick={handleRetry} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
+                          <ReloadIcon className="w-4 h-4" /> {t.BTN_RETRY}
+                      </button>
+                      
+                      <button onClick={() => abandonSession()} className="w-full py-4 bg-transparent hover:bg-slate-800/50 text-slate-500 hover:text-white font-bold rounded-xl uppercase tracking-widest transition-colors text-xs">
                           {t.BTN_MENU}
                       </button>
                   </div>
@@ -574,219 +593,145 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* BRIEFING OVERLAY (SKIRMISH/START) */}
-      {gameStatus === 'BRIEFING' && (
-          // Fixed Padding Top/Bottom to 5-7% (py-[7vh]) to fit mobile screens
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md px-4 py-[7vh] pointer-events-auto">
-              {/* Added max-h-full and flex column to allow scrolling */}
-              <div className="relative max-w-md w-full max-h-full flex flex-col">
+      {/* FOOTER ACTIONS */}
+      {gameStatus === 'PLAYING' && (
+          <div className="absolute inset-x-0 bottom-0 p-4 md:p-8 pointer-events-none pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="max-w-2xl mx-auto flex items-end justify-center gap-4 md:gap-8 pointer-events-auto">
                   
-                  {/* Decorative Tech Borders */}
-                  <div className="absolute -inset-0.5 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-[2rem] opacity-20 blur-md"></div>
-                  
-                  {/* Main Container with flex column */}
-                  <div className="bg-slate-950 border border-slate-800 p-1 rounded-[1.8rem] relative overflow-hidden shadow-2xl flex flex-col max-h-full">
+                  {/* Left: Rotate */}
+                  <button onClick={() => { onRotateCamera('left'); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 backdrop-blur shadow-lg active:scale-90 transition-all group">
+                      <RotateCcw className="w-5 h-5 md:w-6 md:h-6 group-hover:-rotate-45 transition-transform" />
+                  </button>
+
+                  {/* Center: Action Buttons */}
+                  <div className="flex items-end gap-3 md:gap-6 bg-slate-950/80 backdrop-blur-xl p-2 md:p-3 rounded-[2rem] border border-slate-800/50 shadow-2xl relative">
                       
-                      {/* Scanline / Grid Background */}
-                      <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.8)_2px,transparent_2px),linear-gradient(90deg,rgba(15,23,42,0.8)_2px,transparent_2px)] bg-[size:20px_20px] opacity-20 pointer-events-none"></div>
+                      {/* Dig (Red) */}
+                      <HexButton 
+                          variant="red" 
+                          size={mainButtonSize}
+                          onClick={() => togglePlayerGrowth('DIG')} 
+                          active={isPlayerGrowing && playerGrowthIntent === 'DIG'}
+                          disabled={!canDig}
+                          progress={timeData.mode === 'DIG' ? timeData.percent : 0}
+                          className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''}
+                          title={digTooltip}
+                      >
+                          <Pickaxe className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
+                      </HexButton>
 
-                      {/* Scrollable Content Area */}
-                      <div className="relative bg-slate-900/50 rounded-[1.6rem] p-6 flex flex-col items-center text-center gap-6 backdrop-blur-sm overflow-y-auto no-scrollbar overscroll-contain">
-                          
-                          {/* Header / Icon */}
-                          <div className="relative shrink-0">
-                              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] rotate-3">
-                                  <Target className="w-8 h-8 text-indigo-400 -rotate-3" />
-                              </div>
-                              <div className="absolute -top-2 -right-2 w-5 h-5 bg-slate-900 rounded-full flex items-center justify-center border border-slate-700">
-                                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></div>
-                              </div>
-                          </div>
+                      {/* Upgrade (Amber) */}
+                      <HexButton 
+                          variant="amber" 
+                          size={mainButtonSize}
+                          onClick={() => togglePlayerGrowth('UPGRADE')} 
+                          active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
+                          disabled={!canUpgrade}
+                          pulsate={canUpgrade && !isPlayerGrowing}
+                          progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0}
+                          className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-2 md:-translate-y-4 ring-4 ring-amber-500/20 rounded-full' : ''}
+                          title={upgradeTooltip}
+                      >
+                          <ChevronsUp className={`w-6 h-6 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
+                      </HexButton>
 
-                          <div className="shrink-0">
-                              <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 uppercase tracking-tighter italic">
-                                  {t.BRIEFING_TITLE}
-                              </h2>
-                              <div className="flex items-center justify-center gap-2 mt-2">
-                                  <div className="h-px w-8 bg-indigo-500/50"></div>
-                                  <p className="text-indigo-400 text-[10px] font-mono uppercase tracking-[0.2em]">{winCondition?.label || t.SKIRMISH_OBJ}</p>
-                                  <div className="h-px w-8 bg-indigo-500/50"></div>
-                              </div>
-                          </div>
-                          
-                          {/* Mission Description */}
-                          <div className="w-full text-slate-300 text-xs leading-relaxed font-mono bg-slate-950/50 p-3 rounded-lg border border-slate-800/50 shrink-0">
-                              {t.BRIEFING_DESC_TEMPLATE.replace('{0}', (winCondition?.targetLevel || 99).toString()).replace('{1}', (winCondition?.targetCoins || 9999).toString())}
-                          </div>
+                      {/* Recover (Blue) */}
+                      <HexButton 
+                          variant="blue" 
+                          size={mainButtonSize}
+                          onClick={() => togglePlayerGrowth('RECOVER')} 
+                          active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'}
+                          disabled={!canRecover}
+                          progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0}
+                          className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''}
+                          title={recoverTooltip}
+                      >
+                          <RefreshCw className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180' : ''}`} />
+                      </HexButton>
 
-                          {/* Objective Cards */}
-                          <div className="grid grid-cols-2 gap-3 w-full shrink-0">
-                              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80 flex flex-col items-center gap-1 group hover:border-indigo-500/30 transition-colors">
-                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest group-hover:text-indigo-400 transition-colors">{t.BRIEFING_TARGET_RANK}</span>
-                                  <span className="text-2xl font-black text-white">{winCondition?.targetLevel || 99}</span>
-                              </div>
-                              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80 flex flex-col items-center gap-1 group hover:border-amber-500/30 transition-colors">
-                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest group-hover:text-amber-400 transition-colors">{t.BRIEFING_TARGET_FUNDS}</span>
-                                  <span className="text-2xl font-black text-white">{winCondition?.targetCoins || 9999}</span>
-                              </div>
-                          </div>
-
-                          {/* Tactical Hints */}
-                          <div className="w-full bg-indigo-900/10 p-4 rounded-xl border border-indigo-500/20 text-left shrink-0">
-                              <h3 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                  <Info className="w-3 h-3" /> {t.BRIEFING_HINTS_TITLE}
-                              </h3>
-                              <ul className="space-y-1.5">
-                                  <li className="text-xs text-slate-300 flex items-start gap-2">
-                                      <span className="text-indigo-500 font-bold">1.</span> {t.BRIEFING_HINT_1}
-                                  </li>
-                                  <li className="text-xs text-slate-300 flex items-start gap-2">
-                                      <span className="text-indigo-500 font-bold">2.</span> {t.BRIEFING_HINT_2}
-                                  </li>
-                                  <li className="text-xs text-slate-300 flex items-start gap-2">
-                                      <span className="text-indigo-500 font-bold">3.</span> {t.BRIEFING_HINT_3}
-                                  </li>
-                              </ul>
-                          </div>
-
-                          {winCondition?.botCount > 0 && (
-                              <div className="w-full flex items-center justify-center gap-3 text-red-400 bg-red-950/20 px-4 py-2 rounded-lg border border-red-900/30 shrink-0">
-                                  <AlertTriangle className="w-4 h-4 animate-pulse" />
-                                  <span className="text-xs font-bold uppercase tracking-wide">{t.BRIEFING_RIVAL} DETECTED ({winCondition.botCount})</span>
-                              </div>
-                          )}
-
-                          {/* Action */}
-                          <button 
-                              onClick={() => { startMission(); playUiSound('SUCCESS'); }}
-                              className="w-full group relative py-4 bg-white text-slate-950 font-black rounded-xl uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.25)] hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden shrink-0"
-                          >
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-200/50 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
-                              <span className="relative flex items-center justify-center gap-2">
-                                  {t.BRIEFING_BTN_START} <ArrowRight className="w-4 h-4" />
-                              </span>
-                          </button>
-
-                      </div>
                   </div>
+
+                  {/* Right: Rotate */}
+                  <button onClick={() => { onRotateCamera('right'); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 backdrop-blur shadow-lg active:scale-90 transition-all group">
+                      <RotateCw className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-45 transition-transform" />
+                  </button>
+
               </div>
           </div>
       )}
 
-      {/* CAMPAIGN LEVEL BRIEFING (IN-GAME) */}
-      {showLevelBriefing && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6 pointer-events-auto">
-              <div className="bg-slate-900 border border-indigo-500/50 p-6 rounded-3xl shadow-2xl max-w-sm w-full relative animate-in fade-in duration-300">
-                  <button onClick={() => setShowLevelBriefing(false)} className="absolute top-3 right-3 text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
-                  <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-3">
-                          <div className="p-2 bg-indigo-500/20 rounded-lg"><Info className="w-6 h-6 text-indigo-400" /></div>
-                          <div>
-                              <h3 className="text-sm font-bold text-white uppercase tracking-widest">{activeLevelConfig?.title}</h3>
-                              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Operational Guide</p>
-                          </div>
-                      </div>
-                      <div className="h-px bg-slate-700/50"></div>
-                      <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed font-mono">
-                          {activeLevelConfig?.description}
-                      </p>
-                      <button onClick={() => setShowLevelBriefing(false)} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs uppercase tracking-widest mt-2">
-                          {t.BTN_READY}
+      {/* BRIEFING MODAL (Tutorials) & INFO MODAL */}
+      {(isBriefingActive || (showMissionDetails && activeLevelConfig)) && activeLevelConfig && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-300">
+              <div className="max-w-lg w-full bg-slate-900 border border-indigo-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                  
+                  {/* Close Button for Info Mode */}
+                  {showMissionDetails && !isBriefingActive && (
+                      <button 
+                          onClick={() => setShowMissionDetails(false)}
+                          className="absolute top-4 right-4 text-slate-500 hover:text-white z-20"
+                      >
+                          <X className="w-6 h-6" />
                       </button>
+                  )}
+
+                  {/* Decor */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+                  <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/30">
+                          <Target className="w-6 h-6 text-indigo-400" />
+                      </div>
+                      <div>
+                          <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.BRIEFING_TITLE}</h2>
+                          <p className="text-xs text-indigo-400 font-mono tracking-widest uppercase mt-1">{activeLevelConfig.title}</p>
+                      </div>
                   </div>
+
+                  <div className="space-y-4 mb-8">
+                      <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800/50 text-sm text-slate-300 leading-relaxed font-medium">
+                          {activeLevelConfig.description.split('\n').map((line, i) => (
+                              <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>
+                          ))}
+                      </div>
+
+                      {/* Objectives Grid */}
+                      <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 flex flex-col items-center">
+                              <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">{t.BRIEFING_TARGET_RANK}</span>
+                              <div className="flex items-center gap-2">
+                                  <Crown className="w-4 h-4 text-indigo-400" />
+                                  <span className="text-xl font-black text-white">{winCondition?.targetLevel || 1}</span>
+                              </div>
+                          </div>
+                          <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 flex flex-col items-center">
+                              <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">{t.BRIEFING_TARGET_FUNDS}</span>
+                              <div className="flex items-center gap-2">
+                                  <Wallet className="w-4 h-4 text-amber-400" />
+                                  <span className="text-xl font-black text-white">{winCondition?.targetCoins || 0}</span>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  <button 
+                      onClick={isBriefingActive ? handleStartMission : () => setShowMissionDetails(false)}
+                      className={`w-full py-4 font-black rounded-xl uppercase tracking-[0.2em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 group ${isBriefingActive ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/40' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`}
+                  >
+                      {isBriefingActive ? (
+                          <>
+                             {t.BRIEFING_BTN_START} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                          </>
+                      ) : (
+                          "CLOSE"
+                      )}
+                  </button>
               </div>
           </div>
       )}
 
-      {/* BOTTOM CONTROLS */}
-      {/* UPDATE: Adjusted bottom position and padding to respect safe areas (env) to prevent browser overlay issues */}
-      <div className={`absolute bottom-0 w-full flex justify-center items-end gap-2 md:gap-5 pointer-events-none z-40 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 bg-gradient-to-t from-slate-950/80 to-transparent origin-bottom`}>
-        <div className="pointer-events-auto mb-1">
-            <HexButton size="sm" onClick={() => { onRotateCamera('left'); playUiSound('CLICK'); }} variant='slate'>
-                <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
-            </HexButton>
-        </div>
-        
-        {/* HIDE ACTION BUTTONS IN LEVEL 1.2 (Movement Only) */}
-        {!isLevel1_2 && (
-            <div className="pointer-events-auto flex items-end gap-2 md:gap-3 relative">
-            
-            {isPlayerGrowing ? (
-                <HexButton 
-                    onClick={() => togglePlayerGrowth(timeData.mode === 'RECOVERY' ? 'RECOVER' : (timeData.mode === 'DIG' ? 'DIG' : 'UPGRADE'))} 
-                    active={true} 
-                    variant={timeData.mode === 'RECOVERY' ? 'blue' : (timeData.mode === 'DIG' ? 'red' : 'amber')} 
-                    progress={timeData.percent} 
-                    size={mainButtonSize} 
-                    pulsate={true}
-                >
-                    <div className="flex flex-col items-center gap-1"><Pause className="w-6 h-6 md:w-8 md:h-8 fill-current" /><span className="text-[10px] font-mono font-bold">{formatTime(timeData.remainingSeconds)}</span></div>
-                </HexButton>
-            ) : (
-                <>
-                    {/* DIG BUTTON */}
-                    <HexButton 
-                        onClick={() => !isMoving && togglePlayerGrowth('DIG')} 
-                        disabled={isMoving || !canDig} 
-                        variant={(canDig && !isMoving) ? 'red' : 'slate'} 
-                        size={mainButtonSize}
-                        title={digTooltip}
-                    >
-                        <Pickaxe className="w-5 h-5 md:w-8 md:h-8" />
-                    </HexButton>
-
-                    {/* RECOVER BUTTON */}
-                    <HexButton 
-                        onClick={() => !isMoving && togglePlayerGrowth('RECOVER')} 
-                        disabled={isMoving} 
-                        variant={(canRecover && !isMoving) ? 'blue' : 'slate'} 
-                        size={mainButtonSize}
-                        title={recoverTooltip}
-                    >
-                        <RefreshCw className="w-5 h-5 md:w-8 md:h-8" />
-                    </HexButton>
-                    
-                    {/* UPGRADE BUTTON */}
-                    <div>
-                        <HexButton 
-                            onClick={() => !isMoving && togglePlayerGrowth('UPGRADE')} 
-                            disabled={isMoving} 
-                            variant={(canUpgrade && !isMoving) ? 'amber' : 'slate'} 
-                            size={mainButtonSize} 
-                            pulsate={canUpgrade}
-                            title={upgradeTooltip}
-                        >
-                            <ChevronsUp className="w-8 h-8 md:w-10 md:h-10" />
-                        </HexButton>
-                    </div>
-                </>
-            )}
-            </div>
-        )}
-
-        <div className="pointer-events-auto mb-1">
-            <HexButton size="sm" onClick={() => { onRotateCamera('right'); playUiSound('CLICK'); }} variant='slate'>
-                <RotateCw className="w-4 h-4 md:w-5 md:h-5" />
-            </HexButton>
-        </div>
-      </div>
-
-      {/* MODALS (Help, Exit, etc.) */}
-      {showExitConfirmation && (
-        <div className="absolute inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center pointer-events-auto p-4">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl shadow-2xl max-w-sm w-full text-center relative overflow-hidden">
-             <div className="mx-auto w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mb-4"><LogOut className="w-6 h-6 text-red-500" /></div>
-             <h3 className="text-xl font-bold text-white mb-2">{t.ABORT_TITLE}</h3>
-             <p className="text-slate-400 text-xs mb-6">{t.ABORT_DESC}</p>
-             <div className="flex gap-3">
-               <button onClick={() => setShowExitConfirmation(false)} className="flex-1 py-3 bg-slate-800 rounded-xl text-slate-300 font-bold text-xs uppercase">{t.BTN_CANCEL}</button>
-               <button onClick={() => { abandonSession(); setShowExitConfirmation(false); }} className="flex-1 py-3 bg-red-900/50 rounded-xl text-red-200 font-bold text-xs uppercase">{t.BTN_CONFIRM}</button>
-             </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default GameHUD;
+export default memo(GameHUD);

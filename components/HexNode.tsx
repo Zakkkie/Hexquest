@@ -6,7 +6,7 @@ import { textureService } from '../services/textureService.ts';
 
 const DEG_TO_RAD = Math.PI / 180;
 const ARROW_UP_PATH = "M12 4l-8 8h6v8h4v-8h6z";
-const MAX_WALL_DEPTH = HEX_SIZE * 1.5; 
+const MAX_WALL_DEPTH = HEX_SIZE * 4; // Increased depth to cover tall towers (L5+)
 
 export interface HexNodeTheme {
     main: string;
@@ -114,14 +114,19 @@ const HexNodeComponent = (props: HexNodeProps) => {
   if (isRealVoid) {
       return (
         <Group x={x} y={y}>
-             {/* Depth Rim */}
-             <Path data={BASE_PATH_D} scaleY={0.8} fill="#020617" stroke="#1e293b" strokeWidth={1} />
-             
-             {/* Static Abyss - Darker center */}
-             <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} scaleY={0.8} opacity={0.8} />
+             {/* Match perspective and rotation of standard hexes */}
+             <Group scaleY={0.8}>
+                 <Group rotation={rotation}>
+                     {/* Depth Rim */}
+                     <Path data={BASE_PATH_D} fill="#020617" stroke="#1e293b" strokeWidth={1} />
+                     
+                     {/* Static Abyss - Darker center */}
+                     <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} opacity={0.8} />
 
-             {/* Grid overlay for sense of scale */}
-             <Path data={BASE_PATH_D} scaleY={0.8} scaleX={0.8} stroke="rgba(56, 189, 248, 0.1)" strokeWidth={1} dash={[2, 4]} listening={false} />
+                     {/* Grid overlay for sense of scale */}
+                     <Path data={BASE_PATH_D} scaleX={0.8} scaleY={0.8} stroke="rgba(56, 189, 248, 0.1)" strokeWidth={1} dash={[2, 4]} listening={false} />
+                 </Group>
+             </Group>
         </Group>
       );
   }
@@ -165,8 +170,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         fillPatternImage={sideTexture as any}
                         fillPatternScale={{ x: 1, y: heightDiff / 64 }}
                         fill={theme.dark}
-                        stroke={theme.dark} 
-                        strokeWidth={0.5}
+                        stroke={theme.stroke} 
+                        strokeWidth={1}
                         closed={true} 
                         shadowEnabled={false} 
                     />

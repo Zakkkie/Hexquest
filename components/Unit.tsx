@@ -1,11 +1,12 @@
 
-import React, { useRef, useLayoutEffect, useState, useEffect, useMemo } from 'react';
-import { Group, Circle, Ellipse, Rect, Text } from 'react-konva';
+import React, { useRef, useLayoutEffect, useMemo } from 'react';
+import { Group, Ellipse, Image as KonvaImage } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { hexToPixel } from '../services/hexUtils.ts';
 import { EntityType } from '../types.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
+import { unitRenderer } from '../services/unitRenderer.ts';
 
 interface UnitProps {
   id?: string;
@@ -17,6 +18,8 @@ interface UnitProps {
   hexLevel: number;
   totalCoinsEarned: number;
   upgradePointCount: number;
+  headIndex?: number;
+  bodyIndex?: number;
   onMoveComplete?: (x: number, y: number, color: string) => void;
 }
 
@@ -26,69 +29,64 @@ const getHexVisualHeight = (level: number) => {
     return (Math.abs(level) - 1) * 10;
 };
 
-const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hexLevel, totalCoinsEarned, upgradePointCount, onMoveComplete }) => {
+const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hexLevel, headIndex = 0, bodyIndex = 0, onMoveComplete }) => {
   const groupRef = useRef<Konva.Group>(null);
   const visualGroupRef = useRef<Konva.Group>(null);
-  const bodyRef = useRef<Konva.Group>(null);
   const shadowRef = useRef<Konva.Ellipse>(null);
+  const isFirstRender = useRef(true);
   
   const user = useGameStore(state => state.user);
   
-  // 1. INITIAL POSITION ONLY
-  const initialPos = useMemo(() => hexToPixel(q, r, rotation), []); 
-
-  // Calculate destination (target)
-  const targetPos = hexToPixel(q, r, rotation);
+  // Calculate destination (target) logic coordinates
+  const targetPos = useMemo(() => hexToPixel(q, r, rotation), [q, r, rotation]);
   const targetZ = getHexVisualHeight(hexLevel);
 
+  // Store previous logical state to calculate deltas accurately
   const prevLogic = useRef({ q, r, rotation, zOffset: targetZ });
   const isPlayer = type === EntityType.PLAYER;
+  
+  // Resolve Appearance
   const finalColor = color || (isPlayer ? (user?.avatarColor || '#3b82f6') : '#ef4444');
+  const finalHead = isPlayer ? (user?.headIndex ?? headIndex) : headIndex;
+  const finalBody = isPlayer ? (user?.bodyIndex ?? bodyIndex) : bodyIndex;
 
-  // Idle Animation (Breathing)
-  useEffect(() => {
-    const node = bodyRef.current;
-    if (!node) return;
-    
-    const anim = new Konva.Animation((frame) => {
-        if (!frame) return;
-        const scale = 1 + Math.sin(frame.time / 400) * 0.03;
-        // Check if node is still valid before applying
-        if (node.getLayer()) {
-            node.scale({ x: scale, y: scale });
-        }
-    }, node.getLayer());
-    
-    anim.start();
-    
-    // CRITICAL FIX: Cleanup animation on unmount
-    return () => { anim.stop(); };
-  }, []);
+  // Get Cached Sprite
+  const spriteImage = useMemo(() => {
+      return unitRenderer.getUnitImage(finalHead, finalBody, finalColor, type);
+  }, [finalHead, finalBody, finalColor, type]);
 
   // Movement & Jump Logic
   useLayoutEffect(() => {
     const groupNode = groupRef.current;
     const visualNode = visualGroupRef.current;
-    const bodyNode = bodyRef.current;
     const shadowNode = shadowRef.current;
 
-    if (!groupNode || !visualNode || !bodyNode) return;
+    if (!groupNode || !visualNode) return;
+
+    // --- INITIALIZATION ---
+    if (isFirstRender.current) {
+        groupNode.position({ x: targetPos.x, y: targetPos.y });
+        visualNode.y(targetZ);
+        isFirstRender.current = false;
+        prevLogic.current = { q, r, rotation, zOffset: targetZ };
+        return;
+    }
 
     const prev = prevLogic.current;
     const isMove = prev.q !== q || prev.r !== r;
-    const isRotation = prev.rotation !== rotation;
-    const isElevationChange = prev.zOffset !== targetZ;
-
+    const isLevelChange = prev.zOffset !== targetZ;
+    
+    // Update ref for next render *before* starting async animations
     prevLogic.current = { q, r, rotation, zOffset: targetZ };
 
-    // Track active animations for cleanup
     let activeTween: Konva.Tween | null = null;
     let activeJumpAnim: Konva.Animation | null = null;
+    let activeLevelTween: Konva.Tween | null = null;
 
     if (isMove) {
-        // --- JUMP ANIMATION ---
+        // --- MOVEMENT (JUMP) ANIMATION ---
         
-        // 1. Move X/Y (Tween)
+        // 1. Move X/Y (Tween from CURRENT node position to TARGET)
         activeTween = new Konva.Tween({
             node: groupNode,
             x: targetPos.x, 
@@ -102,10 +100,12 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
         activeTween.play();
 
         // 2. Elevation (Jump Arc)
-        const startGroundZ = visualNode.y();
+        const startGroundZ = prev.zOffset; 
+        const endGroundZ = targetZ;
+        
         const duration = GAME_CONFIG.MOVEMENT_ANIMATION_DURATION * 1000;
         const startTime = Date.now();
-        const jumpPeak = 50; 
+        const jumpPeak = 60; // Jump height
 
         activeJumpAnim = new Konva.Animation((frame) => {
             if (!frame) return;
@@ -113,32 +113,36 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
             const elapsed = now - startTime;
             const progress = Math.min(1, elapsed / duration);
             
-            if (!visualNode.getLayer()) return; // Safety check
+            if (!visualNode.getLayer()) {
+                activeJumpAnim?.stop();
+                return;
+            }
 
-            // Ground Height Interpolation
+            // Interpolate Ground Height (Where the feet would be if walking)
             const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-            const currentGroundZ = startGroundZ + (targetZ - startGroundZ) * ease;
+            const currentGroundZ = startGroundZ + (endGroundZ - startGroundZ) * ease;
 
-            // Jump Arc
-            const arc = 4 * progress * (1 - progress);
+            // Calculate Jump Arc (Parabola)
+            const arc = 4 * progress * (1 - progress); 
             const jumpY = -arc * jumpPeak;
 
-            visualNode.y(currentGroundZ);
-            bodyNode.y(jumpY - 8);
+            // Apply absolute position
+            visualNode.y(currentGroundZ + jumpY);
 
+            // Shadow logic (Stay on ground)
             if (shadowNode) {
-                const shadowScale = 1 - (arc * 0.5);
-                const shadowOpacity = 0.4 - (arc * 0.3);
+                shadowNode.y(-jumpY); 
+                const shadowScale = 1 - (arc * 0.4);
                 shadowNode.scaleX(shadowScale);
                 shadowNode.scaleY(shadowScale);
-                shadowNode.opacity(shadowOpacity);
+                shadowNode.opacity(0.4 - (arc * 0.2));
             }
 
             if (progress >= 1) {
                 activeJumpAnim?.stop();
-                visualNode.y(targetZ);
-                bodyNode.y(-8);
+                visualNode.y(endGroundZ);
                 if(shadowNode) {
+                    shadowNode.y(0);
                     shadowNode.scale({x:1, y:1});
                     shadowNode.opacity(0.4);
                 }
@@ -147,28 +151,39 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
 
         activeJumpAnim.start();
 
-    } else if (isRotation) {
-        groupNode.position({ x: targetPos.x, y: targetPos.y });
-    } else if (isElevationChange) {
-        activeTween = new Konva.Tween({
-            node: visualNode,
-            y: targetZ,
-            duration: 0.5,
-            easing: Konva.Easings.EaseInOut
-        });
-        activeTween.play();
     } else {
-        // Drift Correction
-        if (Math.abs(groupNode.x() - targetPos.x) > 1 || Math.abs(groupNode.y() - targetPos.y) > 1) {
-             groupNode.position({ x: targetPos.x, y: targetPos.y });
+        // --- STATIC STATE / ROTATION / ELEVATION CHANGE ---
+        
+        // Immediate Update for X/Y (e.g. Camera Rotation or Correction)
+        // Since rotation animates smoothly frame-by-frame in parent, instant update here appears smooth.
+        groupNode.position({ x: targetPos.x, y: targetPos.y });
+        
+        // Handle Level Change (Growing/Shrinking Hex under unit)
+        if (isLevelChange) {
+             activeLevelTween = new Konva.Tween({
+                 node: visualNode,
+                 y: targetZ,
+                 duration: 0.3,
+                 easing: Konva.Easings.EaseInOut
+             });
+             activeLevelTween.play();
+        } else {
+             // Snap to ensure exact position if no animation needed
+             // Only if not currently animating (could check tween existence, but safe to snap if static)
+             if (!activeLevelTween) visualNode.y(targetZ);
         }
-        visualNode.y(targetZ);
-        bodyNode.y(-8);
+        
+        // Reset Shadow if needed
+        if (shadowNode) {
+            shadowNode.y(0);
+            shadowNode.scale({x:1, y:1});
+            shadowNode.opacity(0.4);
+        }
     }
 
-    // CRITICAL FIX: Cleanup movement animations if props change mid-move or component unmounts
     return () => {
         if (activeTween) activeTween.destroy();
+        if (activeLevelTween) activeLevelTween.destroy();
         if (activeJumpAnim) activeJumpAnim.stop();
     };
 
@@ -176,18 +191,46 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
 
   return (
     <Group>
-      <Group ref={groupRef} x={initialPos.x} y={initialPos.y} listening={false}>
-        <Group ref={visualGroupRef} y={targetZ}>
-            <Ellipse ref={shadowRef} x={0} y={0} radiusX={10} radiusY={6} fill="rgba(0,0,0,0.4)" shadowEnabled={false} />
-            <Group ref={bodyRef} y={-8}>
-                <Rect x={-6} y={-10} width={12} height={20} fill={finalColor} cornerRadius={4} shadowEnabled={false} />
-                {isPlayer ? (
-                    <Circle y={-14} radius={8} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} shadowEnabled={false} />
-                ) : (
-                    <Rect x={-7} y={-21} width={14} height={14} fill={finalColor} stroke="rgba(255,255,255,0.4)" strokeWidth={2} cornerRadius={3} shadowEnabled={false} />
-                )}
-            </Group>
-            {isPlayer && <Ellipse y={0} radiusX={16} radiusY={10} stroke="white" strokeWidth={1} opacity={0.6} dash={[4, 4]} shadowEnabled={false} />}
+      {/* 
+         CRITICAL: Do NOT pass x={targetPos.x} y={targetPos.y} here.
+         Let the ref and imperative Konva calls handle positioning to avoid 
+         React reconciling styles before animations start (causing teleportation).
+      */}
+      <Group ref={groupRef} listening={false}>
+        <Group ref={visualGroupRef}>
+            {/* Shadow */}
+            <Ellipse 
+                ref={shadowRef} 
+                x={0} 
+                y={0} 
+                radiusX={10} 
+                radiusY={6} 
+                fill="rgba(0,0,0,0.4)" 
+                shadowEnabled={false} 
+            />
+            
+            {/* Player Indicator Ring */}
+            {isPlayer && (
+                <Ellipse 
+                    y={0} 
+                    radiusX={16} 
+                    radiusY={10} 
+                    stroke="white" 
+                    strokeWidth={1} 
+                    opacity={0.6} 
+                    dash={[4, 4]} 
+                    shadowEnabled={false} 
+                />
+            )}
+
+            {/* The Cached Sprite */}
+            <KonvaImage 
+                image={spriteImage} 
+                width={64} 
+                height={64} 
+                offsetX={32} // Center X
+                offsetY={48} // Pivot near feet (match UnitRenderer logic)
+            />
         </Group>
       </Group>
     </Group>

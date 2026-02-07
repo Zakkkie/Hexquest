@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, memo } from 'react';
 
 interface BackgroundProps {
   variant?: 'MENU' | 'GAME';
@@ -151,4 +151,4 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
   return <canvas ref={canvasRef} className="w-full h-full block" />;
 };
 
-export default Background;
+export default memo(Background);

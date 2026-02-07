@@ -11,8 +11,8 @@ import { calculateMovementCost } from './rules/movement.ts';
 import { generateMap } from './services/mapGenerator.ts';
 import { TEXT } from './services/i18n.ts';
 
-const MOCK_USER_DB: Record<string, { password: string; avatarColor: string; avatarIcon: string }> = {};
-const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899']; 
+const MOCK_USER_DB: Record<string, { password: string; avatarColor: string; headIndex: number; bodyIndex: number }> = {};
+const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e']; 
 const LEADERBOARD_STORAGE_KEY = 'hexquest_leaderboard_v3'; 
 const CAMPAIGN_PROGRESS_KEY = 'hexquest_campaign_progress_v1';
 
@@ -52,8 +52,8 @@ interface GameStore extends GameState {
   session: SessionState | null;
   setUIState: (state: UIState) => void;
   setDeviceType: (type: DeviceType) => void;
-  loginAsGuest: (n: string, c: string, i: string) => void;
-  registerUser: (n: string, p: string, c: string, i: string) => AuthResponse;
+  loginAsGuest: (n: string, c: string, h: number, b: number) => void;
+  registerUser: (n: string, p: string, c: string, h: number, b: number) => AuthResponse;
   loginUser: (n: string, p: string) => AuthResponse;
   logout: () => void;
   startNewGame: (win?: WinCondition, levelConfig?: LevelConfig) => void;
@@ -83,6 +83,9 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
   // Map Generation Logic (Delegate to service)
   const initialGrid = generateMap(levelConfig);
   
+  // Access store strictly for USER data, avoid `get()` inside helper if possible but we need user prefs
+  const user = useGameStore.getState().user;
+
   const botCount = levelConfig ? (levelConfig.aiMode === 'none' ? 0 : 1) : (winCondition?.botCount || 0);
   const difficulty = winCondition?.difficulty || 'MEDIUM';
   const diffSettings = DIFFICULTY_SETTINGS[difficulty];
@@ -92,11 +95,9 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
   const startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;
   const startMoves = levelConfig ? levelConfig.startState.moves : GAME_CONFIG.INITIAL_MOVES;
   const startRank = levelConfig ? levelConfig.startState.rank : 1;
-  // Apply Materials from Config or Default to 0
   const startStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0;
   
   const bots: Entity[] = [];
-  // Spawn points at edge of radius 2
   const spawnPoints = [{ q: 0, r: -2 }, { q: 2, r: -2 }, { q: 2, r: 0 }, { q: 0, r: 2 }, { q: -2, r: 2 }, { q: -2, r: 0 }];
 
   for (let i = 0; i < Math.min(botCount, spawnPoints.length); i++) {
@@ -111,12 +112,14 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     bots.push({
       id: `bot-${i+1}`, type: EntityType.BOT, state: EntityState.IDLE, q: sp.q, r: sp.r,
       playerLevel: 0, 
-      coins: startCredits, // Bots match player starting resources (0 in Skirmish)
-      moves: startMoves,   // Bots match player starting resources (0 in Skirmish)
+      coins: startCredits,
+      moves: startMoves,
       totalCoinsEarned: 0, movementQueue: [],
       storage: 0, maxStorage: maxStorage,
       memory: { lastPlayerPos: null, currentGoal: null, stuckCounter: 0 },
-      avatarColor: BOT_PALETTE[i % BOT_PALETTE.length],
+      avatarColor: BOT_PALETTE[Math.floor(Math.random() * BOT_PALETTE.length)], // Random color
+      headIndex: Math.floor(Math.random() * 4), // Random head (0-3)
+      bodyIndex: Math.floor(Math.random() * 4), // Random body (0-3)
       recoveredCurrentHex: false,
       recentUpgrades: []
     });
@@ -149,14 +152,19 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       storage: startStorage, 
       maxStorage: maxStorage,
       recoveredCurrentHex: false,
-      recentUpgrades: []
+      recentUpgrades: [],
+      // Use User preferences or default
+      avatarColor: user?.avatarColor || '#3b82f6',
+      headIndex: user?.headIndex || 0,
+      bodyIndex: user?.bodyIndex || 0
     },
     bots,
     currentTurn: 0,
     messageLog: [initialLog],
     botActivityLog: [],
     fullBotHistory: [], 
-    gameStatus: levelConfig ? 'PLAYING' : 'BRIEFING',
+    // FIX: Skirmish (no levelConfig) should start PLAYING immediately. Campaign starts BRIEFING (Paused).
+    gameStatus: levelConfig ? 'BRIEFING' : 'PLAYING',
     lastBotActionTime: Date.now(),
     isPlayerGrowing: false,
     playerGrowthIntent: null,
@@ -185,14 +193,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setUIState: (uiState) => set({ uiState }),
   setDeviceType: (deviceType) => set({ deviceType }),
   
-  loginAsGuest: (nickname, avatarColor, avatarIcon) => {
+  loginAsGuest: (nickname, avatarColor, headIndex, bodyIndex) => {
     audioService.play('UI_CLICK');
-    set({ user: { isAuthenticated: true, isGuest: true, nickname, avatarColor, avatarIcon } });
+    set({ user: { isAuthenticated: true, isGuest: true, nickname, avatarColor, headIndex, bodyIndex } });
   },
-  registerUser: (nickname, password, avatarColor, avatarIcon) => { 
+  registerUser: (nickname, password, avatarColor, headIndex, bodyIndex) => { 
     audioService.play('UI_CLICK');
-    MOCK_USER_DB[nickname] = { password, avatarColor, avatarIcon }; 
-    set({ user: { isAuthenticated: true, isGuest: false, nickname, avatarColor, avatarIcon } }); 
+    MOCK_USER_DB[nickname] = { password, avatarColor, headIndex, bodyIndex }; 
+    set({ user: { isAuthenticated: true, isGuest: false, nickname, avatarColor, headIndex, bodyIndex } }); 
     return { success: true }; 
   },
   loginUser: (nickname, password) => { 
@@ -200,9 +208,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const r = MOCK_USER_DB[nickname]; 
     if (!r || r.password !== password) {
       audioService.play('ERROR');
-      return { success: false }; 
+      return { success: false, message: "Invalid credentials" }; 
     }
-    set({ user: { isAuthenticated: true, isGuest: false, nickname, avatarColor: r.avatarColor, avatarIcon: r.avatarIcon } }); 
+    set({ user: { isAuthenticated: true, isGuest: false, nickname, avatarColor: r.avatarColor, headIndex: r.headIndex, bodyIndex: r.bodyIndex } }); 
     return { success: true }; 
   },
   logout: () => {
@@ -240,12 +248,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       
       let effectiveWin = winCondition;
 
-      // Handle Campaign Levels Logic
       if (levelConfig) {
           let difficulty = 'MEDIUM';
-          let queueSize = 2; // Default Medium
+          let queueSize = 2; 
 
-          // For Level 1.6, enforce EASY difficulty (Queue = 1)
           if (levelConfig.id === '1.6') {
               difficulty = 'EASY';
               queueSize = 1;
@@ -262,7 +268,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
               winType: 'AND'
           };
       } else if (!winCondition) {
-          // Fallback if nothing passed
           effectiveWin = {
               levelId: -1,
               targetLevel: 99,
@@ -279,11 +284,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       engine = new GameEngine(initialSessionState); 
       set({ session: engine.state, hasActiveSession: true, uiState: 'GAME' });
 
-      // Show objective popup if campaign
-      if (levelConfig) {
-          const startMsg = initialSessionState.messageLog[0]?.text;
-          if (startMsg) get().showToast(startMsg, 'info');
-      }
+      // Removed Toast for briefing start as the Modal covers it
   },
 
   startCampaignLevel: (levelId) => {
@@ -316,7 +317,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   togglePlayerGrowth: (intent: 'RECOVER' | 'UPGRADE' | 'DIG' = 'RECOVER') => {
       if (!engine) return;
-      const session = engine.state; // Use authoritative state
+      const session = engine.state; 
       if (!session) return;
 
       if (session.player.state === EntityState.MOVING) {
@@ -324,8 +325,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return;
       }
       
-      // If intent changes, just switch intent without toggling off if already growing
-      // If same intent, toggle off.
       const isCurrentlyGrowing = session.isPlayerGrowing;
       const currentIntent = session.playerGrowthIntent;
       
@@ -378,11 +377,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       if (session.player.state === EntityState.MOVING) return;
       
-      // --- NEW: Rank Check ---
       const targetKey = getHexKey(tq, tr);
       const targetHex = session.grid[targetKey];
       
-      // Check if trying to move to a hex with too high level
       if (targetHex && targetHex.structureType !== 'VOID' && targetHex.maxLevel > session.player.playerLevel) {
           audioService.play('ERROR');
           const lang = get().language;
@@ -390,7 +387,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
           set({ toast: { message: msg, type: 'error', timestamp: Date.now() } });
           return;
       }
-      // -----------------------
 
       const obstacles = session.bots.map(b => ({ q: b.q, r: b.r }));
       const path = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles);
@@ -456,7 +452,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   checkTutorialCamera: (deltaX: number) => {
-      // Legacy tutorial function retained
   },
 
   downloadBotLog: () => {
@@ -498,8 +493,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       tickCount++;
       
-      // --- MEMORY OPTIMIZATION: GARBAGE COLLECTION ---
-      // Runs every 50 ticks (~5 seconds) to keep arrays from growing indefinitely
       if (tickCount % 50 === 0) {
           if (result.state.messageLog.length > 50) {
               result.state.messageLog = result.state.messageLog.slice(0, 50);
@@ -507,20 +500,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if (result.state.botActivityLog.length > 50) {
               result.state.botActivityLog = result.state.botActivityLog.slice(0, 50);
           }
-          // MEMORY LEAK FIX: Cap full history too (2000 events max)
           if (result.state.fullBotHistory.length > 2000) {
               result.state.fullBotHistory = result.state.fullBotHistory.slice(result.state.fullBotHistory.length - 2000);
           }
-          // Telemetry cleanup if needed (keep last 100 events)
           if (result.state.telemetry && result.state.telemetry.length > 100) {
               result.state.telemetry = result.state.telemetry.slice(result.state.telemetry.length - 100);
           }
-          // Effects cleanup
           const now = Date.now();
           result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
       }
 
-      // --- LEVEL 1.5 AUDIO TIMER ---
       if (result.state.activeLevelConfig?.id === '1.5' && result.state.gameStatus === 'PLAYING') {
           const elapsed = Date.now() - result.state.sessionStartTime;
           const timeLeft = Math.max(0, 60000 - elapsed);
@@ -569,7 +558,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 if (user) {
                     entry.nickname = user.nickname;
                     entry.avatarColor = user.avatarColor;
-                    entry.avatarIcon = user.avatarIcon;
+                    entry.headIndex = user.headIndex;
+                    entry.bodyIndex = user.bodyIndex;
                 }
                 
                 const currentLB = [...get().leaderboard];
@@ -615,7 +605,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             break;
                         case 'SECTOR_EXCAVATED':
                             text = "EXCAVATED";
-                            color = "#a855f7"; // Purple for Dig
+                            color = "#a855f7"; 
                             icon = 'PICKAXE';
                             break;
                         case 'RECOVERY_USED':
@@ -655,17 +645,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
           newToast = { message: error.message || 'Error', type: 'error', timestamp: Date.now() };
       }
 
-      // --- RENDERING OPTIMIZATION ---
-      // Throttle UI updates to 15-20 FPS (every 2nd tick at 100ms interval is 5Hz logical, 
-      // but logic runs at 10Hz. Actually setInterval is 100ms. 
-      // Updating React every 200ms is perfectly fine for strategy.
       const shouldRender = tickCount % 2 === 0; 
       const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
       const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
 
       if (shouldRender || hasCriticalEvents || playerStateChanged) {
         set({ 
-            session: result.state, // Use the fresh state from tick result
+            session: result.state, 
             toast: newToast,
         });
       }

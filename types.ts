@@ -95,7 +95,12 @@ export interface Entity {
   movementQueue: HexCoord[]; 
   
   memory?: BotMemory; 
+  
+  // Visual Customization
   avatarColor?: string; 
+  headIndex: number;
+  bodyIndex: number;
+
   attackTokens?: number;
   
   // Track if "Recovery" ability was used on the current hex
@@ -161,7 +166,8 @@ export interface UserProfile {
   isGuest: boolean;
   nickname: string;
   avatarColor: string;
-  avatarIcon: string;
+  headIndex: number;
+  bodyIndex: number;
 }
 
 export interface PendingConfirmation {
@@ -192,7 +198,9 @@ export interface WinCondition {
 export interface LeaderboardEntry {
   nickname: string;
   avatarColor: string;
-  avatarIcon: string;
+  headIndex: number;
+  bodyIndex: number;
+  avatarIcon?: string;
   maxCoins: number;
   maxLevel: number;
   timestamp: number;

@@ -116,8 +116,10 @@ export class VictorySystem implements System {
   private generateLeaderboardEvent(state: SessionState, events: GameEvent[]): void {
     const statsEntry: LeaderboardEntry = {
         nickname: 'Player', 
-        avatarColor: '#000', 
+        avatarColor: state.player.avatarColor || '#000', 
         avatarIcon: 'user',
+        headIndex: state.player.headIndex,
+        bodyIndex: state.player.bodyIndex,
         maxCoins: state.player.coins, 
         maxLevel: state.player.playerLevel,
         difficulty: state.difficulty,
