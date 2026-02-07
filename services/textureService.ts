@@ -1,5 +1,4 @@
 
-
 export class TextureService {
   private static instance: TextureService;
   // Cache key: level_variationIndex (e.g. "5_0", "5_1", etc.)
@@ -17,8 +16,8 @@ export class TextureService {
 
   public getTexture(level: number, q: number = 0, r: number = 0): HTMLCanvasElement {
     const clampedLevel = Math.max(-10, Math.min(10, level));
-    // Increase variations to ensure map looks organic
-    const variationCount = 6; 
+    // Reduced variations to save memory, focusing on high quality static designs
+    const variationCount = 4; 
     const variationIndex = Math.abs((q * 73856093 ^ r * 19349663) % variationCount);
     const key = `${clampedLevel}_${variationIndex}`;
 
@@ -65,125 +64,145 @@ export class TextureService {
     return canvas;
   }
 
-  // === POSITIVE STYLE: Strictly Bound Level Indicators ===
+  private drawHexagon(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+          const angle = (i * 60 + 30) * Math.PI / 180;
+          const px = x + radius * Math.cos(angle);
+          const py = y + radius * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+  }
+
+  // === POSITIVE STYLE: Tech Panels ===
   private drawPositive(ctx: CanvasRenderingContext2D, size: number, level: number, seed: number) {
-      let baseColor = '#0f172a'; // Default Dark Slate
-      let accentColor = '#38bdf8'; // Default Cyan
+      let baseColor = '#0f172a'; 
+      let accentColor = '#38bdf8';
+      let secColor = '#0284c7';
 
       if (level <= 3) {
-          // TECH (1-3): Industrial/Clean
-          baseColor = '#1e293b'; // Slate 800
-          accentColor = '#0ea5e9'; // Sky Blue
+          // TECH (1-3): Cyan / Industrial
+          baseColor = '#0f172a'; // Slate 900
+          accentColor = '#0ea5e9'; // Sky 500
+          secColor = '#0369a1'; // Sky 700
       } else if (level <= 7) {
-          // CYBER (4-7): High Tech
+          // CYBER (4-7): Purple / Neon
           baseColor = '#1e1b4b'; // Indigo 950
-          accentColor = '#a855f7'; // Purple
+          accentColor = '#a855f7'; // Purple 500
+          secColor = '#7e22ce'; // Purple 700
       } else {
-          // ASCENDED (8-10): Elite
-          baseColor = '#271a0c'; // Deep Bronze
-          accentColor = '#fbbf24'; // Amber
+          // ASCENDED (8-10): Gold / Elite
+          baseColor = '#271a0c'; // Bronze
+          accentColor = '#fbbf24'; // Amber 400
+          secColor = '#d97706'; // Amber 600
       }
 
-      // 1. Background
+      const cx = size / 2;
+      const cy = size / 2;
+
+      // 1. Base Background
       ctx.fillStyle = baseColor;
       ctx.fillRect(0, 0, size, size);
 
-      const grad = ctx.createLinearGradient(0, 0, size, size);
-      grad.addColorStop(0, 'rgba(255,255,255,0.03)');
-      grad.addColorStop(1, 'rgba(0,0,0,0.1)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, size, size);
-
-      // 2. Strict Level Identification (Symbols)
-      ctx.fillStyle = accentColor;
-      
-      const cx = size / 2;
-      const cy = size / 2;
-      
-      // Visual Logic: 
-      // Levels 1-3: Circles
-      // Levels 4-6: Squares
-      // Levels 7-9: Diamonds
-      // Level 10: Star
-      
-      const count = level > 9 ? 1 : ((level - 1) % 3) + 1;
-      const gap = 10;
-      const startX = cx - ((count - 1) * gap) / 2;
-
-      for (let i = 0; i < count; i++) {
-          const x = startX + i * gap;
-          
-          ctx.beginPath();
-          if (level <= 3) {
-              ctx.arc(x, cy, 3.5, 0, Math.PI*2);
-              ctx.fill();
-          } else if (level <= 6) {
-              ctx.fillRect(x - 3.5, cy - 3.5, 7, 7);
-          } else if (level <= 9) {
-              ctx.moveTo(x, cy - 5);
-              ctx.lineTo(x + 5, cy);
-              ctx.lineTo(x, cy + 5);
-              ctx.lineTo(x - 5, cy);
-              ctx.fill();
-          } else {
-              // Level 10
-              ctx.font = '24px monospace';
-              ctx.fillStyle = accentColor;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText('★', cx, cy + 2);
-          }
+      // 2. Scanlines (Tech Feel)
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      for(let i=0; i<size; i+=4) {
+          ctx.fillRect(0, i, size, 1);
       }
 
-      // 3. Border Highlight
+      // 3. The "Stroke Along The Edge" (Inner Hex Border)
+      // Radius ~28 fits safely within the hex shape at typical scale
+      ctx.strokeStyle = secColor;
+      ctx.lineWidth = 3;
+      this.drawHexagon(ctx, cx, cy, 28);
+      ctx.stroke();
+
+      // Inner thin highlight for depth
       ctx.strokeStyle = accentColor;
       ctx.lineWidth = 1;
-      ctx.strokeRect(1, 1, size-2, size-2);
-      
-      // 4. Subtle Texture Variation (Seed-based but non-intrusive)
-      if (seed % 2 === 0) {
+      this.drawHexagon(ctx, cx, cy, 26);
+      ctx.stroke();
+
+      // 4. Central Rank Symbol
+      ctx.fillStyle = accentColor;
+      ctx.shadowColor = accentColor;
+      ctx.shadowBlur = 10;
+
+      // Glyph Logic
+      if (level === 1) {
+          // Dot
+          ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2); ctx.fill();
+      } else if (level === 2) {
+          // Square
+          ctx.fillRect(cx-5, cy-5, 10, 10);
+      } else if (level === 3) {
+          // Triangle
           ctx.beginPath();
-          ctx.moveTo(size, 0); ctx.lineTo(size-8, 0); ctx.lineTo(size, 8);
+          ctx.moveTo(cx, cy-6); ctx.lineTo(cx+6, cy+5); ctx.lineTo(cx-6, cy+5);
           ctx.fill();
+      } else if (level <= 6) {
+          // Ring / Target
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI*2); ctx.stroke();
+          if (level >= 5) { ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill(); } // Center dot
+          if (level === 6) { ctx.beginPath(); ctx.moveTo(cx-10, cy); ctx.lineTo(cx+10, cy); ctx.moveTo(cx, cy-10); ctx.lineTo(cx, cy+10); ctx.stroke(); } // Crosshair
+      } else {
+          // High Rank Star
+          ctx.font = '24px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(level >= 9 ? '★' : '◆', cx, cy + 2);
       }
+      
+      // Cleanup Shadow
+      ctx.shadowBlur = 0;
+
+      // 5. Tech Decor (Corner Bits)
+      // Only visible if not clipped, positioned strategically
+      ctx.fillStyle = secColor;
+      // Top/Bottom blips
+      ctx.fillRect(cx-2, 4, 4, 4);
+      ctx.fillRect(cx-2, size-8, 4, 4);
   }
 
-  // === NEGATIVE STYLE: Depth Indicators ===
+  // === NEGATIVE STYLE: Excavation Pits ===
   private drawNegative(ctx: CanvasRenderingContext2D, size: number, level: number, seed: number) {
       let base = '#1c1917';
-      let highlight = '#44403c';
+      let stroke = '#44403c';
+      
+      if (level <= -4) { base = '#450a0a'; stroke = '#991b1b'; } // Magma
+      if (level <= -8) { base = '#fff7ed'; stroke = '#fb923c'; } // Core
 
-      if (level <= -8) {
-          base = '#fff7ed'; highlight = '#ffffff';
-      } else if (level <= -4) {
-          base = '#450a0a'; highlight = '#ef4444';
-      } else {
-          base = '#292524'; highlight = '#57534e';
-      }
+      const cx = size / 2;
+      const cy = size / 2;
 
+      // Background
       ctx.fillStyle = base;
       ctx.fillRect(0, 0, size, size);
 
-      // Depth Rings indicating Level Magnitude
+      // Depth Lines (Concentric Hexagons)
+      // Simulates looking down into a structured mine
       const depth = Math.abs(level);
-      ctx.strokeStyle = highlight;
-      ctx.lineWidth = 2;
-      const cx = size / 2;
-      const cy = size / 2;
+      const steps = Math.min(4, depth + 1);
       
-      // Cap at 5 rings
-      const rings = Math.min(5, depth);
-      for(let i=0; i<rings; i++) {
-          const r = 24 - (i * 4);
-          ctx.beginPath();
-          ctx.arc(cx, cy, r, 0, Math.PI*2);
+      for(let i=0; i<steps; i++) {
+          const r = 28 - (i * 6);
+          if (r < 0) break;
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = i === 0 ? 3 : 1; // Outer rim thick
+          ctx.globalAlpha = 1.0 - (i * 0.15);
+          this.drawHexagon(ctx, cx, cy, r);
           ctx.stroke();
       }
+      ctx.globalAlpha = 1.0;
 
-      // Vignette
-      const grad = ctx.createRadialGradient(cx, cy, size*0.3, cx, cy, size);
-      grad.addColorStop(0, 'transparent');
-      grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+      // Center darkness (Void hint)
+      const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 20);
+      grad.addColorStop(0, 'rgba(0,0,0,0.8)');
+      grad.addColorStop(1, 'transparent');
       ctx.fillStyle = grad;
       ctx.fillRect(0,0,size,size);
   }
@@ -193,31 +212,39 @@ export class TextureService {
       ctx.fillStyle = '#1e293b'; // Slate 800
       ctx.fillRect(0, 0, size, size);
       
-      // Crosshair
+      const cx = size/2;
+      const cy = size/2;
+
+      // Subtle Rim
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      this.drawHexagon(ctx, cx, cy, 28);
+      ctx.stroke();
+
+      // Center crosshair
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      const cx = size/2, cy = size/2;
-      const len = 4;
-      ctx.moveTo(cx-len, cy); ctx.lineTo(cx+len, cy);
-      ctx.moveTo(cx, cy-len); ctx.lineTo(cx, cy+len);
+      ctx.moveTo(cx-4, cy); ctx.lineTo(cx+4, cy);
+      ctx.moveTo(cx, cy-4); ctx.lineTo(cx, cy+4);
       ctx.stroke();
   }
 
-  // === SIDE TEXTURES ===
+  // === SIDE TEXTURES: Strata ===
   private drawSide(ctx: CanvasRenderingContext2D, size: number, level: number) {
+      // Vertical Gradient
       const grad = ctx.createLinearGradient(0, 0, 0, size);
       
       if (level > 0) {
-          grad.addColorStop(0, '#334155'); 
-          grad.addColorStop(1, '#020617'); 
+          grad.addColorStop(0, '#475569'); // Lighter top
+          grad.addColorStop(1, '#0f172a'); // Darker bottom
       } else if (level < 0) {
-          if (level <= -8) {
-              grad.addColorStop(0, '#fb923c'); 
+          if (level <= -4) {
+              grad.addColorStop(0, '#b91c1c'); 
               grad.addColorStop(1, '#450a0a');
           } else {
-              grad.addColorStop(0, '#44403c'); 
-              grad.addColorStop(1, '#0c0a09');
+              grad.addColorStop(0, '#57534e'); 
+              grad.addColorStop(1, '#1c1917');
           }
       } else {
           grad.addColorStop(0, '#475569');
@@ -227,10 +254,15 @@ export class TextureService {
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, size, size);
 
-      // Striations
-      ctx.fillStyle = 'rgba(0,0,0,0.2)';
-      ctx.fillRect(16, 0, 2, size);
-      ctx.fillRect(48, 0, 2, size);
+      // Horizontal grooves (Strata)
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(0, size * 0.3, size, 2);
+      ctx.fillRect(0, size * 0.7, size, 2);
+      
+      // Vertical edges highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(0, 0, 2, size);
+      ctx.fillRect(size-2, 0, 2, size);
   }
 }
 
