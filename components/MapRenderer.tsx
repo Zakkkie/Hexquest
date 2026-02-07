@@ -13,24 +13,65 @@ import { EXCHANGE_RATE_COINS_PER_MOVE, HEX_SIZE } from '../rules/config.ts';
 const VOID_LEVEL_FLAG = -99;
 
 // THEME CONFIGURATION
+// Colors define the specific visual style per level range
 const THEME_PALETTE: Record<string, HexNodeTheme> = {
-    '0': { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#334155' },
-    '1': { main: '#475569', light: '#64748b', dark: '#334155', stroke: '#64748b' },
-    '2': { main: '#0891b2', light: '#22d3ee', dark: '#155e75', stroke: '#22d3ee' },
-    '3': { main: '#0284c7', light: '#38bdf8', dark: '#0c4a6e', stroke: '#38bdf8' },
-    '4': { main: '#2563eb', light: '#60a5fa', dark: '#1e3a8a', stroke: '#60a5fa' },
-    '5': { main: '#4f46e5', light: '#818cf8', dark: '#312e81', stroke: '#818cf8' },
-    '6': { main: '#7c3aed', light: '#a78bfa', dark: '#4c1d95', stroke: '#a78bfa' },
-    '-1': { main: '#3f1a0a', light: '#5c2415', dark: '#260e05', stroke: '#3f1a0a' },
-    '-2': { main: '#2a0a0a', light: '#451a1a', dark: '#140303', stroke: '#2a0a0a' },
-    '-3': { main: '#1a0505', light: '#330a0a', dark: '#000000', stroke: '#1a0505' },
+    // Neutral (L0)
+    '0': { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' }, // Slate
+
+    // Positive: TECH (L1-L3) - Cyan / Sky
+    '1': { main: '#020617', light: '#1e293b', dark: '#020617', stroke: '#0ea5e9' }, 
+    '2': { main: '#020617', light: '#1e293b', dark: '#020617', stroke: '#0ea5e9' },
+    '3': { main: '#020617', light: '#1e293b', dark: '#020617', stroke: '#0ea5e9' },
+
+    // Positive: CYBER (L4-L7) - Purple / Neon
+    '4': { main: '#1e1b4b', light: '#312e81', dark: '#020617', stroke: '#a855f7' }, 
+    '5': { main: '#1e1b4b', light: '#312e81', dark: '#020617', stroke: '#a855f7' },
+    '6': { main: '#1e1b4b', light: '#312e81', dark: '#020617', stroke: '#a855f7' },
+    '7': { main: '#1e1b4b', light: '#312e81', dark: '#020617', stroke: '#a855f7' },
+
+    // Positive: ASCENDED (L8+) - Gold / Amber
+    '8': { main: '#271a0c', light: '#451a03', dark: '#020617', stroke: '#fbbf24' },
+    '9': { main: '#271a0c', light: '#451a03', dark: '#020617', stroke: '#fbbf24' },
+    '10': { main: '#271a0c', light: '#451a03', dark: '#020617', stroke: '#fbbf24' },
+
+    // Negative: SEDIMENT (L-1 to L-3) - Stone / Grey
+    '-1': { main: '#292524', light: '#44403c', dark: '#1c1917', stroke: '#a8a29e' }, 
+    '-2': { main: '#292524', light: '#44403c', dark: '#1c1917', stroke: '#a8a29e' },
+    '-3': { main: '#292524', light: '#44403c', dark: '#1c1917', stroke: '#a8a29e' },
+
+    // Negative: MAGMA (L-4 to L-7) - Red / Orange
+    '-4': { main: '#450a0a', light: '#7f1d1d', dark: '#450a0a', stroke: '#ef4444' }, 
+    '-5': { main: '#450a0a', light: '#7f1d1d', dark: '#450a0a', stroke: '#ef4444' },
+    '-6': { main: '#450a0a', light: '#7f1d1d', dark: '#450a0a', stroke: '#ef4444' },
+    '-7': { main: '#450a0a', light: '#7f1d1d', dark: '#450a0a', stroke: '#ef4444' },
+
+    // Negative: CORE (L-8+) - Plasma / White
+    '-8': { main: '#fff7ed', light: '#ffedd5', dark: '#c2410c', stroke: '#ffffff' },
 };
 
 const getTheme = (level: number): HexNodeTheme => {
-    if (level > 6) return THEME_PALETTE['6'];
-    // FIX: Clamp negative levels to -3 so deep pits use the deepest pit theme instead of defaulting to Surface(0)
-    if (level < -3) return THEME_PALETTE['-3'];
-    return THEME_PALETTE[String(level)] || THEME_PALETTE['0'];
+    // Clamp high levels to Gold theme
+    if (level > 8) return THEME_PALETTE['8'];
+    // Clamp low levels to Core theme
+    if (level < -8) return THEME_PALETTE['-8'];
+    
+    // Check specific entry
+    const key = String(level);
+    if (THEME_PALETTE[key]) return THEME_PALETTE[key];
+
+    // Fallback logic for ranges if specific key missing
+    if (level > 0) {
+        if (level <= 3) return THEME_PALETTE['1'];
+        if (level <= 7) return THEME_PALETTE['4'];
+        return THEME_PALETTE['8'];
+    } 
+    if (level < 0) {
+        if (level >= -3) return THEME_PALETTE['-1'];
+        if (level >= -7) return THEME_PALETTE['-4'];
+        return THEME_PALETTE['-8'];
+    }
+
+    return THEME_PALETTE['0'];
 };
 
 const getHeightOffset = (level: number) => {

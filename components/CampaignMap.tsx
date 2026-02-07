@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
@@ -11,9 +12,10 @@ const CampaignMap: React.FC = () => {
   const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
   const playUiSound = useGameStore(state => state.playUiSound);
   const campaignProgress = useGameStore(state => state.campaignProgress);
+  const deviceType = useGameStore(state => state.deviceType);
 
-  // Responsive State
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  // Responsive State using Global Device Type
+  const isMobile = deviceType === 'MOBILE';
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -23,7 +25,6 @@ const CampaignMap: React.FC = () => {
 
   useEffect(() => {
     const handleResize = () => {
-        setIsMobile(window.innerWidth < 768);
         if (containerRef.current) {
             setContainerWidth(containerRef.current.clientWidth);
         }

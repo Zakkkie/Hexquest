@@ -1,8 +1,60 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, Coins, Layers, ArrowLeft, User, Zap, Shield, Ghost, Bot } from 'lucide-react';
+import { Trophy, Coins, Layers, ArrowLeft, User, Zap, Shield, Ghost, Bot, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TEXT } from '../services/i18n.ts';
+import { textureService } from '../services/textureService.ts';
+
+// Helper component to render a single hex preview
+const HexPreview: React.FC<{ level: number }> = ({ level }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Get texture from service (returns 64x64)
+        const tex = textureService.getTexture(level, 0, 0);
+        
+        // Increased size for better visibility
+        const size = 64; 
+        
+        ctx.clearRect(0,0,size,size);
+        
+        // Draw Hexagon shape clip
+        ctx.beginPath();
+        const radius = size / 2 - 2; // slight padding
+        const cx = size / 2;
+        const cy = size / 2;
+        for (let i = 0; i < 6; i++) {
+            const angle = (60 * i + 30) * Math.PI / 180;
+            ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+        }
+        ctx.closePath();
+        ctx.save();
+        ctx.clip();
+        // Draw the 64x64 texture onto the canvas
+        ctx.drawImage(tex, 0, 0, 64, 64, 0, 0, size, size);
+        ctx.restore();
+        
+        // Border
+        ctx.strokeStyle = level < 0 ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+    }, [level]);
+
+    return (
+        <div className="flex flex-col items-center gap-2 shrink-0 mx-2 snap-center transition-transform hover:scale-110 duration-200">
+            <canvas ref={canvasRef} width={64} height={64} className="drop-shadow-xl shadow-black/50" />
+            <span className={`text-[10px] font-mono font-bold ${level < 0 ? 'text-red-400' : (level > 0 ? 'text-indigo-400' : 'text-slate-500')}`}>
+                {level === 0 ? 'L0' : (level > 0 ? `L${level}` : level)}
+            </span>
+        </div>
+    );
+};
 
 const Leaderboard: React.FC = () => {
   const leaderboard = useGameStore(state => state.leaderboard);
@@ -10,6 +62,8 @@ const Leaderboard: React.FC = () => {
   const setUIState = useGameStore(state => state.setUIState);
   const language = useGameStore(state => state.language);
   const t = TEXT[language].LEADERBOARD;
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const getIconComponent = (id: string) => {
     switch(id) {
@@ -20,6 +74,15 @@ const Leaderboard: React.FC = () => {
         default: return User;
     }
   };
+
+  const scroll = (offset: number) => {
+      if (scrollRef.current) {
+          scrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+      }
+  };
+
+  // Generate range -10 to 10
+  const rankRange = Array.from({ length: 21 }, (_, i) => i - 10);
 
   return (
     <div className="w-full h-full flex items-center justify-center p-4 md:p-12 pointer-events-auto">
@@ -110,6 +173,37 @@ const Leaderboard: React.FC = () => {
           {leaderboard.length === 0 && (
             <div className="p-8 text-center text-slate-500 text-sm">{t.EMPTY}</div>
           )}
+        </div>
+
+        {/* RANK SPECTRUM FOOTER */}
+        <div className="p-4 bg-black/40 border-t border-slate-800 shrink-0">
+            <div className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-3 text-center">Rank Spectrum (Terrain Data)</div>
+            
+            <div className="relative flex items-center justify-center">
+                {/* Scroll Left */}
+                <button 
+                    onClick={() => scroll(-300)}
+                    className="absolute left-0 z-10 p-2 md:p-3 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-400 hover:text-white rounded-full shadow-xl backdrop-blur-sm transition-all hover:scale-110 active:scale-95 hidden md:flex"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {/* Container */}
+                <div 
+                    ref={scrollRef}
+                    className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-2 px-8 md:px-16 w-full scroll-smooth mask-linear-fade snap-x"
+                >
+                    {rankRange.map(lvl => <HexPreview key={lvl} level={lvl} />)}
+                </div>
+
+                {/* Scroll Right */}
+                <button 
+                    onClick={() => scroll(300)}
+                    className="absolute right-0 z-10 p-2 md:p-3 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-400 hover:text-white rounded-full shadow-xl backdrop-blur-sm transition-all hover:scale-110 active:scale-95 hidden md:flex"
+                >
+                    <ChevronRight className="w-5 h-5" />
+                </button>
+            </div>
         </div>
 
       </div>

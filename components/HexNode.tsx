@@ -112,8 +112,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
   }, [maxLevel, durability]);
 
   if (isRealVoid) {
-      // OPTIMIZATION: Removed Konva.Animation for Voids.
-      // Replaced with static gradient rendering to save CPU cycles.
       return (
         <Group x={x} y={y}>
              {/* Depth Rim */}
@@ -128,8 +126,11 @@ const HexNodeComponent = (props: HexNodeProps) => {
       );
   }
 
-  const strokeColor = isNegative ? '#ffffff' : theme.stroke;
-  const strokeWidth = isNegative ? 0.5 : 1;
+  // Use the specific stroke from theme for outlines
+  const strokeColor = theme.stroke;
+  // Increased width to make the "contour" visible as requested
+  const strokeWidth = 2.0; 
+  
   const fillScale = { x: HEX_SIZE / 32, y: HEX_SIZE / 32 }; 
   const fillOffset = { x: 32, y: 32 }; 
 
@@ -205,7 +206,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     </Group>
                 )}
 
-                {/* Structural Grid Decor */}
+                {/* Structural Grid Decor (Only for positive) */}
                 {!isNegative && neighborLevels.map((_, i) => {
                     const next = (i + 1) % 6;
                     return (
