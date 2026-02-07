@@ -69,14 +69,35 @@ export class AiSystem implements System {
         bot.memory = aiResult.memory;
     }
 
+    // --- ENHANCED LOGGING ---
+    let targetStr: string | undefined = undefined;
+    if (aiResult.action) {
+        let tQ: number | undefined;
+        let tR: number | undefined;
+
+        if (aiResult.action.type === 'MOVE' && aiResult.action.path.length > 0) {
+            const dest = aiResult.action.path[aiResult.action.path.length - 1];
+            tQ = dest.q;
+            tR = dest.r;
+        } else if (aiResult.action.type === 'UPGRADE' || aiResult.action.type === 'DIG') {
+            tQ = aiResult.action.coord.q;
+            tR = aiResult.action.coord.r;
+        }
+
+        if (tQ !== undefined && tR !== undefined) {
+            const h = state.grid[getHexKey(tQ, tR)];
+            const lvl = h ? h.currentLevel : '?';
+            // Format: (q,r) L:level
+            targetStr = `(${tQ},${tR}) L:${lvl}`;
+        }
+    }
+
     const logEntry: BotLogEntry = {
         botId: bot.id,
         action: aiResult.action ? aiResult.action.type : 'WAIT',
         reason: aiResult.debug,
         timestamp: now,
-        target: aiResult.action && aiResult.action.type === 'MOVE' && aiResult.action.path.length > 0
-            ? `${aiResult.action.path[aiResult.action.path.length-1].q},${aiResult.action.path[aiResult.action.path.length-1].r}`
-            : undefined
+        target: targetStr
     };
 
     // 1. Short-term circular buffer for UI Debugger

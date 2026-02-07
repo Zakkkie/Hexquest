@@ -464,7 +464,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
      const lines = history.map(e => {
          const timeStr = new Date(e.timestamp).toISOString().split('T')[1].replace('Z', '');
-         return `[${timeStr}] ${e.botId.toUpperCase()}: ${e.action} | Target: ${e.target || 'None'} | Reason: ${e.reason}`;
+         const action = e.action.padEnd(10, ' ');
+         const target = (e.target || '-').padEnd(18, ' ');
+         return `${timeStr} | ${e.botId.toUpperCase()} | ${action} | Tgt: ${target} | ${e.reason}`;
      });
 
      const content = `HEXQUEST BOT SESSION LOG\nSession ID: ${engine.state.sessionId}\nDate: ${new Date().toISOString()}\n------------------------\n` + lines.join('\n');

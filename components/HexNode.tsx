@@ -1,6 +1,7 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { Group, Path, Circle, Text, Rect, Line } from 'react-konva';
+import Konva from 'konva';
 import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { textureService } from '../services/textureService.ts';
 
@@ -137,6 +138,25 @@ const HexNodeComponent = (props: HexNodeProps) => {
       return Math.max(0, maxD - durability);
   }, [maxLevel, durability]);
 
+  // Void Animation Ref
+  const voidOutlineRef = useRef<Konva.Path>(null);
+
+  useEffect(() => {
+      if (isRealVoid && voidOutlineRef.current) {
+          const tween = new Konva.Tween({
+              node: voidOutlineRef.current,
+              duration: 0.8,
+              opacity: 0.4,
+              strokeWidth: 1.5,
+              shadowBlur: 5,
+              yoyo: true,
+              easing: Konva.Easings.EaseInOut
+          });
+          tween.play();
+          return () => tween.destroy();
+      }
+  }, [isRealVoid]);
+
   if (isRealVoid) {
       return (
         <Group x={x} y={y}>
@@ -148,6 +168,19 @@ const HexNodeComponent = (props: HexNodeProps) => {
                      
                      {/* Static Abyss - Darker center */}
                      <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} opacity={0.8} />
+
+                     {/* Blinking Danger Outline */}
+                     <Path 
+                        ref={voidOutlineRef}
+                        data={BASE_PATH_D} 
+                        stroke="#ef4444" 
+                        strokeWidth={3} 
+                        opacity={1}
+                        shadowColor="#ef4444"
+                        shadowBlur={15}
+                        listening={false} 
+                        perfectDrawEnabled={false}
+                     />
 
                      {/* Grid overlay for sense of scale */}
                      <Path data={BASE_PATH_D} scaleX={0.8} scaleY={0.8} stroke="rgba(56, 189, 248, 0.1)" strokeWidth={1} dash={[2, 4]} listening={false} perfectDrawEnabled={false} />

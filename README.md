@@ -1,111 +1,56 @@
 
 # HexQuest Economy
 
-**HexQuest Economy** is a high-fidelity hexagonal strategy game built with **React**, **Konva**, and **TypeScript**. It combines the thrill of exploring an infinite procedural world with a tight economic simulation where every move and upgrade must be calculated against your limited resources (Credits & Propulsion).
-
-Compete against advanced **AI Sentinels**, manage a delicate balance of **Moves vs. Coins**, and master complex zoning rules to dominate the sector.
-
-> **v3.4 Update: Deep Excavation**
-> Digging now rewards effort based on depth. Excavating deep pits yields significantly more propulsion fuel.
-
----
+**HexQuest Economy** is a high-fidelity isometric strategy game where exploration meets strict economic management. Built with **React 19**, **Konva**, and **TypeScript**, it features an infinite procedural world, vertical terrain manipulation, and competitive AI.
 
 ## 🚀 Key Features
 
-*   **Infinite Procedural World**: A living, breathing hex grid that expands as you explore.
-*   **Dynamic Terrain Destruction**: Level 1 sectors are unstable. Heavy traffic causes them to degrade, crack, and eventually collapse into the void.
-*   **The Cycle Economy**: A unique resource system where horizontal expansion (Acquisition) fuels vertical growth (Upgrades).
-*   **Deep Excavation Logic**: Digging operations now grant bonus moves based on the depth of the resulting pit (e.g., Digging to -2 grants +2 Moves).
-*   **Competitive AI ("The Rival")**: Autonomous bots that farm resources, plan expansions, and react to collapsing terrain.
-*   **Procedural Audio Engine**: A custom-built, asset-free sound synthesizer using the Web Audio API ("Nebula V2").
-*   **Visual Fidelity**: A 2.5D isometric view with neon-glass aesthetics, dynamic lighting, shake effects, and smooth React-Konva animations.
+*   **2.5D Isometric Engine**: Custom rendering engine built on `react-konva` supporting dynamic lighting, height perspective, and smooth animations.
+*   **Verticality & Physics**: Terrain height affects movement cost. **Level 1** sectors are unstable and will collapse into the **Void** if traversed too often.
+*   **"The Cycle" Economy**: A tight resource loop. **Dig** terrain to gain materials, **Build** upwards to increase rank and income, **Recover** to refuel.
+*   **Procedural Audio**: "Nebula V2" sound engine generates dynamic music and SFX in real-time using the Web Audio API (FM Synthesis). No audio assets required.
+*   **Smart AI**: Competitive "Architect" bots that gather resources, build bases, and compete for territory.
+*   **Campaign & Skirmish**: A scripted campaign mode with unique objectives and a customizable skirmish generator.
 
----
+## 🎮 How to Play
 
-## ⚠️ Hazard Warning: Terrain Collapse
+### Controls
+*   **Left Click**: Move / Select Hex.
+*   **Right Click + Drag**: Rotate Camera.
+*   **Scroll**: Zoom In/Out.
+*   **UI Buttons**: Trigger actions (Dig, Upgrade, Recover).
 
-The unstable nature of the simulation introduces a physical threat:
+### The Core Loop
+1.  **Movement**: Moving costs **Moves** (Fuel). High terrain (Level 2+) costs more fuel. If out of fuel, you burn **Credits**.
+2.  **Excavation (Red)**: Dig down to lower a hex's level. Rewards **Material** and **Moves** (based on depth).
+3.  **Construction (Amber)**: Spend **Material** to raise a hex's level. Higher levels grant Rank and Income.
+    *   *Rule*: To build up, you need support neighbors at the same level.
+4.  **Recovery (Blue)**: Spend time on an owned hex to generate **Moves** and **Credits**.
 
-### 1. Durability & Degradation
-*   **Fragile Foundation**: All **Level 1** hexes have limited structural integrity (6 Durability).
-*   **Wear & Tear**: Every time a unit (Player or Bot) steps **off** a Level 1 hex, its durability decreases.
-*   **Visual Indicators**: As durability drops, the hex will develop visible cracks and craters.
+### ⚠️ The Void Hazard
+Level 1 hexes have **Durability**. Every time a unit steps off a Level 1 hex, it cracks. When durability hits 0, it collapses into the Void. Falling or being near a collapse damages your Rank.
 
-### 2. The Void & Shockwave Penalty
-*   **Collapse**: When durability reaches zero, the sector collapses instantly, turning into a **Void Crater**.
-*   **Irreversibility**: A Void hex is impassable and cannot be repaired.
-*   **Shockwave Damage**: If you trigger a collapse (by stepping off the last durability point), the energy discharge hits your suit systems.
-    *   **PENALTY**: You immediately lose **1 Rank Level**.
+## 🛠️ Tech Stack
 
----
-
-## 📜 The Rules of Engagement
-
-Success in HexQuest requires understanding the laws that govern the simulation.
-
-### 1. Movement & Propulsion
-*   **Basic Movement**: Moving to an adjacent hex costs **1 Move**.
-*   **Terrain Cost**: High-level hexes are harder to traverse. Cost equals the **Hex Level** (for Level 2+).
-*   **Emergency Propulsion**: If you lack Moves, you can burn **Credits** to move.
-    *   **Exchange Rate**: **5 Credits = 1 Move**.
-*   *Warning*: Running out of both Moves and Credits leaves you stranded.
-
-### 2. The Growth Cycle (Points Economy)
-You cannot simply build a single tall tower. Expansion and Elevation are linked.
-
-*   **Acquisition (L0 → L1)**: Claiming a neutral sector generates **1 Upgrade Point**.
-*   **Elevation (L1 → L2+)**: Upgrading an owned sector consumes **1 Upgrade Point**.
-*   **Capacity**: You can only store a limited number of Upgrade Points at a time (determined by Difficulty).
-*   *Strategy*: You must oscillate between expanding wide (capturing L0) and building tall (spending points).
-
-### 3. Excavation (Digging)
-*   **Action**: Clicking the "Pickaxe" (Red) button allows you to lower a sector's level.
-*   **Material Gain**: Digging grants **+1 Material** if your storage is not full.
-*   **Propulsion Gain**: Digging grants Moves equal to the **absolute level** of the resulting depth.
-    *   Digging to Level -1: **+1 Move**
-    *   Digging to Level -2: **+2 Moves**
-    *   Digging to Level -5: **+5 Moves**
-
-### 4. Recovery & Farming
-If you are low on resources or need to stall, you can perform a **Recovery** operation on any hex you own.
-*   **Action**: Clicking the "Refresh" (Blue) button.
-*   **Reward**: Grants **+1 Move** and a significant amount of **Credits** based on the hex level.
-*   **Use Case**: Essential for generating the movement fuel needed to cross difficult terrain.
-
----
-
-## 🤖 The AI: "The Rival"
-
-The world is populated by AI bots running the **"Survivor V34"** logic engine.
-
-*   **Behavior**: They prioritize survival and economic efficiency. They will establish "farms", build walls to block you, and dig traps near your position.
-*   **Panic Mode**: If a bot gets trapped by Void Craters, it triggers a "Panic" state, attempting desperate maneuvers to break free.
-
----
-
-## 🎮 Controls
-
-| Action | Control |
-| :--- | :--- |
-| **Move / Select** | `Left Click` on a Hex |
-| **Pan Camera** | `Left Click` + Drag background |
-| **Rotate Camera** | `Right Click` + Drag (or UI Buttons) |
-| **Zoom** | `Mouse Wheel` |
-| **Upgrade (Amber)** | Improve Sector Level (Uses Point) |
-| **Recover (Blue)** | Harvest Resources (Gains Move/Credits) |
-| **Dig (Red)** | Lower Level (Gains Material + Deep Move Bonus) |
-| **Menu / Settings** | `Gear` Icon (Top Right) |
-
----
-
-## 🛠️ Technical Stack
-
-*   **Frontend**: React 19, TailwindCSS
-*   **Graphics**: Konva (HTML5 Canvas) via `react-konva`
+*   **Frontend**: React 19, TypeScript, Vite
 *   **State Management**: Zustand
-*   **Build Tool**: Vite
-*   **Audio**: Web Audio API (Procedural FM Synthesis)
+*   **Graphics**: Konva (Canvas API), TailwindCSS
+*   **Audio**: Native Web Audio API (Procedural)
+*   **Bundler**: Vite
 
----
+## ⚡ Quick Start
 
-*HexQuest Economy - v3.4*
+1.  **Install Dependencies**
+    ```bash
+    npm install
+    ```
+
+2.  **Run Development Server**
+    ```bash
+    npm run dev
+    ```
+
+3.  **Build for Production**
+    ```bash
+    npm run build
+    ```
