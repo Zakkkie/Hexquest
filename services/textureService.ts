@@ -44,7 +44,8 @@ export class TextureService {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
-    const ctx = canvas.getContext('2d', { alpha: false })!;
+    // Request an alpha channel but we will fill it opaque
+    const ctx = canvas.getContext('2d')!;
 
     if (type === 'SIDE') {
         this.drawSide(ctx, size, level);
@@ -74,6 +75,8 @@ export class TextureService {
           data[i] = Math.max(0, Math.min(255, data[i] + noise));
           data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
           data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
+          // CRITICAL: Force Alpha to 255 (Solid) to prevent walls from being transparent
+          data[i+3] = 255; 
       }
       ctx.putImageData(imgData, 0, 0);
   }
@@ -228,6 +231,10 @@ export class TextureService {
   private drawSide(ctx: CanvasRenderingContext2D, size: number, level: number) {
       const grad = ctx.createLinearGradient(0, 0, 0, size);
       
+      // Ensure we start with a solid fill
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0,0,size,size);
+
       if (level > 0) {
           grad.addColorStop(0, '#475569'); 
           grad.addColorStop(1, '#0f172a'); 

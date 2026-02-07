@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Layer, Group, Line, Circle, Text } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
-import { getHexKey, getNeighbors, hexToPixel, pixelToHex } from '../services/hexUtils.ts';
+import { getHexKey, getNeighbors, pixelToHex } from '../services/hexUtils.ts';
 import { HexNode, HexNodeTheme } from './HexNode.tsx';
 import Unit from './Unit.tsx';
 import { EntityType, EntityState, FloatingText, Hex, Entity } from '../types.ts';
@@ -112,9 +112,22 @@ const DustCloud: React.FC<VisualParticle & { onComplete: (id: number) => void }>
     );
 });
 
+// Re-implement simplified hexToPixel inside the component for floating effects to keep them light
+const simpleHexToPixel = (q: number, r: number, rotation: number) => {
+    const rawX = HEX_SIZE * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r);
+    const rawY = HEX_SIZE * (1.5 * r);
+    const angleRad = rotation * (Math.PI / 180);
+    const cos = Math.cos(angleRad);
+    const sin = Math.sin(angleRad);
+    return { 
+        x: rawX * cos - rawY * sin, 
+        y: (rawX * sin + rawY * cos) * 0.8 
+    };
+};
+
 const FloatingEffect: React.FC<{ effect: FloatingText; rotation: number }> = React.memo(({ effect, rotation }) => {
     const animRef = useRef<Konva.Group>(null);
-    const { x, y } = hexToPixel(effect.q, effect.r, rotation);
+    const { x, y } = simpleHexToPixel(effect.q, effect.r, rotation);
     useEffect(() => {
         const node = animRef.current;
         if (!node) return;
@@ -190,6 +203,25 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
         const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
 
+        // --- OPTIMIZATION: Pre-calculate Math Constants ---
+        // We do this ONCE per frame/render, preventing thousands of Math.cos/sin calls in loop
+        const angleRad = rotation * (Math.PI / 180);
+        const cos = Math.cos(angleRad);
+        const sin = Math.sin(angleRad);
+        const SQRT3 = Math.sqrt(3);
+        const SQRT3_2 = SQRT3 / 2;
+        const ONE_POINT_FIVE = 1.5;
+
+        // Inline fast projector to avoid function overhead and re-calc
+        const fastProject = (q: number, r: number) => {
+            const rawX = HEX_SIZE * (SQRT3 * q + SQRT3_2 * r);
+            const rawY = HEX_SIZE * (ONE_POINT_FIVE * r);
+            return {
+                x: rawX * cos - rawY * sin,
+                y: (rawX * sin + rawY * cos) * 0.8
+            };
+        };
+
         let missingSupports: Set<string> | null = null;
         if (hoveredHexId) {
             const hHex = grid[hoveredHexId];
@@ -209,7 +241,8 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                 const hex = grid[getHexKey(q, r)];
                 if (!hex) continue; 
 
-                const { x, y } = hexToPixel(q, r, rotation);
+                // Use the fast projector
+                const { x, y } = fastProject(q, r);
                 
                 const neighborLevels = new Array(6);
                 const rawN = getNeighbors(hex.q, hex.r);
@@ -231,9 +264,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                         if (isNeighbor && hex.maxLevel<1) { isTutorial=true; tutColor='blue'; }
                     }
                     if (activeLevelConfig?.id === '1.4') {
-                        // Highlight Mounds (Source)
                         if (isNeighbor && hex.maxLevel>=2) { isTutorial=true; tutColor='cyan'; }
-                        // Highlight Center (Goal)
                         if (hex.q === 0 && hex.r === 0 && hex.maxLevel < 3) { isTutorial=true; tutColor='amber'; }
                     }
                 }
@@ -275,7 +306,9 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         // 2. Process Units
         const allEntities = [{ ...player, isPlayer: true }, ...(bots || []).map(b => ({ ...b, isPlayer: false }))];
         for (const u of allEntities) {
-            const px = hexToPixel(u.q, u.r, rotation);
+            // Use fastProject for entities too
+            const px = fastProject(u.q, u.r);
+            
             // Strict Entity Culling
             if (px.x < x0 - 100 || px.x > x0 + width + 100 || px.y < y0 - 100 || px.y > y0 + height + 100) continue;
             
@@ -305,7 +338,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
 
         // 3. Process Path Connections
         if (!isPlayerGrowing && player.state !== EntityState.MOVING) {
-            const pStart = hexToPixel(player.q, player.r, rotation);
+            const pStart = fastProject(player.q, player.r);
             const pHex = grid[getHexKey(player.q, player.r)];
             const startH = pHex ? (10 + pHex.maxLevel * 6) : 10;
 
@@ -316,7 +349,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                 const isVoid = (nHex?.structureType as string) === 'VOID';
                 if (isBot || isVoid) continue;
 
-                const nPos = hexToPixel(n.q, n.r, rotation);
+                const nPos = fastProject(n.q, n.r);
                 const endH = nHex ? (10 + nHex.maxLevel * 6) : 10;
                 
                 if (Math.abs((pHex?.maxLevel||0) - (nHex?.maxLevel||0)) > 1) continue;
@@ -350,7 +383,8 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                             
                 if (item.type === 'HEX') return <HexNode key={key} {...item.props} />;
                 if (item.type === 'UNIT') return <Unit key={key} {...item.props} />;
-                if (item.type === 'CONN') return <Line key={key} {...item.props} strokeWidth={2} listening={false} />;
+                // Optimization: perfectDrawEnabled={false} prevents unnecessary hit graph generation for non-interactive lines
+                if (item.type === 'CONN') return <Line key={key} {...item.props} strokeWidth={2} listening={false} perfectDrawEnabled={false} />;
                 return null;
             })}
             

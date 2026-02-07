@@ -6,7 +6,7 @@ import { textureService } from '../services/textureService.ts';
 
 const DEG_TO_RAD = Math.PI / 180;
 const ARROW_UP_PATH = "M12 4l-8 8h6v8h4v-8h6z";
-const MAX_WALL_DEPTH = HEX_SIZE * 4; // Increased depth to cover tall towers (L5+)
+const MAX_WALL_DEPTH = HEX_SIZE * 4; 
 
 export interface HexNodeTheme {
     main: string;
@@ -80,18 +80,44 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const isRealVoid = structureType === 'VOID';
   const isNegative = level < 0;
 
-  // Wall Geometry
-  const wallTops = useMemo(() => {
-      const pts = [];
+  // Wall Geometry & Visibility
+  const wallData = useMemo(() => {
       const angleOffset = rotation * DEG_TO_RAD;
+      const walls = [];
+      const pts = [];
+
+      // Calculate points first
       for (let i = 0; i < 6; i++) {
           const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
           pts.push({ 
               x: Math.cos(angle) * HEX_SIZE, 
-              y: Math.sin(angle) * HEX_SIZE * 0.8 + offsetY 
+              y: Math.sin(angle) * HEX_SIZE * 0.8 + offsetY,
+              // Precompute sine for visibility check (Back-face culling)
+              // Positive sine means "facing down/front" in screen space (Y+ is down)
+              // We use a small negative epsilon to handle rounding errors at exactly 0/180
+              visible: Math.sin(angle) > -0.01 
           });
       }
-      return pts;
+
+      // Generate wall quads
+      for(let i=0; i<6; i++) {
+          const next = (i + 1) % 6;
+          // Determine if this face is front-facing (average of two vertices or face normal)
+          // Simplified: The edge is "front" if its midpoint angle sin > 0
+          // Or strictly: if the normal points roughly +Y. 
+          // The vertices visibility check above is approximate. 
+          // Better Check: Midpoint angle.
+          const midAngle = (60 * i + 60) * DEG_TO_RAD + angleOffset; // Angle bisector between i(30) and next(90) -> 60
+          // Wait, i=0 is 30deg. i+1 is 90deg. Edge is between them (60deg).
+          const isFrontFacing = Math.sin(midAngle) > 0;
+
+          walls.push({
+              t1: pts[i],
+              t2: pts[next],
+              visible: isFrontFacing
+          });
+      }
+      return walls;
   }, [offsetY, rotation]);
 
   const handleClick = (e: any) => {
@@ -124,7 +150,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                      <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} opacity={0.8} />
 
                      {/* Grid overlay for sense of scale */}
-                     <Path data={BASE_PATH_D} scaleX={0.8} scaleY={0.8} stroke="rgba(56, 189, 248, 0.1)" strokeWidth={1} dash={[2, 4]} listening={false} />
+                     <Path data={BASE_PATH_D} scaleX={0.8} scaleY={0.8} stroke="rgba(56, 189, 248, 0.1)" strokeWidth={1} dash={[2, 4]} listening={false} perfectDrawEnabled={false} />
                  </Group>
              </Group>
         </Group>
@@ -147,6 +173,9 @@ const HexNodeComponent = (props: HexNodeProps) => {
     >
         {/* 1. WALLS */}
         {neighborLevels.map((nLevel, i) => {
+            // Check visibility first (Optimization + Logic Fix)
+            if (!wallData[i].visible) return null;
+
             let nY = 0;
             if (nLevel === -99) nY = offsetY + MAX_WALL_DEPTH; 
             else if (nLevel >= 0) nY = -(10 + nLevel * 10);
@@ -154,9 +183,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
             if (offsetY < nY) {
                 const safeNY = Math.min(nY, offsetY + MAX_WALL_DEPTH);
-                const next = (i + 1) % 6;
-                const t1 = wallTops[i];
-                const t2 = wallTops[next];
+                const { t1, t2 } = wallData[i];
+                
                 const heightDiff = safeNY - offsetY;
                 const b1x = t2.x;
                 const b1y = t2.y + heightDiff;
@@ -169,11 +197,13 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
                         fillPatternImage={sideTexture as any}
                         fillPatternScale={{ x: 1, y: heightDiff / 64 }}
-                        fill={theme.dark}
+                        fill={theme.dark} // Solid fallback color
                         stroke={theme.stroke} 
-                        strokeWidth={1}
+                        strokeWidth={1.5} // Slightly thicker to seal seams
+                        perfectDrawEnabled={false} // Performance opt
+                        listening={false} // Wall sides are not clickable
                         closed={true} 
-                        shadowEnabled={false} 
+                        opacity={1} 
                     />
                 );
             }
@@ -206,6 +236,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                                 opacity={0.6} 
                                 lineJoin="round" 
                                 lineCap="round" 
+                                perfectDrawEnabled={false}
                             />
                         ))}
                     </Group>
@@ -222,13 +253,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             strokeWidth={1} 
                             opacity={0.3} 
                             listening={false} 
+                            perfectDrawEnabled={false}
                         />
                     );
                 })}
 
                 {/* Interaction Overlays */}
                 {isSelected && (
-                    <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} shadowColor="#06b6d4" shadowBlur={10} listening={false} />
+                    <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} shadowColor="#06b6d4" shadowBlur={10} listening={false} perfectDrawEnabled={false} />
                 )}
                 
                 {isTutorialTarget && (
@@ -237,13 +269,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         stroke={tutorialColor === 'amber' ? '#fbbf24' : (tutorialColor === 'cyan' ? '#06b6d4' : '#22d3ee')} 
                         strokeWidth={3} 
                         listening={false} 
+                        perfectDrawEnabled={false}
                     />
                 )}
 
                 {isMissingSupport && (
                     <Group listening={false}>
-                        <Path data={BASE_PATH_D} stroke="#ef4444" strokeWidth={2} dash={[5, 5]} fill="rgba(239, 68, 68, 0.15)" />
-                        <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="#ef4444" opacity={0.8} />
+                        <Path data={BASE_PATH_D} stroke="#ef4444" strokeWidth={2} dash={[5, 5]} fill="rgba(239, 68, 68, 0.15)" perfectDrawEnabled={false} />
+                        <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="#ef4444" opacity={0.8} perfectDrawEnabled={false} />
                     </Group>
                 )}
             </Group>
@@ -266,8 +299,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
         
         {isGrowing && (
             <Group y={offsetY - 18} listening={false}>
-                <Rect x={-18} y={0} width={36} height={5} fill="rgba(0,0,0,0.7)" cornerRadius={2} />
-                <Rect x={-18} y={0} width={36 * Math.min(1, progress / (30))} height={5} fill={isRankLocked ? "#f59e0b" : "#10b981"} cornerRadius={2} />
+                <Rect x={-18} y={0} width={36} height={5} fill="rgba(0,0,0,0.7)" cornerRadius={2} perfectDrawEnabled={false} />
+                <Rect x={-18} y={0} width={36 * Math.min(1, progress / (30))} height={5} fill={isRankLocked ? "#f59e0b" : "#10b981"} cornerRadius={2} perfectDrawEnabled={false} />
             </Group>
         )}
     </Group>
