@@ -46,10 +46,11 @@ export function checkDigCondition(
       if (!neighborHex || neighborHex.structureType === 'VOID') return false;
       
       const neighborLevel = neighborHex.currentLevel ?? 0;
-      // Strict Check: Neighbor must be at same depth or deeper.
+      // Strict Check: Neighbor must be at same depth (=).
       // Example: We are at -1. We want to go to -2.
       // Neighbor at 0?  (0 <= -1) -> False.
       // Neighbor at -1? (-1 <= -1) -> True.
+      // Neighbor at -2? (-2 <= -1) -> True.
       return neighborLevel === currentLevel;
   });
 

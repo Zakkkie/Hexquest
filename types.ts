@@ -53,7 +53,11 @@ export interface BotGoal {
 export interface BotMemory {
   lastPlayerPos: HexCoord | null;
   currentGoal: BotGoal | null;
-  masterGoalId?: string | null; // The high-level hex we ultimately want to upgrade
+  
+  // V50 Recursive Planning
+  masterGoalId?: string | null; // The ultimate project center (Tower Peak / Pit Center)
+  subGoalId?: string | null;    // The immediate dependency (Support hex)
+  
   stuckCounter: number;
   lastActionFailed?: boolean;
   failReason?: string;
