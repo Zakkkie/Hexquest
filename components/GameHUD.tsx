@@ -29,7 +29,7 @@ const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, ma
                     <div 
                         key={i} 
                         className={`
-                            w-1.5 h-3 md:w-2.5 md:h-4 rounded-[1px] md:rounded-sm transition-all duration-300
+                            w-2 h-4 md:w-2.5 md:h-4 rounded-[1px] md:rounded-sm transition-all duration-300
                             ${isOverflow 
                                 ? 'bg-amber-500 shadow-[0_0_4px_#f59e0b]' 
                                 : isFilled 
@@ -318,7 +318,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                        {/* Rank */}
                        <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
                            <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-                               <Crown className="w-3.5 h-3.5 md:w-5 md:h-5 text-white" />
+                               <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />
                            </div>
                            <div className="flex flex-col justify-center">
                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.RANK}</span>
@@ -331,7 +331,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                        {/* Material Storage (VISUALIZED) */}
                        <div onClick={() => { setHelpTopic('MATERIAL'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
                            <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/20 transition-colors">
-                               <Box className="w-3.5 h-3.5 md:w-5 md:h-5 text-emerald-400" />
+                               <Box className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" />
                            </div>
                            <div className="flex flex-col justify-center">
                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MATERIAL}</span>
@@ -344,7 +344,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                        {/* Coins */}
                        <div onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
                            <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
-                               <Wallet className="w-3.5 h-3.5 md:w-5 md:h-5 text-amber-400" />
+                               <Wallet className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                            </div>
                            <div className="flex flex-col justify-center">
                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.CREDITS}</span>
@@ -357,7 +357,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                        {/* Moves */}
                        <div onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0 pr-1">
                            <div className={`w-6 h-6 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${isMoving ? 'bg-blue-600 animate-pulse' : 'bg-blue-500/10 border border-blue-500/30'}`}>
-                               <Footprints className={`w-3.5 h-3.5 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
+                               <Footprints className={`w-4 h-4 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
                            </div>
                            <div className="flex flex-col justify-center">
                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MOVES}</span>

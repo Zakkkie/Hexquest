@@ -32,7 +32,7 @@ const GameView: React.FC = () => {
   // RESPONSIVE: Scale Logic based on Device Type
   const getInitialScale = () => {
       switch(deviceType) {
-          case 'MOBILE': return 0.55; // Slightly zoomed out for mobile context
+          case 'MOBILE': return 0.65; // Increased from 0.55 for better touch targets
           case 'TABLET': return 0.8;
           default: return 1.0;
       }
