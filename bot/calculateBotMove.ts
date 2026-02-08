@@ -13,15 +13,14 @@ export interface AiResult {
 
 const SETTLING_TIME_MS = 3000;
 const MOVE_COST_COINS = 5;
-const ZONE_RADIUS = 5; // Compact zone for pyramids
+const ZONE_RADIUS = 4; 
 
 /**
- * AI V46: "The Pyramid Builder"
- * Focus: VERTICAL DOMINANCE.
- * Strategy:
- * 1. Always prioritize the Highest Possible Upgrade.
- * 2. If blocked by support -> Target the support hexes.
- * 3. Never wander aimlessly in Build Mode.
+ * AI V47: "The Pyramid Master"
+ * Goal: Build ONE massive tower.
+ * 1. Never dig own tower.
+ * 2. If tower needs support -> Build support.
+ * 3. If out of mats -> Go dig (far away).
  */
 export const calculateBotMove = (
   bot: Entity, 
@@ -46,50 +45,37 @@ export const calculateBotMove = (
   const mem: BotMemory = bot.memory ? { ...bot.memory } : { lastPlayerPos: null, currentGoal: null, stuckCounter: 0, mode: 'GATHER' };
   
   if (!mem.spawnTime) mem.spawnTime = now;
-  const timeAlive = now - (mem.spawnTime || now);
-
+  
   const storage = bot.storage || 0;
   const maxStorage = bot.maxStorage || 4;
   const canAffordMove = bot.moves >= 1 || bot.coins >= MOVE_COST_COINS;
   const isBroke = !canAffordMove;
 
-  // --- 0. SETTLING (Quick Start) ---
+  // --- 0. INIT ---
   if (!mem.homeBase) {
-      if (!mem.migrationAngle) {
-          const seed = bot.id.charCodeAt(bot.id.length-1);
-          mem.migrationAngle = ((seed % 8) * (Math.PI / 4));
-      }
-      const dist = cubeDistance(bot, {q:0, r:0});
-      const tQ = Math.round(15 * Math.cos(mem.migrationAngle));
-      const tR = Math.round(15 * Math.sin(mem.migrationAngle));
-      const path = findPath({q:bot.q, r:bot.r}, {q:tQ, r:tR}, grid, bot.playerLevel, navObstacles);
-      const canMigrate = path && path.length > 0 && calculateMovementCost(bot, [path[0]], grid).canAfford;
-
-      if (dist > 8 || timeAlive > SETTLING_TIME_MS || !canMigrate) {
-          mem.homeBase = { q: bot.q, r: bot.r };
-          const qQ = Math.round(bot.q + 4 * Math.cos(mem.migrationAngle + Math.PI));
-          const qR = Math.round(bot.r + 4 * Math.sin(mem.migrationAngle + Math.PI));
-          mem.quarrySite = { q: qQ, r: qR };
-          mem.mode = 'GATHER';
-      } else {
-          if (canMigrate && path) {
-               return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: 'Migrate', memory: mem };
-          }
-          return { action: { type: 'WAIT', stateVersion }, debug: 'Wait Settling', memory: mem };
-      }
+      // Just settle where we spawned to start building immediately
+      mem.homeBase = { q: bot.q, r: bot.r };
+      // Quarry 5 steps East
+      mem.quarrySite = { q: bot.q + 5, r: bot.r };
+      mem.mode = 'GATHER';
   }
 
-  // --- 1. MODE SWITCH ---
+  // --- 1. MODE LOGIC ---
   if (mem.mode === 'GATHER' && storage >= maxStorage) {
       mem.mode = 'BUILD';
-      // Identify Tower Site (Highest Hex in Zone)
+      mem.targetHexId = undefined;
+      
+      // Select Tower Site (Highest Hex in Zone)
       const candidates = index.getHexesInRange(mem.homeBase, ZONE_RADIUS);
       let bestH = null; let maxL = -99;
       for (const h of candidates) {
-          if(h.maxLevel > maxL && h.structureType !== 'VOID') { maxL = h.maxLevel; bestH = h; }
+          if (h.structureType !== 'VOID') {
+              // Prefer existing towers, then center
+              const score = h.maxLevel * 10 - cubeDistance(h, mem.homeBase);
+              if (score > maxL) { maxL = score; bestH = h; }
+          }
       }
       if (bestH) mem.towerKey = bestH.id;
-      mem.targetHexId = undefined;
 
   } else if (mem.mode === 'BUILD' && storage <= 0) {
       mem.mode = 'GATHER';
@@ -97,181 +83,135 @@ export const calculateBotMove = (
   }
 
   const isGathering = mem.mode === 'GATHER';
-  const focalPoint = isGathering ? (mem.quarrySite || mem.homeBase!) : mem.homeBase!;
+  const focalPoint = isGathering ? mem.quarrySite! : mem.homeBase!;
 
-  // --- 2. LOCAL WORK (Priority) ---
+  // === 2. LOCAL WORK (Zero Travel) ===
   if (currentHex) {
       const neighbors = getNeighbors(bot.q, bot.r);
-      
-      // Broke Logic
+      const isMyTower = currentHex.maxLevel > 0;
+
+      // SURVIVAL: Only dig if NOT on a tower. If on tower, must Recover.
       if (isBroke) {
-           if (checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
-               return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Survival Dig', memory: { ...mem, stuckCounter: 0 } };
+           if (!isMyTower && checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
+               return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Fuel Dig', memory: { ...mem, stuckCounter: 0 } };
            }
            if (!bot.recoveredCurrentHex) {
                return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Recover', memory: { ...mem, stuckCounter: 0 } };
            }
       }
 
-      // Normal Work
+      // GATHER: Only dig pits (Level <= 0)
       if (isGathering && storage < maxStorage) {
-          if (currentHex.maxLevel <= 0 && checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
+          if (!isMyTower && checkDigCondition(currentHex, bot, neighbors, grid).canGrow) {
                return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Mining', memory: { ...mem, stuckCounter: 0 } };
           }
       }
+
+      // BUILD: Upgrade anything we stand on if we have mats
       if (!isGathering && storage > 0) {
-          if (currentHex.currentLevel >= 0 && checkGrowthCondition(currentHex, bot, neighbors, grid, [], queueSize).canGrow) {
+          // If we are on a valid build spot, build it.
+          // Don't fill Quarry (-level) unless it helps movement.
+          if (checkGrowthCondition(currentHex, bot, neighbors, grid, [], queueSize).canGrow) {
+               // Prioritize Tower: If this is our tower key, definitely build.
                return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Building', memory: { ...mem, stuckCounter: 0 } };
           }
       }
   }
 
-  // --- 3. TARGETING (PYRAMID LOGIC) ---
+  // === 3. TARGETING (The Pyramid Logic) ===
   let targetHexId = mem.targetHexId;
-  
-  // PYRAMID BUILDER: Always target the Tower Center first.
+
   if (mem.mode === 'BUILD' && mem.towerKey) {
       const tower = grid[mem.towerKey];
       if (!tower || tower.structureType === 'VOID') {
-          mem.towerKey = null; 
-          targetHexId = undefined;
+          mem.towerKey = null; targetHexId = undefined;
       } else {
-          // Can we upgrade the PEAK?
+          // Recursive Support Check
           const tNeighbors = getNeighbors(tower.q, tower.r);
           const tCheck = checkGrowthCondition(tower, bot, tNeighbors, grid, [], queueSize);
           
           if (tCheck.canGrow) {
-              targetHexId = tower.id; // Yes -> Go to Peak
+              targetHexId = tower.id; // Go to Peak
           } else if (tCheck.missingSupports && tCheck.missingSupports.length > 0) {
-              // No -> We need to build the BASE.
-              // Find the best support hex to target.
-              // Criteria: Must be valid, Must not be occupied by others.
+              // Target the lowest support
               let bestSupport = null;
-              let highestSupportLevel = -99;
-
+              let minL = 999;
               for (const coord of tCheck.missingSupports) {
-                  const sHex = grid[getHexKey(coord.q, coord.r)];
-                  if (!sHex || sHex.structureType === 'VOID') continue;
+                  // Collision Check
                   if (index.isOccupied(coord.q, coord.r) && getHexKey(coord.q, coord.r) !== currentHexKey) continue;
                   
-                  // Pick the highest support (closest to being ready)
-                  if (sHex.maxLevel > highestSupportLevel) {
-                      highestSupportLevel = sHex.maxLevel;
-                      bestSupport = sHex;
+                  const sHex = grid[getHexKey(coord.q, coord.r)];
+                  if (sHex && sHex.structureType !== 'VOID') {
+                      if (sHex.maxLevel < minL) { minL = sHex.maxLevel; bestSupport = sHex; }
                   }
               }
-              
-              if (bestSupport) {
-                  targetHexId = bestSupport.id;
-              } else {
-                  // If all direct supports are blocked or invalid, widen search
-                  // This naturally builds the "next layer" of the pyramid
-                  targetHexId = undefined; // Trigger fallback search
-              }
+              if (bestSupport) targetHexId = bestSupport.id;
           }
       }
   }
   
-  // Fallback / Gathering Targeting
+  // Fallback / Gather Target
   if (!targetHexId) {
       const candidates = index.getHexesInRange(focalPoint, 6);
-      let bestTarget = null;
-      let maxScore = -9999;
+      let bestT = null; let maxS = -999;
       
-      for (const hex of candidates) {
-          if (hex.structureType === 'VOID') continue;
-          if (index.isOccupied(hex.q, hex.r) && hex.id !== currentHexKey) continue;
-          if (bot.recentUpgrades.includes(hex.id)) continue;
+      for (const h of candidates) {
+          if (h.structureType === 'VOID') continue;
+          if (index.isOccupied(h.q, h.r) && h.id !== currentHexKey) continue;
+          if (bot.recentUpgrades.includes(h.id)) continue;
 
-          let score = 0;
+          let s = 0;
           let valid = false;
-          const dist = cubeDistance(bot, hex);
-
+          const d = cubeDistance(bot, h);
+          
           if (isGathering) {
-              // Dig Pits
-              if (checkDigCondition(hex, bot, getNeighbors(hex.q, hex.r), grid).canGrow) {
-                   valid = true;
-                   if (hex.currentLevel <= 0) score = 100 - dist * 2; 
-                   if (hex.currentLevel < 0) score += 50; 
+              if (h.maxLevel <= 0 && checkDigCondition(h, bot, getNeighbors(h.q, h.r), grid).canGrow) {
+                  valid = true;
+                  s = -h.currentLevel * 10 - d; // Deepest & Closest
               }
           } else {
-              // Build (Support Layer)
-              // If main tower logic failed, we look for ANY hex that can go UP.
-              // Priority: Adjacent to high hexes.
-              if (checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, [], queueSize).canGrow) {
-                   valid = true;
-                   score = 100 - dist;
-                   
-                   // Check neighbors for height context
-                   const nList = getNeighbors(hex.q, hex.r);
-                   const supportValue = nList.reduce((acc, n) => acc + (grid[getHexKey(n.q, n.r)]?.maxLevel || 0), 0);
-                   score += supportValue * 2; // Build next to mountains
+              // Build (Generic)
+              if (checkGrowthCondition(h, bot, getNeighbors(h.q, h.r), grid, [], queueSize).canGrow) {
+                  valid = true;
+                  s = h.maxLevel * 10 - d;
               }
           }
-
-          if (valid && score > maxScore) {
-              maxScore = score;
-              bestTarget = hex;
-          }
+          if (valid && s > maxS) { maxS = s; bestT = h; }
       }
-      if (bestTarget) targetHexId = bestTarget.id;
+      if (bestT) targetHexId = bestT.id;
   }
   
   mem.targetHexId = targetHexId;
 
-  // --- 4. MOVEMENT ---
-  const targetHex = targetHexId ? grid[targetHexId] : null;
-  const dest = targetHex ? { q: targetHex.q, r: targetHex.r } : focalPoint;
-
+  // === 4. MOVEMENT ===
+  const tHex = targetHexId ? grid[targetHexId] : null;
+  const dest = tHex ? {q: tHex.q, r: tHex.r} : focalPoint;
+  
   if (dest.q === bot.q && dest.r === bot.r) {
-      // At dest but couldn't work (checked in Local Work).
-      // Force rethink
-      mem.targetHexId = undefined;
+      mem.targetHexId = undefined; // At target but couldn't work -> Reset
       mem.stuckCounter++;
   } else if (canAffordMove) {
       const path = findPath({q:bot.q, r:bot.r}, dest, grid, bot.playerLevel, navObstacles);
       if (path && path.length > 0) {
           if (calculateMovementCost(bot, path, grid).canAfford) {
-              return { action: { type: 'MOVE', path, stateVersion }, debug: `Go > ${mem.mode}`, memory: { ...mem, stuckCounter: 0 } };
+              return { action: { type: 'MOVE', path, stateVersion }, debug: `Go > ${mem.mode}`, memory: mem };
           } else if (calculateMovementCost(bot, [path[0]], grid).canAfford) {
-              return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: 'Creep', memory: { ...mem, stuckCounter: 0 } };
+              return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: 'Creep', memory: mem };
           }
       } else {
-           // Blind / Scout
-           const neighbors = getNeighbors(bot.q, bot.r);
-           let bestN = null; let minD = 999;
-           for(const n of neighbors) {
-               if(!index.isOccupied(n.q, n.r)) {
-                   const d = cubeDistance(n, dest);
-                   if(d < minD) { minD=d; bestN=n; }
-               }
-           }
-           if (bestN && calculateMovementCost(bot, [bestN], grid).canAfford) {
-               return { action: { type: 'MOVE', path: [bestN], stateVersion }, debug: 'Scout', memory: { ...mem, stuckCounter: 0 } };
-           }
-           mem.stuckCounter++;
-      }
-  } else {
-      mem.stuckCounter++;
-  }
-
-  // --- 5. UNSTUCK ---
-  if (mem.stuckCounter > 1) {
-      mem.targetHexId = undefined;
-      if (!isBroke) {
-          const neighbors = getNeighbors(bot.q, bot.r);
-          const valid = neighbors.filter(n => !index.isOccupied(n.q, n.r) && grid[getHexKey(n.q, n.r)]?.structureType !== 'VOID');
-          if (valid.length > 0) {
-              const rnd = valid[Math.floor(Math.random() * valid.length)];
-              if (calculateMovementCost(bot, [rnd], grid).canAfford) {
-                  return { action: { type: 'MOVE', path: [rnd], stateVersion }, debug: 'Unstuck', memory: { ...mem, stuckCounter: 0 } };
-              }
+          // Scout
+          const n = getNeighbors(bot.q, bot.r).find(x => !index.isOccupied(x.q, x.r));
+          if(n && calculateMovementCost(bot, [n], grid).canAfford) {
+              return { action: { type: 'MOVE', path: [n], stateVersion }, debug: 'Scout', memory: mem };
           }
       }
-      if (mem.stuckCounter > 4) {
-          mem.mode = mem.mode === 'GATHER' ? 'BUILD' : 'GATHER';
-          mem.stuckCounter = 0;
-      }
+  }
+
+  // === 5. UNSTUCK ===
+  mem.stuckCounter++;
+  if (mem.stuckCounter > 3) {
+      mem.mode = isGathering ? 'BUILD' : 'GATHER';
+      mem.stuckCounter = 0;
   }
 
   return { action: { type: 'WAIT', stateVersion }, debug: 'Idle', memory: mem };
