@@ -72,6 +72,9 @@ export interface BotMemory {
   // V29 Settler Memory
   spawnTime?: number;
   migrationAngle?: number;
+
+  // V48 Grand Architect
+  projectFailCount?: number;
 }
 
 export interface Entity {
