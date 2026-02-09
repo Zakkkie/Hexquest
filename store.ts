@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType } from './types.ts';
+import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty } from './types.ts';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS } from './rules/config.ts';
 import { getHexKey, getNeighbors, findPath } from './services/hexUtils.ts';
 import { GameEngine } from './engine/GameEngine.ts';
@@ -87,7 +87,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
   const user = useGameStore.getState().user;
 
   const botCount = levelConfig ? (levelConfig.aiMode === 'none' ? 0 : 1) : (winCondition?.botCount || 0);
-  const difficulty = winCondition?.difficulty || 'MEDIUM';
+  const difficulty: Difficulty = winCondition?.difficulty || 'MEDIUM';
   const diffSettings = DIFFICULTY_SETTINGS[difficulty];
   const maxStorage = diffSettings.maxStorage; 
   
@@ -249,7 +249,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       let effectiveWin = winCondition;
 
       if (levelConfig) {
-          let difficulty = 'MEDIUM';
+          let difficulty: Difficulty = 'MEDIUM';
           let queueSize = 2; 
 
           if (levelConfig.id === '1.6') {
@@ -263,7 +263,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               targetCoins: 9999,
               label: levelConfig.title,
               botCount: 0,
-              difficulty: difficulty as any,
+              difficulty: difficulty,
               queueSize: queueSize,
               winType: 'AND'
           };
@@ -452,6 +452,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   checkTutorialCamera: (deltaX: number) => {
+      // Placeholder for tutorial camera tracking
+      // Logic would go here to detect if player rotated camera during tutorial
   },
 
   downloadBotLog: () => {

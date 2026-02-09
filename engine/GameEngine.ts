@@ -124,8 +124,8 @@ export class GameEngine {
     return result;
   }
   
-  public processTick(): TickResult {
-    if (!this._state || !this._index) return { state: {} as any, events: [] };
+  public processTick(): TickResult | null {
+    if (!this._state || !this._index) return null;
 
     const nextState = this.cloneState(this._state);
     this._index.syncGrid(nextState.grid); // Still sync grid structure for pathfinding safety

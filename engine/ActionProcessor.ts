@@ -1,5 +1,5 @@
 
-import { GameState, GameAction, EntityType, EntityState, ValidationResult, SessionState } from '../types';
+import { GameAction, EntityType, EntityState, ValidationResult, SessionState } from '../types';
 import { WorldIndex } from './WorldIndex';
 import { getHexKey } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';

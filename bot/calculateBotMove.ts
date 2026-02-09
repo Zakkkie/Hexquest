@@ -41,7 +41,17 @@ export const calculateBotMove = (
 
   const currentHexKey = getHexKey(bot.q, bot.r);
   const currentHex = grid[currentHexKey];
+  
+  // Base obstacles (existing entities), excluding self
   const navObstacles = obstacles.filter(o => o.q !== bot.q || o.r !== bot.r);
+
+  // Add reserved hexes (destinations of other bots in this tick) to obstacles to prevent collisions
+  if (reservedHexKeys) {
+      reservedHexKeys.forEach(k => {
+          const [q, r] = k.split(',').map(Number);
+          navObstacles.push({ q, r });
+      });
+  }
   
   const now = Date.now();
   const mem: BotMemory = bot.memory ? { ...bot.memory } : { lastPlayerPos: null, currentGoal: null, stuckCounter: 0, mode: 'GATHER', projectFailCount: 0 };
@@ -66,7 +76,8 @@ export const calculateBotMove = (
       const occupied = index.getOccupiedHexesList();
       let nearestNeighborDist = 999;
       for (const o of occupied) {
-          if (o.q !== bot.q && o.r !== bot.r) {
+          // Ensure we are checking against OTHER entities
+          if (o.q !== bot.q || o.r !== bot.r) {
               const d = cubeDistance(bot, o);
               if (d < nearestNeighborDist) nearestNeighborDist = d;
           }

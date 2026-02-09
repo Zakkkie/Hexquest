@@ -1,5 +1,4 @@
 
-// Using any for the config to avoid circular dependency with campaign/types.ts which imports SessionState
 // In a stricter setup, we would move shared types to a 'core' module.
 export type HexCoord = { q: number; r: number; upgrade?: boolean; intent?: 'UPGRADE' | 'RECOVER' | 'DIG' };
 
@@ -225,6 +224,53 @@ export interface FloatingText {
   icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE';
 }
 
+// MOVED FROM campaign/types.ts to resolve circular dependency
+export interface ScenarioHooks {
+  // Check for victory condition (called every tick/action)
+  // Returns true if victory achieved
+  checkWinCondition?: (state: SessionState) => boolean;
+
+  // Check for loss condition (called every tick/action)
+  // Returns true if defeat condition met
+  checkLossCondition?: (state: SessionState) => boolean;
+  
+  // Validate a move before it happens or provide custom feedback
+  // Returns a ValidationResult. If ok=false, the action is blocked with the reason.
+  onBeforeAction?: (state: SessionState, action: GameAction) => ValidationResult | null;
+  
+  // Trigger events after an action
+  onAfterAction?: (state: SessionState) => void;
+}
+
+export interface LevelConfig {
+  id: string;
+  title: string;
+  description: string;
+  
+  mapConfig: {
+    size: number;
+    type: 'procedural' | 'fixed';
+    generateWalls?: boolean; 
+    wallStartRadius?: number; 
+    wallStartLevel?: number;  
+    wallType?: 'classic' | 'void_shatter'; 
+    
+    // NEW: Allow explicit hex definitions for puzzle levels
+    customLayout?: Partial<Hex>[];
+  };
+
+  startState: {
+    credits: number;
+    moves: number;
+    rank: number;
+    materials?: number; // Added materials support
+  };
+
+  aiMode: 'none' | 'dummy' | 'basic';
+
+  hooks: ScenarioHooks;
+}
+
 // Authoritative state for a single game session, managed by GameEngine
 export interface SessionState {
   stateVersion: number;
@@ -235,7 +281,7 @@ export interface SessionState {
   winCondition: WinCondition | null;
   
   // NEW: Campaign Configuration (Injected)
-  activeLevelConfig?: any; // typed as 'any' to avoid circular dependency with campaign/types
+  activeLevelConfig?: LevelConfig; 
 
   difficulty: Difficulty;
   grid: Record<string, Hex>; 

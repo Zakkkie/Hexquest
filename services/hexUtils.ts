@@ -187,8 +187,8 @@ export const findPath = (
   const startKey = getHexKey(start.q, start.r);
   const endKey = getHexKey(end.q, end.r);
   
-  // 1. Immediate checks - Return null if already at destination
-  if (startKey === endKey) return null;
+  // 1. Immediate checks - Return empty array if already at destination (Success, no movement needed)
+  if (startKey === endKey) return [];
   
   // DESTINATION VALIDITY CHECK
   const endHex = grid[endKey];

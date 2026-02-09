@@ -17,7 +17,8 @@ export const GAME_CONFIG = {
 
   // Growth Time in TICKS (1 tick = 100ms). So 30 ticks = 3 seconds.
   // UPDATED: Income formula = 5 * Level^2
-  // UPDATED: All costs set to 0.
+  // COSTS: Are 0 for levels as costs are handled via Material storage now (1 Material per upgrade).
+  // Structures (Mine/Barrier/Capital) still have Credit costs.
   LEVELS: {
     0: { cost: 0,    growthTime: 30,  income: 1,   reqRank: 0 },
     1: { cost: 0,    growthTime: 30,  income: 5,   reqRank: 0 },   

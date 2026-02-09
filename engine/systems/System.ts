@@ -1,6 +1,5 @@
 
-
-import { GameState, GameEvent, SessionState } from '../../types';
+import { GameEvent, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
 
 export interface System {
