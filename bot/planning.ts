@@ -6,7 +6,72 @@ import { DIFFICULTY_SETTINGS } from '../rules/config';
 import { WorldIndex } from '../engine/WorldIndex';
 
 /**
+ * V62: Pyramid Foundation Planning
+ * Calculates the optimal base size needed for a target height
+ * For a pyramid of height H, we need a base of approximately H hexes radius
+ * 
+ * Returns array of hexes that should be built in order (foundation first)
+ */
+export const planPyramidConstruction = (
+    centerHex: Hex,
+    targetHeight: number,
+    bot: Entity,
+    grid: Record<string, Hex>,
+    index: WorldIndex
+): Hex[] => {
+    const buildOrder: Hex[] = [];
+    
+    // Calculate required base radius for target height
+    // For height H, we need base radius of at least H (for safety, use H+1)
+    const baseRadius = Math.min(targetHeight + 1, 4); // Cap at 4 to avoid too wide bases
+    
+    // Gather all hexes within base radius
+    const baseHexes: Hex[] = [];
+    const allHexes = Object.values(grid);
+    
+    for (const hex of allHexes) {
+        const dist = cubeDistance(centerHex, hex);
+        if (dist <= baseRadius && hex.structureType !== 'VOID') {
+            baseHexes.push(hex);
+        }
+    }
+    
+    // Sort by distance from center (closer = built first)
+    baseHexes.sort((a, b) => {
+        const distA = cubeDistance(centerHex, a);
+        const distB = cubeDistance(centerHex, b);
+        if (distA !== distB) return distA - distB;
+        // For same distance, sort by current level (lower = prioritize)
+        return a.currentLevel - b.currentLevel;
+    });
+    
+    // Group hexes by desired level in the pyramid
+    // Level 1: All hexes at base radius
+    // Level 2: Hexes at radius-1
+    // etc.
+    const levelGroups: Hex[][] = [];
+    for (let level = 1; level <= targetHeight; level++) {
+        const maxRadiusForLevel = baseRadius - level + 1;
+        const hexesAtLevel = baseHexes.filter(h => {
+            const dist = cubeDistance(centerHex, h);
+            return dist <= maxRadiusForLevel && h.currentLevel < level;
+        });
+        if (hexesAtLevel.length > 0) {
+            levelGroups.push(hexesAtLevel);
+        }
+    }
+    
+    // Flatten groups into build order (level 1 first, then level 2, etc.)
+    for (const group of levelGroups) {
+        buildOrder.push(...group);
+    }
+    
+    return buildOrder;
+};
+
+/**
  * Finds the immediate actionable hex required to support a long-term goal.
+ * V62: Enhanced with pyramid-aware planning
  * Uses Depth-First Search (DFS) to focus on completing local support structures
  * before moving to distant ones, preventing the bot from "jumping" around.
  */

@@ -5,7 +5,7 @@ import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hex
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
 import { calculateMovementCost } from '../rules/movement';
-import { findNextConstructionTarget, findNextExcavationTarget } from './planning';
+import { findNextConstructionTarget, findNextExcavationTarget, planPyramidConstruction } from './planning';
 
 export interface AiResult {
     action: BotAction | null;
@@ -47,7 +47,7 @@ const playerHasHighHexes = (player: Entity, grid: Record<string, Hex>, threshold
     return Object.values(grid).some(h => h.ownerId === player.id && h.maxLevel >= threshold);
 };
 
-// V61: Enhanced role determination with better cooperation
+// V62: Fixed role determination - only 1 aggressor, rest keep building
 const determineBotRole = (
     bot: Entity,
     mem: BotMemory,
@@ -59,23 +59,33 @@ const determineBotRole = (
     const playerHasLevel4Plus = playerHasHighHexes(player, grid, AGGRESSOR_TRIGGER_LEVEL);
     const shouldAggress = playerHasLevel4Plus && player.playerLevel >= AGGRESSOR_TRIGGER_LEVEL;
     
+    // Only assign ONE bot as aggressor - the rest continue building!
     if (shouldAggress) {
-        // Assign one bot as aggressor (the one closest to player's highest hex)
-        const playerHighest = findPlayerHighestHex(player, grid);
-        if (playerHighest) {
-            const botDist = cubeDistance(bot, playerHighest);
-            const otherDists = otherBots.map(b => cubeDistance(b, playerHighest));
-            const minOtherDist = otherDists.length > 0 ? Math.min(...otherDists) : 999;
-            
-            if (botDist <= minOtherDist) {
-                mem.botRole = 'AGGRESSOR';
-                mem.mode = 'AGGRESSOR';
-                mem.targetPlayerHexId = playerHighest.id;
-                mem.aggressorActive = true;
-                if (!mem.aggressorStuckCount) mem.aggressorStuckCount = 0;
-                return;
+        // Check if any bot is already aggressor
+        const existingAggressor = otherBots.find(b => b.memory?.botRole === 'AGGRESSOR' && b.memory?.aggressorActive);
+        
+        if (!existingAggressor && !mem.aggressorActive) {
+            // No aggressor yet - assign the closest bot to player's highest hex
+            const playerHighest = findPlayerHighestHex(player, grid);
+            if (playerHighest) {
+                const botDist = cubeDistance(bot, playerHighest);
+                const otherDists = otherBots.map(b => cubeDistance(b, playerHighest));
+                const minOtherDist = otherDists.length > 0 ? Math.min(...otherDists) : 999;
+                
+                if (botDist <= minOtherDist) {
+                    mem.botRole = 'AGGRESSOR';
+                    mem.mode = 'AGGRESSOR';
+                    mem.targetPlayerHexId = playerHighest.id;
+                    mem.aggressorActive = true;
+                    if (!mem.aggressorStuckCount) mem.aggressorStuckCount = 0;
+                    return;
+                }
             }
+        } else if (mem.aggressorActive) {
+            // Keep current aggressor active
+            return;
         }
+        // If this bot is not the aggressor, continue with normal role assignment below
     } else if (mem.aggressorActive && !shouldAggress) {
         // Deactivate aggressor mode
         mem.aggressorActive = false;
@@ -91,13 +101,13 @@ const determineBotRole = (
     }
     
     // If no role assigned, assign based on bot index
-    if (!mem.botRole) {
+    if (!mem.botRole || mem.botRole === 'SUPPORTER') {
         const botIndex = parseInt(bot.id.split('-')[1] || '1');
-        // 50/50 split between builders and diggers
-        if (botIndex % 2 === 0) {
-            mem.botRole = 'DIGGER';
+        // More builders than diggers (3:1 ratio)
+        if (botIndex === 2) {
+            mem.botRole = 'DIGGER'; // Only bot-2 is primary digger
         } else {
-            mem.botRole = 'BUILDER';
+            mem.botRole = 'BUILDER'; // Bots 1,3,4 are builders
         }
     }
     
@@ -158,12 +168,12 @@ const determineBotRole = (
 };
 
 /**
- * AI V61: "Strategic Architects"
- * - Persistent Tower Building: Bots commit to single tower until reaching high levels
- * - Deep Pit Mining: Dedicated deep quarries with -6 target depth
- * - True Cooperation: Bots actively assist on shared towers
- * - Smart Aggressor: Tactical retreat when blocked, alternative attack routes
- * - Better Stuck Handling: Smarter unstuck logic with fallback strategies
+ * AI V62: "Pyramid Builders"
+ * - Fixed Aggressor Assignment: Only 1 bot becomes aggressor, others keep building
+ * - Pyramid Foundation Planning: Bots calculate proper base size for target height
+ * - Triangle Construction: Builds level 1 platform first, then level 2 on top, etc.
+ * - 3:1 Builder Ratio: 3 builders + 1 digger for efficient construction
+ * - Smart Target Height: Aims for level 6 towers with proper foundation
  */
 export const calculateBotMove = (
   bot: Entity, 
@@ -341,7 +351,7 @@ export const calculateBotMove = (
 
 // ==========================================
 // SCENARIO 1: THE ARCHITECT (Builder)
-// V61: Enhanced persistence and cooperation
+// V62: Pyramid construction with proper foundation planning
 // ==========================================
 const executeBuilderScenario = (
     bot: Entity, 
@@ -354,7 +364,7 @@ const executeBuilderScenario = (
 ): AiResult => {
     
     // 1. Identify Ultimate Goal (The Peak)
-    // V61: Prioritize shared tower for cooperative building
+    // V62: Prioritize shared tower for cooperative building
     let masterTower: Hex | null = null;
     
     // Use shared tower if available and tall enough
@@ -364,7 +374,7 @@ const executeBuilderScenario = (
         masterTower = grid[mem.towerKey];
     }
     
-    // V61: Only switch tower if current is destroyed OR hasn't made progress in long time
+    // V62: Only switch tower if current is destroyed OR hasn't made progress in long time
     if (!masterTower || masterTower.structureType === 'VOID') {
         // Find best candidate near homebase
         const candidates = index.getHexesInRange(mem.homeBase!, 4);
@@ -379,9 +389,43 @@ const executeBuilderScenario = (
         mem.projectFailCount = 0; // Reset failure counter on new tower
     }
 
-    // 2. Use Recursive Planner to find the specific brick we need to lay right now
-    const nextBrick = findNextConstructionTarget(masterTower, bot, grid, index, difficulty);
-    const targetHex = nextBrick || masterTower; // Fallback to master if calculation fails
+    // 2. V62: Use Pyramid Planner to calculate proper foundation
+    // Determine target height based on win condition or default to 5
+    const targetHeight = 6; // Aim for level 6 towers
+    
+    // Get pyramid build order (foundation first)
+    const pyramidPlan = planPyramidConstruction(masterTower, targetHeight, bot, grid, index);
+    
+    // Find next buildable hex from pyramid plan
+    let targetHex: Hex | null = null;
+    
+    if (pyramidPlan.length > 0) {
+        // Try each hex in pyramid order until we find one we can build
+        for (const plannedHex of pyramidPlan) {
+            const neighbors = getNeighbors(plannedHex.q, plannedHex.r);
+            const occupied = index.getOccupiedHexesList();
+            const queueSize = DIFFICULTY_SETTINGS[difficulty]?.queueSize || 2;
+            
+            const check = checkGrowthCondition(plannedHex, bot, neighbors, grid, occupied, queueSize);
+            if (check.canGrow) {
+                const occupant = index.getEntityAt(plannedHex.q, plannedHex.r);
+                if (!occupant || occupant.id === bot.id) {
+                    targetHex = plannedHex;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Fallback to DFS planner if pyramid planner didn't find anything
+    if (!targetHex) {
+        targetHex = findNextConstructionTarget(masterTower, bot, grid, index, difficulty);
+    }
+    
+    // Final fallback to master tower itself
+    if (!targetHex) {
+        targetHex = masterTower;
+    }
 
     // 3. Execution Logic
     const dist = cubeDistance(bot, targetHex);
@@ -397,7 +441,7 @@ const executeBuilderScenario = (
             return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: `Build L${targetHex.currentLevel + 1}`, memory: { ...mem, stuckCounter: 0, projectFailCount: 0 } };
         } 
         
-        // V61: Stuck at target - be more patient before switching
+        // V62: Stuck at target - be more patient before switching
         mem.projectFailCount = (mem.projectFailCount || 0) + 1;
         if (mem.projectFailCount > PROJECT_STUCK_LIMIT) {
             // Only shift if tower is still low level, otherwise wait
