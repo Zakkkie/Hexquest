@@ -5,7 +5,7 @@ import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hex
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
 import { calculateMovementCost } from '../rules/movement';
-import { findNextConstructionTarget, findNextExcavationTarget, planPyramidConstruction } from './planning';
+import { findNextConstructionTarget, findNextExcavationTarget, planPyramidConstruction, findBestBuildTargets, findBestDigTargets, HexScore } from './planning';
 
 export interface AiResult {
     action: BotAction | null;
@@ -168,12 +168,12 @@ const determineBotRole = (
 };
 
 /**
- * AI V62: "Pyramid Builders"
- * - Fixed Aggressor Assignment: Only 1 bot becomes aggressor, others keep building
- * - Pyramid Foundation Planning: Bots calculate proper base size for target height
- * - Triangle Construction: Builds level 1 platform first, then level 2 on top, etc.
- * - 3:1 Builder Ratio: 3 builders + 1 digger for efficient construction
- * - Smart Target Height: Aims for level 6 towers with proper foundation
+ * AI V70: "Smart Colony"
+ * - Hex Scoring System: Evaluates hexes by strategic value for optimal building
+ * - Smart Target Selection: Uses scoring to find best build/dig locations
+ * - Territory Awareness: Avoids building in other bots' claimed areas
+ * - Pyramid-Ready Detection: Prioritizes hexes with supporting neighbors
+ * - Supply Chain Optimization: Diggers target hexes near builders
  */
 export const calculateBotMove = (
   bot: Entity, 
@@ -343,15 +343,15 @@ export const calculateBotMove = (
 
   // --- 3. SCENARIO DISPATCH ---
   if (mem.mode === 'BUILD') {
-      return executeBuilderScenario(bot, mem, grid, index, stateVersion, difficulty, navObstacles);
+      return executeBuilderScenario(bot, mem, grid, index, stateVersion, difficulty, navObstacles, otherBots);
   } else {
-      return executeMinerScenario(bot, mem, grid, index, stateVersion, navObstacles);
+      return executeMinerScenario(bot, mem, grid, index, stateVersion, navObstacles, otherBots);
   }
 };
 
 // ==========================================
 // SCENARIO 1: THE ARCHITECT (Builder)
-// V62: Pyramid construction with proper foundation planning
+// V70: Smart scoring with hex evaluation
 // ==========================================
 const executeBuilderScenario = (
     bot: Entity, 
@@ -360,7 +360,8 @@ const executeBuilderScenario = (
     index: WorldIndex,
     stateVersion: number,
     difficulty: Difficulty,
-    navObstacles: HexCoord[]
+    navObstacles: HexCoord[],
+    allBots: Entity[]
 ): AiResult => {
     
     // 1. Identify Ultimate Goal (The Peak)
@@ -389,18 +390,45 @@ const executeBuilderScenario = (
         mem.projectFailCount = 0; // Reset failure counter on new tower
     }
 
-    // 2. V62: Use Pyramid Planner to calculate proper foundation
-    // Determine target height based on win condition or default to 5
-    const targetHeight = 6; // Aim for level 6 towers
+    // 2. V70: Use Smart Scoring to find best build targets
+    const allBotsList = allBots || [];
+    const bestTargets = findBestBuildTargets(bot, grid, allBotsList, 5);
     
-    // Get pyramid build order (foundation first)
-    const pyramidPlan = planPyramidConstruction(masterTower, targetHeight, bot, grid, index);
-    
-    // Find next buildable hex from pyramid plan
+    // Try each scored target in order
     let targetHex: Hex | null = null;
+    let targetScore = 0;
     
-    if (pyramidPlan.length > 0) {
-        // Try each hex in pyramid order until we find one we can build
+    for (const scored of bestTargets) {
+        const hex = scored.hex;
+        const dist = cubeDistance(bot, hex);
+        
+        // Check if we can build here
+        const neighbors = getNeighbors(hex.q, hex.r);
+        const occupied = index.getOccupiedHexesList();
+        const queueSize = DIFFICULTY_SETTINGS[difficulty]?.queueSize || 2;
+        
+        const check = checkGrowthCondition(hex, bot, neighbors, grid, occupied, queueSize);
+        if (check.canGrow) {
+            const occupant = index.getEntityAt(hex.q, hex.r);
+            if (!occupant || occupant.id === bot.id) {
+                targetHex = hex;
+                targetScore = scored.score;
+                break;
+            }
+        }
+        
+        // If can't build but close, move toward it
+        if (dist <= 3 && !targetHex) {
+            targetHex = hex;
+            targetScore = scored.score;
+        }
+    }
+    
+    // Fallback to pyramid planner if scoring didn't find good target
+    if (!targetHex || targetScore < 20) {
+        const targetHeight = 6;
+        const pyramidPlan = planPyramidConstruction(masterTower, targetHeight, bot, grid, index);
+        
         for (const plannedHex of pyramidPlan) {
             const neighbors = getNeighbors(plannedHex.q, plannedHex.r);
             const occupied = index.getOccupiedHexesList();
@@ -417,12 +445,7 @@ const executeBuilderScenario = (
         }
     }
     
-    // Fallback to DFS planner if pyramid planner didn't find anything
-    if (!targetHex) {
-        targetHex = findNextConstructionTarget(masterTower, bot, grid, index, difficulty);
-    }
-    
-    // Final fallback to master tower itself
+    // Final fallback
     if (!targetHex) {
         targetHex = masterTower;
     }
@@ -468,7 +491,7 @@ const executeBuilderScenario = (
 
 // ==========================================
 // SCENARIO 2: THE MINER (Gatherer)
-// V61: Deep pit commitment with better targeting
+// V70: Smart scoring for best dig targets
 // ==========================================
 const executeMinerScenario = (
     bot: Entity, 
@@ -476,57 +499,68 @@ const executeMinerScenario = (
     grid: Record<string, Hex>, 
     index: WorldIndex,
     stateVersion: number,
-    navObstacles: HexCoord[]
+    navObstacles: HexCoord[],
+    allBots: Entity[]
 ): AiResult => {
 
-    // 1. Identify Quarry Center
-    // V61: Commit to deep pit digging with shared quarry
-    let quarry: Hex | null = null;
+    // 1. V70: Use Smart Scoring to find best dig targets
+    const bestTargets = findBestDigTargets(bot, grid, allBots, 3);
     
-    if (mem.sharedQuarryKey && grid[mem.sharedQuarryKey]) {
-        quarry = grid[mem.sharedQuarryKey];
-    } else if (mem.quarryKey) {
-        quarry = grid[mem.quarryKey];
-    }
+    // Try each scored target in order
+    let targetHex: Hex | null = null;
     
-    // If quarry missing, re-establish at quarry site or current location
-    if (!quarry) {
-        if (mem.quarrySite) {
-             const key = getHexKey(mem.quarrySite.q, mem.quarrySite.r);
-             if (grid[key]) {
-                 mem.quarryKey = key;
-                 mem.sharedQuarryKey = key;
-                 quarry = grid[key];
-             }
-        }
-        if (!quarry) {
-            mem.quarryKey = getHexKey(bot.q, bot.r);
-            mem.sharedQuarryKey = mem.quarryKey;
-            quarry = grid[mem.quarryKey!];
-        }
-    }
-
-    // 2. V61: Deep Pit Strategy - focus on digging quarry deep first
-    let targetHex = quarry;
-    
-    if (quarry) {
-        // If quarry not deep enough, prioritize digging it deeper
-        if (quarry.currentLevel > DEEP_PIT_TARGET) {
-            targetHex = quarry; // Keep digging the center
-        } else {
-            // Once deep enough, use recursive planner for surrounding area
-            const nextDigSpot = findNextExcavationTarget(quarry, bot, grid, index);
-            if (nextDigSpot) {
-                targetHex = nextDigSpot;
-            } else {
-                targetHex = quarry; // Fallback to center
+    for (const scored of bestTargets) {
+        const hex = scored.hex;
+        const dist = cubeDistance(bot, hex);
+        
+        // Check if we can dig here
+        const check = checkDigCondition(hex, bot, getNeighbors(hex.q, hex.r), grid);
+        if (check.canGrow) {
+            const occupant = index.getEntityAt(hex.q, hex.r);
+            if (!occupant || occupant.id === bot.id) {
+                targetHex = hex;
+                break;
             }
         }
+        
+        // If can't dig but close, move toward it
+        if (dist <= 3 && !targetHex) {
+            targetHex = hex;
+        }
+    }
+    
+    // Fallback to legacy quarry logic
+    if (!targetHex) {
+        let quarry: Hex | null = null;
+        
+        if (mem.sharedQuarryKey && grid[mem.sharedQuarryKey]) {
+            quarry = grid[mem.sharedQuarryKey];
+        } else if (mem.quarryKey) {
+            quarry = grid[mem.quarryKey];
+        }
+        
+        if (!quarry) {
+            if (mem.quarrySite) {
+                 const key = getHexKey(mem.quarrySite.q, mem.quarrySite.r);
+                 if (grid[key]) {
+                     mem.quarryKey = key;
+                     mem.sharedQuarryKey = key;
+                     quarry = grid[key];
+                 }
+            }
+            if (!quarry) {
+                mem.quarryKey = getHexKey(bot.q, bot.r);
+                mem.sharedQuarryKey = mem.quarryKey;
+                quarry = grid[mem.quarryKey!];
+            }
+        }
+        
+        targetHex = quarry;
     }
     
     targetHex = targetHex || grid[getHexKey(bot.q, bot.r)];
 
-    // 3. Execution
+    // 2. Execution
     const dist = cubeDistance(bot, targetHex);
 
     // A. At Target
@@ -535,7 +569,7 @@ const executeMinerScenario = (
         if (checkDigCondition(targetHex, bot, neighbors, grid).canGrow) {
              return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: `Dig L${targetHex.currentLevel - 1}`, memory: { ...mem, stuckCounter: 0, projectFailCount: 0 } };
         }
-        // V61: More patient with quarry
+        // V70: More patient with quarry
         mem.projectFailCount = (mem.projectFailCount || 0) + 1;
         if (mem.projectFailCount > 8) {
              // Only move quarry if really stuck
