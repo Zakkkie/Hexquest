@@ -68,7 +68,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const toggleSfx = useGameStore(state => state.toggleSfx);
   const playUiSound = useGameStore(state => state.playUiSound);
   const startMission = useGameStore(state => state.startMission);
-  const downloadBotLog = useGameStore(state => state.downloadBotLog);
+  const downloadSessionLog = useGameStore(state => state.downloadSessionLog);
   
   // New actions for game over
   const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
@@ -438,11 +438,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
                                 {/* Download Log Button */}
                                 <button 
-                                    onClick={() => { downloadBotLog(); setIsSystemMenuOpen(false); playUiSound('CLICK'); }}
+                                    onClick={() => { downloadSessionLog(); setIsSystemMenuOpen(false); playUiSound('CLICK'); }}
                                     className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 hover:text-indigo-200 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left"
                                 >
                                     <FileText className="w-4 h-4" />
-                                    <span className="text-xs font-bold uppercase">Download Log</span>
+                                    <span className="text-xs font-bold uppercase">Session Log</span>
                                 </button>
 
                                 {/* Abort Mission */}

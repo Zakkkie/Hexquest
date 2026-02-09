@@ -86,6 +86,10 @@ export interface BotMemory {
   targetPlayerHexId?: string | null; // Target hex for aggressor to attack
   aggressorActive?: boolean;        // Whether aggressor mode is currently active
   aggressorStuckCount?: number;     // V61: Counter for aggressor being stuck
+  
+  // V71: Anti-stuck mechanism
+  waitCounter?: number;             // Track consecutive WAIT actions
+  lastActionType?: string;          // Track last action type for pattern detection
 }
 
 export interface Entity {

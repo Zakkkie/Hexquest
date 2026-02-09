@@ -1,5 +1,5 @@
 
-import { GameAction, EntityType, EntityState, ValidationResult, SessionState } from '../types';
+import { GameAction, EntityType, EntityState, ValidationResult, SessionState, BotLogEntry } from '../types';
 import { WorldIndex } from './WorldIndex';
 import { getHexKey } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
@@ -158,6 +158,37 @@ export class ActionProcessor {
         break;
       case 'WAIT':
         break;
+    }
+
+    // --- PLAYER ACTION LOGGING ---
+    // Log successful player actions for dataset/imitation learning
+    if (actor.type === EntityType.PLAYER) {
+        let targetStr: string | undefined = undefined;
+        
+        if (action.type === 'MOVE' && action.path.length > 0) {
+            const dest = action.path[action.path.length - 1];
+            const h = state.grid[getHexKey(dest.q, dest.r)];
+            targetStr = `(${dest.q},${dest.r}) L:${h?.currentLevel??'?'}`;
+        } else if (action.type === 'UPGRADE' || action.type === 'DIG') {
+            const {q, r} = action.coord;
+            const h = state.grid[getHexKey(q, r)];
+            targetStr = `(${q},${r}) L:${h?.currentLevel??'?'}`;
+        }
+
+        const logEntry: BotLogEntry = {
+            botId: actor.id,
+            action: action.type,
+            reason: 'Manual Control',
+            timestamp: Date.now(),
+            target: targetStr || '-'
+        };
+
+        // Add to permanent history
+        state.fullBotHistory.push(logEntry);
+        
+        // Add to UI log (Circular)
+        state.botActivityLog.unshift(logEntry);
+        if (state.botActivityLog.length > 60) state.botActivityLog.pop();
     }
     
     return { ok: true };

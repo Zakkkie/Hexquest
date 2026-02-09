@@ -73,7 +73,7 @@ interface GameStore extends GameState {
   toggleSfx: () => void;
   playUiSound: (type: UiSoundType) => void;
   setLanguage: (lang: 'EN' | 'RU') => void;
-  downloadBotLog: () => void;
+  downloadSessionLog: () => void;
 }
 
 let engine: GameEngine | null = null;
@@ -456,11 +456,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Logic would go here to detect if player rotated camera during tutorial
   },
 
-  downloadBotLog: () => {
+  downloadSessionLog: () => {
      if (!engine || !engine.state) return;
      const history = engine.state.fullBotHistory;
      if (!history || history.length === 0) {
-         get().showToast("No bot history recorded.", "info");
+         get().showToast("No history recorded.", "info");
          return;
      }
 
@@ -471,19 +471,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
          return `${timeStr} | ${e.botId.toUpperCase()} | ${action} | Tgt: ${target} | ${e.reason}`;
      });
 
-     const content = `HEXQUEST BOT SESSION LOG\nSession ID: ${engine.state.sessionId}\nDate: ${new Date().toISOString()}\n------------------------\n` + lines.join('\n');
+     const content = `HEXQUEST SESSION LOG\nSession ID: ${engine.state.sessionId}\nDate: ${new Date().toISOString()}\n------------------------\n` + lines.join('\n');
      
      const blob = new Blob([content], { type: 'text/plain' });
      const url = URL.createObjectURL(blob);
      const a = document.createElement('a');
      a.href = url;
-     a.download = `bot_logs_${Date.now()}.txt`;
+     a.download = `session_log_${Date.now()}.txt`;
      document.body.appendChild(a);
      a.click();
      document.body.removeChild(a);
      URL.revokeObjectURL(url);
      
-     get().showToast("Bot Log Downloaded", "success");
+     get().showToast("Session Log Downloaded", "success");
   },
 
   tick: () => {

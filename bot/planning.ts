@@ -148,9 +148,9 @@ export const findBestDigTargets = (
 };
 
 /**
- * V62: Pyramid Foundation Planning
- * Calculates the optimal base size needed for a target height
- * For a pyramid of height H, we need a base of approximately H hexes radius
+ * V71: Pyramid Foundation Planning
+ * Builds proper foundation: L1 base first, then L2 on top, etc.
+ * Creates a triangular/pyramid structure for maximum height
  * 
  * Returns array of hexes that should be built in order (foundation first)
  */
@@ -163,49 +163,48 @@ export const planPyramidConstruction = (
 ): Hex[] => {
     const buildOrder: Hex[] = [];
     
-    // Calculate required base radius for target height
-    // For height H, we need base radius of at least H (for safety, use H+1)
-    const baseRadius = Math.min(targetHeight + 1, 4); // Cap at 4 to avoid too wide bases
+    // V71: Dynamic base radius based on current tower height
+    // As tower grows, we need larger foundation
+    const currentHeight = centerHex.maxLevel;
+    const neededBaseRadius = Math.min(Math.max(2, currentHeight + 1), 4);
     
-    // Gather all hexes within base radius
-    const baseHexes: Hex[] = [];
+    // Gather all hexes within pyramid base
     const allHexes = Object.values(grid);
+    const pyramidHexes: Hex[] = [];
     
     for (const hex of allHexes) {
         const dist = cubeDistance(centerHex, hex);
-        if (dist <= baseRadius && hex.structureType !== 'VOID') {
-            baseHexes.push(hex);
+        if (dist <= neededBaseRadius && hex.structureType !== 'VOID') {
+            pyramidHexes.push(hex);
         }
     }
     
-    // Sort by distance from center (closer = built first)
-    baseHexes.sort((a, b) => {
-        const distA = cubeDistance(centerHex, a);
-        const distB = cubeDistance(centerHex, b);
-        if (distA !== distB) return distA - distB;
-        // For same distance, sort by current level (lower = prioritize)
-        return a.currentLevel - b.currentLevel;
-    });
+    // V71: Build by pyramid levels - foundation first
+    // Level 0: Center (the peak)
+    // Level 1: Distance 1 from center
+    // Level 2: Distance 2 from center, etc.
     
-    // Group hexes by desired level in the pyramid
-    // Level 1: All hexes at base radius
-    // Level 2: Hexes at radius-1
-    // etc.
-    const levelGroups: Hex[][] = [];
-    for (let level = 1; level <= targetHeight; level++) {
-        const maxRadiusForLevel = baseRadius - level + 1;
-        const hexesAtLevel = baseHexes.filter(h => {
+    for (let level = 1; level <= neededBaseRadius; level++) {
+        // Find hexes at this distance from center
+        const hexesAtThisLevel = pyramidHexes.filter(h => {
             const dist = cubeDistance(centerHex, h);
-            return dist <= maxRadiusForLevel && h.currentLevel < level;
+            return dist === level && h.currentLevel < (neededBaseRadius - level + 1);
         });
-        if (hexesAtLevel.length > 0) {
-            levelGroups.push(hexesAtLevel);
-        }
+        
+        // Sort by: 1) Current level (lower first), 2) Distance from bot (closer first)
+        hexesAtThisLevel.sort((a, b) => {
+            if (a.currentLevel !== b.currentLevel) {
+                return a.currentLevel - b.currentLevel;
+            }
+            return cubeDistance(bot, a) - cubeDistance(bot, b);
+        });
+        
+        buildOrder.push(...hexesAtThisLevel);
     }
     
-    // Flatten groups into build order (level 1 first, then level 2, etc.)
-    for (const group of levelGroups) {
-        buildOrder.push(...group);
+    // V71: Finally, add the center if it needs building
+    if (centerHex.currentLevel < targetHeight) {
+        buildOrder.push(centerHex);
     }
     
     return buildOrder;
