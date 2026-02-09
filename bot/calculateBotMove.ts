@@ -14,16 +14,19 @@ export interface AiResult {
 }
 
 // CONFIG FOR DISPERSAL
-const SETTLING_TIME_MS = 15000; // Reduced to 15 seconds for faster setup
-const MIN_DIST_FROM_CENTER = 8; // Reduced for tighter gameplay
-const MIN_DIST_FROM_OTHERS = 5;  // Reduced personal space
+const SETTLING_TIME_MS = 12000; // Fast initial setup
+const MIN_DIST_FROM_CENTER = 10; // Good spacing from center
+const MIN_DIST_FROM_OTHERS = 6;  // Personal space between bots
 const MOVE_COST_COINS = 5;
-const PROJECT_STUCK_LIMIT = 5;
+const PROJECT_STUCK_LIMIT = 15; // Increased - commit to projects longer!
 
-// V60: Cooperative AI Config
-const COOPERATION_RADIUS = 4; // Distance within which bots cooperate
+// V61: Enhanced Cooperative AI Config
+const COOPERATION_RADIUS = 6; // Larger cooperation range
 const AGGRESSOR_TRIGGER_LEVEL = 4; // Player level that triggers aggressor
 const AGGRESSOR_DEACTIVATE_LEVEL = 3; // Level at which aggressor stops
+const AGGRESSOR_STUCK_LIMIT = 8; // If stuck 8 times, change tactics
+const MIN_TOWER_BUILD_LEVEL = 3; // Minimum level before switching tower targets
+const DEEP_PIT_TARGET = -6; // Target depth for quarries
 
 // V60: Helper to find player's highest hex
 const findPlayerHighestHex = (player: Entity, grid: Record<string, Hex>): Hex | null => {
@@ -44,7 +47,7 @@ const playerHasHighHexes = (player: Entity, grid: Record<string, Hex>, threshold
     return Object.values(grid).some(h => h.ownerId === player.id && h.maxLevel >= threshold);
 };
 
-// V60: Determine bot role based on situation
+// V61: Enhanced role determination with better cooperation
 const determineBotRole = (
     bot: Entity,
     mem: BotMemory,
@@ -69,6 +72,7 @@ const determineBotRole = (
                 mem.mode = 'AGGRESSOR';
                 mem.targetPlayerHexId = playerHighest.id;
                 mem.aggressorActive = true;
+                if (!mem.aggressorStuckCount) mem.aggressorStuckCount = 0;
                 return;
             }
         }
@@ -78,6 +82,7 @@ const determineBotRole = (
         mem.botRole = 'BUILDER';
         mem.mode = 'GATHER';
         mem.targetPlayerHexId = null;
+        mem.aggressorStuckCount = 0;
     }
     
     // Normal role assignment if not aggressor
@@ -88,6 +93,7 @@ const determineBotRole = (
     // If no role assigned, assign based on bot index
     if (!mem.botRole) {
         const botIndex = parseInt(bot.id.split('-')[1] || '1');
+        // 50/50 split between builders and diggers
         if (botIndex % 2 === 0) {
             mem.botRole = 'DIGGER';
         } else {
@@ -95,7 +101,7 @@ const determineBotRole = (
         }
     }
     
-    // V60: Cooperative target sharing - find nearby bots and share targets
+    // V61: Enhanced Cooperative target sharing
     if (otherBots.length > 0 && mem.homeBase) {
         const nearbyBots = otherBots.filter(b => {
             if (!b.memory?.homeBase) return false;
@@ -103,45 +109,61 @@ const determineBotRole = (
         });
         
         if (nearbyBots.length > 0) {
-            // Share tower target with nearby bots (use the highest existing tower)
-            let sharedTower = mem.sharedTowerKey ? grid[mem.sharedTowerKey] : null;
+            // Find the tallest tower among all nearby bots
+            let bestTower: Hex | null = null;
+            let highestLevel = -1;
             
-            if (!sharedTower || sharedTower.structureType === 'VOID') {
-                // Find highest tower among cooperating bots
-                let highestLevel = -1;
-                for (const b of [bot, ...nearbyBots]) {
-                    const towerKey = b.memory?.towerKey;
-                    if (towerKey) {
-                        const tower = grid[towerKey];
-                        if (tower && tower.maxLevel > highestLevel && tower.structureType !== 'VOID') {
-                            highestLevel = tower.maxLevel;
-                            sharedTower = tower;
-                        }
+            for (const b of [bot, ...nearbyBots]) {
+                const towerKey = b.memory?.towerKey;
+                if (towerKey) {
+                    const tower = grid[towerKey];
+                    if (tower && tower.maxLevel > highestLevel && tower.structureType !== 'VOID') {
+                        highestLevel = tower.maxLevel;
+                        bestTower = tower;
                     }
-                }
-                
-                if (sharedTower) {
-                    mem.sharedTowerKey = sharedTower.id;
                 }
             }
             
-            // Share quarry target
-            if (!mem.sharedQuarryKey) {
-                const diggerBot = nearbyBots.find(b => b.memory?.botRole === 'DIGGER');
-                if (diggerBot?.memory?.quarryKey) {
-                    mem.sharedQuarryKey = diggerBot.memory.quarryKey;
+            // Share the best tower with everyone
+            if (bestTower && bestTower.maxLevel >= 2) {
+                mem.sharedTowerKey = bestTower.id;
+                // All builders focus on shared tower
+                if (mem.botRole === 'BUILDER') {
+                    mem.towerKey = bestTower.id;
                 }
+            }
+            
+            // Find deepest quarry among diggers
+            let bestQuarry: Hex | null = null;
+            let deepestLevel = 0;
+            
+            for (const b of nearbyBots.filter(b => b.memory?.botRole === 'DIGGER')) {
+                const quarryKey = b.memory?.quarryKey;
+                if (quarryKey) {
+                    const quarry = grid[quarryKey];
+                    if (quarry && quarry.currentLevel < deepestLevel) {
+                        deepestLevel = quarry.currentLevel;
+                        bestQuarry = quarry;
+                    }
+                }
+            }
+            
+            // Share the deepest quarry
+            if (bestQuarry && mem.botRole === 'DIGGER') {
+                mem.sharedQuarryKey = bestQuarry.id;
+                mem.quarryKey = bestQuarry.id;
             }
         }
     }
 };
 
 /**
- * AI V60: "Cooperative Conquerors"
- * - Focused Tower Building: Each bot focuses on maximizing one tower height
- * - Deep Pit Excavation: Dedicated quarry points for efficient material gathering
- * - Cooperative Building: Bots share targets and help each other
- * - Aggressor Role: Attacks player hexes when player reaches high levels
+ * AI V61: "Strategic Architects"
+ * - Persistent Tower Building: Bots commit to single tower until reaching high levels
+ * - Deep Pit Mining: Dedicated deep quarries with -6 target depth
+ * - True Cooperation: Bots actively assist on shared towers
+ * - Smart Aggressor: Tactical retreat when blocked, alternative attack routes
+ * - Better Stuck Handling: Smarter unstuck logic with fallback strategies
  */
 export const calculateBotMove = (
   bot: Entity, 
@@ -219,38 +241,27 @@ export const calculateBotMove = (
       const isFarEnough = currentDist >= MIN_DIST_FROM_CENTER;
       const isAlone = nearestNeighborDist >= MIN_DIST_FROM_OTHERS;
       const isTimeout = timeAlive > SETTLING_TIME_MS;
-
+      
       if ((isFarEnough && isAlone) || isTimeout) {
           // ESTABLISH BASE
           mem.homeBase = { q: bot.q, r: bot.r };
-          
-          // V60: Use shared tower if available from cooperative bots
-          if (mem.sharedTowerKey && grid[mem.sharedTowerKey] && grid[mem.sharedTowerKey].structureType !== 'VOID') {
-              mem.towerKey = mem.sharedTowerKey;
-          } else {
-              mem.towerKey = getHexKey(bot.q, bot.r);
-              mem.sharedTowerKey = mem.towerKey;
-          }
-          
-          // V60: Deep pit quarry - further out for deeper digging potential
-          const quarryDist = 8; // Increased distance for deeper pit potential
-          const qQ = Math.round(bot.q + quarryDist * Math.cos(mem.migrationAngle));
-          const qR = Math.round(bot.r + quarryDist * Math.sin(mem.migrationAngle));
-          
-          // Use shared quarry if available
-          if (mem.sharedQuarryKey && grid[mem.sharedQuarryKey]) {
-              mem.quarryKey = mem.sharedQuarryKey;
-              const [qq, qr] = mem.quarryKey.split(',').map(Number);
-              mem.quarrySite = { q: qq, r: qr };
-          } else {
-              mem.quarryKey = getHexKey(qQ, qR); 
-              mem.quarrySite = { q: qQ, r: qR };
-              mem.sharedQuarryKey = mem.quarryKey;
-          }
-          
-          // V60: Set initial mode based on role
-          mem.mode = mem.botRole === 'DIGGER' ? 'GATHER' : 'BUILD';
-          return { action: { type: 'WAIT', stateVersion }, debug: `Base Established (${mem.botRole})`, memory: mem };
+                  
+          // V61: Set tower at base location (will be shared later if cooperating)
+          mem.towerKey = getHexKey(bot.q, bot.r);
+          mem.sharedTowerKey = mem.towerKey;
+                  
+          // V61: Quarry placement - offset from tower for efficiency
+          const quarryDist = 5; // Moderate distance for accessibility
+          const qQ = Math.round(bot.q + quarryDist * Math.cos(mem.migrationAngle + Math.PI)); // Opposite side
+          const qR = Math.round(bot.r + quarryDist * Math.sin(mem.migrationAngle + Math.PI));
+                  
+          mem.quarryKey = getHexKey(qQ, qR); 
+          mem.quarrySite = { q: qQ, r: qR };
+          mem.sharedQuarryKey = mem.quarryKey;
+                  
+          // V61: Set initial mode based on role - start gathering resources
+          mem.mode = 'GATHER';
+          return { action: { type: 'WAIT', stateVersion }, debug: `Base (${mem.botRole})`, memory: mem };
       }
       
       // MOVEMENT LOGIC (MIGRATION)
@@ -330,6 +341,7 @@ export const calculateBotMove = (
 
 // ==========================================
 // SCENARIO 1: THE ARCHITECT (Builder)
+// V61: Enhanced persistence and cooperation
 // ==========================================
 const executeBuilderScenario = (
     bot: Entity, 
@@ -342,21 +354,29 @@ const executeBuilderScenario = (
 ): AiResult => {
     
     // 1. Identify Ultimate Goal (The Peak)
-    // V60: Prioritize shared tower for cooperative building
+    // V61: Prioritize shared tower for cooperative building
     let masterTower: Hex | null = null;
     
+    // Use shared tower if available and tall enough
     if (mem.sharedTowerKey && grid[mem.sharedTowerKey] && grid[mem.sharedTowerKey].structureType !== 'VOID') {
         masterTower = grid[mem.sharedTowerKey];
-    } else if (mem.towerKey) {
+    } else if (mem.towerKey && grid[mem.towerKey]) {
         masterTower = grid[mem.towerKey];
     }
     
-    // If master tower is destroyed/void, pick a new spot nearby
+    // V61: Only switch tower if current is destroyed OR hasn't made progress in long time
     if (!masterTower || masterTower.structureType === 'VOID') {
-        const candidates = index.getHexesInRange(mem.homeBase!, 3);
-        masterTower = candidates.find(h => h.structureType !== 'VOID') || grid[getHexKey(bot.q, bot.r)];
+        // Find best candidate near homebase
+        const candidates = index.getHexesInRange(mem.homeBase!, 4);
+        const validCandidates = candidates.filter(h => h.structureType !== 'VOID');
+        
+        // Prefer hexes that already have some height
+        validCandidates.sort((a, b) => b.maxLevel - a.maxLevel);
+        
+        masterTower = validCandidates[0] || grid[getHexKey(bot.q, bot.r)];
         mem.towerKey = masterTower.id;
         mem.sharedTowerKey = masterTower.id;
+        mem.projectFailCount = 0; // Reset failure counter on new tower
     }
 
     // 2. Use Recursive Planner to find the specific brick we need to lay right now
@@ -374,26 +394,37 @@ const executeBuilderScenario = (
         
         // Try Build
         if (checkGrowthCondition(targetHex, bot, neighbors, grid, occupied, queueSize).canGrow) {
-            return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Build', memory: { ...mem, stuckCounter: 0, projectFailCount: 0 } };
+            return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: `Build L${targetHex.currentLevel + 1}`, memory: { ...mem, stuckCounter: 0, projectFailCount: 0 } };
         } 
         
-        // Stuck at target?
+        // V61: Stuck at target - be more patient before switching
         mem.projectFailCount = (mem.projectFailCount || 0) + 1;
         if (mem.projectFailCount > PROJECT_STUCK_LIMIT) {
-            // Shift project center randomly to unblock
-            const neighbors = getNeighbors(bot.q, bot.r);
-            const n = neighbors[Math.floor(Math.random()*neighbors.length)];
-            if(n) mem.towerKey = getHexKey(n.q, n.r);
-            return { action: { type: 'WAIT', stateVersion }, debug: 'Shift Plan', memory: { ...mem, projectFailCount: 0 } };
+            // Only shift if tower is still low level, otherwise wait
+            if (masterTower.maxLevel < MIN_TOWER_BUILD_LEVEL) {
+                // Shift project center to neighbor
+                const neighbors = getNeighbors(bot.q, bot.r);
+                const validNeighbors = neighbors.filter(n => {
+                    const h = grid[getHexKey(n.q, n.r)];
+                    return h && h.structureType !== 'VOID';
+                });
+                if (validNeighbors.length > 0) {
+                    const newTower = validNeighbors[0];
+                    mem.towerKey = getHexKey(newTower.q, newTower.r);
+                    mem.sharedTowerKey = mem.towerKey;
+                }
+            }
+            return { action: { type: 'WAIT', stateVersion }, debug: 'Plan Shift', memory: { ...mem, projectFailCount: 0 } };
         }
     }
 
     // B. Move to Target
-    return executeMove(bot, targetHex, grid, navObstacles, stateVersion, mem, 'Commute');
+    return executeMove(bot, targetHex, grid, navObstacles, stateVersion, mem, 'Build Move');
 };
 
 // ==========================================
 // SCENARIO 2: THE MINER (Gatherer)
+// V61: Deep pit commitment with better targeting
 // ==========================================
 const executeMinerScenario = (
     bot: Entity, 
@@ -405,7 +436,7 @@ const executeMinerScenario = (
 ): AiResult => {
 
     // 1. Identify Quarry Center
-    // V60: Use shared quarry for cooperative digging
+    // V61: Commit to deep pit digging with shared quarry
     let quarry: Hex | null = null;
     
     if (mem.sharedQuarryKey && grid[mem.sharedQuarryKey]) {
@@ -414,34 +445,38 @@ const executeMinerScenario = (
         quarry = grid[mem.quarryKey];
     }
     
-    // If quarry voided or missing, stick to current site or find new
+    // If quarry missing, re-establish at quarry site or current location
     if (!quarry) {
         if (mem.quarrySite) {
              const key = getHexKey(mem.quarrySite.q, mem.quarrySite.r);
              if (grid[key]) {
                  mem.quarryKey = key;
                  mem.sharedQuarryKey = key;
+                 quarry = grid[key];
              }
         }
-        if (!mem.quarryKey) {
+        if (!quarry) {
             mem.quarryKey = getHexKey(bot.q, bot.r);
             mem.sharedQuarryKey = mem.quarryKey;
+            quarry = grid[mem.quarryKey!];
         }
-        quarry = grid[mem.quarryKey!];
     }
 
-    // 2. Recursive Planner for Digging (Deep pit strategy)
-    // V60: Focus on digging deep at the quarry center
+    // 2. V61: Deep Pit Strategy - focus on digging quarry deep first
     let targetHex = quarry;
     
-    // Try to find the deepest possible dig spot at quarry
     if (quarry) {
-        const nextDigSpot = findNextExcavationTarget(quarry, bot, grid, index);
-        if (nextDigSpot) {
-            targetHex = nextDigSpot;
-        } else if (quarry.currentLevel > -4) {
-            // If quarry not deep enough, dig it deeper
-            targetHex = quarry;
+        // If quarry not deep enough, prioritize digging it deeper
+        if (quarry.currentLevel > DEEP_PIT_TARGET) {
+            targetHex = quarry; // Keep digging the center
+        } else {
+            // Once deep enough, use recursive planner for surrounding area
+            const nextDigSpot = findNextExcavationTarget(quarry, bot, grid, index);
+            if (nextDigSpot) {
+                targetHex = nextDigSpot;
+            } else {
+                targetHex = quarry; // Fallback to center
+            }
         }
     }
     
@@ -454,25 +489,32 @@ const executeMinerScenario = (
     if (dist === 0) {
         const neighbors = getNeighbors(bot.q, bot.r);
         if (checkDigCondition(targetHex, bot, neighbors, grid).canGrow) {
-             return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Mine', memory: { ...mem, stuckCounter: 0, projectFailCount: 0 } };
+             return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: `Dig L${targetHex.currentLevel - 1}`, memory: { ...mem, stuckCounter: 0, projectFailCount: 0 } };
         }
-        // Stuck?
+        // V61: More patient with quarry
         mem.projectFailCount = (mem.projectFailCount || 0) + 1;
-        if (mem.projectFailCount > 3) {
-             // Move quarry slightly
+        if (mem.projectFailCount > 8) {
+             // Only move quarry if really stuck
              const neighbors = getNeighbors(bot.q, bot.r);
-             const n = neighbors[Math.floor(Math.random()*neighbors.length)];
-             if(n) mem.quarryKey = getHexKey(n.q, n.r);
-             return { action: { type: 'WAIT', stateVersion }, debug: 'Shift Mine', memory: { ...mem, projectFailCount: 0 } };
+             const validNeighbors = neighbors.filter(n => {
+                 const h = grid[getHexKey(n.q, n.r)];
+                 return h && h.structureType !== 'VOID';
+             });
+             if (validNeighbors.length > 0) {
+                 mem.quarryKey = getHexKey(validNeighbors[0].q, validNeighbors[0].r);
+                 mem.sharedQuarryKey = mem.quarryKey;
+             }
+             return { action: { type: 'WAIT', stateVersion }, debug: 'Quarry Shift', memory: { ...mem, projectFailCount: 0 } };
         }
     }
 
     // B. Move to Target
-    return executeMove(bot, targetHex, grid, navObstacles, stateVersion, mem, 'Go Mine');
+    return executeMove(bot, targetHex, grid, navObstacles, stateVersion, mem, 'Mine Move');
 };
 
 // ==========================================
 // SCENARIO 3: THE AGGRESSOR (Attacker)
+// V61: Smart tactics with fallback strategies
 // ==========================================
 const executeAggressorScenario = (
     bot: Entity, 
@@ -500,6 +542,7 @@ const executeAggressorScenario = (
         targetHex = findPlayerHighestHex(player, grid);
         if (targetHex) {
             mem.targetPlayerHexId = targetHex.id;
+            mem.aggressorStuckCount = 0; // Reset stuck counter for new target
         }
     }
     
@@ -509,7 +552,8 @@ const executeAggressorScenario = (
         mem.botRole = 'BUILDER';
         mem.mode = 'GATHER';
         mem.targetPlayerHexId = null;
-        return { action: { type: 'WAIT', stateVersion }, debug: 'Aggressor: No Target', memory: mem };
+        mem.aggressorStuckCount = 0;
+        return { action: { type: 'WAIT', stateVersion }, debug: 'Aggressor: Done', memory: mem };
     }
     
     // 2. Check if we're at the target
@@ -521,14 +565,61 @@ const executeAggressorScenario = (
         
         // Try to dig the hex
         if (checkDigCondition(targetHex, bot, neighbors, grid).canGrow) {
+            mem.aggressorStuckCount = 0; // Reset on successful action
             return { 
                 action: { type: 'DIG', coord: {q: bot.q, r: bot.r}, stateVersion }, 
-                debug: 'Aggressor: Digging!', 
-                memory: { ...mem, stuckCounter: 0 } 
+                debug: 'Aggressor: Attack!', 
+                memory: mem
             };
         }
         
-        // Can't dig - need supports, try to dig neighbors first
+        // V61: Can't dig primary target - increment stuck counter
+        mem.aggressorStuckCount = (mem.aggressorStuckCount || 0) + 1;
+        
+        // V61: If stuck too long, switch to alternative target
+        if (mem.aggressorStuckCount > AGGRESSOR_STUCK_LIMIT) {
+            // Find all player hexes level 3+
+            const playerHexes = Object.values(grid).filter(h => 
+                h.ownerId === player.id && h.maxLevel >= 3
+            );
+            
+            if (playerHexes.length > 0) {
+                // Sort by accessibility (distance and level)
+                playerHexes.sort((a, b) => {
+                    const distA = cubeDistance(bot, a);
+                    const distB = cubeDistance(bot, b);
+                    // Prefer closer hexes, break ties by level
+                    if (Math.abs(distA - distB) < 3) {
+                        return b.maxLevel - a.maxLevel; // Higher level first
+                    }
+                    return distA - distB; // Closer first
+                });
+                
+                // Switch to different target
+                for (const hex of playerHexes) {
+                    if (hex.id !== mem.targetPlayerHexId) {
+                        mem.targetPlayerHexId = hex.id;
+                        mem.aggressorStuckCount = 0;
+                        return { 
+                            action: { type: 'WAIT', stateVersion }, 
+                            debug: 'Aggressor: Retarget', 
+                            memory: mem 
+                        };
+                    }
+                }
+            }
+            
+            // No alternative targets - temporarily retreat to gather resources
+            mem.mode = 'GATHER';
+            mem.aggressorStuckCount = 0;
+            return { 
+                action: { type: 'WAIT', stateVersion }, 
+                debug: 'Aggressor: Regroup', 
+                memory: mem 
+            };
+        }
+        
+        // Try to dig neighbors that support the target
         for (const n of neighbors) {
             const nKey = getHexKey(n.q, n.r);
             const nHex = grid[nKey];
@@ -540,12 +631,22 @@ const executeAggressorScenario = (
             }
         }
         
-        // Stuck - wait
-        return { action: { type: 'WAIT', stateVersion }, debug: 'Aggressor: Stuck', memory: mem };
+        // Still stuck - wait
+        return { action: { type: 'WAIT', stateVersion }, debug: 'Aggressor: Wait', memory: mem };
     }
     
     // 3. Move to target
-    return executeMove(bot, targetHex, grid, navObstacles, stateVersion, mem, 'Aggressor: Approach');
+    // V61: Check if path is blocked repeatedly
+    const moveResult = executeMove(bot, targetHex, grid, navObstacles, stateVersion, mem, 'Aggressor: Approach');
+    
+    // If blocked, increment stuck counter
+    if (moveResult.debug === 'Blocked') {
+        mem.aggressorStuckCount = (mem.aggressorStuckCount || 0) + 1;
+    } else {
+        mem.aggressorStuckCount = 0; // Reset on successful movement
+    }
+    
+    return moveResult;
 };
 
 // --- HELPER: Movement Logic ---

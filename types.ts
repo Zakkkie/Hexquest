@@ -85,6 +85,7 @@ export interface BotMemory {
   sharedQuarryKey?: string | null;  // Shared quarry target for cooperative digging
   targetPlayerHexId?: string | null; // Target hex for aggressor to attack
   aggressorActive?: boolean;        // Whether aggressor mode is currently active
+  aggressorStuckCount?: number;     // V61: Counter for aggressor being stuck
 }
 
 export interface Entity {
