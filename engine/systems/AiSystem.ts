@@ -61,7 +61,8 @@ export class AiSystem implements System {
       index, 
       state.stateVersion,
       state.difficulty,
-      tickReservedKeys 
+      tickReservedKeys,
+      state.bots // V60: Pass all bots for cooperative AI
     );
 
     // PERSIST MEMORY (Crucial for Master Goal logic)

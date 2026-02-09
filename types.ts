@@ -38,7 +38,7 @@ export enum EntityState {
   LOCKED = 'LOCKED'
 }
 
-export type BotGoalType = 'EXPAND' | 'DEFEND' | 'ATTACK' | 'GROWTH' | 'IDLE' | 'PREPARE_CYCLE' | 'BUILD_SUPPORT' | 'GATHER_RESOURCES';
+export type BotGoalType = 'EXPAND' | 'DEFEND' | 'ATTACK' | 'GROWTH' | 'IDLE' | 'PREPARE_CYCLE' | 'BUILD_SUPPORT' | 'GATHER_RESOURCES' | 'AGGRESSOR';
 
 export interface BotGoal {
   type: BotGoalType;
@@ -67,7 +67,7 @@ export interface BotMemory {
   towerKey?: string | null;     
 
   // V21 Architect Memory
-  mode?: 'GATHER' | 'BUILD';
+  mode?: 'GATHER' | 'BUILD' | 'AGGRESSOR';
   homeBase?: HexCoord;       // Coordinates of Tower Center
   quarrySite?: HexCoord;     // Coordinates of Quarry Center
   targetHexId?: string | null;      
@@ -78,6 +78,13 @@ export interface BotMemory {
 
   // V48 Grand Architect
   projectFailCount?: number;
+  
+  // V60 Cooperative AI & Aggressor
+  botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER';
+  sharedTowerKey?: string | null;   // Shared tower target for cooperative building
+  sharedQuarryKey?: string | null;  // Shared quarry target for cooperative digging
+  targetPlayerHexId?: string | null; // Target hex for aggressor to attack
+  aggressorActive?: boolean;        // Whether aggressor mode is currently active
 }
 
 export interface Entity {
