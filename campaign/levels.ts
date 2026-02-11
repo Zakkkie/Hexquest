@@ -12,7 +12,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '1.1',
     title: 'Sim 1.1: Expansion Protocol',
-    description: 'Mission: Secure 3 NEW sectors.\n\nYour unit needs a foothold. Acquire 3 adjacent Neutral Sectors (L0) to establish a perimeter.\n\nMethod: Move to a Neutral hex, then use the UPGRADE action (Amber Button) to build a Level 1 structure (Cost: 1 Material).\n\nWARNING: You have limited materials. Do not waste them.',
+    description: 'Mission: Secure 3 NEW sectors.\n\nYour unit needs a foothold. Acquire 3 adjacent Neutral Sectors (L0) to establish a perimeter.\n\nMethod: Move to a Neutral hex, then use the UPGRADE action (Amber Button) to build a Level 1 structure (Cost: 1 Material).\n\nWARNING: You have limited materials. Use them to expand outward.',
     
     mapConfig: {
       size: 5, 
@@ -50,7 +50,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       credits: 500, 
       moves: 5,     
       rank: 1,
-      materials: 4 // Exact match for default Medium Difficulty storage limit
+      materials: 5 // Increased from 4 to 5 to allow 2 mistakes/upgrades
     },
 
     aiMode: 'none', 
@@ -125,8 +125,19 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           
-          // Voids ring
+          // Voids ring (Radius 2)
+          { q: 0, r: -2, structureType: 'VOID', revealed: true },
+          { q: 1, r: -2, structureType: 'VOID', revealed: true },
+          { q: 2, r: -2, structureType: 'VOID', revealed: true },
           { q: 2, r: -1, structureType: 'VOID', revealed: true },
+          { q: 2, r: 0, structureType: 'VOID', revealed: true },
+          { q: 1, r: 1, structureType: 'VOID', revealed: true },
+          { q: 0, r: 2, structureType: 'VOID', revealed: true },
+          { q: -1, r: 2, structureType: 'VOID', revealed: true },
+          { q: -2, r: 2, structureType: 'VOID', revealed: true },
+          { q: -2, r: 1, structureType: 'VOID', revealed: true },
+          { q: -2, r: 0, structureType: 'VOID', revealed: true },
+          { q: -1, r: -1, structureType: 'VOID', revealed: true },
       ]
     },
 
@@ -273,7 +284,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     startState: {
       credits: 0,
-      moves: 5, // Just enough to reach a node
+      moves: 6, // Increased to 6 to allow direct travel to L5 (Cost 1+5) OR Recovery strategy
       rank: 5,
       materials: 0
     },
