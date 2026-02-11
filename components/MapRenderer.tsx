@@ -14,44 +14,45 @@ const VOID_LEVEL_FLAG = -99;
 
 // THEME CONFIGURATION
 // Colors define the specific visual style per level range
+// UPDATED: Gradients applied to make each level distinct
 const THEME_PALETTE: Record<string, HexNodeTheme> = {
     // Neutral (L0)
     '0': { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' }, // Slate
 
-    // Positive: TECH (L1-L3) - Cyan / Sky
-    '1': { main: '#020617', light: '#1e293b', dark: '#020617', stroke: '#0ea5e9' }, 
-    '2': { main: '#020617', light: '#1e293b', dark: '#020617', stroke: '#0ea5e9' },
-    '3': { main: '#020617', light: '#1e293b', dark: '#020617', stroke: '#0ea5e9' },
+    // Positive: TECH (L1-L3) - Shift from Navy to Cyan
+    '1': { main: '#0f172a', light: '#1e293b', dark: '#020617', stroke: '#0c4a6e' }, // Deep Navy
+    '2': { main: '#172554', light: '#1e3a8a', dark: '#0f172a', stroke: '#0284c7' }, // Blue
+    '3': { main: '#1e3a8a', light: '#2563eb', dark: '#172554', stroke: '#0ea5e9' }, // Sky Blue
 
-    // Positive: CYBER (L4-L7) - Purple / Neon
-    '4': { main: '#1e1b4b', light: '#312e81', dark: '#020617', stroke: '#a855f7' }, 
-    '5': { main: '#1e1b4b', light: '#312e81', dark: '#020617', stroke: '#a855f7' },
-    '6': { main: '#1e1b4b', light: '#312e81', dark: '#020617', stroke: '#a855f7' },
-    '7': { main: '#1e1b4b', light: '#312e81', dark: '#020617', stroke: '#a855f7' },
+    // Positive: CYBER (L4-L7) - Shift from Indigo to Neon Purple
+    '4': { main: '#312e81', light: '#4338ca', dark: '#1e1b4b', stroke: '#6366f1' }, // Indigo
+    '5': { main: '#4c1d95', light: '#5b21b6', dark: '#2e1065', stroke: '#8b5cf6' }, // Violet
+    '6': { main: '#581c87', light: '#6b21a8', dark: '#3b0764', stroke: '#a855f7' }, // Purple
+    '7': { main: '#701a75', light: '#86198f', dark: '#4a044e', stroke: '#d946ef' }, // Fuchsia
 
-    // Positive: ASCENDED (L8+) - Gold / Amber
-    '8': { main: '#271a0c', light: '#451a03', dark: '#020617', stroke: '#fbbf24' },
-    '9': { main: '#271a0c', light: '#451a03', dark: '#020617', stroke: '#fbbf24' },
-    '10': { main: '#271a0c', light: '#451a03', dark: '#020617', stroke: '#fbbf24' },
+    // Positive: ASCENDED (L8+) - Shift from Bronze to Gold
+    '8': { main: '#451a03', light: '#78350f', dark: '#271a0c', stroke: '#d97706' }, // Bronze
+    '9': { main: '#713f12', light: '#a16207', dark: '#422006', stroke: '#f59e0b' }, // Gold
+    '10': { main: '#854d0e', light: '#ca8a04', dark: '#713f12', stroke: '#fcd34d' }, // Bright Gold
 
-    // Negative: SEDIMENT (L-1 to L-3) - Stone / Grey
-    '-1': { main: '#292524', light: '#44403c', dark: '#1c1917', stroke: '#a8a29e' }, 
-    '-2': { main: '#292524', light: '#44403c', dark: '#1c1917', stroke: '#a8a29e' },
-    '-3': { main: '#292524', light: '#44403c', dark: '#1c1917', stroke: '#a8a29e' },
+    // Negative: SEDIMENT (L-1 to L-3) - Shift from Grey to Dark Stone
+    '-1': { main: '#292524', light: '#44403c', dark: '#1c1917', stroke: '#57534e' }, // Warm Grey
+    '-2': { main: '#1c1917', light: '#292524', dark: '#0c0a09', stroke: '#44403c' }, // Darker
+    '-3': { main: '#0c0a09', light: '#1c1917', dark: '#000000', stroke: '#292524' }, // Near Black
 
-    // Negative: MAGMA (L-4 to L-7) - Red / Orange
-    '-4': { main: '#450a0a', light: '#7f1d1d', dark: '#450a0a', stroke: '#ef4444' }, 
-    '-5': { main: '#450a0a', light: '#7f1d1d', dark: '#450a0a', stroke: '#ef4444' },
-    '-6': { main: '#450a0a', light: '#7f1d1d', dark: '#450a0a', stroke: '#ef4444' },
-    '-7': { main: '#450a0a', light: '#7f1d1d', dark: '#450a0a', stroke: '#ef4444' },
+    // Negative: MAGMA (L-4 to L-7) - Shift from Dark Red to Bright Heat
+    '-4': { main: '#450a0a', light: '#7f1d1d', dark: '#2a0505', stroke: '#991b1b' }, // Dark Red
+    '-5': { main: '#7f1d1d', light: '#991b1b', dark: '#450a0a', stroke: '#dc2626' }, // Red
+    '-6': { main: '#991b1b', light: '#b91c1c', dark: '#7f1d1d', stroke: '#ef4444' }, // Bright Red
+    '-7': { main: '#c2410c', light: '#ea580c', dark: '#7c2d12', stroke: '#f97316' }, // Orange Red
 
-    // Negative: CORE (L-8+) - Plasma / White
+    // Negative: CORE (L-8+) - White Hot
     '-8': { main: '#fff7ed', light: '#ffedd5', dark: '#c2410c', stroke: '#ffffff' },
 };
 
 const getTheme = (level: number): HexNodeTheme => {
     // Clamp high levels to Gold theme
-    if (level > 8) return THEME_PALETTE['8'];
+    if (level > 8) return THEME_PALETTE['10']; // Use 10 as max
     // Clamp low levels to Core theme
     if (level < -8) return THEME_PALETTE['-8'];
     

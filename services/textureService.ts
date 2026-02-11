@@ -99,21 +99,33 @@ export class TextureService {
       let accentColor = '#38bdf8';
       let secColor = '#0284c7';
 
-      if (level <= 3) {
-          // TECH (1-3): Cyan / Industrial
-          baseColor = '#0f172a'; // Slate 900
-          accentColor = '#0ea5e9'; // Sky 500
-          secColor = '#0369a1'; // Sky 700
-      } else if (level <= 7) {
-          // CYBER (4-7): Purple / Neon
-          baseColor = '#1e1b4b'; // Indigo 950
-          accentColor = '#a855f7'; // Purple 500
-          secColor = '#7e22ce'; // Purple 700
-      } else {
-          // ASCENDED (8-10): Gold / Elite
-          baseColor = '#271a0c'; // Bronze
-          accentColor = '#fbbf24'; // Amber 400
-          secColor = '#d97706'; // Amber 600
+      // DISTINCT LEVEL COLORS (Gradient Approach)
+      switch(level) {
+          // TECH (Blue/Cyan Gradient)
+          case 1: 
+              baseColor = '#0f172a'; accentColor = '#0ea5e9'; secColor = '#0369a1'; break;
+          case 2: 
+              baseColor = '#172554'; accentColor = '#3b82f6'; secColor = '#1d4ed8'; break;
+          case 3: 
+              baseColor = '#1e3a8a'; accentColor = '#60a5fa'; secColor = '#2563eb'; break;
+          
+          // CYBER (Indigo/Purple Gradient)
+          case 4: 
+              baseColor = '#312e81'; accentColor = '#818cf8'; secColor = '#4338ca'; break;
+          case 5: 
+              baseColor = '#4c1d95'; accentColor = '#a78bfa'; secColor = '#6d28d9'; break;
+          case 6: 
+              baseColor = '#581c87'; accentColor = '#c084fc'; secColor = '#7e22ce'; break;
+          case 7: 
+              baseColor = '#701a75'; accentColor = '#e879f9'; secColor = '#a21caf'; break;
+
+          // ASCENDED (Gold Gradient)
+          case 8: 
+              baseColor = '#451a03'; accentColor = '#f59e0b'; secColor = '#b45309'; break;
+          case 9: 
+              baseColor = '#713f12'; accentColor = '#fbbf24'; secColor = '#d97706'; break;
+          default: // 10+
+              baseColor = '#854d0e'; accentColor = '#fcd34d'; secColor = '#eab308'; break;
       }
 
       const cx = size / 2;
@@ -143,7 +155,7 @@ export class TextureService {
 
       // 4. Central Rank Symbol
       ctx.fillStyle = accentColor;
-      // We render crisp symbols, noise will be applied after to settle them in
+      
       if (level === 1) {
           ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2); ctx.fill();
       } else if (level === 2) {
@@ -176,8 +188,19 @@ export class TextureService {
       let base = '#1c1917';
       let stroke = '#44403c';
       
-      if (level <= -4) { base = '#450a0a'; stroke = '#991b1b'; } 
-      if (level <= -8) { base = '#fff7ed'; stroke = '#fb923c'; } 
+      // GRADIENT LOGIC FOR NEGATIVES
+      switch(level) {
+          case -1: base = '#292524'; stroke = '#57534e'; break;
+          case -2: base = '#1c1917'; stroke = '#44403c'; break;
+          case -3: base = '#0c0a09'; stroke = '#292524'; break;
+          
+          case -4: base = '#450a0a'; stroke = '#991b1b'; break;
+          case -5: base = '#7f1d1d'; stroke = '#dc2626'; break;
+          case -6: base = '#991b1b'; stroke = '#ef4444'; break;
+          case -7: base = '#c2410c'; stroke = '#f97316'; break;
+          
+          default: base = '#fff7ed'; stroke = '#fb923c'; break; // -8+
+      }
 
       const cx = size / 2;
       const cy = size / 2;

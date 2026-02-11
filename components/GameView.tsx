@@ -70,15 +70,23 @@ const GameView: React.FC = () => {
      setViewState(prev => ({ ...prev, scale: getInitialScale() }));
   }, [deviceType]);
 
+  // --- AUDIO LIFECYCLE (Start/Stop) ---
   useEffect(() => {
+      // Start music only once when the GameView mounts
       audioService.startMusic();
-      const playerStats = { coins: player.coins }; 
-      if (playerStats && winCondition) {
-          audioService.updateMusic(playerStats.coins, winCondition.targetCoins || 500);
-      }
+      
       return () => {
+          // Stop music only when GameView unmounts (returning to menu)
           audioService.stopMusic();
       };
+  }, []); // Empty dependency array ensures this runs once
+
+  // --- AUDIO DYNAMICS (Update Intensity) ---
+  useEffect(() => {
+      if (player && winCondition) {
+          // Update intensity without restarting the engine
+          audioService.updateMusic(player.coins, winCondition.targetCoins || 500);
+      }
   }, [player.coins, winCondition]);
 
   useEffect(() => {
