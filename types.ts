@@ -9,7 +9,7 @@ export interface HexView {
   r: number;
   currentLevel: number;
   maxLevel: number;
-  structureType?: 'NONE' | 'BARRIER' | 'MINE' | 'CAPITAL' | 'VOID'; // Added VOID
+  structureType?: 'NONE' | 'BARRIER' | 'MINE' | 'CAPITAL' | 'VOID' | 'MONUMENT'; // Added MONUMENT
   ownerId?: string; 
 }
 
@@ -214,7 +214,7 @@ export interface WinCondition {
   botCount: number; 
   difficulty: Difficulty;
   queueSize: number;     
-  winType: 'OR' | 'AND'; 
+  winType: 'OR' | 'AND' | 'SUMMIT'; // Added SUMMIT type
   isTutorial?: boolean;
 }
 
@@ -299,6 +299,9 @@ export interface SessionState {
   
   // NEW: Campaign Configuration (Injected)
   activeLevelConfig?: LevelConfig; 
+  
+  // NEW: Store the secret coordinate for the Monument
+  secretMonumentCoord?: HexCoord;
 
   difficulty: Difficulty;
   grid: Record<string, Hex>; 

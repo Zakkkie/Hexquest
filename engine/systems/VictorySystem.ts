@@ -3,6 +3,7 @@ import { System } from './System';
 import { GameEvent, LeaderboardEntry, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
 import { GameEventFactory } from '../events';
+import { getHexKey } from '../../services/hexUtils';
 
 export class VictorySystem implements System {
   update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
@@ -59,36 +60,70 @@ export class VictorySystem implements System {
     if (!state.winCondition) return;
 
     const { targetLevel, targetCoins, winType } = state.winCondition;
-    const pLevel = state.player.playerLevel;
-    const pCoins = state.player.coins;
     
-    let isVictory = false;
-    if (winType === 'AND') {
-        isVictory = pLevel >= targetLevel && pCoins >= targetCoins;
-    } else {
-        isVictory = pLevel >= targetLevel || pCoins >= targetCoins;
-    }
-    
-    if (isVictory) {
-        state.gameStatus = 'VICTORY';
-        const msg = 'Mission Accomplished';
+    // NEW: SUMMIT CONDITION (King of the Hill)
+    if (winType === 'SUMMIT') {
+        const playerHex = state.grid[getHexKey(state.player.q, state.player.r)];
         
-        state.messageLog.unshift({
-            id: `win-${Date.now()}`,
-            text: msg,
-            type: 'SUCCESS',
-            source: 'SYSTEM',
-            timestamp: Date.now()
-        });
+        // Check if player is standing on a Monument hex
+        if (playerHex && playerHex.structureType === 'MONUMENT') {
+             // Also verify height match as a sanity check
+             if (playerHex.maxLevel >= targetLevel) {
+                 state.gameStatus = 'VICTORY';
+                 const msg = 'Summit Reached! Monument Activated.';
+                 
+                 state.messageLog.unshift({
+                    id: `win-summit-${Date.now()}`,
+                    text: msg,
+                    type: 'SUCCESS',
+                    source: 'SYSTEM',
+                    timestamp: Date.now()
+                 });
 
-        events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
-        this.generateLeaderboardEvent(state, events);
-        return;
+                 events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
+                 this.generateLeaderboardEvent(state, events);
+                 return;
+             }
+        }
+    } else {
+        // Standard Resource/Rank Win
+        const pLevel = state.player.playerLevel;
+        const pCoins = state.player.coins;
+        
+        let isVictory = false;
+        if (winType === 'AND') {
+            isVictory = pLevel >= targetLevel && pCoins >= targetCoins;
+        } else {
+            isVictory = pLevel >= targetLevel || pCoins >= targetCoins;
+        }
+        
+        if (isVictory) {
+            state.gameStatus = 'VICTORY';
+            const msg = 'Mission Accomplished';
+            
+            state.messageLog.unshift({
+                id: `win-${Date.now()}`,
+                text: msg,
+                type: 'SUCCESS',
+                source: 'SYSTEM',
+                timestamp: Date.now()
+            });
+
+            events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
+            this.generateLeaderboardEvent(state, events);
+            return;
+        }
     }
 
     const winningBot = state.bots.find(b => {
          const bLevel = b.playerLevel;
          const bCoins = b.coins;
+         // AI Victory Condition Logic (Simplified)
+         if (winType === 'SUMMIT') {
+             const bHex = state.grid[getHexKey(b.q, b.r)];
+             return bHex && bHex.structureType === 'MONUMENT';
+         }
+         
          if (winType === 'AND') {
              return bLevel >= targetLevel && bCoins >= targetCoins;
          } else {

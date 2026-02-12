@@ -1,6 +1,6 @@
 
 import React, { useMemo, useEffect, useRef } from 'react';
-import { Group, Path, Circle, Text, Rect, Line } from 'react-konva';
+import { Group, Path, Circle, Text, Rect, Line, Star } from 'react-konva';
 import Konva from 'konva';
 import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { textureService } from '../services/textureService.ts';
@@ -79,6 +79,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const sideTexture = useMemo(() => textureService.getSideTexture(maxLevel), [maxLevel]);
 
   const isRealVoid = structureType === 'VOID';
+  const isMonument = structureType === 'MONUMENT';
   const isNegative = level < 0;
 
   // Wall Geometry & Visibility
@@ -134,6 +135,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Void Animation Ref
   const voidOutlineRef = useRef<Konva.Path>(null);
+  const monumentGlowRef = useRef<Konva.Path>(null);
 
   useEffect(() => {
       if (isRealVoid && voidOutlineRef.current) {
@@ -150,6 +152,22 @@ const HexNodeComponent = (props: HexNodeProps) => {
           return () => tween.destroy();
       }
   }, [isRealVoid]);
+
+  // Monument Pulse Effect
+  useEffect(() => {
+      if (isMonument && monumentGlowRef.current) {
+          const tween = new Konva.Tween({
+              node: monumentGlowRef.current,
+              duration: 1.5,
+              shadowBlur: 30,
+              strokeWidth: 4,
+              yoyo: true,
+              easing: Konva.Easings.EaseInOut
+          });
+          tween.play();
+          return () => tween.destroy();
+      }
+  }, [isMonument]);
 
   if (isRealVoid) {
       return (
@@ -186,9 +204,9 @@ const HexNodeComponent = (props: HexNodeProps) => {
   }
 
   // Use the specific stroke from theme for outlines
-  const strokeColor = theme.stroke;
+  const strokeColor = isMonument ? '#fcd34d' : theme.stroke;
   // Increased width to make the "contour" visible as requested
-  const strokeWidth = 2.0; 
+  const strokeWidth = isMonument ? 3.0 : 2.0; 
   
   const fillScale = { x: HEX_SIZE / 32, y: HEX_SIZE / 32 }; 
   const fillOffset = { x: 32, y: 32 }; 
@@ -226,8 +244,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
                         fillPatternImage={sideTexture as any}
                         fillPatternScale={{ x: 1, y: heightDiff / 64 }}
-                        fill={theme.dark} 
-                        stroke={theme.stroke} 
+                        fill={isMonument ? '#78350f' : theme.dark} 
+                        stroke={isMonument ? '#b45309' : theme.stroke} 
                         strokeWidth={1.5} 
                         perfectDrawEnabled={false} 
                         listening={false} 
@@ -243,6 +261,21 @@ const HexNodeComponent = (props: HexNodeProps) => {
         {/* 2. TOP FACE */}
         <Group y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
             <Group rotation={rotation} perfectDrawEnabled={false}>
+                {/* Monument Glow Base */}
+                {isMonument && (
+                    <Path 
+                        ref={monumentGlowRef}
+                        data={BASE_PATH_D} 
+                        stroke="#f59e0b" 
+                        strokeWidth={2}
+                        shadowColor="#fbbf24"
+                        shadowBlur={15}
+                        listening={false}
+                        perfectDrawEnabled={false}
+                        shadowForStrokeEnabled={false}
+                    />
+                )}
+
                 <Path 
                     data={BASE_PATH_D} 
                     fillPatternImage={topTexture as any}
@@ -255,6 +288,22 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     perfectDrawEnabled={false}
                     shadowForStrokeEnabled={false}
                 />
+
+                {/* Monument Star Symbol */}
+                {isMonument && (
+                    <Star 
+                        numPoints={5}
+                        innerRadius={8}
+                        outerRadius={16}
+                        fill="#fbbf24"
+                        stroke="#78350f"
+                        strokeWidth={2}
+                        shadowColor="#f59e0b"
+                        shadowBlur={10}
+                        listening={false}
+                        perfectDrawEnabled={false}
+                    />
+                )}
 
                 {/* Damage Cracks Overlay */}
                 {damageLevel > 0 && (

@@ -1,13 +1,7 @@
 
-import { Hex, Entity, HexCoord, Difficulty } from '../types';
+import { Hex, Entity, HexCoord } from '../types';
 import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
-import { DIFFICULTY_SETTINGS } from '../rules/config';
-import { WorldIndex } from '../engine/WorldIndex';
-
-// ==========================================
-// V70: HEX SCORING SYSTEM
-// ==========================================
 
 export interface HexScore {
   hex: Hex;
@@ -42,7 +36,7 @@ const isLoadBearing = (hex: Hex, grid: Record<string, Hex>): boolean => {
     return false;
 };
 
-// V70: Score hex for building potential
+// Score hex for building potential
 export const scoreHexForBuilding = (
   hex: Hex,
   bot: Entity,
@@ -89,7 +83,7 @@ export const scoreHexForBuilding = (
   };
 };
 
-// V70: Score hex for digging potential
+// Score hex for digging potential
 export const scoreHexForDigging = (
   hex: Hex,
   bot: Entity,
@@ -111,27 +105,33 @@ export const scoreHexForDigging = (
       }
   }
 
-  // Rule 3: PRESERVE OWNED TERRITORY
+  // Rule 3: PRESERVE INFRASTRUCTURE
+  // Avoid digging structures > L0 unless owned by self (logic handled by caller usually)
+  // Here we penalize digging any structure to preserve the map.
   if (hex.maxLevel > 0) {
       const isMyHex = hex.ownerId === bot.id;
       const isAllyHex = allBots.some(b => b.id === hex.ownerId); 
       
       if (isMyHex || isAllyHex) {
            return { hex, score: -1000, reason: 'OWNED-INFRASTRUCTURE', action: 'AVOID' };
+      } else {
+           // Neutral/Enemy structures. Still avoid if just gathering material.
+           score -= 300; 
+           reasons.push('structure-avoid');
       }
   }
 
-  // Distance penalty (prefer close digs, but depth overrides distance)
+  // Distance penalty
   const dist = cubeDistance(bot, hex);
   score += Math.max(0, 15 - dist); 
 
-  // Deep hexes are better quarries (Cluster pits)
-  // We prefer digging deeper into negatives than skimming 0s.
+  // Deep hexes are better quarries
   if (hex.currentLevel < 0) {
       score += 15 + Math.abs(hex.currentLevel) * 5;
       reasons.push('quarry');
   } else if (hex.currentLevel === 0) {
-      score += 5; // Low priority unless nothing else
+      score += 10; // Good surface mining
+      reasons.push('surface');
   }
   
   // Accessibility
@@ -170,10 +170,12 @@ export const findBestDigTargets = (
   bot: Entity,
   grid: Record<string, Hex>,
   allBots: Entity[],
-  maxResults: number = 3
+  maxResults: number = 3,
+  restrictedHexIds?: Set<string>
 ): HexScore[] => {
   const allHexes = Object.values(grid);
   const scoredHexes = allHexes
+    .filter(h => !restrictedHexIds || !restrictedHexIds.has(h.id))
     .map(h => scoreHexForDigging(h, bot, allBots, grid))
     .filter(s => s.score > 5)
     .sort((a, b) => b.score - a.score);

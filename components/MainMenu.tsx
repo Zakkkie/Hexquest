@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User, Smile } from 'lucide-react';
+import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User, Smile, Mountain } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -194,10 +194,11 @@ const MainMenu: React.FC = () => {
   const t = TEXT[language].MENU;
   const isMobile = deviceType === 'MOBILE';
 
+  // UPDATED MISSION TIERS FOR SUMMIT OBJECTIVE
   const MISSION_TIERS = {
-    1: { level: 5, coins: 250, label: language === 'RU' ? 'Патруль' : 'Patrol', time: '~5m', color: 'text-blue-400', difficulty: 'EASY' as Difficulty },
-    2: { level: 7, coins: 500, label: language === 'RU' ? 'Штаб' : 'HQ', time: '~10m', color: 'text-amber-400', difficulty: 'MEDIUM' as Difficulty },
-    3: { level: 10, coins: 1000, label: language === 'RU' ? 'Доминация' : 'Dominion', time: '~20m', color: 'text-red-400', difficulty: 'HARD' as Difficulty }
+    1: { level: 5, coins: 0, label: language === 'RU' ? 'ПИК УР.5' : 'SUMMIT L5', time: '~10m', color: 'text-blue-400', difficulty: 'EASY' as Difficulty },
+    2: { level: 6, coins: 0, label: language === 'RU' ? 'ПИК УР.6' : 'SUMMIT L6', time: '~15m', color: 'text-amber-400', difficulty: 'MEDIUM' as Difficulty },
+    3: { level: 7, coins: 0, label: language === 'RU' ? 'ПИК УР.7' : 'SUMMIT L7', time: '~25m', color: 'text-red-400', difficulty: 'HARD' as Difficulty }
   };
 
   useEffect(() => {
@@ -253,7 +254,7 @@ const MainMenu: React.FC = () => {
       difficulty: difficulty,
       label: `${tier.label}`,
       queueSize: DIFFICULTY_SETTINGS[difficulty].queueSize,
-      winType: 'AND' 
+      winType: 'SUMMIT' // CHANGED TO SUMMIT TYPE
     };
     startNewGame(winCondition);
     setShowMissionConfig(false);
@@ -414,7 +415,7 @@ const MainMenu: React.FC = () => {
         </div>
       </div>
 
-      {/* AUTH MODAL (WITH CHARACTER EDITOR) */}
+      {/* AUTH MODAL */}
       {authMode && (
         <div className="absolute inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-700/80 rounded-[2rem] shadow-2xl w-full max-w-sm relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
@@ -601,7 +602,7 @@ const MainMenu: React.FC = () => {
                                   className={`w-full p-2.5 rounded-xl border text-left transition-all relative overflow-hidden group flex items-center gap-3 ${isSelected ? 'bg-slate-800/80 border-indigo-500 shadow-lg' : 'bg-slate-950/40 border-slate-800 hover:bg-slate-900 hover:border-slate-600'}`}
                                 >
                                    <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-900 text-slate-500'}`}>
-                                       {id === 1 ? <Target className="w-3.5 h-3.5" /> : (id === 2 ? <Shield className="w-3.5 h-3.5" /> : <Swords className="w-3.5 h-3.5" />)}
+                                       <Mountain className="w-3.5 h-3.5" />
                                    </div>
                                    <div className="flex flex-col">
                                        <span className={`text-xs font-black uppercase ${isSelected ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{tier.label}</span>
@@ -631,8 +632,8 @@ const MainMenu: React.FC = () => {
                                 </div>
                                 {/* Reward */}
                                 <div className="flex flex-col items-center bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
-                                    <span className="text-[8px] font-bold uppercase text-slate-500 mb-0.5 flex items-center gap-1"><Zap className="w-2.5 h-2.5" /> Reward</span>
-                                    <span className="text-lg font-mono font-black text-amber-400">{currentTierData.coins}</span>
+                                    <span className="text-[8px] font-bold uppercase text-slate-500 mb-0.5 flex items-center gap-1"><Mountain className="w-2.5 h-2.5" /> Type</span>
+                                    <span className="text-[9px] font-mono font-black text-amber-400 uppercase mt-1">SUMMIT</span>
                                 </div>
                                 {/* Supply */}
                                 <div className="flex flex-col items-center bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">

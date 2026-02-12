@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty } from './types.ts';
+import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord } from './types.ts';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG } from './rules/config.ts';
 import { getHexKey, getNeighbors, findPath } from './services/hexUtils.ts';
 import { GameEngine } from './engine/GameEngine.ts';
@@ -81,7 +81,26 @@ let tickCount = 0;
 
 const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig, language: Language = 'EN'): SessionState => {
   // Map Generation Logic (Delegate to service)
+  // Map Generator now only generates a small starting area.
+  // We need to calculate the SECRET MONUMENT LOCATION here if it's a Skirmish.
+  
   const initialGrid = generateMap(levelConfig);
+  let secretMonumentCoord: HexCoord | undefined = undefined;
+  
+  if (!levelConfig && winCondition?.winType === 'SUMMIT') {
+      // Calculate secret location between Radius 4 and 6
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 4 + Math.floor(Math.random() * 3); // 4, 5, or 6
+      
+      const x = Math.cos(angle) * dist;
+      const y = Math.sin(angle) * dist;
+      
+      const q = Math.round(x);
+      const r = Math.round(y);
+      
+      secretMonumentCoord = { q, r };
+      console.log(`[SYS] Monument Coordinates Set: ${q}, ${r}`);
+  }
   
   // Access store strictly for USER data, avoid `get()` inside helper if possible but we need user prefs
   const user = useGameStore.getState().user;
@@ -102,6 +121,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
 
   for (let i = 0; i < Math.min(botCount, spawnPoints.length); i++) {
     const sp = spawnPoints[i];
+    // Ensure bot spawn points exist in grid
     if (!initialGrid[getHexKey(sp.q, sp.r)]) {
         initialGrid[getHexKey(sp.q, sp.r)] = { id: getHexKey(sp.q,sp.r), q:sp.q, r:sp.r, currentLevel:0, maxLevel:0, progress:0, revealed:true };
         getNeighbors(sp.q, sp.r).forEach(n => {
@@ -141,6 +161,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     sessionStartTime: Date.now(),
     winCondition,
     activeLevelConfig: levelConfig,
+    secretMonumentCoord,
     difficulty: difficulty,
     grid: initialGrid,
     player: {
@@ -268,15 +289,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
               winType: 'AND'
           };
       } else if (!winCondition) {
+          // Default Quick Start to a simple summit run
           effectiveWin = {
               levelId: -1,
-              targetLevel: 99,
-              targetCoins: 9999,
-              label: "Quick Start",
+              targetLevel: 6, // Medium Summit
+              targetCoins: 0,
+              label: "Quick Summit",
               botCount: 0,
               difficulty: 'MEDIUM',
               queueSize: 2,
-              winType: 'AND'
+              winType: 'SUMMIT'
           };
       }
 
@@ -378,6 +400,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (session.player.state === EntityState.MOVING) return;
       
       const targetKey = getHexKey(tq, tr);
+      
+      // DYNAMIC MAP GENERATION: Check if target exists, if not, check dynamic feasibility
+      // But pathfinding needs grid. We must handle this via dynamic grid expansion during pathfinding? 
+      // No, pathfinding currently expects existing grid.
+      // However, if the user clicks a hex that is rendered, it exists.
+      // The Fog of War renderer only renders what is in the grid.
+      
       const targetHex = session.grid[targetKey];
       
       if (targetHex && targetHex.structureType !== 'VOID' && targetHex.maxLevel > session.player.playerLevel) {
@@ -389,6 +418,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       const obstacles = session.bots.map(b => ({ q: b.q, r: b.r }));
+      // Pathfinding will fail if grid is not fully generated for a long path.
+      // But typically we move to neighbors which are visible.
+      // If we clicked, it must be visible.
+      
       const path = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles);
       
       if (!path) {

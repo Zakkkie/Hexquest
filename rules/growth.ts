@@ -17,6 +17,11 @@ export function checkDigCondition(
   grid: Record<string, Hex>
 ): GrowthCheckResult {
   
+  // IMPERATIVE: Monument Hexes are indestructible
+  if (hex.structureType === 'MONUMENT') {
+      return { canGrow: false, reason: "INDESTRUCTIBLE MONUMENT" };
+  }
+
   // Use nullish coalescing to ensure 0 is treated as a valid number, not falsy
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel - 1;
@@ -86,6 +91,11 @@ export function checkGrowthCondition(
   requiredQueueSize: number = 3
 ): GrowthCheckResult {
   if (!hex) return { canGrow: false, reason: 'Invalid Hex' };
+
+  // IMPERATIVE: Monument Hexes cannot be modified by players
+  if (hex.structureType === 'MONUMENT') {
+      return { canGrow: false, reason: "ANCIENT STRUCTURE (IMMUTABLE)" };
+  }
 
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel + 1;

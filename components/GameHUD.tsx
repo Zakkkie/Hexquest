@@ -10,7 +10,7 @@ import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
-  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan
+  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain
 } from 'lucide-react';
 
 interface GameHUDProps {
@@ -309,6 +309,17 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                    <span className={isDone ? "text-emerald-400" : "text-white"}>
                       {campaignMetrics.current}/{campaignMetrics.target}
                    </span>
+               </div>
+          );
+      }
+      
+      // SUMMIT OBJECTIVE DISPLAY
+      if (winCondition?.winType === 'SUMMIT') {
+          return (
+               <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
+                   <span className="text-slate-400">SUMMIT:</span>
+                   <span className="text-amber-400">LEVEL {winCondition?.targetLevel}</span>
+                   <Mountain className="w-3 h-3 text-amber-500" />
                </div>
           );
       }
@@ -690,6 +701,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800/50 text-sm text-slate-300 leading-relaxed font-medium">
                           {(activeLevelConfig 
                               ? activeLevelConfig.description 
+                              : winCondition?.winType === 'SUMMIT' ?
+                                `SCENARIO: KING OF THE HILL\n\nA dormant Monument has been detected in the sector. It stands at Level ${winCondition.targetLevel}.\n\nYour unit cannot jump directly to the summit. You must construct a staircase (Raise adjacent terrain to Level ${winCondition.targetLevel - 1}, then jump).`
                               : t.BRIEFING_DESC_TEMPLATE
                                   .replace('{0}', (winCondition?.targetLevel || 99).toString())
                                   .replace('{1}', (winCondition?.targetCoins || 0).toString())
@@ -707,10 +720,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               </div>
                           </div>
                           <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 flex flex-col items-center">
-                              <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">{t.BRIEFING_TARGET_FUNDS}</span>
+                              <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">{winCondition?.winType === 'SUMMIT' ? 'MONUMENT' : t.BRIEFING_TARGET_FUNDS}</span>
                               <div className="flex items-center gap-2">
-                                  <Wallet className="w-4 h-4 text-amber-400" />
-                                  <span className="text-xl font-black text-white">{winCondition?.targetCoins || 0}</span>
+                                  {winCondition?.winType === 'SUMMIT' ? <Mountain className="w-4 h-4 text-amber-400" /> : <Wallet className="w-4 h-4 text-amber-400" />}
+                                  <span className="text-xl font-black text-white">{winCondition?.winType === 'SUMMIT' ? 'SUMMIT' : winCondition?.targetCoins || 0}</span>
                               </div>
                           </div>
                       </div>

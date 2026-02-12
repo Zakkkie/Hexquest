@@ -2,9 +2,10 @@
 import { System } from './System';
 import { GameState, GameEvent, EntityState, Entity, SessionState, Hex, EntityType } from '../../types';
 import { WorldIndex } from '../WorldIndex';
-import { getHexKey, getNeighbors } from '../../services/hexUtils';
+import { getHexKey, getNeighbors, cubeDistance } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';
 import { GAME_CONFIG } from '../../rules/config';
+import { generateSingleHex } from '../../services/mapGenerator';
 
 export class MovementSystem implements System {
   update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
@@ -177,20 +178,87 @@ export class MovementSystem implements System {
         gridUpdates[newHexKey] = { ...newHex, durability: newDurability };
     }
 
-    // C. FOG OF WAR
+    // C. MONUMENT DISCOVERY & FOG REVEAL
+    // Only check if secret exists
+    if (state.secretMonumentCoord) {
+        const secret = state.secretMonumentCoord;
+        // Check distance to secret center. If <= 2, we are standing on the complex (Center, Moat, or Outer)
+        const distToSecret = cubeDistance({ q: entity.q, r: entity.r }, secret);
+        
+        if (distToSecret <= 2) {
+            // MONUMENT COMPLEX DISCOVERY EVENT
+            // We need to generate/update the entire 2-radius complex
+            const monumentKey = getHexKey(secret.q, secret.r);
+            
+            // Check if already discovered to prevent re-spamming (check center hex structure)
+            const centerHex = state.grid[monumentKey] || gridUpdates[monumentKey];
+            const isNewDiscovery = !centerHex || centerHex.structureType !== 'MONUMENT';
+
+            if (isNewDiscovery) {
+                if (entity.type === EntityType.PLAYER) {
+                    state.messageLog.unshift({
+                        id: `monument-found-${Date.now()}`,
+                        text: `ANOMALY DETECTED: Monument Complex Found!`,
+                        type: 'SUCCESS',
+                        source: 'SYSTEM',
+                        timestamp: Date.now()
+                    });
+                }
+
+                // Iterate over Radius 0, 1, 2 from Secret Center
+                for (let q = secret.q - 2; q <= secret.q + 2; q++) {
+                    for (let r = secret.r - 2; r <= secret.r + 2; r++) {
+                        if (cubeDistance({ q, r }, secret) > 2) continue;
+
+                        const hexKey = getHexKey(q, r);
+                        // Generate fresh hex properties based on position in complex
+                        const dist = cubeDistance({ q, r }, secret);
+                        
+                        // Create or fetch hex
+                        // Note: We use generateSingleHex to get base props, but override level
+                        const baseHex = generateSingleHex(q, r, state.activeLevelConfig);
+                        
+                        // Force Reveal
+                        baseHex.revealed = true;
+
+                        if (dist === 0) {
+                            // CENTER: Monument
+                            baseHex.structureType = 'MONUMENT';
+                            baseHex.maxLevel = state.winCondition?.targetLevel || 5;
+                            baseHex.currentLevel = state.winCondition?.targetLevel || 5;
+                        } else if (dist === 1) {
+                            // RING 1: Moat (-1)
+                            baseHex.structureType = undefined;
+                            baseHex.maxLevel = -1;
+                            baseHex.currentLevel = -1;
+                        } else {
+                            // RING 2: Outer Ring (0)
+                            // Don't overwrite if it was already something cooler (unlikely in proc gen)
+                            // But for "landing zone" safety, we ensure it's L0.
+                            baseHex.structureType = undefined;
+                            baseHex.maxLevel = 0;
+                            baseHex.currentLevel = 0;
+                        }
+
+                        gridUpdates[hexKey] = baseHex;
+                    }
+                }
+            }
+        }
+    }
+
+    // D. STANDARD FOG OF WAR (If no monument event overrides)
     const neighbors = getNeighbors(entity.q, entity.r);
     [...neighbors, { q: entity.q, r: entity.r }].forEach(n => {
       const k = getHexKey(n.q, n.r);
       const existingHex = gridUpdates[k] || state.grid[k];
       
       if (!existingHex) {
-        gridUpdates[k] = { 
-          id: k, q: n.q, r: n.r, 
-          currentLevel: 0, maxLevel: 0, progress: 0, 
-          revealed: true 
-        };
+          const newGeneratedHex = generateSingleHex(n.q, n.r, state.activeLevelConfig);
+          newGeneratedHex.revealed = true;
+          gridUpdates[k] = newGeneratedHex;
       } else if (!existingHex.revealed) {
-        gridUpdates[k] = { ...existingHex, revealed: true };
+          gridUpdates[k] = { ...existingHex, revealed: true };
       }
     });
 
