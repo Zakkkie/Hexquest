@@ -107,8 +107,8 @@ const DustCloud: React.FC<VisualParticle & { onComplete: (id: number) => void }>
     }, [id, onComplete]);
 
     return (
-        <Group ref={groupRef} x={x} y={y}>
-            {[0, 1, 2, 3].map(i => <Circle key={i} radius={3 + Math.random()*3} fill={color} opacity={0.4} />)}
+        <Group ref={groupRef} x={x} y={y} listening={false} perfectDrawEnabled={false}>
+            {[0, 1, 2, 3].map(i => <Circle key={i} radius={3 + Math.random()*3} fill={color} opacity={0.4} perfectDrawEnabled={false} />)}
         </Group>
     );
 });
@@ -140,9 +140,9 @@ const FloatingEffect: React.FC<{ effect: FloatingText; rotation: number }> = Rea
         node.to({ opacity: 1, scaleX: 1, scaleY: 1, duration: 0.2 });
     }, []); 
     return (
-        <Group x={x} y={y - 20} listening={false}>
-            <Group ref={animRef}>
-                <Text text={effect.text} fontSize={16} fontStyle="bold" fill={effect.color} x={-50} width={100} align="center" shadowColor={effect.color} shadowBlur={10} />
+        <Group x={x} y={y - 20} listening={false} perfectDrawEnabled={false}>
+            <Group ref={animRef} perfectDrawEnabled={false}>
+                <Text text={effect.text} fontSize={16} fontStyle="bold" fill={effect.color} x={-50} width={100} align="center" shadowColor={effect.color} shadowBlur={10} perfectDrawEnabled={false} />
             </Group>
         </Group>
     );
@@ -196,8 +196,9 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         const centerY = y0 + height / 2;
         const centerHex = pixelToHex(centerX, centerY, rotation);
         
-        // Calculate a safe "radius" of hexes to render based on zoom
-        const radius = Math.ceil(Math.sqrt(width*width + height*height) / (HEX_SIZE * 1.5)) + 4;
+        // Calculate a strict "radius" of hexes to render based on zoom.
+        // Reduced the buffer from +4 to +2 to save draw calls.
+        const radius = Math.ceil(Math.sqrt(width*width + height*height) / (HEX_SIZE * 1.5)) + 2;
 
         const playerNeighbors = getNeighbors(player.q, player.r);
         const playerNeighborKeys = new Set(playerNeighbors.map(n => getHexKey(n.q, n.r)));

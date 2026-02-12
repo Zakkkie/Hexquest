@@ -139,23 +139,9 @@ const GameView: React.FC = () => {
       return () => { anim.stop(); };
   }, []);
 
-  // --- SYNC TARGET TO PLAYER ---
-  useEffect(() => {
-      // Do not auto-center if user is interacting via touch
-      if (isMultitouch.current) return;
-
-      const { x: px, y: py } = hexToPixel(player.q, player.r, cameraRotation);
-      
-      const targetX = (dimensions.width / 2) - (px * viewState.scale);
-      const targetY = (dimensions.height / 2) - (py * viewState.scale);
-      
-      targetViewRef.current = { x: targetX, y: targetY };
-      
-      if (Math.abs(viewState.x - targetX) > 2000) {
-          setViewState(prev => ({ ...prev, x: targetX, y: targetY }));
-      }
-
-  }, [player.q, player.r, cameraRotation, dimensions, viewState.scale]);
+  // --- AUTO-FOLLOW DISABLED ---
+  // The useEffect that previously centered the camera on player movement has been removed 
+  // to satisfy the requirement: "Camera centers only on action button press".
 
   const rotateCamera = useCallback((direction: 'left' | 'right') => {
       // Use Ref to get start position without adding dependency
@@ -189,12 +175,11 @@ const GameView: React.FC = () => {
       // Use Ref for calculation to avoid dependency
       const rot = cameraRotationRef.current;
       const { x: px, y: py } = hexToPixel(player.q, player.r, rot);
-      // Note: We use current dimensions/scale from closure or ref? 
-      // Ideally these should be refs too if strict stability is needed, 
-      // but re-creating this function on resize/zoom is acceptable compared to rotation loop.
-      // For now, letting it depend on dimensions/scale is fine as they don't change during rotation animation.
+      
       const tx = (dimensions.width / 2) - (px * viewState.scale);
       const ty = (dimensions.height / 2) - (py * viewState.scale);
+      
+      // Update the TARGET for the spring animation loop
       targetViewRef.current = { x: tx, y: ty };
   }, [player.q, player.r, dimensions, viewState.scale]);
 

@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty } from './types.ts';
-import { GAME_CONFIG, DIFFICULTY_SETTINGS } from './rules/config.ts';
+import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG } from './rules/config.ts';
 import { getHexKey, getNeighbors, findPath } from './services/hexUtils.ts';
 import { GameEngine } from './engine/GameEngine.ts';
 import { audioService } from './services/audioService.ts';
@@ -498,15 +498,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       tickCount++;
       
       if (tickCount % 50 === 0) {
-          if (result.state.messageLog.length > 50) {
-              result.state.messageLog = result.state.messageLog.slice(0, 50);
+          // MEMORY OPTIMIZATION: Aggressive pruning of history arrays
+          if (result.state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
+              result.state.messageLog = result.state.messageLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
           }
-          if (result.state.botActivityLog.length > 50) {
-              result.state.botActivityLog = result.state.botActivityLog.slice(0, 50);
+          if (result.state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
+              result.state.botActivityLog = result.state.botActivityLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
           }
-          if (result.state.fullBotHistory.length > 2000) {
-              result.state.fullBotHistory = result.state.fullBotHistory.slice(result.state.fullBotHistory.length - 2000);
+          
+          // CRITICAL: Limit the infinite growth of fullBotHistory
+          const historyLimit = SAFETY_CONFIG.MAX_HISTORY_SIZE || 3000;
+          if (result.state.fullBotHistory.length > historyLimit) {
+              result.state.fullBotHistory = result.state.fullBotHistory.slice(result.state.fullBotHistory.length - historyLimit);
           }
+          
           if (result.state.telemetry && result.state.telemetry.length > 100) {
               result.state.telemetry = result.state.telemetry.slice(result.state.telemetry.length - 100);
           }

@@ -9,6 +9,11 @@ export const GAME_CONFIG = {
   BOT_ACTION_INTERVAL_MS: 1000,
   L1_HEX_MAX_DURABILITY: 6, // Explicitly set to 6 as requested
   
+  // High Level Recovery Logic
+  HIGH_LEVEL_RECOVERY_THRESHOLD: 4, // Level 4+ triggers advanced mechanics
+  RECOVERY_COOLDOWN_MS: 15000,      // 15 Seconds cooldown
+  MAX_RECOVERY_POINTS: 3,           // Max uses before degradation
+  
   // Movement & Animation Speeds
   // Tuned for smoother transitions (0.6s animation provides distinct travel time)
   // Logic interval slightly larger to ensure animation finishes before next logic tick
@@ -47,7 +52,8 @@ export const DIFFICULTY_SETTINGS = {
 
 // Resource & Computation Guards
 export const SAFETY_CONFIG = {
-  MAX_LOG_SIZE: 200,            // Increased for Level 1.4 Telemetry Tracking 
+  MAX_LOG_SIZE: 50,             // Kept small for UI
+  MAX_HISTORY_SIZE: 3000,       // Strict limit on full history to prevent lag (approx 20-30 mins of play)
   MAX_PATH_LENGTH: 20,          
   MAX_SEARCH_ITERATIONS: 1000,  
   MAX_MOVEMENT_QUEUE: 25        

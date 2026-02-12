@@ -7,9 +7,10 @@ import { EntityState, Hex } from '../types.ts';
 import HexButton from './HexButton.tsx';
 import { TEXT } from '../services/i18n.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
+import { GAME_CONFIG } from '../rules/config.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
-  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp
+  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan
 } from 'lucide-react';
 
 interface GameHUDProps {
@@ -86,6 +87,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const [showMissionDetails, setShowMissionDetails] = useState(false);
 
   const [timeLeft, setTimeLeft] = useState(60);
+  const [tick, setTick] = useState(0); // Trigger re-render for timers
 
   const t = TEXT[language].HUD;
   
@@ -95,7 +97,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const safeBots = useMemo(() => (bots || []).filter(b => b && typeof b.q === 'number' && typeof b.r === 'number'), [bots]);
   const botPositions = useMemo(() => safeBots.map(b => ({ q: b.q, r: b.r })), [safeBots]);
   const isMoving = player?.state === EntityState.MOVING;
-  const canRecover = player ? !player.recoveredCurrentHex : false;
   
   const isMobile = deviceType === 'MOBILE';
 
@@ -110,14 +111,40 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   // Explicitly check for briefing status
   const isBriefingActive = gameStatus === 'BRIEFING' && !!activeLevelConfig;
 
-  // --- LEVEL 1.5 TIMER LOGIC ---
+  // --- RECOVERY LOGIC (HIGH LEVEL) ---
+  const recoveryState = useMemo(() => {
+      if (!currentHex || !player) return { canRecover: false, label: '', cooling: false, remainingCd: 0 };
+      
+      const isHighLevel = currentHex.maxLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD;
+      
+      if (isHighLevel) {
+          const now = Date.now();
+          const lastUsed = currentHex.lastRecoveryTime || 0;
+          const remaining = Math.max(0, GAME_CONFIG.RECOVERY_COOLDOWN_MS - (now - lastUsed));
+          const cooling = remaining > 0;
+          const uses = currentHex.recoveryPoints ?? GAME_CONFIG.MAX_RECOVERY_POINTS;
+          
+          if (cooling) {
+              return { canRecover: false, label: `${Math.ceil(remaining/1000)}s`, cooling: true, remainingCd: remaining };
+          }
+          return { canRecover: true, label: `${uses}/${GAME_CONFIG.MAX_RECOVERY_POINTS}`, cooling: false, remainingCd: 0 };
+      } else {
+          // Standard logic: If flag is set, you must move to reset.
+          const can = !player.recoveredCurrentHex;
+          return { canRecover: can, label: '', cooling: false, remainingCd: 0 };
+      }
+  }, [currentHex, player, tick]); // Tick ensures countdown updates
+
+  // --- TIMER UPDATE LOOP ---
   useEffect(() => {
-      if (!isLevel1_5 || gameStatus !== 'PLAYING') return;
       const interval = setInterval(() => {
-          const elapsed = Date.now() - sessionStartTime;
-          const remaining = Math.max(0, 60 - Math.floor(elapsed / 1000));
-          setTimeLeft(remaining);
-      }, 200);
+          setTick(t => t + 1);
+          if (isLevel1_5 && gameStatus === 'PLAYING') {
+              const elapsed = Date.now() - (sessionStartTime || 0);
+              const remaining = Math.max(0, 60 - Math.floor(elapsed / 1000));
+              setTimeLeft(remaining);
+          }
+      }, 250);
       return () => clearInterval(interval);
   }, [isLevel1_5, gameStatus, sessionStartTime]);
 
@@ -172,14 +199,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
     return { remainingSeconds, percent, mode };
   }, [currentHex, isPlayerGrowing, canUpgrade, canDig, playerGrowthIntent]);
 
-  const formatTime = (seconds: number) => {
-    const totalSeconds = Math.ceil(seconds);
-    if (totalSeconds < 60) return `${totalSeconds}s`;
-    const min = Math.floor(totalSeconds / 60);
-    const sec = totalSeconds % 60;
-    return `${min}m ${sec}s`;
-  };
-
   const digTooltip = useMemo(() => {
       if (isMoving) return "Unit is moving";
       if (!digCondition.canGrow) return digCondition.reason || "Cannot Excavate";
@@ -188,9 +207,13 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const recoverTooltip = useMemo(() => {
       if (isMoving) return "Unit is moving";
-      if (!canRecover) return "Already recovered resources on this sector";
+      if (recoveryState.cooling) return `SYSTEM COOLING: ${recoveryState.label} remaining`;
+      if (!recoveryState.canRecover) return "Already recovered here. Move to another sector to reset tools.";
+      if (currentHex && currentHex.maxLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
+          return `Advanced Recovery (${recoveryState.label} uses left)`;
+      }
       return "Recover Resources (Gain Moves & Credits)";
-  }, [isMoving, canRecover]);
+  }, [isMoving, recoveryState, currentHex]);
 
   const upgradeTooltip = useMemo(() => {
       if (isMoving) return "Unit is moving";
@@ -264,8 +287,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       startMission();
   };
 
-  // Fixed: Always use "lg" size for main buttons to ensure they aren't narrowed/small on desktop.
-  // The 'lg' size maps to 'w-16' on mobile and 'md:w-20' on desktop.
   const mainButtonSize = "lg";
 
   const renderMissionStatus = () => {
@@ -292,7 +313,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           );
       }
       
-      // Skirmish / Generic
       return (
            <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
                <span className="text-slate-400">GOAL:</span>
@@ -461,6 +481,91 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       </div>
 
+      {/* FOOTER ACTIONS */}
+      {gameStatus === 'PLAYING' && (
+          <div className="absolute inset-x-0 bottom-0 p-4 md:p-8 pointer-events-none pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="max-w-2xl mx-auto flex items-end justify-center gap-4 md:gap-8 pointer-events-auto">
+                  
+                  {/* Left: Rotate */}
+                  <button onClick={() => { onRotateCamera('left'); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 backdrop-blur shadow-lg active:scale-90 transition-all group">
+                      <RotateCcw className="w-5 h-5 md:w-6 md:h-6 group-hover:-rotate-45 transition-transform" />
+                  </button>
+
+                  {/* Center: Action Buttons */}
+                  <div className="flex items-end gap-3 md:gap-6 bg-slate-950/80 backdrop-blur-xl p-2 md:p-3 rounded-[2rem] border border-slate-800/50 shadow-2xl relative">
+                      
+                      {/* Dig (Red) */}
+                      <HexButton 
+                          variant="red" 
+                          size={mainButtonSize}
+                          onClick={() => { togglePlayerGrowth('DIG'); onCenterPlayer(); }} 
+                          active={isPlayerGrowing && playerGrowthIntent === 'DIG'}
+                          disabled={!canDig}
+                          progress={timeData.mode === 'DIG' ? timeData.percent : 0}
+                          className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''}
+                          title={digTooltip}
+                      >
+                          <Pickaxe className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
+                      </HexButton>
+
+                      {/* Upgrade (Amber) */}
+                      <HexButton 
+                          variant="amber" 
+                          size={mainButtonSize}
+                          onClick={() => { togglePlayerGrowth('UPGRADE'); onCenterPlayer(); }} 
+                          active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
+                          disabled={!canUpgrade}
+                          pulsate={canUpgrade && !isPlayerGrowing}
+                          progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0}
+                          className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-2 md:-translate-y-4 ring-4 ring-amber-500/20 rounded-full' : ''}
+                          title={upgradeTooltip}
+                      >
+                          <ChevronsUp className={`w-6 h-6 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
+                      </HexButton>
+
+                      {/* Recover (Blue) */}
+                      <HexButton 
+                          variant="blue" 
+                          size={mainButtonSize}
+                          onClick={() => { togglePlayerGrowth('RECOVER'); onCenterPlayer(); }} 
+                          active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'}
+                          disabled={!recoveryState.canRecover}
+                          progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0}
+                          className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''}
+                          title={recoverTooltip}
+                      >
+                          {recoveryState.cooling ? (
+                              <div className="flex flex-col items-center">
+                                  <Hourglass className="w-4 h-4 md:w-6 md:h-6 animate-spin-slow" />
+                                  <span className="text-[9px] md:text-[10px] font-mono mt-0.5">{recoveryState.label}</span>
+                              </div>
+                          ) : (
+                              <>
+                                <RefreshCw className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180' : ''}`} />
+                                {recoveryState.label && <span className="absolute -bottom-1 md:-bottom-2 bg-slate-900 px-1 rounded text-[8px] font-bold text-emerald-400">{recoveryState.label}</span>}
+                              </>
+                          )}
+                      </HexButton>
+
+                  </div>
+
+                  {/* Right Group */}
+                  <div className="flex items-center gap-2">
+                      {/* Manual Center Button */}
+                      <button onClick={() => { onCenterPlayer(); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-indigo-500 backdrop-blur shadow-lg active:scale-90 transition-all group" title="Locate Unit">
+                          <Scan className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform text-indigo-400" />
+                      </button>
+
+                      {/* Right: Rotate */}
+                      <button onClick={() => { onRotateCamera('right'); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 backdrop-blur shadow-lg active:scale-90 transition-all group">
+                          <RotateCw className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-45 transition-transform" />
+                      </button>
+                  </div>
+
+              </div>
+          </div>
+      )}
+
       {/* HELP POPUP */}
       {helpTopic && (
           <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6 pointer-events-auto" onClick={() => setHelpTopic(null)}>
@@ -515,33 +620,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* FLOATING LEADERBOARD (Controlled by Menu) */}
-      {isRankingsOpen && (
-           <div className="absolute top-[70px] md:top-[80px] right-4 md:right-[max(2rem,env(safe-area-inset-right))] z-40 flex flex-col bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden w-64 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
-               <div className="flex items-center justify-between p-3 border-b border-slate-700/50 bg-slate-950/30">
-                   <div className="flex items-center gap-2">
-                       <Trophy className="w-4 h-4 text-amber-500" />
-                       <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">{t.LEADERBOARD_TITLE}</span>
-                   </div>
-                   <button onClick={() => setIsRankingsOpen(false)} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
-               </div>
-               <div className="flex flex-col p-2 gap-1.5 max-h-[40vh] overflow-y-auto no-scrollbar">
-                   {[player, ...safeBots].sort((a, b) => (b.coins || 0) - (a.coins || 0)).map((e) => {
-                       const isP = e.type === 'PLAYER';
-                       const color = isP ? (user?.avatarColor || '#3b82f6') : (e.avatarColor || '#ef4444');
-                       return (
-                           <div key={e.id} className="grid grid-cols-5 items-center p-2 rounded-lg bg-slate-950/50 border border-slate-800/50 gap-1">
-                               <div className="col-span-2 flex items-center gap-2 overflow-hidden"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} /><span className={`text-[10px] font-bold truncate ${isP ? 'text-white' : 'text-slate-400'}`}>{isP ? 'YOU' : e.id.toUpperCase()}</span></div>
-                               <div className="col-span-1 text-center font-mono text-[9px] text-indigo-400">L{e.playerLevel}</div>
-                               <div className="col-span-2 text-right font-mono text-[9px] text-amber-400">{e.coins}</div>
-                           </div>
-                       )
-                   })}
-               </div>
-           </div>
-      )}
-
-      {/* ABORT CONFIRMATION */}
+      {/* ABORT CONFIRMATION & VICTORY/DEFEAT SCREENS & BRIEFING (Unchanged from original) */}
       {showExitConfirmation && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-auto p-4">
               <div className="bg-slate-900 border border-red-900/50 p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center animate-in zoom-in-95 duration-200">
@@ -558,7 +637,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* VICTORY / DEFEAT SCREEN */}
       {(gameStatus === 'VICTORY' || gameStatus === 'DEFEAT') && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-700 pointer-events-auto p-4">
               <div className="flex flex-col items-center max-w-md w-full">
@@ -593,79 +671,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* FOOTER ACTIONS */}
-      {gameStatus === 'PLAYING' && (
-          <div className="absolute inset-x-0 bottom-0 p-4 md:p-8 pointer-events-none pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <div className="max-w-2xl mx-auto flex items-end justify-center gap-4 md:gap-8 pointer-events-auto">
-                  
-                  {/* Left: Rotate */}
-                  <button onClick={() => { onRotateCamera('left'); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 backdrop-blur shadow-lg active:scale-90 transition-all group">
-                      <RotateCcw className="w-5 h-5 md:w-6 md:h-6 group-hover:-rotate-45 transition-transform" />
-                  </button>
-
-                  {/* Center: Action Buttons */}
-                  <div className="flex items-end gap-3 md:gap-6 bg-slate-950/80 backdrop-blur-xl p-2 md:p-3 rounded-[2rem] border border-slate-800/50 shadow-2xl relative">
-                      
-                      {/* Dig (Red) */}
-                      <HexButton 
-                          variant="red" 
-                          size={mainButtonSize}
-                          onClick={() => togglePlayerGrowth('DIG')} 
-                          active={isPlayerGrowing && playerGrowthIntent === 'DIG'}
-                          disabled={!canDig}
-                          progress={timeData.mode === 'DIG' ? timeData.percent : 0}
-                          className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''}
-                          title={digTooltip}
-                      >
-                          <Pickaxe className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
-                      </HexButton>
-
-                      {/* Upgrade (Amber) */}
-                      <HexButton 
-                          variant="amber" 
-                          size={mainButtonSize}
-                          onClick={() => togglePlayerGrowth('UPGRADE')} 
-                          active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
-                          disabled={!canUpgrade}
-                          pulsate={canUpgrade && !isPlayerGrowing}
-                          progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0}
-                          className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-2 md:-translate-y-4 ring-4 ring-amber-500/20 rounded-full' : ''}
-                          title={upgradeTooltip}
-                      >
-                          <ChevronsUp className={`w-6 h-6 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
-                      </HexButton>
-
-                      {/* Recover (Blue) */}
-                      <HexButton 
-                          variant="blue" 
-                          size={mainButtonSize}
-                          onClick={() => togglePlayerGrowth('RECOVER')} 
-                          active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'}
-                          disabled={!canRecover}
-                          progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0}
-                          className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''}
-                          title={recoverTooltip}
-                      >
-                          <RefreshCw className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180' : ''}`} />
-                      </HexButton>
-
-                  </div>
-
-                  {/* Right: Rotate */}
-                  <button onClick={() => { onRotateCamera('right'); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 backdrop-blur shadow-lg active:scale-90 transition-all group">
-                      <RotateCw className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-45 transition-transform" />
-                  </button>
-
-              </div>
-          </div>
-      )}
-
-      {/* BRIEFING MODAL (Tutorials) & INFO MODAL */}
       {(isBriefingActive || (showMissionDetails && activeLevelConfig)) && activeLevelConfig && (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-300">
               <div className="max-w-lg w-full bg-slate-900 border border-indigo-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                   
-                  {/* Close Button for Info Mode */}
                   {showMissionDetails && !isBriefingActive && (
                       <button 
                           onClick={() => setShowMissionDetails(false)}
@@ -675,7 +684,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       </button>
                   )}
 
-                  {/* Decor */}
                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
                   <div className="flex items-center gap-3 mb-6">
@@ -695,7 +703,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           ))}
                       </div>
 
-                      {/* Objectives Grid */}
                       <div className="grid grid-cols-2 gap-3">
                           <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 flex flex-col items-center">
                               <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">{t.BRIEFING_TARGET_RANK}</span>

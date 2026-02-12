@@ -103,13 +103,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
       // Generate wall quads
       for(let i=0; i<6; i++) {
           const next = (i + 1) % 6;
-          // Determine if this face is front-facing (average of two vertices or face normal)
-          // Simplified: The edge is "front" if its midpoint angle sin > 0
-          // Or strictly: if the normal points roughly +Y. 
-          // The vertices visibility check above is approximate. 
-          // Better Check: Midpoint angle.
-          const midAngle = (60 * i + 60) * DEG_TO_RAD + angleOffset; // Angle bisector between i(30) and next(90) -> 60
-          // Wait, i=0 is 30deg. i+1 is 90deg. Edge is between them (60deg).
+          const midAngle = (60 * i + 60) * DEG_TO_RAD + angleOffset; 
           const isFrontFacing = Math.sin(midAngle) > 0;
 
           walls.push({
@@ -159,15 +153,15 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   if (isRealVoid) {
       return (
-        <Group x={x} y={y}>
+        <Group x={x} y={y} perfectDrawEnabled={false}>
              {/* Match perspective and rotation of standard hexes */}
-             <Group scaleY={0.8}>
-                 <Group rotation={rotation}>
+             <Group scaleY={0.8} perfectDrawEnabled={false}>
+                 <Group rotation={rotation} perfectDrawEnabled={false}>
                      {/* Depth Rim */}
-                     <Path data={BASE_PATH_D} fill="#020617" stroke="#1e293b" strokeWidth={1} />
+                     <Path data={BASE_PATH_D} fill="#020617" stroke="#1e293b" strokeWidth={1} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                      
                      {/* Static Abyss - Darker center */}
-                     <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} opacity={0.8} />
+                     <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} opacity={0.8} perfectDrawEnabled={false} />
 
                      {/* Blinking Danger Outline */}
                      <Path 
@@ -180,6 +174,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         shadowBlur={15}
                         listening={false} 
                         perfectDrawEnabled={false}
+                        shadowForStrokeEnabled={false}
                      />
 
                      {/* Grid overlay for sense of scale */}
@@ -203,6 +198,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
         x={x} y={y} 
         onClick={handleClick} onTap={handleClick}
         onMouseEnter={handleHover} onMouseLeave={handleHoverEnd}
+        perfectDrawEnabled={false} // CRITICAL OPTIMIZATION: Disables expensive buffer canvas
     >
         {/* 1. WALLS */}
         {neighborLevels.map((nLevel, i) => {
@@ -230,13 +226,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
                         fillPatternImage={sideTexture as any}
                         fillPatternScale={{ x: 1, y: heightDiff / 64 }}
-                        fill={theme.dark} // Solid fallback color
+                        fill={theme.dark} 
                         stroke={theme.stroke} 
-                        strokeWidth={1.5} // Slightly thicker to seal seams
-                        perfectDrawEnabled={false} // Performance opt
-                        listening={false} // Wall sides are not clickable
+                        strokeWidth={1.5} 
+                        perfectDrawEnabled={false} 
+                        listening={false} 
                         closed={true} 
                         opacity={1} 
+                        shadowForStrokeEnabled={false}
                     />
                 );
             }
@@ -244,8 +241,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
         })}
 
         {/* 2. TOP FACE */}
-        <Group y={offsetY} scaleY={0.8}>
-            <Group rotation={rotation}>
+        <Group y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
+            <Group rotation={rotation} perfectDrawEnabled={false}>
                 <Path 
                     data={BASE_PATH_D} 
                     fillPatternImage={topTexture as any}
@@ -255,11 +252,13 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     stroke={strokeColor} 
                     strokeWidth={strokeWidth} 
                     shadowEnabled={false} 
+                    perfectDrawEnabled={false}
+                    shadowForStrokeEnabled={false}
                 />
 
                 {/* Damage Cracks Overlay */}
                 {damageLevel > 0 && (
-                    <Group listening={false}>
+                    <Group listening={false} perfectDrawEnabled={false}>
                         {CRACK_PATHS.slice(0, damageLevel).map((path, idx) => (
                             <Path 
                                 key={idx} 
@@ -270,6 +269,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                                 lineJoin="round" 
                                 lineCap="round" 
                                 perfectDrawEnabled={false}
+                                shadowForStrokeEnabled={false}
                             />
                         ))}
                     </Group>
@@ -287,13 +287,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             opacity={0.3} 
                             listening={false} 
                             perfectDrawEnabled={false}
+                            shadowForStrokeEnabled={false}
                         />
                     );
                 })}
 
                 {/* Interaction Overlays */}
                 {isSelected && (
-                    <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} shadowColor="#06b6d4" shadowBlur={10} listening={false} perfectDrawEnabled={false} />
+                    <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} shadowColor="#06b6d4" shadowBlur={10} listening={false} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                 )}
                 
                 {isTutorialTarget && (
@@ -303,13 +304,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         strokeWidth={3} 
                         listening={false} 
                         perfectDrawEnabled={false}
+                        shadowForStrokeEnabled={false}
                     />
                 )}
 
                 {isMissingSupport && (
-                    <Group listening={false}>
-                        <Path data={BASE_PATH_D} stroke="#ef4444" strokeWidth={2} dash={[5, 5]} fill="rgba(239, 68, 68, 0.15)" perfectDrawEnabled={false} />
-                        <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="#ef4444" opacity={0.8} perfectDrawEnabled={false} />
+                    <Group listening={false} perfectDrawEnabled={false}>
+                        <Path data={BASE_PATH_D} stroke="#ef4444" strokeWidth={2} dash={[5, 5]} fill="rgba(239, 68, 68, 0.15)" perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
+                        <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="#ef4444" opacity={0.8} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                     </Group>
                 )}
             </Group>
@@ -317,21 +319,21 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
         {/* 3. BILLBOARD ICONS */}
         {artifactType && !isRealVoid && (
-            <Group y={offsetY - 12} listening={false}>
-                <Circle radius={9} fill={artifactType.includes('RELIC') ? '#f59e0b' : '#3b82f6'} shadowColor="rgba(0,0,0,0.5)" shadowBlur={4} />
-                <Text text={artifactType.includes('RELIC') ? '★' : '?'} fontSize={13} fontStyle="bold" fill="white" offsetX={4.5} offsetY={6.5} />
+            <Group y={offsetY - 12} listening={false} perfectDrawEnabled={false}>
+                <Circle radius={9} fill={artifactType.includes('RELIC') ? '#f59e0b' : '#3b82f6'} shadowColor="rgba(0,0,0,0.5)" shadowBlur={4} perfectDrawEnabled={false} />
+                <Text text={artifactType.includes('RELIC') ? '★' : '?'} fontSize={13} fontStyle="bold" fill="white" offsetX={4.5} offsetY={6.5} perfectDrawEnabled={false} />
             </Group>
         )}
 
         {isPending && (
-            <Group y={offsetY - 38} listening={false}>
-                <Circle radius={15} fill="#fbbf24" stroke="#92400e" strokeWidth={2} shadowBlur={10} shadowColor="rgba(251, 191, 36, 0.4)" />
-                <Text text={`${pendingCost}`} y={-6} fontSize={13} fontStyle="bold" fill="#78350f" align="center" width={30} offsetX={15} />
+            <Group y={offsetY - 38} listening={false} perfectDrawEnabled={false}>
+                <Circle radius={15} fill="#fbbf24" stroke="#92400e" strokeWidth={2} shadowBlur={10} shadowColor="rgba(251, 191, 36, 0.4)" perfectDrawEnabled={false} />
+                <Text text={`${pendingCost}`} y={-6} fontSize={13} fontStyle="bold" fill="#78350f" align="center" width={30} offsetX={15} perfectDrawEnabled={false} />
             </Group>
         )}
         
         {isGrowing && (
-            <Group y={offsetY - 18} listening={false}>
+            <Group y={offsetY - 18} listening={false} perfectDrawEnabled={false}>
                 <Rect x={-18} y={0} width={36} height={5} fill="rgba(0,0,0,0.7)" cornerRadius={2} perfectDrawEnabled={false} />
                 <Rect x={-18} y={0} width={36 * Math.min(1, progress / (30))} height={5} fill={isRankLocked ? "#f59e0b" : "#10b981"} cornerRadius={2} perfectDrawEnabled={false} />
             </Group>

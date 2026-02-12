@@ -26,9 +26,16 @@
 3.  **Construction (Amber)**: Spend **Material** to raise a hex's level. Higher levels grant Rank and Income.
     *   *Rule*: To build up, you need support neighbors at the same level.
 4.  **Recovery (Blue)**: Spend time on an owned hex to generate **Moves** and **Credits**.
+    *   **Standard Recovery (L0-L3)**: You can only recover **once** per visit. To recover again, you must **move off the hex** and return (or move to a different hex) to reset your tools.
+    *   **Advanced Recovery (L4+)**: High-level sectors operate on a **Charge System**. They yield massive rewards but have limited charges. Once depleted or used, they enter a **15s Cooldown**.
 
-### ⚠️ The Void Hazard
-Level 1 hexes have **Durability**. Every time a unit steps off a Level 1 hex, it cracks. When durability hits 0, it collapses into the Void. Falling or being near a collapse damages your Rank.
+### ⚠️ Environmental Hazards
+
+**Terrain Instability**
+Level 1 sectors ("Cracked Ground") have limited **Durability**.
+*   Every time a unit steps *off* a Level 1 hex, it takes damage.
+*   When durability reaches 0, the sector collapses into the **Void**.
+*   Any unit standing near a collapse takes Rank Damage.
 
 ## 🛠️ Tech Stack
 

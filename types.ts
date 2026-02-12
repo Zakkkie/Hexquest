@@ -24,6 +24,10 @@ export interface Hex extends HexView {
   attackPoint?: number;
   movePoint?: number;
   artifact?: { type: string };
+  
+  // V95 High Level Mechanics
+  recoveryPoints?: number;    // Remaining uses for L4+ hexes (Max 3)
+  lastRecoveryTime?: number;  // Timestamp of last use or upgrade
 }
 
 export enum EntityType {
@@ -144,7 +148,8 @@ export type GameEventType =
   | 'BOT_LOG'
   | 'LEADERBOARD_UPDATE'
   | 'RECOVERY_USED'
-  | 'HEX_COLLAPSE';
+  | 'HEX_COLLAPSE'
+  | 'HEX_DOWNGRADE'; // Added for recovery depletion
 
 export interface GameEvent {
   type: GameEventType;

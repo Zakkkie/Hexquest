@@ -253,7 +253,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '1.5',
     title: 'Sim 1.5: Oxygen Run',
-    description: 'Protocol: Emergency Recovery.\n\nObjective: Accrue 150 Coins in 60s.\n\nStatus: Fuel Low. Funds Low.\n\nMethod: Use the RECOVER action (Blue Button) on High-Level sectors. Higher levels yield more Credits and Moves.',
+    description: 'Protocol: Emergency Recovery.\n\nObjective: Accrue 150 Coins in 60s.\n\nRule: You can only Recover once per visit on standard sectors. You must MOVE to reset the ability.\n\nMethod: Use the RECOVER action (Blue Button) on High-Level sectors. Higher levels yield more Credits.\n\nWARNING: High-Level (L4+) sectors have a 15s COOLDOWN. You cannot spam them. Move between multiple peaks to survive.',
     
     mapConfig: {
       size: 5,
