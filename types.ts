@@ -42,6 +42,17 @@ export enum EntityState {
   LOCKED = 'LOCKED'
 }
 
+// LOOT SYSTEM TYPES
+export type ItemRarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'LEGENDARY';
+
+export interface Item {
+  id: string;
+  rarity: ItemRarity;
+  name: string;
+  value: number; // Credit value if sold (future feature) or score
+  timestamp: number;
+}
+
 export type BotGoalType = 'EXPAND' | 'DEFEND' | 'ATTACK' | 'GROWTH' | 'IDLE' | 'PREPARE_CYCLE' | 'BUILD_SUPPORT' | 'GATHER_RESOURCES' | 'AGGRESSOR';
 
 export interface BotGoal {
@@ -114,6 +125,9 @@ export interface Entity {
   storage: number;
   maxStorage: number;
 
+  // NEW: Loot Inventory
+  inventory: Item[];
+
   movementQueue: HexCoord[]; 
   
   memory?: BotMemory; 
@@ -149,7 +163,11 @@ export type GameEventType =
   | 'LEADERBOARD_UPDATE'
   | 'RECOVERY_USED'
   | 'HEX_COLLAPSE'
-  | 'HEX_DOWNGRADE'; // Added for recovery depletion
+  | 'HEX_DOWNGRADE'
+  | 'ITEM_DROP' // New
+  | 'ITEM_DESTROYED' // New
+  | 'HEX_RESTORED' // New
+  | 'HEX_RESTORE_FAILED'; // New
 
 export interface GameEvent {
   type: GameEventType;
@@ -238,7 +256,7 @@ export interface FloatingText {
   color: string;
   startTime: number;
   lifetime: number;
-  icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE';
+  icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE' | 'GEM';
 }
 
 // MOVED FROM campaign/types.ts to resolve circular dependency
@@ -336,6 +354,9 @@ export interface GameState {
   isMusicMuted: boolean;
   isSfxMuted: boolean;
   language: Language;
+  
+  // UI Dialog States
+  voidDialogTarget: HexCoord | null; // Target hex for void restoration
 }
 
 export type MoveAction = { type: 'MOVE'; path: { q: number; r: number }[]; stateVersion?: number };
@@ -343,9 +364,11 @@ export type UpgradeAction = { type: 'UPGRADE'; coord: { q: number; r: number }; 
 export type DigAction = { type: 'DIG'; coord: { q: number; r: number }; stateVersion?: number };
 export type WaitAction = { type: 'WAIT'; stateVersion?: number };
 export type RechargeAction = { type: 'RECHARGE_MOVE'; stateVersion?: number };
+export type DestroyItemAction = { type: 'DESTROY_ITEM'; itemId: string; stateVersion?: number };
+export type RestoreHexAction = { type: 'RESTORE_HEX'; coord: HexCoord; itemId: string; stateVersion?: number };
 
 export type BotAction = MoveAction | UpgradeAction | DigAction | WaitAction | RechargeAction;
-export type GameAction = BotAction | RechargeAction;
+export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction;
 
 // Validates result of logic before execution (Architecture Requirement)
 export interface ValidationResult {

@@ -6,6 +6,7 @@ import { getHexKey } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';
 import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
 import { getLevelConfig, GAME_CONFIG, DIFFICULTY_SETTINGS } from '../../rules/config';
+import { rollForLoot, LOOT_COLORS } from '../../rules/loot';
 
 export class GrowthSystem implements System {
   update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
@@ -290,6 +291,30 @@ export class GrowthSystem implements System {
              
              state.messageLog.unshift({ id: `dig-ok-${Date.now()}`, text: msg, type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now() });
              events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id));
+
+             // --- LOOT LOGIC ---
+             if (entity.type === EntityType.PLAYER) {
+                 const loot = rollForLoot(newLevel);
+                 if (loot.type === 'COIN') {
+                     entity.coins += loot.amount;
+                     entity.totalCoinsEarned += loot.amount;
+                     const lootMsg = `FOUND: ${loot.amount} Coins!`;
+                     state.messageLog.unshift({ id: `loot-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
+                     events.push(GameEventFactory.create('RECOVERY_USED', lootMsg, entity.id)); // Reuse coin sound
+                 } else if (loot.type === 'ITEM') {
+                     if (!entity.inventory) entity.inventory = [];
+                     
+                     if (entity.inventory.length < GAME_CONFIG.MAX_INVENTORY_SIZE) {
+                         entity.inventory = [...entity.inventory, loot.item];
+                         const lootMsg = `FOUND: ${loot.item.name}!`;
+                         state.messageLog.unshift({ id: `loot-item-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
+                         events.push(GameEventFactory.create('ITEM_DROP', lootMsg, entity.id));
+                     } else {
+                         state.messageLog.unshift({ id: `loot-full-${Date.now()}`, text: "Inventory Full! Item Discarded.", type: 'WARN', source: 'LOOT', timestamp: Date.now() });
+                         events.push(GameEventFactory.create('ERROR', "Inventory Full", entity.id));
+                     }
+                 }
+             }
              
              if (hasUpgradeCmd) entity.movementQueue.shift();
              entity.state = EntityState.IDLE;

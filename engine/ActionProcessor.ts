@@ -1,10 +1,11 @@
 
-import { GameAction, EntityType, EntityState, ValidationResult, SessionState, BotLogEntry } from '../types';
+import { GameAction, EntityType, EntityState, ValidationResult, SessionState, BotLogEntry, ItemRarity } from '../types';
 import { WorldIndex } from './WorldIndex';
-import { getHexKey } from '../services/hexUtils';
+import { getHexKey, cubeDistance } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { GAME_CONFIG, SAFETY_CONFIG, DIFFICULTY_SETTINGS } from '../rules/config';
 import { calculateMovementCost } from '../rules/movement';
+import { GameEventFactory } from './events';
 
 /**
  * ActionProcessor is now a STATELESS service.
@@ -89,6 +90,28 @@ export class ActionProcessor {
             }
             break;
         }
+        case 'DESTROY_ITEM': {
+            if (!actor.inventory || !actor.inventory.some(i => i.id === action.itemId)) {
+                return { ok: false, reason: 'Item not found in inventory' };
+            }
+            break;
+        }
+        case 'RESTORE_HEX': {
+            const key = getHexKey(action.coord.q, action.coord.r);
+            const hex = state.grid[key];
+            if (!hex) return { ok: false, reason: 'Target does not exist' };
+            if (hex.structureType !== 'VOID') return { ok: false, reason: 'Target is not a VOID hex' };
+            
+            // Distance Check: Must be adjacent (dist 1)
+            const dist = cubeDistance({q: actor.q, r: actor.r}, action.coord);
+            if (dist > 1) return { ok: false, reason: 'Target too far (Must be adjacent)' };
+            
+            // Item Ownership Check
+            if (!actor.inventory || !actor.inventory.some(i => i.id === action.itemId)) {
+                return { ok: false, reason: 'Item not in inventory' };
+            }
+            break;
+        }
     }
 
     return { ok: true };
@@ -158,11 +181,103 @@ export class ActionProcessor {
         break;
       case 'WAIT':
         break;
+      case 'DESTROY_ITEM':
+        actor.inventory = actor.inventory.filter(i => i.id !== action.itemId);
+        break;
+      case 'RESTORE_HEX': {
+        const item = actor.inventory.find(i => i.id === action.itemId);
+        if (!item) return { ok: false, reason: 'Item missing during execution' }; // Should not happen due to validation
+
+        // Consume Item
+        actor.inventory = actor.inventory.filter(i => i.id !== action.itemId);
+
+        // Determine Chance
+        let successChance = 0;
+        switch (item.rarity) {
+            case 'COMMON': successChance = 0.25; break;
+            case 'UNCOMMON': successChance = 0.50; break;
+            case 'RARE': successChance = 0.75; break;
+            case 'LEGENDARY': successChance = 1.00; break;
+        }
+
+        const roll = Math.random();
+        const success = roll < successChance;
+        const key = getHexKey(action.coord.q, action.coord.r);
+        const hex = state.grid[key];
+
+        if (success) {
+            // Restore Hex to Level 0
+            state.grid = {
+                ...state.grid,
+                [key]: {
+                    ...hex,
+                    structureType: undefined, // Remove VOID type
+                    currentLevel: 0,
+                    maxLevel: 0,
+                    progress: 0,
+                    durability: undefined // Reset durability (infinite for L0)
+                }
+            };
+            
+            const msg = `Stabilization SUCCESS: Sector Restored using ${item.name}`;
+            state.messageLog.unshift({
+                id: `rest-ok-${Date.now()}`,
+                text: msg,
+                type: 'SUCCESS',
+                source: actor.id,
+                timestamp: Date.now()
+            });
+            // We reuse SECTOR_ACQUIRED sound/event for visual feedback
+            // Actually, we should trigger a new event type if possible, but SECTOR_ACQUIRED works for now
+            // Added HEX_RESTORED to types earlier
+            // Note: Since this class returns ValidationResult and doesn't push events directly, 
+            // the GameEngine usually handles events. 
+            // However, this class DOES modify state.telemetry or we need to rely on GameEngine logic.
+            // GameEngine currently doesn't auto-generate events from ActionProcessor mutations except for movement.
+            // We can assume the UI/Engine will handle event generation if needed, or we can add to a temporary list?
+            // ActionProcessor currently doesn't output events directly.
+            // We will rely on the UI toast for immediate feedback, or update GameEngine to detect restoration.
+            // But wait, the previous code updates messageLog directly. We can add a visual effect via messageLog logic or effects array.
+            
+            // Add visual effect
+            state.effects.push({
+                id: `eff-rest-${Date.now()}`,
+                q: action.coord.q,
+                r: action.coord.r,
+                text: "STABILIZED",
+                color: "#10b981", // Emerald
+                icon: 'PLUS',
+                startTime: Date.now(),
+                lifetime: 1500
+            });
+
+        } else {
+            const msg = `Stabilization FAILED: ${item.name} consumed without effect.`;
+            state.messageLog.unshift({
+                id: `rest-fail-${Date.now()}`,
+                text: msg,
+                type: 'ERROR',
+                source: actor.id,
+                timestamp: Date.now()
+            });
+             state.effects.push({
+                id: `eff-fail-${Date.now()}`,
+                q: action.coord.q,
+                r: action.coord.r,
+                text: "FIZZLED",
+                color: "#ef4444", // Red
+                icon: 'WARN',
+                startTime: Date.now(),
+                lifetime: 1500
+            });
+        }
+        break;
+      }
     }
 
     // --- PLAYER ACTION LOGGING ---
     // Log successful player actions for dataset/imitation learning
-    if (actor.type === EntityType.PLAYER) {
+    if (actor.type === EntityType.PLAYER && action.type !== 'DESTROY_ITEM' && action.type !== 'RESTORE_HEX') {
         let targetStr: string | undefined = undefined;
         
         if (action.type === 'MOVE' && action.path.length > 0) {

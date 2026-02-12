@@ -8,9 +8,10 @@ import HexButton from './HexButton.tsx';
 import { TEXT } from '../services/i18n.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
+import { LOOT_COLORS } from '../rules/loot.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
-  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain
+  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap
 } from 'lucide-react';
 
 interface GameHUDProps {
@@ -55,8 +56,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
   const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
   const sessionStartTime = useGameStore(state => state.session?.sessionStartTime);
+  const leaderboard = useGameStore(state => state.leaderboard);
   const language = useGameStore(state => state.language);
   const user = useGameStore(state => state.user);
+  const voidDialogTarget = useGameStore(state => state.voidDialogTarget);
   
   const isMusicMuted = useGameStore(state => state.isMusicMuted);
   const isSfxMuted = useGameStore(state => state.isSfxMuted);
@@ -70,6 +73,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const playUiSound = useGameStore(state => state.playUiSound);
   const startMission = useGameStore(state => state.startMission);
   const downloadSessionLog = useGameStore(state => state.downloadSessionLog);
+  const destroyItem = useGameStore(state => state.destroyItem);
+  const closeVoidDialog = useGameStore(state => state.closeVoidDialog);
+  const restoreVoidHex = useGameStore(state => state.restoreVoidHex);
   
   // New actions for game over
   const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
@@ -497,6 +503,163 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                </div>
           </div>
       </div>
+
+      {/* LEFT SIDE: INVENTORY PANEL (Vertically Centered) */}
+      {gameStatus === 'PLAYING' && (
+          <div className="absolute top-1/2 -translate-y-1/2 left-2 md:left-4 z-40 pointer-events-auto flex flex-col gap-2">
+              <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-xl p-2 md:p-3 shadow-xl flex flex-col items-center gap-2">
+                  <span className="text-[8px] md:text-[9px] font-bold uppercase text-slate-500 tracking-widest">LOOT</span>
+                  
+                  {[0, 1, 2].map(index => {
+                      const item = player.inventory[index];
+                      return (
+                          <div 
+                              key={index} 
+                              className={`
+                                  w-10 h-10 md:w-12 md:h-12 rounded-lg border flex items-center justify-center relative group
+                                  ${item 
+                                      ? 'bg-slate-800 border-slate-600 shadow-inner' 
+                                      : 'bg-slate-950/30 border-slate-800 border-dashed'}
+                              `}
+                          >
+                              {item ? (
+                                  <>
+                                      <Gem 
+                                          className="w-5 h-5 md:w-6 md:h-6 drop-shadow-md" 
+                                          style={{ color: LOOT_COLORS[item.rarity] || '#fff' }} 
+                                      />
+                                      {/* Tooltip on Hover */}
+                                      <div className="absolute left-full ml-2 bg-black/90 px-2 py-1 rounded text-[10px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 uppercase tracking-wider font-bold">
+                                          {item.name}
+                                      </div>
+                                      {/* Delete Button */}
+                                      <button 
+                                          onClick={(e) => { e.stopPropagation(); destroyItem(item.id); }}
+                                          className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 shadow-lg"
+                                          title="Discard Item"
+                                      >
+                                          <X className="w-2.5 h-2.5" />
+                                      </button>
+                                  </>
+                              ) : (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-800" />
+                              )}
+                          </div>
+                      );
+                  })}
+              </div>
+          </div>
+      )}
+
+      {/* RIGHT SIDE: RANKINGS PANEL (Toggleable) */}
+      {isRankingsOpen && (
+          <div className="absolute top-[80px] md:top-[100px] right-2 md:right-4 z-40 pointer-events-auto flex flex-col gap-2 animate-in slide-in-from-right-10 fade-in duration-300">
+              <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-xl p-3 shadow-xl min-w-[200px] md:min-w-[240px]">
+                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-800">
+                      <div className="flex items-center gap-2">
+                          <Trophy className="w-3 h-3 text-amber-500" />
+                          <span className="text-[9px] font-bold uppercase text-slate-500 tracking-widest">{t.LEADERBOARD_TITLE}</span>
+                      </div>
+                      <button 
+                          onClick={() => setIsRankingsOpen(false)}
+                          className="text-slate-500 hover:text-white transition-colors"
+                      >
+                          <X className="w-3.5 h-3.5" />
+                      </button>
+                  </div>
+                  
+                  {/* Column Headers */}
+                  <div className="grid grid-cols-6 text-[8px] uppercase font-bold text-slate-600 mb-1 px-1">
+                      <div className="col-span-1">#</div>
+                      <div className="col-span-3">Name</div>
+                      <div className="col-span-1 text-right">Lvl</div>
+                      <div className="col-span-1 text-right">$</div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 max-h-[200px] overflow-y-auto no-scrollbar">
+                      {leaderboard.slice(0, 10).map((entry, i) => (
+                          <div key={i} className="grid grid-cols-6 items-center text-xs px-1 py-0.5 rounded hover:bg-slate-800/30">
+                              <div className={`col-span-1 font-mono font-bold ${i===0?'text-amber-400':(i===1?'text-slate-300':'text-slate-500')}`}>
+                                  {i+1}
+                              </div>
+                              <div className="col-span-3 text-slate-300 truncate font-bold text-[10px] md:text-xs">
+                                  {entry.nickname}
+                              </div>
+                              <div className="col-span-1 text-emerald-400 font-mono text-right text-[10px] md:text-xs">
+                                  {entry.maxLevel}
+                              </div>
+                              <div className="col-span-1 text-amber-500 font-mono text-right text-[10px] md:text-xs">
+                                  {entry.maxCoins > 999 ? '999+' : entry.maxCoins}
+                              </div>
+                          </div>
+                      ))}
+                      {leaderboard.length === 0 && <span className="text-xs text-slate-600 italic text-center py-2">No records</span>}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* VOID RESTORATION DIALOG */}
+      {voidDialogTarget && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-auto p-4 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-red-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full relative overflow-hidden flex flex-col gap-4 animate-in zoom-in-95">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                  
+                  <button onClick={closeVoidDialog} className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5"/></button>
+
+                  <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+                      <div className="p-2.5 bg-red-950/50 rounded-lg border border-red-900/50 shadow-inner">
+                          <Zap className="w-5 h-5 text-red-500 animate-pulse" />
+                      </div>
+                      <div>
+                          <h3 className="text-lg font-black text-white uppercase tracking-tighter leading-none">Sector Collapsed</h3>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono mt-1">Void Stabilization</p>
+                      </div>
+                  </div>
+
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                      This sector has destabilized. Insert matter from your inventory to attempt restoration to Level 0.
+                      <br/><span className="text-red-400 text-[10px] font-bold uppercase mt-1 block">Warning: Item will be consumed.</span>
+                  </p>
+
+                  <div className="flex flex-col gap-2 bg-slate-900/50 rounded-xl p-2 border border-slate-800 max-h-[200px] overflow-y-auto no-scrollbar">
+                      <span className="text-[9px] font-bold uppercase text-slate-600 tracking-widest px-1">Select Matter Source</span>
+                      {player.inventory.length === 0 ? (
+                          <div className="py-6 text-center text-xs text-slate-600 italic">No stability matter available.</div>
+                      ) : (
+                          player.inventory.map(item => {
+                              let chance = "25%";
+                              let color = LOOT_COLORS[item.rarity];
+                              if (item.rarity === 'UNCOMMON') chance = "50%";
+                              if (item.rarity === 'RARE') chance = "75%";
+                              if (item.rarity === 'LEGENDARY') chance = "100%";
+
+                              return (
+                                  <button 
+                                      key={item.id}
+                                      onClick={() => restoreVoidHex(item.id)}
+                                      className="flex items-center justify-between p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-500 transition-all group"
+                                  >
+                                      <div className="flex items-center gap-3">
+                                          <div className="w-8 h-8 rounded bg-slate-900 flex items-center justify-center border border-slate-700">
+                                              <Gem className="w-4 h-4" style={{ color }} />
+                                          </div>
+                                          <div className="flex flex-col items-start">
+                                              <span className="text-xs font-bold text-white group-hover:text-emerald-200">{item.name}</span>
+                                              <span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span>
+                                          </div>
+                                      </div>
+                                      <div className="px-2 py-1 rounded bg-slate-950 text-[10px] font-mono font-bold text-emerald-400 border border-slate-800">
+                                          {chance}
+                                      </div>
+                                  </button>
+                              );
+                          })
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* FOOTER ACTIONS */}
       {gameStatus === 'PLAYING' && (

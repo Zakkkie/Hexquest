@@ -1,8 +1,8 @@
 
 import { create } from 'zustand';
-import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord } from './types.ts';
+import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction } from './types.ts';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG } from './rules/config.ts';
-import { getHexKey, getNeighbors, findPath } from './services/hexUtils.ts';
+import { getHexKey, getNeighbors, findPath, cubeDistance } from './services/hexUtils.ts';
 import { GameEngine } from './engine/GameEngine.ts';
 import { audioService } from './services/audioService.ts';
 import { CAMPAIGN_LEVELS } from './campaign/levels.ts';
@@ -74,6 +74,12 @@ interface GameStore extends GameState {
   playUiSound: (type: UiSoundType) => void;
   setLanguage: (lang: 'EN' | 'RU') => void;
   downloadSessionLog: () => void;
+  destroyItem: (itemId: string) => void;
+  
+  // Void Restoration
+  openVoidDialog: (q: number, r: number) => void;
+  closeVoidDialog: () => void;
+  restoreVoidHex: (itemId: string) => void;
 }
 
 let engine: GameEngine | null = null;
@@ -136,6 +142,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       moves: startMoves,
       totalCoinsEarned: 0, movementQueue: [],
       storage: 0, maxStorage: maxStorage,
+      inventory: [],
       memory: { lastPlayerPos: null, currentGoal: null, stuckCounter: 0 },
       avatarColor: BOT_PALETTE[Math.floor(Math.random() * BOT_PALETTE.length)], // Random color
       headIndex: Math.floor(Math.random() * 4), // Random head (0-3)
@@ -172,6 +179,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       totalCoinsEarned: 0, movementQueue: [],
       storage: startStorage, 
       maxStorage: maxStorage,
+      inventory: [], // Init empty inventory
       recoveredCurrentHex: false,
       recentUpgrades: [],
       // Use User preferences or default
@@ -209,6 +217,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isSfxMuted: false,
   session: null,
   language: 'EN',
+  voidDialogTarget: null,
   
   setLanguage: (lang) => set({ language: lang }),
   setUIState: (uiState) => set({ uiState }),
@@ -330,7 +339,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (engine) {
           engine.destroy();
           engine = null;
-          set({ session: null, hasActiveSession: false, uiState: 'MENU' });
+          set({ session: null, hasActiveSession: false, uiState: 'MENU', voidDialogTarget: null });
       }
   },
   
@@ -379,13 +388,69 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
   },
 
+  destroyItem: (itemId: string) => {
+      if (!engine || !engine.state) return;
+      const action: DestroyItemAction = { type: 'DESTROY_ITEM', itemId, stateVersion: engine.state.stateVersion };
+      const res = engine.applyAction(engine.state.player.id, action);
+      if (res.ok) {
+          audioService.play('CRACK');
+          set({ session: engine.state });
+      }
+  },
+
+  openVoidDialog: (q, r) => {
+      audioService.play('UI_CLICK');
+      set({ voidDialogTarget: { q, r } });
+  },
+
+  closeVoidDialog: () => {
+      audioService.play('UI_CLICK');
+      set({ voidDialogTarget: null });
+  },
+
+  restoreVoidHex: (itemId: string) => {
+      if (!engine || !engine.state) return;
+      const target = get().voidDialogTarget;
+      if (!target) return;
+
+      const action: RestoreHexAction = { 
+          type: 'RESTORE_HEX', 
+          coord: target, 
+          itemId, 
+          stateVersion: engine.state.stateVersion 
+      };
+      
+      const res = engine.applyAction(engine.state.player.id, action);
+      
+      if (res.ok) {
+          audioService.play('GROWTH_START'); // Sound for attempt
+          set({ session: engine.state, voidDialogTarget: null });
+      } else {
+          audioService.play('ERROR');
+          set({ toast: { message: res.reason || "Restoration Error", type: 'error', timestamp: Date.now() } });
+      }
+  },
+
   movePlayer: (tq, tr) => {
       if (!engine || !engine.state) return;
       
       const session = engine.state; 
-      const { pendingConfirmation, confirmPendingAction, cancelPendingAction } = get();
+      const { pendingConfirmation, confirmPendingAction, cancelPendingAction, openVoidDialog } = get();
 
       if (session.gameStatus === 'BRIEFING') return;
+
+      // VOID INTERACTION LOGIC
+      // If clicking a VOID hex that is ADJACENT, open the restoration dialog instead of moving
+      const targetKey = getHexKey(tq, tr);
+      const targetHex = session.grid[targetKey];
+      
+      if (targetHex && targetHex.structureType === 'VOID') {
+          const dist = cubeDistance(session.player, { q: tq, r: tr });
+          if (dist === 1) {
+              openVoidDialog(tq, tr);
+              return; // Stop movement logic
+          }
+      }
 
       if (pendingConfirmation) {
           const target = pendingConfirmation.data.path[pendingConfirmation.data.path.length - 1];
@@ -399,16 +464,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       if (session.player.state === EntityState.MOVING) return;
       
-      const targetKey = getHexKey(tq, tr);
-      
-      // DYNAMIC MAP GENERATION: Check if target exists, if not, check dynamic feasibility
-      // But pathfinding needs grid. We must handle this via dynamic grid expansion during pathfinding? 
-      // No, pathfinding currently expects existing grid.
-      // However, if the user clicks a hex that is rendered, it exists.
-      // The Fog of War renderer only renders what is in the grid.
-      
-      const targetHex = session.grid[targetKey];
-      
+      // Standard Movement Checks
       if (targetHex && targetHex.structureType !== 'VOID' && targetHex.maxLevel > session.player.playerLevel) {
           audioService.play('ERROR');
           const lang = get().language;
@@ -418,13 +474,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       const obstacles = session.bots.map(b => ({ q: b.q, r: b.r }));
-      // Pathfinding will fail if grid is not fully generated for a long path.
-      // But typically we move to neighbors which are visible.
-      // If we clicked, it must be visible.
       
       const path = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles);
       
       if (!path) {
+        // Only show error if we weren't trying to interact with a void hex (which handled above)
+        // If it's a void hex far away, we fall here
+        if (targetHex && targetHex.structureType === 'VOID') {
+             audioService.play('ERROR');
+             set({ toast: { message: "Too far to stabilize", type: 'error', timestamp: Date.now() } });
+             return;
+        }
+
         audioService.play('ERROR');
         set({ toast: { message: "Path Blocked / Invalid", type: 'error', timestamp: Date.now() } });
         return;
@@ -577,6 +638,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                  case 'HEX_COLLAPSE': audioService.play('COLLAPSE'); break;
                  case 'VICTORY': audioService.play('SUCCESS'); break;
                  case 'DEFEAT': audioService.play('ERROR'); break;
+                 case 'ITEM_DROP': audioService.play('SUCCESS'); break; 
+                 case 'ITEM_DESTROYED': audioService.play('CRACK'); break; 
                }
             }
 
@@ -661,6 +724,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             text = "COLLAPSE -1 RANK"; 
                             color = "#ef4444";
                             icon = 'DOWN';
+                            break;
+                        case 'ITEM_DROP':
+                            text = "ITEM FOUND!";
+                            color = "#fcd34d";
+                            icon = 'GEM';
                             break;
                     }
 

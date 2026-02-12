@@ -14,6 +14,9 @@ export const GAME_CONFIG = {
   RECOVERY_COOLDOWN_MS: 15000,      // 15 Seconds cooldown
   MAX_RECOVERY_POINTS: 3,           // Max uses before degradation
   
+  // Loot System
+  MAX_INVENTORY_SIZE: 3,
+
   // Movement & Animation Speeds
   // Tuned for smoother transitions (0.6s animation provides distinct travel time)
   // Logic interval slightly larger to ensure animation finishes before next logic tick

@@ -117,7 +117,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
   }, [offsetY, rotation]);
 
   const handleClick = (e: any) => {
-      if (isRealVoid) return;
       if (e.evt && e.evt.button !== undefined && e.evt.button !== 0) return;
       e.cancelBubble = true;
       onHexClick(q, r);
@@ -171,7 +170,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   if (isRealVoid) {
       return (
-        <Group x={x} y={y} perfectDrawEnabled={false}>
+        <Group 
+            x={x} y={y} 
+            perfectDrawEnabled={false}
+            onClick={handleClick} 
+            onTap={handleClick}
+            onMouseEnter={handleHover} 
+            onMouseLeave={handleHoverEnd}
+        >
              {/* Match perspective and rotation of standard hexes */}
              <Group scaleY={0.8} perfectDrawEnabled={false}>
                  <Group rotation={rotation} perfectDrawEnabled={false}>
