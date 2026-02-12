@@ -109,7 +109,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const isLevel1_6 = activeLevelConfig?.id === '1.6';
 
   // Explicitly check for briefing status
-  const isBriefingActive = gameStatus === 'BRIEFING' && !!activeLevelConfig;
+  const isBriefingActive = gameStatus === 'BRIEFING';
 
   // --- RECOVERY LOGIC (HIGH LEVEL) ---
   const recoveryState = useMemo(() => {
@@ -324,6 +324,12 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   if (!grid || !player || !bots) return null;
 
+  // Prepare Briefing Data
+  const briefingTitle = activeLevelConfig ? activeLevelConfig.title : (winCondition?.label || "Mission Briefing");
+  const briefingDesc = activeLevelConfig 
+      ? activeLevelConfig.description 
+      : t.BRIEFING_DESC_TEMPLATE.replace('{0}', (winCondition?.targetLevel || 99).toString()).replace('{1}', (winCondition?.targetCoins || 0).toString());
+
   return (
     <div className="absolute inset-0 pointer-events-none z-30 select-none">
       
@@ -486,11 +492,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           <div className="absolute inset-x-0 bottom-0 p-4 md:p-8 pointer-events-none pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="max-w-2xl mx-auto flex items-end justify-center gap-4 md:gap-8 pointer-events-auto">
                   
-                  {/* Left: Rotate */}
-                  <button onClick={() => { onRotateCamera('left'); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 backdrop-blur shadow-lg active:scale-90 transition-all group">
-                      <RotateCcw className="w-5 h-5 md:w-6 md:h-6 group-hover:-rotate-45 transition-transform" />
-                  </button>
-
                   {/* Center: Action Buttons */}
                   <div className="flex items-end gap-3 md:gap-6 bg-slate-950/80 backdrop-blur-xl p-2 md:p-3 rounded-[2rem] border border-slate-800/50 shadow-2xl relative">
                       
@@ -547,19 +548,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           )}
                       </HexButton>
 
-                  </div>
-
-                  {/* Right Group */}
-                  <div className="flex items-center gap-2">
-                      {/* Manual Center Button */}
-                      <button onClick={() => { onCenterPlayer(); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-indigo-500 backdrop-blur shadow-lg active:scale-90 transition-all group" title="Locate Unit">
-                          <Scan className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform text-indigo-400" />
-                      </button>
-
-                      {/* Right: Rotate */}
-                      <button onClick={() => { onRotateCamera('right'); playUiSound('HOVER'); }} className="p-3 md:p-4 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 backdrop-blur shadow-lg active:scale-90 transition-all group">
-                          <RotateCw className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-45 transition-transform" />
-                      </button>
                   </div>
 
               </div>
@@ -671,7 +659,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {(isBriefingActive || (showMissionDetails && activeLevelConfig)) && activeLevelConfig && (
+      {(isBriefingActive || (showMissionDetails && (activeLevelConfig || winCondition))) && (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-300">
               <div className="max-w-lg w-full bg-slate-900 border border-indigo-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                   
@@ -692,13 +680,20 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       </div>
                       <div>
                           <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.BRIEFING_TITLE}</h2>
-                          <p className="text-xs text-indigo-400 font-mono tracking-widest uppercase mt-1">{activeLevelConfig.title}</p>
+                          <p className="text-xs text-indigo-400 font-mono tracking-widest uppercase mt-1">
+                              {activeLevelConfig ? activeLevelConfig.title : (winCondition?.label || "Skirmish Operation")}
+                          </p>
                       </div>
                   </div>
 
                   <div className="space-y-4 mb-8">
                       <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800/50 text-sm text-slate-300 leading-relaxed font-medium">
-                          {activeLevelConfig.description.split('\n').map((line, i) => (
+                          {(activeLevelConfig 
+                              ? activeLevelConfig.description 
+                              : t.BRIEFING_DESC_TEMPLATE
+                                  .replace('{0}', (winCondition?.targetLevel || 99).toString())
+                                  .replace('{1}', (winCondition?.targetCoins || 0).toString())
+                           ).split('\n').map((line, i) => (
                               <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>
                           ))}
                       </div>
