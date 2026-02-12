@@ -224,17 +224,8 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
             };
         };
 
-        let missingSupports: Set<string> | null = null;
-        if (hoveredHexId) {
-            const hHex = grid[hoveredHexId];
-            if (hHex && hHex.q === player.q && hHex.r === player.r) {
-                const occupied = (bots || []).map(b => ({ q: b.q, r: b.r }));
-                const res = checkGrowthCondition(hHex, player, playerNeighbors, grid, occupied, winCondition?.queueSize || 3);
-                if (!res.canGrow && res.missingSupports) {
-                    missingSupports = new Set(res.missingSupports.map(c => getHexKey(c.q, c.r)));
-                }
-            }
-        }
+        const missingSupports: Set<string> | null = null;
+        // Removed highlight logic for missing supports as requested
 
         // --- OPTIMIZED LOOP: COORDINATE ITERATION ---
         for (let q = centerHex.q - radius; q <= centerHex.q + radius; q++) {
