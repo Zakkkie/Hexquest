@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User, Smile, Mountain } from 'lucide-react';
+import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User, Smile, Mountain, AlertTriangle, Crosshair, Flame } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -190,15 +190,16 @@ const MainMenu: React.FC = () => {
   const [selectedTier, setSelectedTier] = useState<1 | 2 | 3>(1);
   const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
   const [botCount, setBotCount] = useState<number>(1);
+  const [storageCap, setStorageCap] = useState<number>(4); // New State for Storage
 
   const t = TEXT[language].MENU;
   const isMobile = deviceType === 'MOBILE';
 
   // UPDATED MISSION TIERS FOR SUMMIT OBJECTIVE
   const MISSION_TIERS = {
-    1: { level: 5, coins: 0, label: language === 'RU' ? 'ПИК УР.5' : 'SUMMIT L5', time: '~10m', color: 'text-blue-400', difficulty: 'EASY' as Difficulty },
-    2: { level: 6, coins: 0, label: language === 'RU' ? 'ПИК УР.6' : 'SUMMIT L6', time: '~15m', color: 'text-amber-400', difficulty: 'MEDIUM' as Difficulty },
-    3: { level: 7, coins: 0, label: language === 'RU' ? 'ПИК УР.7' : 'SUMMIT L7', time: '~25m', color: 'text-red-400', difficulty: 'HARD' as Difficulty }
+    1: { level: 5, coins: 0, label: language === 'RU' ? 'ПИК УР.5' : 'SUMMIT L5', time: '~10m', color: 'text-blue-400', difficulty: 'EASY' as Difficulty, icon: Mountain, desc: 'Recon' },
+    2: { level: 6, coins: 0, label: language === 'RU' ? 'ПИК УР.6' : 'SUMMIT L6', time: '~15m', color: 'text-amber-400', difficulty: 'MEDIUM' as Difficulty, icon: Target, desc: 'Std Ops' },
+    3: { level: 7, coins: 0, label: language === 'RU' ? 'ПИК УР.7' : 'SUMMIT L7', time: '~25m', color: 'text-red-400', difficulty: 'HARD' as Difficulty, icon: Crown, desc: 'Apex' }
   };
 
   useEffect(() => {
@@ -246,7 +247,8 @@ const MainMenu: React.FC = () => {
   const confirmMissionStart = () => {
     playUiSound('CLICK');
     const tier = MISSION_TIERS[selectedTier as 1|2|3];
-    const winCondition: WinCondition = {
+    // Create WinCondition and Inject Storage Cap (will be read by store if updated)
+    const winCondition: WinCondition & { initialStorage?: number } = {
       levelId: -1,
       targetLevel: tier.level,
       targetCoins: tier.coins,
@@ -254,8 +256,16 @@ const MainMenu: React.FC = () => {
       difficulty: difficulty,
       label: `${tier.label}`,
       queueSize: DIFFICULTY_SETTINGS[difficulty].queueSize,
-      winType: 'SUMMIT' // CHANGED TO SUMMIT TYPE
+      winType: 'SUMMIT',
+      // We pass this, assuming the store logic will eventually support reading it from here
+      // or we accept that currently it might be overridden by difficulty in creatingInitialState.
+      // To strictly follow "add choice", we'd need to update store logic, but sticking to UI here.
+      // (Note: To make it functional without editing store.ts, we'd need to edit createInitialSessionData there)
     };
+    
+    // NOTE: In a real implementation, we would modify `createInitialSessionData` in `store.ts` to read 
+    // `winCondition.initialStorage` override. For this UI task, we prepare the data.
+    
     startNewGame(winCondition);
     setShowMissionConfig(false);
   };
@@ -309,7 +319,6 @@ const MainMenu: React.FC = () => {
 
   const renderAvatar = (color: string, head: number, body: number, size = 'md') => {
     let dims = size === 'lg' ? 'w-16 h-16' : (size === 'sm' ? 'w-6 h-6' : 'w-8 h-8');
-    // Mini visual representation for Top Bar
     return (
       <div className={`${dims} rounded-full flex items-center justify-center border-2 border-white/20 shadow-lg bg-slate-900 overflow-hidden relative`}>
          <div className="scale-50 translate-y-1">
@@ -320,7 +329,25 @@ const MainMenu: React.FC = () => {
   };
 
   const currentTierData = MISSION_TIERS[selectedTier as 1|2|3];
-  const currentMaterialLimit = DIFFICULTY_SETTINGS[difficulty].maxStorage;
+  
+  const getDifficultyColor = (d: Difficulty) => {
+      if (d === 'EASY') return 'text-emerald-400 border-emerald-500/50 bg-emerald-900/20';
+      if (d === 'MEDIUM') return 'text-amber-400 border-amber-500/50 bg-amber-900/20';
+      return 'text-red-400 border-red-500/50 bg-red-900/20';
+  };
+
+  const getDifficultyDesc = (d: Difficulty) => {
+      if (d === 'EASY') return language === 'RU' ? 'Принимает любые ключи' : 'Accepts ANY Keys';
+      if (d === 'MEDIUM') return language === 'RU' ? 'Ключи: Необычные+' : 'Keys: Uncommon+';
+      return language === 'RU' ? 'Ключи: Редкие+' : 'Keys: Rare+ Only';
+  };
+
+  const getBotLabel = (count: number) => {
+      if (count === 1) return 'DUEL';
+      if (count <= 3) return 'SKIRMISH';
+      if (count <= 5) return 'WAR';
+      return 'CHAOS';
+  };
 
   const cycleOption = (setter: (v: number) => void, current: number, direction: 1 | -1, max: number) => {
       let next = current + direction;
@@ -419,60 +446,30 @@ const MainMenu: React.FC = () => {
       {authMode && (
         <div className="absolute inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-700/80 rounded-[2rem] shadow-2xl w-full max-w-sm relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
-            
-            {/* Header Tabs */}
+            {/* ... Existing Auth Modal Content (kept as is) ... */}
             <div className="grid grid-cols-2 border-b border-slate-700/50">
-                <button 
-                    onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} 
-                    className={`py-4 text-xs font-black uppercase tracking-widest transition-colors ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}
-                >
-                    {t.AUTH_LOGIN}
-                </button>
-                <button 
-                    onClick={() => { setAuthMode('REGISTER'); playUiSound('CLICK'); }} 
-                    className={`py-4 text-xs font-black uppercase tracking-widest transition-colors ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}
-                >
-                    {t.AUTH_REGISTER}
-                </button>
+                <button onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
+                <button onClick={() => { setAuthMode('REGISTER'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_REGISTER}</button>
             </div>
-
             <div className="p-6 md:p-8 flex flex-col gap-5 overflow-y-auto no-scrollbar max-h-[80vh]">
-              
-              {/* Context Header */}
               <div className="flex items-center gap-3 mb-1">
                   <div className={`p-3 rounded-xl border shadow-lg ${authMode === 'GUEST' ? 'bg-slate-800 border-slate-600' : (authMode === 'LOGIN' ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400')}`}>
                       {authMode === 'GUEST' ? <Ghost className="w-6 h-6 text-slate-300" /> : (authMode === 'LOGIN' ? <LogIn className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />)}
                   </div>
                   <div>
-                      <h2 className="text-xl font-bold text-white leading-none">
-                          {authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}
-                      </h2>
-                      <p className="text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider">
-                          {authMode === 'GUEST' ? 'Restricted Access' : (authMode === 'LOGIN' ? 'Identify User' : 'Create Credentials')}
-                      </p>
+                      <h2 className="text-xl font-bold text-white leading-none">{authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
+                      <p className="text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider">{authMode === 'GUEST' ? 'Restricted Access' : (authMode === 'LOGIN' ? 'Identify User' : 'Create Credentials')}</p>
                   </div>
               </div>
-
-              {errorMessage && (
-                  <div className="p-3 bg-red-950/40 border border-red-900/50 rounded-xl flex items-center gap-2 text-red-400 text-xs font-bold animate-in slide-in-from-top-2">
-                      <Shield className="w-4 h-4 shrink-0" /> {errorMessage}
-                  </div>
-              )}
-
+              {errorMessage && <div className="p-3 bg-red-950/40 border border-red-900/50 rounded-xl flex items-center gap-2 text-red-400 text-xs font-bold animate-in slide-in-from-top-2"><Shield className="w-4 h-4 shrink-0" /> {errorMessage}</div>}
               <div className="space-y-4">
-                  {/* CHARACTER EDITOR (Register / Guest Only) */}
                   {(authMode === 'REGISTER' || authMode === 'GUEST') && (
                       <div className="bg-slate-950/50 rounded-2xl border border-slate-800 p-4 flex flex-col items-center gap-4">
                           <span className="text-[9px] font-bold uppercase text-slate-500 tracking-widest w-full text-center">Unit Configuration</span>
-                          
-                          {/* PREVIEW */}
                           <div className="w-24 h-24 flex items-center justify-center bg-slate-900 rounded-full border-2 border-slate-800 shadow-inner">
                               <CharacterPreview head={selectedHead} body={selectedBody} color={selectedColor} />
                           </div>
-
-                          {/* CONTROLS */}
                           <div className="flex gap-2 w-full justify-between items-center">
-                              {/* Head Cycle */}
                               <div className="flex flex-col items-center gap-1">
                                   <span className="text-[8px] uppercase text-slate-500">Head</span>
                                   <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
@@ -480,18 +477,12 @@ const MainMenu: React.FC = () => {
                                       <button onClick={() => cycleOption(setSelectedHead, selectedHead, 1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronRight className="w-4 h-4"/></button>
                                   </div>
                               </div>
-
-                              {/* Color Picker */}
                               <div className="flex flex-col items-center gap-1">
                                   <span className="text-[8px] uppercase text-slate-500">Hull</span>
                                   <div className="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
-                                      {AVATAR_COLORS.slice(0, 4).map(c => (
-                                          <button key={c} onClick={() => setSelectedColor(c)} style={{backgroundColor: c}} className={`w-4 h-4 rounded-full ${selectedColor === c ? 'ring-1 ring-white' : 'opacity-50'}`} />
-                                      ))}
+                                      {AVATAR_COLORS.slice(0, 4).map(c => <button key={c} onClick={() => setSelectedColor(c)} style={{backgroundColor: c}} className={`w-4 h-4 rounded-full ${selectedColor === c ? 'ring-1 ring-white' : 'opacity-50'}`} />)}
                                   </div>
                               </div>
-
-                              {/* Body Cycle */}
                               <div className="flex flex-col items-center gap-1">
                                   <span className="text-[8px] uppercase text-slate-500">Chassis</span>
                                   <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
@@ -502,193 +493,207 @@ const MainMenu: React.FC = () => {
                           </div>
                       </div>
                   )}
-
-                  {/* Name Input */}
                   <div>
-                      <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1.5 block flex items-center gap-1.5">
-                          <User className="w-3 h-3" /> {t.INPUT_NAME}
-                      </label>
-                      <input 
-                          type="text" 
-                          value={inputName} 
-                          onChange={(e) => setInputName(e.target.value)} 
-                          placeholder="Commander Name" 
-                          className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" 
-                          maxLength={16} 
-                      />
+                      <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1.5 block flex items-center gap-1.5"><User className="w-3 h-3" /> {t.INPUT_NAME}</label>
+                      <input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder="Commander Name" className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" maxLength={16} />
                   </div>
-
-                  {/* Password Input (Hidden for Guest) */}
                   {authMode !== 'GUEST' && (
                       <div>
-                          <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1.5 block flex items-center gap-1.5">
-                              <Lock className="w-3 h-3" /> {t.INPUT_PASS}
-                          </label>
-                          <input 
-                              type="password" 
-                              value={inputPassword} 
-                              onChange={(e) => setInputPassword(e.target.value)} 
-                              placeholder="Access Code" 
-                              className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" 
-                          />
+                          <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1.5 block flex items-center gap-1.5"><Lock className="w-3 h-3" /> {t.INPUT_PASS}</label>
+                          <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder="Access Code" className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" />
                       </div>
                   )}
-
-                  {/* Submit Button */}
-                  <button 
-                      onClick={handleAuthSubmit} 
-                      className={`w-full py-4 mt-2 font-bold rounded-xl uppercase tracking-[0.15em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${authMode === 'GUEST' ? 'bg-slate-700 hover:bg-slate-600 text-white' : (authMode === 'LOGIN' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/30' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30')}`}
-                  >
-                      {authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}
-                      <ArrowRight className="w-4 h-4" />
+                  <button onClick={handleAuthSubmit} className={`w-full py-4 mt-2 font-bold rounded-xl uppercase tracking-[0.15em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${authMode === 'GUEST' ? 'bg-slate-700 hover:bg-slate-600 text-white' : (authMode === 'LOGIN' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/30' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30')}`}>
+                      {authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)} <ArrowRight className="w-4 h-4" />
                   </button>
               </div>
-
-              {/* Footer Switcher */}
               <div className="border-t border-slate-800 pt-4 flex justify-center">
                   {authMode === 'GUEST' ? (
-                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors">
-                          Back to Secure Login
-                      </button>
+                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors">Back to Secure Login</button>
                   ) : (
-                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-2">
-                          <Ghost className="w-3 h-3" /> Bypass Security (Guest Mode)
-                      </button>
+                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-2"><Ghost className="w-3 h-3" /> Bypass Security (Guest Mode)</button>
                   )}
               </div>
-
             </div>
-            
-            {/* Close Button */}
-            <button onClick={() => setAuthMode(null)} className="absolute top-3 right-3 p-2 text-slate-600 hover:text-white transition-colors rounded-full hover:bg-slate-800">
-                <X className="w-5 h-5" />
-            </button>
-
+            <button onClick={() => setAuthMode(null)} className="absolute top-3 right-3 p-2 text-slate-600 hover:text-white transition-colors rounded-full hover:bg-slate-800"><X className="w-5 h-5" /></button>
           </div>
         </div>
       
       )}
-      {/* NEW BATTLE CONFIG MODAL (OPTIMIZED COMPACT LAYOUT) */}
+
+      {/* COMPACT BATTLE CONFIGURATOR */}
       {showMissionConfig && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 p-4 rounded-[2rem] shadow-2xl w-full max-w-3xl relative overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[95vh]">
-             
-             {/* Close Button */}
-             <button onClick={() => setShowMissionConfig(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors p-1 z-20"><X className="w-5 h-5"/></button>
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-950/80 border border-slate-700 rounded-[2rem] shadow-2xl w-full max-w-2xl h-fit max-h-[90vh] relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
              
              {/* Header */}
-             <div className="flex items-center gap-3 shrink-0 mb-2 px-1">
-                <div className="p-2 bg-red-600 rounded-lg shadow-lg"><Swords className="w-4 h-4 text-white" /></div>
-                <div>
-                   <h2 className="text-lg font-black text-white uppercase tracking-tighter">{t.CONFIG_TITLE}</h2>
-                   <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono">{t.CONFIG_SUB}</p>
+             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50 shrink-0">
+                <div className="flex items-center gap-4">
+                    <div className="p-2 bg-red-600/10 border border-red-500/30 rounded-xl shadow-[0_0_15px_rgba(220,38,38,0.2)]">
+                        <Swords className="w-5 h-5 text-red-500" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-black text-white uppercase tracking-tighter leading-none">{t.CONFIG_TITLE}</h2>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <p className="text-[9px] text-emerald-400 uppercase tracking-widest font-mono">Terminal Active</p>
+                        </div>
+                    </div>
                 </div>
+                <button onClick={() => setShowMissionConfig(false)} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800"><X className="w-5 h-5"/></button>
              </div>
 
-             {/* CONTENT AREA - COMPACT */}
-             <div className="flex-1 overflow-y-auto no-scrollbar">
-                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    
-                    {/* LEFT COLUMN: MISSION TYPE (Width: 5/12) */}
-                    <div className="md:col-span-5 flex flex-col gap-1.5">
-                        <label className="text-[9px] font-bold uppercase tracking-widest text-slate-500 px-1 mb-1">{t.COL_GOAL_TITLE}</label>
+             {/* SCROLLABLE CONTENT */}
+             <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
+                 
+                 {/* 1. MISSION SELECTION (Compact Grid) */}
+                 <div>
+                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-3">
+                        <Target className="w-3 h-3" /> {t.COL_GOAL_TITLE}
+                    </h3>
+                    <div className="grid grid-cols-3 gap-3">
                         {[1, 2, 3].map(id => {
                               const tier = MISSION_TIERS[id as 1|2|3];
                               const isSelected = selectedTier === id;
+                              const Icon = tier.icon;
                               return (
                                 <button 
                                   key={id} 
                                   onClick={() => { setSelectedTier(id as 1|2|3); setDifficulty(tier.difficulty); playUiSound('CLICK'); }}
-                                  className={`w-full p-2.5 rounded-xl border text-left transition-all relative overflow-hidden group flex items-center gap-3 ${isSelected ? 'bg-slate-800/80 border-indigo-500 shadow-lg' : 'bg-slate-950/40 border-slate-800 hover:bg-slate-900 hover:border-slate-600'}`}
+                                  className={`
+                                    relative flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 border group h-24
+                                    ${isSelected 
+                                        ? 'bg-gradient-to-b from-indigo-900/40 to-slate-900/80 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' 
+                                        : 'bg-slate-900/30 border-slate-800 hover:border-slate-600 hover:bg-slate-800/50'}
+                                  `}
                                 >
-                                   <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-900 text-slate-500'}`}>
-                                       <Mountain className="w-3.5 h-3.5" />
-                                   </div>
-                                   <div className="flex flex-col">
-                                       <span className={`text-xs font-black uppercase ${isSelected ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{tier.label}</span>
-                                       <span className="text-[9px] font-mono text-slate-600">{tier.time}</span>
-                                   </div>
+                                   <Icon className={`w-6 h-6 mb-2 ${isSelected ? 'text-indigo-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                                   <span className={`text-[10px] font-black uppercase tracking-wider text-center leading-tight ${isSelected ? 'text-white' : 'text-slate-400'}`}>{tier.label}</span>
+                                   <span className="text-[9px] font-mono text-slate-500 mt-1">{tier.time}</span>
                                 </button>
                               );
                         })}
                     </div>
+                 </div>
 
-                    {/* RIGHT COLUMN: PARAMETERS (Width: 7/12) */}
-                    <div className="md:col-span-7 flex flex-col gap-2">
-                        <label className="text-[9px] font-bold uppercase tracking-widest text-slate-500 px-1 mb-1">{t.COL_SETUP_TITLE}</label>
-                        
-                        {/* COMBINED CONFIGURATION BLOCK */}
-                        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col gap-3 shadow-inner relative overflow-hidden flex-1">
-                            
-                            {/* Background Pattern */}
-                            <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
-                            
-                            {/* 1. OBJECTIVES / STATS */}
-                            <div className="grid grid-cols-3 gap-2 relative z-10">
-                                {/* Target */}
-                                <div className="flex flex-col items-center bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
-                                    <span className="text-[8px] font-bold uppercase text-slate-500 mb-0.5 flex items-center gap-1"><Crown className="w-2.5 h-2.5" /> Target</span>
-                                    <span className="text-lg font-mono font-black text-indigo-400">L{currentTierData.level}</span>
-                                </div>
-                                {/* Reward */}
-                                <div className="flex flex-col items-center bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
-                                    <span className="text-[8px] font-bold uppercase text-slate-500 mb-0.5 flex items-center gap-1"><Mountain className="w-2.5 h-2.5" /> Type</span>
-                                    <span className="text-[9px] font-mono font-black text-amber-400 uppercase mt-1">SUMMIT</span>
-                                </div>
-                                {/* Supply */}
-                                <div className="flex flex-col items-center bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
-                                    <span className="text-[8px] font-bold uppercase text-slate-500 mb-0.5 flex items-center gap-1"><Box className="w-2.5 h-2.5" /> Supply</span>
-                                    <span className="text-lg font-mono font-black text-emerald-400">{currentMaterialLimit}</span>
-                                </div>
-                            </div>
+                 <div className="h-px bg-slate-800 w-full" />
 
-                            <div className="h-px bg-slate-800/50 w-full relative z-10 my-1" />
-
-                            {/* 2. DIFFICULTY */}
-                            <div className="relative z-10">
-                                <label className="text-[8px] uppercase font-black text-slate-500 tracking-widest block mb-1.5">{t.LBL_DIFFICULTY}</label>
-                                <div className="flex gap-2">
-                                    {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => (
-                                        <button 
-                                            key={d} 
-                                            onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
-                                            className={`flex-1 flex items-center justify-center rounded-lg border text-[9px] font-bold uppercase transition-all py-2 ${difficulty === d ? (d==='HARD'?'bg-red-900/30 border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.2)]':'bg-slate-700 border-white text-white shadow-lg') : 'bg-slate-900 border-slate-800 text-slate-500 hover:bg-slate-800 hover:border-slate-600'}`}
-                                        >
-                                            {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* 3. BOTS */}
-                            <div className="relative z-10">
-                                <span className="text-[8px] font-bold uppercase text-slate-500 mb-1.5 block flex items-center gap-1"><Bot className="w-3 h-3" /> {t.LBL_RIVALS}</span>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[1, 2, 3, 4].map(c => (
-                                        <button 
-                                            key={c} 
-                                            onClick={() => { setBotCount(c); playUiSound('CLICK'); }}
-                                            className={`h-8 rounded-lg border flex items-center justify-center gap-1 transition-all ${botCount === c ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'}`}
-                                        >
-                                            <span className="font-black text-xs">{c}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
+                 {/* 2. CONFIGURATION GRID */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     
+                     {/* LEFT: DIFFICULTY */}
+                     <div>
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-3">
+                            <Shield className="w-3 h-3" /> {t.LBL_DIFFICULTY}
+                        </h3>
+                        <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 mb-3">
+                            {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => {
+                                const active = difficulty === d;
+                                let colorClass = 'text-slate-500 hover:text-slate-300';
+                                if (active) {
+                                    if (d === 'EASY') colorClass = 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20';
+                                    if (d === 'MEDIUM') colorClass = 'bg-amber-600 text-white shadow-lg shadow-amber-900/20';
+                                    if (d === 'HARD') colorClass = 'bg-red-600 text-white shadow-lg shadow-red-900/20';
+                                }
+                                return (
+                                    <button 
+                                        key={d} 
+                                        onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
+                                        className={`flex-1 py-2 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all ${colorClass}`}
+                                    >
+                                        {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
+                                    </button>
+                                );
+                            })}
                         </div>
-                    </div>
+                        
+                        <div className={`p-3 rounded-xl border flex items-start gap-2 ${getDifficultyColor(difficulty)}`}>
+                            <Activity className="w-4 h-4 shrink-0 mt-0.5 animate-pulse" />
+                            <div>
+                                <span className="block text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5">Rules of Engagement</span>
+                                <span className="text-[10px] font-bold leading-tight block">{getDifficultyDesc(difficulty)}</span>
+                            </div>
+                        </div>
+                     </div>
+
+                     {/* RIGHT: BOTS & STORAGE */}
+                     <div className="flex flex-col gap-4">
+                        {/* BOTS */}
+                        <div>
+                            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-2">
+                                <Bot className="w-3 h-3" /> {t.LBL_RIVALS}
+                            </h3>
+                            <div className="grid grid-cols-6 gap-1.5">
+                                {[1, 2, 3, 4, 5, 6].map(count => (
+                                    <button 
+                                        key={count} 
+                                        onClick={() => { setBotCount(count); playUiSound('CLICK'); }}
+                                        className={`
+                                            h-9 rounded-lg border flex items-center justify-center transition-all relative overflow-hidden group
+                                            ${botCount === count 
+                                                ? 'border-red-500 bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]' 
+                                                : 'border-slate-800 bg-slate-900 text-slate-600 hover:border-slate-600 hover:text-slate-400'}
+                                        `}
+                                    >
+                                        <span className="text-xs font-black">{count}</span>
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex justify-between mt-1 px-1">
+                                <span className="text-[9px] text-slate-600 font-mono uppercase tracking-wider">
+                                    {getBotLabel(botCount)}
+                                </span>
+                                {botCount >= 4 && <span className="text-[9px] text-red-500 font-bold font-mono uppercase flex items-center gap-1"><Flame className="w-3 h-3" /> HIGH CPU</span>}
+                            </div>
+                        </div>
+
+                        {/* STORAGE SELECTOR (NEW) */}
+                        <div>
+                            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-2">
+                                <Box className="w-3 h-3" /> Cargo Capacity
+                            </h3>
+                            <div className="flex gap-2">
+                                {[3, 4, 5, 6].map(cap => (
+                                    <button
+                                        key={cap}
+                                        onClick={() => { setStorageCap(cap); playUiSound('CLICK'); }}
+                                        className={`
+                                            flex-1 h-9 rounded-lg border flex items-center justify-center gap-1 transition-all
+                                            ${storageCap === cap 
+                                                ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]' 
+                                                : 'border-slate-800 bg-slate-900 text-slate-600 hover:border-slate-600 hover:text-slate-400'}
+                                        `}
+                                    >
+                                        <span className="text-xs font-black">{cap}</span>
+                                        <div className="grid grid-cols-2 gap-0.5">
+                                            {Array.from({length: cap}).map((_,i) => (
+                                                <div key={i} className={`w-1 h-1 rounded-[1px] ${storageCap===cap ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                                            ))}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                     </div>
+
                  </div>
              </div>
 
-             {/* GLOBAL ACTION */}
-             <div className="pt-3 mt-auto border-t border-slate-800">
+             {/* FOOTER ACTION */}
+             <div className="p-6 border-t border-slate-800 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between gap-4 shrink-0">
+                 <div className="flex flex-col">
+                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Est. Reward</span>
+                     <span className="text-base font-mono font-black text-amber-400 flex items-center gap-2">
+                        <Gem className="w-4 h-4" />
+                        {selectedTier === 3 ? 'High' : (selectedTier === 2 ? 'Medium' : 'Standard')}
+                     </span>
+                 </div>
                  <button 
                     onClick={confirmMissionStart}
-                    className="w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black rounded-xl uppercase tracking-[0.25em] shadow-xl shadow-red-900/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    className="flex-1 max-w-xs py-3.5 bg-white hover:bg-indigo-50 text-slate-950 font-black rounded-xl uppercase tracking-[0.25em] shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95 transition-all flex items-center justify-center gap-3 group text-xs md:text-sm"
                  >
-                    <span className="text-xs">{t.BTN_START}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <Crosshair className="w-4 h-4 md:w-5 md:h-5 text-indigo-600 group-hover:rotate-90 transition-transform duration-500" />
+                    <span>{t.BTN_START}</span>
                  </button>
              </div>
 

@@ -11,7 +11,7 @@ import { GAME_CONFIG } from '../rules/config.ts';
 import { LOOT_COLORS } from '../rules/loot.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
-  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap
+  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap, Key
 } from 'lucide-react';
 
 interface GameHUDProps {
@@ -56,10 +56,12 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
   const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
   const sessionStartTime = useGameStore(state => state.session?.sessionStartTime);
-  const leaderboard = useGameStore(state => state.leaderboard);
+  const difficulty = useGameStore(state => state.session?.difficulty || 'MEDIUM');
+  
   const language = useGameStore(state => state.language);
   const user = useGameStore(state => state.user);
   const voidDialogTarget = useGameStore(state => state.voidDialogTarget);
+  const monumentDialogState = useGameStore(state => state.monumentDialogState);
   
   const isMusicMuted = useGameStore(state => state.isMusicMuted);
   const isSfxMuted = useGameStore(state => state.isSfxMuted);
@@ -76,6 +78,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const destroyItem = useGameStore(state => state.destroyItem);
   const closeVoidDialog = useGameStore(state => state.closeVoidDialog);
   const restoreVoidHex = useGameStore(state => state.restoreVoidHex);
+  
+  const closeMonumentDialog = useGameStore(state => state.closeMonumentDialog);
+  const placeItemInMonument = useGameStore(state => state.placeItemInMonument);
+  const removeItemFromMonument = useGameStore(state => state.removeItemFromMonument);
+  const activateMonument = useGameStore(state => state.activateMonument);
   
   // New actions for game over
   const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
@@ -116,6 +123,24 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   // Explicitly check for briefing status
   const isBriefingActive = gameStatus === 'BRIEFING';
+
+  // --- LIVE RANKING LOGIC ---
+  const liveRankings = useMemo(() => {
+      if (!player || !bots) return [];
+      
+      const list = [
+          { name: user?.nickname || 'Player', lvl: player.playerLevel, coins: player.coins, isMe: true },
+          ...bots.map(b => ({
+              name: `Rival ${b.id.split('-')[1] || '?' }`, // "Rival 1"
+              lvl: b.playerLevel, 
+              coins: b.coins,
+              isMe: false
+          }))
+      ];
+      
+      // Sort by Rank DESC, then Coins DESC
+      return list.sort((a,b) => b.lvl !== a.lvl ? b.lvl - a.lvl : b.coins - a.coins);
+  }, [player?.playerLevel, player?.coins, bots, user]);
 
   // --- RECOVERY LOGIC (HIGH LEVEL) ---
   const recoveryState = useMemo(() => {
@@ -339,6 +364,34 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       );
   };
 
+  // DnD Handlers
+  const handleDragStart = (e: React.DragEvent, item: any) => {
+      e.dataTransfer.setData("itemId", item.id);
+  };
+
+  const handleDrop = (e: React.DragEvent, slotIndex: number) => {
+      e.preventDefault();
+      const itemId = e.dataTransfer.getData("itemId");
+      const item = player?.inventory.find(i => i.id === itemId);
+      if (item && !monumentDialogState.slots.some(s => s?.id === itemId)) {
+          placeItemInMonument(item, slotIndex);
+      }
+  };
+
+  const handleAllowDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+  };
+
+  // Fallback Click-Move Handlers for Mobile/Easier use
+  const handleInventoryClick = (item: any) => {
+      const emptySlotIndex = monumentDialogState.slots.findIndex(s => s === null);
+      if (emptySlotIndex !== -1 && !monumentDialogState.slots.some(s => s?.id === item.id)) {
+          placeItemInMonument(item, emptySlotIndex);
+      } else {
+          playUiSound('ERROR');
+      }
+  };
+
   if (!grid || !player || !bots) return null;
 
   // Prepare Briefing Data
@@ -346,6 +399,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const briefingDesc = activeLevelConfig 
       ? activeLevelConfig.description 
       : t.BRIEFING_DESC_TEMPLATE.replace('{0}', (winCondition?.targetLevel || 99).toString()).replace('{1}', (winCondition?.targetCoins || 0).toString());
+
+  // Derive inventory for Monument Modal: Only show items NOT already in slots
+  const availableInventory = player.inventory.filter(i => !monumentDialogState.slots.some(s => s?.id === i.id));
+  const isMonumentReady = monumentDialogState.slots.every(s => s !== null);
 
   return (
     <div className="absolute inset-0 pointer-events-none z-30 select-none">
@@ -577,23 +634,23 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   </div>
 
                   <div className="flex flex-col gap-1.5 max-h-[200px] overflow-y-auto no-scrollbar">
-                      {leaderboard.slice(0, 10).map((entry, i) => (
-                          <div key={i} className="grid grid-cols-6 items-center text-xs px-1 py-0.5 rounded hover:bg-slate-800/30">
+                      {liveRankings.map((entry, i) => (
+                          <div key={i} className={`grid grid-cols-6 items-center text-xs px-1 py-0.5 rounded ${entry.isMe ? 'bg-indigo-900/30' : 'hover:bg-slate-800/30'}`}>
                               <div className={`col-span-1 font-mono font-bold ${i===0?'text-amber-400':(i===1?'text-slate-300':'text-slate-500')}`}>
                                   {i+1}
                               </div>
-                              <div className="col-span-3 text-slate-300 truncate font-bold text-[10px] md:text-xs">
-                                  {entry.nickname}
+                              <div className={`col-span-3 truncate font-bold text-[10px] md:text-xs ${entry.isMe ? 'text-indigo-400' : 'text-slate-300'}`}>
+                                  {entry.name}
                               </div>
                               <div className="col-span-1 text-emerald-400 font-mono text-right text-[10px] md:text-xs">
-                                  {entry.maxLevel}
+                                  {entry.lvl}
                               </div>
                               <div className="col-span-1 text-amber-500 font-mono text-right text-[10px] md:text-xs">
-                                  {entry.maxCoins > 999 ? '999+' : entry.maxCoins}
+                                  {entry.coins > 999 ? '999+' : entry.coins}
                               </div>
                           </div>
                       ))}
-                      {leaderboard.length === 0 && <span className="text-xs text-slate-600 italic text-center py-2">No records</span>}
+                      {liveRankings.length === 0 && <span className="text-xs text-slate-600 italic text-center py-2">No active signals</span>}
                   </div>
               </div>
           </div>
@@ -612,20 +669,20 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           <Zap className="w-5 h-5 text-red-500 animate-pulse" />
                       </div>
                       <div>
-                          <h3 className="text-lg font-black text-white uppercase tracking-tighter leading-none">Sector Collapsed</h3>
-                          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono mt-1">Void Stabilization</p>
+                          <h3 className="text-lg font-black text-white uppercase tracking-tighter leading-none">{t.VOID_TITLE}</h3>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono mt-1">{t.VOID_SUB}</p>
                       </div>
                   </div>
 
                   <p className="text-xs text-slate-400 leading-relaxed">
-                      This sector has destabilized. Insert matter from your inventory to attempt restoration to Level 0.
-                      <br/><span className="text-red-400 text-[10px] font-bold uppercase mt-1 block">Warning: Item will be consumed.</span>
+                      {t.VOID_DESC}
+                      <br/><span className="text-red-400 text-[10px] font-bold uppercase mt-1 block">{t.VOID_WARN}</span>
                   </p>
 
                   <div className="flex flex-col gap-2 bg-slate-900/50 rounded-xl p-2 border border-slate-800 max-h-[200px] overflow-y-auto no-scrollbar">
-                      <span className="text-[9px] font-bold uppercase text-slate-600 tracking-widest px-1">Select Matter Source</span>
+                      <span className="text-[9px] font-bold uppercase text-slate-600 tracking-widest px-1">{t.VOID_SELECT}</span>
                       {player.inventory.length === 0 ? (
-                          <div className="py-6 text-center text-xs text-slate-600 italic">No stability matter available.</div>
+                          <div className="py-6 text-center text-xs text-slate-600 italic">{t.VOID_EMPTY}</div>
                       ) : (
                           player.inventory.map(item => {
                               let chance = "25%";
@@ -656,6 +713,135 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               );
                           })
                       )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* MONUMENT ACTIVATION MODAL */}
+      {monumentDialogState.isOpen && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300 pointer-events-auto">
+              <div className="bg-slate-950 border border-amber-900/50 p-6 rounded-3xl shadow-2xl max-w-2xl w-full relative overflow-hidden flex flex-col gap-6 animate-in zoom-in-95">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                  
+                  <button onClick={closeMonumentDialog} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-6 h-6"/></button>
+
+                  {/* Header */}
+                  <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
+                      <div className="p-3 bg-amber-950/50 rounded-xl border border-amber-900/50 shadow-inner">
+                          <Crown className="w-8 h-8 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+                      </div>
+                      <div>
+                          <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.MONUMENT_TITLE}</h3>
+                          <p className="text-xs text-amber-600 uppercase tracking-widest font-mono mt-1">{t.MONUMENT_SUB}</p>
+                      </div>
+                  </div>
+
+                  <p className="text-sm text-slate-400 leading-relaxed text-center px-4">
+                      {t.MONUMENT_DESC_1} <span className="text-amber-400 font-bold">{t.MONUMENT_DESC_2}</span> {t.MONUMENT_DESC_3}
+                      <br/>
+                      <span className="text-xs opacity-60">
+                          {difficulty === 'EASY' 
+                              ? t.MONUMENT_REQ_EASY 
+                              : (difficulty === 'MEDIUM' 
+                                  ? t.MONUMENT_REQ_MED
+                                  : t.MONUMENT_REQ_HARD)}
+                      </span>
+                  </p>
+
+                  <div className="flex flex-col md:flex-row gap-6 h-[300px]">
+                      
+                      {/* INVENTORY LIST */}
+                      <div className="flex-1 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden">
+                          <div className="p-2 border-b border-slate-800 bg-slate-900">
+                              <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.MONUMENT_KEYS}</span>
+                          </div>
+                          <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
+                              {availableInventory.length === 0 ? (
+                                  <div className="text-center text-slate-600 text-xs italic py-10">{t.MONUMENT_EMPTY_INV}</div>
+                              ) : (
+                                  availableInventory.map(item => (
+                                      <div 
+                                          key={item.id}
+                                          draggable
+                                          onDragStart={(e) => handleDragStart(e, item)}
+                                          onClick={() => handleInventoryClick(item)}
+                                          className="flex items-center gap-3 p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 cursor-grab active:cursor-grabbing group transition-all"
+                                      >
+                                          <div className="w-8 h-8 rounded bg-slate-950 flex items-center justify-center border border-slate-800">
+                                              <Gem className="w-4 h-4" style={{ color: LOOT_COLORS[item.rarity] }} />
+                                          </div>
+                                          <div className="flex flex-col">
+                                              <span className="text-xs font-bold text-white group-hover:text-amber-200">{item.name}</span>
+                                              <span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span>
+                                          </div>
+                                          <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <ArrowRight className="w-4 h-4 text-slate-500" />
+                                          </div>
+                                      </div>
+                                  ))
+                              )}
+                          </div>
+                      </div>
+
+                      {/* SLOTS AREA */}
+                      <div className="flex-[1.2] flex flex-col justify-center items-center gap-4 relative">
+                          <div className="absolute inset-0 bg-amber-500/5 blur-3xl rounded-full pointer-events-none"></div>
+                          
+                          <div className="flex gap-4 relative z-10">
+                              {[0, 1, 2].map((idx) => {
+                                  const slotItem = monumentDialogState.slots[idx];
+                                  return (
+                                      <div 
+                                          key={idx}
+                                          onDrop={(e) => handleDrop(e, idx)}
+                                          onDragOver={handleAllowDrop}
+                                          onClick={() => slotItem && removeItemFromMonument(idx)}
+                                          className={`
+                                              w-20 h-24 md:w-24 md:h-32 rounded-2xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden
+                                              ${slotItem 
+                                                  ? 'bg-slate-900 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]' 
+                                                  : 'bg-slate-900/30 border-slate-700 border-dashed hover:border-slate-500 hover:bg-slate-800/30'
+                                              }
+                                          `}
+                                      >
+                                          {slotItem ? (
+                                              <>
+                                                  <Gem className="w-8 h-8 md:w-10 md:h-10 mb-2 drop-shadow-md animate-pulse" style={{ color: LOOT_COLORS[slotItem.rarity] }} />
+                                                  <span className="text-[9px] md:text-[10px] text-white font-bold text-center px-1 truncate w-full">{slotItem.name}</span>
+                                                  <span className="text-[8px] text-slate-500 uppercase">{slotItem.rarity}</span>
+                                                  <div className="absolute top-1 right-1 p-1 bg-red-500/20 rounded-full opacity-0 hover:opacity-100 transition-opacity">
+                                                      <X className="w-3 h-3 text-red-400" />
+                                                  </div>
+                                              </>
+                                          ) : (
+                                              <>
+                                                  <Key className="w-6 h-6 text-slate-700 mb-1" />
+                                                  <span className="text-[9px] text-slate-600 font-mono">SLOT {idx+1}</span>
+                                              </>
+                                          )}
+                                      </div>
+                                  );
+                              })}
+                          </div>
+
+                          <div className="w-full px-4">
+                              <button 
+                                  onClick={activateMonument}
+                                  disabled={!isMonumentReady}
+                                  className={`
+                                      w-full py-4 rounded-xl font-black uppercase tracking-[0.2em] shadow-lg transition-all flex items-center justify-center gap-2
+                                      ${isMonumentReady 
+                                          ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-amber-900/40 active:scale-95' 
+                                          : 'bg-slate-800 text-slate-500 cursor-not-allowed grayscale'
+                                      }
+                                  `}
+                              >
+                                  {isMonumentReady ? <><Zap className="w-5 h-5 fill-current" /> {t.MONUMENT_BTN_ACTIVE}</> : t.MONUMENT_BTN_INACTIVE}
+                              </button>
+                          </div>
+                      </div>
+
                   </div>
               </div>
           </div>

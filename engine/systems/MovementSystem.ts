@@ -12,11 +12,11 @@ export class MovementSystem implements System {
     const entities = [state.player, ...state.bots];
 
     for (const entity of entities) {
-      this.processEntity(entity, state, index, events);
+      this.processEntity(entity, state, index, events, state);
     }
   }
 
-  private processEntity(entity: Entity, state: SessionState, index: WorldIndex, events: GameEvent[]) {
+  private processEntity(entity: Entity, state: SessionState, index: WorldIndex, events: GameEvent[], fullState: SessionState) {
     if (entity.state !== EntityState.IDLE && entity.state !== EntityState.MOVING) {
       return;
     }
@@ -27,6 +27,16 @@ export class MovementSystem implements System {
          entity.state = EntityState.IDLE;
          entity.recoveredCurrentHex = false;
          events.push(GameEventFactory.create('MOVE_COMPLETE', undefined, entity.id));
+         
+         // MONUMENT CHECK
+         if (entity.type === EntityType.PLAYER) {
+             const key = getHexKey(entity.q, entity.r);
+             const hex = fullState.grid[key];
+             if (hex && hex.structureType === 'MONUMENT') {
+                 // Verify height requirement logic if needed, but if they are ON it, they climbed it.
+                 events.push(GameEventFactory.create('MONUMENT_REACHED', 'Monument Connection Established', entity.id));
+             }
+         }
       }
       return;
     }
@@ -274,6 +284,15 @@ export class MovementSystem implements System {
         entity.state = EntityState.IDLE;
         entity.recoveredCurrentHex = false;
         events.push(GameEventFactory.create('MOVE_COMPLETE', undefined, entity.id));
+        
+        // RE-CHECK: If we finished moving, check for Monument again (safety for instant arrival)
+        if (entity.type === EntityType.PLAYER) {
+             const key = getHexKey(entity.q, entity.r);
+             const hex = fullState.grid[key];
+             if (hex && hex.structureType === 'MONUMENT') {
+                 events.push(GameEventFactory.create('MONUMENT_REACHED', undefined, entity.id));
+             }
+        }
     } else {
         entity.state = EntityState.MOVING;
     }

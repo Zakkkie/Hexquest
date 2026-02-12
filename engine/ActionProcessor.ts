@@ -112,6 +112,49 @@ export class ActionProcessor {
             }
             break;
         }
+        case 'ACTIVATE_MONUMENT': {
+            // Must be standing on a Monument
+            const key = getHexKey(actor.q, actor.r);
+            const hex = state.grid[key];
+            if (!hex || hex.structureType !== 'MONUMENT') {
+                return { ok: false, reason: 'Not standing on a Monument' };
+            }
+            
+            // Must have 3 items provided
+            if (action.itemIds.length !== 3) {
+                return { ok: false, reason: 'Requires 3 items' };
+            }
+            
+            // Check ownership of all items
+            if (!actor.inventory) return { ok: false, reason: 'No inventory' };
+            for (const id of action.itemIds) {
+                if (!actor.inventory.some(i => i.id === id)) {
+                    return { ok: false, reason: 'Item missing from inventory' };
+                }
+            }
+            
+            // Rule: Rarity Check based on Difficulty
+            const difficulty = state.difficulty;
+
+            for (const id of action.itemIds) {
+                const item = actor.inventory.find(i => i.id === id);
+                if (!item) continue;
+                
+                if (difficulty === 'HARD') {
+                    // Hard: Strict (Rare+)
+                    if (item.rarity === 'COMMON' || item.rarity === 'UNCOMMON') {
+                        return { ok: false, reason: 'HARD MODE: Keys must be RARE or LEGENDARY.' };
+                    }
+                } else if (difficulty === 'MEDIUM') {
+                    // Medium: Uncommon+
+                    if (item.rarity === 'COMMON') {
+                        return { ok: false, reason: 'MEDIUM MODE: Keys must be UNCOMMON or better.' };
+                    }
+                }
+                // EASY: Accepts ANY rarity (Common, Uncommon, Rare, Legendary).
+            }
+            break;
+        }
     }
 
     return { ok: true };
@@ -186,7 +229,7 @@ export class ActionProcessor {
         break;
       case 'RESTORE_HEX': {
         const item = actor.inventory.find(i => i.id === action.itemId);
-        if (!item) return { ok: false, reason: 'Item missing during execution' }; // Should not happen due to validation
+        if (!item) return { ok: false, reason: 'Item missing during execution' }; 
 
         // Consume Item
         actor.inventory = actor.inventory.filter(i => i.id !== action.itemId);
@@ -206,78 +249,51 @@ export class ActionProcessor {
         const hex = state.grid[key];
 
         if (success) {
-            // Restore Hex to Level 0
             state.grid = {
                 ...state.grid,
                 [key]: {
                     ...hex,
-                    structureType: undefined, // Remove VOID type
+                    structureType: undefined, 
                     currentLevel: 0,
                     maxLevel: 0,
                     progress: 0,
-                    durability: undefined // Reset durability (infinite for L0)
+                    durability: undefined 
                 }
             };
-            
             const msg = `Stabilization SUCCESS: Sector Restored using ${item.name}`;
-            state.messageLog.unshift({
-                id: `rest-ok-${Date.now()}`,
-                text: msg,
-                type: 'SUCCESS',
-                source: actor.id,
-                timestamp: Date.now()
-            });
-            // We reuse SECTOR_ACQUIRED sound/event for visual feedback
-            // Actually, we should trigger a new event type if possible, but SECTOR_ACQUIRED works for now
-            // Added HEX_RESTORED to types earlier
-            // Note: Since this class returns ValidationResult and doesn't push events directly, 
-            // the GameEngine usually handles events. 
-            // However, this class DOES modify state.telemetry or we need to rely on GameEngine logic.
-            // GameEngine currently doesn't auto-generate events from ActionProcessor mutations except for movement.
-            // We can assume the UI/Engine will handle event generation if needed, or we can add to a temporary list?
-            // ActionProcessor currently doesn't output events directly.
-            // We will rely on the UI toast for immediate feedback, or update GameEngine to detect restoration.
-            // But wait, the previous code updates messageLog directly. We can add a visual effect via messageLog logic or effects array.
-            
-            // Add visual effect
-            state.effects.push({
-                id: `eff-rest-${Date.now()}`,
-                q: action.coord.q,
-                r: action.coord.r,
-                text: "STABILIZED",
-                color: "#10b981", // Emerald
-                icon: 'PLUS',
-                startTime: Date.now(),
-                lifetime: 1500
-            });
-
+            state.messageLog.unshift({ id: `rest-ok-${Date.now()}`, text: msg, type: 'SUCCESS', source: actor.id, timestamp: Date.now() });
+            state.effects.push({ id: `eff-rest-${Date.now()}`, q: action.coord.q, r: action.coord.r, text: "STABILIZED", color: "#10b981", icon: 'PLUS', startTime: Date.now(), lifetime: 1500 });
         } else {
             const msg = `Stabilization FAILED: ${item.name} consumed without effect.`;
-            state.messageLog.unshift({
-                id: `rest-fail-${Date.now()}`,
-                text: msg,
-                type: 'ERROR',
-                source: actor.id,
-                timestamp: Date.now()
-            });
-             state.effects.push({
-                id: `eff-fail-${Date.now()}`,
-                q: action.coord.q,
-                r: action.coord.r,
-                text: "FIZZLED",
-                color: "#ef4444", // Red
-                icon: 'WARN',
-                startTime: Date.now(),
-                lifetime: 1500
-            });
+            state.messageLog.unshift({ id: `rest-fail-${Date.now()}`, text: msg, type: 'ERROR', source: actor.id, timestamp: Date.now() });
+             state.effects.push({ id: `eff-fail-${Date.now()}`, q: action.coord.q, r: action.coord.r, text: "FIZZLED", color: "#ef4444", icon: 'WARN', startTime: Date.now(), lifetime: 1500 });
         }
         break;
+      }
+      case 'ACTIVATE_MONUMENT': {
+          // Consume items
+          const ids = new Set(action.itemIds);
+          actor.inventory = actor.inventory.filter(i => !ids.has(i.id));
+          
+          // Trigger Victory
+          state.gameStatus = 'VICTORY';
+          const msg = "MONUMENT ACTIVATED. PLANETARY CONTROL ESTABLISHED.";
+          
+          state.messageLog.unshift({
+              id: `monument-win-${Date.now()}`,
+              text: msg,
+              type: 'SUCCESS',
+              source: 'SYSTEM',
+              timestamp: Date.now()
+          });
+          
+          // VictorySystem will handle the rest
+          break;
       }
     }
 
     // --- PLAYER ACTION LOGGING ---
-    // Log successful player actions for dataset/imitation learning
-    if (actor.type === EntityType.PLAYER && action.type !== 'DESTROY_ITEM' && action.type !== 'RESTORE_HEX') {
+    if (actor.type === EntityType.PLAYER && action.type !== 'DESTROY_ITEM' && action.type !== 'RESTORE_HEX' && action.type !== 'ACTIVATE_MONUMENT') {
         let targetStr: string | undefined = undefined;
         
         if (action.type === 'MOVE' && action.path.length > 0) {
@@ -298,10 +314,7 @@ export class ActionProcessor {
             target: targetStr || '-'
         };
 
-        // Add to permanent history
         state.fullBotHistory.push(logEntry);
-        
-        // Add to UI log (Circular)
         state.botActivityLog.unshift(logEntry);
         if (state.botActivityLog.length > 60) state.botActivityLog.pop();
     }

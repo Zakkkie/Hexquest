@@ -84,11 +84,11 @@ interface Dictionary {
         BRIEFING_TARGET_RANK: string;
         BRIEFING_TARGET_FUNDS: string;
         BRIEFING_BTN_START: string;
-        BRIEFING_DESC_TEMPLATE: string; // New
-        BRIEFING_HINTS_TITLE: string; // New
-        BRIEFING_HINT_1: string; // New
-        BRIEFING_HINT_2: string; // New
-        BRIEFING_HINT_3: string; // New
+        BRIEFING_DESC_TEMPLATE: string; 
+        BRIEFING_HINTS_TITLE: string; 
+        BRIEFING_HINT_1: string; 
+        BRIEFING_HINT_2: string; 
+        BRIEFING_HINT_3: string; 
         HELP_RANK_DESC: string;
         HELP_RANK_GOAL: string;
         HELP_MAT_DESC: string;
@@ -141,7 +141,27 @@ interface Dictionary {
         TUT_1_6_CYCLE_HINT: string;
         TUT_1_6_COUNTER: string;
         TUT_1_6_RIVAL: string;
-        ERROR_RANK: string; // New Key
+        ERROR_RANK: string;
+        
+        // NEW KEYS FOR MONUMENT & VOID
+        VOID_TITLE: string;
+        VOID_SUB: string;
+        VOID_DESC: string;
+        VOID_WARN: string;
+        VOID_SELECT: string;
+        VOID_EMPTY: string;
+        MONUMENT_TITLE: string;
+        MONUMENT_SUB: string;
+        MONUMENT_DESC_1: string;
+        MONUMENT_DESC_2: string;
+        MONUMENT_DESC_3: string;
+        MONUMENT_KEYS: string;
+        MONUMENT_BTN_ACTIVE: string;
+        MONUMENT_BTN_INACTIVE: string;
+        MONUMENT_EMPTY_INV: string;
+        MONUMENT_REQ_EASY: string;
+        MONUMENT_REQ_MED: string;
+        MONUMENT_REQ_HARD: string;
     };
     TOOLTIP: {
         CURRENT_LOC: string;
@@ -325,6 +345,26 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_6_COUNTER: "RANK",
             TUT_1_6_RIVAL: "RIVAL",
             ERROR_RANK: "RANK TOO LOW",
+            
+            VOID_TITLE: "Sector Collapsed",
+            VOID_SUB: "Void Stabilization",
+            VOID_DESC: "This sector has destabilized. Insert matter from your inventory to attempt restoration to Level 0.",
+            VOID_WARN: "Warning: Item will be consumed.",
+            VOID_SELECT: "Select Matter Source",
+            VOID_EMPTY: "No stability matter available.",
+            
+            MONUMENT_TITLE: "Monument Activation",
+            MONUMENT_SUB: "Key Authorization Required",
+            MONUMENT_DESC_1: "Insert",
+            MONUMENT_DESC_2: "3 Keys",
+            MONUMENT_DESC_3: "to override the security protocol.",
+            MONUMENT_KEYS: "Available Keys",
+            MONUMENT_BTN_ACTIVE: "ACTIVATE",
+            MONUMENT_BTN_INACTIVE: "INSERT KEYS",
+            MONUMENT_EMPTY_INV: "No items available.",
+            MONUMENT_REQ_EASY: "(Accepts ANY Rarity)",
+            MONUMENT_REQ_MED: "(Requires: UNCOMMON+)",
+            MONUMENT_REQ_HARD: "(Requires: RARE+)"
         },
         TOOLTIP: {
             CURRENT_LOC: "Location",
@@ -506,6 +546,26 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_6_COUNTER: "РАНГ",
             TUT_1_6_RIVAL: "ВРАГ",
             ERROR_RANK: "РАНГ СЛИШКОМ МАЛ",
+            
+            VOID_TITLE: "Сектор Разрушен",
+            VOID_SUB: "Стабилизация Пустоты",
+            VOID_DESC: "Этот сектор дестабилизирован. Используйте материю из инвентаря для восстановления до уровня 0.",
+            VOID_WARN: "Внимание: Предмет будет поглощен.",
+            VOID_SELECT: "Источник Материи",
+            VOID_EMPTY: "Нет стабилизирующей материи.",
+            
+            MONUMENT_TITLE: "Активация Монумента",
+            MONUMENT_SUB: "Требуется Ключ Доступа",
+            MONUMENT_DESC_1: "Вставьте",
+            MONUMENT_DESC_2: "3 Ключа",
+            MONUMENT_DESC_3: "чтобы обойти протокол защиты.",
+            MONUMENT_KEYS: "Доступные Ключи",
+            MONUMENT_BTN_ACTIVE: "АКТИВИРОВАТЬ",
+            MONUMENT_BTN_INACTIVE: "ВСТАВЬТЕ КЛЮЧИ",
+            MONUMENT_EMPTY_INV: "Нет предметов.",
+            MONUMENT_REQ_EASY: "(Любая Редкость)",
+            MONUMENT_REQ_MED: "(Требуется: Необычный+)",
+            MONUMENT_REQ_HARD: "(Требуется: Редкий+)"
         },
         TOOLTIP: {
             CURRENT_LOC: "Местоположение",

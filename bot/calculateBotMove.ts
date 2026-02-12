@@ -15,6 +15,9 @@ export interface AiResult {
 const HIVE_RADIUS = 30; 
 const STUCK_THRESHOLD = 2; // Reduced threshold to react faster to jams
 
+// Helper moved to top to avoid ReferenceError/Hoisting issues
+const distToBot = (bot: Entity, hex: Hex) => cubeDistance(bot, hex);
+
 export const calculateBotMove = (
   bot: Entity, 
   grid: Record<string, Hex>, 
@@ -165,9 +168,10 @@ export const calculateBotMove = (
               if (growthCheck.canGrow) {
                   // Reachability Check
                   let isReachable = false;
-                  const distToBot = cubeDistance(bot, current);
+                  // RENAMED LOCAL VARIABLE TO AVOID SHADOWING FUNCTION
+                  const dToTarget = cubeDistance(bot, current);
                   
-                  if (distToBot <= 1) {
+                  if (dToTarget <= 1) {
                       isReachable = true;
                   } else if (pathChecks < MAX_PATH_CHECKS) {
                       pathChecks++;
@@ -275,8 +279,6 @@ export const calculateBotMove = (
       return executeMinerLogic(bot, grid, index, navObstacles, stateVersion, mem, allBots || [], claimedTargets);
   }
 };
-
-const distToBot = (bot: Entity, hex: Hex) => cubeDistance(bot, hex);
 
 const executeBuilderLogic = (
     bot: Entity,

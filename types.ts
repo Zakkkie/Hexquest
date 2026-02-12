@@ -167,7 +167,8 @@ export type GameEventType =
   | 'ITEM_DROP' // New
   | 'ITEM_DESTROYED' // New
   | 'HEX_RESTORED' // New
-  | 'HEX_RESTORE_FAILED'; // New
+  | 'HEX_RESTORE_FAILED' // New
+  | 'MONUMENT_REACHED'; // New
 
 export interface GameEvent {
   type: GameEventType;
@@ -357,6 +358,12 @@ export interface GameState {
   
   // UI Dialog States
   voidDialogTarget: HexCoord | null; // Target hex for void restoration
+  
+  // Monument Activation State
+  monumentDialogState: {
+      isOpen: boolean;
+      slots: (Item | null)[]; // Fixed size 3
+  };
 }
 
 export type MoveAction = { type: 'MOVE'; path: { q: number; r: number }[]; stateVersion?: number };
@@ -366,9 +373,10 @@ export type WaitAction = { type: 'WAIT'; stateVersion?: number };
 export type RechargeAction = { type: 'RECHARGE_MOVE'; stateVersion?: number };
 export type DestroyItemAction = { type: 'DESTROY_ITEM'; itemId: string; stateVersion?: number };
 export type RestoreHexAction = { type: 'RESTORE_HEX'; coord: HexCoord; itemId: string; stateVersion?: number };
+export type ActivateMonumentAction = { type: 'ACTIVATE_MONUMENT'; itemIds: string[]; stateVersion?: number };
 
 export type BotAction = MoveAction | UpgradeAction | DigAction | WaitAction | RechargeAction;
-export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction;
+export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction | ActivateMonumentAction;
 
 // Validates result of logic before execution (Architecture Requirement)
 export interface ValidationResult {

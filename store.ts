@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction } from './types.ts';
+import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction, Item, ActivateMonumentAction } from './types.ts';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG } from './rules/config.ts';
 import { getHexKey, getNeighbors, findPath, cubeDistance } from './services/hexUtils.ts';
 import { GameEngine } from './engine/GameEngine.ts';
@@ -80,6 +80,13 @@ interface GameStore extends GameState {
   openVoidDialog: (q: number, r: number) => void;
   closeVoidDialog: () => void;
   restoreVoidHex: (itemId: string) => void;
+
+  // Monument Activation
+  openMonumentDialog: () => void;
+  closeMonumentDialog: () => void;
+  placeItemInMonument: (item: Item, slotIndex: number) => void;
+  removeItemFromMonument: (slotIndex: number) => void;
+  activateMonument: () => void;
 }
 
 let engine: GameEngine | null = null;
@@ -218,6 +225,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   session: null,
   language: 'EN',
   voidDialogTarget: null,
+  monumentDialogState: { isOpen: false, slots: [null, null, null] },
   
   setLanguage: (lang) => set({ language: lang }),
   setUIState: (uiState) => set({ uiState }),
@@ -339,7 +347,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (engine) {
           engine.destroy();
           engine = null;
-          set({ session: null, hasActiveSession: false, uiState: 'MENU', voidDialogTarget: null });
+          set({ session: null, hasActiveSession: false, uiState: 'MENU', voidDialogTarget: null, monumentDialogState: { isOpen: false, slots: [null, null, null] } });
       }
   },
   
@@ -580,6 +588,63 @@ export const useGameStore = create<GameStore>((set, get) => ({
      get().showToast("Session Log Downloaded", "success");
   },
 
+  openMonumentDialog: () => {
+      audioService.play('SUCCESS'); // Mystical sound prefered
+      set({ monumentDialogState: { isOpen: true, slots: [null, null, null] } });
+  },
+
+  closeMonumentDialog: () => {
+      audioService.play('UI_CLICK');
+      set({ monumentDialogState: { isOpen: false, slots: [null, null, null] } });
+  },
+
+  placeItemInMonument: (item: Item, slotIndex: number) => {
+      audioService.play('UI_CLICK');
+      set(state => {
+          const newSlots = [...state.monumentDialogState.slots];
+          newSlots[slotIndex] = item;
+          return { monumentDialogState: { ...state.monumentDialogState, slots: newSlots } };
+      });
+  },
+
+  removeItemFromMonument: (slotIndex: number) => {
+      audioService.play('UI_CLICK');
+      set(state => {
+          const newSlots = [...state.monumentDialogState.slots];
+          newSlots[slotIndex] = null;
+          return { monumentDialogState: { ...state.monumentDialogState, slots: newSlots } };
+      });
+  },
+
+  activateMonument: () => {
+      if (!engine || !engine.state) return;
+      const { monumentDialogState } = get();
+      
+      const items = monumentDialogState.slots.filter((i): i is Item => i !== null);
+      if (items.length !== 3) {
+          audioService.play('ERROR');
+          get().showToast("All slots must be filled!", 'error');
+          return;
+      }
+
+      const action: ActivateMonumentAction = { 
+          type: 'ACTIVATE_MONUMENT', 
+          itemIds: items.map(i => i.id), 
+          stateVersion: engine.state.stateVersion 
+      };
+
+      const res = engine.applyAction(engine.state.player.id, action);
+      
+      if (res.ok) {
+          audioService.play('LEVEL_UP'); 
+          set({ monumentDialogState: { isOpen: false, slots: [null, null, null] } });
+          // Victory should be handled by VictorySystem events
+      } else {
+          audioService.play('ERROR');
+          get().showToast(res.reason || "Activation Failed", 'error');
+      }
+  },
+
   tick: () => {
       if (!engine || !engine.state) return;
       if (engine.state.gameStatus !== 'PLAYING' && engine.state.gameStatus !== 'VICTORY') return;
@@ -623,6 +688,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                   audioService.play('WARNING');
               }
           }
+      }
+
+      // Check for Monument Entry Event
+      if (result.events.some(e => e.type === 'MONUMENT_REACHED')) {
+          get().openMonumentDialog();
       }
 
       if (result.events.length > 0) {
@@ -699,30 +769,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
                     switch (event.type) {
                         case 'LEVEL_UP':
-                            text = isPlayer ? "RANK UP" : "RIVAL UP"; 
-                            color = isPlayer ? "#fbbf24" : "#f87171"; 
+                            text = "+1 LVL";
+                            color = isPlayer ? "#fbbf24" : "#f87171"; // Gold for player, Red for rival
                             icon = 'UP';
                             break;
                         case 'SECTOR_ACQUIRED':
-                            text = "CLAIMED"; 
-                            color = isPlayer ? "#4ade80" : "#f87171"; 
+                            text = "+1 LVL"; 
+                            color = isPlayer ? "#4ade80" : "#f87171"; // Green for player
                             icon = 'PLUS';
                             break;
                         case 'SECTOR_EXCAVATED':
-                            text = "EXCAVATED";
-                            color = "#a855f7"; 
+                            text = "+1 MAT";
+                            color = "#a855f7"; // Purple
                             icon = 'PICKAXE';
                             break;
                         case 'RECOVERY_USED':
                             if (isPlayer) {
-                                text = "+MOVES";
-                                color = "#34d399";
+                                const coinGain = (event.data?.coins as number) || 0;
+                                const moveGain = (event.data?.moves as number) || 0;
+                                if (coinGain > 0) {
+                                    text = `+${coinGain} COIN`;
+                                    color = "#34d399"; // Emerald
+                                } else {
+                                    text = "+1 MOVE";
+                                    color = "#60a5fa"; // Blue
+                                }
                                 icon = 'COIN';
                             }
                             break;
                         case 'HEX_COLLAPSE':
-                            text = "COLLAPSE -1 RANK"; 
-                            color = "#ef4444";
+                            text = "-1 LVL"; 
+                            color = "#ef4444"; // Red
                             icon = 'DOWN';
                             break;
                         case 'ITEM_DROP':

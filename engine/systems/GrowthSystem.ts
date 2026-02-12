@@ -166,7 +166,8 @@ export class GrowthSystem implements System {
                         source: entity.id,
                         timestamp: now
                     });
-                    events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id));
+                    // PASS DATA FOR FLOATING TEXT
+                    events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id, { coins: coinReward, moves: 1 }));
                 }
 
                 state.grid = { ...state.grid, [key]: { ...hex, ...newUpdates } };
@@ -213,7 +214,8 @@ export class GrowthSystem implements System {
                     timestamp: Date.now()
                 });
                 
-                events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id));
+                // PASS DATA FOR FLOATING TEXT
+                events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id, { coins: coinReward, moves: 1 }));
                 
                 state.grid = { ...state.grid, [key]: { ...hex, progress: 0 } };
                 
@@ -290,17 +292,21 @@ export class GrowthSystem implements System {
              const msg = `${prefix} Excavated to L${newLevel} (+1 Mat, +${depthReward} Moves)`;
              
              state.messageLog.unshift({ id: `dig-ok-${Date.now()}`, text: msg, type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now() });
-             events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id));
+             
+             // PASS DATA FOR FLOATING TEXT
+             events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id, { material: 1, moves: depthReward }));
 
              // --- LOOT LOGIC ---
-             if (entity.type === EntityType.PLAYER) {
+             // Only grant loot if the new level is negative (deep digging)
+             if (entity.type === EntityType.PLAYER && newLevel < 0) {
                  const loot = rollForLoot(newLevel);
                  if (loot.type === 'COIN') {
                      entity.coins += loot.amount;
                      entity.totalCoinsEarned += loot.amount;
                      const lootMsg = `FOUND: ${loot.amount} Coins!`;
                      state.messageLog.unshift({ id: `loot-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
-                     events.push(GameEventFactory.create('RECOVERY_USED', lootMsg, entity.id)); // Reuse coin sound
+                     // Reuse recovery used for sound, but pass COIN data for visual
+                     events.push(GameEventFactory.create('RECOVERY_USED', lootMsg, entity.id, { coins: loot.amount })); 
                  } else if (loot.type === 'ITEM') {
                      if (!entity.inventory) entity.inventory = [];
                      
@@ -391,12 +397,14 @@ export class GrowthSystem implements System {
                  
                  const msg = `${prefix} Sector L1 Built (-1 Mat, +Move, +Cr)`;
                  state.messageLog.unshift({ id: `acq-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
-                 events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id));
+                 // PASS LEVEL DATA
+                 events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id, { level: 1 }));
             } else {
                  newDurability = undefined;
                  const msg = `${prefix} Upgraded to L${targetLevel} (-1 Mat, +Move, +Cr)`;
                  state.messageLog.unshift({ id: `lvl-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
-                 events.push(GameEventFactory.create('LEVEL_UP', msg, entity.id));
+                 // PASS LEVEL DATA
+                 events.push(GameEventFactory.create('LEVEL_UP', msg, entity.id, { level: targetLevel }));
             }
 
             // INIT RECOVERY POINTS IF LEVEL >= 4
