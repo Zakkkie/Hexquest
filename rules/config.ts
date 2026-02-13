@@ -47,6 +47,16 @@ export const GAME_CONFIG = {
   }
 };
 
+export const ENTROPY_CONFIG = {
+  INITIAL_MAX: 100,
+  THRESHOLD: 6,
+  COST_ACTION_BASE: 0.1, // %
+  COST_VOID_CREATION: 2.0, // %
+  COST_RESTORE_FAIL: 1.0, // %
+  GAIN_RESTORE_SUCCESS: 3.0, // %
+  SHIFT_VOID_CHANCE: 0.2 // 20%
+};
+
 export const DIFFICULTY_SETTINGS = {
   EASY:   { queueSize: 1, maxStorage: 5 },
   MEDIUM: { queueSize: 2, maxStorage: 4 },

@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction, Item, ActivateMonumentAction } from './types.ts';
-import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG } from './rules/config.ts';
+import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG, ENTROPY_CONFIG } from './rules/config.ts';
 import { getHexKey, getNeighbors, findPath, cubeDistance } from './services/hexUtils.ts';
 import { GameEngine } from './engine/GameEngine.ts';
 import { audioService } from './services/audioService.ts';
@@ -199,7 +199,6 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     messageLog: [initialLog],
     botActivityLog: [],
     fullBotHistory: [], 
-    // FIX: Skirmish (no levelConfig) should start PLAYING immediately. Campaign starts BRIEFING (Paused).
     gameStatus: levelConfig ? 'BRIEFING' : 'PLAYING',
     lastBotActionTime: Date.now(),
     isPlayerGrowing: false,
@@ -207,7 +206,12 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     growingBotIds: [],
     telemetry: [],
     effects: [],
-    language
+    language,
+    entropy: {
+        current: ENTROPY_CONFIG.INITIAL_MAX,
+        max: ENTROPY_CONFIG.INITIAL_MAX,
+        threshold: ENTROPY_CONFIG.THRESHOLD
+    }
   };
 };
 
@@ -710,6 +714,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                  case 'DEFEAT': audioService.play('ERROR'); break;
                  case 'ITEM_DROP': audioService.play('SUCCESS'); break; 
                  case 'ITEM_DESTROYED': audioService.play('CRACK'); break; 
+                 case 'ENTROPY_SHIFT': audioService.play('COLLAPSE'); break;
                }
             }
 
@@ -766,21 +771,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     let text = '';
                     let color = '#ffffff';
                     let icon: FloatingText['icon'] = undefined;
+                    
+                    const lang = get().language;
 
                     switch (event.type) {
                         case 'LEVEL_UP':
-                            text = "+1 LVL";
-                            color = isPlayer ? "#fbbf24" : "#f87171"; // Gold for player, Red for rival
+                            text = lang === 'RU' ? "+1 УР" : "+1 LVL";
+                            color = isPlayer ? "#818cf8" : "#f87171"; 
                             icon = 'UP';
                             break;
                         case 'SECTOR_ACQUIRED':
-                            text = "+1 LVL"; 
-                            color = isPlayer ? "#4ade80" : "#f87171"; // Green for player
+                            text = lang === 'RU' ? "+1 УР" : "+1 LVL"; 
+                            color = isPlayer ? "#818cf8" : "#f87171";
                             icon = 'PLUS';
                             break;
                         case 'SECTOR_EXCAVATED':
-                            text = "+1 MAT";
-                            color = "#a855f7"; // Purple
+                            text = lang === 'RU' ? "+1 МАТ" : "+1 MAT";
+                            color = "#34d399"; 
                             icon = 'PICKAXE';
                             break;
                         case 'RECOVERY_USED':
@@ -788,22 +795,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
                                 const coinGain = (event.data?.coins as number) || 0;
                                 const moveGain = (event.data?.moves as number) || 0;
                                 if (coinGain > 0) {
-                                    text = `+${coinGain} COIN`;
-                                    color = "#34d399"; // Emerald
+                                    text = lang === 'RU' ? `+${coinGain} МОН` : `+${coinGain} COIN`;
+                                    color = "#fbbf24"; 
                                 } else {
-                                    text = "+1 MOVE";
-                                    color = "#60a5fa"; // Blue
+                                    text = lang === 'RU' ? "+1 ХОД" : "+1 MOVE";
+                                    color = "#60a5fa"; 
                                 }
                                 icon = 'COIN';
                             }
                             break;
                         case 'HEX_COLLAPSE':
-                            text = "-1 LVL"; 
-                            color = "#ef4444"; // Red
+                            text = lang === 'RU' ? "-1 УР" : "-1 LVL"; 
+                            color = "#ef4444";
                             icon = 'DOWN';
                             break;
                         case 'ITEM_DROP':
-                            text = "ITEM FOUND!";
+                            text = lang === 'RU' ? "ПРЕДМЕТ!" : "ITEM FOUND!";
                             color = "#fcd34d";
                             icon = 'GEM';
                             break;

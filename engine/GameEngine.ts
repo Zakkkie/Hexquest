@@ -6,6 +6,7 @@ import { MovementSystem } from './systems/MovementSystem';
 import { GrowthSystem } from './systems/GrowthSystem';
 import { AiSystem } from './systems/AiSystem';
 import { VictorySystem } from './systems/VictorySystem';
+import { EntropySystem } from './systems/EntropySystem';
 import { ActionProcessor } from './ActionProcessor';
 import { SAFETY_CONFIG } from '../rules/config';
 import { GameEventFactory } from './events';
@@ -35,6 +36,7 @@ export class GameEngine {
       new GrowthSystem(),
       new AiSystem(this._actionProcessor!),
       new MovementSystem(),
+      new EntropySystem(), // Integrated
       new VictorySystem()
     ];
   }
@@ -90,6 +92,9 @@ export class GameEngine {
       // Shallow copy effects
       effects: [...source.effects],
       
+      // Copy Entropy State
+      entropy: { ...source.entropy },
+
       // Preserve activeLevelConfig reference (it contains functions)
       activeLevelConfig: source.activeLevelConfig 
     };

@@ -164,11 +164,12 @@ export type GameEventType =
   | 'RECOVERY_USED'
   | 'HEX_COLLAPSE'
   | 'HEX_DOWNGRADE'
-  | 'ITEM_DROP' // New
-  | 'ITEM_DESTROYED' // New
-  | 'HEX_RESTORED' // New
-  | 'HEX_RESTORE_FAILED' // New
-  | 'MONUMENT_REACHED'; // New
+  | 'ITEM_DROP' 
+  | 'ITEM_DESTROYED' 
+  | 'HEX_RESTORED' 
+  | 'HEX_RESTORE_FAILED' 
+  | 'MONUMENT_REACHED'
+  | 'ENTROPY_SHIFT'; // New
 
 export interface GameEvent {
   type: GameEventType;
@@ -307,6 +308,12 @@ export interface LevelConfig {
   hooks: ScenarioHooks;
 }
 
+export interface EntropyState {
+  current: number;
+  max: number;
+  threshold: number;
+}
+
 // Authoritative state for a single game session, managed by GameEngine
 export interface SessionState {
   stateVersion: number;
@@ -338,6 +345,9 @@ export interface SessionState {
   telemetry?: GameEvent[];
   effects: FloatingText[]; // Visual effects layer
   language: Language; // Language setting for session-level localization (e.g. hooks)
+  
+  // ENTROPY
+  entropy: EntropyState;
 }
 
 // State for the entire application, managed by Zustand

@@ -5,6 +5,7 @@ import { getHexKey, getNeighbors, getSecondsToGrow, cubeDistance } from '../serv
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth.ts';
 import { EntityState, Hex } from '../types.ts';
 import HexButton from './HexButton.tsx';
+import EntropyGauge from './EntropyGauge.tsx';
 import { TEXT } from '../services/i18n.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
@@ -561,9 +562,17 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       </div>
 
-      {/* LEFT SIDE: INVENTORY PANEL (Vertically Centered) */}
+      {/* LEFT SIDE: INVENTORY PANEL & ENTROPY GAUGE */}
       {gameStatus === 'PLAYING' && (
-          <div className="absolute top-1/2 -translate-y-1/2 left-2 md:left-4 z-40 pointer-events-auto flex flex-col gap-2">
+          <div className="absolute top-1/2 -translate-y-1/2 left-2 md:left-4 z-40 pointer-events-auto flex flex-col gap-3">
+              
+              {/* ENTROPY GAUGE */}
+              <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-2 shadow-xl flex flex-col items-center justify-center">
+                  <span className="text-[8px] font-bold uppercase text-slate-500 tracking-widest mb-1">STABILITY</span>
+                  <EntropyGauge />
+              </div>
+
+              {/* INVENTORY */}
               <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-xl p-2 md:p-3 shadow-xl flex flex-col items-center gap-2">
                   <span className="text-[8px] md:text-[9px] font-bold uppercase text-slate-500 tracking-widest">LOOT</span>
                   
