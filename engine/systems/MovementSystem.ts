@@ -118,7 +118,8 @@ export class MovementSystem implements System {
     // A. HEX COLLAPSE (ON EXIT)
     const oldHex = state.grid[oldHexKey];
     
-    if (oldHex && oldHex.maxLevel === 1 && oldHex.structureType !== 'VOID') {
+    // SAFETY: Monument Hexes are indestructible physics objects. They never collapse.
+    if (oldHex && oldHex.maxLevel === 1 && oldHex.structureType !== 'VOID' && oldHex.structureType !== 'MONUMENT') {
         const d = oldHex.durability !== undefined ? oldHex.durability : GAME_CONFIG.L1_HEX_MAX_DURABILITY;
         if (d <= 0) {
              const collapsedHex: Hex = {
@@ -181,7 +182,8 @@ export class MovementSystem implements System {
     // Take from updates if available, else state
     const newHex = gridUpdates[newHexKey] || state.grid[newHexKey];
     
-    if (newHex && newHex.maxLevel === 1 && newHex.structureType !== 'VOID') {
+    // SAFETY: Monument Hexes do not take durability damage.
+    if (newHex && newHex.maxLevel === 1 && newHex.structureType !== 'VOID' && newHex.structureType !== 'MONUMENT') {
         const currentDurability = newHex.durability !== undefined ? newHex.durability : GAME_CONFIG.L1_HEX_MAX_DURABILITY;
         const newDurability = currentDurability - 1;
         
