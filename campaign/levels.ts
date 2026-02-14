@@ -11,8 +11,8 @@ const isStranded = (state: any) => {
 export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '1.1',
-    title: 'Sim 1.1: Expansion Protocol',
-    description: 'Mission: Secure 3 NEW sectors.\n\nYour unit needs a foothold. Acquire 3 adjacent Neutral Sectors (L0) to establish a perimeter.\n\nMethod: Move to a Neutral hex, then use the UPGRADE action (Amber Button) to build a Level 1 structure (Cost: 1 Material).\n\nWARNING: You have limited materials. Use them to expand outward.',
+    title: 'Сим 1.1: Протокол Экспансии',
+    description: 'Миссия: Захватить 3 НОВЫХ сектора.\n\nЮниту нужен плацдарм. Захватите 3 соседних Нейтральных Сектора (Ур.0), чтобы создать периметр.\n\nМетод: Перейдите на нейтральный гекс и используйте УЛУЧШЕНИЕ (Желтая кнопка), чтобы построить Уровень 1 (Цена: 1 Мат.).\n\nВНИМАНИЕ: Материалы ограничены. Используйте их для расширения.',
     
     mapConfig: {
       size: 5, 
@@ -72,8 +72,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   },
   {
     id: '1.2',
-    title: 'Sim 1.2: Stable Ground',
-    description: 'Objective: Reach the Capital Sector.\n\nSCAN DATA: A safe path (Durability 3) has been generated through the void. Follow it.\n\nHAZARD: Surrounding debris is UNSTABLE (1 Durability). Stepping OFF unstable ground causes immediate collapse and Rank Damage.\n\nFAILURE CONDITION: Rank falling to 1.',
+    title: 'Сим 1.2: Твердая Почва',
+    description: 'Цель: Достичь Столицы.\n\nСКАНЕР: Обнаружен безопасный путь (Прочность 3). Следуйте ему через пустоту.\n\nОПАСНОСТЬ: Окружение НЕСТАБИЛЬНО (Прочность 1). Сход с пути вызывает мгновенный обвал и потерю Ранга.\n\nПРОВАЛ: Падение Ранга до 1.',
     
     // Logic handled by mapGenerator.ts
     mapConfig: {
@@ -106,8 +106,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   },
   {
     id: '1.3',
-    title: 'Sim 1.3: Structural Support',
-    description: 'Protocol: Vertical Construction.\n\nObjective: Upgrade the Center Sector to Level 2.\n\nRule: You cannot build higher without a foundation. A hex needs at least 2 neighbors at its current level to upgrade.\n\nTask: Build 2 Level 1 neighbors using provided materials, then upgrade the center.',
+    title: 'Сим 1.3: Опорные Конструкции',
+    description: 'Протокол: Вертикальная Стройка.\n\nЦель: Улучшить Центр до Ур. 2.\n\nПравило: Нельзя строить выше без фундамента. Гексу нужно минимум 2 соседа того же уровня для улучшения.\n\nЗадача: Постройте 2 соседа Ур. 1 используя выданные материалы, затем улучшите центр.',
     
     mapConfig: {
       size: 5,
@@ -175,7 +175,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
                   if (validSupports.length < 2) {
                       return {
                           ok: false,
-                          reason: "UNSTABLE! Upgrade 2 neighbors to Level 1 first."
+                          reason: "НЕУСТОЙЧИВО! Улучшите 2 соседей до Ур. 1."
                       };
                   }
               }
@@ -186,8 +186,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   },
   {
     id: '1.4',
-    title: 'Sim 1.4: Material Excavation',
-    description: 'Protocol: Resource Cycle.\n\nObjective: Upgrade Center to Level 3.\n\nProblem: You have 0 Material. You cannot build.\n\nSolution: EXCAVATE (Dig) the surrounding Level 2 mounds. Digging grants +1 Material. Use it to build up the center.',
+    title: 'Сим 1.4: Раскопки',
+    description: 'Протокол: Ресурсный Цикл.\n\nЦель: Улучшить Центр до Ур. 3.\n\nПроблема: У вас 0 Материалов. Стройка невозможна.\n\nРешение: РАСКОПКИ (Красная кнопка). Копайте окружающие холмы (Ур. 2), чтобы добыть +1 Мат. Используйте их для улучшения центра.',
     
     mapConfig: {
       size: 5,
@@ -244,7 +244,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       onBeforeAction: (state, action) => {
           // Force player to learn Digging if they try to upgrade without material
           if (action.type === 'UPGRADE' && state.player.storage === 0 && action.intent !== 'RECOVER') {
-             return { ok: false, reason: "NO MATERIAL! Dig a L2 mound to harvest." };
+             return { ok: false, reason: "НЕТ МАТЕРИАЛОВ! Копайте холмы (Ур.2)." };
           }
           return { ok: true };
       }
@@ -252,8 +252,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   },
   {
     id: '1.5',
-    title: 'Sim 1.5: Oxygen Run',
-    description: 'Protocol: Emergency Recovery.\n\nObjective: Accrue 150 Coins in 60s.\n\nRule: You can only Recover once per visit on standard sectors. You must MOVE to reset the ability.\n\nMethod: Use the RECOVER action (Blue Button) on High-Level sectors. Higher levels yield more Credits.\n\nWARNING: High-Level (L4+) sectors have a 15s COOLDOWN. You cannot spam them. Move between multiple peaks to survive.',
+    title: 'Сим 1.5: Кислородный Марш',
+    description: 'Протокол: Экстренное Восстановление.\n\nЦель: Собрать 150 Кред. за 60с.\n\nПравило: Восстановление доступно 1 раз за визит. Вы должны СДВИНУТЬСЯ, чтобы сбросить инструмент.\n\nМетод: Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на высоких секторах. Высота дает больше Денег.\n\nВНИМАНИЕ: Высокие (Ур. 4+) сектора перегреваются (КД 15с). Перемещайтесь между пиками.',
     
     mapConfig: {
       size: 5,
@@ -306,8 +306,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   },
   {
     id: '1.6',
-    title: 'Sim 1.6: The Architect',
-    description: 'Protocol: Combat.\n\nObjective: Reach Level 4 before the Rival.\n\nThe Rival Bot "Architect V18" is active. It knows how to Dig for material and build Supports. Compete for limited space.',
+    title: 'Сим 1.6: Архитектор',
+    description: 'Протокол: Бой.\n\nЦель: Достичь Уровня 4 раньше соперника.\n\nБот "Архитектор V18" активен. Он умеет Копать материалы и Строить опоры. Сражайтесь за ограниченное пространство.',
     
     mapConfig: {
       size: 4, 
