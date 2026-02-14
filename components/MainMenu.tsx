@@ -462,33 +462,33 @@ const MainMenu: React.FC = () => {
                   </div>
                   <div>
                       <h2 className="text-xl font-bold text-white leading-none">{authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
-                      <p className="text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider">{authMode === 'GUEST' ? 'Restricted Access' : (authMode === 'LOGIN' ? 'Identify User' : 'Create Credentials')}</p>
+                      <p className="text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider">{authMode === 'GUEST' ? t.MODAL_GUEST_SUBTITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_SUBTITLE : t.MODAL_REGISTER_SUBTITLE)}</p>
                   </div>
               </div>
               {errorMessage && <div className="p-3 bg-red-950/40 border border-red-900/50 rounded-xl flex items-center gap-2 text-red-400 text-xs font-bold animate-in slide-in-from-top-2"><Shield className="w-4 h-4 shrink-0" /> {errorMessage}</div>}
               <div className="space-y-4">
                   {(authMode === 'REGISTER' || authMode === 'GUEST') && (
                       <div className="bg-slate-950/50 rounded-2xl border border-slate-800 p-4 flex flex-col items-center gap-4">
-                          <span className="text-[9px] font-bold uppercase text-slate-500 tracking-widest w-full text-center">Unit Configuration</span>
+                          <span className="text-[9px] font-bold uppercase text-slate-500 tracking-widest w-full text-center">{t.UNIT_CONFIG}</span>
                           <div className="w-24 h-24 flex items-center justify-center bg-slate-900 rounded-full border-2 border-slate-800 shadow-inner">
                               <CharacterPreview head={selectedHead} body={selectedBody} color={selectedColor} />
                           </div>
                           <div className="flex gap-2 w-full justify-between items-center">
                               <div className="flex flex-col items-center gap-1">
-                                  <span className="text-[8px] uppercase text-slate-500">Head</span>
+                                  <span className="text-[8px] uppercase text-slate-500">{t.UNIT_HEAD}</span>
                                   <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
                                       <button onClick={() => cycleOption(setSelectedHead, selectedHead, -1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronLeft className="w-4 h-4"/></button>
                                       <button onClick={() => cycleOption(setSelectedHead, selectedHead, 1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronRight className="w-4 h-4"/></button>
                                   </div>
                               </div>
                               <div className="flex flex-col items-center gap-1">
-                                  <span className="text-[8px] uppercase text-slate-500">Hull</span>
+                                  <span className="text-[8px] uppercase text-slate-500">{t.UNIT_HULL}</span>
                                   <div className="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
                                       {AVATAR_COLORS.slice(0, 4).map(c => <button key={c} onClick={() => setSelectedColor(c)} style={{backgroundColor: c}} className={`w-4 h-4 rounded-full ${selectedColor === c ? 'ring-1 ring-white' : 'opacity-50'}`} />)}
                                   </div>
                               </div>
                               <div className="flex flex-col items-center gap-1">
-                                  <span className="text-[8px] uppercase text-slate-500">Chassis</span>
+                                  <span className="text-[8px] uppercase text-slate-500">{t.UNIT_CHASSIS}</span>
                                   <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
                                       <button onClick={() => cycleOption(setSelectedBody, selectedBody, -1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronLeft className="w-4 h-4"/></button>
                                       <button onClick={() => cycleOption(setSelectedBody, selectedBody, 1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronRight className="w-4 h-4"/></button>
@@ -499,12 +499,12 @@ const MainMenu: React.FC = () => {
                   )}
                   <div>
                       <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1.5 block flex items-center gap-1.5"><User className="w-3 h-3" /> {t.INPUT_NAME}</label>
-                      <input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder="Commander Name" className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" maxLength={16} />
+                      <input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder={t.INPUT_NAME_PH} className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" maxLength={16} />
                   </div>
                   {authMode !== 'GUEST' && (
                       <div>
                           <label className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1.5 block flex items-center gap-1.5"><Lock className="w-3 h-3" /> {t.INPUT_PASS}</label>
-                          <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder="Access Code" className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" />
+                          <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder={t.INPUT_PASS_PH} className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-sm" />
                       </div>
                   )}
                   <button onClick={handleAuthSubmit} className={`w-full py-4 mt-2 font-bold rounded-xl uppercase tracking-[0.15em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${authMode === 'GUEST' ? 'bg-slate-700 hover:bg-slate-600 text-white' : (authMode === 'LOGIN' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/30' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30')}`}>
@@ -513,9 +513,9 @@ const MainMenu: React.FC = () => {
               </div>
               <div className="border-t border-slate-800 pt-4 flex justify-center">
                   {authMode === 'GUEST' ? (
-                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors">Back to Secure Login</button>
+                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors">{t.BTN_BACK_LOGIN}</button>
                   ) : (
-                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-2"><Ghost className="w-3 h-3" /> Bypass Security (Guest Mode)</button>
+                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-2"><Ghost className="w-3 h-3" /> {t.BYPASS_SECURITY}</button>
                   )}
               </div>
             </div>
@@ -540,7 +540,7 @@ const MainMenu: React.FC = () => {
                         <h2 className="text-lg font-black text-white uppercase tracking-tighter leading-none">{t.CONFIG_TITLE}</h2>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <p className="text-[9px] text-emerald-400 uppercase tracking-widest font-mono">Terminal Active</p>
+                            <p className="text-[9px] text-emerald-400 uppercase tracking-widest font-mono">{t.TERMINAL_ACTIVE}</p>
                         </div>
                     </div>
                 </div>
@@ -614,7 +614,7 @@ const MainMenu: React.FC = () => {
                         <div className={`p-3 rounded-xl border flex items-start gap-2 ${getDifficultyColor(difficulty)}`}>
                             <Activity className="w-4 h-4 shrink-0 mt-0.5 animate-pulse" />
                             <div>
-                                <span className="block text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5">Rules of Engagement</span>
+                                <span className="block text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5">{t.RULES_ENGAGEMENT}</span>
                                 <span className="text-[10px] font-bold leading-tight block">{getDifficultyDesc(difficulty)}</span>
                             </div>
                         </div>
@@ -647,14 +647,14 @@ const MainMenu: React.FC = () => {
                                 <span className="text-[9px] text-slate-600 font-mono uppercase tracking-wider">
                                     {getBotLabel(botCount)}
                                 </span>
-                                {botCount >= 4 && <span className="text-[9px] text-red-500 font-bold font-mono uppercase flex items-center gap-1"><Flame className="w-3 h-3" /> HIGH CPU</span>}
+                                {botCount >= 4 && <span className="text-[9px] text-red-500 font-bold font-mono uppercase flex items-center gap-1"><Flame className="w-3 h-3" /> {t.HIGH_CPU}</span>}
                             </div>
                         </div>
 
                         {/* STORAGE SELECTOR (NEW) */}
                         <div>
                             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-2">
-                                <Box className="w-3 h-3" /> Cargo Capacity
+                                <Box className="w-3 h-3" /> {t.CARGO_CAP}
                             </h3>
                             <div className="flex gap-2">
                                 {[3, 4, 5, 6].map(cap => (
@@ -686,10 +686,10 @@ const MainMenu: React.FC = () => {
              {/* FOOTER ACTION */}
              <div className="p-6 border-t border-slate-800 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between gap-4 shrink-0">
                  <div className="flex flex-col">
-                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Est. Reward</span>
+                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{t.EST_REWARD}</span>
                      <span className="text-base font-mono font-black text-amber-400 flex items-center gap-2">
                         <Gem className="w-4 h-4" />
-                        {selectedTier === 3 ? 'High' : (selectedTier === 2 ? 'Medium' : 'Standard')}
+                        {selectedTier === 3 ? t.REWARD_HIGH : (selectedTier === 2 ? t.REWARD_MED : t.REWARD_STD)}
                      </span>
                  </div>
                  <button 

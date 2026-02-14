@@ -395,11 +395,26 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   if (!grid || !player || !bots) return null;
 
-  // Prepare Briefing Data
-  const briefingTitle = activeLevelConfig ? activeLevelConfig.title : (winCondition?.label || "Mission Briefing");
-  const briefingDesc = activeLevelConfig 
-      ? activeLevelConfig.description 
-      : t.BRIEFING_DESC_TEMPLATE.replace('{0}', (winCondition?.targetLevel || 99).toString()).replace('{1}', (winCondition?.targetCoins || 0).toString());
+  // --- Dynamic Briefing Data from I18N ---
+  let briefingTitle = winCondition?.label || "Mission Briefing";
+  let briefingDesc = t.BRIEFING_DESC_TEMPLATE
+      .replace('{0}', (winCondition?.targetLevel || 99).toString())
+      .replace('{1}', (winCondition?.targetCoins || 0).toString());
+
+  if (activeLevelConfig) {
+      // Lookup translated strings dynamically using the level ID
+      // Replace '.' with '_' to match key format (e.g. 1.1 -> LEVEL_1_1_TITLE)
+      const levelKey = activeLevelConfig.id.replace('.', '_');
+      const titleKey = `LEVEL_${levelKey}_TITLE` as keyof typeof TEXT.EN.CAMPAIGN;
+      const descKey = `LEVEL_${levelKey}_DESC` as keyof typeof TEXT.EN.CAMPAIGN;
+      
+      // Fallback to config text if translation missing (though type system enforces it usually)
+      briefingTitle = TEXT[language].CAMPAIGN[titleKey] || activeLevelConfig.title;
+      briefingDesc = TEXT[language].CAMPAIGN[descKey] || activeLevelConfig.description;
+  } else if (winCondition?.winType === 'SUMMIT') {
+      // Fallback Summit Text if Skirmish
+      briefingDesc = `SCENARIO: KING OF THE HILL\n\nA dormant Monument has been detected in the sector. It stands at Level ${winCondition.targetLevel}.\n\nYour unit cannot jump directly to the summit. You must construct a staircase (Raise adjacent terrain to Level ${winCondition.targetLevel - 1}, then jump).`;
+  }
 
   // Derive inventory for Monument Modal: Only show items NOT already in slots
   const availableInventory = player.inventory.filter(i => !monumentDialogState.slots.some(s => s?.id === i.id));
@@ -1050,21 +1065,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       <div>
                           <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.BRIEFING_TITLE}</h2>
                           <p className="text-xs text-indigo-400 font-mono tracking-widest uppercase mt-1">
-                              {activeLevelConfig ? activeLevelConfig.title : (winCondition?.label || "Skirmish Operation")}
+                              {briefingTitle}
                           </p>
                       </div>
                   </div>
 
                   <div className="space-y-4 mb-8">
                       <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800/50 text-sm text-slate-300 leading-relaxed font-medium">
-                          {(activeLevelConfig 
-                              ? activeLevelConfig.description 
-                              : winCondition?.winType === 'SUMMIT' ?
-                                `SCENARIO: KING OF THE HILL\n\nA dormant Monument has been detected in the sector. It stands at Level ${winCondition.targetLevel}.\n\nYour unit cannot jump directly to the summit. You must construct a staircase (Raise adjacent terrain to Level ${winCondition.targetLevel - 1}, then jump).`
-                              : t.BRIEFING_DESC_TEMPLATE
-                                  .replace('{0}', (winCondition?.targetLevel || 99).toString())
-                                  .replace('{1}', (winCondition?.targetCoins || 0).toString())
-                           ).split('\n').map((line, i) => (
+                          {briefingDesc.split('\n').map((line, i) => (
                               <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>
                           ))}
                       </div>

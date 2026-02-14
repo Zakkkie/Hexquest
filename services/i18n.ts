@@ -22,15 +22,26 @@ interface Dictionary {
         MODAL_LOGIN_TITLE: string;
         MODAL_REGISTER_TITLE: string;
         MODAL_GUEST_TITLE: string;
+        MODAL_GUEST_SUBTITLE: string;
+        MODAL_LOGIN_SUBTITLE: string;
+        MODAL_REGISTER_SUBTITLE: string;
         BTN_LOGIN: string;
         BTN_REGISTER: string;
         BTN_GUEST: string;
+        BTN_BACK_LOGIN: string;
         INPUT_NAME: string;
+        INPUT_NAME_PH: string;
         INPUT_PASS: string;
+        INPUT_PASS_PH: string;
         AUTH_AVATAR_COLOR: string;
         AUTH_INSIGNIA: string;
+        UNIT_CONFIG: string;
+        UNIT_HEAD: string;
+        UNIT_HULL: string;
+        UNIT_CHASSIS: string;
         CONFIG_TITLE: string;
         CONFIG_SUB: string;
+        TERMINAL_ACTIVE: string;
         DIFF_EASY: string;
         DIFF_MEDIUM: string;
         DIFF_HARD: string;
@@ -45,7 +56,14 @@ interface Dictionary {
         COL_SETUP_TITLE: string;
         COL_SETUP_DESC: string;
         LBL_DIFFICULTY: string;
+        RULES_ENGAGEMENT: string;
         LBL_RIVALS: string;
+        HIGH_CPU: string;
+        CARGO_CAP: string;
+        EST_REWARD: string;
+        REWARD_STD: string;
+        REWARD_MED: string;
+        REWARD_HIGH: string;
         
         // Forecast / Details
         FORECAST_TITLE: string;
@@ -58,6 +76,17 @@ interface Dictionary {
         VAL_PASSIVE: string;
         VAL_BALANCED: string;
         VAL_AGGRESSIVE: string;
+    };
+    CAMPAIGN_MAP: {
+        HEADER_TITLE: string;
+        HEADER_SUBTITLE: string;
+        BTN_BACK: string;
+        BADGE_CURRENT: string;
+        BADGE_LOCKED: string;
+        BADGE_DONE: string;
+        MISSION_PREFIX: string;
+        HOSTILES: string;
+        ENCRYPTED: string;
     };
     HUD: {
         RANK: string;
@@ -163,6 +192,20 @@ interface Dictionary {
         MONUMENT_REQ_MED: string;
         MONUMENT_REQ_HARD: string;
     };
+    CAMPAIGN: {
+        LEVEL_1_1_TITLE: string;
+        LEVEL_1_1_DESC: string;
+        LEVEL_1_2_TITLE: string;
+        LEVEL_1_2_DESC: string;
+        LEVEL_1_3_TITLE: string;
+        LEVEL_1_3_DESC: string;
+        LEVEL_1_4_TITLE: string;
+        LEVEL_1_4_DESC: string;
+        LEVEL_1_5_TITLE: string;
+        LEVEL_1_5_DESC: string;
+        LEVEL_1_6_TITLE: string;
+        LEVEL_1_6_DESC: string;
+    };
     TOOLTIP: {
         CURRENT_LOC: string;
         BLOCKED: string;
@@ -227,15 +270,26 @@ export const TEXT: Record<Language, Dictionary> = {
             MODAL_LOGIN_TITLE: "Login",
             MODAL_REGISTER_TITLE: "New Commission",
             MODAL_GUEST_TITLE: "Guest Mode",
+            MODAL_GUEST_SUBTITLE: "Restricted Access",
+            MODAL_LOGIN_SUBTITLE: "Identify User",
+            MODAL_REGISTER_SUBTITLE: "Create Credentials",
             BTN_LOGIN: "Authenticate",
             BTN_REGISTER: "Join Ranks",
             BTN_GUEST: "Play as Guest",
+            BTN_BACK_LOGIN: "Back to Secure Login",
             INPUT_NAME: "Callsign",
+            INPUT_NAME_PH: "Commander Name",
             INPUT_PASS: "Password",
+            INPUT_PASS_PH: "Access Code",
             AUTH_AVATAR_COLOR: "Suit Color",
             AUTH_INSIGNIA: "Insignia",
+            UNIT_CONFIG: "Unit Configuration",
+            UNIT_HEAD: "Head",
+            UNIT_HULL: "Hull",
+            UNIT_CHASSIS: "Chassis",
             CONFIG_TITLE: "Battle Configuration",
             CONFIG_SUB: "Define mission parameters",
+            TERMINAL_ACTIVE: "Terminal Active",
             DIFF_EASY: "Easy",
             DIFF_MEDIUM: "Medium",
             DIFF_HARD: "Hard",
@@ -249,7 +303,14 @@ export const TEXT: Record<Language, Dictionary> = {
             COL_SETUP_TITLE: "Simulation Settings",
             COL_SETUP_DESC: "Configure threats and difficulty.",
             LBL_DIFFICULTY: "Challenge Level",
+            RULES_ENGAGEMENT: "Rules of Engagement",
             LBL_RIVALS: "Bots",
+            HIGH_CPU: "HIGH CPU",
+            CARGO_CAP: "Cargo Capacity",
+            EST_REWARD: "Est. Reward",
+            REWARD_STD: "Standard",
+            REWARD_MED: "Medium",
+            REWARD_HIGH: "High",
 
             FORECAST_TITLE: "Tactical Forecast",
             STAT_MAP_SIZE: "Map Radius",
@@ -261,6 +322,17 @@ export const TEXT: Record<Language, Dictionary> = {
             VAL_PASSIVE: "Defensive",
             VAL_BALANCED: "Balanced",
             VAL_AGGRESSIVE: "Hostile"
+        },
+        CAMPAIGN_MAP: {
+            HEADER_TITLE: "Campaign",
+            HEADER_SUBTITLE: "Sector Operations Map",
+            BTN_BACK: "Back",
+            BADGE_CURRENT: "Current",
+            BADGE_LOCKED: "Locked",
+            BADGE_DONE: "Done",
+            MISSION_PREFIX: "Mission",
+            HOSTILES: "Hostiles Detected",
+            ENCRYPTED: "ENCRYPTED"
         },
         HUD: {
             RANK: "Rank",
@@ -366,6 +438,20 @@ export const TEXT: Record<Language, Dictionary> = {
             MONUMENT_REQ_MED: "(Requires: UNCOMMON+)",
             MONUMENT_REQ_HARD: "(Requires: RARE+)"
         },
+        CAMPAIGN: {
+            LEVEL_1_1_TITLE: 'Sim 1.1: Expansion Protocol',
+            LEVEL_1_1_DESC: 'Mission: Capture 3 NEW sectors.\n\nThe unit requires a foothold. Capture 3 adjacent Neutral Sectors (Lvl 0) to establish a perimeter.\n\nMethod: Move to a neutral hex and use UPGRADE (Amber Button) to build Level 1 (Cost: 1 Mat).\n\nWARNING: Materials are limited. Use them to expand.',
+            LEVEL_1_2_TITLE: 'Sim 1.2: Solid Ground',
+            LEVEL_1_2_DESC: 'Objective: Reach the Capital.\n\nSCANNER: A safe path (Durability 3) detected. Follow it through the void.\n\nDANGER: Environment UNSTABLE (Durability 1). Stepping off the path causes immediate collapse and Rank loss.\n\nFAILURE: Rank drops to 1.',
+            LEVEL_1_3_TITLE: 'Sim 1.3: Structural Supports',
+            LEVEL_1_3_DESC: 'Protocol: Vertical Construction.\n\nObjective: Upgrade Center to Lvl 2.\n\nRule: Cannot build higher without foundation. A hex needs at least 2 neighbors of the SAME level to upgrade.\n\nTask: Build 2 Lvl 1 neighbors using provided materials, then upgrade center.',
+            LEVEL_1_4_TITLE: 'Sim 1.4: Excavation',
+            LEVEL_1_4_DESC: 'Protocol: Resource Cycle.\n\nObjective: Upgrade Center to Lvl 3.\n\nProblem: You have 0 Materials. Construction is impossible.\n\nSolution: DIG (Red Button). Excavate surrounding mounds (Lvl 2) to harvest +1 Mat. Use them to upgrade center.',
+            LEVEL_1_5_TITLE: 'Sim 1.5: Oxygen March',
+            LEVEL_1_5_DESC: 'Protocol: Emergency Recovery.\n\nObjective: Collect 150 Credits in 60s.\n\nRule: Standard Recovery is single-use. You must MOVE to reset the tool.\n\nMethod: Use RECOVERY (Blue Button) on high sectors. Height yields more Credits.\n\nWARNING: High (Lvl 4+) sectors overheat (Cooldown 15s). Rotate between peaks.',
+            LEVEL_1_6_TITLE: 'Sim 1.6: The Architect',
+            LEVEL_1_6_DESC: 'Protocol: Combat.\n\nObjective: Reach Level 4 before the Rival.\n\nBot "Architect V18" active. It can Gather materials and Build supports. Compete for limited space.'
+        },
         TOOLTIP: {
             CURRENT_LOC: "Location",
             BLOCKED: "BLOCKED",
@@ -428,15 +514,26 @@ export const TEXT: Record<Language, Dictionary> = {
             MODAL_LOGIN_TITLE: "Доступ",
             MODAL_REGISTER_TITLE: "Новый Контракт",
             MODAL_GUEST_TITLE: "Гостевой Режим",
+            MODAL_GUEST_SUBTITLE: "Ограниченный Доступ",
+            MODAL_LOGIN_SUBTITLE: "Идентификация",
+            MODAL_REGISTER_SUBTITLE: "Создание Учетной Записи",
             BTN_LOGIN: "Войти",
             BTN_REGISTER: "Создать",
             BTN_GUEST: "Играть как Гость",
+            BTN_BACK_LOGIN: "Вернуться ко входу",
             INPUT_NAME: "Позывной",
+            INPUT_NAME_PH: "Имя Командира",
             INPUT_PASS: "Пароль",
+            INPUT_PASS_PH: "Код Доступа",
             AUTH_AVATAR_COLOR: "Цвет Снаряжения",
             AUTH_INSIGNIA: "Эмблема",
+            UNIT_CONFIG: "Конфигурация Юнита",
+            UNIT_HEAD: "Голова",
+            UNIT_HULL: "Корпус",
+            UNIT_CHASSIS: "Шасси",
             CONFIG_TITLE: "Настройка",
             CONFIG_SUB: "Параметры симуляции",
+            TERMINAL_ACTIVE: "ТЕРМИНАЛ АКТИВЕН",
             DIFF_EASY: "Легкий",
             DIFF_MEDIUM: "Средний",
             DIFF_HARD: "Сложный",
@@ -450,7 +547,14 @@ export const TEXT: Record<Language, Dictionary> = {
             COL_SETUP_TITLE: "Параметры",
             COL_SETUP_DESC: "Сложность и враждебность.",
             LBL_DIFFICULTY: "Сложность",
+            RULES_ENGAGEMENT: "Правила Боя",
             LBL_RIVALS: "Боты",
+            HIGH_CPU: "НАГРУЗКА",
+            CARGO_CAP: "Грузоподъемность",
+            EST_REWARD: "Ожид. Награда",
+            REWARD_STD: "Стандарт",
+            REWARD_MED: "Средняя",
+            REWARD_HIGH: "Высокая",
 
             FORECAST_TITLE: "Прогноз",
             STAT_MAP_SIZE: "Карта",
@@ -462,6 +566,17 @@ export const TEXT: Record<Language, Dictionary> = {
             VAL_PASSIVE: "Защита",
             VAL_BALANCED: "Баланс",
             VAL_AGGRESSIVE: "Агрессия"
+        },
+        CAMPAIGN_MAP: {
+            HEADER_TITLE: "Кампания",
+            HEADER_SUBTITLE: "Карта Сектора",
+            BTN_BACK: "Назад",
+            BADGE_CURRENT: "Текущая",
+            BADGE_LOCKED: "Закрыто",
+            BADGE_DONE: "Готово",
+            MISSION_PREFIX: "Миссия",
+            HOSTILES: "Враги",
+            ENCRYPTED: "ЗАШИФРОВАНО"
         },
         HUD: {
             RANK: "Ранг",
@@ -566,6 +681,20 @@ export const TEXT: Record<Language, Dictionary> = {
             MONUMENT_REQ_EASY: "(Любые)",
             MONUMENT_REQ_MED: "(Необычные+)",
             MONUMENT_REQ_HARD: "(Редкие+)"
+        },
+        CAMPAIGN: {
+            LEVEL_1_1_TITLE: 'Сим 1.1: Протокол Экспансии',
+            LEVEL_1_1_DESC: 'Миссия: Захватить 3 НОВЫХ сектора.\n\nЮниту нужен плацдарм. Захватите 3 соседних Нейтральных Сектора (Ур.0), чтобы создать периметр.\n\nМетод: Перейдите на нейтральный гекс и используйте УЛУЧШЕНИЕ (Желтая кнопка), чтобы построить Уровень 1 (Цена: 1 Мат.).\n\nВНИМАНИЕ: Материалы ограничены. Используйте их для расширения.',
+            LEVEL_1_2_TITLE: 'Сим 1.2: Твердая Почва',
+            LEVEL_1_2_DESC: 'Цель: Достичь Столицы.\n\nСКАНЕР: Обнаружен безопасный путь (Прочность 3). Следуйте ему через пустоту.\n\nОПАСНОСТЬ: Окружение НЕСТАБИЛЬНО (Прочность 1). Сход с пути вызывает мгновенный обвал и потерю Ранга.\n\nПРОВАЛ: Падение Ранга до 1.',
+            LEVEL_1_3_TITLE: 'Сим 1.3: Опорные Конструкции',
+            LEVEL_1_3_DESC: 'Протокол: Вертикальная Стройка.\n\nЦель: Улучшить Центр до Ур. 2.\n\nПравило: Нельзя строить выше без фундамента. Гексу нужно минимум 2 соседа того же уровня для улучшения.\n\nЗадача: Постройте 2 соседа Ур. 1 используя выданные материалы, затем улучшите центр.',
+            LEVEL_1_4_TITLE: 'Сим 1.4: Раскопки',
+            LEVEL_1_4_DESC: 'Протокол: Ресурсный Цикл.\n\nЦель: Улучшить Центр до Ур. 3.\n\nПроблема: У вас 0 Материалов. Стройка невозможна.\n\nРешение: РАСКОПКИ (Красная кнопка). Копайте окружающие холмы (Ур. 2), чтобы добыть +1 Мат. Используйте их для улучшения центра.',
+            LEVEL_1_5_TITLE: 'Сим 1.5: Кислородный Марш',
+            LEVEL_1_5_DESC: 'Протокол: Экстренное Восстановление.\n\nЦель: Собрать 150 Кред. за 60с.\n\nПравило: Восстановление доступно 1 раз за визит. Вы должны СДВИНУТЬСЯ, чтобы сбросить инструмент.\n\nМетод: Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на высоких секторах. Высота дает больше Денег.\n\nВНИМАНИЕ: Высокие (Ур. 4+) сектора перегреваются (КД 15с). Перемещайтесь между пиками.',
+            LEVEL_1_6_TITLE: 'Сим 1.6: Архитектор',
+            LEVEL_1_6_DESC: 'Протокол: Бой.\n\nЦель: Достичь Уровня 4 раньше соперника.\n\nБот "Архитектор V18" активен. Он умеет Копать материалы и Строить опоры. Сражайтесь за ограниченное пространство.'
         },
         TOOLTIP: {
             CURRENT_LOC: "Позиция",
