@@ -216,9 +216,17 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
   };
 };
 
+// Initial device type detection
+const getDeviceType = (): DeviceType => {
+    const w = window.innerWidth;
+    if (w < 768) return 'MOBILE';
+    if (w < 1024) return 'TABLET';
+    return 'DESKTOP';
+};
+
 export const useGameStore = create<GameStore>((set, get) => ({
   uiState: 'MENU',
-  deviceType: window.innerWidth < 768 ? 'MOBILE' : (window.innerWidth < 1024 ? 'TABLET' : 'DESKTOP'),
+  deviceType: getDeviceType(),
   user: null,
   toast: null,
   pendingConfirmation: null,

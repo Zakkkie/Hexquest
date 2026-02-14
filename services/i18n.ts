@@ -49,6 +49,7 @@ interface Dictionary {
         BTN_CANCEL: string;
         LOGOUT_CONFIRM: string;
         ABANDON_CONFIRM: string;
+        BYPASS_SECURITY: string;
         
         // New Layout Keys
         COL_GOAL_TITLE: string;
@@ -297,6 +298,7 @@ export const TEXT: Record<Language, Dictionary> = {
             BTN_CANCEL: "Cancel",
             LOGOUT_CONFIRM: "Logging out will end your session.",
             ABANDON_CONFIRM: "Abort mission? Progress will be lost.",
+            BYPASS_SECURITY: "Bypass Security",
             
             COL_GOAL_TITLE: "Mission Objectives",
             COL_GOAL_DESC: "Select the victory criteria.",
@@ -541,6 +543,7 @@ export const TEXT: Record<Language, Dictionary> = {
             BTN_CANCEL: "Отмена",
             LOGOUT_CONFIRM: "Выход завершит текущую сессию.",
             ABANDON_CONFIRM: "Прервать миссию? Прогресс будет потерян.",
+            BYPASS_SECURITY: "Обход Защиты",
             
             COL_GOAL_TITLE: "Цели",
             COL_GOAL_DESC: "Выберите условия победы.",

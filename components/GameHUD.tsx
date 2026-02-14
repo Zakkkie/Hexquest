@@ -319,7 +319,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       startMission();
   };
 
-  const mainButtonSize = "lg";
+  // Dynamically set button size based on device type for better ergonomics
+  const mainButtonSize = isMobile ? "lg" : "xl";
 
   const renderMissionStatus = () => {
       if (isLevel1_5 && timeLeft !== null) {
