@@ -186,6 +186,9 @@ const MainMenu: React.FC = () => {
   const [showSoundMenu, setShowSoundMenu] = useState(false);
   const soundMenuRef = useRef<HTMLDivElement>(null);
 
+  // Animation State
+  const [logoVisible, setLogoVisible] = useState(false);
+
   // Config State
   const [selectedTier, setSelectedTier] = useState<1 | 2 | 3>(1);
   const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
@@ -203,8 +206,15 @@ const MainMenu: React.FC = () => {
   };
 
   useEffect(() => {
+      // Trigger entrance animation with a slight delay to ensure the browser registers the initial 'opacity-0' state
+      const timer = setTimeout(() => {
+          setLogoVisible(true);
+      }, 100);
+      
       audioService.startMusic();
-      audioService.updateMusic(250, 500); 
+      audioService.updateMusic(250, 500);
+      
+      return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -247,8 +257,8 @@ const MainMenu: React.FC = () => {
   const confirmMissionStart = () => {
     playUiSound('CLICK');
     const tier = MISSION_TIERS[selectedTier as 1|2|3];
-    // Create WinCondition and Inject Storage Cap (will be read by store if updated)
-    const winCondition: WinCondition & { initialStorage?: number } = {
+    // Create WinCondition and Inject Storage Cap
+    const winCondition: WinCondition = {
       levelId: -1,
       targetLevel: tier.level,
       targetCoins: tier.coins,
@@ -257,14 +267,8 @@ const MainMenu: React.FC = () => {
       label: `${tier.label}`,
       queueSize: DIFFICULTY_SETTINGS[difficulty].queueSize,
       winType: 'SUMMIT',
-      // We pass this, assuming the store logic will eventually support reading it from here
-      // or we accept that currently it might be overridden by difficulty in creatingInitialState.
-      // To strictly follow "add choice", we'd need to update store logic, but sticking to UI here.
-      // (Note: To make it functional without editing store.ts, we'd need to edit createInitialSessionData there)
+      initialStorage: storageCap // PASS CUSTOM STORAGE SETTING
     };
-    
-    // NOTE: In a real implementation, we would modify `createInitialSessionData` in `store.ts` to read 
-    // `winCondition.initialStorage` override. For this UI task, we prepare the data.
     
     startNewGame(winCondition);
     setShowMissionConfig(false);
@@ -412,8 +416,8 @@ const MainMenu: React.FC = () => {
       {/* CENTER MENU */}
       <div className="flex flex-col gap-6 w-full max-w-sm px-6 z-10 max-h-screen overflow-y-auto no-scrollbar py-20 md:py-0">
         
-        {/* LOGO BLOCK */}
-        <div className="text-center mb-8 relative group cursor-default">
+        {/* LOGO BLOCK WITH ANIMATION */}
+        <div className={`text-center mb-8 relative group cursor-default transition-all duration-1000 ease-out transform ${logoVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-12 scale-90'}`}>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-indigo-500/20 blur-[50px] rounded-full animate-pulse"></div>
           <div className="relative flex flex-col items-center justify-center">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border border-indigo-500/30 rounded-full animate-[spin_10s_linear_infinite]"></div>

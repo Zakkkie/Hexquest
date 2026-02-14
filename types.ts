@@ -236,6 +236,7 @@ export interface WinCondition {
   queueSize: number;     
   winType: 'OR' | 'AND' | 'SUMMIT'; // Added SUMMIT type
   isTutorial?: boolean;
+  initialStorage?: number; // Custom override for max storage capacity
 }
 
 export interface LeaderboardEntry {

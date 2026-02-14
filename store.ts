@@ -122,7 +122,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
   
   // CUSTOM STORAGE LOGIC:
   // Check if winCondition has 'initialStorage' (passed from MainMenu hack), otherwise fallback to Difficulty
-  const maxStorage = (winCondition as any)?.initialStorage || diffSettings.maxStorage; 
+  const maxStorage = winCondition?.initialStorage ?? diffSettings.maxStorage; 
   
   // Skirmish Defaults vs Level Config
   const startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;
