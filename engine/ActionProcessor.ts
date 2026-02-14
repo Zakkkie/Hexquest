@@ -83,9 +83,12 @@ export class ActionProcessor {
       // Queue Movement
       actor.movementQueue = [...action.path.map(p => ({ q: p.q, r: p.r }))];
       actor.state = EntityState.MOVING;
-      actor.lastMoveTime = Date.now(); 
+      
+      // FIX: Set lastMoveTime to 0 ensures the MovementSystem processes the first step immediately
+      // instead of waiting for the throttle interval (650ms).
+      actor.lastMoveTime = 0; 
 
-      // Entropy Logic
+      // Entropy Logic (Movement tax)
       if (state.entropy.current > 0) {
           state.entropy.current = Math.max(0, state.entropy.current - ENTROPY_CONFIG.COST_ACTION_BASE);
       }
@@ -164,9 +167,11 @@ export class ActionProcessor {
               progress: 0,
               durability: undefined 
           };
+          // Entropy Gain on Success
           state.entropy.current = Math.min(state.entropy.max, state.entropy.current + ENTROPY_CONFIG.GAIN_RESTORE_SUCCESS);
           return { ok: true };
       } else {
+          // Entropy Loss on Fail
           state.entropy.current = Math.max(0, state.entropy.current - ENTROPY_CONFIG.COST_RESTORE_FAIL);
           return { ok: false, reason: 'Stabilization Failed (Item Consumed)' };
       }

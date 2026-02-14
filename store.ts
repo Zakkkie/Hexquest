@@ -94,8 +94,6 @@ let tickCount = 0;
 
 const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig, language: Language = 'EN'): SessionState => {
   // Map Generation Logic (Delegate to service)
-  // Map Generator now only generates a small starting area.
-  // We need to calculate the SECRET MONUMENT LOCATION here if it's a Skirmish.
   
   const initialGrid = generateMap(levelConfig);
   let secretMonumentCoord: HexCoord | undefined = undefined;
@@ -115,13 +113,16 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       console.log(`[SYS] Monument Coordinates Set: ${q}, ${r}`);
   }
   
-  // Access store strictly for USER data, avoid `get()` inside helper if possible but we need user prefs
+  // Access store strictly for USER data
   const user = useGameStore.getState().user;
 
   const botCount = levelConfig ? (levelConfig.aiMode === 'none' ? 0 : 1) : (winCondition?.botCount || 0);
   const difficulty: Difficulty = winCondition?.difficulty || 'MEDIUM';
   const diffSettings = DIFFICULTY_SETTINGS[difficulty];
-  const maxStorage = diffSettings.maxStorage; 
+  
+  // CUSTOM STORAGE LOGIC:
+  // Check if winCondition has 'initialStorage' (passed from MainMenu hack), otherwise fallback to Difficulty
+  const maxStorage = (winCondition as any)?.initialStorage || diffSettings.maxStorage; 
   
   // Skirmish Defaults vs Level Config
   const startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;

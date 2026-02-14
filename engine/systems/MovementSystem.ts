@@ -4,7 +4,7 @@ import { GameState, GameEvent, EntityState, Entity, SessionState, Hex, EntityTyp
 import { WorldIndex } from '../WorldIndex';
 import { getHexKey, getNeighbors, cubeDistance } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';
-import { GAME_CONFIG } from '../../rules/config';
+import { GAME_CONFIG, ENTROPY_CONFIG } from '../../rules/config';
 import { generateSingleHex } from '../../services/mapGenerator';
 
 export class MovementSystem implements System {
@@ -133,6 +133,9 @@ export class MovementSystem implements System {
             };
             
             gridUpdates[oldHexKey] = collapsedHex;
+            
+            // ENTROPY PENALTY FOR VOID CREATION
+            state.entropy.current = Math.max(0, state.entropy.current - ENTROPY_CONFIG.COST_VOID_CREATION);
             
             // --- PENALTY LOGIC: SHOCKWAVE DAMAGE ---
             if (entity.playerLevel > 0) {

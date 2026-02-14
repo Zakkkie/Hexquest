@@ -5,7 +5,7 @@ import { WorldIndex } from '../WorldIndex';
 import { getHexKey } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';
 import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
-import { getLevelConfig, GAME_CONFIG, DIFFICULTY_SETTINGS } from '../../rules/config';
+import { getLevelConfig, GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../../rules/config';
 import { rollForLoot, LOOT_COLORS } from '../../rules/loot';
 
 export class GrowthSystem implements System {
@@ -288,6 +288,10 @@ export class GrowthSystem implements System {
                   }
              };
              
+             // --- ENTROPY COST ---
+             const entropyCost = hex.currentLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(hex.currentLevel));
+             state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
+
              const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
              const msg = `${prefix} Excavated to L${newLevel} (+1 Mat, +${depthReward} Moves)`;
              
@@ -390,6 +394,10 @@ export class GrowthSystem implements System {
             entity.coins += income;
             entity.totalCoinsEarned += income;
             entity.moves += 1;
+
+            // --- ENTROPY COST ---
+            const entropyCost = targetLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(targetLevel));
+            state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
 
             if (targetLevel === 1) {
                  newOwnerId = entity.id;
