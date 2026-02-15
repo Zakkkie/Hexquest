@@ -262,8 +262,10 @@ export const findPath = (
       if (Math.abs(currentLevel - nextLevel) > 1) continue;
 
       // -- Cost Calculation --
-      // Base cost 1. Rough terrain (L2+) costs more.
-      const moveCost = (neighborHex && neighborHex.maxLevel >= 2) ? neighborHex.maxLevel : 1;
+      // Update logic: Positive (>1) costs level. Negative/Flat (<2) costs 1.
+      const level = neighborHex ? neighborHex.maxLevel : 0;
+      const moveCost = level > 1 ? level : 1;
+      
       const tentativeG = (gScore.get(currentKey) ?? Infinity) + moveCost;
 
       if (tentativeG < (gScore.get(nKey) ?? Infinity)) {

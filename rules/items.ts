@@ -1,5 +1,5 @@
 
-import { Item, ItemRarity, ItemEffectType, NegativeEffectType, Language } from '../types';
+import { Item, ItemRarity, ItemEffectType, NegativeEffectType, Language, Difficulty } from '../types';
 
 export interface ItemDefinition {
     idPrefix: string;
@@ -11,7 +11,6 @@ export interface ItemDefinition {
     effectType: ItemEffectType;
     effectValue: number;
     effectDuration?: number; // ms
-    baseValue: number; // For selling
     effectLabel: Record<Language, string>;
     
     // Negative Effects
@@ -32,7 +31,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#4ade80',
         effectType: 'ADD_MOVES',
         effectValue: 3,
-        baseValue: 5,
         effectLabel: { EN: '+3 Moves', RU: '+3 Хода' },
         negativeEffectType: 'LOSE_CREDITS',
         negativeEffectValue: 15,
@@ -47,7 +45,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#fb923c',
         effectType: 'ADD_CREDITS',
         effectValue: 15,
-        baseValue: 15,
         effectLabel: { EN: '+15 Credits', RU: '+15 Кредитов' },
         negativeEffectType: 'RESET_MATERIALS',
         negativeEffectLabel: { EN: 'System Error: Mat=0', RU: 'Сбой: Материалы=0' }
@@ -61,7 +58,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#78350f',
         effectType: 'ADD_MATERIAL',
         effectValue: 2,
-        baseValue: 10,
         effectLabel: { EN: '+2 Material', RU: '+2 Материала' },
         negativeEffectType: 'LOSE_MOVES',
         negativeEffectValue: 3,
@@ -76,7 +72,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#60a5fa',
         effectType: 'ADD_ENTROPY',
         effectValue: 3,
-        baseValue: 10,
         effectLabel: { EN: '+3% Stability', RU: '+3% Энтропии' },
         negativeEffectType: 'LOSE_CREDITS',
         negativeEffectValue: 10,
@@ -91,7 +86,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#94a3b8',
         effectType: 'REVEAL_MAP',
         effectValue: 1, 
-        baseValue: 10,
         effectLabel: { EN: 'Reveal Fog', RU: 'Разведка' },
         negativeEffectType: 'LOSE_RANK',
         negativeEffectValue: 1,
@@ -108,7 +102,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#34d399',
         effectType: 'INCREASE_STORAGE',
         effectValue: 1,
-        baseValue: 50,
         effectLabel: { EN: '+1 Max Storage', RU: '+1 Вместимость' },
         negativeEffectType: 'STATUS_FATIGUE',
         negativeEffectDuration: 30000,
@@ -124,7 +117,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'STATUS_GOLD_RUSH',
         effectValue: 2, 
         effectDuration: 60000, // 60s
-        baseValue: 50,
         effectLabel: { EN: 'Gold Rush (+2 Mat)', RU: 'Золотая Лихорадка' },
         negativeEffectType: 'STATUS_BREAKDOWN_RISK',
         negativeEffectDuration: 45000,
@@ -139,7 +131,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#3b82f6',
         effectType: 'ADD_CREDITS',
         effectValue: 55,
-        baseValue: 55,
         effectLabel: { EN: '+55 Credits', RU: '+55 Кредитов' },
         negativeEffectType: 'STATUS_MINING_OFFLINE',
         negativeEffectDuration: 35000,
@@ -154,7 +145,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#22c55e',
         effectType: 'ADD_MOVES',
         effectValue: 10,
-        baseValue: 50,
         effectLabel: { EN: '+10 Moves', RU: '+10 Ходов' },
         negativeEffectType: 'STATUS_TUNNEL_VISION',
         negativeEffectDuration: 30000,
@@ -172,7 +162,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'STATUS_FREE_BUILD',
         effectValue: 1, 
         effectDuration: 30000,
-        baseValue: 150,
         effectLabel: { EN: 'Free Building', RU: 'Бесплатная Стройка' },
         negativeEffectType: 'LOSE_CREDITS', // Using LOSE_CREDITS but value logic handled specially if needed, or static
         negativeEffectValue: 50, // Placeholder, usually % logic in processor
@@ -187,7 +176,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#a855f7',
         effectType: 'LEVEL_UP',
         effectValue: 1,
-        baseValue: 200,
         effectLabel: { EN: '+1 Rank (Level Up)', RU: '+1 Ранг' },
         negativeEffectType: 'AMNESIA',
         negativeEffectLabel: { EN: 'Amnesia (Map Reset)', RU: 'Амнезия (Туман)' }
@@ -201,7 +189,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#d946ef',
         effectType: 'EXPAND_INVENTORY',
         effectValue: 1,
-        baseValue: 200,
         effectLabel: { EN: '+1 Inventory Slot', RU: '+1 Слот Инвентаря' },
         negativeEffectType: 'STATUS_SOIL_EATER',
         negativeEffectDuration: 45000,
@@ -218,7 +205,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#f43f5e',
         effectType: 'GOD_MODE', // +10 Rank, +1000 Cr, +100 Moves
         effectValue: 1,
-        baseValue: 1000,
         effectLabel: { EN: 'God Mode', RU: 'Режим Бога' },
         negativeEffectType: 'FULL_RESET',
         negativeEffectLabel: { EN: 'System Wipe', RU: 'Полный Сброс' }
@@ -232,7 +218,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#fbbf24',
         effectType: 'ADD_CREDITS',
         effectValue: 1000,
-        baseValue: 1000,
         effectLabel: { EN: '+1000 Credits', RU: '+1000 Кредитов' },
         negativeEffectType: 'STATUS_GOLD_CURSE',
         negativeEffectDuration: 999999, // Permanent-ish
@@ -251,10 +236,10 @@ export const getRandomItem = (rarity: ItemRarity, language: Language): Item => {
     
     return {
         id: `${def.idPrefix}-${Date.now()}-${Math.floor(Math.random() * 9999)}`,
+        baseId: def.idPrefix, // NEW: Type identifier
         rarity: def.rarity,
         name: def.name[language],
         description: def.description[language],
-        value: def.baseValue,
         timestamp: Date.now(),
         visualType: def.visualType,
         effectType: def.effectType,
@@ -266,4 +251,27 @@ export const getRandomItem = (rarity: ItemRarity, language: Language): Item => {
         negativeEffectLabel: def.negativeEffectLabel[language],
         negativeEffectDuration: def.negativeEffectDuration
     };
+};
+
+export const getItemDef = (baseId: string): ItemDefinition | undefined => {
+    return ITEM_REGISTRY.find(i => i.idPrefix === baseId);
+};
+
+export const generateMonumentRecipe = (difficulty: Difficulty): string[] => {
+    const pick = (rarity: ItemRarity) => {
+        const candidates = ITEM_REGISTRY.filter(i => i.rarity === rarity);
+        if (candidates.length === 0) return ITEM_REGISTRY[0].idPrefix;
+        return candidates[Math.floor(Math.random() * candidates.length)].idPrefix;
+    };
+
+    if (difficulty === 'EASY') {
+        // 2 Common, 1 Uncommon
+        return [pick('COMMON'), pick('COMMON'), pick('UNCOMMON')];
+    } else if (difficulty === 'MEDIUM') {
+        // 1 Common, 1 Uncommon, 1 Rare
+        return [pick('COMMON'), pick('UNCOMMON'), pick('RARE')];
+    } else {
+        // HARD: 2 Rare, 1 Legendary
+        return [pick('RARE'), pick('RARE'), pick('LEGENDARY')];
+    }
 };

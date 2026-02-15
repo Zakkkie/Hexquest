@@ -32,6 +32,8 @@ export class EntropySystem implements System {
       // 2. Modifying Grid
       const updates: Record<string, Hex> = {};
       const gridKeys = Object.keys(state.grid);
+      const playerHexKey = getHexKey(state.player.q, state.player.r);
+      let playerHitByShift = false;
 
       for (const key of gridKeys) {
           const hex = state.grid[key];
@@ -41,21 +43,33 @@ export class EntropySystem implements System {
 
           let newLevel = hex.currentLevel;
           let newType = hex.structureType;
+          let hasChanged = false;
 
-          // MODIFIED LOGIC:
-          // Removed automatic level shifting for Pits and Peaks.
-          // Only Level 0 plains are affected.
-          
-          if (hex.currentLevel === 0) {
-              // Rule 3: Plains to Void (20%)
+          // LOGIC UPDATED:
+          // 50% Peaks (>=1) collapse by -1
+          // 50% Pits (<= -1) fill by +1
+          // 10% Plains (0) become Void
+
+          if (hex.currentLevel >= 1) {
+              if (Math.random() < ENTROPY_CONFIG.SHIFT_COLLAPSE_CHANCE) {
+                  newLevel = hex.currentLevel - 1;
+                  hasChanged = true;
+              }
+          } else if (hex.currentLevel <= -1) {
+              if (Math.random() < ENTROPY_CONFIG.SHIFT_FILL_CHANCE) {
+                  newLevel = hex.currentLevel + 1;
+                  hasChanged = true;
+              }
+          } else if (hex.currentLevel === 0) {
+              // Level 0 logic
               if (hex.structureType !== 'VOID' && Math.random() < ENTROPY_CONFIG.SHIFT_VOID_CHANCE) {
                   newType = 'VOID';
-                  // Usually Void is 0 or -99 visual, but logic handles 'VOID' flag primarily
                   newLevel = 0; 
+                  hasChanged = true;
               }
           }
 
-          if (newLevel !== hex.currentLevel || newType !== hex.structureType) {
+          if (hasChanged) {
               updates[key] = {
                   ...hex,
                   currentLevel: newLevel,
@@ -63,12 +77,29 @@ export class EntropySystem implements System {
                   structureType: newType,
                   progress: 0
               };
+
+              // Check if player is standing on this shifting hex
+              if (key === playerHexKey) {
+                  playerHitByShift = true;
+              }
           }
       }
 
       state.grid = { ...state.grid, ...updates };
 
-      // 3. Player Death Check
+      // 3. Player Damage Logic
+      // If player stood on a hex that changed, they lose 1 Level.
+      if (playerHitByShift) {
+          if (state.player.playerLevel > 1) {
+              state.player.playerLevel -= 1;
+              const dmgMsg = "Instability Damage! Rank -1";
+              state.messageLog.unshift({ id: `dmg-${now}`, text: dmgMsg, type: 'WARN', source: 'SYSTEM', timestamp: now });
+              events.push(GameEventFactory.create('HEX_DOWNGRADE', dmgMsg, state.player.id));
+          }
+      }
+
+      // 4. Player Death Check (Specific Void Check)
+      // Even if they took damage above, if the hex became VOID, they die.
       const pKey = getHexKey(state.player.q, state.player.r);
       const pHex = state.grid[pKey];
       if (pHex && pHex.structureType === 'VOID') {
@@ -79,11 +110,11 @@ export class EntropySystem implements System {
           return; 
       }
 
-      // 4. Reset & Diminish
+      // 5. Reset & Diminish
       state.entropy.max = state.entropy.max / 2;
       state.entropy.current = state.entropy.max;
 
-      // 5. Global Game Over Check
+      // 6. Global Game Over Check
       if (state.entropy.max < ENTROPY_CONFIG.THRESHOLD) {
           state.gameStatus = 'DEFEAT';
           const msg = "Sector Reality Collapsed. Entropy Critical.";

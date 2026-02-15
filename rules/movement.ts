@@ -15,10 +15,11 @@ export interface MovementCostResult {
  * Centralized logic for calculating movement costs.
  * Rules:
  * 1. Base cost per hex is 1.
- * 2. If hex.maxLevel >= 2, cost equals maxLevel.
- * 3. Use entity.moves first.
- * 4. If insufficient moves, cover deficit with coins (Exchange Rate).
- * 5. STATUS_FATIGUE doubles the movement cost.
+ * 2. If hex.maxLevel > 1 (High Ground), cost equals maxLevel.
+ * 3. If hex.maxLevel < 0 (Pits), cost remains 1 (Cheap traversal but high Entropy risk).
+ * 4. Use entity.moves first.
+ * 5. If insufficient moves, cover deficit with coins (Exchange Rate).
+ * 6. STATUS_FATIGUE doubles the movement cost.
  */
 export const calculateMovementCost = (
     entity: Entity, // Changed from partial type to Entity to access activeStatuses
@@ -35,8 +36,13 @@ export const calculateMovementCost = (
 
     for (const step of path) {
         const hex = grid[getHexKey(step.q, step.r)];
+        
         // Terrain Cost Logic
-        const stepCost = (hex && hex.maxLevel >= 2) ? hex.maxLevel : 1;
+        // Positive High Ground (>1): Costs height.
+        // Flat (0, 1) or Negative (<0): Costs 1.
+        const level = hex ? hex.maxLevel : 0;
+        const stepCost = level > 1 ? level : 1;
+        
         totalPoints += stepCost;
     }
 

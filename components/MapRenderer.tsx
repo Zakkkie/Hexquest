@@ -347,7 +347,11 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                 
                 if (Math.abs((pHex?.maxLevel||0) - (nHex?.maxLevel||0)) > 1) continue;
 
-                const cost = (nHex && nHex.maxLevel >= 2) ? nHex.maxLevel : 1;
+                // Symmetric Cost Check: Use magnitude of level
+                // Only cost more if level > 1. 0, 1, -1, -2 etc cost 1.
+                const level = nHex ? nHex.maxLevel : 0;
+                const cost = level > 1 ? level : 1;
+                
                 const canAfford = player.moves >= cost || player.coins >= (cost * EXCHANGE_RATE_COINS_PER_MOVE);
 
                 items.push({

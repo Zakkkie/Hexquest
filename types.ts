@@ -1,3 +1,4 @@
+
 // In a stricter setup, we would move shared types to a 'core' module.
 export type HexCoord = { q: number; r: number; upgrade?: boolean; intent?: 'UPGRADE' | 'RECOVER' | 'DIG' };
 
@@ -27,6 +28,9 @@ export interface Hex extends HexView {
   // V95 High Level Mechanics
   recoveryPoints?: number;    // Remaining uses for L4+ hexes (Max 3)
   lastRecoveryTime?: number;  // Timestamp of last use or upgrade
+  
+  // Loot History: Tracks negative levels where items/coins were already found
+  lootedLevels?: number[];
 }
 
 export enum EntityType {
@@ -84,10 +88,10 @@ export interface ActiveStatus {
 
 export interface Item {
   id: string;
+  baseId: string; // NEW: The type identifier (e.g. 'fuel_cell')
   rarity: ItemRarity;
   name: string; // Localized name
   description: string; // Visual description
-  value: number; // Credit value
   timestamp: number;
   
   // New props for specific mechanics
@@ -387,6 +391,9 @@ export interface SessionState {
   
   // NEW: Store the secret coordinate for the Monument
   secretMonumentCoord?: HexCoord;
+  
+  // NEW: Monument Recipe (Array of required baseIds)
+  monumentRequirements?: string[];
 
   difficulty: Difficulty;
   grid: Record<string, Hex>; 

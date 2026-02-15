@@ -12,9 +12,10 @@ import { GAME_CONFIG } from '../rules/config.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap, Key, 
-  Activity, EyeOff, Skull, Hammer, Flame
+  Activity, EyeOff, Skull, Hammer, Flame, ShieldAlert
 } from 'lucide-react';
 import { itemRenderer } from '../services/itemRenderer.ts';
+import { getItemDef } from '../rules/items.ts'; 
 
 interface GameHUDProps {
   hoveredHexId: string | null;
@@ -22,7 +23,7 @@ interface GameHUDProps {
   onCenterPlayer: () => void;
 }
 
-// Visual Component for Storage Blocks
+// ... StorageBlocks ... keep existing
 const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, max }) => {
     return (
         <div className="flex items-center gap-0.5 md:gap-1">
@@ -48,8 +49,8 @@ const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, ma
     );
 };
 
-// --- CUSTOM ITEM ICON COMPONENT ---
-const ItemIcon: React.FC<{ item: Item, size?: string }> = ({ item, size = "w-8 h-8 md:w-10 md:h-10" }) => {
+// ... ItemIcon ... keep existing
+const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity?: number, grayscale?: boolean }> = ({ item, def, size = "w-8 h-8 md:w-10 md:h-10", opacity = 1, grayscale = false }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -58,23 +59,33 @@ const ItemIcon: React.FC<{ item: Item, size?: string }> = ({ item, size = "w-8 h
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        const target = item || def;
+        if (!target) return;
+
         // Color mapping for visuals
         let visualColor = '#fff';
-        if (item.rarity === 'COMMON') visualColor = '#cbd5e1';
-        if (item.rarity === 'UNCOMMON') visualColor = '#4ade80';
-        if (item.rarity === 'RARE') visualColor = '#c084fc';
-        if (item.rarity === 'LEGENDARY') visualColor = '#fbbf24';
+        const rarity = target.rarity || 'COMMON';
+        if (rarity === 'COMMON') visualColor = '#cbd5e1';
+        if (rarity === 'UNCOMMON') visualColor = '#4ade80';
+        if (rarity === 'RARE') visualColor = '#c084fc';
+        if (rarity === 'LEGENDARY') visualColor = '#fbbf24';
 
-        const img = itemRenderer.getItemImage(item.visualType, visualColor, item.rarity);
+        const img = itemRenderer.getItemImage(target.visualType, visualColor, rarity);
         ctx.clearRect(0,0,64,64);
+        
+        ctx.globalAlpha = opacity;
+        if (grayscale) ctx.filter = 'grayscale(100%) brightness(0.7)';
         ctx.drawImage(img, 0,0,64,64);
+        ctx.filter = 'none';
+        ctx.globalAlpha = 1.0;
 
-    }, [item]);
+    }, [item, def, opacity, grayscale]);
 
     return <canvas ref={canvasRef} width={64} height={64} className={`${size} object-contain`} />;
 };
 
 const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCenterPlayer }) => {
+  // ... state hooks ... keep existing
   const grid = useGameStore(state => state.session?.grid);
   const player = useGameStore(state => state.session?.player);
   const bots = useGameStore(state => state.session?.bots);
@@ -85,6 +96,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
   const sessionStartTime = useGameStore(state => state.session?.sessionStartTime);
   const difficulty = useGameStore(state => state.session?.difficulty || 'MEDIUM');
+  const monumentRequirements = useGameStore(state => state.session?.monumentRequirements); 
+  const leaderboard = useGameStore(state => state.leaderboard);
   
   const language = useGameStore(state => state.language);
   const user = useGameStore(state => state.user);
@@ -123,11 +136,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const systemMenuRef = useRef<HTMLDivElement>(null);
   
   const [showMissionDetails, setShowMissionDetails] = useState(false);
+  const [inspectedItem, setInspectedItem] = useState<Item | null>(null);
 
   const [timeLeft, setTimeLeft] = useState(60);
   const [tick, setTick] = useState(0); 
 
-  // --- VICTORY SEQUENCE STATE ---
   const [victoryStage, setVictoryStage] = useState<'HIDDEN' | 'SALUTE' | 'MODAL'>('HIDDEN');
 
   const t = TEXT[language].HUD;
@@ -141,7 +154,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   
   const isMobile = deviceType === 'MOBILE';
 
-  // Level Tutorial Flags
   const isLevel1_1 = activeLevelConfig?.id === '1.1';
   const isLevel1_2 = activeLevelConfig?.id === '1.2';
   const isLevel1_3 = activeLevelConfig?.id === '1.3';
@@ -151,29 +163,37 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const isBriefingActive = gameStatus === 'BRIEFING';
 
-  // --- VICTORY SEQUENCER ---
+  // HELPER: Resolve localized strings for an item dynamically
+  const resolveItemText = (item: Item) => {
+      const def = getItemDef(item.baseId);
+      if (!def) return { 
+          name: item.name, 
+          description: item.description, 
+          effectDesc: item.effectDescription,
+          negDesc: item.negativeEffectLabel
+      };
+      return {
+          name: def.name[language],
+          description: def.description[language],
+          effectDesc: def.effectLabel[language],
+          negDesc: def.negativeEffectLabel[language]
+      };
+  };
+
   useEffect(() => {
       if (gameStatus === 'VICTORY' && victoryStage === 'HIDDEN') {
-          // Start Salute
           setVictoryStage('SALUTE');
-          
-          // Wait 5 seconds before showing Modal
           const timer = setTimeout(() => {
-              // Only auto-advance if we are still in salute (user didn't skip)
               setVictoryStage(current => current === 'SALUTE' ? 'MODAL' : current);
           }, 5000);
-          
           return () => clearTimeout(timer);
       } else if (gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT') {
-          // Reset if game restarts
           setVictoryStage('HIDDEN');
       }
   }, [gameStatus]);
 
-  // If in SALUTE stage, hide the HUD controls to enjoy the show
   const isHudVisible = victoryStage === 'HIDDEN' && !isBriefingActive;
 
-  // --- RECOVERY LOGIC (HIGH LEVEL) ---
   const recoveryState = useMemo(() => {
       if (!currentHex || !player) return { canRecover: false, label: '', cooling: false, remainingCd: 0 };
       
@@ -191,13 +211,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           }
           return { canRecover: true, label: `${uses}/${GAME_CONFIG.MAX_RECOVERY_POINTS}`, cooling: false, remainingCd: 0 };
       } else {
-          // Standard logic: If flag is set, you must move to reset.
           const can = !player.recoveredCurrentHex;
           return { canRecover: can, label: '', cooling: false, remainingCd: 0 };
       }
-  }, [currentHex, player, tick]); // Tick ensures countdown updates
+  }, [currentHex, player, tick]); 
 
-  // --- TIMER UPDATE LOOP ---
   useEffect(() => {
       const interval = setInterval(() => {
           setTick(t => t + 1);
@@ -239,7 +257,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
     
     let totalNeeded = 0;
     let mode = 'IDLE';
-    let currentStepNeeded = 30; // default 3s
+    let currentStepNeeded = 30; 
 
     if (playerGrowthIntent === 'RECOVER') {
         totalNeeded = getSecondsToGrow(currentHex.maxLevel);
@@ -247,8 +265,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
         currentStepNeeded = totalNeeded;
     } else if (playerGrowthIntent === 'DIG') {
         mode = 'DIG';
-        currentStepNeeded = 30; // Digging takes 3s
-    } else { // UPGRADE
+        currentStepNeeded = 30; 
+    } else { 
         mode = 'UPGRADE';
         currentStepNeeded = getSecondsToGrow(currentHex.currentLevel + 1);
     }
@@ -283,7 +301,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       return "Upgrade Sector (Increase Level)";
   }, [isMoving, upgradeCondition]);
 
-  // --- STATUS ICONS RENDERER ---
   const renderActiveStatuses = () => {
       if (!player?.activeStatuses || player.activeStatuses.length === 0) return null;
       
@@ -314,7 +331,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       );
   };
 
-  // --- Campaign Objective Metrics ---
   const campaignMetrics = useMemo(() => {
       if (!grid || !player) return null;
       
@@ -380,7 +396,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       startMission();
   };
 
-  // Dynamically set button size based on device type for better ergonomics
   const mainButtonSize = isMobile ? "lg" : "xl";
 
   const renderMissionStatus = () => {
@@ -407,7 +422,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           );
       }
       
-      // SUMMIT OBJECTIVE DISPLAY
       if (winCondition?.winType === 'SUMMIT') {
           return (
                <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
@@ -427,7 +441,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       );
   };
 
-  // DnD Handlers
   const handleDragStart = (e: React.DragEvent, item: any) => {
       e.dataTransfer.setData("itemId", item.id);
   };
@@ -436,8 +449,15 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       e.preventDefault();
       const itemId = e.dataTransfer.getData("itemId");
       const item = player?.inventory.find(i => i.id === itemId);
-      if (item && !monumentDialogState.slots.some(s => s?.id === itemId)) {
-          placeItemInMonument(item, slotIndex);
+      
+      if (item && monumentRequirements && monumentRequirements.length > slotIndex) {
+          if (item.baseId !== monumentRequirements[slotIndex]) {
+              playUiSound('ERROR');
+              return;
+          }
+          if (!monumentDialogState.slots.some(s => s?.id === itemId)) {
+              placeItemInMonument(item, slotIndex);
+          }
       }
   };
 
@@ -445,19 +465,27 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       e.preventDefault();
   };
 
-  // Fallback Click-Move Handlers for Mobile/Easier use
-  const handleInventoryClick = (item: any) => {
-      const emptySlotIndex = monumentDialogState.slots.findIndex(s => s === null);
-      if (emptySlotIndex !== -1 && !monumentDialogState.slots.some(s => s?.id === item.id)) {
-          placeItemInMonument(item, emptySlotIndex);
+  const handleInventoryClick = (item: Item) => {
+      if (monumentDialogState.isOpen) {
+          if (!monumentRequirements) return;
+
+          const matchingSlotIndex = monumentRequirements.findIndex((reqId, idx) => {
+              return reqId === item.baseId && monumentDialogState.slots[idx] === null;
+          });
+
+          if (matchingSlotIndex !== -1 && !monumentDialogState.slots.some(s => s?.id === item.id)) {
+              placeItemInMonument(item, matchingSlotIndex);
+          } else {
+              playUiSound('ERROR');
+          }
       } else {
-          playUiSound('ERROR');
+          setInspectedItem(item);
+          playUiSound('CLICK');
       }
   };
 
   if (!grid || !player || !bots) return null;
 
-  // --- Dynamic Briefing Data from I18N ---
   let briefingTitle = winCondition?.label || "Mission Briefing";
   let briefingDesc = t.BRIEFING_DESC_TEMPLATE
       .replace('{0}', (winCondition?.targetLevel || 99).toString())
@@ -488,10 +516,24 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const inventoryList = [0, 1, 2, 3, 4, 5].slice(0, player.maxInventorySize || 3);
 
+  // Resolved inspected item text
+  const inspectedData = inspectedItem ? resolveItemText(inspectedItem) : null;
+
+  // Help Content Resolution
+  const getHelpContent = () => {
+      switch(helpTopic) {
+          case 'RANK': return { title: t.RANK, desc: t.HELP_RANK_DESC, hint: t.HELP_RANK_GOAL.replace('{0}', String(winCondition?.targetLevel || 0)) };
+          case 'MATERIAL': return { title: t.MATERIAL, desc: t.HELP_MAT_DESC, hint: t.HELP_MAT_GOAL };
+          case 'COINS': return { title: t.CREDITS, desc: t.HELP_COINS_DESC, hint: t.HELP_COINS_GOAL.replace('{0}', String(winCondition?.targetCoins || 0)) };
+          case 'MOVES': return { title: t.MOVES, desc: t.HELP_MOVES_DESC, hint: t.HELP_MOVES_HINT };
+          default: return null;
+      }
+  };
+  const helpData = getHelpContent();
+
   return (
     <div className="absolute inset-0 pointer-events-none z-30 select-none">
       
-      {/* CLICK TO SKIP VICTORY SALUTE */}
       {victoryStage === 'SALUTE' && (
           <div 
               className="absolute inset-0 z-[150] pointer-events-auto cursor-pointer"
@@ -500,12 +542,13 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           />
       )}
 
-      {/* HEADER: Only show if HUD is visible (Not during salute) */}
       {isHudVisible && (
+      // ... HEADER RENDER ...
       <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-30 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in">
           <div className="w-full flex justify-between items-start gap-2 max-w-7xl mx-auto relative">
                <div className="flex flex-col gap-2">
                    <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-700/50 shadow-xl px-2 py-1.5 md:px-3 md:py-2 gap-2 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade flex-1 md:flex-none md:w-fit md:shrink-0 max-w-[calc(100vw-70px)] md:max-w-none">
+                       {/* Stats block (rank/mat/coins/moves) */}
                        <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
                            <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
                                <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />
@@ -547,7 +590,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                        </div>
                    </div>
                    
-                   {/* Mission Panel */}
                    {gameStatus === 'PLAYING' && (
                        <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-xl overflow-hidden self-start flex items-center px-2 py-1.5 gap-2 mt-1 pointer-events-auto max-w-fit">
                            <div className="p-1 bg-indigo-500/10 rounded-lg"><Target className="w-3.5 h-3.5 text-indigo-400" /></div>
@@ -558,7 +600,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                    )}
                </div>
 
-               {/* System Menu Button (Right Side) */}
+               {/* System Menu Button */}
                <div className="pointer-events-auto flex items-start shrink-0 relative z-50">
                    <div className="relative">
                         <button onClick={() => { setIsSystemMenuOpen(!isSystemMenuOpen); playUiSound('CLICK'); }} className={`w-9 h-9 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'}`}>
@@ -566,15 +608,17 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                         </button>
                         {isSystemMenuOpen && (
                             <div ref={systemMenuRef} className="absolute top-full right-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[180px] z-[60] animate-in slide-in-from-top-2 duration-200">
-                                {/* Audio, Language, etc. Same as before */}
+                                {/* Audio Toggles */}
                                 <div className="flex gap-2">
                                     <button onClick={() => { toggleMusic(); playUiSound('CLICK'); }} className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isMusicMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-indigo-900/40 border-indigo-500/50 text-indigo-400'}`}>{isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}</button>
                                     <button onClick={() => { toggleSfx(); playUiSound('CLICK'); }} className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isSfxMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-emerald-900/40 border-emerald-500/50 text-emerald-400'}`}>{isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</button>
                                 </div>
+                                {/* Language Toggle */}
                                 <button onClick={() => { setLanguage(language === 'EN' ? 'RU' : 'EN'); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
                                     <Globe className="w-4 h-4 text-sky-400" />
                                     <span className="text-xs font-bold uppercase">{language === 'EN' ? 'English' : 'Русский'}</span>
                                 </button>
+                                {/* Other Menu Items */}
                                 <button onClick={() => { setIsRankingsOpen(!isRankingsOpen); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border ${isRankingsOpen ? 'bg-amber-900/20 border-amber-500/50 text-amber-400' : 'bg-slate-800/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white'}`}>
                                     <Trophy className="w-4 h-4 text-amber-500" />
                                     <span className="text-xs font-bold uppercase">{isRankingsOpen ? 'Hide Ranks' : t.LEADERBOARD_TITLE}</span>
@@ -599,14 +643,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       {/* LEFT SIDE: INVENTORY PANEL & ENTROPY GAUGE */}
       {isHudVisible && gameStatus === 'PLAYING' && (
           <div className="absolute top-1/2 -translate-y-1/2 left-2 md:left-4 z-40 pointer-events-auto flex flex-col gap-3 animate-in fade-in">
-              
-              {/* ENTROPY GAUGE */}
               <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-2 shadow-xl flex flex-col items-center justify-center">
                   <span className="text-[8px] font-bold uppercase text-slate-500 tracking-widest mb-1">STABILITY</span>
                   <EntropyGauge />
               </div>
 
-              {/* ACTIVE STATUSES */}
               {renderActiveStatuses() && (
                   <div className="self-start pl-1">
                       {renderActiveStatuses()}
@@ -622,46 +663,22 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       return (
                           <div 
                               key={index} 
+                              onClick={() => item && handleInventoryClick(item)}
                               className={`
-                                  w-10 h-10 md:w-12 md:h-12 rounded-lg border flex items-center justify-center relative group
+                                  w-10 h-10 md:w-12 md:h-12 rounded-lg border flex items-center justify-center relative group cursor-pointer
                                   ${item 
-                                      ? `bg-slate-800 ${getRarityBorder(item.rarity)} shadow-inner` 
+                                      ? `bg-slate-800 ${getRarityBorder(item.rarity)} shadow-inner hover:scale-105 active:scale-95 transition-transform` 
                                       : 'bg-slate-950/30 border-slate-800 border-dashed'}
                               `}
                           >
                               {item ? (
                                   <>
                                       <ItemIcon item={item} />
-                                      
-                                      {/* ADVANCED TOOLTIP (HOVER) */}
-                                      <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-slate-900 border border-slate-600 rounded-lg p-3 shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 w-48 scale-95 group-hover:scale-100 origin-left">
-                                          <div className="flex items-center justify-between border-b border-slate-700 pb-1 mb-1">
-                                              <span className="text-[10px] font-bold text-white uppercase tracking-wider truncate">{item.name}</span>
-                                              <span className="text-[8px] text-slate-500 uppercase">{item.rarity}</span>
+                                      {!isMobile && (
+                                          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-slate-900 px-2 py-1 rounded text-[9px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg border border-slate-700">
+                                              Click to Inspect
                                           </div>
-                                          <div className="flex flex-col gap-1">
-                                              <div className="text-[9px] text-emerald-400 font-mono font-bold bg-emerald-900/20 px-1.5 py-0.5 rounded">
-                                                  RECYCLE: {item.effectDescription || item.effectType}
-                                              </div>
-                                              {item.negativeEffectType && (
-                                                  <div className="text-[9px] text-red-400 font-mono font-bold bg-red-900/20 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                      <AlertTriangle className="w-3 h-3"/> RISK: {item.negativeEffectLabel}
-                                                  </div>
-                                              )}
-                                              <div className="text-[9px] text-slate-400 font-mono font-bold bg-slate-800 px-1.5 py-0.5 rounded mt-1">
-                                                  PRICE: {item.value} CR
-                                              </div>
-                                          </div>
-                                      </div>
-
-                                      {/* Delete Button */}
-                                      <button 
-                                          onClick={(e) => { e.stopPropagation(); destroyItem(item.id); }}
-                                          className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 shadow-lg border border-red-400"
-                                          title="Discard Item"
-                                      >
-                                          <X className="w-2.5 h-2.5" />
-                                      </button>
+                                      )}
                                   </>
                               ) : (
                                   <div className="w-1.5 h-1.5 rounded-full bg-slate-800" />
@@ -702,10 +719,67 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* RENDER OTHER DIALOGS AS USUAL (Briefing, Help, Monument, Void) */}
-      {/* ... [Standard Modal Logic similar to original file, just ensure z-index is above Fireworks] ... */}
+      {/* INSPECTION CARD - DYNAMIC TEXT RESOLUTION */}
+      {inspectedItem && inspectedData && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-700 rounded-3xl shadow-2xl max-w-sm w-full relative overflow-hidden flex flex-col gap-6 p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => setInspectedItem(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-6 h-6"/></button>
+                  
+                  {/* Header */}
+                  <div className="flex flex-col items-center">
+                      <div className="w-32 h-32 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 shadow-inner">
+                          <ItemIcon item={inspectedItem} size="w-24 h-24" />
+                      </div>
+                      <h3 className="text-xl font-black text-white uppercase tracking-tight text-center">{inspectedData.name}</h3>
+                      <span className={`text-xs font-bold uppercase mt-1 px-2 py-0.5 rounded-full bg-slate-900 border ${getRarityBorder(inspectedItem.rarity)} text-slate-300`}>{inspectedItem.rarity}</span>
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-sm text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800 py-4">
+                      "{inspectedData.description}"
+                  </p>
+
+                  {/* Stats */}
+                  <div className="flex flex-col gap-3">
+                      <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-950/30 border border-emerald-900/50">
+                          <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                          <div>
+                              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">On Restoration Success</span>
+                              <span className="text-xs text-emerald-100 font-mono">{inspectedData.effectDesc}</span>
+                          </div>
+                      </div>
+                      
+                      {inspectedItem.negativeEffectType && (
+                          <div className="flex items-start gap-3 p-3 rounded-xl bg-red-950/30 border border-red-900/50">
+                              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                              <div>
+                                  <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest block mb-0.5">On Restoration Failure</span>
+                                  <span className="text-xs text-red-100 font-mono">{inspectedData.negDesc}</span>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3 mt-2">
+                      <button 
+                          onClick={() => { destroyItem(inspectedItem.id); setInspectedItem(null); playUiSound('CRACK'); }}
+                          className="flex-1 py-3 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-800 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors flex items-center justify-center gap-2 group"
+                      >
+                          <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" /> Discard
+                      </button>
+                      <button 
+                          onClick={() => setInspectedItem(null)}
+                          className="flex-1 py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-wider text-xs transition-colors"
+                      >
+                          Close
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
       
-      {/* VICTORY / DEFEAT SCREENS */}
+      {/* VICTORY / DEFEAT SCREENS (unchanged) */}
       {(gameStatus === 'DEFEAT' || (gameStatus === 'VICTORY' && victoryStage === 'MODAL')) && (
           <div className="absolute inset-0 z-[200] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-700 pointer-events-auto p-4">
               <div className="flex flex-col items-center max-w-md w-full">
@@ -751,7 +825,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   </p>
 
                   <div className="flex flex-col md:flex-row gap-6 h-[300px]">
-                      {/* INVENTORY LIST */}
+                      {/* INVENTORY LIST - DYNAMIC TEXT */}
                       <div className="flex-1 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden">
                           <div className="p-2 border-b border-slate-800 bg-slate-900">
                               <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.MONUMENT_KEYS}</span>
@@ -760,26 +834,30 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               {availableInventory.length === 0 ? (
                                   <div className="text-center text-slate-600 text-xs italic py-10">{t.MONUMENT_EMPTY_INV}</div>
                               ) : (
-                                  availableInventory.map(item => (
-                                      <div 
-                                          key={item.id}
-                                          draggable
-                                          onDragStart={(e) => handleDragStart(e, item)}
-                                          onClick={() => handleInventoryClick(item)}
-                                          className={`flex items-center gap-3 p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border cursor-grab active:cursor-grabbing group transition-all ${getRarityBorder(item.rarity)}`}
-                                      >
-                                          <div className="w-8 h-8 rounded bg-slate-950 flex items-center justify-center border border-slate-800 overflow-hidden">
-                                              <ItemIcon item={item} size="w-8 h-8" />
+                                  availableInventory.map(item => {
+                                      // Resolve Name Dynamically
+                                      const dynamicText = resolveItemText(item);
+                                      return (
+                                          <div 
+                                              key={item.id}
+                                              draggable
+                                              onDragStart={(e) => handleDragStart(e, item)}
+                                              onClick={() => handleInventoryClick(item)}
+                                              className={`flex items-center gap-3 p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border cursor-grab active:cursor-grabbing group transition-all ${getRarityBorder(item.rarity)}`}
+                                          >
+                                              <div className="w-8 h-8 rounded bg-slate-950 flex items-center justify-center border border-slate-800 overflow-hidden">
+                                                  <ItemIcon item={item} size="w-8 h-8" />
+                                              </div>
+                                              <div className="flex flex-col min-w-0">
+                                                  <span className="text-xs font-bold text-white group-hover:text-amber-200 truncate">{dynamicText.name}</span>
+                                                  <span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span>
+                                              </div>
+                                              <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                                  <ArrowRight className="w-4 h-4 text-slate-500" />
+                                              </div>
                                           </div>
-                                          <div className="flex flex-col min-w-0">
-                                              <span className="text-xs font-bold text-white group-hover:text-amber-200 truncate">{item.name}</span>
-                                              <span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span>
-                                          </div>
-                                          <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                                              <ArrowRight className="w-4 h-4 text-slate-500" />
-                                          </div>
-                                      </div>
-                                  ))
+                                      );
+                                  })
                               )}
                           </div>
                       </div>
@@ -790,6 +868,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           <div className="flex gap-4 relative z-10">
                               {[0, 1, 2].map((idx) => {
                                   const slotItem = monumentDialogState.slots[idx];
+                                  const reqId = monumentRequirements ? monumentRequirements[idx] : undefined;
+                                  const reqDef = reqId ? getItemDef(reqId) : undefined;
+
                                   return (
                                       <div 
                                           key={idx}
@@ -816,8 +897,17 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                               </>
                                           ) : (
                                               <>
-                                                  <Key className="w-6 h-6 text-slate-700 mb-1" />
-                                                  <span className="text-[9px] text-slate-600 font-mono">SLOT {idx+1}</span>
+                                                  {reqDef ? (
+                                                      <div className="flex flex-col items-center opacity-60 grayscale group-hover:grayscale-0 transition-all">
+                                                          <ItemIcon def={reqDef} size="w-10 h-10 md:w-12 md:h-12" opacity={0.6} grayscale />
+                                                          <span className="text-[8px] text-slate-500 font-mono mt-1 text-center leading-tight max-w-[60px]">{reqDef.name[language]}</span>
+                                                      </div>
+                                                  ) : (
+                                                      <>
+                                                          <Key className="w-6 h-6 text-slate-700 mb-1" />
+                                                          <span className="text-[9px] text-slate-600 font-mono">SLOT {idx+1}</span>
+                                                      </>
+                                                  )}
                                               </>
                                           )}
                                       </div>
@@ -839,78 +929,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* BRIEFING */}
-      {(isBriefingActive || (showMissionDetails && (activeLevelConfig || winCondition))) && (
-          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-300">
-              <div className="max-w-lg w-full bg-slate-900 border border-indigo-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-                  {showMissionDetails && !isBriefingActive && <button onClick={() => setShowMissionDetails(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white z-20"><X className="w-6 h-6" /></button>}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                  <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/30"><Target className="w-6 h-6 text-indigo-400" /></div>
-                      <div><h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.BRIEFING_TITLE}</h2><p className="text-xs text-indigo-400 font-mono tracking-widest uppercase mt-1">{briefingTitle}</p></div>
-                  </div>
-                  <div className="space-y-4 mb-8">
-                      <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800/50 text-sm text-slate-300 leading-relaxed font-medium">{briefingDesc.split('\n').map((line, i) => <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>)}</div>
-                      <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 flex flex-col items-center"><span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">{t.BRIEFING_TARGET_RANK}</span><div className="flex items-center gap-2"><Crown className="w-4 h-4 text-indigo-400" /><span className="text-xl font-black text-white">{winCondition?.targetLevel || 1}</span></div></div>
-                          <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 flex flex-col items-center"><span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">{winCondition?.winType === 'SUMMIT' ? 'MONUMENT' : t.BRIEFING_TARGET_FUNDS}</span><div className="flex items-center gap-2">{winCondition?.winType === 'SUMMIT' ? <Mountain className="w-4 h-4 text-amber-400" /> : <Wallet className="w-4 h-4 text-amber-400" />}<span className="text-xl font-black text-white">{winCondition?.winType === 'SUMMIT' ? 'SUMMIT' : winCondition?.targetCoins || 0}</span></div></div>
-                      </div>
-                  </div>
-                  <button onClick={isBriefingActive ? handleStartMission : () => setShowMissionDetails(false)} className={`w-full py-4 font-black rounded-xl uppercase tracking-[0.2em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 group ${isBriefingActive ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/40' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`}>{isBriefingActive ? <>{t.BRIEFING_BTN_START} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></> : "CLOSE"}</button>
-              </div>
-          </div>
-      )}
-
-      {/* HELP POPUP */}
-      {helpTopic && (
-          <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6 pointer-events-auto" onClick={() => setHelpTopic(null)}>
-              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-sm w-full relative animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => setHelpTopic(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
-                  <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-3">
-                          <div className={`p-3 rounded-xl border ${helpTopic === 'RANK' ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' : helpTopic === 'MATERIAL' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : helpTopic === 'COINS' ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-blue-500/20 border-blue-500/50 text-blue-400'}`}>
-                              {helpTopic === 'RANK' && <Crown className="w-6 h-6" />}
-                              {helpTopic === 'MATERIAL' && <Box className="w-6 h-6" />}
-                              {helpTopic === 'COINS' && <Wallet className="w-6 h-6" />}
-                              {helpTopic === 'MOVES' && <Footprints className="w-6 h-6" />}
-                          </div>
-                          <div>
-                              <h3 className="text-lg font-bold text-white uppercase tracking-wider">{helpTopic === 'RANK' ? t.RANK : helpTopic === 'MATERIAL' ? t.MATERIAL : helpTopic === 'COINS' ? t.CREDITS : t.MOVES}</h3>
-                              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">
-                                  {helpTopic === 'RANK' ? t.HELP_RANK_GOAL.replace('{0}', (winCondition?.targetLevel || 99).toString()) : helpTopic === 'MATERIAL' ? t.HELP_MAT_GOAL : helpTopic === 'COINS' ? t.HELP_COINS_GOAL.replace('{0}', (winCondition?.targetCoins || 9999).toString()) : t.HINT_MOVES}
-                              </p>
-                          </div>
-                      </div>
-                      <div className="h-px bg-slate-800"></div>
-                      <p className="text-sm text-slate-300 leading-relaxed">
-                          {helpTopic === 'RANK' && t.HELP_RANK_DESC}
-                          {helpTopic === 'MATERIAL' && t.HELP_MAT_DESC}
-                          {helpTopic === 'COINS' && t.HELP_COINS_DESC}
-                          {helpTopic === 'MOVES' && t.HELP_MOVES_DESC}
-                      </p>
-                      {helpTopic === 'MOVES' && <div className="p-3 bg-slate-950 rounded-lg border border-slate-800"><p className="text-xs text-slate-400 italic">"{t.HELP_MOVES_HINT}"</p></div>}
-                      <button onClick={() => setHelpTopic(null)} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl uppercase tracking-widest text-xs mt-2">{t.BTN_READY}</button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* ABORT CONFIRMATION */}
-      {showExitConfirmation && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-auto p-4">
-              <div className="bg-slate-900 border border-red-900/50 p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center animate-in zoom-in-95 duration-200">
-                  <div className="w-12 h-12 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse"><AlertTriangle className="w-6 h-6 text-red-500" /></div>
-                  <h3 className="text-xl font-bold text-white mb-2 uppercase">{t.ABORT_TITLE}</h3>
-                  <p className="text-sm text-slate-400 mb-6">{t.ABORT_DESC}</p>
-                  <div className="flex gap-3">
-                      <button onClick={() => setShowExitConfirmation(false)} className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider text-xs transition-colors">{t.BTN_CANCEL}</button>
-                      <button onClick={() => { abandonSession(); playUiSound('ERROR'); }} className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold uppercase tracking-wider text-xs shadow-lg shadow-red-900/20 transition-colors">{t.BTN_CONFIRM}</button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* VOID DIALOG */}
+      {/* VOID DIALOG - DYNAMIC TEXT RESOLUTION */}
       {voidDialogTarget && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-auto p-4 animate-in fade-in duration-200">
               <div className="bg-slate-950 border border-red-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full relative overflow-hidden flex flex-col gap-4 animate-in zoom-in-95">
@@ -924,6 +943,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   <div className="flex flex-col gap-2 bg-slate-900/50 rounded-xl p-2 border border-slate-800 max-h-[200px] overflow-y-auto no-scrollbar">
                       <span className="text-[9px] font-bold uppercase text-slate-600 tracking-widest px-1">{t.VOID_SELECT}</span>
                       {player.inventory.length === 0 ? <div className="py-6 text-center text-xs text-slate-600 italic">{t.VOID_EMPTY}</div> : player.inventory.map(item => {
+                              // Localized Strings
+                              const dynamicText = resolveItemText(item);
                               let chance = "25%";
                               if (item.rarity === 'UNCOMMON') chance = "50%";
                               if (item.rarity === 'RARE') chance = "75%";
@@ -935,13 +956,13 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                               <ItemIcon item={item} size="w-8 h-8" />
                                           </div>
                                           <div className="flex flex-col items-start">
-                                              <span className="text-xs font-bold text-white group-hover:text-emerald-200 truncate max-w-[100px]">{item.name}</span>
+                                              <span className="text-xs font-bold text-white group-hover:text-emerald-200 truncate max-w-[100px]">{dynamicText.name}</span>
                                               <span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span>
                                           </div>
                                       </div>
                                       <div className="flex flex-col items-end gap-1">
                                           <div className="px-2 py-0.5 rounded bg-slate-950 text-[9px] font-mono font-bold text-emerald-400 border border-slate-800">Success: {chance}</div>
-                                          {item.negativeEffectType && <div className="text-[8px] text-red-400 font-mono">Risk: {item.negativeEffectLabel?.substring(0,12)}..</div>}
+                                          {dynamicText.negDesc && <div className="text-[8px] text-red-400 font-mono">Risk: {dynamicText.negDesc.substring(0,12)}..</div>}
                                       </div>
                                   </button>
                               );
@@ -950,6 +971,86 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
               </div>
           </div>
       )}
+
+      {/* --- ADDED MODALS --- */}
+
+      {/* MISSION DETAILS MODAL */}
+      {showMissionDetails && (
+          <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setShowMissionDetails(false)}>
+              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-md w-full relative" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => setShowMissionDetails(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
+                  <h3 className="text-xl font-black text-white uppercase mb-2">{briefingTitle}</h3>
+                  <div className="h-px w-full bg-slate-800 mb-4" />
+                  <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed font-mono">{briefingDesc}</p>
+                  
+                  {/* Hints Section if available */}
+                  <div className="mt-4 bg-indigo-900/20 border border-indigo-500/20 p-3 rounded-lg">
+                      <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-2">{t.BRIEFING_HINTS_TITLE}</span>
+                      <ul className="list-disc list-inside text-xs text-indigo-200/80 space-y-1">
+                          <li>{t.BRIEFING_HINT_1}</li>
+                          <li>{t.BRIEFING_HINT_2}</li>
+                          <li>{t.BRIEFING_HINT_3}</li>
+                      </ul>
+                  </div>
+
+                  <div className="mt-6 flex justify-end">
+                      <button onClick={() => setShowMissionDetails(false)} className="px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold uppercase text-white transition-colors">{t.BTN_READY}</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* EXIT CONFIRMATION MODAL */}
+      {showExitConfirmation && (
+          <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 pointer-events-auto animate-in zoom-in-95">
+              <div className="bg-slate-950 border border-red-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+                  <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-black text-white uppercase mb-2">{t.ABORT_TITLE}</h3>
+                  <p className="text-sm text-slate-400 mb-6">{t.ABORT_DESC}</p>
+                  <div className="flex gap-3">
+                      <button onClick={() => setShowExitConfirmation(false)} className="flex-1 py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs uppercase hover:bg-slate-700">{t.BTN_CANCEL}</button>
+                      <button onClick={() => { abandonSession(); setShowExitConfirmation(false); }} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-xs uppercase hover:bg-red-500 shadow-lg shadow-red-900/20">{t.BTN_CONFIRM}</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* RANKINGS OVERLAY */}
+      {isRankingsOpen && (
+          <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setIsRankingsOpen(false)}>
+              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                  <div className="flex justify-between items-center mb-4 shrink-0">
+                      <h3 className="text-lg font-black text-amber-500 uppercase flex items-center gap-2"><Trophy className="w-5 h-5" /> {t.LEADERBOARD_TITLE}</h3>
+                      <button onClick={() => setIsRankingsOpen(false)} className="text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+                      {leaderboard.length === 0 && <p className="text-slate-500 text-center text-xs py-4">{t.EMPTY || "No records"}</p>}
+                      {leaderboard.map((e, i) => (
+                          <div key={i} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                              <div className="flex items-center gap-3">
+                                  <span className={`font-mono font-bold w-6 text-center ${i<3 ? 'text-amber-400' : 'text-slate-500'}`}>#{i+1}</span>
+                                  <span className="text-sm font-bold text-white truncate max-w-[100px]">{e.nickname}</span>
+                              </div>
+                              <div className="text-xs font-mono text-slate-400">{e.maxLevel} Lvl / {e.maxCoins} Cr</div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* HELP INFO OVERLAY */}
+      {helpTopic && helpData && (
+          <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setHelpTopic(null)}>
+              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
+                  <h3 className="text-lg font-black text-white uppercase mb-2">{helpData.title}</h3>
+                  <p className="text-xs text-slate-400 mb-4">{helpData.desc}</p>
+                  <div className="bg-slate-800 p-2 rounded text-xs font-mono text-emerald-400">{helpData.hint}</div>
+                  <button onClick={() => setHelpTopic(null)} className="mt-4 text-xs font-bold text-slate-500 hover:text-white uppercase tracking-wider">Close</button>
+              </div>
+          </div>
+      )}
+
     </div>
   );
 };

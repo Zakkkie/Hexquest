@@ -99,7 +99,18 @@ export class ActionProcessor {
 
       // Entropy Logic (Movement tax)
       if (state.entropy.current > 0) {
-          state.entropy.current = Math.max(0, state.entropy.current - ENTROPY_CONFIG.COST_ACTION_BASE);
+          let entropyCost = ENTROPY_CONFIG.COST_ACTION_BASE;
+          
+          // Iterate path to detect negative levels and increase tax
+          for (const step of action.path) {
+              const hex = state.grid[getHexKey(step.q, step.r)];
+              if (hex && hex.maxLevel < 0) {
+                  // Double the entropy impact for stepping on negative hexes
+                  entropyCost += ENTROPY_CONFIG.COST_ACTION_BASE;
+              }
+          }
+          
+          state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
       }
 
       return { ok: true };
@@ -136,12 +147,9 @@ export class ActionProcessor {
       const idx = actor.inventory.findIndex(i => i.id === action.itemId);
       if (idx === -1) return { ok: false, reason: 'Item not found' };
       
-      const item = actor.inventory[idx];
       actor.inventory.splice(idx, 1);
       
-      // Scrap value
-      const scrap = Math.floor(item.value * 0.1);
-      actor.coins += scrap;
+      // Removed scrap value logic as requested - items have no coin value on disposal
       
       return { ok: true };
   }
@@ -292,7 +300,12 @@ export class ActionProcessor {
   private handleActivateMonument(state: SessionState, actor: Entity, action: any): ValidationResult {
       if (!action.itemIds || action.itemIds.length !== 3) return { ok: false, reason: 'Requires 3 Keys' };
       
-      const difficulty = state.difficulty;
+      const requirements = state.monumentRequirements;
+      
+      if (!requirements || requirements.length !== 3) {
+          return { ok: false, reason: "No active monument requirements" };
+      }
+
       const items = [];
       
       for (const id of action.itemIds) {
@@ -301,9 +314,12 @@ export class ActionProcessor {
           items.push(item);
       }
 
-      for (const item of items) {
-          if (difficulty === 'MEDIUM' && item.rarity === 'COMMON') return { ok: false, reason: 'Need Uncommon+ Keys' };
-          if (difficulty === 'HARD' && (item.rarity === 'COMMON' || item.rarity === 'UNCOMMON')) return { ok: false, reason: 'Need Rare+ Keys' };
+      // Check if items match requirements
+      // The order matters based on how slots are filled in UI
+      for (let i = 0; i < 3; i++) {
+          if (items[i].baseId !== requirements[i]) {
+              return { ok: false, reason: `Slot ${i+1} incorrect item` };
+          }
       }
 
       actor.inventory = actor.inventory.filter(i => !action.itemIds.includes(i.id));

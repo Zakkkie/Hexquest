@@ -5,6 +5,7 @@ import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
 import { calculateMovementCost } from '../rules/movement';
 import { findBestBuildTargets, findBestDigTargets, scoreHexForDigging, scoreHexForBuilding } from './planning';
+import { GAME_CONFIG } from '../rules/config';
 
 export interface AiResult {
     action: BotAction | null;
@@ -57,6 +58,20 @@ export const calculateBotMove = (
   };
   
   if (!mem.mode) mem.mode = 'GATHER';
+
+  // 0. SURVIVAL CHECK: RECOVER IF EMPTY
+  // If we have no moves and no money to buy moves, we MUST recover if possible.
+  // This takes precedence over all other goals to prevent deadlock.
+  // "How do bots move at 0 moves and 0 credits? They should use recovery..."
+  if (bot.moves <= 0 && bot.coins < GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE && !bot.recoveredCurrentHex) {
+      if (currentHex && currentHex.structureType !== 'VOID') {
+          return { 
+              action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'RECOVER', stateVersion }, 
+              debug: 'Survival Rec', 
+              memory: mem 
+          };
+      }
+  }
 
   // 2. CHECK FOR VISIBLE MONUMENT
   const monument = Object.values(grid).find(h => h.structureType === 'MONUMENT');

@@ -259,6 +259,48 @@ export class GrowthSystem implements System {
              // Reset Recovery Stats on Level Change
              const newRecoveryPoints = undefined;
              const newLastRecoveryTime = undefined;
+             
+             // Determine new looted levels array to ensure persistence
+             let nextLootedLevels = hex.lootedLevels ? [...hex.lootedLevels] : [];
+
+             // --- LOOT LOGIC (BEFORE UPDATING STATE) ---
+             // We process loot first to see if we need to update 'lootedLevels'
+             if (entity.type === EntityType.PLAYER && newLevel < 0) {
+                 // DEPLETION CHECK: Has this depth been looted on this hex before?
+                 const isDepleted = nextLootedLevels.includes(newLevel);
+                 
+                 if (!isDepleted) {
+                     // Mark this level as Depleted for this hex immediately to prevent farming
+                     nextLootedLevels.push(newLevel);
+
+                     const loot = rollForLoot(newLevel, state.language);
+                     if (loot.type !== 'NONE') {
+                         
+                         if (loot.type === 'COIN') {
+                             entity.coins += loot.amount;
+                             entity.totalCoinsEarned += loot.amount;
+                             const lootMsg = `FOUND: ${loot.amount} Coins!`;
+                             state.messageLog.unshift({ id: `loot-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
+                             events.push(GameEventFactory.create('RECOVERY_USED', lootMsg, entity.id, { coins: loot.amount })); 
+                         } else if (loot.type === 'ITEM') {
+                             if (!entity.inventory) entity.inventory = [];
+                             
+                             const maxInv = entity.maxInventorySize || GAME_CONFIG.MAX_INVENTORY_SIZE;
+                             if (entity.inventory.length < maxInv) {
+                                 entity.inventory = [...entity.inventory, loot.item];
+                                 const lootMsg = `FOUND: ${loot.item.name}!`;
+                                 state.messageLog.unshift({ id: `loot-item-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
+                                 events.push(GameEventFactory.create('ITEM_DROP', lootMsg, entity.id));
+                             } else {
+                                 state.messageLog.unshift({ id: `loot-full-${Date.now()}`, text: "Inventory Full! Item Discarded.", type: 'WARN', source: 'LOOT', timestamp: Date.now() });
+                                 events.push(GameEventFactory.create('ERROR', "Inventory Full", entity.id));
+                             }
+                         }
+                     }
+                 } else {
+                     // Depleted feedback is silent usually, or maybe a small toast if we want
+                 }
+             }
 
              // Update Hex (Copy-On-Write)
              state.grid = { 
@@ -271,7 +313,8 @@ export class GrowthSystem implements System {
                       structureType: undefined, 
                       durability: newDurability,
                       recoveryPoints: newRecoveryPoints,
-                      lastRecoveryTime: newLastRecoveryTime
+                      lastRecoveryTime: newLastRecoveryTime,
+                      lootedLevels: nextLootedLevels // Persist updated loot history
                   }
              };
              
@@ -285,31 +328,6 @@ export class GrowthSystem implements System {
              state.messageLog.unshift({ id: `dig-ok-${Date.now()}`, text: msg, type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now() });
              
              events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id, { material: matGain, moves: depthReward }));
-
-             // --- LOOT LOGIC ---
-             if (entity.type === EntityType.PLAYER && newLevel < 0) {
-                 const loot = rollForLoot(newLevel, state.language);
-                 if (loot.type === 'COIN') {
-                     entity.coins += loot.amount;
-                     entity.totalCoinsEarned += loot.amount;
-                     const lootMsg = `FOUND: ${loot.amount} Coins!`;
-                     state.messageLog.unshift({ id: `loot-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
-                     events.push(GameEventFactory.create('RECOVERY_USED', lootMsg, entity.id, { coins: loot.amount })); 
-                 } else if (loot.type === 'ITEM') {
-                     if (!entity.inventory) entity.inventory = [];
-                     
-                     const maxInv = entity.maxInventorySize || GAME_CONFIG.MAX_INVENTORY_SIZE;
-                     if (entity.inventory.length < maxInv) {
-                         entity.inventory = [...entity.inventory, loot.item];
-                         const lootMsg = `FOUND: ${loot.item.name}!`;
-                         state.messageLog.unshift({ id: `loot-item-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
-                         events.push(GameEventFactory.create('ITEM_DROP', lootMsg, entity.id));
-                     } else {
-                         state.messageLog.unshift({ id: `loot-full-${Date.now()}`, text: "Inventory Full! Item Discarded.", type: 'WARN', source: 'LOOT', timestamp: Date.now() });
-                         events.push(GameEventFactory.create('ERROR', "Inventory Full", entity.id));
-                     }
-                 }
-             }
              
              if (hasUpgradeCmd) entity.movementQueue.shift();
              entity.state = EntityState.IDLE;
@@ -441,6 +459,11 @@ export class GrowthSystem implements System {
                   durability: newDurability,
                   recoveryPoints: newRecoveryPoints,
                   lastRecoveryTime: newLastRecoveryTime
+                  // lootedLevels is preserved via spread ...hex in simple updates, but here we construct a new object.
+                  // Since we didn't dig, we don't modify lootedLevels, so spreading ...hex handles it OR we explicitly pass it if needed.
+                  // Actually, ...hex is sufficient if it's the first spread argument.
+                  // BUT we are spreading inside the object literal.
+                  // Wait, earlier I did `...state.grid, [key]: { ...hex, ... }`. Yes, spreading `hex` preserves lootedLevels.
               }
           };
           

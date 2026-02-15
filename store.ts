@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction, Item, ActivateMonumentAction } from './types.ts';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG, ENTROPY_CONFIG } from './rules/config.ts';
@@ -9,6 +10,7 @@ import { LevelConfig } from './campaign/types.ts';
 import { calculateMovementCost } from './rules/movement.ts';
 import { generateMap } from './services/mapGenerator.ts';
 import { TEXT } from './services/i18n.ts';
+import { generateMonumentRecipe } from './rules/items.ts';
 
 const MOCK_USER_DB: Record<string, { password: string; avatarColor: string; headIndex: number; bodyIndex: number }> = {};
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e']; 
@@ -170,6 +172,12 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     timestamp: Date.now()
   };
 
+  // Generate Requirements
+  let monumentRequirements: string[] | undefined;
+  if (winCondition?.winType === 'SUMMIT') {
+      monumentRequirements = generateMonumentRecipe(difficulty);
+  }
+
   return {
     stateVersion: 0,
     sessionId: Math.random().toString(36).substring(2, 15),
@@ -177,6 +185,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     winCondition,
     activeLevelConfig: levelConfig,
     secretMonumentCoord,
+    monumentRequirements,
     difficulty: difficulty,
     grid: initialGrid,
     player: {
@@ -615,6 +624,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   placeItemInMonument: (item: Item, slotIndex: number) => {
+      const state = get();
+      const requirements = state.session?.monumentRequirements;
+      
+      if (!requirements || requirements.length <= slotIndex) {
+          audioService.play('ERROR');
+          return;
+      }
+
+      // VALIDATION: Does this item match the requirement for this slot?
+      const requiredBaseId = requirements[slotIndex];
+      if (item.baseId !== requiredBaseId) {
+          audioService.play('ERROR');
+          state.showToast("Wrong item type for this slot!", "error");
+          return;
+      }
+
       audioService.play('UI_CLICK');
       set(state => {
           const newSlots = [...state.monumentDialogState.slots];
