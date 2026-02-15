@@ -112,10 +112,10 @@ const GameView: React.FC = () => {
               const dx = (Math.random() - 0.5) * intensity * 2;
               const dy = (Math.random() - 0.5) * intensity * 2;
               setShakeOffset({ x: dx, y: dy });
-          }, stageRef.current?.getLayer()); // Pass null or layer? Stage is better but Animation needs layer usually? Actually can be null for logic.
+          }, stageRef.current?.getLayer()); 
           
           shakeAnim.start();
-          return () => shakeAnim.stop();
+          return () => { shakeAnim.stop(); };
       }
   }, [lastVisualEvent]);
 
