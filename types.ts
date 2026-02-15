@@ -1,4 +1,3 @@
-
 // In a stricter setup, we would move shared types to a 'core' module.
 export type HexCoord = { q: number; r: number; upgrade?: boolean; intent?: 'UPGRADE' | 'RECOVER' | 'DIG' };
 
@@ -56,7 +55,32 @@ export type ItemEffectType =
     | 'FREE_UPGRADES' 
     | 'LEVEL_UP' 
     | 'EXPAND_INVENTORY' 
-    | 'GOD_MODE';
+    | 'GOD_MODE'
+    // Status Effects (Positive)
+    | 'STATUS_GOLD_RUSH'
+    | 'STATUS_FREE_BUILD';
+
+export type NegativeEffectType =
+    | 'LOSE_CREDITS'
+    | 'LOSE_MOVES'
+    | 'LOSE_RANK'
+    | 'RESET_MATERIALS'
+    | 'FULL_RESET'
+    | 'AMNESIA' // Fog reset
+    // Status Effects (Negative)
+    | 'STATUS_FATIGUE'      // 2x Move Cost
+    | 'STATUS_MINING_OFFLINE' // No passive income (not used in core loop yet, but tracked)
+    | 'STATUS_TUNNEL_VISION'  // Fog radius 1
+    | 'STATUS_GOLD_CURSE'     // No Loot
+    | 'STATUS_SOIL_EATER'     // Upgrade destroys neighbor
+    | 'STATUS_BREAKDOWN_RISK'; // Digging causes damage
+
+export interface ActiveStatus {
+    type: ItemEffectType | NegativeEffectType;
+    label: string; // "Fatigue", "Gold Rush"
+    expiresAt: number; // Timestamp
+    icon?: string; // Icon identifier
+}
 
 export interface Item {
   id: string;
@@ -68,9 +92,18 @@ export interface Item {
   
   // New props for specific mechanics
   visualType: string;
+  
+  // Positive (Success)
   effectType: ItemEffectType;
   effectValue: number;
   effectDescription: string; // "Recycle: +3 Moves"
+  effectDuration?: number; // ms for status effects
+
+  // Negative (Failure)
+  negativeEffectType?: NegativeEffectType;
+  negativeEffectValue?: number;
+  negativeEffectLabel?: string;
+  negativeEffectDuration?: number;
 }
 
 export type BotGoalType = 'EXPAND' | 'DEFEND' | 'ATTACK' | 'GROWTH' | 'IDLE' | 'PREPARE_CYCLE' | 'BUILD_SUPPORT' | 'GATHER_RESOURCES' | 'AGGRESSOR';
@@ -149,6 +182,9 @@ export interface Entity {
   inventory: Item[];
   maxInventorySize?: number; // Expandable inventory
 
+  // NEW: Active Status Effects
+  activeStatuses: ActiveStatus[];
+
   movementQueue: HexCoord[]; 
   
   memory?: BotMemory; 
@@ -190,6 +226,7 @@ export type GameEventType =
   | 'HEX_RESTORED' 
   | 'HEX_RESTORE_FAILED' 
   | 'MONUMENT_REACHED'
+  | 'STATUS_APPLIED'
   | 'ENTROPY_SHIFT'; // New
 
 export interface GameEvent {
@@ -280,7 +317,7 @@ export interface FloatingText {
   color: string;
   startTime: number;
   lifetime: number;
-  icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE' | 'GEM';
+  icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE' | 'GEM' | 'SKULL';
 }
 
 // MOVED FROM campaign/types.ts to resolve circular dependency

@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction, Item, ActivateMonumentAction } from './types.ts';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG, ENTROPY_CONFIG } from './rules/config.ts';
@@ -156,7 +155,8 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       headIndex: Math.floor(Math.random() * 4), // Random head (0-3)
       bodyIndex: Math.floor(Math.random() * 4), // Random body (0-3)
       recoveredCurrentHex: false,
-      recentUpgrades: []
+      recentUpgrades: [],
+      activeStatuses: []
     });
   }
   
@@ -193,7 +193,8 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       // Use User preferences or default
       avatarColor: user?.avatarColor || '#3b82f6',
       headIndex: user?.headIndex || 0,
-      bodyIndex: user?.bodyIndex || 0
+      bodyIndex: user?.bodyIndex || 0,
+      activeStatuses: []
     },
     bots,
     currentTurn: 0,

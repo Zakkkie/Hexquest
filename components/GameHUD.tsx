@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useRef, memo } from 'react';
 import { useGameStore } from '../store.ts';
 import { getHexKey, getNeighbors, getSecondsToGrow, cubeDistance } from '../services/hexUtils.ts';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth.ts';
-import { EntityState, Hex, Item, ItemRarity } from '../types.ts';
+import { EntityState, Hex, Item, ItemRarity, ActiveStatus } from '../types.ts';
 import HexButton from './HexButton.tsx';
 import EntropyGauge from './EntropyGauge.tsx';
 import { TEXT } from '../services/i18n.ts';
@@ -11,7 +11,8 @@ import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
-  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap, Key
+  Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap, Key, 
+  Activity, EyeOff, Skull, Hammer, Flame
 } from 'lucide-react';
 import { itemRenderer } from '../services/itemRenderer.ts';
 
@@ -282,6 +283,37 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       return "Upgrade Sector (Increase Level)";
   }, [isMoving, upgradeCondition]);
 
+  // --- STATUS ICONS RENDERER ---
+  const renderActiveStatuses = () => {
+      if (!player?.activeStatuses || player.activeStatuses.length === 0) return null;
+      
+      const getStatusIcon = (type: string) => {
+          if (type.includes('FATIGUE')) return <Activity className="w-3 h-3 text-red-400" />;
+          if (type.includes('GOLD_RUSH')) return <Pickaxe className="w-3 h-3 text-amber-400" />;
+          if (type.includes('TUNNEL')) return <EyeOff className="w-3 h-3 text-slate-400" />;
+          if (type.includes('FREE_BUILD')) return <Hammer className="w-3 h-3 text-emerald-400" />;
+          if (type.includes('CURSE')) return <Skull className="w-3 h-3 text-amber-600" />;
+          if (type.includes('RISK')) return <Flame className="w-3 h-3 text-orange-500" />;
+          return <AlertTriangle className="w-3 h-3 text-slate-200" />;
+      };
+
+      const now = Date.now();
+      const validStatuses = player.activeStatuses.filter(s => !s.expiresAt || s.expiresAt > now);
+
+      if (validStatuses.length === 0) return null;
+
+      return (
+          <div className="flex gap-2 mb-2">
+              {validStatuses.map((status, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-slate-900/80 border border-slate-700 rounded-full animate-in slide-in-from-left-2">
+                      {getStatusIcon(status.type)}
+                      <span className="text-[9px] font-bold uppercase text-white">{status.label}</span>
+                  </div>
+              ))}
+          </div>
+      );
+  };
+
   // --- Campaign Objective Metrics ---
   const campaignMetrics = useMemo(() => {
       if (!grid || !player) return null;
@@ -454,7 +486,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       }
   };
 
-  const inventoryList = [0, 1, 2].slice(0, player.maxInventorySize || 3);
+  const inventoryList = [0, 1, 2, 3, 4, 5].slice(0, player.maxInventorySize || 3);
 
   return (
     <div className="absolute inset-0 pointer-events-none z-30 select-none">
@@ -574,6 +606,13 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   <EntropyGauge />
               </div>
 
+              {/* ACTIVE STATUSES */}
+              {renderActiveStatuses() && (
+                  <div className="self-start pl-1">
+                      {renderActiveStatuses()}
+                  </div>
+              )}
+
               {/* INVENTORY */}
               <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-xl p-2 md:p-3 shadow-xl flex flex-col items-center gap-2">
                   <span className="text-[8px] md:text-[9px] font-bold uppercase text-slate-500 tracking-widest">LOOT</span>
@@ -604,8 +643,13 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                               <div className="text-[9px] text-emerald-400 font-mono font-bold bg-emerald-900/20 px-1.5 py-0.5 rounded">
                                                   RECYCLE: {item.effectDescription || item.effectType}
                                               </div>
-                                              <div className="text-[9px] text-red-400 font-mono font-bold bg-red-900/20 px-1.5 py-0.5 rounded">
-                                                  PRICE: {language === 'RU' ? 'ЦЕНА' : ''} {item.value} CR
+                                              {item.negativeEffectType && (
+                                                  <div className="text-[9px] text-red-400 font-mono font-bold bg-red-900/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                      <AlertTriangle className="w-3 h-3"/> RISK: {item.negativeEffectLabel}
+                                                  </div>
+                                              )}
+                                              <div className="text-[9px] text-slate-400 font-mono font-bold bg-slate-800 px-1.5 py-0.5 rounded mt-1">
+                                                  PRICE: {item.value} CR
                                               </div>
                                           </div>
                                       </div>
@@ -658,12 +702,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* HELP POPUP, ABORT, VOID, MONUMENT, BRIEFING MODALS (Keep existing logic, just omitted for brevity unless specific change needed) */}
-      
+      {/* RENDER OTHER DIALOGS AS USUAL (Briefing, Help, Monument, Void) */}
       {/* ... [Standard Modal Logic similar to original file, just ensure z-index is above Fireworks] ... */}
       
       {/* VICTORY / DEFEAT SCREENS */}
-      {/* Show immediately on DEFEAT, or only after Delay on VICTORY */}
       {(gameStatus === 'DEFEAT' || (gameStatus === 'VICTORY' && victoryStage === 'MODAL')) && (
           <div className="absolute inset-0 z-[200] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-700 pointer-events-auto p-4">
               <div className="flex flex-col items-center max-w-md w-full">
@@ -681,8 +723,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* RENDER OTHER DIALOGS AS USUAL (Briefing, Help, Monument, Void) */}
-      {/* ... Copied from original file structure ... */}
       {/* MONUMENT DIALOG */}
       {monumentDialogState.isOpen && (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300 pointer-events-auto">
@@ -899,7 +939,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                               <span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span>
                                           </div>
                                       </div>
-                                      <div className="px-2 py-1 rounded bg-slate-950 text-[10px] font-mono font-bold text-emerald-400 border border-slate-800">{chance}</div>
+                                      <div className="flex flex-col items-end gap-1">
+                                          <div className="px-2 py-0.5 rounded bg-slate-950 text-[9px] font-mono font-bold text-emerald-400 border border-slate-800">Success: {chance}</div>
+                                          {item.negativeEffectType && <div className="text-[8px] text-red-400 font-mono">Risk: {item.negativeEffectLabel?.substring(0,12)}..</div>}
+                                      </div>
                                   </button>
                               );
                           })}

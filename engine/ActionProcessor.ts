@@ -1,5 +1,5 @@
 
-import { GameAction, EntityState, ValidationResult, SessionState, Entity, MoveAction } from '../types';
+import { GameAction, EntityState, ValidationResult, SessionState, Entity, MoveAction, ActiveStatus, Item, Hex } from '../types';
 import { WorldIndex } from './WorldIndex';
 import { getHexKey, cubeDistance } from '../services/hexUtils';
 import { ENTROPY_CONFIG } from '../rules/config';
@@ -45,6 +45,14 @@ export class ActionProcessor {
 
       const actor = state.player.id === actorId ? state.player : state.bots.find(b => b.id === actorId);
       if (!actor) return { ok: false, reason: 'Entity lost' };
+
+      // Clean expired statuses before action
+      if (actor.activeStatuses) {
+          const now = Date.now();
+          actor.activeStatuses = actor.activeStatuses.filter(s => !s.expiresAt || s.expiresAt > now);
+      } else {
+          actor.activeStatuses = [];
+      }
 
       switch (action.type) {
           case 'MOVE':
@@ -138,6 +146,76 @@ export class ActionProcessor {
       return { ok: true };
   }
 
+  private addStatus(actor: Entity, type: string, label: string, duration?: number) {
+      if (!actor.activeStatuses) actor.activeStatuses = [];
+      // Remove existing of same type
+      actor.activeStatuses = actor.activeStatuses.filter(s => s.type !== type);
+      actor.activeStatuses.push({
+          type: type as any,
+          label: label,
+          expiresAt: duration ? Date.now() + duration : Date.now() + 60000
+      });
+  }
+
+  private applyEffect(state: SessionState, actor: Entity, type: string, val: number | undefined, desc: string, duration?: number) {
+      switch(type) {
+          // --- INSTANT EFFECTS ---
+          case 'ADD_MOVES': actor.moves += (val || 0); break;
+          case 'ADD_CREDITS': actor.coins += (val || 0); break;
+          case 'ADD_MATERIAL': actor.storage = Math.min(actor.maxStorage, actor.storage + (val || 0)); break;
+          case 'ADD_ENTROPY': state.entropy.current = Math.min(state.entropy.max, state.entropy.current + (val || 0)); break;
+          case 'INCREASE_STORAGE': actor.maxStorage += (val || 0); break;
+          case 'EXPAND_INVENTORY': actor.maxInventorySize = (actor.maxInventorySize || 3) + (val || 0); break;
+          case 'LEVEL_UP': actor.playerLevel += (val || 0); break;
+          case 'REVEAL_MAP': 
+                // Reveal fog around player radius 2
+                Object.values(state.grid).forEach(h => {
+                    if (cubeDistance(actor, h) <= 2) h.revealed = true;
+                });
+                break;
+          case 'GOD_MODE': 
+                actor.playerLevel += 10; 
+                actor.coins += 1000; 
+                actor.moves += 100; 
+                break;
+
+          // --- NEGATIVE INSTANT ---
+          case 'LOSE_CREDITS': 
+                if (val) actor.coins = Math.max(0, actor.coins - val);
+                // "Greed" Logic: 50% loss if value not specified or special flag
+                else actor.coins = Math.floor(actor.coins * 0.5); 
+                break;
+          case 'LOSE_MOVES': actor.moves = Math.max(0, actor.moves - (val || 0)); break;
+          case 'LOSE_RANK': actor.playerLevel = Math.max(1, actor.playerLevel - (val || 0)); break;
+          case 'RESET_MATERIALS': actor.storage = 0; break;
+          case 'FULL_RESET': 
+                actor.playerLevel = 1; 
+                actor.coins = 0; 
+                actor.storage = 0; 
+                actor.moves = 0; 
+                break;
+          case 'AMNESIA': 
+                // Reset Fog
+                Object.values(state.grid).forEach(h => {
+                    if (cubeDistance(actor, h) > 1) h.revealed = false;
+                });
+                break;
+
+          // --- STATUS EFFECTS (Both Pos & Neg) ---
+          case 'STATUS_FATIGUE':
+          case 'STATUS_GOLD_RUSH':
+          case 'STATUS_MINING_OFFLINE':
+          case 'STATUS_TUNNEL_VISION':
+          case 'STATUS_FREE_BUILD':
+          case 'STATUS_GOLD_CURSE':
+          case 'STATUS_SOIL_EATER':
+          case 'STATUS_BREAKDOWN_RISK':
+          case 'BUFF_DIG': // Mapped to gold rush internally usually, or custom
+              this.addStatus(actor, type, desc, duration);
+              break;
+      }
+  }
+
   private handleRestoreHex(state: SessionState, actor: Entity, action: any): ValidationResult {
       const hexKey = getHexKey(action.coord.q, action.coord.r);
       const hex = state.grid[hexKey];
@@ -170,69 +248,21 @@ export class ActionProcessor {
               durability: undefined 
           };
           
-          // Entropy Gain on Success
           state.entropy.current = Math.min(state.entropy.max, state.entropy.current + ENTROPY_CONFIG.GAIN_RESTORE_SUCCESS);
           
-          // APPLY ITEM EFFECT
-          const val = item.effectValue;
-          let feedbackText = item.effectDescription || "Effect Applied";
-          let feedbackColor = "#ffffff";
-
-          switch(item.effectType) {
-              case 'ADD_MOVES': 
-                  actor.moves += val; 
-                  feedbackColor = "#60a5fa"; // Blue
-                  break;
-              case 'ADD_CREDITS': 
-                  actor.coins += val; 
-                  feedbackColor = "#fbbf24"; // Amber
-                  break;
-              case 'ADD_MATERIAL': 
-                  actor.storage = Math.min(actor.maxStorage, actor.storage + val); 
-                  feedbackColor = "#34d399"; // Emerald
-                  break;
-              case 'ADD_ENTROPY': 
-                  state.entropy.current = Math.min(state.entropy.max, state.entropy.current + val); 
-                  feedbackColor = "#818cf8"; // Indigo
-                  break;
-              case 'INCREASE_STORAGE': 
-                  actor.maxStorage += val; 
-                  feedbackColor = "#34d399"; 
-                  break;
-              case 'EXPAND_INVENTORY': 
-                  actor.maxInventorySize = (actor.maxInventorySize || 3) + val; 
-                  feedbackColor = "#d946ef"; // Fuchsia
-                  break;
-              case 'LEVEL_UP': 
-                  actor.playerLevel += val; 
-                  feedbackColor = "#818cf8"; 
-                  break;
-              case 'BUFF_DIG': 
-                  actor.storage = Math.min(actor.maxStorage, actor.storage + val); 
-                  feedbackColor = "#facc15"; // Yellow
-                  break;
-              case 'REVEAL_MAP': 
-                  // Effect logic for reveal could go here, but MapRenderer handles fog mostly.
-                  // We can force reveal neighbors of player?
-                  feedbackColor = "#94a3b8"; 
-                  break;
-              case 'GOD_MODE': 
-                  actor.playerLevel += 10; 
-                  actor.coins += 1000; 
-                  actor.moves += 100; 
-                  feedbackColor = "#f43f5e"; // Red
-                  break;
-          }
+          // APPLY POSITIVE
+          this.applyEffect(state, actor, item.effectType, item.effectValue, item.effectDescription, item.effectDuration);
           
-          // --- GENERATE VISUAL EVENT ---
-          // Use RECOVERY_USED type as it triggers floating text in store.ts
-          // We pass customText and customColor in data.
+          let feedbackColor = "#34d399";
+          if (item.effectType.includes('CREDITS')) feedbackColor = "#fbbf24";
+          if (item.effectType.includes('MOVES')) feedbackColor = "#60a5fa";
+
           if (state.outgoingEvents) {
               state.outgoingEvents.push(GameEventFactory.create(
                   'RECOVERY_USED', 
-                  `Item Effect: ${item.name}`, 
+                  `SUCCESS: ${item.effectDescription}`, 
                   actor.id, 
-                  { customText: feedbackText, customColor: feedbackColor }
+                  { customText: item.effectDescription, customColor: feedbackColor }
               ));
           }
 
@@ -241,12 +271,17 @@ export class ActionProcessor {
           // --- FAILURE ---
           state.entropy.current = Math.max(0, state.entropy.current - ENTROPY_CONFIG.COST_RESTORE_FAIL);
           
+          // APPLY NEGATIVE
+          if (item.negativeEffectType) {
+              this.applyEffect(state, actor, item.negativeEffectType, item.negativeEffectValue, item.negativeEffectLabel || "Bad Luck", item.negativeEffectDuration);
+          }
+
           if (state.outgoingEvents) {
               state.outgoingEvents.push(GameEventFactory.create(
                   'ERROR', 
-                  `Item Destroyed`, 
+                  `FAIL: ${item.negativeEffectLabel || 'Stabilization Failed'}`, 
                   actor.id,
-                  { text: "STABILIZATION FAILED" }
+                  { text: "FAILED" }
               ));
           }
           

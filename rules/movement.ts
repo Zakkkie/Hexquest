@@ -18,13 +18,20 @@ export interface MovementCostResult {
  * 2. If hex.maxLevel >= 2, cost equals maxLevel.
  * 3. Use entity.moves first.
  * 4. If insufficient moves, cover deficit with coins (Exchange Rate).
+ * 5. STATUS_FATIGUE doubles the movement cost.
  */
 export const calculateMovementCost = (
-    entity: { moves: number; coins: number },
+    entity: Entity, // Changed from partial type to Entity to access activeStatuses
     path: HexCoord[],
     grid: Record<string, Hex>
 ): MovementCostResult => {
     let totalPoints = 0;
+
+    // Check for Fatigue (Status Effect)
+    // We check if the status exists and hasn't expired
+    const now = Date.now();
+    const hasFatigue = entity.activeStatuses?.some(s => s.type === 'STATUS_FATIGUE' && (!s.expiresAt || s.expiresAt > now));
+    const costMultiplier = hasFatigue ? 2 : 1;
 
     for (const step of path) {
         const hex = grid[getHexKey(step.q, step.r)];
@@ -32,6 +39,9 @@ export const calculateMovementCost = (
         const stepCost = (hex && hex.maxLevel >= 2) ? hex.maxLevel : 1;
         totalPoints += stepCost;
     }
+
+    // Apply Multiplier
+    totalPoints *= costMultiplier;
 
     const movesAvailable = Math.max(0, entity.moves);
     const coinsAvailable = Math.max(0, entity.coins);

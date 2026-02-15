@@ -1,5 +1,5 @@
 
-import { Item, ItemRarity, ItemEffectType, Language } from '../types';
+import { Item, ItemRarity, ItemEffectType, NegativeEffectType, Language } from '../types';
 
 export interface ItemDefinition {
     idPrefix: string;
@@ -10,8 +10,15 @@ export interface ItemDefinition {
     visualColor: string;
     effectType: ItemEffectType;
     effectValue: number;
+    effectDuration?: number; // ms
     baseValue: number; // For selling
     effectLabel: Record<Language, string>;
+    
+    // Negative Effects
+    negativeEffectType: NegativeEffectType;
+    negativeEffectValue?: number;
+    negativeEffectDuration?: number; // ms
+    negativeEffectLabel: Record<Language, string>;
 }
 
 export const ITEM_REGISTRY: ItemDefinition[] = [
@@ -26,7 +33,10 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'ADD_MOVES',
         effectValue: 3,
         baseValue: 5,
-        effectLabel: { EN: '+3 Moves (Refuel)', RU: '+3 Хода' }
+        effectLabel: { EN: '+3 Moves', RU: '+3 Хода' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 15,
+        negativeEffectLabel: { EN: '-15 Credits (Fine)', RU: '-15 Кредитов (Штраф)' }
     },
     {
         idPrefix: 'data_disc',
@@ -38,7 +48,9 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'ADD_CREDITS',
         effectValue: 15,
         baseValue: 15,
-        effectLabel: { EN: '+15 Credits', RU: '+15 Кредитов' }
+        effectLabel: { EN: '+15 Credits', RU: '+15 Кредитов' },
+        negativeEffectType: 'RESET_MATERIALS',
+        negativeEffectLabel: { EN: 'System Error: Mat=0', RU: 'Сбой: Материалы=0' }
     },
     {
         idPrefix: 'raw_container',
@@ -50,7 +62,10 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'ADD_MATERIAL',
         effectValue: 2,
         baseValue: 10,
-        effectLabel: { EN: '+2 Material', RU: '+2 Материала' }
+        effectLabel: { EN: '+2 Material', RU: '+2 Материала' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 3,
+        negativeEffectLabel: { EN: '-3 Moves (Exhaustion)', RU: '-3 Хода (Вскрытие)' }
     },
     {
         idPrefix: 'reality_patch',
@@ -62,7 +77,10 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'ADD_ENTROPY',
         effectValue: 3,
         baseValue: 10,
-        effectLabel: { EN: '+3% Stability', RU: '+3% Энтропии' }
+        effectLabel: { EN: '+3% Stability', RU: '+3% Энтропии' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 10,
+        negativeEffectLabel: { EN: '-10 Credits (Waste)', RU: '-10 Кредитов' }
     },
     {
         idPrefix: 'rusted_scanner',
@@ -74,7 +92,10 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'REVEAL_MAP',
         effectValue: 1, 
         baseValue: 10,
-        effectLabel: { EN: 'Reveal Fog', RU: 'Открыть Туман' }
+        effectLabel: { EN: 'Reveal Fog', RU: 'Разведка' },
+        negativeEffectType: 'LOSE_RANK',
+        negativeEffectValue: 1,
+        negativeEffectLabel: { EN: '-1 Rank (Malfunction)', RU: '-1 Ранг (Ожог)' }
     },
 
     // --- UNCOMMON (Необычные) ---
@@ -88,7 +109,10 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'INCREASE_STORAGE',
         effectValue: 1,
         baseValue: 50,
-        effectLabel: { EN: '+1 Max Storage', RU: '+1 Вместимость' }
+        effectLabel: { EN: '+1 Max Storage', RU: '+1 Вместимость' },
+        negativeEffectType: 'STATUS_FATIGUE',
+        negativeEffectDuration: 30000,
+        negativeEffectLabel: { EN: 'Fatigue (Moves x2)', RU: 'Усталость (Ход x2)' }
     },
     {
         idPrefix: 'hornet_drill',
@@ -97,10 +121,14 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         description: { EN: 'Yellow spiral drill, laser sharp.', RU: 'Желтый спиральный бур.' },
         visualType: 'DRILL',
         visualColor: '#facc15',
-        effectType: 'BUFF_DIG',
+        effectType: 'STATUS_GOLD_RUSH',
         effectValue: 2, 
+        effectDuration: 60000, // 60s
         baseValue: 50,
-        effectLabel: { EN: 'Gold Rush (+2 Mat)', RU: '+2 Материала' }
+        effectLabel: { EN: 'Gold Rush (+2 Mat)', RU: 'Золотая Лихорадка' },
+        negativeEffectType: 'STATUS_BREAKDOWN_RISK',
+        negativeEffectDuration: 45000,
+        negativeEffectLabel: { EN: 'Breakdown Risk', RU: 'Риск Поломки' }
     },
     {
         idPrefix: 'emergency_gen',
@@ -112,7 +140,10 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'ADD_CREDITS',
         effectValue: 55,
         baseValue: 55,
-        effectLabel: { EN: '+55 Credits', RU: '+55 Кредитов' }
+        effectLabel: { EN: '+55 Credits', RU: '+55 Кредитов' },
+        negativeEffectType: 'STATUS_MINING_OFFLINE',
+        negativeEffectDuration: 35000,
+        negativeEffectLabel: { EN: 'Mining Offline', RU: 'Нет Майнинга' }
     },
     {
         idPrefix: 'stability_scanner',
@@ -124,7 +155,10 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'ADD_MOVES',
         effectValue: 10,
         baseValue: 50,
-        effectLabel: { EN: '+10 Moves', RU: '+10 Ходов' }
+        effectLabel: { EN: '+10 Moves', RU: '+10 Ходов' },
+        negativeEffectType: 'STATUS_TUNNEL_VISION',
+        negativeEffectDuration: 30000,
+        negativeEffectLabel: { EN: 'Tunnel Vision (Fog)', RU: 'Туннельное Зрение' }
     },
 
     // --- RARE (Редкие) ---
@@ -135,10 +169,14 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         description: { EN: 'Swarm of silver particles.', RU: 'Рой серебристых частиц.' },
         visualType: 'PARTICLES',
         visualColor: '#e2e8f0',
-        effectType: 'ADD_MATERIAL',
-        effectValue: 5, 
+        effectType: 'STATUS_FREE_BUILD',
+        effectValue: 1, 
+        effectDuration: 30000,
         baseValue: 150,
-        effectLabel: { EN: '+5 Material (Max)', RU: '+5 Материала' }
+        effectLabel: { EN: 'Free Building', RU: 'Бесплатная Стройка' },
+        negativeEffectType: 'LOSE_CREDITS', // Using LOSE_CREDITS but value logic handled specially if needed, or static
+        negativeEffectValue: 50, // Placeholder, usually % logic in processor
+        negativeEffectLabel: { EN: 'Greed (-50% Cr)', RU: 'Жадность (-50% Кр)' }
     },
     {
         idPrefix: 'cortex_overclocker',
@@ -150,7 +188,9 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'LEVEL_UP',
         effectValue: 1,
         baseValue: 200,
-        effectLabel: { EN: '+1 Rank (Level Up)', RU: '+1 Ранг' }
+        effectLabel: { EN: '+1 Rank (Level Up)', RU: '+1 Ранг' },
+        negativeEffectType: 'AMNESIA',
+        negativeEffectLabel: { EN: 'Amnesia (Map Reset)', RU: 'Амнезия (Туман)' }
     },
     {
         idPrefix: 'matter_prism',
@@ -162,7 +202,10 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'EXPAND_INVENTORY',
         effectValue: 1,
         baseValue: 200,
-        effectLabel: { EN: '+1 Inventory Slot', RU: '+1 Слот' }
+        effectLabel: { EN: '+1 Inventory Slot', RU: '+1 Слот Инвентаря' },
+        negativeEffectType: 'STATUS_SOIL_EATER',
+        negativeEffectDuration: 45000,
+        negativeEffectLabel: { EN: 'Soil Eater', RU: 'Пожирание Почвы' }
     },
 
     // --- LEGENDARY (Легендарные) ---
@@ -176,7 +219,9 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'GOD_MODE', // +10 Rank, +1000 Cr, +100 Moves
         effectValue: 1,
         baseValue: 1000,
-        effectLabel: { EN: 'Absolute Mode', RU: 'Режим Абсолюта' }
+        effectLabel: { EN: 'God Mode', RU: 'Режим Бога' },
+        negativeEffectType: 'FULL_RESET',
+        negativeEffectLabel: { EN: 'System Wipe', RU: 'Полный Сброс' }
     },
     {
         idPrefix: 'midas_chip',
@@ -188,14 +233,16 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectType: 'ADD_CREDITS',
         effectValue: 1000,
         baseValue: 1000,
-        effectLabel: { EN: 'System Bankruptcy', RU: '+1000 Кредитов' }
+        effectLabel: { EN: '+1000 Credits', RU: '+1000 Кредитов' },
+        negativeEffectType: 'STATUS_GOLD_CURSE',
+        negativeEffectDuration: 999999, // Permanent-ish
+        negativeEffectLabel: { EN: 'Gold Curse', RU: 'Проклятие Золота' }
     }
 ];
 
 export const getRandomItem = (rarity: ItemRarity, language: Language): Item => {
     const candidates = ITEM_REGISTRY.filter(i => i.rarity === rarity);
     
-    // Fallback if registry is empty for some reason (should not happen)
     if (candidates.length === 0) {
         return ITEM_REGISTRY[0] as unknown as Item;
     }
@@ -212,6 +259,11 @@ export const getRandomItem = (rarity: ItemRarity, language: Language): Item => {
         visualType: def.visualType,
         effectType: def.effectType,
         effectValue: def.effectValue,
-        effectDescription: def.effectLabel[language]
+        effectDescription: def.effectLabel[language],
+        effectDuration: def.effectDuration,
+        negativeEffectType: def.negativeEffectType,
+        negativeEffectValue: def.negativeEffectValue,
+        negativeEffectLabel: def.negativeEffectLabel[language],
+        negativeEffectDuration: def.negativeEffectDuration
     };
 };
