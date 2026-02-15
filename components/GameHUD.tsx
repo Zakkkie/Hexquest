@@ -763,7 +763,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   {/* Actions */}
                   <div className="flex gap-3 mt-2">
                       <button 
-                          onClick={() => { destroyItem(inspectedItem.id); setInspectedItem(null); playUiSound('CRACK'); }}
+                          onClick={() => { destroyItem(inspectedItem.id); setInspectedItem(null); }}
                           className="flex-1 py-3 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-800 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors flex items-center justify-center gap-2 group"
                       >
                           <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" /> Discard

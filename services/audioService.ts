@@ -685,6 +685,7 @@ class AudioService {
          setTimeout(() => playOsc(880, 'triangle', 0.6, 0.1), 200);
          break;
       case 'COLLAPSE': playOsc(60, 'sawtooth', 0.6, 0.3); break;
+      case 'CRACK': playOsc(300, 'square', 0.05, 0.2); break;
     }
   }
 }

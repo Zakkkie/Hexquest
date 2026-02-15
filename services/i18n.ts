@@ -192,6 +192,7 @@ interface Dictionary {
         MONUMENT_REQ_EASY: string;
         MONUMENT_REQ_MED: string;
         MONUMENT_REQ_HARD: string;
+        EMPTY: string; // Added Missing Key
     };
     CAMPAIGN: {
         LEVEL_1_1_TITLE: string;
@@ -438,7 +439,8 @@ export const TEXT: Record<Language, Dictionary> = {
             MONUMENT_EMPTY_INV: "No items available.",
             MONUMENT_REQ_EASY: "(Accepts ANY Rarity)",
             MONUMENT_REQ_MED: "(Requires: UNCOMMON+)",
-            MONUMENT_REQ_HARD: "(Requires: RARE+)"
+            MONUMENT_REQ_HARD: "(Requires: RARE+)",
+            EMPTY: "Empty."
         },
         CAMPAIGN: {
             LEVEL_1_1_TITLE: 'Sim 1.1: Expansion Protocol',
@@ -683,7 +685,8 @@ export const TEXT: Record<Language, Dictionary> = {
             MONUMENT_EMPTY_INV: "Пусто.",
             MONUMENT_REQ_EASY: "(Любые)",
             MONUMENT_REQ_MED: "(Необычные+)",
-            MONUMENT_REQ_HARD: "(Редкие+)"
+            MONUMENT_REQ_HARD: "(Редкие+)",
+            EMPTY: "Пусто."
         },
         CAMPAIGN: {
             LEVEL_1_1_TITLE: 'Сим 1.1: Протокол Экспансии',
