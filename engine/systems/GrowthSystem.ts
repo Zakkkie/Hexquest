@@ -303,7 +303,7 @@ export class GrowthSystem implements System {
              // --- LOOT LOGIC ---
              // Only grant loot if the new level is negative (deep digging)
              if (entity.type === EntityType.PLAYER && newLevel < 0) {
-                 const loot = rollForLoot(newLevel);
+                 const loot = rollForLoot(newLevel, state.language);
                  if (loot.type === 'COIN') {
                      entity.coins += loot.amount;
                      entity.totalCoinsEarned += loot.amount;
@@ -314,7 +314,8 @@ export class GrowthSystem implements System {
                  } else if (loot.type === 'ITEM') {
                      if (!entity.inventory) entity.inventory = [];
                      
-                     if (entity.inventory.length < GAME_CONFIG.MAX_INVENTORY_SIZE) {
+                     const maxInv = entity.maxInventorySize || GAME_CONFIG.MAX_INVENTORY_SIZE;
+                     if (entity.inventory.length < maxInv) {
                          entity.inventory = [...entity.inventory, loot.item];
                          const lootMsg = `FOUND: ${loot.item.name}!`;
                          state.messageLog.unshift({ id: `loot-item-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });

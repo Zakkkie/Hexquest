@@ -4,6 +4,7 @@ import { WorldIndex } from './WorldIndex';
 import { getHexKey, cubeDistance } from '../services/hexUtils';
 import { ENTROPY_CONFIG } from '../rules/config';
 import { calculateMovementCost } from '../rules/movement';
+import { GameEventFactory } from './events';
 
 /**
  * ActionProcessor is now a STATELESS service.
@@ -159,6 +160,7 @@ export class ActionProcessor {
       if (item.rarity === 'LEGENDARY') chance = 1.00;
 
       if (Math.random() < chance) {
+          // --- SUCCESS ---
           state.grid[hexKey] = {
               ...hex,
               structureType: undefined,
@@ -167,12 +169,87 @@ export class ActionProcessor {
               progress: 0,
               durability: undefined 
           };
+          
           // Entropy Gain on Success
           state.entropy.current = Math.min(state.entropy.max, state.entropy.current + ENTROPY_CONFIG.GAIN_RESTORE_SUCCESS);
+          
+          // APPLY ITEM EFFECT
+          const val = item.effectValue;
+          let feedbackText = item.effectDescription || "Effect Applied";
+          let feedbackColor = "#ffffff";
+
+          switch(item.effectType) {
+              case 'ADD_MOVES': 
+                  actor.moves += val; 
+                  feedbackColor = "#60a5fa"; // Blue
+                  break;
+              case 'ADD_CREDITS': 
+                  actor.coins += val; 
+                  feedbackColor = "#fbbf24"; // Amber
+                  break;
+              case 'ADD_MATERIAL': 
+                  actor.storage = Math.min(actor.maxStorage, actor.storage + val); 
+                  feedbackColor = "#34d399"; // Emerald
+                  break;
+              case 'ADD_ENTROPY': 
+                  state.entropy.current = Math.min(state.entropy.max, state.entropy.current + val); 
+                  feedbackColor = "#818cf8"; // Indigo
+                  break;
+              case 'INCREASE_STORAGE': 
+                  actor.maxStorage += val; 
+                  feedbackColor = "#34d399"; 
+                  break;
+              case 'EXPAND_INVENTORY': 
+                  actor.maxInventorySize = (actor.maxInventorySize || 3) + val; 
+                  feedbackColor = "#d946ef"; // Fuchsia
+                  break;
+              case 'LEVEL_UP': 
+                  actor.playerLevel += val; 
+                  feedbackColor = "#818cf8"; 
+                  break;
+              case 'BUFF_DIG': 
+                  actor.storage = Math.min(actor.maxStorage, actor.storage + val); 
+                  feedbackColor = "#facc15"; // Yellow
+                  break;
+              case 'REVEAL_MAP': 
+                  // Effect logic for reveal could go here, but MapRenderer handles fog mostly.
+                  // We can force reveal neighbors of player?
+                  feedbackColor = "#94a3b8"; 
+                  break;
+              case 'GOD_MODE': 
+                  actor.playerLevel += 10; 
+                  actor.coins += 1000; 
+                  actor.moves += 100; 
+                  feedbackColor = "#f43f5e"; // Red
+                  break;
+          }
+          
+          // --- GENERATE VISUAL EVENT ---
+          // Use RECOVERY_USED type as it triggers floating text in store.ts
+          // We pass customText and customColor in data.
+          if (state.outgoingEvents) {
+              state.outgoingEvents.push(GameEventFactory.create(
+                  'RECOVERY_USED', 
+                  `Item Effect: ${item.name}`, 
+                  actor.id, 
+                  { customText: feedbackText, customColor: feedbackColor }
+              ));
+          }
+
           return { ok: true };
       } else {
-          // Entropy Loss on Fail
+          // --- FAILURE ---
           state.entropy.current = Math.max(0, state.entropy.current - ENTROPY_CONFIG.COST_RESTORE_FAIL);
+          
+          if (state.outgoingEvents) {
+              state.outgoingEvents.push(GameEventFactory.create(
+                  'ERROR', 
+                  `Item Destroyed`, 
+                  actor.id,
+                  { text: "STABILIZATION FAILED" }
+              ));
+          }
+          
           return { ok: false, reason: 'Stabilization Failed (Item Consumed)' };
       }
   }

@@ -96,7 +96,10 @@ export class GameEngine {
       entropy: { ...source.entropy },
 
       // Preserve activeLevelConfig reference (it contains functions)
-      activeLevelConfig: source.activeLevelConfig 
+      activeLevelConfig: source.activeLevelConfig,
+      
+      // Pending Events
+      outgoingEvents: [...(source.outgoingEvents || [])]
     };
   }
 
@@ -135,7 +138,9 @@ export class GameEngine {
     const nextState = this.cloneState(this._state);
     this._index.syncGrid(nextState.grid); // Still sync grid structure for pathfinding safety
 
-    const tickEvents: GameEvent[] = [];
+    // Collect Events: Start with any queued outgoing events from ActionProcessor
+    const tickEvents: GameEvent[] = [...nextState.outgoingEvents];
+    nextState.outgoingEvents = []; // Clear queue
 
     // 1. Cleanup old effects
     const now = Date.now();

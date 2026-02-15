@@ -42,26 +42,16 @@ export class EntropySystem implements System {
           let newLevel = hex.currentLevel;
           let newType = hex.structureType;
 
-          if (hex.currentLevel > 0) {
-              // Rule 1: Peaks Erode
-              newLevel = hex.currentLevel - 1;
-          } else if (hex.currentLevel < 0) {
-              // Rule 2: Pits Fill
-              // Exception: Void (-99) handled separately?
-              // The logic says "Level < 0". VOID is structureType='VOID'.
-              // Usually VOID hexes have currentLevel 0 or -99?
-              // Let's assume structureType='VOID' is immutable unless it was level 0.
-              // But prompt says "Exception: Void hexes remain unchanged".
-              if (hex.structureType === 'VOID') {
-                  // Do nothing
-              } else {
-                  newLevel = hex.currentLevel + 1;
-              }
-          } else if (hex.currentLevel === 0) {
+          // MODIFIED LOGIC:
+          // Removed automatic level shifting for Pits and Peaks.
+          // Only Level 0 plains are affected.
+          
+          if (hex.currentLevel === 0) {
               // Rule 3: Plains to Void (20%)
               if (hex.structureType !== 'VOID' && Math.random() < ENTROPY_CONFIG.SHIFT_VOID_CHANCE) {
                   newType = 'VOID';
-                  newLevel = 0; // Or -99 visual
+                  // Usually Void is 0 or -99 visual, but logic handles 'VOID' flag primarily
+                  newLevel = 0; 
               }
           }
 

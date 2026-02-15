@@ -7,6 +7,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import Background from './Background.tsx';
 import GameHUD from './GameHUD.tsx';
 import MapRenderer from './MapRenderer.tsx';
+import Fireworks from './Fireworks.tsx';
 import { audioService } from '../services/audioService.ts';
 import { XCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 
@@ -15,6 +16,8 @@ const GameView: React.FC = () => {
   const player = useGameStore(state => state.session?.player);
   const winCondition = useGameStore(state => state.session?.winCondition);
   const deviceType = useGameStore(state => state.deviceType);
+  const lastVisualEvent = useGameStore(state => state.lastVisualEvent);
+  const gameStatus = useGameStore(state => state.session?.gameStatus);
   
   const movePlayer = useGameStore(state => state.movePlayer);
   const hideToast = useGameStore(state => state.hideToast);
@@ -88,6 +91,33 @@ const GameView: React.FC = () => {
           audioService.updateMusic(player.coins, winCondition.targetCoins || 500);
       }
   }, [player.coins, winCondition]);
+
+  // --- SCREEN SHAKE TRIGGER ---
+  useEffect(() => {
+      if (lastVisualEvent?.type === 'ENTROPY_SHIFT') {
+          // Trigger shake animation
+          let duration = 600; // ms
+          let start = Date.now();
+          const shakeAnim = new Konva.Animation((frame) => {
+              const now = Date.now();
+              const elapsed = now - start;
+              if (elapsed > duration) {
+                  setShakeOffset({ x: 0, y: 0 });
+                  shakeAnim.stop();
+                  return;
+              }
+              // Dampening shake
+              const progress = elapsed / duration;
+              const intensity = 10 * (1 - progress); 
+              const dx = (Math.random() - 0.5) * intensity * 2;
+              const dy = (Math.random() - 0.5) * intensity * 2;
+              setShakeOffset({ x: dx, y: dy });
+          }, stageRef.current?.getLayer()); // Pass null or layer? Stage is better but Animation needs layer usually? Actually can be null for logic.
+          
+          shakeAnim.start();
+          return () => shakeAnim.stop();
+      }
+  }, [lastVisualEvent]);
 
   useEffect(() => {
     const interval = setInterval(tick, 100); 
@@ -331,6 +361,9 @@ const GameView: React.FC = () => {
          <Background variant="GAME" />
          <div className="absolute inset-0 bg-slate-950/20" />
       </div>
+
+      {/* FIREWORKS LAYER (VICTORY) */}
+      {gameStatus === 'VICTORY' && <Fireworks />}
 
       {/* CANVAS */}
       <div className="absolute inset-0 z-10">

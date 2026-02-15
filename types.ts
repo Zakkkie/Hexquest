@@ -45,12 +45,32 @@ export enum EntityState {
 // LOOT SYSTEM TYPES
 export type ItemRarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'LEGENDARY';
 
+export type ItemEffectType = 
+    | 'ADD_MOVES' 
+    | 'ADD_CREDITS' 
+    | 'ADD_MATERIAL' 
+    | 'ADD_ENTROPY' 
+    | 'REVEAL_MAP' 
+    | 'INCREASE_STORAGE' 
+    | 'BUFF_DIG' 
+    | 'FREE_UPGRADES' 
+    | 'LEVEL_UP' 
+    | 'EXPAND_INVENTORY' 
+    | 'GOD_MODE';
+
 export interface Item {
   id: string;
   rarity: ItemRarity;
-  name: string;
-  value: number; // Credit value if sold (future feature) or score
+  name: string; // Localized name
+  description: string; // Visual description
+  value: number; // Credit value
   timestamp: number;
+  
+  // New props for specific mechanics
+  visualType: string;
+  effectType: ItemEffectType;
+  effectValue: number;
+  effectDescription: string; // "Recycle: +3 Moves"
 }
 
 export type BotGoalType = 'EXPAND' | 'DEFEND' | 'ATTACK' | 'GROWTH' | 'IDLE' | 'PREPARE_CYCLE' | 'BUILD_SUPPORT' | 'GATHER_RESOURCES' | 'AGGRESSOR';
@@ -127,6 +147,7 @@ export interface Entity {
 
   // NEW: Loot Inventory
   inventory: Item[];
+  maxInventorySize?: number; // Expandable inventory
 
   movementQueue: HexCoord[]; 
   
@@ -349,6 +370,9 @@ export interface SessionState {
   
   // ENTROPY
   entropy: EntropyState;
+  
+  // Events queue from actions (to be consumed by renderer/store)
+  outgoingEvents: GameEvent[];
 }
 
 // State for the entire application, managed by Zustand
@@ -375,6 +399,9 @@ export interface GameState {
       isOpen: boolean;
       slots: (Item | null)[]; // Fixed size 3
   };
+
+  // Triggers for View-level effects (Shake, Flash, etc)
+  lastVisualEvent?: { type: string; time: number };
 }
 
 export type MoveAction = { type: 'MOVE'; path: { q: number; r: number }[]; stateVersion?: number };

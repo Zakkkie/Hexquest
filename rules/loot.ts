@@ -1,5 +1,6 @@
 
 import { Item, ItemRarity } from '../types';
+import { getRandomItem } from './items';
 
 export type LootResult = 
     | { type: 'NONE' }
@@ -13,85 +14,88 @@ export const LOOT_COLORS: Record<ItemRarity, string> = {
     LEGENDARY: '#f97316' // Orange-500
 };
 
-const generateItem = (rarity: ItemRarity): Item => {
-    return {
-        id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        rarity,
-        name: `${rarity} Gem`,
-        value: rarity === 'LEGENDARY' ? 500 : (rarity === 'RARE' ? 200 : (rarity === 'UNCOMMON' ? 50 : 10)),
-        timestamp: Date.now()
-    };
-};
-
-export const rollForLoot = (depth: number): LootResult => {
-    // Depth is expected to be negative (e.g. -1, -5). We use Math.abs
+export const rollForLoot = (depth: number, language: 'EN' | 'RU' = 'EN'): LootResult => {
+    // Depth is expected to be negative (e.g. -1, -5). We use absolute value for calculation.
     const d = Math.abs(depth);
     if (d === 0) return { type: 'NONE' };
 
     const rand = Math.random();
 
-    // 1. DROP CHANCE based on Depth
+    // 1. CALCULATE DROP CHANCE (Based on Depth)
+    // Deeper = Higher chance to find SOMETHING
     let dropChance = 0;
-    if (d === 1) dropChance = 0.10;
-    else if (d === 2) dropChance = 0.25;
-    else if (d === 3) dropChance = 0.33;
-    else if (d === 4) dropChance = 0.50;
-    else if (d === 5) dropChance = 0.60;
-    else if (d === 6) dropChance = 0.70;
-    else if (d === 7) dropChance = 0.80;
-    else if (d === 8) dropChance = 0.90;
-    else if (d >= 9) dropChance = 1.00;
+    if (d === 1) dropChance = 0.15;      // 15%
+    else if (d === 2) dropChance = 0.30; // 30%
+    else if (d === 3) dropChance = 0.45; // 45%
+    else if (d === 4) dropChance = 0.60; // 60%
+    else if (d === 5) dropChance = 0.70; // 70%
+    else if (d === 6) dropChance = 0.80; // 80%
+    else if (d === 7) dropChance = 0.90; // 90%
+    else if (d >= 8) dropChance = 1.00;  // 100%
 
+    // If check fails, no loot
     if (rand > dropChance) return { type: 'NONE' };
 
-    // 2. RARITY TABLE
-    // Roll again for type/rarity distribution
+    // 2. DETERMINE RARITY (Based on Depth)
+    // Strictly determine the rarity bucket first, before picking the item.
     const roll = Math.random();
+    let rarity: ItemRarity = 'COMMON';
 
+    // Depth 1: Mostly Coins or Common junk
     if (d === 1) {
-        // Reward: 5 coins or COMMON
-        return roll < 0.5 
-            ? { type: 'COIN', amount: 5 }
-            : { type: 'ITEM', item: generateItem('COMMON') };
+        return roll < 0.6 ? { type: 'COIN', amount: 5 } : { type: 'ITEM', item: getRandomItem('COMMON', language) };
     }
 
-    if (d === 2) {
-        // COMMON (high) or UNCOMMON (low)
-        return { type: 'ITEM', item: generateItem(roll < 0.8 ? 'COMMON' : 'UNCOMMON') };
+    // Depth 2: Common (80%), Uncommon (20%)
+    else if (d === 2) {
+        if (roll < 0.80) rarity = 'COMMON';
+        else rarity = 'UNCOMMON';
+    }
+    
+    // Depth 3: Common (50%), Uncommon (50%)
+    else if (d === 3) {
+        if (roll < 0.50) rarity = 'COMMON';
+        else rarity = 'UNCOMMON';
     }
 
-    if (d === 3) {
-        // COMMON or UNCOMMON (Equal)
-        return { type: 'ITEM', item: generateItem(roll < 0.5 ? 'COMMON' : 'UNCOMMON') };
+    // Depth 4: Common (30%), Uncommon (50%), Rare (20%)
+    else if (d === 4) {
+        if (roll < 0.30) rarity = 'COMMON';
+        else if (roll < 0.80) rarity = 'UNCOMMON';
+        else rarity = 'RARE';
     }
 
-    if (d === 4) {
-        // UNCOMMON (high), COMMON (low), RARE (rare)
-        if (roll < 0.6) return { type: 'ITEM', item: generateItem('UNCOMMON') };
-        if (roll < 0.9) return { type: 'ITEM', item: generateItem('COMMON') };
-        return { type: 'ITEM', item: generateItem('RARE') };
+    // Depth 5: Common (10%), Uncommon (50%), Rare (40%)
+    else if (d === 5) {
+        if (roll < 0.10) rarity = 'COMMON';
+        else if (roll < 0.60) rarity = 'UNCOMMON';
+        else rarity = 'RARE';
     }
 
-    if (d === 5) {
-        // UNCOMMON or RARE (Equal)
-        return { type: 'ITEM', item: generateItem(roll < 0.5 ? 'UNCOMMON' : 'RARE') };
+    // Depth 6: Uncommon (40%), Rare (60%)
+    else if (d === 6) {
+        if (roll < 0.40) rarity = 'UNCOMMON';
+        else rarity = 'RARE';
     }
 
-    if (d === 6) {
-        // ONLY RARE
-        return { type: 'ITEM', item: generateItem('RARE') };
+    // Depth 7: Uncommon (20%), Rare (60%), Legendary (20%)
+    else if (d === 7) {
+        if (roll < 0.20) rarity = 'UNCOMMON';
+        else if (roll < 0.80) rarity = 'RARE';
+        else rarity = 'LEGENDARY';
     }
 
-    if (d === 7) {
-        // RARE (High) or LEGENDARY (Low)
-        return { type: 'ITEM', item: generateItem(roll < 0.85 ? 'RARE' : 'LEGENDARY') };
+    // Depth 8: Rare (50%), Legendary (50%)
+    else if (d === 8) {
+        if (roll < 0.50) rarity = 'RARE';
+        else rarity = 'LEGENDARY';
     }
 
-    if (d === 8) {
-        // RARE or LEGENDARY (Equal)
-        return { type: 'ITEM', item: generateItem(roll < 0.5 ? 'RARE' : 'LEGENDARY') };
+    // Depth 9+: Always Legendary
+    else {
+        rarity = 'LEGENDARY';
     }
 
-    // d >= 9
-    return { type: 'ITEM', item: generateItem('LEGENDARY') };
+    // 3. SELECT RANDOM ITEM OF DETERMINED RARITY
+    return { type: 'ITEM', item: getRandomItem(rarity, language) };
 };

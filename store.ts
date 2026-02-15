@@ -212,7 +212,8 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
         current: ENTROPY_CONFIG.INITIAL_MAX,
         max: ENTROPY_CONFIG.INITIAL_MAX,
         threshold: ENTROPY_CONFIG.THRESHOLD
-    }
+    },
+    outgoingEvents: [] // Initialize outgoing events queue
   };
 };
 
@@ -239,6 +240,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   language: 'EN',
   voidDialogTarget: null,
   monumentDialogState: { isOpen: false, slots: [null, null, null] },
+  lastVisualEvent: undefined,
   
   setLanguage: (lang) => set({ language: lang }),
   setUIState: (uiState) => set({ uiState }),
@@ -360,7 +362,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (engine) {
           engine.destroy();
           engine = null;
-          set({ session: null, hasActiveSession: false, uiState: 'MENU', voidDialogTarget: null, monumentDialogState: { isOpen: false, slots: [null, null, null] } });
+          set({ session: null, hasActiveSession: false, uiState: 'MENU', voidDialogTarget: null, monumentDialogState: { isOpen: false, slots: [null, null, null] }, lastVisualEvent: undefined });
       }
   },
   
@@ -723,10 +725,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
                  case 'DEFEAT': audioService.play('ERROR'); break;
                  case 'ITEM_DROP': audioService.play('SUCCESS'); break; 
                  case 'ITEM_DESTROYED': audioService.play('CRACK'); break; 
-                 case 'ENTROPY_SHIFT': audioService.play('COLLAPSE'); break;
+                 case 'ENTROPY_SHIFT': 
+                    audioService.play('COLLAPSE'); 
+                    // TRIGGER VISUAL SHAKE
+                    set({ lastVisualEvent: { type: 'ENTROPY_SHIFT', time: Date.now() } });
+                    break;
                }
             }
 
+            // ... (Rest of event handling logic unchanged)
             if (event.type === 'VICTORY' && engine?.state?.activeLevelConfig) {
                 const currentId = engine.state.activeLevelConfig.id;
                 const currentIdx = CAMPAIGN_LEVELS.findIndex(l => l.id === currentId);
@@ -801,16 +808,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             break;
                         case 'RECOVERY_USED':
                             if (isPlayer) {
-                                const coinGain = (event.data?.coins as number) || 0;
-                                const moveGain = (event.data?.moves as number) || 0;
-                                if (coinGain > 0) {
-                                    text = lang === 'RU' ? `+${coinGain} МОН` : `+${coinGain} COIN`;
-                                    color = "#fbbf24"; 
+                                // NEW: HANDLE CUSTOM TEXT FROM ITEM EFFECTS
+                                if (event.data?.customText) {
+                                    text = String(event.data.customText);
+                                    color = String(event.data.customColor || '#fbbf24');
+                                    icon = 'GEM';
                                 } else {
-                                    text = lang === 'RU' ? "+1 ХОД" : "+1 MOVE";
-                                    color = "#60a5fa"; 
+                                    const coinGain = (event.data?.coins as number) || 0;
+                                    const moveGain = (event.data?.moves as number) || 0;
+                                    if (coinGain > 0) {
+                                        text = lang === 'RU' ? `+${coinGain} МОН` : `+${coinGain} COIN`;
+                                        color = "#fbbf24"; 
+                                    } else {
+                                        text = lang === 'RU' ? "+1 ХОД" : "+1 MOVE";
+                                        color = "#60a5fa"; 
+                                    }
+                                    icon = 'COIN';
                                 }
-                                icon = 'COIN';
                             }
                             break;
                         case 'HEX_COLLAPSE':
