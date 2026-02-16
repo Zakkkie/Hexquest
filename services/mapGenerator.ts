@@ -10,14 +10,16 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     const dist = Math.max(Math.abs(q), Math.abs(r), Math.abs(-q-r));
     
     // Default Defaults
-    // EXPANDED MAP: Wall starts further out (24 instead of 12)
     const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? 24; 
     const wallStartLevel = levelConfig?.mapConfig.wallStartLevel ?? 9;
     const wallType = levelConfig?.mapConfig.wallType ?? 'classic';
-    const shouldGenerateWalls = levelConfig?.mapConfig.generateWalls ?? true; // Default to true for Skirmish unless specified
+    const shouldGenerateWalls = levelConfig?.mapConfig.generateWalls ?? true; 
 
     let level = 0;
     let structureType: 'BARRIER' | 'VOID' | 'MONUMENT' | undefined = undefined;
+    
+    // Arena Mode Check (Pit Rings usually imply full visibility arena)
+    let forceReveal = false;
 
     // Wall Logic
     if (shouldGenerateWalls && dist >= wallStartRadius) {
@@ -30,9 +32,11 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
                 structureType = undefined;
             }
         } else if (wallType === 'pit_ring') {
-            // Level 1.6 logic: Surround with Deep Pits (-8)
+            // Level 1.6 & 2.X logic: Surround with Deep Pits (-8)
+            // These serve as the map boundary
             level = -8;
             structureType = undefined;
+            forceReveal = true; // Arenas are always visible
         } else {
             // Classic Wall
             level = Math.min(99, wallStartLevel + (dist - wallStartRadius));
@@ -59,7 +63,7 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
         currentLevel: level,
         maxLevel: level,
         progress: 0,
-        revealed: false, // Initially fogged until player sees it
+        revealed: forceReveal, // Apply force reveal for arenas
         structureType,
         durability
     };
@@ -70,22 +74,48 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
   
   if (levelConfig && levelConfig.mapConfig.customLayout) {
       // --- CUSTOM FIXED LAYOUT (Campaign Puzzles) ---
+      
+      // 1. First, generate the base grid (background/walls)
+      // If generateWalls is true, we fill the area up to wallStartRadius + padding
+      if (levelConfig.mapConfig.generateWalls) {
+          const radius = (levelConfig.mapConfig.wallStartRadius || levelConfig.mapConfig.size) + 1;
+          for (let q = -radius; q <= radius; q++) {
+              const r1 = Math.max(-radius, -q - radius);
+              const r2 = Math.min(radius, -q + radius);
+              for (let r = r1; r <= r2; r++) {
+                  const hex = generateSingleHex(q, r, levelConfig);
+                  // For 'pit_ring' maps (Arenas), start fully revealed
+                  if (levelConfig.mapConfig.wallType === 'pit_ring') {
+                      hex.revealed = true;
+                  } else {
+                      hex.revealed = true; // Default to revealed for skirmish/campaign base
+                  }
+                  initialGrid[hex.id] = hex;
+              }
+          }
+      }
+
+      // 2. Overlay Custom Hexes
       levelConfig.mapConfig.customLayout.forEach(hexDef => {
           if (hexDef.q === undefined || hexDef.r === undefined) return;
           const key = getHexKey(hexDef.q, hexDef.r);
+          
+          // Merge with existing or create new
+          const existing = initialGrid[key] || { 
+              id: key, q: hexDef.q, r: hexDef.r, 
+              currentLevel: 0, maxLevel: 0, progress: 0, revealed: true 
+          };
+
           initialGrid[key] = {
-              id: key,
-              q: hexDef.q,
-              r: hexDef.r,
-              currentLevel: hexDef.currentLevel ?? 0,
-              maxLevel: hexDef.maxLevel ?? 0,
-              progress: 0,
-              revealed: true,
-              ownerId: hexDef.ownerId,
-              structureType: hexDef.structureType,
-              durability: hexDef.durability
+              ...existing,
+              ...hexDef,
+              // Ensure critical props exist
+              currentLevel: hexDef.currentLevel ?? existing.currentLevel,
+              maxLevel: hexDef.maxLevel ?? existing.maxLevel,
+              revealed: true // Custom layout always revealed
           };
       });
+
   } else if (levelConfig && levelConfig.id === '1.2') {
       // --- LEVEL 1.2: FIXED ALGORITHM ---
       // (Kept as is for compatibility)
@@ -148,7 +178,6 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
 
   } else {
       // --- STANDARD DYNAMIC GENERATION (Skirmish / Default) ---
-      // REVERTED: Start radius is small (2) again, for proper exploration flow
       const startRadius = 2;
 
       for (let q = -startRadius; q <= startRadius; q++) {

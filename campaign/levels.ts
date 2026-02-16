@@ -313,22 +313,19 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       size: 4, 
       type: 'fixed',
       generateWalls: true, 
-      wallStartRadius: 4,
-      wallType: 'pit_ring',
+      wallStartRadius: 3, // Very tight arena
+      wallType: 'pit_ring', // Level -8 boundary
       customLayout: [
           // Player Side
-          { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           { q: 0, r: 2, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
-          // Bot Side (Will be populated by engine spawn logic or we place here)
-          // We let the engine place the bot, but ensure land exists
-          { q: 0, r: -3, maxLevel: 1, currentLevel: 1, revealed: true },
+          // Bot Side
           { q: 0, r: -2, maxLevel: 1, currentLevel: 1, revealed: true },
 
           // Central Conflict Zone
           { q: 0, r: 0, maxLevel: 2, currentLevel: 2, revealed: true }, 
-          { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
+          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
       ]
     },
 
@@ -360,31 +357,27 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     description: 'Target acquired: Unknown Spire.\n\nObjective: Stand on the Monolith (Center, Level 4).\n\nConstraint: The Monolith is indestructible and too high to climb directly.\n\nTask: Build a staircase (L1 -> L2 -> L3) to reach the summit.',
     
     mapConfig: {
-      size: 6,
+      size: 5,
       type: 'fixed',
-      generateWalls: false,
+      generateWalls: true,
+      wallStartRadius: 4,
+      wallType: 'pit_ring',
       customLayout: [
-          // The Monolith (Goal)
+          // The Monolith (Goal) - Center
           { q: 0, r: 0, maxLevel: 4, currentLevel: 4, structureType: 'MONUMENT', revealed: true },
           
-          // Player Start (Far away)
-          { q: 0, r: 4, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          // Player Start (Edge) - NOT on Monument
+          { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
           // Terrain (Flat L0) for pathing
           { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          // Fill Neighbors for pathing
+          
+          // Surrounding filler
           { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 4, maxLevel: 0, currentLevel: 0, revealed: true },
-          
-          // Some obstacles (Void pits) to force pathing
-          { q: 1, r: 0, structureType: 'VOID', revealed: true },
-          { q: -1, r: 1, structureType: 'VOID', revealed: true },
       ]
     },
 
@@ -392,7 +385,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       credits: 500, 
       moves: 15,     
       rank: 2,
-      materials: 6 // Enough for a sloppy staircase (Need 3 perfect moves, 6 gives margin)
+      materials: 6
     },
 
     aiMode: 'none',
@@ -417,13 +410,15 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     mapConfig: {
       size: 5,
       type: 'fixed',
-      generateWalls: false,
+      generateWalls: true,
+      wallStartRadius: 4,
+      wallType: 'pit_ring',
       customLayout: [
           // Low Monolith (Level 2 - Easy climb)
           { q: 0, r: 0, maxLevel: 2, currentLevel: 2, structureType: 'MONUMENT', revealed: true },
           
-          // Player Start
-          { q: -2, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          // Player Start - Edge
+          { q: -3, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
           // "Dig Site" - Pre-lowered terrain to hint where to dig
           { q: 2, r: 0, maxLevel: -1, currentLevel: -1, revealed: true }, 
@@ -432,6 +427,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           
           // Path
           { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
@@ -448,18 +444,9 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     aiMode: 'none',
 
     hooks: {
-      // NOTE: Win is handled by ActionProcessor via ACTIVATE_MONUMENT event.
-      // But we can check if monument dialog logic passed (gameStatus will become VICTORY)
       checkLossCondition: (state) => {
           if (isStranded(state)) return true;
           return false;
-      },
-      // Force Difficulty to EASY so monument requires ANY item rarity
-      onBeforeAction: (state, action) => {
-          if (state.difficulty !== 'EASY') {
-              // Hacky reset if needed, but easier to just assume EASY for campaign
-          }
-          return { ok: true };
       }
     }
   },
@@ -471,12 +458,14 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     mapConfig: {
       size: 6,
       type: 'fixed',
-      generateWalls: false,
+      generateWalls: true,
+      wallStartRadius: 4,
+      wallType: 'pit_ring',
       customLayout: [
           // High Monolith (Level 5)
           { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
           
-          // Player Start
+          // Player Start - Edge
           { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
           // A narrow path of L0 that is vulnerable to Entropy Shift
@@ -497,7 +486,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       credits: 1000, 
       moves: 15,
       rank: 3,
-      materials: 10, // Rich in mats to encourage fast building (which drains entropy)
+      materials: 10,
     },
 
     aiMode: 'none',
@@ -522,26 +511,27 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       size: 6,
       type: 'fixed',
       generateWalls: true,
-      wallType: 'classic', 
+      wallStartRadius: 4,
+      wallType: 'pit_ring',
       customLayout: [
           // Center Spire
           { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
           
-          // Player
+          // Player - Edge
           { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
-          // Bot spawn handled by AI system automatically or explicit:
+          // Bot - Opposite Edge
           { q: 0, r: -3, maxLevel: 1, currentLevel: 1, revealed: true }, 
           
           // Resources
           { q: 2, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: -2, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true }, // Pre-dug pit
-          { q: -2, r: -1, maxLevel: -1, currentLevel: -1, revealed: true }, // Pre-dug pit
+          { q: 2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
+          { q: -2, r: -1, maxLevel: -1, currentLevel: -1, revealed: true },
       ]
     },
 
-    aiMode: 'basic', // The bot will compete
+    aiMode: 'basic',
 
     startState: {
       credits: 300, 
@@ -552,17 +542,11 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     
     hooks: {
         checkWinCondition: (state) => {
-            // Victory triggered by ACTIVATE_MONUMENT event
             return false; 
         },
         checkLossCondition: (state) => {
-            // Loss if bot activates (Handled by VictorySystem automatically for SUMMIT/Monument type, but explicit check here good)
             const botWin = state.bots.some(b => {
                 const hex = state.grid[getHexKey(b.q, b.r)];
-                // Bot wins if it stands on monument? No, bots don't activate yet in code.
-                // So we make it a "King of the Hill" for the bot.
-                // If Bot stands on Monument for X turns? 
-                // Let's keep it simple: If bot reaches Monument, you lose.
                 return hex && hex.structureType === 'MONUMENT';
             });
             if (botWin) return true;
