@@ -193,6 +193,15 @@ interface Dictionary {
         MONUMENT_REQ_MED: string;
         MONUMENT_REQ_HARD: string;
         EMPTY: string; // Added Missing Key
+
+        // ENTROPY SPECIFIC
+        HELP_ENTROPY_TITLE: string;
+        HELP_ENTROPY_DESC: string;
+        HELP_ENTROPY_DRAIN: string;
+        HELP_ENTROPY_SHIFT: string;
+        HELP_ENTROPY_GAIN: string;
+        MINI_LB_TITLE: string;
+        MINI_LB_EMPTY: string;
     };
     CAMPAIGN: {
         LEVEL_1_1_TITLE: string;
@@ -440,7 +449,15 @@ export const TEXT: Record<Language, Dictionary> = {
             MONUMENT_REQ_EASY: "(Accepts ANY Rarity)",
             MONUMENT_REQ_MED: "(Requires: UNCOMMON+)",
             MONUMENT_REQ_HARD: "(Requires: RARE+)",
-            EMPTY: "Empty."
+            EMPTY: "Empty.",
+
+            HELP_ENTROPY_TITLE: "Reality Stability",
+            HELP_ENTROPY_DESC: "Measures the structural integrity of the sector.",
+            HELP_ENTROPY_DRAIN: "▼ DRAIN: Every Move, Build, and Dig action reduces stability. Digging deep and moving on Void-adjacent tiles accelerates this.",
+            HELP_ENTROPY_SHIFT: "⚠ CRITICAL ZERO: An 'Entropy Shift' occurs. The map distorts: High ground collapses, pits fill, and voids may open randomly.",
+            HELP_ENTROPY_GAIN: "▲ RESTORE: Successfully stabilizing a Void hex (using items) restores system stability.",
+            MINI_LB_TITLE: "Local Sector Rankings",
+            MINI_LB_EMPTY: "No active signals."
         },
         CAMPAIGN: {
             LEVEL_1_1_TITLE: 'Sim 1.1: Expansion Protocol',
@@ -686,7 +703,15 @@ export const TEXT: Record<Language, Dictionary> = {
             MONUMENT_REQ_EASY: "(Любые)",
             MONUMENT_REQ_MED: "(Необычные+)",
             MONUMENT_REQ_HARD: "(Редкие+)",
-            EMPTY: "Пусто."
+            EMPTY: "Пусто.",
+
+            HELP_ENTROPY_TITLE: "Стабильность",
+            HELP_ENTROPY_DESC: "Показатель структурной целостности сектора.",
+            HELP_ENTROPY_DRAIN: "▼ ИСТОЩЕНИЕ: Любое действие (Ход, Стройка, Раскопки) снижает стабильность.",
+            HELP_ENTROPY_SHIFT: "⚠ СДВИГ РЕАЛЬНОСТИ: При 0 происходит 'Сдвиг'. Ландшафт искажается: Горы рушатся, ямы заполняются, открываются Разломы.",
+            HELP_ENTROPY_GAIN: "▲ ВОССТАНОВЛЕНИЕ: Успешная стабилизация Разлома (предметом) восстанавливает систему.",
+            MINI_LB_TITLE: "Локальный Рейтинг",
+            MINI_LB_EMPTY: "Нет сигналов."
         },
         CAMPAIGN: {
             LEVEL_1_1_TITLE: 'Сим 1.1: Протокол Экспансии',

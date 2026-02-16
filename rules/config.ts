@@ -15,7 +15,7 @@ export const GAME_CONFIG = {
   MAX_RECOVERY_POINTS: 3,           // Max uses before degradation
   
   // Loot System
-  MAX_INVENTORY_SIZE: 3,
+  MAX_INVENTORY_SIZE: 5, // Updated from 3 to 5 for new UI layout
 
   // Movement & Animation Speeds
   // Tuned for smoother transitions (0.6s animation provides distinct travel time)

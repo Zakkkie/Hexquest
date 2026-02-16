@@ -21,81 +21,56 @@ export const rollForLoot = (depth: number, language: 'EN' | 'RU' = 'EN'): LootRe
 
     const rand = Math.random();
 
-    // 1. CALCULATE DROP CHANCE (Based on Depth)
-    // Deeper = Higher chance to find SOMETHING
-    let dropChance = 0;
-    if (d === 1) dropChance = 0.15;      // 15%
-    else if (d === 2) dropChance = 0.30; // 30%
-    else if (d === 3) dropChance = 0.45; // 45%
-    else if (d === 4) dropChance = 0.60; // 60%
-    else if (d === 5) dropChance = 0.70; // 70%
-    else if (d === 6) dropChance = 0.80; // 80%
-    else if (d === 7) dropChance = 0.90; // 90%
-    else if (d >= 8) dropChance = 1.00;  // 100%
-
-    // If check fails, no loot
+    // 1. CALCULATE DROP CHANCE (Finding ANYTHING)
+    // -1: 20%, -2: 30% ... -9: 100%
+    let dropChance = Math.min(1.0, 0.10 + (d * 0.10)); 
+    
+    // Check if we found anything at all
     if (rand > dropChance) return { type: 'NONE' };
 
-    // 2. DETERMINE RARITY (Based on Depth)
-    // Strictly determine the rarity bucket first, before picking the item.
-    const roll = Math.random();
+    // 2. WEIGHTED RARITY DISTRIBUTION
+    // We use a weight system where weights sum to 100
+    let weights = { common: 0, uncommon: 0, rare: 0, legendary: 0 };
+
+    switch (d) {
+        case 1: weights = { common: 69, uncommon: 20, rare: 10, legendary: 1 }; break;
+        case 2: weights = { common: 55, uncommon: 30, rare: 13, legendary: 2 }; break;
+        case 3: weights = { common: 45, uncommon: 35, rare: 17, legendary: 3 }; break;
+        case 4: weights = { common: 30, uncommon: 40, rare: 25, legendary: 5 }; break;
+        case 5: weights = { common: 15, uncommon: 40, rare: 35, legendary: 10 }; break;
+        case 6: weights = { common: 5,  uncommon: 30, rare: 45, legendary: 20 }; break;
+        case 7: weights = { common: 0,  uncommon: 20, rare: 50, legendary: 30 }; break;
+        case 8: weights = { common: 0,  uncommon: 10, rare: 40, legendary: 50 }; break;
+        case 9: weights = { common: 0,  uncommon: 0,  rare: 20, legendary: 80 }; break;
+        default: weights = { common: 0, uncommon: 0,  rare: 0,  legendary: 100 }; break; // -10+
+    }
+
+    const rarityRoll = Math.random() * 100;
     let rarity: ItemRarity = 'COMMON';
 
-    // Depth 1: Mostly Coins or Common junk
-    if (d === 1) {
-        return roll < 0.6 ? { type: 'COIN', amount: 5 } : { type: 'ITEM', item: getRandomItem('COMMON', language) };
-    }
-
-    // Depth 2: Common (80%), Uncommon (20%)
-    else if (d === 2) {
-        if (roll < 0.80) rarity = 'COMMON';
-        else rarity = 'UNCOMMON';
-    }
-    
-    // Depth 3: Common (50%), Uncommon (50%)
-    else if (d === 3) {
-        if (roll < 0.50) rarity = 'COMMON';
-        else rarity = 'UNCOMMON';
-    }
-
-    // Depth 4: Common (30%), Uncommon (50%), Rare (20%)
-    else if (d === 4) {
-        if (roll < 0.30) rarity = 'COMMON';
-        else if (roll < 0.80) rarity = 'UNCOMMON';
-        else rarity = 'RARE';
-    }
-
-    // Depth 5: Common (10%), Uncommon (50%), Rare (40%)
-    else if (d === 5) {
-        if (roll < 0.10) rarity = 'COMMON';
-        else if (roll < 0.60) rarity = 'UNCOMMON';
-        else rarity = 'RARE';
-    }
-
-    // Depth 6: Uncommon (40%), Rare (60%)
-    else if (d === 6) {
-        if (roll < 0.40) rarity = 'UNCOMMON';
-        else rarity = 'RARE';
-    }
-
-    // Depth 7: Uncommon (20%), Rare (60%), Legendary (20%)
-    else if (d === 7) {
-        if (roll < 0.20) rarity = 'UNCOMMON';
-        else if (roll < 0.80) rarity = 'RARE';
-        else rarity = 'LEGENDARY';
-    }
-
-    // Depth 8: Rare (50%), Legendary (50%)
-    else if (d === 8) {
-        if (roll < 0.50) rarity = 'RARE';
-        else rarity = 'LEGENDARY';
-    }
-
-    // Depth 9+: Always Legendary
-    else {
+    // Determine Rarity Bucket
+    if (rarityRoll < weights.common) {
+        rarity = 'COMMON';
+    } else if (rarityRoll < weights.common + weights.uncommon) {
+        rarity = 'UNCOMMON';
+    } else if (rarityRoll < weights.common + weights.uncommon + weights.rare) {
+        rarity = 'RARE';
+    } else {
         rarity = 'LEGENDARY';
     }
 
-    // 3. SELECT RANDOM ITEM OF DETERMINED RARITY
+    // 3. COMMON LOGIC: COINS vs ITEMS
+    // Common tier is mostly coins (60%), sometimes items (40%)
+    if (rarity === 'COMMON') {
+        const coinRoll = Math.random();
+        if (coinRoll < 0.60) {
+            // Coins scale slightly with depth
+            const baseCoins = 5;
+            const depthBonus = (d - 1) * 2;
+            return { type: 'COIN', amount: baseCoins + depthBonus };
+        }
+    }
+
+    // 4. GENERATE ITEM
     return { type: 'ITEM', item: getRandomItem(rarity, language) };
 };

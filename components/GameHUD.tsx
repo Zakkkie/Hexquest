@@ -12,7 +12,7 @@ import { GAME_CONFIG } from '../rules/config.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap, Key, 
-  Activity, EyeOff, Skull, Hammer, Flame, ShieldAlert
+  Activity, EyeOff, Skull, Hammer, Flame, ShieldAlert, Backpack
 } from 'lucide-react';
 import { itemRenderer } from '../services/itemRenderer.ts';
 import { getItemDef } from '../rules/items.ts'; 
@@ -34,7 +34,7 @@ const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, ma
                     <div 
                         key={i} 
                         className={`
-                            w-2 h-4 md:w-2.5 md:h-4 rounded-[1px] md:rounded-sm transition-all duration-300
+                            w-1.5 h-3 md:w-2.5 md:h-4 rounded-[1px] md:rounded-sm transition-all duration-300
                             ${isOverflow 
                                 ? 'bg-amber-500 shadow-[0_0_4px_#f59e0b]' 
                                 : isFilled 
@@ -130,7 +130,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [isRankingsOpen, setIsRankingsOpen] = useState(false);
-  const [helpTopic, setHelpTopic] = useState<'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | null>(null);
+  const [helpTopic, setHelpTopic] = useState<'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | 'ENTROPY' | null>(null);
   
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
   const systemMenuRef = useRef<HTMLDivElement>(null);
@@ -320,9 +320,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       if (validStatuses.length === 0) return null;
 
       return (
-          <div className="flex gap-2 mb-2">
+          <div className="flex gap-2 mb-2 justify-center w-full">
               {validStatuses.map((status, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-slate-900/80 border border-slate-700 rounded-full animate-in slide-in-from-left-2">
+                  <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-slate-900/90 border border-slate-700 rounded-full shadow-lg animate-in slide-in-from-bottom-2">
                       {getStatusIcon(status.type)}
                       <span className="text-[9px] font-bold uppercase text-white">{status.label}</span>
                   </div>
@@ -396,13 +396,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       startMission();
   };
 
-  const mainButtonSize = isMobile ? "lg" : "xl";
+  // OPTIMIZATION: Reduced main button size to save space
+  const mainButtonSize = "lg";
 
   const renderMissionStatus = () => {
       if (isLevel1_5 && timeLeft !== null) {
            const isCrit = timeLeft < 10;
            return (
-               <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
+               <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
                    <span className="text-slate-400">COINS:</span>
                    <span className={player.coins >= 150 ? "text-emerald-400" : "text-white"}>{player.coins}/150</span>
                    <span className={`ml-1 ${isCrit ? "text-red-500 animate-pulse" : "text-amber-400"}`}>{timeLeft}s</span>
@@ -413,7 +414,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       if (campaignMetrics) {
           const isDone = campaignMetrics.current >= campaignMetrics.target;
           return (
-               <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
+               <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
                    <span className="text-slate-400 uppercase">{campaignMetrics.label}:</span>
                    <span className={isDone ? "text-emerald-400" : "text-white"}>
                       {campaignMetrics.current}/{campaignMetrics.target}
@@ -424,7 +425,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       
       if (winCondition?.winType === 'SUMMIT') {
           return (
-               <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
+               <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
                    <span className="text-slate-400">SUMMIT:</span>
                    <span className="text-amber-400">LEVEL {winCondition?.targetLevel}</span>
                    <Mountain className="w-3 h-3 text-amber-500" />
@@ -433,7 +434,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       }
       
       return (
-           <div className="flex items-center gap-2 text-[10px] font-bold font-mono">
+           <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
                <span className="text-slate-400">GOAL:</span>
                <span className="text-white">L{winCondition?.targetLevel}</span>
                <span className="text-amber-400">{winCondition?.targetCoins}cr</span>
@@ -514,7 +515,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       }
   };
 
-  const inventoryList = [0, 1, 2, 3, 4, 5].slice(0, player.maxInventorySize || 3);
+  // Fixed 5 slots as requested
+  const inventoryList = [0, 1, 2, 3, 4];
 
   // Resolved inspected item text
   const inspectedData = inspectedItem ? resolveItemText(inspectedItem) : null;
@@ -526,6 +528,13 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           case 'MATERIAL': return { title: t.MATERIAL, desc: t.HELP_MAT_DESC, hint: t.HELP_MAT_GOAL };
           case 'COINS': return { title: t.CREDITS, desc: t.HELP_COINS_DESC, hint: t.HELP_COINS_GOAL.replace('{0}', String(winCondition?.targetCoins || 0)) };
           case 'MOVES': return { title: t.MOVES, desc: t.HELP_MOVES_DESC, hint: t.HELP_MOVES_HINT };
+          case 'ENTROPY': 
+              return { 
+                  title: t.HELP_ENTROPY_TITLE, 
+                  desc: t.HELP_ENTROPY_DESC,
+                  extra: [t.HELP_ENTROPY_DRAIN, t.HELP_ENTROPY_SHIFT, t.HELP_ENTROPY_GAIN],
+                  hint: "Monitor the gauge carefully." 
+              };
           default: return null;
       }
   };
@@ -542,62 +551,92 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           />
       )}
 
+      {/* EXIT CONFIRMATION MODAL */}
+      {showExitConfirmation && (
+          <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setShowExitConfirmation(false)}>
+              <div className="bg-slate-900 border border-red-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
+                  <div className="w-12 h-12 rounded-full bg-red-900/20 flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+                      <LogOut className="w-6 h-6 text-red-500" />
+                  </div>
+                  <h3 className="text-lg font-black text-white uppercase mb-2">{t.ABORT_TITLE}</h3>
+                  <p className="text-xs text-slate-400 mb-6">{t.ABORT_DESC}</p>
+                  <div className="flex gap-3">
+                      <button 
+                          onClick={() => { setShowExitConfirmation(false); playUiSound('CLICK'); }} 
+                          className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition-colors"
+                      >
+                          {t.BTN_CANCEL}
+                      </button>
+                      <button 
+                          onClick={() => { abandonSession(); playUiSound('CLICK'); }} 
+                          className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-red-900/20"
+                      >
+                          {t.BTN_CONFIRM}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {isHudVisible && (
       // ... HEADER RENDER ...
       <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-30 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in">
-          <div className="w-full flex justify-between items-start gap-2 max-w-7xl mx-auto relative">
+          <div className="w-full flex justify-between items-start gap-2 md:gap-2 max-w-7xl mx-auto relative">
                <div className="flex flex-col gap-2">
-                   <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-700/50 shadow-xl px-2 py-1.5 md:px-3 md:py-2 gap-2 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade flex-1 md:flex-none md:w-fit md:shrink-0 max-w-[calc(100vw-70px)] md:max-w-none">
+                   <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-700/50 shadow-xl px-2 py-1.5 md:px-3 md:py-2 gap-2 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade flex-1 md:flex-none md:w-fit md:shrink-0 max-w-[calc(100vw-80px)] md:max-w-none">
                        {/* Stats block (rank/mat/coins/moves) */}
                        <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                           <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-                               <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                           <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                               <Crown className="w-3 h-3 md:w-5 md:h-5 text-white" />
                            </div>
                            <div className="flex flex-col justify-center">
-                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.RANK}</span>
-                               <span className="text-sm md:text-xl font-black text-white leading-none">{player.playerLevel}</span>
+                               <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.RANK}</span>
+                               <span className="text-xs md:text-xl font-black text-white leading-none">{player.playerLevel}</span>
                            </div>
                        </div>
-                       <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
+                       <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0"></div>
                        <div onClick={() => { setHelpTopic('MATERIAL'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                           <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/20 transition-colors">
-                               <Box className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" />
+                           <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/20 transition-colors">
+                               <Box className="w-3 h-3 md:w-5 md:h-5 text-emerald-400" />
                            </div>
                            <div className="flex flex-col justify-center">
-                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MATERIAL}</span>
+                               <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MATERIAL}</span>
                                <StorageBlocks current={player.storage} max={player.maxStorage} />
                            </div>
                        </div>
-                       <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
+                       <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0"></div>
                        <div onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                           <div className="w-6 h-6 md:w-10 md:h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
-                               <Wallet className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+                           <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
+                               <Wallet className="w-3 h-3 md:w-5 md:h-5 text-amber-400" />
                            </div>
                            <div className="flex flex-col justify-center">
-                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.CREDITS}</span>
-                               <span className="text-sm md:text-xl font-black text-white leading-none">{player.coins}</span>
+                               <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.CREDITS}</span>
+                               <span className="text-xs md:text-xl font-black text-white leading-none">{player.coins}</span>
                            </div>
                        </div>
-                       <div className="w-px h-6 md:h-8 bg-slate-800 shrink-0"></div>
+                       <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0"></div>
                        <div onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0 pr-1">
-                           <div className={`w-6 h-6 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${isMoving ? 'bg-blue-600 animate-pulse' : 'bg-blue-500/10 border border-blue-500/30'}`}>
-                               <Footprints className={`w-4 h-4 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
+                           <div className={`w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${isMoving ? 'bg-blue-600 animate-pulse' : 'bg-blue-500/10 border border-blue-500/30'}`}>
+                               <Footprints className={`w-3 h-3 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
                            </div>
                            <div className="flex flex-col justify-center">
-                               <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MOVES}</span>
-                               <span className="text-sm md:text-xl font-black text-white leading-none">{player.moves}</span>
+                               <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MOVES}</span>
+                               <span className="text-xs md:text-xl font-black text-white leading-none">{player.moves}</span>
+                           </div>
+                       </div>
+                       
+                       {/* ENTROPY / STABILITY */}
+                       <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0"></div>
+                       <div onClick={() => { setHelpTopic('ENTROPY'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
+                           <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-slate-800 flex items-center justify-center border border-slate-700">
+                               <EntropyGauge className="w-4 h-4 md:w-8 md:h-8" />
+                           </div>
+                           <div className="flex flex-col justify-center">
+                               <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">STABLE</span>
+                               {/* REMOVED MAX LABEL HERE */}
                            </div>
                        </div>
                    </div>
-                   
-                   {gameStatus === 'PLAYING' && (
-                       <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-xl overflow-hidden self-start flex items-center px-2 py-1.5 gap-2 mt-1 pointer-events-auto max-w-fit">
-                           <div className="p-1 bg-indigo-500/10 rounded-lg"><Target className="w-3.5 h-3.5 text-indigo-400" /></div>
-                           {renderMissionStatus()}
-                           <div className="h-4 w-px bg-slate-700 mx-1" />
-                           <button onClick={() => { setShowMissionDetails(true); playUiSound('CLICK'); }} className="p-1 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-white transition-colors"><Info className="w-3.5 h-3.5" /></button>
-                       </div>
-                   )}
                </div>
 
                {/* System Menu Button */}
@@ -619,9 +658,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                     <span className="text-xs font-bold uppercase">{language === 'EN' ? 'English' : 'Русский'}</span>
                                 </button>
                                 {/* Other Menu Items */}
-                                <button onClick={() => { setIsRankingsOpen(!isRankingsOpen); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border ${isRankingsOpen ? 'bg-amber-900/20 border-amber-500/50 text-amber-400' : 'bg-slate-800/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white'}`}>
+                                <button onClick={() => { setIsRankingsOpen(true); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border bg-slate-800/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white`}>
                                     <Trophy className="w-4 h-4 text-amber-500" />
-                                    <span className="text-xs font-bold uppercase">{isRankingsOpen ? 'Hide Ranks' : t.LEADERBOARD_TITLE}</span>
+                                    <span className="text-xs font-bold uppercase">{t.LEADERBOARD_TITLE}</span>
                                 </button>
                                 <button onClick={() => { downloadSessionLog(); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 hover:text-indigo-200 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left">
                                     <FileText className="w-4 h-4" />
@@ -640,77 +679,76 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       </div>
       )}
 
-      {/* LEFT SIDE: INVENTORY PANEL & ENTROPY GAUGE */}
+      {/* FOOTER ACTION DOCK (Optimized Width & Horizontal Layout) */}
       {isHudVisible && gameStatus === 'PLAYING' && (
-          <div className="absolute top-1/2 -translate-y-1/2 left-2 md:left-4 z-40 pointer-events-auto flex flex-col gap-3 animate-in fade-in">
-              <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-2 shadow-xl flex flex-col items-center justify-center">
-                  <span className="text-[8px] font-bold uppercase text-slate-500 tracking-widest mb-1">STABILITY</span>
-                  <EntropyGauge />
+          <div className="absolute inset-x-0 bottom-0 p-1 md:p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end">
+              
+              {/* Active Statuses - Floating above dock */}
+              <div className="mb-1 pointer-events-auto">
+                  {renderActiveStatuses()}
               </div>
 
-              {renderActiveStatuses() && (
-                  <div className="self-start pl-1">
-                      {renderActiveStatuses()}
-                  </div>
-              )}
-
-              {/* INVENTORY */}
-              <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-xl p-2 md:p-3 shadow-xl flex flex-col items-center gap-2">
-                  <span className="text-[8px] md:text-[9px] font-bold uppercase text-slate-500 tracking-widest">LOOT</span>
+              {/* UNIFIED GLASS DOCK - HORIZONTAL LAYOUT */}
+              <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-1 md:p-1.5 pointer-events-auto flex items-end gap-1 md:gap-3 relative max-w-full overflow-hidden">
                   
-                  {inventoryList.map(index => {
-                      const item = player.inventory[index];
-                      return (
-                          <div 
-                              key={index} 
-                              onClick={() => item && handleInventoryClick(item)}
-                              className={`
-                                  w-10 h-10 md:w-12 md:h-12 rounded-lg border flex items-center justify-center relative group cursor-pointer
-                                  ${item 
-                                      ? `bg-slate-800 ${getRarityBorder(item.rarity)} shadow-inner hover:scale-105 active:scale-95 transition-transform` 
-                                      : 'bg-slate-950/30 border-slate-800 border-dashed'}
-                              `}
-                          >
-                              {item ? (
-                                  <>
-                                      <ItemIcon item={item} />
-                                      {!isMobile && (
-                                          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-slate-900 px-2 py-1 rounded text-[9px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg border border-slate-700">
-                                              Click to Inspect
-                                          </div>
-                                      )}
-                                  </>
-                              ) : (
-                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-800" />
-                              )}
-                          </div>
-                      );
-                  })}
-              </div>
-          </div>
-      )}
+                  {/* LEFT COLUMN: INFO & INVENTORY */}
+                  <div className="flex flex-col gap-1 md:gap-1.5 justify-end pb-0.5">
+                      
+                      {/* MISSION INFO PILL (Compact) */}
+                      <div className="flex items-center gap-2 px-2 py-1 bg-black/40 rounded border border-white/5 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => { setShowMissionDetails(true); playUiSound('CLICK'); }}>
+                          {renderMissionStatus()}
+                          <Info className="w-3 h-3 text-slate-500" />
+                      </div>
 
-      {/* FOOTER ACTION BUTTONS */}
-      {isHudVisible && gameStatus === 'PLAYING' && (
-          <div className="absolute inset-x-0 bottom-0 p-4 md:p-8 pointer-events-none pb-[max(1rem,env(safe-area-inset-bottom))] animate-in fade-in">
-              <div className="max-w-2xl mx-auto flex items-end justify-center gap-4 md:gap-8 pointer-events-auto">
-                  <div className="flex items-end gap-3 md:gap-6 bg-slate-950/80 backdrop-blur-xl p-2 md:p-3 rounded-[2rem] border border-slate-800/50 shadow-2xl relative">
+                      {/* INVENTORY ROW */}
+                      <div className="flex items-center gap-0.5 md:gap-1">
+                          {inventoryList.map(index => {
+                              const item = player.inventory[index];
+                              const slotSize = "w-7 h-7 md:w-9 md:h-9"; // Compact 28px on mobile, 36px desktop
+                              return (
+                                  <div 
+                                      key={index} 
+                                      onClick={() => item && handleInventoryClick(item)}
+                                      className={`
+                                          ${slotSize} rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all
+                                          ${item 
+                                              ? `bg-slate-800 ${getRarityBorder(item.rarity)} shadow-md hover:scale-105 active:scale-95` 
+                                              : 'bg-slate-950/30 border-slate-800/50 border-dashed'}
+                                      `}
+                                  >
+                                      {item ? (
+                                          <ItemIcon item={item} size={slotSize} />
+                                      ) : (
+                                          <div className="w-1 h-1 rounded-full bg-slate-800" />
+                                      )}
+                                  </div>
+                              );
+                          })}
+                          {/* Backpack Hint Removed as requested */}
+                      </div>
+                  </div>
+
+                  {/* SEPARATOR */}
+                  <div className="w-px h-14 md:h-16 bg-gradient-to-b from-transparent via-slate-500/30 to-transparent"></div>
+
+                  {/* RIGHT COLUMN: ACTION BUTTONS */}
+                  <div className="flex items-end gap-1 md:gap-2">
                       <HexButton variant="red" size={mainButtonSize} onClick={() => { togglePlayerGrowth('DIG'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
-                          <Pickaxe className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
+                          <Pickaxe className={`w-4 h-4 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
                       </HexButton>
-                      <HexButton variant="amber" size={mainButtonSize} onClick={() => { togglePlayerGrowth('UPGRADE'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} disabled={!canUpgrade} pulsate={canUpgrade && !isPlayerGrowing} progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-2 md:-translate-y-4 ring-4 ring-amber-500/20 rounded-full' : ''} title={upgradeTooltip}>
-                          <ChevronsUp className={`w-6 h-6 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
+                      <HexButton variant="amber" size={mainButtonSize} onClick={() => { togglePlayerGrowth('UPGRADE'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} disabled={!canUpgrade} pulsate={canUpgrade && !isPlayerGrowing} progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-1 ring-4 ring-amber-500/20 rounded-full' : ''} title={upgradeTooltip}>
+                          <ChevronsUp className={`w-5 h-5 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
                       </HexButton>
                       <HexButton variant="blue" size={mainButtonSize} onClick={() => { togglePlayerGrowth('RECOVER'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} disabled={!recoveryState.canRecover} progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''} title={recoverTooltip}>
                           {recoveryState.cooling ? (
                               <div className="flex flex-col items-center">
-                                  <Hourglass className="w-4 h-4 md:w-6 md:h-6 animate-spin-slow" />
-                                  <span className="text-[9px] md:text-[10px] font-mono mt-0.5">{recoveryState.label}</span>
+                                  <Hourglass className="w-3 h-3 md:w-6 md:h-6 animate-spin-slow" />
+                                  <span className="text-[8px] md:text-[10px] font-mono mt-0.5">{recoveryState.label}</span>
                               </div>
                           ) : (
                               <>
-                                <RefreshCw className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180' : ''}`} />
-                                {recoveryState.label && <span className="absolute -bottom-1 md:-bottom-2 bg-slate-900 px-1 rounded text-[8px] font-bold text-emerald-400">{recoveryState.label}</span>}
+                                <RefreshCw className={`w-4 h-4 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180' : ''}`} />
+                                {recoveryState.label && <span className="absolute -bottom-1 md:-bottom-2 bg-slate-900 px-1 rounded text-[7px] md:text-[8px] font-bold text-emerald-400">{recoveryState.label}</span>}
                               </>
                           )}
                       </HexButton>
@@ -929,136 +967,83 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* VOID DIALOG - DYNAMIC TEXT RESOLUTION */}
-      {voidDialogTarget && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-auto p-4 animate-in fade-in duration-200">
-              <div className="bg-slate-950 border border-red-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full relative overflow-hidden flex flex-col gap-4 animate-in zoom-in-95">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                  <button onClick={closeVoidDialog} className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5"/></button>
-                  <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
-                      <div className="p-2.5 bg-red-950/50 rounded-lg border border-red-900/50 shadow-inner"><Zap className="w-5 h-5 text-red-500 animate-pulse" /></div>
-                      <div><h3 className="text-lg font-black text-white uppercase tracking-tighter leading-none">{t.VOID_TITLE}</h3><p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono mt-1">{t.VOID_SUB}</p></div>
-                  </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">{t.VOID_DESC}<br/><span className="text-red-400 text-[10px] font-bold uppercase mt-1 block">{t.VOID_WARN}</span></p>
-                  <div className="flex flex-col gap-2 bg-slate-900/50 rounded-xl p-2 border border-slate-800 max-h-[200px] overflow-y-auto no-scrollbar">
-                      <span className="text-[9px] font-bold uppercase text-slate-600 tracking-widest px-1">{t.VOID_SELECT}</span>
-                      {player.inventory.length === 0 ? <div className="py-6 text-center text-xs text-slate-600 italic">{t.VOID_EMPTY}</div> : player.inventory.map(item => {
-                              // Localized Strings
-                              const dynamicText = resolveItemText(item);
-                              let chance = "25%";
-                              if (item.rarity === 'UNCOMMON') chance = "50%";
-                              if (item.rarity === 'RARE') chance = "75%";
-                              if (item.rarity === 'LEGENDARY') chance = "100%";
-                              return (
-                                  <button key={item.id} onClick={() => restoreVoidHex(item.id)} className="flex items-center justify-between p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-500 transition-all group">
-                                      <div className="flex items-center gap-3">
-                                          <div className="w-8 h-8 rounded bg-slate-950 flex items-center justify-center border border-slate-800 overflow-hidden">
-                                              <ItemIcon item={item} size="w-8 h-8" />
-                                          </div>
-                                          <div className="flex flex-col items-start">
-                                              <span className="text-xs font-bold text-white group-hover:text-emerald-200 truncate max-w-[100px]">{dynamicText.name}</span>
-                                              <span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span>
-                                          </div>
-                                      </div>
-                                      <div className="flex flex-col items-end gap-1">
-                                          <div className="px-2 py-0.5 rounded bg-slate-950 text-[9px] font-mono font-bold text-emerald-400 border border-slate-800">Success: {chance}</div>
-                                          {dynamicText.negDesc && <div className="text-[8px] text-red-400 font-mono">Risk: {dynamicText.negDesc.substring(0,12)}..</div>}
-                                      </div>
-                                  </button>
-                              );
-                          })}
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* MISSION DETAILS MODAL (Shared with Briefing) */}
-      {(showMissionDetails || isBriefingActive) && (
-          <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => !isBriefingActive && setShowMissionDetails(false)}>
-              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-md w-full relative" onClick={e => e.stopPropagation()}>
-                  {!isBriefingActive && (
-                      <button onClick={() => setShowMissionDetails(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
-                  )}
-                  {isBriefingActive && (
-                      <button onClick={() => abandonSession()} className="absolute top-4 right-4 text-slate-500 hover:text-red-400 transition-colors" title="Abort Mission"><LogOut className="w-5 h-5"/></button>
-                  )}
-
-                  <h3 className="text-xl font-black text-white uppercase mb-2">{briefingTitle}</h3>
-                  <div className="h-px w-full bg-slate-800 mb-4" />
-                  <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed font-mono">{briefingDesc}</p>
+      {/* MINI LEADERBOARD MODAL (IN-GAME) */}
+      {isRankingsOpen && (
+          <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setIsRankingsOpen(false)}>
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                   
-                  {/* Hints Section if available */}
-                  <div className="mt-4 bg-indigo-900/20 border border-indigo-500/20 p-3 rounded-lg">
-                      <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-2">{t.BRIEFING_HINTS_TITLE}</span>
-                      <ul className="list-disc list-inside text-xs text-indigo-200/80 space-y-1">
-                          <li>{t.BRIEFING_HINT_1}</li>
-                          <li>{t.BRIEFING_HINT_2}</li>
-                          <li>{t.BRIEFING_HINT_3}</li>
-                      </ul>
+                  {/* Header */}
+                  <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                      <div className="flex items-center gap-3">
+                          <Trophy className="w-5 h-5 text-amber-500" />
+                          <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.MINI_LB_TITLE}</h3>
+                      </div>
+                      <button onClick={() => setIsRankingsOpen(false)} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
                   </div>
 
-                  <div className="mt-6 flex justify-end">
-                      {isBriefingActive ? (
-                          <button onClick={handleStartMission} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-black uppercase text-white transition-colors shadow-lg shadow-emerald-900/20 tracking-widest flex items-center gap-2">
-                              {t.BRIEFING_BTN_START} <ArrowRight className="w-4 h-4" />
-                          </button>
+                  {/* List */}
+                  <div className="flex-1 overflow-y-auto no-scrollbar p-2">
+                      {leaderboard.length === 0 ? (
+                          <div className="p-8 text-center text-slate-500 text-xs font-mono">{t.MINI_LB_EMPTY}</div>
                       ) : (
-                          <button onClick={() => setShowMissionDetails(false)} className="px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold uppercase text-white transition-colors">
-                              {t.BTN_READY}
-                          </button>
+                          <div className="flex flex-col gap-1">
+                              {leaderboard.map((entry, idx) => (
+                                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 transition-all">
+                                      <div className="flex items-center gap-3">
+                                          <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-black ${idx === 0 ? 'bg-amber-500 text-black' : (idx === 1 ? 'bg-slate-400 text-black' : (idx === 2 ? 'bg-orange-700 text-white' : 'bg-slate-700 text-slate-400'))}`}>
+                                              {idx + 1}
+                                          </div>
+                                          <div className="flex flex-col">
+                                              <span className="text-xs font-bold text-white leading-none">{entry.nickname}</span>
+                                              <span className="text-[8px] text-slate-500 font-mono mt-0.5">{new Date(entry.timestamp).toLocaleDateString()}</span>
+                                          </div>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                          <div className="flex flex-col items-end">
+                                              <span className="text-[8px] uppercase text-slate-500 font-bold">{t.RANK}</span>
+                                              <span className="text-xs font-mono text-indigo-400 font-bold">L{entry.maxLevel}</span>
+                                          </div>
+                                          <div className="flex flex-col items-end w-12">
+                                              <span className="text-[8px] uppercase text-slate-500 font-bold">{t.CREDITS}</span>
+                                              <span className="text-xs font-mono text-amber-400 font-bold">{entry.maxCoins}</span>
+                                          </div>
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
                       )}
                   </div>
               </div>
           </div>
       )}
 
-      {/* EXIT CONFIRMATION MODAL */}
-      {showExitConfirmation && (
-          <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 pointer-events-auto animate-in zoom-in-95">
-              <div className="bg-slate-950 border border-red-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center">
-                  <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-black text-white uppercase mb-2">{t.ABORT_TITLE}</h3>
-                  <p className="text-sm text-slate-400 mb-6">{t.ABORT_DESC}</p>
-                  <div className="flex gap-3">
-                      <button onClick={() => setShowExitConfirmation(false)} className="flex-1 py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs uppercase hover:bg-slate-700">{t.BTN_CANCEL}</button>
-                      <button onClick={() => { abandonSession(); setShowExitConfirmation(false); }} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-xs uppercase hover:bg-red-500 shadow-lg shadow-red-900/20">{t.BTN_CONFIRM}</button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* RANKINGS OVERLAY */}
-      {isRankingsOpen && (
-          <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setIsRankingsOpen(false)}>
-              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                  <div className="flex justify-between items-center mb-4 shrink-0">
-                      <h3 className="text-lg font-black text-amber-500 uppercase flex items-center gap-2"><Trophy className="w-5 h-5" /> {t.LEADERBOARD_TITLE}</h3>
-                      <button onClick={() => setIsRankingsOpen(false)} className="text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
-                      {leaderboard.length === 0 && <p className="text-slate-500 text-center text-xs py-4">{t.EMPTY || "No records"}</p>}
-                      {leaderboard.map((e, i) => (
-                          <div key={i} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                              <div className="flex items-center gap-3">
-                                  <span className={`font-mono font-bold w-6 text-center ${i<3 ? 'text-amber-400' : 'text-slate-500'}`}>#{i+1}</span>
-                                  <span className="text-sm font-bold text-white truncate max-w-[100px]">{e.nickname}</span>
-                              </div>
-                              <div className="text-xs font-mono text-slate-400">{e.maxLevel} Lvl / {e.maxCoins} Cr</div>
-                          </div>
-                      ))}
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* HELP INFO OVERLAY */}
+      {/* HELP INFO OVERLAY (Expanded for Entropy) */}
       {helpTopic && helpData && (
           <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setHelpTopic(null)}>
-              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
-                  <h3 className="text-lg font-black text-white uppercase mb-2">{helpData.title}</h3>
-                  <p className="text-xs text-slate-400 mb-4">{helpData.desc}</p>
-                  <div className="bg-slate-800 p-2 rounded text-xs font-mono text-emerald-400">{helpData.hint}</div>
-                  <button onClick={() => setHelpTopic(null)} className="mt-4 text-xs font-bold text-slate-500 hover:text-white uppercase tracking-wider">Close</button>
+              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-sm w-full" onClick={e => e.stopPropagation()}>
+                  <h3 className="text-lg font-black text-white uppercase mb-2 text-center">{helpData.title}</h3>
+                  <p className="text-xs text-slate-400 mb-4 text-center leading-relaxed">{helpData.desc}</p>
+                  
+                  {/* Handle new array-based extra info for Entropy details */}
+                  {(helpData as any).extra ? (
+                      <div className="flex flex-col gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 mb-4">
+                          {(helpData as any).extra.map((line: string, i: number) => (
+                              <p key={i} className="text-[10px] text-slate-300 font-mono leading-tight border-l-2 border-indigo-500 pl-2 py-1">
+                                  {line}
+                              </p>
+                          ))}
+                      </div>
+                  ) : (
+                      <div className="bg-slate-800 p-2 rounded text-xs font-mono text-emerald-400 text-center mb-4">{helpData.hint}</div>
+                  )}
+                  
+                  {(helpData as any).extra && (
+                      <div className="bg-slate-800 p-2 rounded text-xs font-mono text-emerald-400 text-center">{helpData.hint}</div>
+                  )}
+
+                  <div className="flex justify-center mt-2">
+                      <button onClick={() => setHelpTopic(null)} className="text-xs font-bold text-slate-500 hover:text-white uppercase tracking-wider py-2 px-4 rounded hover:bg-slate-800 transition-colors">Close</button>
+                  </div>
               </div>
           </div>
       )}
