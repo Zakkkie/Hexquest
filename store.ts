@@ -468,7 +468,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (!engine || !engine.state) return;
       
       const session = engine.state; 
-      const { pendingConfirmation, confirmPendingAction, cancelPendingAction, openVoidDialog } = get();
+      const { pendingConfirmation, confirmPendingAction, cancelPendingAction, openVoidDialog, openMonumentDialog } = get();
 
       if (session.gameStatus === 'BRIEFING') return;
 
@@ -482,6 +482,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if (dist === 1) {
               openVoidDialog(tq, tr);
               return; // Stop movement logic
+          }
+      }
+
+      // MONUMENT INTERACTION LOGIC (Click-to-Open if standing on it)
+      if (targetHex && targetHex.structureType === 'MONUMENT') {
+          const dist = cubeDistance(session.player, { q: tq, r: tr });
+          if (dist === 0) {
+              openMonumentDialog();
+              return;
           }
       }
 

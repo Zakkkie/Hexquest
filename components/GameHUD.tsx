@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef, memo } from 'react';
 import { useGameStore } from '../store.ts';
 import { getHexKey, getNeighbors, getSecondsToGrow, cubeDistance } from '../services/hexUtils.ts';
@@ -481,6 +482,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       } else {
           setInspectedItem(item);
           playUiSound('CLICK');
+      }
+  };
+
+  const handleVoidRestore = (item: Item) => {
+      if (voidDialogTarget) {
+          restoreVoidHex(item.id);
+          // Don't need to close manually, restoreVoidHex calls set({voidDialogTarget: null}) on success.
+          // But if fail, we might want to keep open? restoreVoidHex handles logic.
       }
   };
 
@@ -1021,6 +1030,63 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                   {isMonumentReady ? <><Zap className="w-5 h-5 fill-current" /> {t.MONUMENT_BTN_ACTIVE}</> : t.MONUMENT_BTN_INACTIVE}
                               </button>
                           </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* VOID DIALOG */}
+      {voidDialogTarget && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300 pointer-events-auto" onClick={closeVoidDialog}>
+              <div className="bg-slate-950 border border-red-900/50 p-6 rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                  <button onClick={closeVoidDialog} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-6 h-6"/></button>
+                  <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
+                      <div className="p-3 bg-red-950/50 rounded-xl border border-red-900/50 shadow-inner animate-pulse">
+                          <AlertTriangle className="w-8 h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
+                      </div>
+                      <div>
+                          <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.VOID_TITLE}</h3>
+                          <p className="text-xs text-red-400 uppercase tracking-widest font-mono mt-1">{t.VOID_SUB}</p>
+                      </div>
+                  </div>
+                  <p className="text-sm text-slate-400 leading-relaxed text-center px-4">
+                      {t.VOID_DESC}
+                      <br/>
+                      <span className="text-xs text-red-400 font-bold mt-2 block">{t.VOID_WARN}</span>
+                  </p>
+
+                  <div className="bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden max-h-[300px]">
+                      <div className="p-2 border-b border-slate-800 bg-slate-900">
+                          <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.VOID_SELECT}</span>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
+                          {player.inventory.length === 0 ? (
+                              <div className="text-center text-slate-600 text-xs italic py-10">{t.VOID_EMPTY}</div>
+                          ) : (
+                              player.inventory.map(item => {
+                                  const dynamicText = resolveItemText(item);
+                                  return (
+                                      <div 
+                                          key={item.id}
+                                          onClick={() => handleVoidRestore(item)}
+                                          className={`flex items-center gap-3 p-3 rounded-lg bg-slate-800 hover:bg-slate-700 border cursor-pointer group transition-all ${getRarityBorder(item.rarity)}`}
+                                      >
+                                          <div className="w-10 h-10 rounded bg-slate-950 flex items-center justify-center border border-slate-800 overflow-hidden shrink-0">
+                                              <ItemIcon item={item} size="w-10 h-10" />
+                                          </div>
+                                          <div className="flex flex-col min-w-0 flex-1">
+                                              <span className="text-xs font-bold text-white group-hover:text-red-200 truncate">{dynamicText.name}</span>
+                                              <span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span>
+                                          </div>
+                                          <div className="px-3 py-1 bg-red-900/20 border border-red-900/50 rounded text-[9px] text-red-400 font-bold uppercase whitespace-nowrap group-hover:bg-red-900/40 transition-colors">
+                                              SACRIFICE
+                                          </div>
+                                      </div>
+                                  );
+                              })
+                          )}
                       </div>
                   </div>
               </div>

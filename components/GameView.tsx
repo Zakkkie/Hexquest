@@ -11,6 +11,43 @@ import Fireworks from './Fireworks.tsx';
 import { audioService } from '../services/audioService.ts';
 import { XCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 
+// HELPER: Calculate new View State to pivot rotation around a specific screen point
+const calculateRotationAdjustedView = (
+    currentView: { x: number, y: number, scale: number },
+    pivot: { x: number, y: number },
+    oldRotation: number,
+    newRotation: number
+) => {
+    // 1. Convert Pivot Screen -> Stage Local (Relative to View offset)
+    const localX = (pivot.x - currentView.x) / currentView.scale;
+    const localY = (pivot.y - currentView.y) / currentView.scale;
+
+    // 2. Un-project (Reverse Squash & Reverse Old Rotation) to get Raw Grid Space
+    const unsquashedY = localY / 0.8;
+    const radOld = -oldRotation * (Math.PI / 180);
+    const cosOld = Math.cos(radOld);
+    const sinOld = Math.sin(radOld);
+    
+    // Rotate by -oldRotation
+    const rawX = localX * cosOld - unsquashedY * sinOld;
+    const rawY = localX * sinOld + unsquashedY * cosOld;
+
+    // 3. Re-project (New Rotation & Squash)
+    const radNew = newRotation * (Math.PI / 180);
+    const cosNew = Math.cos(radNew);
+    const sinNew = Math.sin(radNew);
+    
+    const rotatedX = rawX * cosNew - rawY * sinNew;
+    const rotatedY = (rawX * sinNew + rawY * cosNew) * 0.8;
+
+    // 4. New View Position = Pivot - RotatedLocal * Scale
+    return {
+        x: pivot.x - rotatedX * currentView.scale,
+        y: pivot.y - rotatedY * currentView.scale,
+        scale: currentView.scale
+    };
+};
+
 const GameView: React.FC = () => {
   const grid = useGameStore(state => state.session?.grid);
   const player = useGameStore(state => state.session?.player);
@@ -256,7 +293,7 @@ const GameView: React.FC = () => {
      }
   };
   
-  // -- Mouse Rotation Handlers --
+  // -- Mouse Rotation Handlers (Pivot around Cursor) --
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (e.evt.button === 2) { 
           isRotating.current = true;
@@ -269,7 +306,21 @@ const GameView: React.FC = () => {
       if (isRotating.current) {
           const deltaX = e.evt.clientX - lastMouseX.current;
           lastMouseX.current = e.evt.clientX;
-          setCameraRotation(prev => prev + deltaX * 0.5);
+          
+          const oldRot = cameraRotationRef.current;
+          const deltaRot = deltaX * 0.5;
+          const newRot = oldRot + deltaRot;
+          
+          setCameraRotation(newRot);
+          // Manually update ref to prevent jitter in fast moves
+          cameraRotationRef.current = newRot;
+
+          // Adjust Camera to Pivot around Mouse
+          const pivot = { x: e.evt.clientX, y: e.evt.clientY };
+          const adjustedView = calculateRotationAdjustedView(viewState, pivot, oldRot, newRot);
+          
+          setViewState(adjustedView);
+          targetViewRef.current = { x: adjustedView.x, y: adjustedView.y };
       }
   };
   
@@ -280,7 +331,7 @@ const GameView: React.FC = () => {
       }
   };
 
-  // -- Advanced Touch Handlers (Pinch & Rotate) --
+  // -- Advanced Touch Handlers (Pinch & Rotate around Center) --
   const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
     const touches = e.evt.touches;
     if (touches.length === 2) {
@@ -308,32 +359,32 @@ const GameView: React.FC = () => {
           const center = { x: (p1.x + p2.x)/2, y: (p1.y + p2.y)/2 };
           const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
 
-          // Rotation with Threshold (prevent accidental rotation while zooming)
+          // 1. Rotation with Pivot Logic
+          let currentRot = cameraRotationRef.current;
+          let tempViewState = viewState;
+
           const dAngle = angle - lastAngle.current;
-          // Only rotate if the gesture is significant (> 2 degrees) to avoid jitter
-          if (Math.abs(dAngle) > 2) {
-             setCameraRotation(prev => prev + dAngle);
+          if (Math.abs(dAngle) > 1) { // Lower threshold for better response
+             const newRot = currentRot + dAngle;
+             
+             // Pivot rotation around center of gesture
+             tempViewState = calculateRotationAdjustedView(tempViewState, center, currentRot, newRot);
+             
+             setCameraRotation(newRot);
+             cameraRotationRef.current = newRot;
              lastAngle.current = angle;
+             currentRot = newRot;
           }
           
-          // Scale Logic
+          // 2. Scale & Pan Logic
           const scaleMult = dist / lastDist.current;
-          let newScale = viewState.scale * scaleMult;
+          let newScale = tempViewState.scale * scaleMult;
           newScale = Math.max(0.4, Math.min(newScale, 2.5));
 
           // Pan (Zoom relative to center point of fingers)
-          // 1. Calculate where the center point is in "world space" using OLD scale/pos
-          const worldFocusX = (lastCenter.current.x - viewState.x) / viewState.scale;
-          const worldFocusY = (lastCenter.current.y - viewState.y) / viewState.scale;
-          
-          // 2. Calculate NEW view position so that worldFocus is still under the NEW center
-          // Panning delta from finger movement
-          const dx = center.x - lastCenter.current.x;
-          const dy = center.y - lastCenter.current.y;
-
-          // New position calculation:
-          // We want: (center.x - newViewX) / newScale = worldFocusX
-          // So: newViewX = center.x - (worldFocusX * newScale)
+          // Use tempViewState (which includes rotation offset) for calculation
+          const worldFocusX = (lastCenter.current.x - tempViewState.x) / tempViewState.scale;
+          const worldFocusY = (lastCenter.current.y - tempViewState.y) / tempViewState.scale;
           
           const newX = center.x - (worldFocusX * newScale);
           const newY = center.y - (worldFocusY * newScale);
