@@ -131,6 +131,18 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
   const startRank = levelConfig ? levelConfig.startState.rank : 1;
   const startStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0;
   
+  // DETECT PLAYER START POSITION FROM GRID
+  // This prevents the player from spawning on the Monument at 0,0 in levels 2.x
+  let startQ = 0;
+  let startR = 0;
+  
+  // Find the first hex owned by player-1
+  const playerStartHex = Object.values(initialGrid).find(h => h.ownerId === 'player-1');
+  if (playerStartHex) {
+      startQ = playerStartHex.q;
+      startR = playerStartHex.r;
+  }
+
   const bots: Entity[] = [];
   const spawnPoints = [{ q: 0, r: -2 }, { q: 2, r: -2 }, { q: 2, r: 0 }, { q: 0, r: 2 }, { q: -2, r: 2 }, { q: -2, r: 0 }];
 
@@ -189,7 +201,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     difficulty: difficulty,
     grid: initialGrid,
     player: {
-      id: 'player-1', type: EntityType.PLAYER, state: EntityState.IDLE, q: 0, r: 0,
+      id: 'player-1', type: EntityType.PLAYER, state: EntityState.IDLE, q: startQ, r: startR,
       playerLevel: startRank, 
       coins: startCredits, 
       moves: startMoves,
