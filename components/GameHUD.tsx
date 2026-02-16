@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef, memo } from 'react';
 import { useGameStore } from '../store.ts';
 import { getHexKey, getNeighbors, getSecondsToGrow, cubeDistance } from '../services/hexUtils.ts';
@@ -12,7 +11,7 @@ import { GAME_CONFIG } from '../rules/config.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap, Key, 
-  Activity, EyeOff, Skull, Hammer, Flame, ShieldAlert, Backpack
+  Activity, EyeOff, Skull, Hammer, Flame, ShieldAlert, Backpack, Swords
 } from 'lucide-react';
 import { itemRenderer } from '../services/itemRenderer.ts';
 import { getItemDef } from '../rules/items.ts'; 
@@ -574,6 +573,67 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           {t.BTN_CONFIRM}
                       </button>
                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* MISSION DETAILS / BRIEFING MODAL */}
+      {(showMissionDetails || isBriefingActive) && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-300">
+              <div className="bg-slate-950 border border-slate-700 rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-6 p-6 animate-in zoom-in-95">
+                  
+                  {/* Decorative Header */}
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
+                  
+                  <button onClick={() => isBriefingActive ? handleStartMission() : setShowMissionDetails(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20">
+                      <X className="w-6 h-6"/>
+                  </button>
+
+                  <div className="flex flex-col items-center text-center mt-2">
+                      <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-4 border border-slate-800 shadow-inner">
+                          <Target className="w-8 h-8 text-indigo-400" />
+                      </div>
+                      <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{briefingTitle}</h2>
+                      <div className="flex items-center gap-2 mt-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${difficulty === 'HARD' ? 'bg-red-900/30 text-red-400 border border-red-900/50' : (difficulty === 'MEDIUM' ? 'bg-amber-900/30 text-amber-400 border border-amber-900/50' : 'bg-emerald-900/30 text-emerald-400 border border-emerald-900/50')}`}>
+                              {difficulty}
+                          </span>
+                          {bots && bots.length > 0 && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-900/20 text-red-400 border border-red-900/30 flex items-center gap-1">
+                                  <Swords className="w-3 h-3"/> {t.BRIEFING_RIVAL}
+                              </span>
+                          )}
+                      </div>
+                  </div>
+
+                  <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-800/50 max-h-[40vh] overflow-y-auto no-scrollbar">
+                      <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-mono">
+                          {briefingDesc}
+                      </p>
+                  </div>
+
+                  {/* Hints */}
+                  <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex flex-col items-center text-center gap-1">
+                          <ChevronsUp className="w-4 h-4 text-amber-400" />
+                          <span className="text-[9px] text-slate-500 uppercase font-bold">{t.HINT_RANK}</span>
+                      </div>
+                      <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex flex-col items-center text-center gap-1">
+                          <Wallet className="w-4 h-4 text-emerald-400" />
+                          <span className="text-[9px] text-slate-500 uppercase font-bold">{t.HINT_CREDITS}</span>
+                      </div>
+                      <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex flex-col items-center text-center gap-1">
+                          <Footprints className="w-4 h-4 text-blue-400" />
+                          <span className="text-[9px] text-slate-500 uppercase font-bold">{t.HINT_MOVES}</span>
+                      </div>
+                  </div>
+
+                  <button 
+                      onClick={() => isBriefingActive ? handleStartMission() : setShowMissionDetails(false)}
+                      className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-indigo-900/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                      {isBriefingActive ? t.BRIEFING_BTN_START : t.BTN_READY}
+                  </button>
               </div>
           </div>
       )}
