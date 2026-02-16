@@ -319,7 +319,8 @@ export class ActionProcessor {
       // Check if items match requirements
       // The order matters based on how slots are filled in UI
       for (let i = 0; i < 3; i++) {
-          if (items[i].baseId !== requirements[i]) {
+          // FIX: Allow ANY wildcard
+          if (requirements[i] !== 'ANY' && items[i].baseId !== requirements[i]) {
               return { ok: false, reason: `Slot ${i+1} incorrect item` };
           }
       }
