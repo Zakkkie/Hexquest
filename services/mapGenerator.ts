@@ -29,6 +29,10 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
                 level = 0;
                 structureType = undefined;
             }
+        } else if (wallType === 'pit_ring') {
+            // Level 1.6 logic: Surround with Deep Pits (-8)
+            level = -8;
+            structureType = undefined;
         } else {
             // Classic Wall
             level = Math.min(99, wallStartLevel + (dist - wallStartRadius));

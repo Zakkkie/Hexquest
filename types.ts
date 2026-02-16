@@ -355,7 +355,7 @@ export interface LevelConfig {
     generateWalls?: boolean; 
     wallStartRadius?: number; 
     wallStartLevel?: number;  
-    wallType?: 'classic' | 'void_shatter'; 
+    wallType?: 'classic' | 'void_shatter' | 'pit_ring'; 
     
     // NEW: Allow explicit hex definitions for puzzle levels
     customLayout?: Partial<Hex>[];

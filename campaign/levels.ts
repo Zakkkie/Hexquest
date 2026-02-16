@@ -314,6 +314,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       type: 'fixed',
       generateWalls: true, 
       wallStartRadius: 4,
+      wallType: 'pit_ring',
       customLayout: [
           // Player Side
           { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
