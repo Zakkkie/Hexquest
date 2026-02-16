@@ -972,13 +972,17 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* --- ADDED MODALS --- */}
-
-      {/* MISSION DETAILS MODAL */}
-      {showMissionDetails && (
-          <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setShowMissionDetails(false)}>
+      {/* MISSION DETAILS MODAL (Shared with Briefing) */}
+      {(showMissionDetails || isBriefingActive) && (
+          <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => !isBriefingActive && setShowMissionDetails(false)}>
               <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-md w-full relative" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => setShowMissionDetails(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
+                  {!isBriefingActive && (
+                      <button onClick={() => setShowMissionDetails(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
+                  )}
+                  {isBriefingActive && (
+                      <button onClick={() => abandonSession()} className="absolute top-4 right-4 text-slate-500 hover:text-red-400 transition-colors" title="Abort Mission"><LogOut className="w-5 h-5"/></button>
+                  )}
+
                   <h3 className="text-xl font-black text-white uppercase mb-2">{briefingTitle}</h3>
                   <div className="h-px w-full bg-slate-800 mb-4" />
                   <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed font-mono">{briefingDesc}</p>
@@ -994,7 +998,15 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   </div>
 
                   <div className="mt-6 flex justify-end">
-                      <button onClick={() => setShowMissionDetails(false)} className="px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold uppercase text-white transition-colors">{t.BTN_READY}</button>
+                      {isBriefingActive ? (
+                          <button onClick={handleStartMission} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-black uppercase text-white transition-colors shadow-lg shadow-emerald-900/20 tracking-widest flex items-center gap-2">
+                              {t.BRIEFING_BTN_START} <ArrowRight className="w-4 h-4" />
+                          </button>
+                      ) : (
+                          <button onClick={() => setShowMissionDetails(false)} className="px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold uppercase text-white transition-colors">
+                              {t.BTN_READY}
+                          </button>
+                      )}
                   </div>
               </div>
           </div>
