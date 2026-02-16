@@ -216,6 +216,14 @@ interface Dictionary {
         LEVEL_1_5_DESC: string;
         LEVEL_1_6_TITLE: string;
         LEVEL_1_6_DESC: string;
+        LEVEL_2_1_TITLE: string;
+        LEVEL_2_1_DESC: string;
+        LEVEL_2_2_TITLE: string;
+        LEVEL_2_2_DESC: string;
+        LEVEL_2_3_TITLE: string;
+        LEVEL_2_3_DESC: string;
+        LEVEL_2_4_TITLE: string;
+        LEVEL_2_4_DESC: string;
     };
     TOOLTIP: {
         CURRENT_LOC: string;
@@ -471,7 +479,15 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_1_5_TITLE: 'Sim 1.5: Oxygen March',
             LEVEL_1_5_DESC: 'Protocol: Emergency Recovery.\n\nObjective: Collect 150 Credits in 60s.\n\nRule: Standard Recovery is single-use. You must MOVE to reset the tool.\n\nMethod: Use RECOVERY (Blue Button) on high sectors. Height yields more Credits.\n\nWARNING: High (Lvl 4+) sectors overheat (Cooldown 15s). Rotate between peaks.',
             LEVEL_1_6_TITLE: 'Sim 1.6: The Architect',
-            LEVEL_1_6_DESC: 'Protocol: Combat.\n\nObjective: Reach Level 4 before the Rival.\n\nBot "Architect V18" active. It can Gather materials and Build supports. Compete for limited space.'
+            LEVEL_1_6_DESC: 'Protocol: Combat.\n\nObjective: Reach Level 4 before the Rival.\n\nBot "Architect V18" active. It can Gather materials and Build supports. Compete for limited space.',
+            LEVEL_2_1_TITLE: 'Sim 2.1: The Monolith',
+            LEVEL_2_1_DESC: 'Target acquired: Unknown Spire.\n\nObjective: Stand on the Monolith (Center, Level 4).\n\nConstraint: The Monolith is indestructible and too high to climb directly.\n\nTask: Build a staircase (L1 -> L2 -> L3) to reach the summit.',
+            LEVEL_2_2_TITLE: 'Sim 2.2: Buried Secrets',
+            LEVEL_2_2_DESC: 'Scan complete: Activation Key detected underground.\n\nObjective: Find items and activate the Monolith.\n\nHint: Dig deep (Level -1 or lower) near the center to find artifacts. You need 3 items to activate the Monolith structure.',
+            LEVEL_2_3_TITLE: 'Sim 2.3: Entropy Rising',
+            LEVEL_2_3_DESC: 'ALERT: Sector instability detected.\n\nObjective: Reach and Activate the Monolith before total collapse.\n\nMechanic: ENTROPY gauge is low. Digging and Building accelerates decay.\n\nOutcome: When Entropy hits 0, terrain shifts and voids open. Hurry.',
+            LEVEL_2_4_TITLE: 'Sim 2.4: The Rivalry',
+            LEVEL_2_4_DESC: 'Threat Assessment: Hostile Unit Detected.\n\nObjective: Secure Keys and activate the Spire before the Rival.\n\nIntel: Resources are scarce. If the Rival finds items first, you may need to dig aggressively to beat them to the summit.'
         },
         TOOLTIP: {
             CURRENT_LOC: "Location",
@@ -725,7 +741,15 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_1_5_TITLE: 'Сим 1.5: Кислородный Марш',
             LEVEL_1_5_DESC: 'Протокол: Экстренное Восстановление.\n\nЦель: Собрать 150 Кред. за 60с.\n\nПравило: Восстановление доступно 1 раз за визит. Вы должны СДВИНУТЬСЯ, чтобы сбросить инструмент.\n\nМетод: Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на высоких секторах. Высота дает больше Денег.\n\nВНИМАНИЕ: Высокие (Ур. 4+) сектора перегреваются (КД 15с). Перемещайтесь между пиками.',
             LEVEL_1_6_TITLE: 'Сим 1.6: Архитектор',
-            LEVEL_1_6_DESC: 'Протокол: Бой.\n\nЦель: Достичь Уровня 4 раньше соперника.\n\nБот "Архитектор V18" активен. Он умеет Копать материалы и Строить опоры. Сражайтесь за ограниченное пространство.'
+            LEVEL_1_6_DESC: 'Протокол: Бой.\n\nЦель: Достичь Уровня 4 раньше соперника.\n\nБот "Архитектор V18" активен. Он умеет Копать материалы и Строить опоры. Сражайтесь за ограниченное пространство.',
+            LEVEL_2_1_TITLE: 'Сим 2.1: Монолит',
+            LEVEL_2_1_DESC: 'Обнаружен Неизвестный Шпиль.\n\nЦель: Встать на Вершину Монолита (Центр, Ур. 4).\n\nОграничение: Монолит неразрушим. Прямой подъем невозможен.\n\nЗадача: Постройте лестницу (Ур.1 -> Ур.2 -> Ур.3), чтобы взобраться на пик.',
+            LEVEL_2_2_TITLE: 'Сим 2.2: Тайны Недр',
+            LEVEL_2_2_DESC: 'Сканирование: Ключи Активации под землей.\n\nЦель: Найдите предметы и активируйте Монолит.\n\nПодсказка: Копайте глубоко (Ур. -1 и ниже) рядом с центром, чтобы найти артефакты. Для активации нужно 3 любых предмета.',
+            LEVEL_2_3_TITLE: 'Сим 2.3: Рост Энтропии',
+            LEVEL_2_3_DESC: 'ВНИМАНИЕ: Нестабильность сектора.\n\nЦель: Добраться до Монолита и Активировать его до коллапса.\n\nМеханика: Шкала ЭНТРОПИИ падает. Стройка и Копка ускоряют распад.\n\nИсход: При 0 энтропии реальность искажается. Спешите.',
+            LEVEL_2_4_TITLE: 'Сим 2.4: Противостояние',
+            LEVEL_2_4_DESC: 'Угроза: Враждебный Юнит.\n\nЦель: Добудьте Ключи и активируйте Шпиль раньше соперника.\n\nРазведка: Ресурсов мало. Если враг найдет предметы первым, вам придется действовать агрессивно.'
         },
         TOOLTIP: {
             CURRENT_LOC: "Позиция",
