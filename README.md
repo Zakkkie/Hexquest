@@ -6,6 +6,7 @@
 ## 🚀 Key Features
 
 *   **2.5D Isometric Engine**: Custom rendering engine built on `react-konva` supporting dynamic lighting, height perspective, and smooth animations.
+*   **Adaptive Responsive UI**: Automatically detects device type (Mobile, Tablet, Desktop) and scales the interface, HUD, and touch targets for optimal playability on any screen.
 *   **Verticality & Physics**: Terrain height affects movement cost. **Level 1** sectors are unstable and will collapse into the **Void** if traversed too often.
 *   **"The Cycle" Economy**: A tight resource loop. **Dig** terrain to gain materials, **Build** upwards to increase rank and income, **Recover** to refuel.
 *   **Procedural Audio**: "Nebula V2" sound engine generates dynamic music and SFX in real-time using the Web Audio API (FM Synthesis). No audio assets required.
@@ -14,11 +15,17 @@
 
 ## 🎮 How to Play
 
-### Controls
+### Controls (Desktop)
 *   **Left Click**: Move / Select Hex.
 *   **Right Click + Drag**: Rotate Camera.
 *   **Scroll**: Zoom In/Out.
 *   **Drag & Drop**: Move items from inventory to interactive slots (Monument).
+
+### Controls (Mobile / Touch)
+*   **Tap**: Move / Select Hex.
+*   **Two-Finger Pinch**: Zoom In/Out.
+*   **Two-Finger Rotate**: Rotate Camera.
+*   **Long Press**: Inspect Item (Inventory).
 
 ### The Core Loop
 1.  **Movement**: Moving costs **Moves** (Fuel). High terrain (Level 2+) costs more fuel. If out of fuel, you burn **Credits**.
