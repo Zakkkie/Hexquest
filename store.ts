@@ -186,8 +186,13 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
 
   // Generate Requirements
   let monumentRequirements: string[] | undefined;
-  if (winCondition?.winType === 'SUMMIT') {
-      monumentRequirements = generateMonumentRecipe(difficulty);
+  if (winCondition?.winType === 'SUMMIT' || levelConfig?.id === '2.1' || levelConfig?.id === '2.2' || levelConfig?.id === '2.3' || levelConfig?.id === '2.4') {
+      // LEVEL 2.2 SPECIAL RULE: ACCEPT ANY ITEM
+      if (levelConfig?.id === '2.2') {
+          monumentRequirements = ['ANY', 'ANY', 'ANY'];
+      } else {
+          monumentRequirements = generateMonumentRecipe(difficulty);
+      }
   }
 
   return {
@@ -655,7 +660,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // VALIDATION: Does this item match the requirement for this slot?
       const requiredBaseId = requirements[slotIndex];
-      if (item.baseId !== requiredBaseId) {
+      // LEVEL 2.2 UPDATE: Allow ANY if requirement is 'ANY'
+      if (requiredBaseId !== 'ANY' && item.baseId !== requiredBaseId) {
           audioService.play('ERROR');
           state.showToast("Wrong item type for this slot!", "error");
           return;

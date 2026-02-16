@@ -354,7 +354,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '2.1',
     title: 'Sim 2.1: The Monolith',
-    description: 'Target acquired: Unknown Spire.\n\nObjective: Stand on the Monolith (Center, Level 4).\n\nConstraint: The Monolith is indestructible and too high to climb directly.\n\nTask: Build a staircase (L1 -> L2 -> L3) to reach the summit.',
+    description: 'Target acquired: Unknown Spire.\n\nObjective: Stand on the Monolith (Center, Level 3).\n\nConstraint: The Monolith is indestructible and too high to climb directly.\n\nTask: Build a staircase (L1 -> L2) to reach the summit.',
     
     mapConfig: {
       size: 5,
@@ -363,8 +363,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       wallStartRadius: 4,
       wallType: 'pit_ring',
       customLayout: [
-          // The Monolith (Goal) - Center
-          { q: 0, r: 0, maxLevel: 4, currentLevel: 4, structureType: 'MONUMENT', revealed: true },
+          // The Monolith (Goal) - Center - REDUCED HEIGHT TO 3
+          { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
           
           // Player Start (Edge) - NOT on Monument
           { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
@@ -405,7 +405,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '2.2',
     title: 'Sim 2.2: Buried Secrets',
-    description: 'Scan complete: Activation Key detected underground.\n\nObjective: Find items and activate the Monolith.\n\nHint: Dig deep (Level -1 or lower) near the center to find artifacts. You need 3 items to activate the Monolith structure.',
+    description: 'Scan complete: Activation Key detected underground.\n\nObjective: Find items and activate the Monolith.\n\nHint: Dig deep (Level -1 or lower) near the center to find artifacts. You can use ANY 3 items to activate the Monolith structure.',
     
     mapConfig: {
       size: 5,

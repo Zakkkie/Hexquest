@@ -12,7 +12,7 @@ import { GAME_CONFIG } from '../rules/config.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap, Key, 
-  Activity, EyeOff, Skull, Hammer, Flame, ShieldAlert, Backpack, Swords, BookOpen, WifiOff
+  Activity, EyeOff, Skull, Hammer, Flame, ShieldAlert, Backpack, Swords, BookOpen, WifiOff, HelpCircle
 } from 'lucide-react';
 import { itemRenderer } from '../services/itemRenderer.ts';
 import { getItemDef, ITEM_REGISTRY } from '../rules/items.ts'; 
@@ -525,7 +525,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       const item = player?.inventory.find(i => i.id === itemId);
       
       if (item && monumentRequirements && monumentRequirements.length > slotIndex) {
-          if (item.baseId !== monumentRequirements[slotIndex]) {
+          const reqId = monumentRequirements[slotIndex];
+          if (reqId !== 'ANY' && item.baseId !== reqId) {
               playUiSound('ERROR');
               return;
           }
@@ -544,7 +545,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           if (!monumentRequirements) return;
 
           const matchingSlotIndex = monumentRequirements.findIndex((reqId, idx) => {
-              return reqId === item.baseId && monumentDialogState.slots[idx] === null;
+              return (reqId === 'ANY' || reqId === item.baseId) && monumentDialogState.slots[idx] === null;
           });
 
           if (matchingSlotIndex !== -1 && !monumentDialogState.slots.some(s => s?.id === item.id)) {
@@ -977,7 +978,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               {[0, 1, 2].map((idx) => {
                                   const slotItem = monumentDialogState.slots[idx];
                                   const reqId = monumentRequirements ? monumentRequirements[idx] : undefined;
-                                  const reqDef = reqId ? getItemDef(reqId) : undefined;
+                                  // Update for wildcard
+                                  const isWildcard = reqId === 'ANY';
+                                  const reqDef = reqId && !isWildcard ? getItemDef(reqId) : undefined;
+                                  
                                   return (
                                       <div 
                                           key={idx}
@@ -1004,16 +1008,23 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                               </>
                                           ) : (
                                               <>
-                                                  {reqDef ? (
+                                                  {isWildcard ? (
                                                       <div className="flex flex-col items-center opacity-60 grayscale group-hover:grayscale-0 transition-all">
-                                                          <ItemIcon def={reqDef} size="w-10 h-10 md:w-12 md:h-12" opacity={0.6} grayscale />
-                                                          <span className="text-[8px] text-slate-500 font-mono mt-1 text-center leading-tight max-w-[60px]">{reqDef.name[language]}</span>
+                                                          <HelpCircle className="w-10 h-10 md:w-12 md:h-12 text-slate-400" />
+                                                          <span className="text-[8px] text-slate-500 font-mono mt-1 text-center leading-tight">ANY KEY</span>
                                                       </div>
                                                   ) : (
-                                                      <>
-                                                          <Key className="w-6 h-6 text-slate-700 mb-1" />
-                                                          <span className="text-[9px] text-slate-600 font-mono">SLOT {idx+1}</span>
-                                                      </>
+                                                      reqDef ? (
+                                                          <div className="flex flex-col items-center opacity-60 grayscale group-hover:grayscale-0 transition-all">
+                                                              <ItemIcon def={reqDef} size="w-10 h-10 md:w-12 md:h-12" opacity={0.6} grayscale />
+                                                              <span className="text-[8px] text-slate-500 font-mono mt-1 text-center leading-tight max-w-[60px]">{reqDef.name[language]}</span>
+                                                          </div>
+                                                      ) : (
+                                                          <>
+                                                              <Key className="w-6 h-6 text-slate-700 mb-1" />
+                                                              <span className="text-[9px] text-slate-600 font-mono">SLOT {idx+1}</span>
+                                                          </>
+                                                      )
                                                   )}
                                               </>
                                           )}
