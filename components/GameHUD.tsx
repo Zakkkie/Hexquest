@@ -97,7 +97,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const sessionStartTime = useGameStore(state => state.session?.sessionStartTime);
   const difficulty = useGameStore(state => state.session?.difficulty || 'MEDIUM');
   const monumentRequirements = useGameStore(state => state.session?.monumentRequirements); 
-  const leaderboard = useGameStore(state => state.leaderboard);
   
   const language = useGameStore(state => state.language);
   const user = useGameStore(state => state.user);
@@ -193,6 +192,39 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   }, [gameStatus]);
 
   const isHudVisible = victoryStage === 'HIDDEN' && !isBriefingActive;
+
+  // --- LIVE RANKINGS CALCULATION ---
+  const liveRankings = useMemo(() => {
+      if (!player) return [];
+      const botList = bots || [];
+      
+      const list = [
+          {
+              id: player.id,
+              nickname: user?.nickname || (language === 'RU' ? 'Вы' : 'You'),
+              isPlayer: true,
+              level: player.playerLevel,
+              coins: player.coins,
+              moves: player.moves,
+              color: player.avatarColor || '#3b82f6'
+          },
+          ...botList.map(b => ({
+              id: b.id,
+              nickname: language === 'RU' ? `Ривал ${b.id.replace('bot-', '')}` : `Rival ${b.id.replace('bot-', '')}`,
+              isPlayer: false,
+              level: b.playerLevel,
+              coins: b.coins,
+              moves: b.moves,
+              color: b.avatarColor || '#ef4444'
+          }))
+      ];
+      
+      return list.sort((a, b) => {
+          if (b.level !== a.level) return b.level - a.level;
+          if (b.coins !== a.coins) return b.coins - a.coins;
+          return b.moves - a.moves;
+      });
+  }, [player, bots, user, language]);
 
   const recoveryState = useMemo(() => {
       if (!currentHex || !player) return { canRecover: false, label: '', cooling: false, remainingCd: 0 };
@@ -488,8 +520,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const handleVoidRestore = (item: Item) => {
       if (voidDialogTarget) {
           restoreVoidHex(item.id);
-          // Don't need to close manually, restoreVoidHex calls set({voidDialogTarget: null}) on success.
-          // But if fail, we might want to keep open? restoreVoidHex handles logic.
       }
   };
 
@@ -523,13 +553,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       }
   };
 
-  // Fixed 5 slots as requested
   const inventoryList = [0, 1, 2, 3, 4];
-
-  // Resolved inspected item text
   const inspectedData = inspectedItem ? resolveItemText(inspectedItem) : null;
 
-  // Help Content Resolution
   const getHelpContent = () => {
       switch(helpTopic) {
           case 'RANK': return { title: t.RANK, desc: t.HELP_RANK_DESC, hint: t.HELP_RANK_GOAL.replace('{0}', String(winCondition?.targetLevel || 0)) };
@@ -586,18 +612,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* MISSION DETAILS / BRIEFING MODAL */}
+      {/* MISSION DETAILS */}
       {(showMissionDetails || isBriefingActive) && (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-300">
               <div className="bg-slate-950 border border-slate-700 rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-6 p-6 animate-in zoom-in-95">
-                  
-                  {/* Decorative Header */}
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
-                  
                   <button onClick={() => isBriefingActive ? handleStartMission() : setShowMissionDetails(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20">
                       <X className="w-6 h-6"/>
                   </button>
-
                   <div className="flex flex-col items-center text-center mt-2">
                       <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-4 border border-slate-800 shadow-inner">
                           <Target className="w-8 h-8 text-indigo-400" />
@@ -614,14 +636,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           )}
                       </div>
                   </div>
-
                   <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-800/50 max-h-[40vh] overflow-y-auto no-scrollbar">
-                      <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-mono">
-                          {briefingDesc}
-                      </p>
+                      <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-mono">{briefingDesc}</p>
                   </div>
-
-                  {/* Hints */}
                   <div className="grid grid-cols-3 gap-2">
                       <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex flex-col items-center text-center gap-1">
                           <ChevronsUp className="w-4 h-4 text-amber-400" />
@@ -636,24 +653,19 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           <span className="text-[9px] text-slate-500 uppercase font-bold">{t.HINT_MOVES}</span>
                       </div>
                   </div>
-
-                  <button 
-                      onClick={() => isBriefingActive ? handleStartMission() : setShowMissionDetails(false)}
-                      className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-indigo-900/30 transition-all active:scale-95 flex items-center justify-center gap-2"
-                  >
+                  <button onClick={() => isBriefingActive ? handleStartMission() : setShowMissionDetails(false)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-indigo-900/30 transition-all active:scale-95 flex items-center justify-center gap-2">
                       {isBriefingActive ? t.BRIEFING_BTN_START : t.BTN_READY}
                   </button>
               </div>
           </div>
       )}
 
+      {/* HEADER HUD */}
       {isHudVisible && (
-      // ... HEADER RENDER ...
       <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-30 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in">
           <div className="w-full flex justify-between items-start gap-2 md:gap-2 max-w-7xl mx-auto relative">
                <div className="flex flex-col gap-2">
                    <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-700/50 shadow-xl px-2 py-1.5 md:px-3 md:py-2 gap-2 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade flex-1 md:flex-none md:w-fit md:shrink-0 max-w-[calc(100vw-80px)] md:max-w-none">
-                       {/* Stats block (rank/mat/coins/moves) */}
                        <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
                            <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
                                <Crown className="w-3 h-3 md:w-5 md:h-5 text-white" />
@@ -693,8 +705,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                <span className="text-xs md:text-xl font-black text-white leading-none">{player.moves}</span>
                            </div>
                        </div>
-                       
-                       {/* ENTROPY / STABILITY */}
                        <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0"></div>
                        <div onClick={() => { setHelpTopic('ENTROPY'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
                            <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-slate-800 flex items-center justify-center border border-slate-700">
@@ -702,13 +712,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                            </div>
                            <div className="flex flex-col justify-center">
                                <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">STABLE</span>
-                               {/* REMOVED MAX LABEL HERE */}
                            </div>
                        </div>
                    </div>
                </div>
 
-               {/* System Menu Button */}
                <div className="pointer-events-auto flex items-start shrink-0 relative z-50">
                    <div className="relative">
                         <button onClick={() => { setIsSystemMenuOpen(!isSystemMenuOpen); playUiSound('CLICK'); }} className={`w-9 h-9 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'}`}>
@@ -716,17 +724,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                         </button>
                         {isSystemMenuOpen && (
                             <div ref={systemMenuRef} className="absolute top-full right-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[180px] z-[60] animate-in slide-in-from-top-2 duration-200">
-                                {/* Audio Toggles */}
                                 <div className="flex gap-2">
                                     <button onClick={() => { toggleMusic(); playUiSound('CLICK'); }} className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isMusicMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-indigo-900/40 border-indigo-500/50 text-indigo-400'}`}>{isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}</button>
                                     <button onClick={() => { toggleSfx(); playUiSound('CLICK'); }} className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isSfxMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-emerald-900/40 border-emerald-500/50 text-emerald-400'}`}>{isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</button>
                                 </div>
-                                {/* Language Toggle */}
                                 <button onClick={() => { setLanguage(language === 'EN' ? 'RU' : 'EN'); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
                                     <Globe className="w-4 h-4 text-sky-400" />
                                     <span className="text-xs font-bold uppercase">{language === 'EN' ? 'English' : 'Русский'}</span>
                                 </button>
-                                {/* Other Menu Items */}
                                 <button onClick={() => { setIsRankingsOpen(true); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border bg-slate-800/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white`}>
                                     <Trophy className="w-4 h-4 text-amber-500" />
                                     <span className="text-xs font-bold uppercase">{t.LEADERBOARD_TITLE}</span>
@@ -748,32 +753,22 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       </div>
       )}
 
-      {/* FOOTER ACTION DOCK (Optimized Width & Horizontal Layout) */}
+      {/* FOOTER ACTION DOCK */}
       {isHudVisible && gameStatus === 'PLAYING' && (
           <div className="absolute inset-x-0 bottom-0 p-1 md:p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end">
-              
-              {/* Active Statuses - Floating above dock */}
               <div className="mb-1 pointer-events-auto">
                   {renderActiveStatuses()}
               </div>
-
-              {/* UNIFIED GLASS DOCK - HORIZONTAL LAYOUT */}
               <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-1 md:p-1.5 pointer-events-auto flex items-end gap-1 md:gap-3 relative max-w-full overflow-hidden">
-                  
-                  {/* LEFT COLUMN: INFO & INVENTORY */}
                   <div className="flex flex-col gap-1 md:gap-1.5 justify-end pb-0.5">
-                      
-                      {/* MISSION INFO PILL (Compact) */}
                       <div className="flex items-center gap-2 px-2 py-1 bg-black/40 rounded border border-white/5 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => { setShowMissionDetails(true); playUiSound('CLICK'); }}>
                           {renderMissionStatus()}
                           <Info className="w-3 h-3 text-slate-500" />
                       </div>
-
-                      {/* INVENTORY ROW */}
                       <div className="flex items-center gap-0.5 md:gap-1">
                           {inventoryList.map(index => {
                               const item = player.inventory[index];
-                              const slotSize = "w-7 h-7 md:w-9 md:h-9"; // Compact 28px on mobile, 36px desktop
+                              const slotSize = "w-7 h-7 md:w-9 md:h-9"; 
                               return (
                                   <div 
                                       key={index} 
@@ -785,22 +780,13 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                               : 'bg-slate-950/30 border-slate-800/50 border-dashed'}
                                       `}
                                   >
-                                      {item ? (
-                                          <ItemIcon item={item} size={slotSize} />
-                                      ) : (
-                                          <div className="w-1 h-1 rounded-full bg-slate-800" />
-                                      )}
+                                      {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1 h-1 rounded-full bg-slate-800" />}
                                   </div>
                               );
                           })}
-                          {/* Backpack Hint Removed as requested */}
                       </div>
                   </div>
-
-                  {/* SEPARATOR */}
                   <div className="w-px h-14 md:h-16 bg-gradient-to-b from-transparent via-slate-500/30 to-transparent"></div>
-
-                  {/* RIGHT COLUMN: ACTION BUTTONS */}
                   <div className="flex items-end gap-1 md:gap-2">
                       <HexButton variant="red" size={mainButtonSize} onClick={() => { togglePlayerGrowth('DIG'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
                           <Pickaxe className={`w-4 h-4 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
@@ -826,13 +812,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* INSPECTION CARD - DYNAMIC TEXT RESOLUTION */}
+      {/* INSPECTION CARD */}
       {inspectedItem && inspectedData && (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-200">
               <div className="bg-slate-950 border border-slate-700 rounded-3xl shadow-2xl max-w-sm w-full relative overflow-hidden flex flex-col gap-6 p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                   <button onClick={() => setInspectedItem(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-6 h-6"/></button>
-                  
-                  {/* Header */}
                   <div className="flex flex-col items-center">
                       <div className="w-32 h-32 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 shadow-inner">
                           <ItemIcon item={inspectedItem} size="w-24 h-24" />
@@ -840,13 +824,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       <h3 className="text-xl font-black text-white uppercase tracking-tight text-center">{inspectedData.name}</h3>
                       <span className={`text-xs font-bold uppercase mt-1 px-2 py-0.5 rounded-full bg-slate-900 border ${getRarityBorder(inspectedItem.rarity)} text-slate-300`}>{inspectedItem.rarity}</span>
                   </div>
-
-                  {/* Description */}
-                  <p className="text-sm text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800 py-4">
-                      "{inspectedData.description}"
-                  </p>
-
-                  {/* Stats */}
+                  <p className="text-sm text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800 py-4">"{inspectedData.description}"</p>
                   <div className="flex flex-col gap-3">
                       <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-950/30 border border-emerald-900/50">
                           <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
@@ -855,7 +833,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               <span className="text-xs text-emerald-100 font-mono">{inspectedData.effectDesc}</span>
                           </div>
                       </div>
-                      
                       {inspectedItem.negativeEffectType && (
                           <div className="flex items-start gap-3 p-3 rounded-xl bg-red-950/30 border border-red-900/50">
                               <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -866,27 +843,16 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           </div>
                       )}
                   </div>
-
-                  {/* Actions */}
                   <div className="flex gap-3 mt-2">
-                      <button 
-                          onClick={() => { destroyItem(inspectedItem.id); setInspectedItem(null); }}
-                          className="flex-1 py-3 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-800 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors flex items-center justify-center gap-2 group"
-                      >
+                      <button onClick={() => { destroyItem(inspectedItem.id); setInspectedItem(null); }} className="flex-1 py-3 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-800 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors flex items-center justify-center gap-2 group">
                           <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" /> Discard
                       </button>
-                      <button 
-                          onClick={() => setInspectedItem(null)}
-                          className="flex-1 py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-wider text-xs transition-colors"
-                      >
-                          Close
-                      </button>
+                      <button onClick={() => setInspectedItem(null)} className="flex-1 py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-wider text-xs transition-colors">Close</button>
                   </div>
               </div>
           </div>
       )}
       
-      {/* VICTORY / DEFEAT SCREENS (unchanged) */}
       {(gameStatus === 'DEFEAT' || (gameStatus === 'VICTORY' && victoryStage === 'MODAL')) && (
           <div className="absolute inset-0 z-[200] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-700 pointer-events-auto p-4">
               <div className="flex flex-col items-center max-w-md w-full">
@@ -904,7 +870,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* MONUMENT DIALOG */}
       {monumentDialogState.isOpen && (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300 pointer-events-auto">
               <div className="bg-slate-950 border border-amber-900/50 p-6 rounded-3xl shadow-2xl max-w-2xl w-full relative overflow-hidden flex flex-col gap-6 animate-in zoom-in-95">
@@ -923,16 +888,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       {t.MONUMENT_DESC_1} <span className="text-amber-400 font-bold">{t.MONUMENT_DESC_2}</span> {t.MONUMENT_DESC_3}
                       <br/>
                       <span className="text-xs opacity-60">
-                          {difficulty === 'EASY' 
-                              ? t.MONUMENT_REQ_EASY 
-                              : (difficulty === 'MEDIUM' 
-                                  ? t.MONUMENT_REQ_MED
-                                  : t.MONUMENT_REQ_HARD)}
+                          {difficulty === 'EASY' ? t.MONUMENT_REQ_EASY : (difficulty === 'MEDIUM' ? t.MONUMENT_REQ_MED : t.MONUMENT_REQ_HARD)}
                       </span>
                   </p>
-
                   <div className="flex flex-col md:flex-row gap-6 h-[300px]">
-                      {/* INVENTORY LIST - DYNAMIC TEXT */}
                       <div className="flex-1 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden">
                           <div className="p-2 border-b border-slate-800 bg-slate-900">
                               <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.MONUMENT_KEYS}</span>
@@ -942,7 +901,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                   <div className="text-center text-slate-600 text-xs italic py-10">{t.MONUMENT_EMPTY_INV}</div>
                               ) : (
                                   availableInventory.map(item => {
-                                      // Resolve Name Dynamically
                                       const dynamicText = resolveItemText(item);
                                       return (
                                           <div 
@@ -968,8 +926,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               )}
                           </div>
                       </div>
-
-                      {/* SLOTS */}
                       <div className="flex-[1.2] flex flex-col justify-center items-center gap-4 relative">
                           <div className="absolute inset-0 bg-amber-500/5 blur-3xl rounded-full pointer-events-none"></div>
                           <div className="flex gap-4 relative z-10">
@@ -977,7 +933,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                   const slotItem = monumentDialogState.slots[idx];
                                   const reqId = monumentRequirements ? monumentRequirements[idx] : undefined;
                                   const reqDef = reqId ? getItemDef(reqId) : undefined;
-
                                   return (
                                       <div 
                                           key={idx}
@@ -1036,7 +991,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* VOID DIALOG */}
       {voidDialogTarget && (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300 pointer-events-auto" onClick={closeVoidDialog}>
               <div className="bg-slate-950 border border-red-900/50 p-6 rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -1056,7 +1010,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       <br/>
                       <span className="text-xs text-red-400 font-bold mt-2 block">{t.VOID_WARN}</span>
                   </p>
-
                   <div className="bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden max-h-[300px]">
                       <div className="p-2 border-b border-slate-800 bg-slate-900">
                           <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.VOID_SELECT}</span>
@@ -1093,12 +1046,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* MINI LEADERBOARD MODAL (IN-GAME) */}
       {isRankingsOpen && (
           <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setIsRankingsOpen(false)}>
               <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-                  
-                  {/* Header */}
                   <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
                       <div className="flex items-center gap-3">
                           <Trophy className="w-5 h-5 text-amber-500" />
@@ -1106,33 +1056,37 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       </div>
                       <button onClick={() => setIsRankingsOpen(false)} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
                   </div>
-
-                  {/* List */}
+                  <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-slate-900 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800">
+                      <div className="col-span-1 text-center">#</div>
+                      <div className="col-span-5">Unit</div>
+                      <div className="col-span-2 text-right">{t.RANK}</div>
+                      <div className="col-span-2 text-right">{t.CREDITS}</div>
+                      <div className="col-span-2 text-right">{t.MOVES}</div>
+                  </div>
                   <div className="flex-1 overflow-y-auto no-scrollbar p-2">
-                      {leaderboard.length === 0 ? (
+                      {liveRankings.length === 0 ? (
                           <div className="p-8 text-center text-slate-500 text-xs font-mono">{t.MINI_LB_EMPTY}</div>
                       ) : (
                           <div className="flex flex-col gap-1">
-                              {leaderboard.map((entry, idx) => (
-                                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 transition-all">
-                                      <div className="flex items-center gap-3">
-                                          <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-black ${idx === 0 ? 'bg-amber-500 text-black' : (idx === 1 ? 'bg-slate-400 text-black' : (idx === 2 ? 'bg-orange-700 text-white' : 'bg-slate-700 text-slate-400'))}`}>
+                              {liveRankings.map((entry, idx) => (
+                                  <div key={entry.id} className={`grid grid-cols-12 gap-2 items-center p-2 rounded-lg border ${entry.isPlayer ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
+                                      <div className="col-span-1 flex justify-center">
+                                          <div className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-black ${idx === 0 ? 'bg-amber-500 text-black' : 'bg-slate-700 text-slate-400'}`}>
                                               {idx + 1}
                                           </div>
-                                          <div className="flex flex-col">
-                                              <span className="text-xs font-bold text-white leading-none">{entry.nickname}</span>
-                                              <span className="text-[8px] text-slate-500 font-mono mt-0.5">{new Date(entry.timestamp).toLocaleDateString()}</span>
-                                          </div>
                                       </div>
-                                      <div className="flex items-center gap-3">
-                                          <div className="flex flex-col items-end">
-                                              <span className="text-[8px] uppercase text-slate-500 font-bold">{t.RANK}</span>
-                                              <span className="text-xs font-mono text-indigo-400 font-bold">L{entry.maxLevel}</span>
-                                          </div>
-                                          <div className="flex flex-col items-end w-12">
-                                              <span className="text-[8px] uppercase text-slate-500 font-bold">{t.CREDITS}</span>
-                                              <span className="text-xs font-mono text-amber-400 font-bold">{entry.maxCoins}</span>
-                                          </div>
+                                      <div className="col-span-5 flex items-center gap-2 overflow-hidden">
+                                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }}></div>
+                                          <span className={`text-xs font-bold truncate ${entry.isPlayer ? 'text-indigo-300' : 'text-slate-300'}`}>{entry.nickname}</span>
+                                      </div>
+                                      <div className="col-span-2 text-right">
+                                          <span className="text-xs font-mono text-emerald-400 font-bold">L{entry.level}</span>
+                                      </div>
+                                      <div className="col-span-2 text-right">
+                                          <span className="text-xs font-mono text-amber-400 font-bold">{entry.coins}</span>
+                                      </div>
+                                      <div className="col-span-2 text-right">
+                                          <span className="text-xs font-mono text-blue-400 font-bold">{entry.moves}</span>
                                       </div>
                                   </div>
                               ))}
@@ -1143,14 +1097,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* HELP INFO OVERLAY (Expanded for Entropy) */}
       {helpTopic && helpData && (
           <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setHelpTopic(null)}>
               <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-sm w-full" onClick={e => e.stopPropagation()}>
                   <h3 className="text-lg font-black text-white uppercase mb-2 text-center">{helpData.title}</h3>
                   <p className="text-xs text-slate-400 mb-4 text-center leading-relaxed">{helpData.desc}</p>
-                  
-                  {/* Handle new array-based extra info for Entropy details */}
                   {(helpData as any).extra ? (
                       <div className="flex flex-col gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 mb-4">
                           {(helpData as any).extra.map((line: string, i: number) => (
@@ -1162,11 +1113,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   ) : (
                       <div className="bg-slate-800 p-2 rounded text-xs font-mono text-emerald-400 text-center mb-4">{helpData.hint}</div>
                   )}
-                  
-                  {(helpData as any).extra && (
-                      <div className="bg-slate-800 p-2 rounded text-xs font-mono text-emerald-400 text-center">{helpData.hint}</div>
-                  )}
-
                   <div className="flex justify-center mt-2">
                       <button onClick={() => setHelpTopic(null)} className="text-xs font-bold text-slate-500 hover:text-white uppercase tracking-wider py-2 px-4 rounded hover:bg-slate-800 transition-colors">Close</button>
                   </div>
