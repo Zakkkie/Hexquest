@@ -263,19 +263,51 @@ export class MovementSystem implements System {
     }
 
     // D. STANDARD FOG OF WAR (If no monument event overrides)
-    const neighbors = getNeighbors(entity.q, entity.r);
-    [...neighbors, { q: entity.q, r: entity.r }].forEach(n => {
-      const k = getHexKey(n.q, n.r);
-      const existingHex = gridUpdates[k] || state.grid[k];
-      
-      if (!existingHex) {
-          const newGeneratedHex = generateSingleHex(n.q, n.r, state.activeLevelConfig);
-          newGeneratedHex.revealed = true;
-          gridUpdates[k] = newGeneratedHex;
-      } else if (!existingHex.revealed) {
-          gridUpdates[k] = { ...existingHex, revealed: true };
-      }
-    });
+    // Check for Scanner Buff
+    const hasScanner = entity.activeStatuses?.some(s => s.type === 'STATUS_SCANNER_BUFF' && (!s.expiresAt || s.expiresAt > Date.now()));
+    const revealRadius = hasScanner ? 2 : 1;
+
+    // Use BFS logic to get hexes in radius
+    const visited = new Set<string>();
+    const queue: { q: number, r: number, dist: number }[] = [{ q: entity.q, r: entity.r, dist: 0 }];
+    const startKey = getHexKey(entity.q, entity.r);
+    visited.add(startKey);
+
+    // Initial hex check
+    let startHex = gridUpdates[startKey] || state.grid[startKey];
+    if (!startHex) {
+        startHex = generateSingleHex(entity.q, entity.r, state.activeLevelConfig);
+        startHex.revealed = true;
+        gridUpdates[startKey] = startHex;
+    } else if (!startHex.revealed) {
+        gridUpdates[startKey] = { ...startHex, revealed: true };
+    }
+
+    // BFS Loop
+    let head = 0;
+    while(head < queue.length) {
+        const { q, r, dist } = queue[head++];
+        if (dist >= revealRadius) continue;
+
+        const neighbors = getNeighbors(q, r);
+        for (const n of neighbors) {
+            const key = getHexKey(n.q, n.r);
+            if (!visited.has(key)) {
+                visited.add(key);
+                let hex = gridUpdates[key] || state.grid[key];
+                
+                if (!hex) {
+                    const newHex = generateSingleHex(n.q, n.r, state.activeLevelConfig);
+                    newHex.revealed = true;
+                    gridUpdates[key] = newHex;
+                } else if (!hex.revealed) {
+                    gridUpdates[key] = { ...hex, revealed: true };
+                }
+                
+                queue.push({ q: n.q, r: n.r, dist: dist + 1 });
+            }
+        }
+    }
 
     // --- APPLY BATCH UPDATE ---
     if (Object.keys(gridUpdates).length > 0) {

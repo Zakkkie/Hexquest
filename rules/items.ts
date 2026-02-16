@@ -81,12 +81,13 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         idPrefix: 'rusted_scanner',
         rarity: 'COMMON',
         name: { EN: 'Rusted Scanner', RU: 'Ржавый Сканер' },
-        description: { EN: 'Old screen taped to a handle.', RU: 'Старый экран на рукоятке.' },
+        description: { EN: 'Old screen taped to a handle. Permanent Range Boost.', RU: 'Старый экран. Увеличивает радиус обзора.' },
         visualType: 'SCANNER',
         visualColor: '#94a3b8',
-        effectType: 'REVEAL_MAP',
+        effectType: 'STATUS_SCANNER_BUFF',
         effectValue: 1, 
-        effectLabel: { EN: 'Reveal Fog', RU: 'Разведка' },
+        effectDuration: 86400000, // 24 Hours (Effectively Permanent)
+        effectLabel: { EN: 'Active Scanner (Range +1)', RU: 'Активный Сканер (Радиус +1)' },
         negativeEffectType: 'LOSE_RANK',
         negativeEffectValue: 1,
         negativeEffectLabel: { EN: '-1 Rank (Malfunction)', RU: '-1 Ранг (Ожог)' }

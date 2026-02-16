@@ -62,7 +62,8 @@ export type ItemEffectType =
     | 'GOD_MODE'
     // Status Effects (Positive)
     | 'STATUS_GOLD_RUSH'
-    | 'STATUS_FREE_BUILD';
+    | 'STATUS_FREE_BUILD'
+    | 'STATUS_SCANNER_BUFF'; // New: Permanent fog reveal
 
 export type NegativeEffectType =
     | 'LOSE_CREDITS'
@@ -82,8 +83,9 @@ export type NegativeEffectType =
 export interface ActiveStatus {
     type: ItemEffectType | NegativeEffectType;
     label: string; // "Fatigue", "Gold Rush"
-    expiresAt: number; // Timestamp
+    expiresAt?: number; // Timestamp (Optional for permanent effects)
     icon?: string; // Icon identifier
+    description?: string; // Detailed description for tooltip
 }
 
 export interface Item {

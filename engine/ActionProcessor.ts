@@ -161,7 +161,8 @@ export class ActionProcessor {
       actor.activeStatuses.push({
           type: type as any,
           label: label,
-          expiresAt: duration ? Date.now() + duration : Date.now() + 60000
+          expiresAt: duration ? Date.now() + duration : undefined, // Explicit undefined means permanent/very long
+          description: label
       });
   }
 
@@ -218,6 +219,7 @@ export class ActionProcessor {
           case 'STATUS_GOLD_CURSE':
           case 'STATUS_SOIL_EATER':
           case 'STATUS_BREAKDOWN_RISK':
+          case 'STATUS_SCANNER_BUFF':
           case 'BUFF_DIG': // Mapped to gold rush internally usually, or custom
               this.addStatus(actor, type, desc, duration);
               break;

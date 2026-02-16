@@ -12,10 +12,10 @@ import { GAME_CONFIG } from '../rules/config.ts';
 import { 
   Pause, Trophy, Footprints, LogOut,
   Crown, RefreshCw, Target, Wallet, Music, Volume2, VolumeX, X, Settings, Globe, AlertTriangle, ChevronsUp, Pickaxe, Box, RotateCcw, RotateCw, Info, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw as ReloadIcon, Clock, ChevronDown, ChevronUp, Hourglass, Scan, Mountain, Gem, Trash2, ChevronRight, Zap, Key, 
-  Activity, EyeOff, Skull, Hammer, Flame, ShieldAlert, Backpack, Swords
+  Activity, EyeOff, Skull, Hammer, Flame, ShieldAlert, Backpack, Swords, BookOpen, WifiOff
 } from 'lucide-react';
 import { itemRenderer } from '../services/itemRenderer.ts';
-import { getItemDef } from '../rules/items.ts'; 
+import { getItemDef, ITEM_REGISTRY } from '../rules/items.ts'; 
 
 interface GameHUDProps {
   hoveredHexId: string | null;
@@ -84,6 +84,59 @@ const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity?: numb
     return <canvas ref={canvasRef} width={64} height={64} className={`${size} object-contain`} />;
 };
 
+// New Status Icon Component
+const StatusIcon: React.FC<{ status: ActiveStatus }> = ({ status }) => {
+    const now = Date.now();
+    const remaining = status.expiresAt ? Math.max(0, status.expiresAt - now) : Infinity;
+    const isPermanent = !status.expiresAt || status.expiresAt > now + 80000000; // > 22 hours
+    const isNegative = status.type.includes('STATUS_FATIGUE') || status.type.includes('CURSE') || status.type.includes('RISK') || status.type.includes('VISION') || status.type.includes('OFFLINE');
+    
+    // Icon Mapping
+    const getIcon = () => {
+        if (status.type.includes('SCANNER')) return <Scan className="w-4 h-4" />;
+        if (status.type.includes('FATIGUE')) return <Activity className="w-4 h-4" />;
+        if (status.type.includes('GOLD_RUSH')) return <Pickaxe className="w-4 h-4" />;
+        if (status.type.includes('FREE_BUILD')) return <Hammer className="w-4 h-4" />;
+        if (status.type.includes('TUNNEL')) return <EyeOff className="w-4 h-4" />;
+        if (status.type.includes('CURSE')) return <Skull className="w-4 h-4" />;
+        if (status.type.includes('RISK')) return <Flame className="w-4 h-4" />;
+        if (status.type.includes('OFFLINE')) return <WifiOff className="w-4 h-4" />;
+        return <AlertTriangle className="w-4 h-4" />;
+    };
+
+    const colorClass = isNegative ? 'text-red-400 border-red-500/50 bg-red-950/80' : 'text-emerald-400 border-emerald-500/50 bg-emerald-950/80';
+    const glowClass = isNegative ? 'shadow-[0_0_10px_rgba(239,68,68,0.3)]' : 'shadow-[0_0_10px_rgba(52,211,153,0.3)]';
+
+    return (
+        <div className={`
+            relative group flex items-center justify-center w-10 h-10 rounded-full border backdrop-blur-md transition-all hover:scale-110 cursor-help
+            ${colorClass} ${glowClass} animate-pulse-slow
+        `}>
+            {getIcon()}
+            
+            {/* Countdown Ring (SVG) */}
+            {!isPermanent && status.expiresAt && (
+                <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="100" strokeDashoffset={100 - (remaining / (status.type.includes('GOLD') ? 60000 : 30000)) * 100} className="opacity-50" />
+                </svg>
+            )}
+
+            {/* Tooltip */}
+            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-48 bg-slate-900/95 border border-slate-700 p-3 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 flex flex-col gap-1">
+                <div className="text-xs font-bold text-white uppercase tracking-wider border-b border-slate-700 pb-1 mb-1">{status.label}</div>
+                <div className="text-[10px] text-slate-400 leading-tight mb-2">
+                    {status.description || status.label}
+                </div>
+                <div className={`text-[10px] font-mono font-bold text-right ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {isPermanent ? 'ACTIVE' : `${Math.ceil(remaining / 1000)}s LEFT`}
+                </div>
+                {/* Arrow */}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900/95"></div>
+            </div>
+        </div>
+    );
+};
+
 const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCenterPlayer }) => {
   // ... state hooks ... keep existing
   const grid = useGameStore(state => state.session?.grid);
@@ -129,6 +182,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [isRankingsOpen, setIsRankingsOpen] = useState(false);
+  const [isCodexOpen, setIsCodexOpen] = useState(false);
   const [helpTopic, setHelpTopic] = useState<'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | 'ENTROPY' | null>(null);
   
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
@@ -336,28 +390,15 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const renderActiveStatuses = () => {
       if (!player?.activeStatuses || player.activeStatuses.length === 0) return null;
       
-      const getStatusIcon = (type: string) => {
-          if (type.includes('FATIGUE')) return <Activity className="w-3 h-3 text-red-400" />;
-          if (type.includes('GOLD_RUSH')) return <Pickaxe className="w-3 h-3 text-amber-400" />;
-          if (type.includes('TUNNEL')) return <EyeOff className="w-3 h-3 text-slate-400" />;
-          if (type.includes('FREE_BUILD')) return <Hammer className="w-3 h-3 text-emerald-400" />;
-          if (type.includes('CURSE')) return <Skull className="w-3 h-3 text-amber-600" />;
-          if (type.includes('RISK')) return <Flame className="w-3 h-3 text-orange-500" />;
-          return <AlertTriangle className="w-3 h-3 text-slate-200" />;
-      };
-
       const now = Date.now();
       const validStatuses = player.activeStatuses.filter(s => !s.expiresAt || s.expiresAt > now);
 
       if (validStatuses.length === 0) return null;
 
       return (
-          <div className="flex gap-2 mb-2 justify-center w-full">
+          <div className="flex gap-4 mb-3 justify-center w-full pointer-events-auto">
               {validStatuses.map((status, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-slate-900/90 border border-slate-700 rounded-full shadow-lg animate-in slide-in-from-bottom-2">
-                      {getStatusIcon(status.type)}
-                      <span className="text-[9px] font-bold uppercase text-white">{status.label}</span>
-                  </div>
+                  <StatusIcon key={`${status.type}-${idx}`} status={status} />
               ))}
           </div>
       );
@@ -732,6 +773,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                     <Globe className="w-4 h-4 text-sky-400" />
                                     <span className="text-xs font-bold uppercase">{language === 'EN' ? 'English' : 'Русский'}</span>
                                 </button>
+                                <button onClick={() => { setIsCodexOpen(true); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
+                                    <BookOpen className="w-4 h-4 text-purple-400" />
+                                    <span className="text-xs font-bold uppercase">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</span>
+                                </button>
                                 <button onClick={() => { setIsRankingsOpen(true); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border bg-slate-800/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white`}>
                                     <Trophy className="w-4 h-4 text-amber-500" />
                                     <span className="text-xs font-bold uppercase">{t.LEADERBOARD_TITLE}</span>
@@ -756,7 +801,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       {/* FOOTER ACTION DOCK */}
       {isHudVisible && gameStatus === 'PLAYING' && (
           <div className="absolute inset-x-0 bottom-0 p-1 md:p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end">
-              <div className="mb-1 pointer-events-auto">
+              <div className="mb-2 pointer-events-auto">
                   {renderActiveStatuses()}
               </div>
               <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-1 md:p-1.5 pointer-events-auto flex items-end gap-1 md:gap-3 relative max-w-full overflow-hidden">
@@ -1092,6 +1137,63 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                               ))}
                           </div>
                       )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {isCodexOpen && (
+          <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setIsCodexOpen(false)}>
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md md:max-w-2xl h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                      <div className="flex items-center gap-3">
+                          <BookOpen className="w-5 h-5 text-purple-500" />
+                          <h3 className="text-sm font-black uppercase tracking-widest text-white">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</h3>
+                      </div>
+                      <button onClick={() => setIsCodexOpen(false)} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-6">
+                      {(['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'] as const).map(rarity => {
+                          const items = ITEM_REGISTRY.filter(i => i.rarity === rarity);
+                          if (items.length === 0) return null;
+                          return (
+                              <div key={rarity}>
+                                  <h4 className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b pb-1 ${
+                                      rarity === 'COMMON' ? 'text-slate-400 border-slate-700' :
+                                      rarity === 'UNCOMMON' ? 'text-emerald-400 border-emerald-900' :
+                                      rarity === 'RARE' ? 'text-purple-400 border-purple-900' :
+                                      'text-amber-400 border-amber-900'
+                                  }`}>{rarity}</h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      {items.map(def => (
+                                          <div key={def.idPrefix} className="flex gap-3 p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:bg-slate-900 transition-colors">
+                                              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-950 flex items-center justify-center border border-slate-800 shrink-0 ${getRarityBorder(def.rarity)}`}>
+                                                  <ItemIcon def={def} size="w-8 h-8 md:w-10 md:h-10" />
+                                              </div>
+                                              <div className="flex-1 min-w-0">
+                                                  <div className="flex items-center justify-between mb-0.5">
+                                                      <span className="text-xs font-bold text-white truncate">{def.name[language]}</span>
+                                                  </div>
+                                                  <p className="text-[9px] text-slate-500 italic mb-2 line-clamp-2 leading-tight">"{def.description[language]}"</p>
+                                                  <div className="flex flex-col gap-1">
+                                                      <div className="flex items-center gap-1.5 text-[9px] text-emerald-300 bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-900/30 w-fit">
+                                                          <CheckCircle className="w-3 h-3" />
+                                                          <span>{def.effectLabel[language]}</span>
+                                                      </div>
+                                                      {def.negativeEffectType && (
+                                                          <div className="flex items-center gap-1.5 text-[9px] text-red-300 bg-red-950/30 px-1.5 py-0.5 rounded border border-red-900/30 w-fit">
+                                                              <AlertTriangle className="w-3 h-3" />
+                                                              <span>{def.negativeEffectLabel[language]}</span>
+                                                          </div>
+                                                      )}
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+                          );
+                      })}
                   </div>
               </div>
           </div>
