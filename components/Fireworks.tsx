@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef } from 'react';
+import { audioService } from '../services/audioService';
 
 const COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff'];
 
@@ -79,6 +80,9 @@ class Firework {
 
     explode() {
         this.exploded = true;
+        // Sound Trigger
+        audioService.play('FIREWORK');
+        
         for (let i = 0; i < 50; i++) {
             this.particles.push(new Particle(this.x, this.y, this.color));
         }
@@ -129,7 +133,7 @@ const Fireworks: React.FC = () => {
             // Reset to default for drawing new particles
             ctx.globalCompositeOperation = 'source-over';
 
-            // Spawn
+            // Spawn rate
             if (Math.random() < 0.05) {
                 fireworks.push(new Firework(width, height));
             }
@@ -164,6 +168,7 @@ const Fireworks: React.FC = () => {
     }, []);
 
     // Z-Index 20 places it above Map (z-10) but below HUD (z-30)
+    // Pointer events none ensures clicks pass through to map during salute
     return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-[20]" />;
 };
 

@@ -222,7 +222,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       if (!def) return { 
           name: item.name, 
           description: item.description, 
-          effectDesc: item.effectDescription,
+          effectDesc: item.effectDescription, 
           negDesc: item.negativeEffectLabel
       };
       return {

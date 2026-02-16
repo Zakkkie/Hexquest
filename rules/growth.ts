@@ -26,12 +26,9 @@ export function checkDigCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel - 1;
 
-  // STORAGE LIMIT CHECK
-  // If storage is full, you cannot dig (as digging produces material)
-  if (entity.storage >= entity.maxStorage) {
-      return { canGrow: false, reason: "STORAGE FULL (MAX MATERIAL)" };
-  }
-
+  // UPDATED: Allow digging even if storage is full (wastes material)
+  // Logic moved to GrowthSystem to handle the capping/warning.
+  
   // 1. FIRST CUT EXCEPTION
   // Digging down to -1 (or any level >= -1) is always allowed without support.
   // This covers leveling hills (5->4) and starting a pit (0->-1).

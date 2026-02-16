@@ -240,9 +240,13 @@ export class GrowthSystem implements System {
 
              // GOLD RUSH: +2 Materials instead of +1
              const matGain = hasGoldRush ? 2 : 1;
+             let actualMatGain = 0;
 
+             // CAP MATERIAL AT MAX STORAGE, BUT ALLOW ACTION TO PROCEED
              if (entity.storage < entity.maxStorage) {
-                 entity.storage = Math.min(entity.maxStorage, entity.storage + matGain);
+                 const space = entity.maxStorage - entity.storage;
+                 actualMatGain = Math.min(space, matGain);
+                 entity.storage += actualMatGain;
              }
              
              const depthReward = Math.max(1, Math.abs(newLevel));
@@ -323,11 +327,20 @@ export class GrowthSystem implements System {
              state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
 
              const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
-             const msg = `${prefix} Excavated to L${newLevel} (+${matGain} Mat, +${depthReward} Moves)`;
+             let msg = `${prefix} Excavated to L${newLevel} (+${actualMatGain} Mat, +${depthReward} Moves)`;
+             
+             // WARN IF STORAGE WAS FULL
+             if (actualMatGain < matGain) {
+                 msg = `${prefix} Dig Complete (STORAGE FULL) +${depthReward} Moves`;
+                 // Push specific error event to trigger red toast if needed
+                 if (entity.type === EntityType.PLAYER) {
+                     events.push(GameEventFactory.create('ERROR', "Storage Full - Material Wasted", entity.id));
+                 }
+             }
              
              state.messageLog.unshift({ id: `dig-ok-${Date.now()}`, text: msg, type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now() });
              
-             events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id, { material: matGain, moves: depthReward }));
+             events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id, { material: actualMatGain, moves: depthReward }));
              
              if (hasUpgradeCmd) entity.movementQueue.shift();
              entity.state = EntityState.IDLE;
