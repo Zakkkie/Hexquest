@@ -96,7 +96,10 @@ let tickCount = 0;
 // --- SESSION FACTORY ---
 
 const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig, language: Language = 'EN'): SessionState => {
-  const initialGrid = generateMap(levelConfig);
+  // Use mapType from winCondition if available (Skirmish), default to FLAT
+  const mapType = winCondition?.mapType || 'FLAT';
+  const initialGrid = generateMap(levelConfig, mapType);
+  
   // Access store state for user preferences to apply to new session player entity
   const stateUser = useGameStore.getState().user; 
 
@@ -258,7 +261,7 @@ export const useGameStore = create<GameStore>()(
       isMusicMuted: false,
       isSfxMuted: false,
       session: null,
-      language: 'EN',
+      language: 'RU', // CHANGED: Default to RU
       voidDialogTarget: null,
       monumentDialogState: { isOpen: false, slots: [null, null, null] },
       lastVisualEvent: undefined,
@@ -336,7 +339,8 @@ export const useGameStore = create<GameStore>()(
           } else if (!winCondition) {
               effectiveWin = {
                   levelId: -1, targetLevel: 6, targetCoins: 0, label: "Quick Summit",
-                  botCount: 0, difficulty: 'MEDIUM', queueSize: 2, winType: 'SUMMIT'
+                  botCount: 0, difficulty: 'MEDIUM', queueSize: 2, winType: 'SUMMIT',
+                  mapType: 'FLAT'
               };
           }
 
@@ -725,7 +729,7 @@ export const useGameStore = create<GameStore>()(
                                          text: lang === 'RU' ? `+${mvs} ХОД` : `+${mvs} MOVE`, 
                                          color: "#60a5fa", 
                                          icon: 'FOOTPRINTS',
-                                         startTime: now + 50, // Slight delay to stagger
+                                         startTime: now + 50,
                                          lifetime: 1200 
                                     });
                                 }

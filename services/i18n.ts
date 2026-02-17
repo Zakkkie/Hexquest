@@ -77,6 +77,12 @@ interface Dictionary {
         VAL_PASSIVE: string;
         VAL_BALANCED: string;
         VAL_AGGRESSIVE: string;
+
+        // Bot Labels
+        BOT_LABEL_DUEL: string;
+        BOT_LABEL_SKIRMISH: string;
+        BOT_LABEL_WAR: string;
+        BOT_LABEL_CHAOS: string;
     };
     CAMPAIGN_MAP: {
         HEADER_TITLE: string;
@@ -180,6 +186,7 @@ interface Dictionary {
         VOID_WARN: string;
         VOID_SELECT: string;
         VOID_EMPTY: string;
+        VOID_BTN_SACRIFICE: string; // New Key
         MONUMENT_TITLE: string;
         MONUMENT_SUB: string;
         MONUMENT_DESC_1: string;
@@ -264,6 +271,7 @@ interface Dictionary {
         HEADER_CREDITS: string;
         HEADER_RANK: string;
         EMPTY: string;
+        LB_TERRAIN_DATA: string; // New Key
     }
 }
 
@@ -341,7 +349,12 @@ export const TEXT: Record<Language, Dictionary> = {
             VAL_LARGE: "Expansive",
             VAL_PASSIVE: "Defensive",
             VAL_BALANCED: "Balanced",
-            VAL_AGGRESSIVE: "Hostile"
+            VAL_AGGRESSIVE: "Hostile",
+
+            BOT_LABEL_DUEL: "DUEL",
+            BOT_LABEL_SKIRMISH: "SKIRMISH",
+            BOT_LABEL_WAR: "WAR",
+            BOT_LABEL_CHAOS: "CHAOS"
         },
         CAMPAIGN_MAP: {
             HEADER_TITLE: "Campaign",
@@ -444,6 +457,7 @@ export const TEXT: Record<Language, Dictionary> = {
             VOID_WARN: "Warning: Item will be consumed.",
             VOID_SELECT: "Select Matter Source",
             VOID_EMPTY: "No stability matter available.",
+            VOID_BTN_SACRIFICE: "SACRIFICE",
             
             MONUMENT_TITLE: "Monument Activation",
             MONUMENT_SUB: "Key Authorization Required",
@@ -477,11 +491,11 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_1_4_TITLE: 'Sim 1.4: Excavation',
             LEVEL_1_4_DESC: 'Protocol: Resource Cycle.\n\nObjective: Upgrade Center to Lvl 3.\n\nProblem: You have 0 Materials. Construction is impossible.\n\nSolution: DIG (Red Button). Excavate surrounding mounds (Lvl 2) to harvest +1 Mat. Use them to upgrade center.',
             LEVEL_1_5_TITLE: 'Sim 1.5: Oxygen March',
-            LEVEL_1_5_DESC: 'Protocol: Emergency Recovery.\n\nObjective: Collect 150 Credits in 60s.\n\nRule: Standard Recovery is single-use. You must MOVE to reset the tool.\n\nMethod: Use RECOVERY (Blue Button) on high sectors. Height yields more Credits.\n\nWARNING: High (Lvl 4+) sectors overheat (Cooldown 15s). Rotate between peaks.',
+            LEVEL_1_5_DESC: 'Protocol: Emergency Recovery.\n\nObjective: Collect 150 Credits in 75s.\n\nRule: Standard Recovery is single-use. You must MOVE to reset the tool.\n\nMethod: Use RECOVERY (Blue Button) on high sectors. Height yields more Credits.\n\nWARNING: High (Lvl 4+) sectors overheat (Cooldown 15s). Rotate between peaks.',
             LEVEL_1_6_TITLE: 'Sim 1.6: The Architect',
             LEVEL_1_6_DESC: 'Protocol: Combat.\n\nObjective: Reach Level 4 before the Rival.\n\nBot "Architect V18" active. It can Gather materials and Build supports. Compete for limited space.',
             LEVEL_2_1_TITLE: 'Sim 2.1: The Monolith',
-            LEVEL_2_1_DESC: 'Target acquired: Unknown Spire.\n\nObjective: Stand on the Monolith (Center, Level 4).\n\nConstraint: The Monolith is indestructible and too high to climb directly.\n\nTask: Build a staircase (L1 -> L2 -> L3) to reach the summit.',
+            LEVEL_2_1_DESC: 'Target acquired: Unknown Spire.\n\nObjective: Stand on the Monolith (Center, Level 3).\n\nConstraint: The Monolith is indestructible and too high to climb directly.\n\nTask: Build a staircase (L1 -> L2 -> L3) to reach the summit.',
             LEVEL_2_2_TITLE: 'Sim 2.2: Buried Secrets',
             LEVEL_2_2_DESC: 'Scan complete: Activation Key detected underground.\n\nObjective: Find items and activate the Monolith.\n\nHint: Dig deep (Level -1 or lower) near the center to find artifacts. You need 3 items to activate the Monolith structure.',
             LEVEL_2_3_TITLE: 'Sim 2.3: Entropy Rising',
@@ -527,7 +541,8 @@ export const TEXT: Record<Language, Dictionary> = {
             HEADER_COMM: "Unit",
             HEADER_CREDITS: "Coins",
             HEADER_RANK: "Rank",
-            EMPTY: "Empty."
+            EMPTY: "Empty.",
+            LB_TERRAIN_DATA: "Rank Spectrum (Terrain Data)"
         }
     },
     RU: {
@@ -603,7 +618,12 @@ export const TEXT: Record<Language, Dictionary> = {
             VAL_LARGE: "Большая",
             VAL_PASSIVE: "Защита",
             VAL_BALANCED: "Баланс",
-            VAL_AGGRESSIVE: "Агрессия"
+            VAL_AGGRESSIVE: "Агрессия",
+
+            BOT_LABEL_DUEL: "ДУЭЛЬ",
+            BOT_LABEL_SKIRMISH: "СТЫЧКА",
+            BOT_LABEL_WAR: "ВОЙНА",
+            BOT_LABEL_CHAOS: "ХАОС"
         },
         CAMPAIGN_MAP: {
             HEADER_TITLE: "Кампания",
@@ -706,6 +726,7 @@ export const TEXT: Record<Language, Dictionary> = {
             VOID_WARN: "Предмет исчезнет.",
             VOID_SELECT: "Источник",
             VOID_EMPTY: "Нет материи.",
+            VOID_BTN_SACRIFICE: "ЖЕРТВА",
             
             MONUMENT_TITLE: "Активация",
             MONUMENT_SUB: "Нужен Ключ",
@@ -739,11 +760,11 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_1_4_TITLE: 'Сим 1.4: Раскопки',
             LEVEL_1_4_DESC: 'Протокол: Ресурсный Цикл.\n\nЦель: Улучшить Центр до Ур. 3.\n\nПроблема: У вас 0 Материалов. Стройка невозможна.\n\nРешение: РАСКОПКИ (Красная кнопка). Копайте окружающие холмы (Ур. 2), чтобы добыть +1 Мат. Используйте их для улучшения центра.',
             LEVEL_1_5_TITLE: 'Сим 1.5: Кислородный Марш',
-            LEVEL_1_5_DESC: 'Протокол: Экстренное Восстановление.\n\nЦель: Собрать 150 Кред. за 60с.\n\nПравило: Восстановление доступно 1 раз за визит. Вы должны СДВИНУТЬСЯ, чтобы сбросить инструмент.\n\nМетод: Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на высоких секторах. Высота дает больше Денег.\n\nВНИМАНИЕ: Высокие (Ур. 4+) сектора перегреваются (КД 15с). Перемещайтесь между пиками.',
+            LEVEL_1_5_DESC: 'Протокол: Экстренное Восстановление.\n\nЦель: Собрать 150 Кред. за 75с.\n\nПравило: Восстановление доступно 1 раз за визит. Вы должны СДВИНУТЬСЯ, чтобы сбросить инструмент.\n\nМетод: Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на высоких секторах. Высота дает больше Денег.\n\nВНИМАНИЕ: Высокие (Ур. 4+) сектора перегреваются (КД 15с). Перемещайтесь между пиками.',
             LEVEL_1_6_TITLE: 'Сим 1.6: Архитектор',
             LEVEL_1_6_DESC: 'Протокол: Бой.\n\nЦель: Достичь Уровня 4 раньше соперника.\n\nБот "Архитектор V18" активен. Он умеет Копать материалы и Строить опоры. Сражайтесь за ограниченное пространство.',
             LEVEL_2_1_TITLE: 'Сим 2.1: Монолит',
-            LEVEL_2_1_DESC: 'Обнаружен Неизвестный Шпиль.\n\nЦель: Встать на Вершину Монолита (Центр, Ур. 4).\n\nОграничение: Монолит неразрушим. Прямой подъем невозможен.\n\nЗадача: Постройте лестницу (Ур.1 -> Ур.2 -> Ур.3), чтобы взобраться на пик.',
+            LEVEL_2_1_DESC: 'Обнаружен Неизвестный Шпиль.\n\nЦель: Встать на Вершину Монолита (Центр, Ур. 3).\n\nОграничение: Монолит неразрушим. Прямой подъем невозможен.\n\nЗадача: Постройте лестницу (Ур.1 -> Ур.2), чтобы взобраться на пик.',
             LEVEL_2_2_TITLE: 'Сим 2.2: Тайны Недр',
             LEVEL_2_2_DESC: 'Сканирование: Ключи Активации под землей.\n\nЦель: Найдите предметы и активируйте Монолит.\n\nПодсказка: Копайте глубоко (Ур. -1 и ниже) рядом с центром, чтобы найти артефакты. Для активации нужно 3 любых предмета.',
             LEVEL_2_3_TITLE: 'Сим 2.3: Рост Энтропии',
@@ -789,7 +810,8 @@ export const TEXT: Record<Language, Dictionary> = {
             HEADER_COMM: "Юнит",
             HEADER_CREDITS: "Счет",
             HEADER_RANK: "Ранг",
-            EMPTY: "Пусто."
+            EMPTY: "Пусто.",
+            LB_TERRAIN_DATA: "Спектр Рангов (Ландшафт)"
         }
     }
 };

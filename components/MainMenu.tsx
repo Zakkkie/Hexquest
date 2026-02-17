@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User, Smile, Mountain, AlertTriangle, Crosshair, Flame } from 'lucide-react';
+import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User, Smile, Mountain, AlertTriangle, Crosshair, Flame, Shuffle } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -193,7 +193,8 @@ const MainMenu: React.FC = () => {
   const [selectedTier, setSelectedTier] = useState<1 | 2 | 3>(1);
   const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
   const [botCount, setBotCount] = useState<number>(1);
-  const [storageCap, setStorageCap] = useState<number>(4); // New State for Storage
+  const [storageCap, setStorageCap] = useState<number>(4); 
+  const [mapType, setMapType] = useState<'FLAT' | 'CHAOTIC'>('FLAT'); // New state
 
   const t = TEXT[language].MENU;
   const isMobile = deviceType === 'MOBILE';
@@ -254,6 +255,27 @@ const MainMenu: React.FC = () => {
     }
   };
 
+  const randomizeConfig = () => {
+      playUiSound('CLICK');
+      // Random Tier (1-3)
+      const rTier = (Math.floor(Math.random() * 3) + 1) as 1|2|3;
+      // Random Diff
+      const diffs: Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
+      const rDiff = diffs[Math.floor(Math.random() * 3)];
+      // Random Bots (1-6)
+      const rBots = Math.floor(Math.random() * 6) + 1;
+      // Random Storage (3-6)
+      const rStor = Math.floor(Math.random() * 4) + 3;
+      // Random Map
+      const rMap = Math.random() > 0.5 ? 'CHAOTIC' : 'FLAT';
+
+      setSelectedTier(rTier);
+      setDifficulty(rDiff);
+      setBotCount(rBots);
+      setStorageCap(rStor);
+      setMapType(rMap);
+  };
+
   const confirmMissionStart = () => {
     playUiSound('CLICK');
     const tier = MISSION_TIERS[selectedTier as 1|2|3];
@@ -267,7 +289,8 @@ const MainMenu: React.FC = () => {
       label: `${tier.label}`,
       queueSize: DIFFICULTY_SETTINGS[difficulty].queueSize,
       winType: 'SUMMIT',
-      initialStorage: storageCap // PASS CUSTOM STORAGE SETTING
+      initialStorage: storageCap, // PASS CUSTOM STORAGE SETTING
+      mapType: mapType // Pass map type
     };
     
     startNewGame(winCondition);
@@ -347,10 +370,10 @@ const MainMenu: React.FC = () => {
   };
 
   const getBotLabel = (count: number) => {
-      if (count === 1) return 'DUEL';
-      if (count <= 3) return 'SKIRMISH';
-      if (count <= 5) return 'WAR';
-      return 'CHAOS';
+      if (count === 1) return t.BOT_LABEL_DUEL;
+      if (count <= 3) return t.BOT_LABEL_SKIRMISH;
+      if (count <= 5) return t.BOT_LABEL_WAR;
+      return t.BOT_LABEL_CHAOS;
   };
 
   const cycleOption = (setter: (v: number) => void, current: number, direction: 1 | -1, max: number) => {
@@ -544,7 +567,12 @@ const MainMenu: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                <button onClick={() => setShowMissionConfig(false)} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800"><X className="w-5 h-5"/></button>
+                <div className="flex items-center gap-2">
+                    <button onClick={randomizeConfig} className="p-2 text-slate-400 hover:text-white transition-colors rounded-full hover:bg-slate-800 border border-slate-700 hover:border-slate-500" title="Randomize Conditions">
+                        <Shuffle className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => setShowMissionConfig(false)} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800"><X className="w-5 h-5"/></button>
+                </div>
              </div>
 
              {/* SCROLLABLE CONTENT */}
@@ -585,37 +613,61 @@ const MainMenu: React.FC = () => {
                  {/* 2. CONFIGURATION GRID */}
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      
-                     {/* LEFT: DIFFICULTY */}
-                     <div>
-                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-3">
-                            <Shield className="w-3 h-3" /> {t.LBL_DIFFICULTY}
-                        </h3>
-                        <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 mb-3">
-                            {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => {
-                                const active = difficulty === d;
-                                let colorClass = 'text-slate-500 hover:text-slate-300';
-                                if (active) {
-                                    if (d === 'EASY') colorClass = 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20';
-                                    if (d === 'MEDIUM') colorClass = 'bg-amber-600 text-white shadow-lg shadow-amber-900/20';
-                                    if (d === 'HARD') colorClass = 'bg-red-600 text-white shadow-lg shadow-red-900/20';
-                                }
-                                return (
-                                    <button 
-                                        key={d} 
-                                        onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
-                                        className={`flex-1 py-2 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all ${colorClass}`}
-                                    >
-                                        {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
-                                    </button>
-                                );
-                            })}
+                     {/* LEFT: DIFFICULTY & MAP TYPE */}
+                     <div className="flex flex-col gap-4">
+                        {/* DIFFICULTY */}
+                        <div>
+                            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-3">
+                                <Shield className="w-3 h-3" /> {t.LBL_DIFFICULTY}
+                            </h3>
+                            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 mb-3">
+                                {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => {
+                                    const active = difficulty === d;
+                                    let colorClass = 'text-slate-500 hover:text-slate-300';
+                                    if (active) {
+                                        if (d === 'EASY') colorClass = 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20';
+                                        if (d === 'MEDIUM') colorClass = 'bg-amber-600 text-white shadow-lg shadow-amber-900/20';
+                                        if (d === 'HARD') colorClass = 'bg-red-600 text-white shadow-lg shadow-red-900/20';
+                                    }
+                                    return (
+                                        <button 
+                                            key={d} 
+                                            onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
+                                            className={`flex-1 py-2 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all ${colorClass}`}
+                                        >
+                                            {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            
+                            <div className={`p-3 rounded-xl border flex items-start gap-2 ${getDifficultyColor(difficulty)}`}>
+                                <Activity className="w-4 h-4 shrink-0 mt-0.5 animate-pulse" />
+                                <div>
+                                    <span className="block text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5">{t.RULES_ENGAGEMENT}</span>
+                                    <span className="text-[10px] font-bold leading-tight block">{getDifficultyDesc(difficulty)}</span>
+                                </div>
+                            </div>
                         </div>
-                        
-                        <div className={`p-3 rounded-xl border flex items-start gap-2 ${getDifficultyColor(difficulty)}`}>
-                            <Activity className="w-4 h-4 shrink-0 mt-0.5 animate-pulse" />
-                            <div>
-                                <span className="block text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5">{t.RULES_ENGAGEMENT}</span>
-                                <span className="text-[10px] font-bold leading-tight block">{getDifficultyDesc(difficulty)}</span>
+
+                        {/* MAP TYPE SELECTOR */}
+                        <div>
+                            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-2">
+                                <MapIcon className="w-3 h-3" /> {language === 'RU' ? 'Ландшафт' : 'Terrain'}
+                            </h3>
+                            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+                                <button 
+                                    onClick={() => { setMapType('FLAT'); playUiSound('CLICK'); }}
+                                    className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${mapType === 'FLAT' ? 'bg-slate-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    <Layers className="w-3 h-3" /> {language === 'RU' ? 'Плоский' : 'Flat'}
+                                </button>
+                                <button 
+                                    onClick={() => { setMapType('CHAOTIC'); playUiSound('CLICK'); }}
+                                    className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    <Activity className="w-3 h-3" /> {language === 'RU' ? 'Хаос' : 'Chaos'}
+                                </button>
                             </div>
                         </div>
                      </div>

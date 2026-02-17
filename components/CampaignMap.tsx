@@ -2,10 +2,78 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
-import { ArrowLeft, Check, Lock, Play, MapPin, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Globe, Radar } from 'lucide-react';
 import HexButton from './HexButton.tsx';
 import { audioService } from '../services/audioService.ts';
 import { TEXT } from '../services/i18n.ts';
+
+// --- DECORATIVE BACKGROUND COMPONENT ---
+const CampaignBackground: React.FC = () => {
+    return (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0">
+            {/* 1. Solid Base */}
+            <div className="absolute inset-0 bg-slate-950" />
+
+            {/* 2. Radial Glow (Valid Tailwind Class) */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/30 via-slate-950/80 to-slate-950" />
+
+            {/* 3. Holographic Grid (CSS Perspective) */}
+            <div className="absolute inset-0 opacity-20"
+                 style={{ 
+                     backgroundImage: 'linear-gradient(rgba(99, 102, 241, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(99, 102, 241, 0.3) 1px, transparent 1px)',
+                     backgroundSize: '50px 50px',
+                     transform: 'perspective(1000px) rotateX(60deg) scale(2.5) translateY(-100px)',
+                     transformOrigin: 'center top',
+                     maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 80%)'
+                 }} 
+            />
+
+            {/* 4. Rotating Orbital Rings */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vmin] h-[100vmin] opacity-20">
+                {/* Outer Ring */}
+                <div className="absolute inset-0 border border-indigo-500/40 rounded-full animate-[spin_60s_linear_infinite]" />
+                
+                {/* Middle Dashed Ring */}
+                <div className="absolute inset-4 md:inset-20 border border-dashed border-cyan-500/30 rounded-full animate-[spin_40s_linear_infinite_reverse]" />
+                
+                {/* Inner Hex (SVG) */}
+                <div className="absolute inset-[25%] flex items-center justify-center animate-[spin_30s_linear_infinite]">
+                    <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible opacity-40">
+                        <path d="M50 5 L90 27.5 L90 72.5 L50 95 L10 72.5 L10 27.5 Z" fill="none" stroke="#38bdf8" strokeWidth="1" />
+                        <circle cx="50" cy="50" r="2" fill="#38bdf8" />
+                        <line x1="50" y1="5" x2="50" y2="25" stroke="#38bdf8" strokeWidth="0.5" />
+                        <line x1="50" y1="95" x2="50" y2="75" stroke="#38bdf8" strokeWidth="0.5" />
+                    </svg>
+                </div>
+            </div>
+
+            {/* 5. Scanning Radar Effect */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/10 to-transparent h-[10vh] w-full animate-[scan_6s_linear_infinite]" style={{ top: '-10vh' }} />
+
+            {/* 6. Floating Particles */}
+            <div className="absolute top-1/4 left-1/4 w-1.5 h-1.5 bg-indigo-400 rounded-full animate-ping opacity-40" style={{ animationDuration: '4s' }} />
+            <div className="absolute bottom-1/3 right-1/4 w-1 h-1 bg-cyan-400 rounded-full animate-ping opacity-60" style={{ animationDuration: '3s' }} />
+
+            {/* 7. Corner HUD Elements */}
+            <div className="absolute top-0 left-0 p-4 opacity-50 hidden md:block">
+                <div className="flex items-center gap-2 text-indigo-400">
+                    <Crosshair className="w-6 h-6" />
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-mono leading-none">SYS.NAV.ONLINE</span>
+                        <span className="text-[8px] font-mono leading-none opacity-70">COORD: {Math.floor(Date.now()/1000)}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <style>{`
+                @keyframes scan {
+                    0% { transform: translateY(-20vh); }
+                    100% { transform: translateY(120vh); }
+                }
+            `}</style>
+        </div>
+    );
+};
 
 const CampaignMap: React.FC = () => {
   const setUIState = useGameStore(state => state.setUIState);
@@ -41,18 +109,16 @@ const CampaignMap: React.FC = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-300">
       
-      {/* Dynamic Background Pattern */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none" 
-           style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(56, 189, 248, 0.3) 1px, transparent 0)', backgroundSize: '40px 40px' }} 
-      />
+      {/* Background Layer (Z-0) */}
+      <CampaignBackground />
 
-      {/* Main Card Container */}
-      <div className="w-full h-full md:h-[85vh] md:w-[90vw] max-w-5xl flex flex-col md:bg-slate-900/90 md:border md:border-slate-700/50 md:rounded-3xl md:shadow-2xl overflow-hidden relative box-border">
+      {/* Main Card Container (Z-10) */}
+      <div className="relative z-10 w-full h-full md:h-[85vh] md:w-[90vw] max-w-5xl flex flex-col md:bg-slate-900/40 md:backdrop-blur-xl md:border md:border-slate-700/50 md:rounded-3xl md:shadow-2xl overflow-hidden box-border">
         
         {/* Header */}
-        <div className="p-4 md:p-6 border-b border-slate-700/50 flex items-center justify-between bg-slate-900/80 shrink-0 z-20 shadow-md">
+        <div className="p-4 md:p-6 border-b border-slate-700/50 flex items-center justify-between bg-slate-900/60 shrink-0 z-20 shadow-md backdrop-blur-md">
           <div className="flex flex-col">
             <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-wider flex items-center gap-2">
               <MapPin className="w-5 h-5 text-indigo-400" /> {t.HEADER_TITLE}
@@ -61,7 +127,7 @@ const CampaignMap: React.FC = () => {
           </div>
           <button 
             onClick={() => { setUIState('MENU'); playUiSound('CLICK'); }}
-            className="group flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white transition-all shadow-lg active:scale-95"
+            className="group flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white transition-all shadow-lg active:scale-95 backdrop-blur-sm"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 
             <span className="text-xs font-bold uppercase tracking-wider">{t.BTN_BACK}</span>
@@ -69,7 +135,7 @@ const CampaignMap: React.FC = () => {
         </div>
 
         {/* Scrollable Map Area */}
-        <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-slate-950/30">
+        <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar">
             
             {/* SVG Layer for Connections */}
             <svg className="absolute inset-0 w-full pointer-events-none z-0" style={{ height: (CAMPAIGN_LEVELS.length * ITEM_HEIGHT) + 200 }}>
@@ -218,7 +284,7 @@ const CampaignMap: React.FC = () => {
 
                                 {/* INFO CARD */}
                                 <div className={`
-                                    flex flex-col bg-slate-900/80 backdrop-blur-md border border-slate-700/50 p-3 md:p-4 rounded-xl shadow-xl max-w-[200px] md:max-w-xs transition-all duration-300
+                                    flex flex-col bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-3 md:p-4 rounded-xl shadow-xl max-w-[200px] md:max-w-xs transition-all duration-300
                                     ${isCurrent ? 'border-amber-500/30 shadow-amber-900/20' : 'hover:border-slate-500'}
                                 `}>
                                     <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 ${isUnlocked ? 'text-indigo-400' : 'text-slate-600'}`}>
@@ -258,7 +324,7 @@ const CampaignMap: React.FC = () => {
         </div>
         
         {/* Footer Fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none z-20" />
+        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none z-20" />
       </div>
     </div>
   );

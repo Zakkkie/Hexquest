@@ -5,7 +5,7 @@ import { getHexKey, getNeighbors } from './hexUtils';
 import { GAME_CONFIG } from '../rules/config';
 
 // Pure function to generate a specific hex based on config rules
-export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfig): Hex => {
+export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfig, mapType?: 'FLAT' | 'CHAOTIC'): Hex => {
     const key = getHexKey(q, r);
     const dist = Math.max(Math.abs(q), Math.abs(r), Math.abs(-q-r));
     
@@ -42,9 +42,19 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
             level = Math.min(99, wallStartLevel + (dist - wallStartRadius));
             structureType = 'BARRIER';
         }
+    } else {
+        // --- RANDOM TERRAIN GENERATION (SKIRMISH) ---
+        if (mapType === 'CHAOTIC' && (q !== 0 || r !== 0)) {
+            // Random level between -1 and 2
+            const rand = Math.random();
+            if (rand < 0.15) level = 2; // High ground
+            else if (rand < 0.3) level = 1; // Unstable
+            else if (rand < 0.45) level = -1; // Pit
+            else level = 0; // Flat
+        }
     }
 
-    // Default center
+    // Default center always safe
     if (q === 0 && r === 0) {
         level = 0;
     }
@@ -69,7 +79,7 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     };
 };
 
-export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
+export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTIC' = 'FLAT'): Record<string, Hex> => {
   const initialGrid: Record<string, Hex> = {};
   
   if (levelConfig && levelConfig.mapConfig.customLayout) {
@@ -83,7 +93,7 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
               const r1 = Math.max(-radius, -q - radius);
               const r2 = Math.min(radius, -q + radius);
               for (let r = r1; r <= r2; r++) {
-                  const hex = generateSingleHex(q, r, levelConfig);
+                  const hex = generateSingleHex(q, r, levelConfig, mapType);
                   // For 'pit_ring' maps (Arenas), start fully revealed
                   if (levelConfig.mapConfig.wallType === 'pit_ring') {
                       hex.revealed = true;
@@ -183,13 +193,14 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
 
   } else {
       // --- STANDARD DYNAMIC GENERATION (Skirmish / Default) ---
+      // Apply the 'CHAOTIC' logic here if requested via mapType
       const startRadius = 2;
 
       for (let q = -startRadius; q <= startRadius; q++) {
           const r1 = Math.max(-startRadius, -q - startRadius);
           const r2 = Math.min(startRadius, -q + startRadius);
           for (let r = r1; r <= r2; r++) {
-              const hex = generateSingleHex(q, r, levelConfig);
+              const hex = generateSingleHex(q, r, levelConfig, mapType);
               hex.revealed = true; // Start revealed
               initialGrid[hex.id] = hex;
           }

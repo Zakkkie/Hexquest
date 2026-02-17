@@ -177,7 +177,7 @@ const Leaderboard: React.FC = () => {
 
         {/* RANK SPECTRUM FOOTER */}
         <div className="p-4 bg-black/40 border-t border-slate-800 shrink-0">
-            <div className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-3 text-center">Rank Spectrum (Terrain Data)</div>
+            <div className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-3 text-center">{t.LB_TERRAIN_DATA}</div>
             
             <div className="relative flex items-center justify-center">
                 {/* Scroll Left */}

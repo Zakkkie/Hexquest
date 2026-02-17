@@ -302,6 +302,7 @@ export interface WinCondition {
   winType: 'OR' | 'AND' | 'SUMMIT'; // Added SUMMIT type
   isTutorial?: boolean;
   initialStorage?: number; // Custom override for max storage capacity
+  mapType?: 'FLAT' | 'CHAOTIC'; // New: Terrain generation preference
 }
 
 export interface LeaderboardEntry {

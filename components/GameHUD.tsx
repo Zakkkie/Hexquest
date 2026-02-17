@@ -188,7 +188,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const [inspectedItem, setInspectedItem] = useState<Item | null>(null);
 
   const [timeLeft, setTimeLeft] = useState(75);
-  const [tick, setTick] = useState(0); 
+  const [tick, setTimeTick] = useState(0); 
 
   const [victoryStage, setVictoryStage] = useState<'HIDDEN' | 'SALUTE' | 'MODAL'>('HIDDEN');
 
@@ -293,7 +293,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   useEffect(() => {
       const interval = setInterval(() => {
-          setTick(t => t + 1);
+          setTimeTick(t => t + 1);
           if (isLevel1_5 && gameStatus === 'PLAYING') {
               const elapsed = Date.now() - (sessionStartTime || 0);
               const remaining = Math.max(0, 75 - Math.floor(elapsed / 1000));
@@ -1092,7 +1092,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                               <span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span>
                                           </div>
                                           <div className="px-3 py-1 bg-red-900/20 border border-red-900/50 rounded text-[9px] text-red-400 font-bold uppercase whitespace-nowrap group-hover:bg-red-900/40 transition-colors">
-                                              SACRIFICE
+                                              {t.VOID_BTN_SACRIFICE}
                                           </div>
                                       </div>
                                   );
