@@ -270,32 +270,45 @@ export const calculateBotMove = (
       }
   }
 
+  // --- STUCK / PANIC LOGIC ---
   if (mem.stuckCounter >= STUCK_THRESHOLD) {
       mem.targetHexId = null; 
       
-      // PARACHUTE LOGIC: If we are stuck, check verticality.
-      // If we are on a tower (>1) and stuck, DIG DOWN immediately.
-      if (currentHex && currentHex.maxLevel >= 2) {
-          const check = checkDigCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid);
-          if (check.canGrow) {
-              return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Parachute Down', memory: { ...mem, stuckCounter: 0 } };
+      if (currentHex) {
+          // 1. DESPERATE BUILD (Climb out of hole / Make wall)
+          // If we have materials, try to build UP first to get unstuck from walls.
+          if (bot.storage > 0) {
+              const check = checkGrowthCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid, obstacles);
+              if (check.canGrow) {
+                  return { 
+                      action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, 
+                      debug: 'Panic Build', 
+                      memory: { ...mem, stuckCounter: 0 } 
+                  };
+              }
           }
-      }
-      // If we are in a hole (<0) and stuck, BUILD UP immediately (if mats > 0).
-      if (currentHex && currentHex.maxLevel < 0 && bot.storage > 0) {
-          const check = checkGrowthCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid, obstacles);
-          if (check.canGrow) {
-              return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Ladder Up', memory: { ...mem, stuckCounter: 0 } };
+
+          // 2. DESPERATE DIG (Get materials / Lower height)
+          // If building failed or no materials, try to DIG DOWN.
+          // Ignored maxLevel check to allow digging even at L0/L1 if stuck.
+          const checkDig = checkDigCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid);
+          if (checkDig.canGrow) {
+              return { 
+                  action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, 
+                  debug: 'Panic Dig', 
+                  memory: { ...mem, stuckCounter: 0 } 
+              };
           }
       }
 
-      // Panic/Unstuck
+      // 3. Move Aside (Yield)
+      const yieldMove = getStepAsideMove("Stuck");
+      if (yieldMove) return yieldMove;
+      
+      // 4. Recovery (Last resort for funds)
       if (bot.moves === 0 && bot.coins < 5 && !bot.recoveredCurrentHex && currentHex) {
            return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Panic Rec', memory: { ...mem, stuckCounter: 0 } };
       }
-      
-      const yieldMove = getStepAsideMove("Stuck");
-      if (yieldMove) return yieldMove;
       
       // FALLBACK: Signal for Help implicitly by keeping stuckCounter high
       return { action: { type: 'WAIT', stateVersion }, debug: 'Trapped (SOS)', memory: { ...mem, stuckCounter: mem.stuckCounter + 1 } };
