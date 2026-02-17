@@ -4,7 +4,7 @@ import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hex
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
 import { calculateMovementCost } from '../rules/movement';
-import { findStrategicBuildTarget, findBestDigTargets } from './planning';
+import { findBestBuildTargets, findBestDigTargets } from './planning';
 import { GAME_CONFIG } from '../rules/config';
 
 export interface AiResult {
@@ -14,7 +14,10 @@ export interface AiResult {
 }
 
 const HIVE_RADIUS = 30; 
-const STUCK_THRESHOLD = 3; 
+const STUCK_THRESHOLD = 2; // Reduced threshold to react faster to jams
+
+// Helper moved to top to avoid ReferenceError/Hoisting issues
+const distToBot = (bot: Entity, hex: Hex) => cubeDistance(bot, hex);
 
 export const calculateBotMove = (
   bot: Entity, 
@@ -33,6 +36,7 @@ export const calculateBotMove = (
 
   const currentHexKey = getHexKey(bot.q, bot.r);
   const currentHex = grid[currentHexKey];
+  // Filter self from obstacles for pathfinding logic
   const navObstacles = obstacles.filter(o => o.q !== bot.q || o.r !== bot.r);
   
   if (reservedHexKeys) {
@@ -53,8 +57,9 @@ export const calculateBotMove = (
       ...(bot.memory || {})
   };
   
-  // 2. SURVIVAL CHECK: RECOVER IF EMPTY
-  // Panic recovery if stranded
+  if (!mem.mode) mem.mode = 'GATHER';
+
+  // 0. SURVIVAL CHECK: RECOVER IF EMPTY
   if (bot.moves <= 0 && bot.coins < GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE && !bot.recoveredCurrentHex) {
       if (currentHex && currentHex.structureType !== 'VOID') {
           return { 
@@ -65,106 +70,261 @@ export const calculateBotMove = (
       }
   }
 
-  // 3. MONUMENT OVERRIDE (Specific Scenario Logic)
-  // If monument is visible, we default to the specific "Staircase" logic for it.
+  // 2. CHECK FOR VISIBLE MONUMENT
   const monument = Object.values(grid).find(h => h.structureType === 'MONUMENT');
-  if (monument && monument.revealed) {
-      // Use the specialized logic if close to monument
-      // For now, we route this through the standard "Tower Builder" but prioritizing the Monument hex
-      // This unifies the logic.
-  }
+  const isMonumentVisible = !!monument && monument.revealed;
 
-  // 4. HYSTERESIS MODE SWITCHING
-  // Don't switch tasks constantly. 
-  // GATHER until FULL. BUILD until EMPTY.
-  const maxStorage = bot.maxStorage || 4;
-  
-  if (mem.mode === 'GATHER') {
-      // Keep gathering until at least 80% full
-      if (bot.storage >= maxStorage - 1) {
-          mem.mode = 'BUILD';
-          mem.targetHexId = null; // Clear target on switch
-      }
-  } else {
-      // BUILD mode
-      // Keep building until empty
-      if (bot.storage <= 0) {
-          mem.mode = 'GATHER';
-          mem.targetHexId = null; // Clear target on switch
+  // 3. GLOBAL CLAIM LIST
+  const claimedTargets = new Set<string>();
+  if (allBots) {
+      for (const other of allBots) {
+          if (other.id === bot.id) continue;
+          if (other.memory?.targetHexId) {
+              claimedTargets.add(other.memory.targetHexId);
+          }
       }
   }
 
-  // 5. UNSTUCK LOGIC
-  if (mem.stuckCounter >= STUCK_THRESHOLD) {
-      mem.targetHexId = null;
-      // Try to move randomly to a valid neighbor
-      const neighbors = getNeighbors(bot.q, bot.r);
-      const valid = neighbors.filter(n => {
-          const h = grid[getHexKey(n.q, n.r)];
-          if (!h || h.structureType === 'VOID' || h.maxLevel > bot.playerLevel) return false;
-          // Physics check: Height diff <= 1
-          if (Math.abs(h.maxLevel - (currentHex?.maxLevel || 0)) > 1) return false;
-          // Obstacle check
+  // Helper: Find a random valid neighbor to step aside to
+  const getStepAsideMove = (reason: string): AiResult | null => {
+      const nbs = getNeighbors(bot.q, bot.r);
+      // Filter for valid, empty neighbors
+      const validNbs = nbs.filter(n => {
+          const k = getHexKey(n.q, n.r);
+          const h = grid[k];
+          if (!h || h.structureType === 'VOID') return false;
+          // Don't step into a wall I can't climb
+          if (h.maxLevel > bot.playerLevel) return false;
+          // Don't step on someone else
           if (obstacles.some(o => o.q === n.q && o.r === n.r)) return false;
           return true;
       });
 
-      if (valid.length > 0) {
-          const rand = valid[Math.floor(Math.random() * valid.length)];
-          const cost = calculateMovementCost(bot, [rand], grid);
+      if (validNbs.length > 0) {
+          // Prefer stepping AWAY from the monument if possible to de-congest
+          if (monument) {
+              validNbs.sort((a, b) => {
+                  // Higher distance is better
+                  return cubeDistance(b, monument) - cubeDistance(a, monument);
+              });
+          }
+          
+          // Pick the best (furthest) one
+          const target = validNbs[0];
+          const cost = calculateMovementCost(bot, [target], grid);
+          
           if (cost.canAfford) {
               return { 
-                  action: { type: 'MOVE', path: [rand], stateVersion }, 
-                  debug: 'Unstuck Move', 
-                  memory: { ...mem, stuckCounter: 0 } 
+                  action: { type: 'MOVE', path: [target], stateVersion }, 
+                  debug: `Yield: ${reason}`, 
+                  memory: { ...mem, stuckCounter: 0 } // Reset stuck counter as we are moving
               };
           }
       }
+      return null;
+  };
+
+  // 4. PRIORITY OVERRIDE: MONUMENT STAIRCASE BUILDER (BFS)
+  if (isMonumentVisible && monument) {
+      const MONUMENT_ZONE_RADIUS = 3;
       
-      // If truly stuck, wait (and recover)
-      if (!bot.recoveredCurrentHex) {
-           return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Unstuck Rec', memory: mem };
+      // A. Material Check
+      if (bot.storage < 1) {
+          const restricted = new Set<string>();
+          for(let q = -MONUMENT_ZONE_RADIUS; q <= MONUMENT_ZONE_RADIUS; q++) {
+               for(let r = -MONUMENT_ZONE_RADIUS; r <= MONUMENT_ZONE_RADIUS; r++) {
+                   restricted.add(getHexKey(monument.q + q, monument.r + r));
+               }
+           }
+           if (mem.targetHexId) restricted.add(mem.targetHexId);
+           return executeMinerLogic(bot, grid, index, navObstacles, stateVersion, mem, allBots || [], claimedTargets, monument, restricted);
       }
-      return { action: { type: 'WAIT', stateVersion }, debug: 'Stuck Wait', memory: { ...mem, stuckCounter: 0 } }; // Reset to try again
+
+      // B. Staircase Target Search (BFS)
+      let targetHex: Hex | null = null;
+      let targetReason = "Zone Build";
+
+      const openSet: Hex[] = [];
+      const visited = new Set<string>();
+      
+      const ring1 = getNeighbors(monument.q, monument.r);
+      for (const c of ring1) {
+          const h = grid[getHexKey(c.q, c.r)];
+          if (h && h.structureType !== 'VOID') openSet.push(h);
+      }
+
+      let steps = 0;
+      const MAX_STEPS = 80;
+      let pathChecks = 0;
+      const MAX_PATH_CHECKS = 3; 
+
+      while (openSet.length > 0 && steps < MAX_STEPS) {
+          steps++;
+          const current = openSet.shift()!;
+          if (visited.has(current.id)) continue;
+          visited.add(current.id);
+
+          // Skip if claimed by other
+          if (claimedTargets.has(current.id)) continue;
+          
+          // Skip if physically occupied by another bot (UNLESS it's me standing on it)
+          const isOccupiedByOther = navObstacles.some(o => o.q === current.q && o.r === current.r);
+          if (isOccupiedByOther) continue;
+
+          const dist = cubeDistance(monument, current);
+          const idealLevel = Math.max(0, monument.maxLevel - dist);
+          
+          if (current.currentLevel < idealLevel) {
+              const growthCheck = checkGrowthCondition(current, bot, getNeighbors(current.q, current.r), grid, navObstacles);
+              
+              if (growthCheck.canGrow) {
+                  // Reachability Check
+                  let isReachable = false;
+                  // RENAMED LOCAL VARIABLE TO AVOID SHADOWING FUNCTION
+                  const dToTarget = cubeDistance(bot, current);
+                  
+                  if (dToTarget <= 1) {
+                      isReachable = true;
+                  } else if (pathChecks < MAX_PATH_CHECKS) {
+                      pathChecks++;
+                      const path = findPath({q:bot.q, r:bot.r}, {q:current.q, r:current.r}, grid, bot.playerLevel, navObstacles);
+                      if (path && path.length > 0) isReachable = true;
+                  }
+
+                  if (isReachable) {
+                      targetHex = current;
+                      targetReason = "L" + (current.currentLevel + 1);
+                      break;
+                  }
+              } else {
+                  // BLOCKED BY SUPPORT?
+                  // If I am standing on this hex, and it needs support, I should NOT target this hex.
+                  // I should target the SUPPORT instead.
+                  if (distToBot(bot, current) === 0 && growthCheck.missingSupports && growthCheck.missingSupports.length > 0) {
+                      // Prioritize the missing supports!
+                      // Add them to the FRONT of the queue to handle immediately
+                      for (const missing of growthCheck.missingSupports) {
+                          const mHex = grid[getHexKey(missing.q, missing.r)];
+                          if (mHex && !visited.has(mHex.id)) {
+                              openSet.unshift(mHex); // High priority push
+                          }
+                      }
+                      continue; // Skip the current blocked hex
+                  }
+
+                  // Standard expansion
+                  const nbs = getNeighbors(current.q, current.r);
+                  for (const n of nbs) {
+                      const nHex = grid[getHexKey(n.q, n.r)];
+                      if (nHex && nHex.structureType !== 'VOID') {
+                          if (cubeDistance(nHex, monument) >= dist) {
+                              openSet.push(nHex);
+                          }
+                      }
+                  }
+              }
+          }
+      }
+
+      if (targetHex) {
+          const result = moveToAndInteract(bot, targetHex, 'UPGRADE', grid, navObstacles, stateVersion, mem, targetReason);
+          
+          // ANTI-STASIS: If result is WAIT, it means we are stuck (either No Path or Blocked Condition)
+          // In a crowded area, WAIT is death. We must YIELD.
+          if (result.action?.type === 'WAIT') {
+              const yieldMove = getStepAsideMove(result.debug);
+              if (yieldMove) return yieldMove;
+          }
+          
+          return result;
+      }
+      
+      // Summit Check
+      if (cubeDistance(bot, monument) <= 1 && currentHex && currentHex.maxLevel >= monument.maxLevel - 1) {
+           return moveToAndInteract(bot, monument, 'UPGRADE', grid, navObstacles, stateVersion, mem, 'Summit Push');
+      }
+      
+      // Fallback: Mine/Yield
+      const yieldMove = getStepAsideMove("Idle");
+      if (yieldMove) return yieldMove;
+
+      // Mine if nothing else
+      const restricted = new Set<string>();
+      for(let q=-MONUMENT_ZONE_RADIUS; q<=MONUMENT_ZONE_RADIUS; q++) {
+           for(let r=-MONUMENT_ZONE_RADIUS; r<=MONUMENT_ZONE_RADIUS; r++) {
+               restricted.add(getHexKey(monument.q+q, monument.r+r));
+           }
+      }
+      return executeMinerLogic(bot, grid, index, navObstacles, stateVersion, mem, allBots || [], claimedTargets, monument, restricted);
   }
 
-  // 6. EXECUTE MODE
+  // 5. STANDARD LOGIC
+  if (!isMonumentVisible) {
+      const maxStorage = bot.maxStorage ?? 4;
+      if (mem.mode === 'GATHER' && bot.storage >= maxStorage) {
+          mem.mode = 'BUILD';
+          mem.targetHexId = null;
+      } else if (mem.mode !== 'GATHER' && bot.storage <= 0) {
+          mem.mode = 'GATHER';
+          mem.targetHexId = null;
+      }
+  }
+
+  if (mem.stuckCounter >= STUCK_THRESHOLD) {
+      mem.targetHexId = null; 
+      
+      // Panic/Unstuck
+      if (bot.moves === 0 && bot.coins < 5 && !bot.recoveredCurrentHex && currentHex) {
+           return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Panic Rec', memory: { ...mem, stuckCounter: 0 } };
+      }
+      
+      const yieldMove = getStepAsideMove("Stuck");
+      if (yieldMove) return yieldMove;
+      
+      return { action: { type: 'WAIT', stateVersion }, debug: 'Trapped', memory: { ...mem, stuckCounter: mem.stuckCounter + 1 } };
+  }
+
+  // 8. EXECUTION
   if (mem.mode === 'BUILD') {
-      return executeTowerBuilder(bot, grid, index, navObstacles, stateVersion, mem, allBots || []);
+      return executeBuilderLogic(bot, grid, index, navObstacles, stateVersion, mem, allBots || [], claimedTargets);
   } else {
-      return executeMinerLogic(bot, grid, index, navObstacles, stateVersion, mem, allBots || []);
+      return executeMinerLogic(bot, grid, index, navObstacles, stateVersion, mem, allBots || [], claimedTargets);
   }
 };
 
-/**
- * ARCHITECT STRATEGY:
- * Find the highest "Crown" (owned or neutral).
- * If upgradeable -> Go there and upgrade.
- * If needs support -> Go to the best support spot and upgrade that.
- */
-const executeTowerBuilder = (
+const executeBuilderLogic = (
     bot: Entity,
     grid: Record<string, Hex>,
     index: WorldIndex,
     obstacles: HexCoord[],
     stateVersion: number,
     mem: BotMemory,
-    allBots: Entity[]
+    allBots: Entity[],
+    claimedTargets: Set<string>
 ): AiResult => {
     
-    // 1. Find Target
-    const targetInfo = findStrategicBuildTarget(bot, grid, allBots, obstacles);
-    
-    if (!targetInfo) {
-        // No valid targets? Panic switch to gather or explore
-        return { action: { type: 'WAIT', stateVersion }, debug: 'No Build Tgt', memory: mem };
+    let bestTarget: Hex | null = null;
+
+    if (mem.targetHexId) {
+        bestTarget = grid[mem.targetHexId] || null;
     }
 
-    const targetHex = targetInfo.hex;
-    mem.targetHexId = targetHex.id;
+    if (!bestTarget) {
+        const targets = findBestBuildTargets(bot, grid, allBots, 15);
+        for (const t of targets) {
+            if (claimedTargets.has(t.hex.id)) continue; 
+            if (cubeDistance(bot, t.hex) > HIVE_RADIUS) continue;
+            bestTarget = t.hex;
+            break;
+        }
+        if (bestTarget) mem.targetHexId = bestTarget.id;
+    }
 
-    // 2. Move & Interact
-    return moveToAndInteract(bot, targetHex, 'UPGRADE', grid, obstacles, stateVersion, mem, targetInfo.reason);
+    if (bestTarget) {
+        return moveToAndInteract(bot, bestTarget, 'UPGRADE', grid, obstacles, stateVersion, mem, 'Build Move');
+    }
+
+    return { action: { type: 'WAIT', stateVersion }, debug: 'Idle Build', memory: mem };
 };
 
 const executeMinerLogic = (
@@ -174,33 +334,38 @@ const executeMinerLogic = (
     obstacles: HexCoord[],
     stateVersion: number,
     mem: BotMemory,
-    allBots: Entity[]
+    allBots: Entity[],
+    claimedTargets: Set<string>,
+    proximityTarget?: Hex,
+    restrictedHexIds?: Set<string>
 ): AiResult => {
 
-    // 1. Find best digging spot (Quarry)
     let bestTarget: Hex | null = null;
 
-    // Check if current target is still valid/good
     if (mem.targetHexId) {
-        const t = grid[mem.targetHexId];
-        if (t && t.structureType !== 'VOID' && t.currentLevel <= 0) {
-            bestTarget = t;
-        }
+        bestTarget = grid[mem.targetHexId] || null;
     }
 
     if (!bestTarget) {
-        const targets = findBestDigTargets(bot, grid, allBots, 5);
-        if (targets.length > 0) {
-            bestTarget = targets[0].hex;
-            mem.targetHexId = bestTarget.id;
+        const targets = findBestDigTargets(bot, grid, allBots, 10, restrictedHexIds);
+        
+        if (proximityTarget) {
+            targets.sort((a, b) => cubeDistance(a.hex, proximityTarget) - cubeDistance(b.hex, proximityTarget));
         }
+
+        for (const t of targets) {
+            if (claimedTargets.has(t.hex.id)) continue;
+            if (!proximityTarget && cubeDistance(bot, t.hex) > HIVE_RADIUS) continue;
+            bestTarget = t.hex;
+            break;
+        }
+        if (bestTarget) mem.targetHexId = bestTarget.id;
     }
 
     if (bestTarget) {
         return moveToAndInteract(bot, bestTarget, 'DIG', grid, obstacles, stateVersion, mem, 'Mine Move');
     }
 
-    // Idle behavior if no mining spots (rare)
     const currentHex = grid[getHexKey(bot.q, bot.r)];
     if (!bot.recoveredCurrentHex && currentHex) {
         return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Idle Rec', memory: mem };
@@ -209,7 +374,6 @@ const executeMinerLogic = (
     return { action: { type: 'WAIT', stateVersion }, debug: 'Idle Mine', memory: mem };
 };
 
-// Generic Move-To-Interact Helper
 const moveToAndInteract = (
     bot: Entity,
     target: Hex,
@@ -226,35 +390,32 @@ const moveToAndInteract = (
     // A. ON TARGET
     if (dist === 0) {
         const nbs = getNeighbors(bot.q, bot.r);
+        
         let success = false;
         let failReason = "";
 
         if (actionType === 'UPGRADE') {
             const check = checkGrowthCondition(target, bot, nbs, grid, obstacles);
-            if (check.canGrow) success = true; 
-            else failReason = check.reason || "Blocked";
+            if (check.canGrow) success = true; else failReason = check.reason || "";
         } else {
             const check = checkDigCondition(target, bot, nbs, grid);
-            if (check.canGrow) success = true; 
-            else failReason = check.reason || "Blocked";
+            if (check.canGrow) success = true; else failReason = check.reason || "";
         }
         
         if (success) {
             return { 
                 action: { type: actionType, coord: {q:target.q, r:target.r}, intent: actionType, stateVersion }, 
-                debug: actionType, 
+                debug: 'Interact', 
                 memory: { ...mem, stuckCounter: 0 } 
             };
         }
         
-        // If we are here but cannot act, we are effectively blocked/waiting
-        // Try recovery while waiting
         if (!bot.recoveredCurrentHex) {
              return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Wait&Rec', memory: mem };
         }
         
-        // Increment stuck counter to force a move-away next tick
-        return { action: { type: 'WAIT', stateVersion }, debug: `Blocked: ${failReason}`, memory: { ...mem, stuckCounter: mem.stuckCounter + 1 } };
+        // Critical: If blocked, return WAIT so the caller can trigger Yield Logic
+        return { action: { type: 'WAIT', stateVersion }, debug: `Blocked: ${failReason}`, memory: { ...mem, targetHexId: null, stuckCounter: mem.stuckCounter + 1 } };
     }
 
     // B. MOVE TO TARGET
@@ -265,7 +426,6 @@ const moveToAndInteract = (
         if (cost.canAfford) {
              return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: debugPrefix, memory: { ...mem, stuckCounter: 0 } };
         } else {
-            // Can't afford move
             if (!bot.recoveredCurrentHex) {
                 return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Fund Recover', memory: mem };
             }
@@ -273,6 +433,6 @@ const moveToAndInteract = (
         }
     }
 
-    // No Path found
+    // Critical: If No Path, return WAIT so caller can trigger Yield Logic
     return { action: { type: 'WAIT', stateVersion }, debug: 'No Path', memory: { ...mem, targetHexId: null, stuckCounter: mem.stuckCounter + 1 } };
 };

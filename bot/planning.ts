@@ -44,30 +44,78 @@ const isLoadBearing = (hex: Hex, grid: Record<string, Hex>): boolean => {
 };
 
 /**
- * Identifies the best "Tower Project" for the bot.
- * 1. Finds the highest owned/reachable hex (The Crown).
- * 2. If Crown needs support, finds the best neighbor to upgrade.
- * 3. Returns the actionable target (either the Crown or the Support).
+ * Recursively checks if a target can be built.
+ * If not, finds the best dependency (support) and recurses on that.
+ * Returns the actual ACTIONABLE hex (the bottom of the dependency chain).
  */
-export const findStrategicBuildTarget = (
+const evaluateBuildChain = (
+    target: Hex, 
+    bot: Entity, 
+    grid: Record<string, Hex>, 
+    obstacles: HexCoord[], 
+    depth: number = 0
+): HexScore | null => {
+    // Prevent infinite recursion
+    if (depth > 2) return null;
+
+    const neighbors = getNeighbors(target.q, target.r);
+    const check = checkGrowthCondition(target, bot, neighbors, grid, obstacles);
+
+    // CASE 1: Actionable immediately
+    if (check.canGrow) {
+        return { 
+            hex: target, 
+            score: 0, // Score will be assigned by caller context
+            reason: depth === 0 ? 'Direct Build' : `Support L${target.maxLevel}`, 
+            action: 'BUILD' 
+        };
+    }
+
+    // CASE 2: Needs Support
+    if (check.missingSupports && check.missingSupports.length > 0) {
+        // Convert coords to Hex objects
+        const supportHexes = check.missingSupports
+            .map(c => grid[getHexKey(c.q, c.r)])
+            .filter(h => h && h.structureType !== 'VOID');
+        
+        // Sort: Highest level first (closest to being a useful support)
+        supportHexes.sort((a, b) => b.maxLevel - a.maxLevel);
+
+        for (const support of supportHexes) {
+            // Recursively check if we can upgrade the support
+            const subResult = evaluateBuildChain(support, bot, grid, obstacles, depth + 1);
+            if (subResult) {
+                // We found a valid step down the chain
+                return {
+                    hex: subResult.hex,
+                    score: 0, 
+                    reason: `Chain: Help L${target.maxLevel} via L${support.maxLevel}`,
+                    action: 'BUILD'
+                };
+            }
+        }
+    }
+
+    return null;
+};
+
+// New function required by the improved calculateBotMove logic
+export const findBestBuildTargets = (
     bot: Entity,
     grid: Record<string, Hex>,
     allBots: Entity[],
-    obstacles: HexCoord[]
-): HexScore | null => {
-    
-    // 1. Identify "Crowns" (Potential Towers)
-    // Preference: My highest hex > High neutral hex > Any hex
+    maxResults: number = 5
+): HexScore[] => {
+    // 1. Identify potential crowns (owned hexes or nearby claimable ones)
     const candidates = Object.values(grid).filter(h => 
         h.structureType !== 'VOID' && 
         h.structureType !== 'MONUMENT' &&
-        cubeDistance(bot, h) < 15 // Focus on local area
+        cubeDistance(bot, h) < 15
     );
 
-    if (candidates.length === 0) return null;
-
-    // Sort by: Level DESC, IsOwned DESC, Distance ASC
+    // Heuristic Sort
     candidates.sort((a, b) => {
+        // Highest Level -> Owned -> Closest
         if (b.maxLevel !== a.maxLevel) return b.maxLevel - a.maxLevel;
         const aOwned = a.ownerId === bot.id ? 1 : 0;
         const bOwned = b.ownerId === bot.id ? 1 : 0;
@@ -75,114 +123,66 @@ export const findStrategicBuildTarget = (
         return cubeDistance(bot, a) - cubeDistance(bot, b);
     });
 
-    // We only check the top few candidates to save CPU
-    const topCandidates = candidates.slice(0, 3);
+    const results: HexScore[] = [];
+    const obstacles: HexCoord[] = allBots.map(b => ({q: b.q, r: b.r}));
 
-    for (const crown of topCandidates) {
-        // Can we upgrade this crown directly?
-        const neighbors = getNeighbors(crown.q, crown.r);
-        const check = checkGrowthCondition(crown, bot, neighbors, grid, obstacles);
-
-        if (check.canGrow) {
-            return { hex: crown, score: 100, reason: `Expand Crown L${crown.maxLevel}`, action: 'BUILD' };
-        }
-
-        // If not, we need support. Find the BEST neighbor to upgrade.
-        // Best support is:
-        // 1. Level < Crown Level (needs upgrade to become support)
-        // 2. Highest Level (closest to being a support)
-        if (check.missingSupports && check.missingSupports.length > 0) {
-            // Find the neighbors corresponding to missing supports
-            // Note: checkGrowthCondition returns neighbors that FAILED the check (are not high enough)
+    // Check top 10 candidates
+    for (const crown of candidates.slice(0, 10)) {
+        const chain = evaluateBuildChain(crown, bot, grid, obstacles);
+        if (chain) {
+            // Scoring logic
+            const isCrown = chain.hex.id === crown.id;
+            const baseScore = isCrown ? 100 : 80;
+            const dist = cubeDistance(bot, chain.hex);
             
-            const supportCandidates: Hex[] = [];
+            chain.score = baseScore + (crown.maxLevel * 10) - dist;
             
-            for (const coord of check.missingSupports) {
-                const sHex = grid[getHexKey(coord.q, coord.r)];
-                if (sHex && sHex.structureType !== 'VOID') {
-                    supportCandidates.push(sHex);
-                }
-            }
-
-            // Sort supports: Highest level first (easiest to fix)
-            supportCandidates.sort((a, b) => b.maxLevel - a.maxLevel);
-
-            if (supportCandidates.length > 0) {
-                const bestSupport = supportCandidates[0];
-                
-                // RECURSIVE CHECK: Can we upgrade the support?
-                // If yes, target it. If no, we might need to support the support (Pyramid building).
-                // For simplicity/CPU, we just return the support. 
-                // The bot will re-evaluate next tick if it can't build this support.
-                return { 
-                    hex: bestSupport, 
-                    score: 80, 
-                    reason: `Support for L${crown.maxLevel}`, 
-                    action: 'BUILD' 
-                };
+            // Dedupe
+            if (!results.some(r => r.hex.id === chain.hex.id)) {
+                results.push(chain);
             }
         }
     }
-
-    // Fallback: Just build nearest valid low-level hex to start something
-    const nearest = candidates.sort((a, b) => cubeDistance(bot, a) - cubeDistance(bot, b))[0];
-    return { hex: nearest, score: 10, reason: 'Foundation', action: 'BUILD' };
+    
+    return results.sort((a, b) => b.score - a.score).slice(0, maxResults);
 };
 
-// Score hex for digging potential
-export const scoreHexForDigging = (
+// Legacy support if needed, though mostly replaced by findBestBuildTargets
+export const findStrategicBuildTarget = (
+    bot: Entity,
+    grid: Record<string, Hex>,
+    allBots: Entity[],
+    obstacles: HexCoord[],
+    monument?: Hex
+): HexScore | null => {
+    // Redirect to new logic
+    const targets = findBestBuildTargets(bot, grid, allBots, 1);
+    return targets.length > 0 ? targets[0] : null;
+};
+
+// Base scoring for a hex to see if it's generally desirable to dig
+const baseDigScore = (
   hex: Hex,
   bot: Entity,
-  allBots: Entity[],
   grid: Record<string, Hex>
-): HexScore => {
+): number => {
+  if (isLoadBearing(hex, grid)) return -9999;
+  if (hex.ownerId === bot.id && hex.maxLevel > 0) return -500;
+  if (hex.structureType === 'MONUMENT') return -9999;
+
   let score = 0;
-  const reasons: string[] = [];
-  
-  // Rule 1: Structural Integrity (Don't dig supports)
-  if (isLoadBearing(hex, grid)) {
-      return { hex, score: -9999, reason: 'LOAD-BEARING', action: 'AVOID' };
-  }
-
-  // Rule 2: Don't dig High Ground (Assets)
-  // If I own it and it's > 0, don't dig (unless I'm desperate, handled by logic caller)
-  if (hex.ownerId === bot.id && hex.maxLevel > 0) {
-      return { hex, score: -500, reason: 'OWNED-ASSET', action: 'AVOID' };
-  }
-
-  // Rule 3: PRESERVE INFRASTRUCTURE (Monuments, Bases)
-  if (hex.structureType === 'MONUMENT') return { hex, score: -9999, reason: 'MONUMENT', action: 'AVOID' };
-
-  // Distance penalty (prefer closer)
   const dist = cubeDistance(bot, hex);
   score += Math.max(0, 20 - dist); 
 
-  // Deep hexes are better quarries (don't ruin the surface view)
   if (hex.currentLevel < 0) {
       score += 30 + Math.abs(hex.currentLevel) * 5;
-      reasons.push('deep-quarry');
   } else if (hex.currentLevel === 0) {
-      score += 10; // Surface mining
-      reasons.push('surface');
+      score += 10; 
   } else {
-      score -= 20; // Digging a hill (inefficient)
+      score -= 20; 
   }
   
-  // Accessibility
-  const digCheck = checkDigCondition(hex, bot, getNeighbors(hex.q, hex.r), grid);
-  if (digCheck.canGrow) {
-    score += 20; // Actionable
-    reasons.push('accessible');
-  } else {
-    score -= 50; // Not valid
-  }
-  
-  return {
-    hex,
-    score,
-    reason: reasons.join(',') || 'neutral',
-    action: score > 15 ? 'DIG' : 'AVOID'
-  };
+  return score;
 };
 
 export const findBestDigTargets = (
@@ -193,11 +193,61 @@ export const findBestDigTargets = (
   restrictedHexIds?: Set<string>
 ): HexScore[] => {
   const allHexes = Object.values(grid);
-  const scoredHexes = allHexes
-    .filter(h => !restrictedHexIds || !restrictedHexIds.has(h.id))
-    .map(h => scoreHexForDigging(h, bot, allBots, grid))
-    .filter(s => s.score > 0) // Only positive scores
-    .sort((a, b) => b.score - a.score);
-  
-  return scoredHexes.slice(0, maxResults);
+  const candidates: HexScore[] = [];
+
+  for (const hex of allHexes) {
+      if (restrictedHexIds && restrictedHexIds.has(hex.id)) continue;
+      
+      const rawScore = baseDigScore(hex, bot, grid);
+      if (rawScore <= 0) continue;
+
+      // Check Physics/Rules
+      const neighbors = getNeighbors(hex.q, hex.r);
+      const digCheck = checkDigCondition(hex, bot, neighbors, grid);
+
+      if (digCheck.canGrow) {
+          candidates.push({
+              hex,
+              score: rawScore + 20,
+              reason: 'Direct Quarry',
+              action: 'DIG'
+          });
+      } else if (digCheck.missingSupports && digCheck.missingSupports.length > 0) {
+          // RECURSIVE DIGGING: Target the blockers ("Widening the pit")
+          for (const blockerCoord of digCheck.missingSupports) {
+              const blockerHex = grid[getHexKey(blockerCoord.q, blockerCoord.r)];
+              if (blockerHex && blockerHex.structureType !== 'VOID') {
+                  
+                  // Check if the blocker itself is actionable
+                  const blockerCheck = checkDigCondition(blockerHex, bot, getNeighbors(blockerHex.q, blockerHex.r), grid);
+                  
+                  if (blockerCheck.canGrow) {
+                      const blockerScore = baseDigScore(blockerHex, bot, grid);
+                      // Only proceed if blocker is valid (not load bearing for someone else)
+                      if (blockerScore > -100) {
+                          candidates.push({
+                              hex: blockerHex,
+                              // CRITICAL: Boost score higher than original to force clearing debris first
+                              score: rawScore + 50, 
+                              reason: `Clear debris for L${hex.currentLevel}`,
+                              action: 'DIG'
+                          });
+                      }
+                  }
+              }
+          }
+      }
+  }
+
+  // Sort and deduplicate (by hex id)
+  const uniqueMap = new Map<string, HexScore>();
+  candidates.forEach(c => {
+      if (!uniqueMap.has(c.hex.id) || uniqueMap.get(c.hex.id)!.score < c.score) {
+          uniqueMap.set(c.hex.id, c);
+      }
+  });
+
+  return Array.from(uniqueMap.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxResults);
 };
