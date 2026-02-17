@@ -17,7 +17,9 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     mapConfig: {
       size: 5, 
       type: 'fixed',
-      generateWalls: false,
+      generateWalls: true, // Auto-generate boundary
+      wallStartRadius: 2, // Play area is Radius 1 (Center + Neighbors)
+      wallType: 'pit_ring', // Negative level boundary
       customLayout: [
           // Player Start (L1)
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
@@ -29,20 +31,6 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-
-          // --- VOID PERIMETER ---
-          { q: 0, r: -2, structureType: 'VOID', revealed: true },
-          { q: 1, r: -2, structureType: 'VOID', revealed: true },
-          { q: 2, r: -2, structureType: 'VOID', revealed: true },
-          { q: 2, r: -1, structureType: 'VOID', revealed: true },
-          { q: 2, r: 0, structureType: 'VOID', revealed: true },
-          { q: 1, r: 1, structureType: 'VOID', revealed: true },
-          { q: 0, r: 2, structureType: 'VOID', revealed: true },
-          { q: -1, r: 2, structureType: 'VOID', revealed: true },
-          { q: -2, r: 2, structureType: 'VOID', revealed: true },
-          { q: -2, r: 1, structureType: 'VOID', revealed: true },
-          { q: -2, r: 0, structureType: 'VOID', revealed: true },
-          { q: -1, r: -1, structureType: 'VOID', revealed: true },
       ]
     },
 
@@ -50,7 +38,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       credits: 500, 
       moves: 5,     
       rank: 1,
-      materials: 5 // Increased from 4 to 5 to allow 2 mistakes/upgrades
+      materials: 5 
     },
 
     aiMode: 'none', 
@@ -85,7 +73,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     startState: {
       credits: 0, 
       moves: 20,  
-      rank: 5, // Start Rank 5
+      rank: 5, 
       materials: 0
     },
 
@@ -112,7 +100,9 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     mapConfig: {
       size: 5,
       type: 'fixed',
-      generateWalls: false,
+      generateWalls: true,
+      wallStartRadius: 2, // Play area Radius 1
+      wallType: 'pit_ring',
       customLayout: [
           // Center (Goal) - Starts L1
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true, durability: 6 },
@@ -124,20 +114,6 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          
-          // Voids ring (Radius 2)
-          { q: 0, r: -2, structureType: 'VOID', revealed: true },
-          { q: 1, r: -2, structureType: 'VOID', revealed: true },
-          { q: 2, r: -2, structureType: 'VOID', revealed: true },
-          { q: 2, r: -1, structureType: 'VOID', revealed: true },
-          { q: 2, r: 0, structureType: 'VOID', revealed: true },
-          { q: 1, r: 1, structureType: 'VOID', revealed: true },
-          { q: 0, r: 2, structureType: 'VOID', revealed: true },
-          { q: -1, r: 2, structureType: 'VOID', revealed: true },
-          { q: -2, r: 2, structureType: 'VOID', revealed: true },
-          { q: -2, r: 1, structureType: 'VOID', revealed: true },
-          { q: -2, r: 0, structureType: 'VOID', revealed: true },
-          { q: -1, r: -1, structureType: 'VOID', revealed: true },
       ]
     },
 
@@ -145,7 +121,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       credits: 300,  
       moves: 10,     
       rank: 2,
-      materials: 3 // EXACTLY 3 materials needed: 2 for supports (L0->L1), 1 for center (L1->L2).
+      materials: 3 
     },
 
     aiMode: 'none',
@@ -157,7 +133,6 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       },
       checkLossCondition: (state) => {
           const center = state.grid[getHexKey(0,0)];
-          // If we ran out of materials and center isn't L2, impossible to win.
           if (state.player.storage <= 0 && center.maxLevel < 2) return true;
           if (isStranded(state)) return true;
           return false;
@@ -192,7 +167,9 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     mapConfig: {
       size: 5,
       type: 'fixed',
-      generateWalls: false,
+      generateWalls: true,
+      wallStartRadius: 2,
+      wallType: 'pit_ring',
       customLayout: [
           // Center (Goal) - Starts L1
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
@@ -204,28 +181,14 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: 0, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-
-          // Voids to lock arena
-          { q: 0, r: -2, structureType: 'VOID', revealed: true },
-          { q: 1, r: -2, structureType: 'VOID', revealed: true },
-          { q: 2, r: -2, structureType: 'VOID', revealed: true },
-          { q: 2, r: -1, structureType: 'VOID', revealed: true },
-          { q: 2, r: 0, structureType: 'VOID', revealed: true },
-          { q: 1, r: 1, structureType: 'VOID', revealed: true },
-          { q: 0, r: 2, structureType: 'VOID', revealed: true },
-          { q: -1, r: 2, structureType: 'VOID', revealed: true },
-          { q: -2, r: 2, structureType: 'VOID', revealed: true },
-          { q: -2, r: 1, structureType: 'VOID', revealed: true },
-          { q: -2, r: 0, structureType: 'VOID', revealed: true },
-          { q: -1, r: -1, structureType: 'VOID', revealed: true },
       ]
     },
 
     startState: {
-      credits: 1000, // Plenty of cash, focusing on Material constraint
+      credits: 1000, 
       moves: 20,
       rank: 3,
-      materials: 0 // Enforce digging
+      materials: 0 
     },
 
     aiMode: 'none',
@@ -237,12 +200,10 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       },
       checkLossCondition: (state) => {
           const center = state.grid[getHexKey(0,0)];
-          // If stuck and goal not met
           if (isStranded(state) && center.maxLevel < 3) return true;
           return false;
       },
       onBeforeAction: (state, action) => {
-          // Force player to learn Digging if they try to upgrade without material
           if (action.type === 'UPGRADE' && state.player.storage === 0 && action.intent !== 'RECOVER') {
              return { ok: false, reason: "NO MATERIALS! Dig the mounds (Lvl 2)." };
           }
@@ -258,7 +219,9 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     mapConfig: {
       size: 5,
       type: 'fixed',
-      generateWalls: false,
+      generateWalls: true,
+      wallStartRadius: 3, // Playable area Radius 2
+      wallType: 'pit_ring',
       customLayout: [
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
@@ -284,7 +247,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     startState: {
       credits: 0,
-      moves: 6, // Increased to 6 to allow direct travel to L5 (Cost 1+5) OR Recovery strategy
+      moves: 6, 
       rank: 5,
       materials: 0
     },
@@ -306,8 +269,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   },
   {
     id: '1.6',
-    title: 'Sim 1.6: The Architect',
-    description: 'Protocol: Combat.\n\nObjective: Reach Level 4 before the Rival.\n\nBot "Architect V18" active. It can Gather materials and Build supports. Compete for limited space.',
+    title: 'Sim 1.6: Vertical Limit',
+    description: 'Protocol: Altitude Test.\n\nObjective: Reach Level 4.\n\nConstraint: Space is extremely limited (Radius 3). You must manage your footprint and resources carefully to build the summit.',
     
     mapConfig: {
       size: 4, 
@@ -319,10 +282,10 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           // Player Side
           { q: 0, r: 2, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
-          // Bot Side
+          // Old Bot Side -> Neutral Flat
           { q: 0, r: -2, maxLevel: 1, currentLevel: 1, revealed: true },
 
-          // Central Conflict Zone
+          // Central Zone
           { q: 0, r: 0, maxLevel: 2, currentLevel: 2, revealed: true }, 
           { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
@@ -336,16 +299,13 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       materials: 5
     },
 
-    aiMode: 'basic', // Enables the bot
+    aiMode: 'none',
 
     hooks: {
       checkWinCondition: (state) => {
-          // Check player rank instead of grid ownership to ensure it triggers correctly on level up
           return state.player.playerLevel >= 4;
       },
       checkLossCondition: (state) => {
-           // Loss if Bot reaches L4 first
-           if (state.bots.some(b => b.playerLevel >= 4)) return true;
            if (isStranded(state)) return true;
            return false;
       }

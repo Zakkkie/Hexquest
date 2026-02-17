@@ -243,7 +243,18 @@ const baseDigScore = (
   score += Math.max(0, 20 - dist); 
 
   if (hex.currentLevel < 0) {
-      score += 30 + Math.abs(hex.currentLevel) * 5;
+      // Adjusted Logic:
+      // In Skirmish, deep pits (<-5) might contain rare loot, so we incentivize digging.
+      // In Campaign/Arena, boundaries are -8. Digging -8 to -9 is usually pointless and dangerous.
+      // Clamp the depth bonus to prevent bots from obsession with boundaries.
+      
+      const depth = Math.abs(hex.currentLevel);
+      if (depth > 5) {
+          // Diminishing returns for extreme depth to prevent boundary obsession
+          score += 20; 
+      } else {
+          score += 30 + depth * 5;
+      }
   } else if (hex.currentLevel === 0) {
       score += 10; 
   } else {

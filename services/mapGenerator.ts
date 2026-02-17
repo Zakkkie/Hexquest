@@ -168,11 +168,16 @@ export const generateMap = (levelConfig?: LevelConfig): Record<string, Hex> => {
               structureType
           };
       });
-      // Void border
+      // Void border (Now Pits)
       walkableCoords.forEach((data) => {
           getNeighbors(data.q, data.r).forEach(n => {
               const nKey = getHexKey(n.q, n.r);
-              if (!walkableCoords.has(nKey)) initialGrid[nKey] = { id: nKey, q: n.q, r: n.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true, structureType: 'VOID' };
+              // Use -8 for boundary pits instead of VOID
+              if (!walkableCoords.has(nKey)) initialGrid[nKey] = { 
+                  id: nKey, q: n.q, r: n.r, 
+                  currentLevel: -8, maxLevel: -8, 
+                  progress: 0, revealed: true, structureType: undefined 
+              };
           });
       });
 
