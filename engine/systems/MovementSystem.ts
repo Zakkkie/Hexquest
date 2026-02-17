@@ -276,7 +276,8 @@ export class MovementSystem implements System {
     // Initial hex check
     let startHex = gridUpdates[startKey] || state.grid[startKey];
     if (!startHex) {
-        startHex = generateSingleHex(entity.q, entity.r, state.activeLevelConfig);
+        // Fallback for initial spot
+        startHex = generateSingleHex(entity.q, entity.r, state.activeLevelConfig, state.winCondition?.mapType);
         startHex.revealed = true;
         gridUpdates[startKey] = startHex;
     } else if (!startHex.revealed) {
@@ -297,7 +298,34 @@ export class MovementSystem implements System {
                 let hex = gridUpdates[key] || state.grid[key];
                 
                 if (!hex) {
-                    const newHex = generateSingleHex(n.q, n.r, state.activeLevelConfig);
+                    // Generate new hex
+                    const newHex = generateSingleHex(n.q, n.r, state.activeLevelConfig, state.winCondition?.mapType);
+                    
+                    // --- CHAOTIC RELATIVE TERRAIN LOGIC ---
+                    // If in Chaotic Skirmish Mode, ignore the random level from mapGenerator and instead
+                    // base the new level on the hex the player is currently standing on (startHex).
+                    if (state.winCondition?.mapType === 'CHAOTIC' && !state.activeLevelConfig) {
+                        const currentRefLevel = startHex ? startHex.maxLevel : 0;
+                        const rand = Math.random();
+                        let modifier = 0;
+                        
+                        // 30% chance +1, 30% chance -1, 40% chance same
+                        if (rand < 0.3) modifier = 1;
+                        else if (rand < 0.6) modifier = -1;
+                        
+                        const newLevel = currentRefLevel + modifier;
+                        
+                        newHex.currentLevel = newLevel;
+                        newHex.maxLevel = newLevel;
+                        
+                        // Correct durability based on the new relative level
+                        if (newLevel === 1) {
+                            newHex.durability = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
+                        } else {
+                            newHex.durability = undefined;
+                        }
+                    }
+
                     newHex.revealed = true;
                     gridUpdates[key] = newHex;
                 } else if (!hex.revealed) {
