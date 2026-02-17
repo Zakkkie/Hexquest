@@ -474,6 +474,27 @@ const moveToAndInteract = (
         }
     }
 
+    // --- MOUNTAINEER LOGIC START ---
+    // If no path is found, check if it's because the target is too high (Distance 1 but unreachable)
+    // AND if we have materials to "build a step" (upgrade current hex).
+    if (dist === 1 && bot.storage > 0) {
+        const currentHexKey = getHexKey(bot.q, bot.r);
+        const currentHex = grid[currentHexKey];
+        if (currentHex && target.maxLevel > currentHex.maxLevel + 1) {
+            // Target is too high. Check if we can build UP our current position.
+            const nbs = getNeighbors(bot.q, bot.r);
+            const check = checkGrowthCondition(currentHex, bot, nbs, grid, obstacles);
+            if (check.canGrow) {
+                return { 
+                    action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, 
+                    debug: 'Mountaineer Step', 
+                    memory: { ...mem, stuckCounter: 0 } 
+                };
+            }
+        }
+    }
+    // --- MOUNTAINEER LOGIC END ---
+
     // Critical: If No Path, return WAIT so caller can trigger Yield Logic
     return { action: { type: 'WAIT', stateVersion }, debug: 'No Path', memory: { ...mem, targetHexId: null, stuckCounter: mem.stuckCounter + 1 } };
 };
