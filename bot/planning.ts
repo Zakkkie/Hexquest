@@ -99,6 +99,68 @@ const evaluateBuildChain = (
     return null;
 };
 
+/**
+ * Finds bots that are stuck on high ground and returns build targets (neighbors) 
+ * that would create a staircase for them to descend.
+ */
+export const findRescueTargets = (
+    bot: Entity,
+    grid: Record<string, Hex>,
+    allBots: Entity[]
+): HexScore[] => {
+    const rescueMissions: HexScore[] = [];
+    const obstacles: HexCoord[] = allBots.map(b => ({q: b.q, r: b.r}));
+
+    for (const otherBot of allBots) {
+        if (otherBot.id === bot.id) continue;
+
+        // Condition for "Stranded":
+        // 1. Stuck counter is high (waiting repeatedly)
+        // 2. On high ground (> L1)
+        // 3. (Optional) No path found recently
+        const otherHexKey = getHexKey(otherBot.q, otherBot.r);
+        const otherHex = grid[otherHexKey];
+        
+        const isStranded = otherBot.memory && otherBot.memory.stuckCounter > 3;
+        const isHighUp = otherHex && otherHex.maxLevel > 1;
+
+        if (isStranded && isHighUp) {
+            // Analyze neighbors of the stranded bot
+            const nbs = getNeighbors(otherBot.q, otherBot.r);
+            const candidates: Hex[] = [];
+
+            for (const n of nbs) {
+                const nHex = grid[getHexKey(n.q, n.r)];
+                if (!nHex || nHex.structureType === 'VOID') continue;
+                
+                // Ideal rescue step is exactly 1 level below the stranded bot
+                // OR 1 level below that (to build up to it)
+                const heightDiff = otherHex.maxLevel - nHex.maxLevel;
+                
+                // We want to target hexes that are too low (diff > 1) and raise them.
+                if (heightDiff > 1) {
+                    candidates.push(nHex);
+                }
+            }
+
+            // Find the easiest candidate to build up
+            // Sort by highest current level (closest to becoming a step)
+            candidates.sort((a, b) => b.maxLevel - a.maxLevel);
+
+            for (const candidate of candidates.slice(0, 2)) {
+                const chain = evaluateBuildChain(candidate, bot, grid, obstacles);
+                if (chain) {
+                    chain.score = 200; // Extremely high priority override
+                    chain.reason = `RESCUE ${otherBot.id} (Stuck L${otherHex.maxLevel})`;
+                    rescueMissions.push(chain);
+                }
+            }
+        }
+    }
+
+    return rescueMissions;
+};
+
 // New function required by the improved calculateBotMove logic
 export const findBestBuildTargets = (
     bot: Entity,
@@ -106,6 +168,12 @@ export const findBestBuildTargets = (
     allBots: Entity[],
     maxResults: number = 5
 ): HexScore[] => {
+    // 0. PRIORITY: Check for Rescue Missions first
+    const rescueTargets = findRescueTargets(bot, grid, allBots);
+    if (rescueTargets.length > 0) {
+        return rescueTargets;
+    }
+
     // 1. Identify potential crowns (owned hexes or nearby claimable ones)
     const candidates = Object.values(grid).filter(h => 
         h.structureType !== 'VOID' && 
@@ -167,7 +235,7 @@ const baseDigScore = (
   grid: Record<string, Hex>
 ): number => {
   if (isLoadBearing(hex, grid)) return -9999;
-  if (hex.ownerId === bot.id && hex.maxLevel > 0) return -500;
+  if (hex.ownerId === bot.id && hex.maxLevel > 0) return -500; // Prefer not destroying own high ground
   if (hex.structureType === 'MONUMENT') return -9999;
 
   let score = 0;
@@ -199,7 +267,8 @@ export const findBestDigTargets = (
       if (restrictedHexIds && restrictedHexIds.has(hex.id)) continue;
       
       const rawScore = baseDigScore(hex, bot, grid);
-      if (rawScore <= 0) continue;
+      // Skip obviously bad targets
+      if (rawScore <= -100) continue;
 
       // Check Physics/Rules
       const neighbors = getNeighbors(hex.q, hex.r);
@@ -213,7 +282,10 @@ export const findBestDigTargets = (
               action: 'DIG'
           });
       } else if (digCheck.missingSupports && digCheck.missingSupports.length > 0) {
-          // RECURSIVE DIGGING: Target the blockers ("Widening the pit")
+          // BLOCKED TARGET LOGIC
+          // Do NOT add the blocked hex ('hex') to candidates. It's causing infinite loops where bot waits on it.
+          // Instead, STRICTLY target the blockers.
+          
           for (const blockerCoord of digCheck.missingSupports) {
               const blockerHex = grid[getHexKey(blockerCoord.q, blockerCoord.r)];
               if (blockerHex && blockerHex.structureType !== 'VOID') {
@@ -227,8 +299,9 @@ export const findBestDigTargets = (
                       if (blockerScore > -100) {
                           candidates.push({
                               hex: blockerHex,
-                              // CRITICAL: Boost score higher than original to force clearing debris first
-                              score: rawScore + 50, 
+                              // CRITICAL: Boost score significantly to prioritize clearing the debris
+                              // This forces the bot to act on the dependency, not the stuck target
+                              score: rawScore + 60, 
                               reason: `Clear debris for L${hex.currentLevel}`,
                               action: 'DIG'
                           });

@@ -87,6 +87,7 @@ class AudioService {
   private nextNoteTime = 0.0;
   private current16thNote = 0;
   private timerID: number | null = null;
+  private schedulerId: number = 0; // Generation ID to kill old loops
 
   // Composition State
   private context: MusicalContext = {
@@ -137,12 +138,11 @@ class AudioService {
       this.ctx = new AudioContextClass();
       
       // 1. Master Chain: Compressor -> Master Gain -> Destination
-      // CHANGED: Relaxed compression to prevent music "ducking" when UI sounds play
       this.masterCompressor = this.ctx.createDynamicsCompressor();
-      this.masterCompressor.threshold.value = -8; // Was -12, moved up to react less
+      this.masterCompressor.threshold.value = -8; 
       this.masterCompressor.knee.value = 40;
-      this.masterCompressor.ratio.value = 4; // Was 12, reduced significantly
-      this.masterCompressor.attack.value = 0.05; // Slower attack
+      this.masterCompressor.ratio.value = 4; 
+      this.masterCompressor.attack.value = 0.05; 
       this.masterCompressor.release.value = 0.1;
 
       this.masterGain = this.ctx.createGain();
@@ -153,11 +153,11 @@ class AudioService {
 
       // 2. Buses
       this.musicBus = this.ctx.createGain();
+      // Enforce mute state on initialization
       this.musicBus.gain.value = this.isMusicMuted ? 0 : 0.5;
       this.musicBus.connect(this.masterCompressor);
 
       this.sfxBus = this.ctx.createGain();
-      // Reduced SFX bus gain slightly to blend better
       this.sfxBus.gain.value = this.isSfxMuted ? 0 : 0.5; 
       this.sfxBus.connect(this.masterCompressor);
 
@@ -222,17 +222,27 @@ class AudioService {
   public setMusicMuted(muted: boolean) {
       this.isMusicMuted = muted;
       if (this.musicBus && this.ctx) {
-          this.musicBus.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.3);
-      }
-      if (!muted && !this.musicRunning) {
-          this.startMusic();
+          // Instant mute, smooth unmute
+          const time = this.ctx.currentTime;
+          if (muted) {
+              this.musicBus.gain.setValueAtTime(0, time);
+              // Kill the loop to save CPU and ensure clean restart
+              this.stopMusic();
+          } else {
+              this.musicBus.gain.setValueAtTime(0, time);
+              this.musicBus.gain.linearRampToValueAtTime(0.5, time + 0.3);
+              // Restart logic if not running
+              if (!this.musicRunning) {
+                  this.startMusic();
+              }
+          }
       }
   }
 
   public setSfxMuted(muted: boolean) {
       this.isSfxMuted = muted;
       if (this.sfxBus && this.ctx) {
-          this.sfxBus.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.1);
+          this.sfxBus.gain.setValueAtTime(muted ? 0 : 0.5, this.ctx.currentTime);
       }
   }
 
@@ -267,7 +277,6 @@ class AudioService {
       const bpm = 90 + Math.random() * 40;
 
       // Generate Chord Progression (4 chords, using scale degrees)
-      // Simple logic: Start I, move to something else, cadence at end
       const prog = [];
       prog.push([0, 2, 4]); // Tonic triad
       for(let i=0; i<3; i++) {
@@ -310,7 +319,6 @@ class AudioService {
       }
 
       // Bass: Follows Root of current chord usually
-      // We store SCALE DEGREES here
       this.patterns.bass = new Array(16).fill(-1);
       this.patterns.bass[0] = 0; // Root on 1
       this.patterns.bass[10] = 0; // Root on 3.5
@@ -328,31 +336,39 @@ class AudioService {
   // --- AUDIO SCHEDULER ---
 
   public startMusic() {
-      // Idempotency: Do not restart or regenerate if already running
-      if (this.musicRunning && this.ctx?.state === 'running') return;
-      
+      // CRITICAL: Stop previous instance fully to prevent overlap from double-mounting in StrictMode
+      this.stopMusic();
+
       this.init();
-      if (!this.ctx) return;
+      if (!this.ctx || this.isMusicMuted) return;
       
-      // Only generate if we don't have a context yet (first start)
-      // or if we are restarting from a stopped state
+      // If we are resetting completely, gen new track
       if (this.arrangementState.totalBars === 0) {
           this.regenerateComposition();
       }
       
       this.musicRunning = true;
+      this.schedulerId++; // Increment ID so pending timeouts from old loops cancel themselves
+      const currentId = this.schedulerId;
+
       this.nextNoteTime = this.ctx.currentTime + 0.1;
       this.current16thNote = 0;
-      this.scheduler();
+      
+      this.scheduler(currentId);
   }
 
   public stopMusic() {
       this.musicRunning = false;
-      if (this.timerID) window.clearTimeout(this.timerID);
+      this.schedulerId++; // Invalidate any pending loops
+      if (this.timerID !== null) {
+          window.clearTimeout(this.timerID);
+          this.timerID = null;
+      }
   }
 
-  private scheduler() {
-      if (!this.musicRunning || !this.ctx) return;
+  private scheduler(runId: number) {
+      // Must verify musicRunning state AND runId to handle race conditions
+      if (!this.musicRunning || !this.ctx || runId !== this.schedulerId) return;
 
       while (this.nextNoteTime < this.ctx.currentTime + this.scheduleAheadTime) {
           this.scheduleNote(this.current16thNote, this.nextNoteTime);
@@ -363,7 +379,7 @@ class AudioService {
               this.handleBarChange();
           }
       }
-      this.timerID = window.setTimeout(() => this.scheduler(), this.lookahead);
+      this.timerID = window.setTimeout(() => this.scheduler(runId), this.lookahead);
   }
 
   private handleBarChange() {
@@ -397,10 +413,11 @@ class AudioService {
   // --- SOUND GENERATION ---
 
   private scheduleNote(beatNumber: number, time: number) {
+      if (this.isMusicMuted) return;
+
       const sect = this.arrangementState.section;
 
       // 1. KICK (Punchy)
-      // Only play in Build (rising) or Main
       if ((sect === Section.MAIN || (sect === Section.BUILD && beatNumber % 2 === 0))) {
           if (this.patterns.kick[beatNumber]) {
               this.triggerKick(time);
@@ -408,22 +425,17 @@ class AudioService {
       }
 
       // 2. BASS (FM Synthesis)
-      // Only in Main and parts of Build
       if (sect === Section.MAIN || (sect === Section.BUILD && this.arrangementState.barCount > 2)) {
           const bassNote = this.patterns.bass[beatNumber];
           if (bassNote !== -1) {
-              // Map scale degree relative to current chord root
               const chord = this.context.chordProgression[this.context.currentChordIndex];
-              const chordRootDegree = chord[0]; 
-              // Simple logic: Play the root of the chord mostly
-              const degree = chordRootDegree; 
+              const degree = chord[0]; 
               const freq = this.getFreq(degree, 0); // Bass octave 0
               this.triggerFMBass(time, freq);
           }
       }
 
       // 3. PAD (Atmospheric Chords)
-      // Always play, controls the mood
       if (beatNumber === 0) { // On downbeat
           const chord = this.context.chordProgression[this.context.currentChordIndex];
           this.triggerPadChord(time, chord);
@@ -438,7 +450,6 @@ class AudioService {
       }
 
       // 5. ARP (Plucky)
-      // Intro, Breakdown, Main
       if (sect !== Section.BUILD) {
           const arpDegree = this.patterns.arp[beatNumber];
           if (arpDegree !== -1) {
@@ -639,8 +650,6 @@ class AudioService {
     this.init();
     if (!this.ctx || !this.sfxBus) return;
     
-    // SFX implementations (Hover, Click, etc.) using simple synthesis
-    // Keeping this part simple to focus on Music upgrade
     const t = this.ctx.currentTime;
     
     const playOsc = (freq: number, type: OscillatorType, dur: number, vol: number) => {

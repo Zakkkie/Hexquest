@@ -273,6 +273,22 @@ export const calculateBotMove = (
   if (mem.stuckCounter >= STUCK_THRESHOLD) {
       mem.targetHexId = null; 
       
+      // PARACHUTE LOGIC: If we are stuck, check verticality.
+      // If we are on a tower (>1) and stuck, DIG DOWN immediately.
+      if (currentHex && currentHex.maxLevel >= 2) {
+          const check = checkDigCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid);
+          if (check.canGrow) {
+              return { action: { type: 'DIG', coord: {q:bot.q, r:bot.r}, stateVersion }, debug: 'Parachute Down', memory: { ...mem, stuckCounter: 0 } };
+          }
+      }
+      // If we are in a hole (<0) and stuck, BUILD UP immediately (if mats > 0).
+      if (currentHex && currentHex.maxLevel < 0 && bot.storage > 0) {
+          const check = checkGrowthCondition(currentHex, bot, getNeighbors(bot.q, bot.r), grid, obstacles);
+          if (check.canGrow) {
+              return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'UPGRADE', stateVersion }, debug: 'Ladder Up', memory: { ...mem, stuckCounter: 0 } };
+          }
+      }
+
       // Panic/Unstuck
       if (bot.moves === 0 && bot.coins < 5 && !bot.recoveredCurrentHex && currentHex) {
            return { action: { type: 'UPGRADE', coord: {q:bot.q, r:bot.r}, intent: 'RECOVER', stateVersion }, debug: 'Panic Rec', memory: { ...mem, stuckCounter: 0 } };
@@ -281,7 +297,8 @@ export const calculateBotMove = (
       const yieldMove = getStepAsideMove("Stuck");
       if (yieldMove) return yieldMove;
       
-      return { action: { type: 'WAIT', stateVersion }, debug: 'Trapped', memory: { ...mem, stuckCounter: mem.stuckCounter + 1 } };
+      // FALLBACK: Signal for Help implicitly by keeping stuckCounter high
+      return { action: { type: 'WAIT', stateVersion }, debug: 'Trapped (SOS)', memory: { ...mem, stuckCounter: mem.stuckCounter + 1 } };
   }
 
   // 8. EXECUTION
@@ -310,6 +327,7 @@ const executeBuilderLogic = (
     }
 
     if (!bestTarget) {
+        // findBestBuildTargets now includes "Rescue Missions" logic inside planning.ts
         const targets = findBestBuildTargets(bot, grid, allBots, 15);
         for (const t of targets) {
             if (claimedTargets.has(t.hex.id)) continue; 
@@ -321,7 +339,12 @@ const executeBuilderLogic = (
     }
 
     if (bestTarget) {
-        return moveToAndInteract(bot, bestTarget, 'UPGRADE', grid, obstacles, stateVersion, mem, 'Build Move');
+        const result = moveToAndInteract(bot, bestTarget, 'UPGRADE', grid, obstacles, stateVersion, mem, 'Build Move');
+        // If we failed to move to a build target, clear it to force re-evaluation next tick
+        if (result.action?.type === 'WAIT' && result.debug.includes('No Path')) {
+            mem.targetHexId = null;
+        }
+        return result;
     }
 
     return { action: { type: 'WAIT', stateVersion }, debug: 'Idle Build', memory: mem };
@@ -341,6 +364,15 @@ const executeMinerLogic = (
 ): AiResult => {
 
     let bestTarget: Hex | null = null;
+
+    // Rescue Logic Injection for Miners too: If we have materials, prioritize saving a friend
+    if (bot.storage > 0) {
+        const buildTargets = findBestBuildTargets(bot, grid, allBots, 1);
+        if (buildTargets.length > 0 && buildTargets[0].reason.startsWith('RESCUE')) {
+             // Switch mode to Build to execute the rescue
+             return executeBuilderLogic(bot, grid, index, obstacles, stateVersion, { ...mem, mode: 'BUILD', targetHexId: null }, allBots, claimedTargets);
+        }
+    }
 
     if (mem.targetHexId) {
         bestTarget = grid[mem.targetHexId] || null;
@@ -363,7 +395,12 @@ const executeMinerLogic = (
     }
 
     if (bestTarget) {
-        return moveToAndInteract(bot, bestTarget, 'DIG', grid, obstacles, stateVersion, mem, 'Mine Move');
+        const result = moveToAndInteract(bot, bestTarget, 'DIG', grid, obstacles, stateVersion, mem, 'Mine Move');
+        // If we are blocked, clear the target to force the system to find the Blocker/Dependency next tick
+        if (result.action?.type === 'WAIT') {
+            mem.targetHexId = null;
+        }
+        return result;
     }
 
     const currentHex = grid[getHexKey(bot.q, bot.r)];
@@ -403,8 +440,12 @@ const moveToAndInteract = (
         }
         
         if (success) {
+            const action: BotAction = actionType === 'UPGRADE'
+                ? { type: 'UPGRADE', coord: {q:target.q, r:target.r}, intent: 'UPGRADE', stateVersion }
+                : { type: 'DIG', coord: {q:target.q, r:target.r}, stateVersion };
+
             return { 
-                action: { type: actionType, coord: {q:target.q, r:target.r}, intent: actionType, stateVersion }, 
+                action, 
                 debug: 'Interact', 
                 memory: { ...mem, stuckCounter: 0 } 
             };
