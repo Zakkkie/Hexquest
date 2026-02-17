@@ -340,7 +340,8 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     hooks: {
       checkWinCondition: (state) => {
-          return Object.values(state.grid).some(h => h.ownerId === state.player.id && h.maxLevel >= 4);
+          // Check player rank instead of grid ownership to ensure it triggers correctly on level up
+          return state.player.playerLevel >= 4;
       },
       checkLossCondition: (state) => {
            // Loss if Bot reaches L4 first

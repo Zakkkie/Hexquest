@@ -100,6 +100,9 @@ export const calculateBotMove = (
           if (h.maxLevel > bot.playerLevel) return false;
           // Don't step on someone else
           if (obstacles.some(o => o.q === n.q && o.r === n.r)) return false;
+          // GEOMETRY CHECK: Cannot jump > 1 level (up or down)
+          if (Math.abs((currentHex?.maxLevel || 0) - h.maxLevel) > 1) return false;
+          
           return true;
       });
 
