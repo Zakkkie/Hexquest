@@ -23,7 +23,6 @@ interface GameHUDProps {
   onCenterPlayer: () => void;
 }
 
-// ... StorageBlocks ... keep existing
 const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, max }) => {
     return (
         <div className="flex items-center gap-0.5 md:gap-1">
@@ -49,7 +48,6 @@ const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, ma
     );
 };
 
-// ... ItemIcon ... keep existing
 const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity?: number, grayscale?: boolean }> = ({ item, def, size = "w-8 h-8 md:w-10 md:h-10", opacity = 1, grayscale = false }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -62,15 +60,23 @@ const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity?: numb
         const target = item || def;
         if (!target) return;
 
-        // Color mapping for visuals
-        let visualColor = '#fff';
-        const rarity = target.rarity || 'COMMON';
-        if (rarity === 'COMMON') visualColor = '#cbd5e1';
-        if (rarity === 'UNCOMMON') visualColor = '#4ade80';
-        if (rarity === 'RARE') visualColor = '#c084fc';
-        if (rarity === 'LEGENDARY') visualColor = '#fbbf24';
+        let visualColor = '#94a3b8'; // Default Slate
 
-        const img = itemRenderer.getItemImage(target.visualType, visualColor, rarity);
+        // Try to get specific color from definition (for Codex) or lookup by ID (for Inventory)
+        const definition = def || (item ? getItemDef(item.baseId) : null);
+
+        if (definition?.visualColor) {
+            visualColor = definition.visualColor;
+        } else {
+            // Fallback to Rarity Colors if definition missing
+            const rarity = target.rarity || 'COMMON';
+            if (rarity === 'COMMON') visualColor = '#cbd5e1';
+            if (rarity === 'UNCOMMON') visualColor = '#4ade80';
+            if (rarity === 'RARE') visualColor = '#c084fc';
+            if (rarity === 'LEGENDARY') visualColor = '#fbbf24';
+        }
+
+        const img = itemRenderer.getItemImage(target.visualType, visualColor, target.rarity || 'COMMON');
         ctx.clearRect(0,0,64,64);
         
         ctx.globalAlpha = opacity;
@@ -84,14 +90,12 @@ const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity?: numb
     return <canvas ref={canvasRef} width={64} height={64} className={`${size} object-contain`} />;
 };
 
-// New Status Icon Component
 const StatusIcon: React.FC<{ status: ActiveStatus }> = ({ status }) => {
     const now = Date.now();
     const remaining = status.expiresAt ? Math.max(0, status.expiresAt - now) : Infinity;
-    const isPermanent = !status.expiresAt || status.expiresAt > now + 80000000; // > 22 hours
-    const isNegative = status.type.includes('STATUS_FATIGUE') || status.type.includes('CURSE') || status.type.includes('RISK') || status.type.includes('VISION') || status.type.includes('OFFLINE');
+    const isPermanent = !status.expiresAt || status.expiresAt > now + 80000000; 
+    const isNegative = status.type.includes('STATUS_FATIGUE') || status.type.includes('CURSE') || status.type.includes('RISK') || status.type.includes('VISION') || status.type.includes('OFFLINE') || status.type.includes('SOIL_EATER');
     
-    // Icon Mapping
     const getIcon = () => {
         if (status.type.includes('SCANNER')) return <Scan className="w-4 h-4" />;
         if (status.type.includes('FATIGUE')) return <Activity className="w-4 h-4" />;
@@ -101,6 +105,7 @@ const StatusIcon: React.FC<{ status: ActiveStatus }> = ({ status }) => {
         if (status.type.includes('CURSE')) return <Skull className="w-4 h-4" />;
         if (status.type.includes('RISK')) return <Flame className="w-4 h-4" />;
         if (status.type.includes('OFFLINE')) return <WifiOff className="w-4 h-4" />;
+        if (status.type.includes('ENTROPY_INVERSION')) return <Zap className="w-4 h-4" />;
         return <AlertTriangle className="w-4 h-4" />;
     };
 
@@ -113,32 +118,23 @@ const StatusIcon: React.FC<{ status: ActiveStatus }> = ({ status }) => {
             ${colorClass} ${glowClass} animate-pulse-slow
         `}>
             {getIcon()}
-            
-            {/* Countdown Ring (SVG) */}
             {!isPermanent && status.expiresAt && (
                 <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="100" strokeDashoffset={100 - (remaining / (status.type.includes('GOLD') ? 60000 : 30000)) * 100} className="opacity-50" />
+                    <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="100" strokeDashoffset={100 - (remaining / (status.type.includes('GOLD') || status.type.includes('FREE') || status.type.includes('DRILL') || status.type.includes('MIDAS') ? 300000 : 30000)) * 100} className="opacity-50" />
                 </svg>
             )}
-
-            {/* Tooltip */}
             <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-48 bg-slate-900/95 border border-slate-700 p-3 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 flex flex-col gap-1">
                 <div className="text-xs font-bold text-white uppercase tracking-wider border-b border-slate-700 pb-1 mb-1">{status.label}</div>
-                <div className="text-[10px] text-slate-400 leading-tight mb-2">
-                    {status.description || status.label}
-                </div>
+                <div className="text-[10px] text-slate-400 leading-tight mb-2">{status.description || status.label}</div>
                 <div className={`text-[10px] font-mono font-bold text-right ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
                     {isPermanent ? 'ACTIVE' : `${Math.ceil(remaining / 1000)}s LEFT`}
                 </div>
-                {/* Arrow */}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900/95"></div>
             </div>
         </div>
     );
 };
 
 const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCenterPlayer }) => {
-  // ... state hooks ... keep existing
   const grid = useGameStore(state => state.session?.grid);
   const player = useGameStore(state => state.session?.player);
   const bots = useGameStore(state => state.session?.bots);
@@ -191,7 +187,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const [showMissionDetails, setShowMissionDetails] = useState(false);
   const [inspectedItem, setInspectedItem] = useState<Item | null>(null);
 
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(75);
   const [tick, setTick] = useState(0); 
 
   const [victoryStage, setVictoryStage] = useState<'HIDDEN' | 'SALUTE' | 'MODAL'>('HIDDEN');
@@ -216,7 +212,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const isBriefingActive = gameStatus === 'BRIEFING';
 
-  // HELPER: Resolve localized strings for an item dynamically
   const resolveItemText = (item: Item) => {
       const def = getItemDef(item.baseId);
       if (!def) return { 
@@ -247,11 +242,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const isHudVisible = victoryStage === 'HIDDEN' && !isBriefingActive;
 
-  // --- LIVE RANKINGS CALCULATION ---
   const liveRankings = useMemo(() => {
       if (!player) return [];
       const botList = bots || [];
-      
       const list = [
           {
               id: player.id,
@@ -272,7 +265,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
               color: b.avatarColor || '#ef4444'
           }))
       ];
-      
       return list.sort((a, b) => {
           if (b.level !== a.level) return b.level - a.level;
           if (b.coins !== a.coins) return b.coins - a.coins;
@@ -282,16 +274,13 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const recoveryState = useMemo(() => {
       if (!currentHex || !player) return { canRecover: false, label: '', cooling: false, remainingCd: 0 };
-      
       const isHighLevel = currentHex.maxLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD;
-      
       if (isHighLevel) {
           const now = Date.now();
           const lastUsed = currentHex.lastRecoveryTime || 0;
           const remaining = Math.max(0, GAME_CONFIG.RECOVERY_COOLDOWN_MS - (now - lastUsed));
           const cooling = remaining > 0;
           const uses = currentHex.recoveryPoints ?? GAME_CONFIG.MAX_RECOVERY_POINTS;
-          
           if (cooling) {
               return { canRecover: false, label: `${Math.ceil(remaining/1000)}s`, cooling: true, remainingCd: remaining };
           }
@@ -307,7 +296,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           setTick(t => t + 1);
           if (isLevel1_5 && gameStatus === 'PLAYING') {
               const elapsed = Date.now() - (sessionStartTime || 0);
-              const remaining = Math.max(0, 60 - Math.floor(elapsed / 1000));
+              const remaining = Math.max(0, 75 - Math.floor(elapsed / 1000));
               setTimeLeft(remaining);
           }
       }, 250);
@@ -340,11 +329,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const timeData = useMemo(() => {
     if (!currentHex) return { totalNeeded: 1, totalDone: 0, percent: 0, mode: 'IDLE' };
-    
     let totalNeeded = 0;
     let mode = 'IDLE';
     let currentStepNeeded = 30; 
-
     if (playerGrowthIntent === 'RECOVER') {
         totalNeeded = getSecondsToGrow(currentHex.maxLevel);
         mode = 'RECOVERY';
@@ -356,12 +343,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
         mode = 'UPGRADE';
         currentStepNeeded = getSecondsToGrow(currentHex.currentLevel + 1);
     }
-
     const currentStepProgress = currentHex.progress;
     const percent = currentStepNeeded > 0 ? (currentStepProgress / currentStepNeeded) * 100 : 0;
     const remainingTicks = Math.max(0, currentStepNeeded - currentStepProgress);
     const remainingSeconds = remainingTicks * 0.1;
-
     return { remainingSeconds, percent, mode };
   }, [currentHex, isPlayerGrowing, canUpgrade, canDig, playerGrowthIntent]);
 
@@ -389,12 +374,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const renderActiveStatuses = () => {
       if (!player?.activeStatuses || player.activeStatuses.length === 0) return null;
-      
       const now = Date.now();
       const validStatuses = player.activeStatuses.filter(s => !s.expiresAt || s.expiresAt > now);
-
       if (validStatuses.length === 0) return null;
-
       return (
           <div className="flex gap-4 mb-3 justify-center w-full pointer-events-auto">
               {validStatuses.map((status, idx) => (
@@ -406,7 +388,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
   const campaignMetrics = useMemo(() => {
       if (!grid || !player) return null;
-      
       if (isLevel1_1) {
           const owned = Object.values(grid).filter((h: Hex) => h.ownerId === player.id && h.maxLevel >= 1).length;
           return { current: Math.max(0, owned - 1), target: 3, label: t.TUT_1_1_COUNTER };
@@ -469,21 +450,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       startMission();
   };
 
-  // OPTIMIZATION: Reduced main button size to save space
   const mainButtonSize = "lg";
 
   const renderMissionStatus = () => {
-      if (isLevel1_5 && timeLeft !== null) {
-           const isCrit = timeLeft < 10;
-           return (
-               <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
-                   <span className="text-slate-400">COINS:</span>
-                   <span className={player.coins >= 150 ? "text-emerald-400" : "text-white"}>{player.coins}/150</span>
-                   <span className={`ml-1 ${isCrit ? "text-red-500 animate-pulse" : "text-amber-400"}`}>{timeLeft}s</span>
-               </div>
-           );
-      }
-      
       if (campaignMetrics) {
           const isDone = campaignMetrics.current >= campaignMetrics.target;
           return (
@@ -495,7 +464,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                </div>
           );
       }
-      
       if (winCondition?.winType === 'SUMMIT') {
           return (
                <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
@@ -505,7 +473,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                </div>
           );
       }
-      
       return (
            <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
                <span className="text-slate-400">GOAL:</span>
@@ -543,11 +510,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   const handleInventoryClick = (item: Item) => {
       if (monumentDialogState.isOpen) {
           if (!monumentRequirements) return;
-
           const matchingSlotIndex = monumentRequirements.findIndex((reqId, idx) => {
               return (reqId === 'ANY' || reqId === item.baseId) && monumentDialogState.slots[idx] === null;
           });
-
           if (matchingSlotIndex !== -1 && !monumentDialogState.slots.some(s => s?.id === item.id)) {
               placeItemInMonument(item, matchingSlotIndex);
           } else {
@@ -616,6 +581,72 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   };
   const helpData = getHelpContent();
 
+  // Dynamic slot generation for Monument Dialog
+  const renderMonumentSlots = () => {
+      const slotCount = monumentRequirements ? monumentRequirements.length : 3;
+      const slots = Array.from({length: slotCount}, (_, i) => i);
+      
+      return (
+          <div className="flex gap-4 relative z-10 flex-wrap justify-center">
+              {slots.map((idx) => {
+                  const slotItem = monumentDialogState.slots[idx];
+                  const reqId = monumentRequirements ? monumentRequirements[idx] : undefined;
+                  const isWildcard = reqId === 'ANY';
+                  const reqDef = reqId && !isWildcard ? getItemDef(reqId) : undefined;
+                  
+                  return (
+                      <div 
+                          key={idx}
+                          onDrop={(e) => handleDrop(e, idx)}
+                          onDragOver={handleAllowDrop}
+                          onClick={() => slotItem && removeItemFromMonument(idx)}
+                          className={`
+                              w-16 h-20 md:w-24 md:h-32 rounded-2xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden
+                              ${slotItem 
+                                  ? `bg-slate-900 ${getRarityBorder(slotItem.rarity)} shadow-[0_0_15px_rgba(245,158,11,0.3)]` 
+                                  : 'bg-slate-900/30 border-slate-700 border-dashed hover:border-slate-500 hover:bg-slate-800/30'
+                              }
+                          `}
+                      >
+                          {slotItem ? (
+                              <>
+                                  <ItemIcon item={slotItem} size="w-10 h-10 md:w-16 md:h-16" />
+                                  <div className="absolute bottom-0 w-full bg-black/60 py-1">
+                                      <span className="text-[8px] text-slate-300 uppercase block text-center truncate px-1">{slotItem.rarity}</span>
+                                  </div>
+                                  <div className="absolute top-1 right-1 p-1 bg-red-500/20 rounded-full opacity-0 hover:opacity-100 transition-opacity">
+                                      <X className="w-3 h-3 text-red-400" />
+                                  </div>
+                              </>
+                          ) : (
+                              <>
+                                  {isWildcard ? (
+                                      <div className="flex flex-col items-center opacity-60 grayscale group-hover:grayscale-0 transition-all">
+                                          <HelpCircle className="w-8 h-8 md:w-12 md:h-12 text-slate-400" />
+                                          <span className="text-[8px] text-slate-500 font-mono mt-1 text-center leading-tight">ANY KEY</span>
+                                      </div>
+                                  ) : (
+                                      reqDef ? (
+                                          <div className="flex flex-col items-center opacity-60 grayscale group-hover:grayscale-0 transition-all">
+                                              <ItemIcon def={reqDef} size="w-8 h-8 md:w-12 md:h-12" opacity={0.6} grayscale />
+                                              <span className="text-[8px] text-slate-500 font-mono mt-1 text-center leading-tight max-w-[60px]">{reqDef.name[language]}</span>
+                                          </div>
+                                      ) : (
+                                          <>
+                                              <Key className="w-6 h-6 text-slate-700 mb-1" />
+                                              <span className="text-[9px] text-slate-600 font-mono">SLOT {idx+1}</span>
+                                          </>
+                                      )
+                                  )}
+                              </>
+                          )}
+                      </div>
+                  );
+              })}
+          </div>
+      );
+  };
+
   return (
     <div className="absolute inset-0 pointer-events-none z-30 select-none">
       
@@ -650,6 +681,18 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                           {t.BTN_CONFIRM}
                       </button>
                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* SPECIAL TIMER FOR LEVEL 1.5 - MOVED DOWN to top-20 to avoid header overlap */}
+      {isLevel1_5 && gameStatus === 'PLAYING' && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in slide-in-from-top-4">
+              <div className={`px-4 py-2 bg-slate-900/90 border-2 rounded-xl shadow-xl flex items-center gap-2 ${timeLeft < 10 ? 'border-red-500 animate-pulse' : 'border-slate-600'}`}>
+                  <Clock className={`w-5 h-5 ${timeLeft < 10 ? 'text-red-500' : 'text-amber-400'}`} />
+                  <span className={`text-xl font-black font-mono leading-none ${timeLeft < 10 ? 'text-red-400' : 'text-white'}`}>
+                      {timeLeft}s
+                  </span>
               </div>
           </div>
       )}
@@ -801,20 +844,32 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
 
       {/* FOOTER ACTION DOCK */}
       {isHudVisible && gameStatus === 'PLAYING' && (
-          <div className="absolute inset-x-0 bottom-0 p-1 md:p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end">
+          <div className="absolute inset-x-0 bottom-0 p-2 md:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end">
               <div className="mb-2 pointer-events-auto">
                   {renderActiveStatuses()}
               </div>
-              <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-1 md:p-1.5 pointer-events-auto flex items-end gap-1 md:gap-3 relative max-w-full overflow-hidden">
-                  <div className="flex flex-col gap-1 md:gap-1.5 justify-end pb-0.5">
-                      <div className="flex items-center gap-2 px-2 py-1 bg-black/40 rounded border border-white/5 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => { setShowMissionDetails(true); playUiSound('CLICK'); }}>
+              
+              {/* UNIFIED DOCK CONTAINER */}
+              <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl p-2 md:p-3 pointer-events-auto flex items-center gap-3 md:gap-6 max-w-full">
+                  
+                  {/* LEFT: INVENTORY & MISSION */}
+                  <div className="flex flex-col gap-1.5 shrink-0">
+                      {/* Mission Header */}
+                      <div 
+                          className="flex items-center justify-between gap-3 px-3 py-1.5 bg-slate-950/50 rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all" 
+                          onClick={() => { setShowMissionDetails(true); playUiSound('CLICK'); }}
+                      >
                           {renderMissionStatus()}
-                          <Info className="w-3 h-3 text-slate-500" />
+                          <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:bg-indigo-500 group-hover:border-indigo-400 transition-colors">
+                              <Info className="w-3 h-3 text-slate-400 group-hover:text-white" />
+                          </div>
                       </div>
-                      <div className="flex items-center gap-0.5 md:gap-1">
+
+                      {/* Inventory Slots */}
+                      <div className="flex items-center gap-1.5 justify-center">
                           {inventoryList.map(index => {
                               const item = player.inventory[index];
-                              const slotSize = "w-7 h-7 md:w-9 md:h-9"; 
+                              const slotSize = "w-8 h-8 md:w-10 md:h-10"; 
                               return (
                                   <div 
                                       key={index} 
@@ -823,33 +878,37 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                           ${slotSize} rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all
                                           ${item 
                                               ? `bg-slate-800 ${getRarityBorder(item.rarity)} shadow-md hover:scale-105 active:scale-95` 
-                                              : 'bg-slate-950/30 border-slate-800/50 border-dashed'}
+                                              : 'bg-slate-950/50 border-slate-800/50 border-dashed'}
                                       `}
                                   >
-                                      {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1 h-1 rounded-full bg-slate-800" />}
+                                      {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1 h-1 rounded-full bg-slate-800/50" />}
                                   </div>
                               );
                           })}
                       </div>
                   </div>
-                  <div className="w-px h-14 md:h-16 bg-gradient-to-b from-transparent via-slate-500/30 to-transparent"></div>
-                  <div className="flex items-end gap-1 md:gap-2">
+
+                  {/* DIVIDER */}
+                  <div className="w-px h-16 bg-slate-800 mx-1 hidden md:block"></div>
+
+                  {/* RIGHT: ACTION BUTTONS */}
+                  <div className="flex items-end gap-2 md:gap-3 shrink-0">
                       <HexButton variant="red" size={mainButtonSize} onClick={() => { togglePlayerGrowth('DIG'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
-                          <Pickaxe className={`w-4 h-4 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
+                          <Pickaxe className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
                       </HexButton>
                       <HexButton variant="amber" size={mainButtonSize} onClick={() => { togglePlayerGrowth('UPGRADE'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} disabled={!canUpgrade} pulsate={canUpgrade && !isPlayerGrowing} progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-1 ring-4 ring-amber-500/20 rounded-full' : ''} title={upgradeTooltip}>
-                          <ChevronsUp className={`w-5 h-5 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
+                          <ChevronsUp className={`w-6 h-6 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
                       </HexButton>
                       <HexButton variant="blue" size={mainButtonSize} onClick={() => { togglePlayerGrowth('RECOVER'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} disabled={!recoveryState.canRecover} progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''} title={recoverTooltip}>
                           {recoveryState.cooling ? (
                               <div className="flex flex-col items-center">
-                                  <Hourglass className="w-3 h-3 md:w-6 md:h-6 animate-spin-slow" />
+                                  <Hourglass className="w-4 h-4 md:w-6 md:h-6 animate-spin-slow" />
                                   <span className="text-[8px] md:text-[10px] font-mono mt-0.5">{recoveryState.label}</span>
                               </div>
                           ) : (
                               <>
-                                <RefreshCw className={`w-4 h-4 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180' : ''}`} />
-                                {recoveryState.label && <span className="absolute -bottom-1 md:-bottom-2 bg-slate-900 px-1 rounded text-[7px] md:text-[8px] font-bold text-emerald-400">{recoveryState.label}</span>}
+                                <RefreshCw className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180' : ''}`} />
+                                {recoveryState.label && <span className="absolute -bottom-1 md:-bottom-2 bg-slate-900 px-1.5 rounded-full text-[8px] md:text-[9px] font-bold text-emerald-400 border border-emerald-900 shadow-sm">{recoveryState.label}</span>}
                               </>
                           )}
                       </HexButton>
@@ -931,7 +990,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       </div>
                   </div>
                   <p className="text-sm text-slate-400 leading-relaxed text-center px-4">
-                      {t.MONUMENT_DESC_1} <span className="text-amber-400 font-bold">{t.MONUMENT_DESC_2}</span> {t.MONUMENT_DESC_3}
+                      {t.MONUMENT_DESC_1} <span className="text-amber-400 font-bold">{monumentRequirements ? monumentRequirements.length : 3} {t.MONUMENT_KEYS}</span> {t.MONUMENT_DESC_3}
                       <br/>
                       <span className="text-xs opacity-60">
                           {difficulty === 'EASY' ? t.MONUMENT_REQ_EASY : (difficulty === 'MEDIUM' ? t.MONUMENT_REQ_MED : t.MONUMENT_REQ_HARD)}
@@ -974,64 +1033,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       </div>
                       <div className="flex-[1.2] flex flex-col justify-center items-center gap-4 relative">
                           <div className="absolute inset-0 bg-amber-500/5 blur-3xl rounded-full pointer-events-none"></div>
-                          <div className="flex gap-4 relative z-10">
-                              {[0, 1, 2].map((idx) => {
-                                  const slotItem = monumentDialogState.slots[idx];
-                                  const reqId = monumentRequirements ? monumentRequirements[idx] : undefined;
-                                  // Update for wildcard
-                                  const isWildcard = reqId === 'ANY';
-                                  const reqDef = reqId && !isWildcard ? getItemDef(reqId) : undefined;
-                                  
-                                  return (
-                                      <div 
-                                          key={idx}
-                                          onDrop={(e) => handleDrop(e, idx)}
-                                          onDragOver={handleAllowDrop}
-                                          onClick={() => slotItem && removeItemFromMonument(idx)}
-                                          className={`
-                                              w-20 h-24 md:w-24 md:h-32 rounded-2xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden
-                                              ${slotItem 
-                                                  ? `bg-slate-900 ${getRarityBorder(slotItem.rarity)} shadow-[0_0_15px_rgba(245,158,11,0.3)]` 
-                                                  : 'bg-slate-900/30 border-slate-700 border-dashed hover:border-slate-500 hover:bg-slate-800/30'
-                                              }
-                                          `}
-                                      >
-                                          {slotItem ? (
-                                              <>
-                                                  <ItemIcon item={slotItem} size="w-12 h-12 md:w-16 md:h-16" />
-                                                  <div className="absolute bottom-0 w-full bg-black/60 py-1">
-                                                      <span className="text-[8px] text-slate-300 uppercase block text-center truncate px-1">{slotItem.rarity}</span>
-                                                  </div>
-                                                  <div className="absolute top-1 right-1 p-1 bg-red-500/20 rounded-full opacity-0 hover:opacity-100 transition-opacity">
-                                                      <X className="w-3 h-3 text-red-400" />
-                                                  </div>
-                                              </>
-                                          ) : (
-                                              <>
-                                                  {isWildcard ? (
-                                                      <div className="flex flex-col items-center opacity-60 grayscale group-hover:grayscale-0 transition-all">
-                                                          <HelpCircle className="w-10 h-10 md:w-12 md:h-12 text-slate-400" />
-                                                          <span className="text-[8px] text-slate-500 font-mono mt-1 text-center leading-tight">ANY KEY</span>
-                                                      </div>
-                                                  ) : (
-                                                      reqDef ? (
-                                                          <div className="flex flex-col items-center opacity-60 grayscale group-hover:grayscale-0 transition-all">
-                                                              <ItemIcon def={reqDef} size="w-10 h-10 md:w-12 md:h-12" opacity={0.6} grayscale />
-                                                              <span className="text-[8px] text-slate-500 font-mono mt-1 text-center leading-tight max-w-[60px]">{reqDef.name[language]}</span>
-                                                          </div>
-                                                      ) : (
-                                                          <>
-                                                              <Key className="w-6 h-6 text-slate-700 mb-1" />
-                                                              <span className="text-[9px] text-slate-600 font-mono">SLOT {idx+1}</span>
-                                                          </>
-                                                      )
-                                                  )}
-                                              </>
-                                          )}
-                                      </div>
-                                  );
-                              })}
-                          </div>
+                          {renderMonumentSlots()}
                           <div className="w-full px-4">
                               <button 
                                   onClick={activateMonument}
@@ -1179,6 +1181,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                       {items.map(def => (
                                           <div key={def.idPrefix} className="flex gap-3 p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:bg-slate-900 transition-colors">
                                               <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-950 flex items-center justify-center border border-slate-800 shrink-0 ${getRarityBorder(def.rarity)}`}>
+                                                  {/* Pass def to ItemIcon so it uses the specific color */}
                                                   <ItemIcon def={def} size="w-8 h-8 md:w-10 md:h-10" />
                                               </div>
                                               <div className="flex-1 min-w-0">

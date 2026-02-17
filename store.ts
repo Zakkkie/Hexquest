@@ -168,11 +168,23 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
 
   // Monument Requirements
   let monumentRequirements: string[] | undefined;
-  if (winCondition?.winType === 'SUMMIT' || (levelConfig && levelConfig.id.startsWith('2.'))) {
-      monumentRequirements = (levelConfig?.id === '2.2') 
-          ? ['ANY', 'ANY', 'ANY'] 
-          : generateMonumentRecipe(difficulty);
+  
+  if (levelConfig) {
+      if (levelConfig.id === '2.2') {
+          monumentRequirements = ['ANY', 'ANY', 'ANY'];
+      } else if (levelConfig.id === '2.3') {
+          monumentRequirements = ['apex_core', 'apex_core', 'apex_core']; // Specific item as requested
+      } else if (levelConfig.id === '2.4') {
+          monumentRequirements = ['ANY', 'ANY', 'ANY', 'ANY']; // 4 items
+      }
+  } else if (winCondition?.winType === 'SUMMIT') {
+      monumentRequirements = generateMonumentRecipe(difficulty);
   }
+
+  // Entropy Configuration for specific levels
+  let initialEntropy = ENTROPY_CONFIG.INITIAL_MAX;
+  if (levelConfig?.id === '2.3') initialEntropy = 10;
+  if (levelConfig?.id === '2.4') initialEntropy = 30;
 
   const initialLog: LogEntry = {
     id: 'init-0',
@@ -222,8 +234,8 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     effects: [],
     language,
     entropy: {
-        current: ENTROPY_CONFIG.INITIAL_MAX,
-        max: ENTROPY_CONFIG.INITIAL_MAX,
+        current: initialEntropy,
+        max: initialEntropy,
         threshold: ENTROPY_CONFIG.THRESHOLD
     },
     outgoingEvents: []
@@ -240,8 +252,8 @@ export const useGameStore = create<GameStore>()(
       user: null,
       toast: null,
       pendingConfirmation: null,
-      leaderboard: [], // Persist will restore this
-      campaignProgress: 0, // Persist will restore this
+      leaderboard: [], 
+      campaignProgress: 0, 
       hasActiveSession: false,
       isMusicMuted: false,
       isSfxMuted: false,
@@ -270,7 +282,6 @@ export const useGameStore = create<GameStore>()(
           set({ isSfxMuted: val });
       },
       playUiSound: (type) => {
-        // Map simplified types to service
         const map: Record<UiSoundType, any> = {
             'HOVER': 'UI_HOVER', 'CLICK': 'UI_CLICK', 'ERROR': 'ERROR', 'WARNING': 'WARNING', 'SUCCESS': 'SUCCESS'
         };
@@ -376,7 +387,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       // --- ACTIONS ---
-      togglePlayerGrowth: (intent = 'RECOVER') => {
+      togglePlayerGrowth: (intent: 'RECOVER' | 'UPGRADE' | 'DIG' = 'RECOVER') => {
           if (!engine || !engine.state) return;
           
           const { isPlayerGrowing, playerGrowthIntent, player } = engine.state;
@@ -538,8 +549,20 @@ export const useGameStore = create<GameStore>()(
           }
       },
 
-      openMonumentDialog: () => { audioService.play('SUCCESS'); set({ monumentDialogState: { isOpen: true, slots: [null, null, null] } }); },
-      closeMonumentDialog: () => { audioService.play('UI_CLICK'); set({ monumentDialogState: { isOpen: false, slots: [null, null, null] } }); },
+      openMonumentDialog: () => { 
+          // Initialize slots based on requirements size (Dynamic for 2.4)
+          const state = get().session;
+          const count = state?.monumentRequirements?.length || 3;
+          const slots = Array(count).fill(null);
+          
+          audioService.play('SUCCESS'); 
+          set({ monumentDialogState: { isOpen: true, slots } }); 
+      },
+      closeMonumentDialog: () => { 
+          audioService.play('UI_CLICK'); 
+          // Reset to 3 or dynamic? Doesn't matter if closed.
+          set({ monumentDialogState: { isOpen: false, slots: [null, null, null] } }); 
+      },
 
       placeItemInMonument: (item, slotIndex) => {
           const state = get();
@@ -571,9 +594,11 @@ export const useGameStore = create<GameStore>()(
 
       activateMonument: () => {
           if (!engine || !engine.state) return;
-          const { monumentDialogState } = get();
+          const { monumentDialogState, session } = get();
+          const reqCount = session?.monumentRequirements?.length || 3;
+          
           const items = monumentDialogState.slots.filter((i): i is Item => i !== null);
-          if (items.length !== 3) {
+          if (items.length !== reqCount) {
               audioService.play('ERROR');
               get().showToast("All slots must be filled!", 'error');
               return;
@@ -585,14 +610,14 @@ export const useGameStore = create<GameStore>()(
           
           if (res.ok) {
               audioService.play('LEVEL_UP'); 
-              set({ monumentDialogState: { isOpen: false, slots: [null, null, null] } });
+              set({ monumentDialogState: { isOpen: false, slots: Array(reqCount).fill(null) } });
           } else {
               audioService.play('ERROR');
               get().showToast(res.reason || "Activation Failed", 'error');
           }
       },
 
-      checkTutorialCamera: () => {}, // Placeholder
+      checkTutorialCamera: () => {}, 
 
       // --- GAME LOOP ---
       tick: () => {
@@ -606,7 +631,7 @@ export const useGameStore = create<GameStore>()(
           tickCount++;
           const now = Date.now();
 
-          // OPTIMIZED GC: Trim logs less frequently
+          // OPTIMIZED GC
           if (tickCount % 50 === 0) {
               if (result.state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.messageLog = result.state.messageLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
               if (result.state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.botActivityLog = result.state.botActivityLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
@@ -614,19 +639,15 @@ export const useGameStore = create<GameStore>()(
               result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
           }
 
-          // Check for Monument Entry
           if (result.events.some(e => e.type === 'MONUMENT_REACHED')) {
               get().openMonumentDialog();
           }
 
-          // Process Events & Sounds
           if (result.events.length > 0) {
               const lang = get().language;
-              
               result.events.forEach(event => {
                 const isPlayer = event.entityId === result.state.player.id;
                 
-                // Sound Trigger
                 if (isPlayer || !event.entityId) {
                     const sound = EVENT_SOUND_MAP[event.type];
                     if (sound) audioService.play(sound as any);
@@ -635,7 +656,6 @@ export const useGameStore = create<GameStore>()(
                     }
                 }
 
-                // Leaderboard Logic
                 if (event.type === 'VICTORY') {
                     const currentId = engine?.state?.activeLevelConfig?.id;
                     if (currentId) {
@@ -643,7 +663,6 @@ export const useGameStore = create<GameStore>()(
                         if (idx !== -1 && idx >= get().campaignProgress) {
                             const nextP = Math.min(CAMPAIGN_LEVELS.length, idx + 1);
                             if (nextP > get().campaignProgress) {
-                                // Persist saves this automatically when updated via set()
                                 set({ campaignProgress: nextP });
                             }
                         }
@@ -670,11 +689,10 @@ export const useGameStore = create<GameStore>()(
                     }
                     currentLB.sort((a, b) => b.maxLevel !== a.maxLevel ? b.maxLevel - a.maxLevel : b.maxCoins - a.maxCoins);
                     const sliced = currentLB.slice(0, 100);
-                    // Persist saves this automatically when updated via set()
                     set({ leaderboard: sliced });
                 }
 
-                // Floating Text Effects
+                // Floating Text
                 if (event.entityId || event.type === 'HEX_COLLAPSE') {
                      const entity = isPlayer ? result.state.player : result.state.bots.find(b => b.id === event.entityId);
                      const targetQ = event.data?.q !== undefined ? Number(event.data.q) : (entity?.q || 0);
@@ -685,19 +703,72 @@ export const useGameStore = create<GameStore>()(
                      switch (event.type) {
                             case 'LEVEL_UP': text = lang === 'RU' ? "+1 УР" : "+1 LVL"; color = isPlayer ? "#818cf8" : "#f87171"; icon = 'UP'; break;
                             case 'SECTOR_ACQUIRED': text = lang === 'RU' ? "+1 УР" : "+1 LVL"; color = isPlayer ? "#818cf8" : "#f87171"; icon = 'PLUS'; break;
-                            case 'SECTOR_EXCAVATED': text = lang === 'RU' ? "+1 МАТ" : "+1 MAT"; color = "#34d399"; icon = 'PICKAXE'; break;
-                            case 'RECOVERY_USED':
+                            
+                            case 'SECTOR_EXCAVATED': {
+                                const mat = Number(event.data?.material || 0);
+                                const mvs = Number(event.data?.moves || 0);
+                                
+                                if (mat > 0) {
+                                    result.state.effects.push({
+                                         id: `fx-mat-${now}-${Math.random()}`,
+                                         q: targetQ, r: targetR,
+                                         text: lang === 'RU' ? `+${mat} МАТ` : `+${mat} MAT`, 
+                                         color: "#34d399", 
+                                         icon: 'PICKAXE',
+                                         startTime: now, lifetime: 1200 
+                                    });
+                                }
+                                if (mvs > 0) {
+                                    result.state.effects.push({
+                                         id: `fx-mv-${now}-${Math.random()}`,
+                                         q: targetQ, r: targetR,
+                                         text: lang === 'RU' ? `+${mvs} ХОД` : `+${mvs} MOVE`, 
+                                         color: "#60a5fa", 
+                                         icon: 'FOOTPRINTS',
+                                         startTime: now + 50, // Slight delay to stagger
+                                         lifetime: 1200 
+                                    });
+                                }
+                                text = ''; // Handled above
+                                break;
+                            }
+
+                            case 'RECOVERY_USED': {
                                 if (isPlayer) {
                                     if (event.data?.customText) {
                                         text = String(event.data.customText); color = String(event.data.customColor || '#fbbf24'); icon = 'GEM';
                                     } else {
                                         const c = Number(event.data?.coins || 0);
-                                        if (c > 0) { text = lang === 'RU' ? `+${c} МОН` : `+${c} COIN`; color = "#fbbf24"; } 
-                                        else { text = lang === 'RU' ? "+1 ХОД" : "+1 MOVE"; color = "#60a5fa"; }
-                                        icon = 'COIN';
+                                        const m = Number(event.data?.moves || 0);
+                                        
+                                        if (c > 0) {
+                                            result.state.effects.push({
+                                                id: `fx-coin-${now}-${Math.random()}`,
+                                                q: targetQ, r: targetR,
+                                                text: lang === 'RU' ? `+${c} МОН` : `+${c} COIN`,
+                                                color: "#fbbf24",
+                                                icon: 'COIN',
+                                                startTime: now, lifetime: 1200
+                                            });
+                                        }
+                                        
+                                        if (m > 0) {
+                                            result.state.effects.push({
+                                                id: `fx-rec-mv-${now}-${Math.random()}`,
+                                                q: targetQ, r: targetR,
+                                                text: lang === 'RU' ? `+${m} ХОД` : `+${m} MOVE`,
+                                                color: "#60a5fa",
+                                                icon: 'FOOTPRINTS',
+                                                startTime: now + 50,
+                                                lifetime: 1200
+                                            });
+                                        }
+                                        text = ''; // Handled above
                                     }
                                 }
                                 break;
+                            }
+
                             case 'HEX_COLLAPSE': text = lang === 'RU' ? "-1 УР" : "-1 LVL"; color = "#ef4444"; icon = 'DOWN'; break;
                             case 'ITEM_DROP': text = lang === 'RU' ? "ПРЕДМЕТ!" : "ITEM FOUND!"; color = "#fcd34d"; icon = 'GEM'; break;
                      }
@@ -714,7 +785,6 @@ export const useGameStore = create<GameStore>()(
               });
           }
 
-          // Check for error toasts from engine
           let newToast = get().toast;
           const error = result.events.find(e => e.type === 'ACTION_DENIED' || e.type === 'ERROR');
           if (error && error.entityId === engine?.state?.player.id) {

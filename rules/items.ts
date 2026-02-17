@@ -105,8 +105,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectValue: 1,
         effectLabel: { EN: '+1 Max Storage', RU: '+1 Вместимость' },
         negativeEffectType: 'STATUS_FATIGUE',
-        negativeEffectDuration: 30000,
-        negativeEffectLabel: { EN: 'Fatigue (Moves x2)', RU: 'Усталость (Ход x2)' }
+        negativeEffectDuration: 90000, // 90s
+        negativeEffectLabel: { EN: 'Fatigue (90s)', RU: 'Усталость (90с)' }
     },
     {
         idPrefix: 'hornet_drill',
@@ -117,8 +117,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#facc15',
         effectType: 'STATUS_GOLD_RUSH',
         effectValue: 2, 
-        effectDuration: 60000, // 60s
-        effectLabel: { EN: 'Gold Rush (+2 Mat)', RU: 'Золотая Лихорадка' },
+        effectDuration: 300000, // 5 minutes
+        effectLabel: { EN: 'Gold Rush (5m)', RU: 'Золотая Лихорадка (5м)' },
         negativeEffectType: 'STATUS_BREAKDOWN_RISK',
         negativeEffectDuration: 45000,
         negativeEffectLabel: { EN: 'Breakdown Risk', RU: 'Риск Поломки' }
@@ -134,8 +134,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectValue: 55,
         effectLabel: { EN: '+55 Credits', RU: '+55 Кредитов' },
         negativeEffectType: 'STATUS_MINING_OFFLINE',
-        negativeEffectDuration: 35000,
-        negativeEffectLabel: { EN: 'Mining Offline', RU: 'Нет Майнинга' }
+        negativeEffectDuration: 75000, // 75s
+        negativeEffectLabel: { EN: 'No Income (75s)', RU: 'Нет Дохода (75с)' }
     },
     {
         idPrefix: 'stability_scanner',
@@ -144,12 +144,13 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         description: { EN: 'Radar lens with green grid.', RU: 'Линза радара с сеткой.' },
         visualType: 'SCANNER',
         visualColor: '#22c55e',
-        effectType: 'ADD_MOVES',
-        effectValue: 10,
-        effectLabel: { EN: '+10 Moves', RU: '+10 Ходов' },
+        effectType: 'STATUS_ENTROPY_INVERSION',
+        effectValue: 1,
+        effectDuration: 120000, // 2 minutes? Keeping generous for a strong buff. Let's stick to standard or match prompt. Prompt didn't specify duration for Buff, but debuff is 60s. Let's make Buff 60s too.
+        effectLabel: { EN: 'Entropy Inversion', RU: 'Инверсия Энтропии' },
         negativeEffectType: 'STATUS_TUNNEL_VISION',
-        negativeEffectDuration: 30000,
-        negativeEffectLabel: { EN: 'Tunnel Vision (Fog)', RU: 'Туннельное Зрение' }
+        negativeEffectDuration: 60000, // 60s
+        negativeEffectLabel: { EN: 'Tunnel Vision (60s)', RU: 'Туннельное Зрение (60с)' }
     },
 
     // --- RARE (Редкие) ---
@@ -162,11 +163,11 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualColor: '#e2e8f0',
         effectType: 'STATUS_FREE_BUILD',
         effectValue: 1, 
-        effectDuration: 30000,
-        effectLabel: { EN: 'Free Building', RU: 'Бесплатная Стройка' },
-        negativeEffectType: 'LOSE_CREDITS', // Using LOSE_CREDITS but value logic handled specially if needed, or static
-        negativeEffectValue: 50, // Placeholder, usually % logic in processor
-        negativeEffectLabel: { EN: 'Greed (-50% Cr)', RU: 'Жадность (-50% Кр)' }
+        effectDuration: 300000, // 300s
+        effectLabel: { EN: 'Free Build (5m)', RU: 'Беспл. Стройка (5м)' },
+        negativeEffectType: 'LOSE_CREDITS', 
+        negativeEffectValue: 100, // 100% loss marker
+        negativeEffectLabel: { EN: 'Greed (-100% Cr)', RU: 'Жадность (-100% Кр)' }
     },
     {
         idPrefix: 'cortex_overclocker',
@@ -192,8 +193,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectValue: 1,
         effectLabel: { EN: '+1 Inventory Slot', RU: '+1 Слот Инвентаря' },
         negativeEffectType: 'STATUS_SOIL_EATER',
-        negativeEffectDuration: 45000,
-        negativeEffectLabel: { EN: 'Soil Eater', RU: 'Пожирание Почвы' }
+        negativeEffectDuration: 200000, // 200s
+        negativeEffectLabel: { EN: 'Soil Eater (200s)', RU: 'Пожиратель (200с)' }
     },
 
     // --- LEGENDARY (Легендарные) ---
@@ -204,9 +205,9 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         description: { EN: 'Pulsating heart of pure light.', RU: 'Пульсирующее сердце.' },
         visualType: 'CORE',
         visualColor: '#f43f5e',
-        effectType: 'GOD_MODE', // +10 Rank, +1000 Cr, +100 Moves
+        effectType: 'GOD_MODE', // Modified behavior in Processor: +10 Rank, +100 Ent, +100 Moves
         effectValue: 1,
-        effectLabel: { EN: 'God Mode', RU: 'Режим Бога' },
+        effectLabel: { EN: '+Rank, +Moves, +Stability', RU: '+Ранг, +Ходы, +Стаб.' },
         negativeEffectType: 'FULL_RESET',
         negativeEffectLabel: { EN: 'System Wipe', RU: 'Полный Сброс' }
     },
@@ -221,8 +222,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectValue: 1000,
         effectLabel: { EN: '+1000 Credits', RU: '+1000 Кредитов' },
         negativeEffectType: 'STATUS_GOLD_CURSE',
-        negativeEffectDuration: 999999, // Permanent-ish
-        negativeEffectLabel: { EN: 'Gold Curse', RU: 'Проклятие Золота' }
+        negativeEffectDuration: 300000, // 5 minutes
+        negativeEffectLabel: { EN: 'Gold Curse (5m)', RU: 'Проклятие (5м)' }
     }
 ];
 

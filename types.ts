@@ -63,7 +63,8 @@ export type ItemEffectType =
     // Status Effects (Positive)
     | 'STATUS_GOLD_RUSH'
     | 'STATUS_FREE_BUILD'
-    | 'STATUS_SCANNER_BUFF'; // New: Permanent fog reveal
+    | 'STATUS_SCANNER_BUFF'
+    | 'STATUS_ENTROPY_INVERSION'; // New: Actions add entropy instead of draining
 
 export type NegativeEffectType =
     | 'LOSE_CREDITS'
@@ -323,7 +324,7 @@ export interface FloatingText {
   color: string;
   startTime: number;
   lifetime: number;
-  icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE' | 'GEM' | 'SKULL';
+  icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE' | 'GEM' | 'SKULL' | 'FOOTPRINTS';
 }
 
 // MOVED FROM campaign/types.ts to resolve circular dependency

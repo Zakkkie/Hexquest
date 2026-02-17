@@ -324,7 +324,13 @@ export class GrowthSystem implements System {
              
              // --- ENTROPY COST ---
              const entropyCost = hex.currentLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(hex.currentLevel));
-             state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
+             const hasEntropyInversion = this.hasStatus(entity, 'STATUS_ENTROPY_INVERSION');
+             
+             if (hasEntropyInversion) {
+                 state.entropy.current = Math.min(state.entropy.max, state.entropy.current + entropyCost);
+             } else {
+                 state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
+             }
 
              const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
              let msg = `${prefix} Excavated to L${newLevel} (+${actualMatGain} Mat, +${depthReward} Moves)`;
@@ -438,7 +444,13 @@ export class GrowthSystem implements System {
 
             // --- ENTROPY COST ---
             const entropyCost = targetLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(targetLevel));
-            state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
+            const hasEntropyInversion = this.hasStatus(entity, 'STATUS_ENTROPY_INVERSION');
+            
+            if (hasEntropyInversion) {
+                state.entropy.current = Math.min(state.entropy.max, state.entropy.current + entropyCost);
+            } else {
+                state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
+            }
 
             if (targetLevel === 1) {
                  newOwnerId = entity.id;
@@ -472,11 +484,6 @@ export class GrowthSystem implements System {
                   durability: newDurability,
                   recoveryPoints: newRecoveryPoints,
                   lastRecoveryTime: newLastRecoveryTime
-                  // lootedLevels is preserved via spread ...hex in simple updates, but here we construct a new object.
-                  // Since we didn't dig, we don't modify lootedLevels, so spreading ...hex handles it OR we explicitly pass it if needed.
-                  // Actually, ...hex is sufficient if it's the first spread argument.
-                  // BUT we are spreading inside the object literal.
-                  // Wait, earlier I did `...state.grid, [key]: { ...hex, ... }`. Yes, spreading `hex` preserves lootedLevels.
               }
           };
           

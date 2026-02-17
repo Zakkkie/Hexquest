@@ -98,7 +98,11 @@ export class ActionProcessor {
       actor.lastMoveTime = 0; 
 
       // Entropy Logic (Movement tax)
-      if (state.entropy.current > 0) {
+      // Check for Entropy Inversion status
+      const now = Date.now();
+      const hasEntropyInversion = actor.activeStatuses?.some(s => s.type === 'STATUS_ENTROPY_INVERSION' && (!s.expiresAt || s.expiresAt > now));
+
+      if (state.entropy.current > 0 || hasEntropyInversion) {
           let entropyCost = ENTROPY_CONFIG.COST_ACTION_BASE;
           
           // Iterate path to detect negative levels and increase tax
@@ -110,7 +114,11 @@ export class ActionProcessor {
               }
           }
           
-          state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
+          if (hasEntropyInversion) {
+              state.entropy.current = Math.min(state.entropy.max, state.entropy.current + entropyCost);
+          } else {
+              state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
+          }
       }
 
       return { ok: true };
@@ -183,16 +191,22 @@ export class ActionProcessor {
                 });
                 break;
           case 'GOD_MODE': 
+                // Apex Core: +10 Ranks, +100 Entropy, +100 Moves (No Coins)
                 actor.playerLevel += 10; 
-                actor.coins += 1000; 
+                state.entropy.current = Math.min(state.entropy.max, state.entropy.current + 100);
                 actor.moves += 100; 
                 break;
 
           // --- NEGATIVE INSTANT ---
           case 'LOSE_CREDITS': 
-                if (val) actor.coins = Math.max(0, actor.coins - val);
-                // "Greed" Logic: 50% loss if value not specified or special flag
-                else actor.coins = Math.floor(actor.coins * 0.5); 
+                if (val !== undefined && val >= 100) {
+                    actor.coins = 0; // 100% Loss
+                } else if (val) {
+                    actor.coins = Math.max(0, actor.coins - val);
+                } else {
+                    // "Greed" Logic fallback: 50% loss if value not specified
+                    actor.coins = Math.floor(actor.coins * 0.5); 
+                }
                 break;
           case 'LOSE_MOVES': actor.moves = Math.max(0, actor.moves - (val || 0)); break;
           case 'LOSE_RANK': actor.playerLevel = Math.max(1, actor.playerLevel - (val || 0)); break;
@@ -220,6 +234,7 @@ export class ActionProcessor {
           case 'STATUS_SOIL_EATER':
           case 'STATUS_BREAKDOWN_RISK':
           case 'STATUS_SCANNER_BUFF':
+          case 'STATUS_ENTROPY_INVERSION': // New
           case 'BUFF_DIG': // Mapped to gold rush internally usually, or custom
               this.addStatus(actor, type, desc, duration);
               break;
@@ -242,10 +257,11 @@ export class ActionProcessor {
       const item = actor.inventory[idx];
       actor.inventory.splice(idx, 1);
 
-      let chance = 0.25;
-      if (item.rarity === 'UNCOMMON') chance = 0.50;
-      if (item.rarity === 'RARE') chance = 0.75;
-      if (item.rarity === 'LEGENDARY') chance = 1.00;
+      // Updated Probability Logic
+      let chance = 0.25; // Common (Default)
+      if (item.rarity === 'UNCOMMON') chance = 0.40;
+      if (item.rarity === 'RARE') chance = 0.65;
+      if (item.rarity === 'LEGENDARY') chance = 0.90;
 
       if (Math.random() < chance) {
           // --- SUCCESS ---

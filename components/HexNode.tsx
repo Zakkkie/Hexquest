@@ -7,6 +7,11 @@ import { textureService } from '../services/textureService.ts';
 
 const DEG_TO_RAD = Math.PI / 180;
 const ARROW_UP_PATH = "M12 4l-8 8h6v8h4v-8h6z";
+
+// NEW 3D ARROW GEOMETRY (Centered at 0,0)
+const ARROW_FACE_PATH = "M -8 -10 H 8 V 0 H 16 L 0 16 L -16 0 H -8 Z";
+const ARROW_SIDE_PATH = "M -8 -6 H 8 V 4 H 16 L 0 20 L -16 4 H -8 Z"; // Shifted Y+4 for depth
+
 const MAX_WALL_DEPTH = HEX_SIZE * 4; 
 
 export interface HexNodeTheme {
@@ -29,7 +34,8 @@ export interface HexNodeProps {
   isSelected: boolean;
   isPending: boolean;
   pendingCost: number | null;
-  isTutorialTarget: boolean;
+  isTutorialTarget: boolean; // Highlights border
+  isTargetArrow: boolean;    // New: Bouncing Arrow
   tutorialColor: string;
   isMissingSupport: boolean;
   isOccupied: boolean;
@@ -69,7 +75,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const { 
       x, y, offsetY, rotation, level, maxLevel, neighborLevels, structureType,
       theme, isSelected, isPending, pendingCost, 
-      isTutorialTarget, tutorialColor, isMissingSupport, 
+      isTutorialTarget, isTargetArrow, tutorialColor, isMissingSupport, 
       isGrowing, isRankLocked, progress, durability, artifactType,
       q, r, id,
       onHexClick, onHover
@@ -94,9 +100,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
           pts.push({ 
               x: Math.cos(angle) * HEX_SIZE, 
               y: Math.sin(angle) * HEX_SIZE * 0.8 + offsetY,
-              // Precompute sine for visibility check (Back-face culling)
-              // Positive sine means "facing down/front" in screen space (Y+ is down)
-              // We use a small negative epsilon to handle rounding errors at exactly 0/180
               visible: Math.sin(angle) > -0.01 
           });
       }
@@ -135,6 +138,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   // Void Animation Ref
   const voidOutlineRef = useRef<Konva.Path>(null);
   const monumentGlowRef = useRef<Konva.Path>(null);
+  const arrowRef = useRef<Konva.Group>(null);
 
   useEffect(() => {
       if (isRealVoid && voidOutlineRef.current) {
@@ -152,7 +156,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
       }
   }, [isRealVoid]);
 
-  // Monument Pulse Effect
   useEffect(() => {
       if (isMonument && monumentGlowRef.current) {
           const tween = new Konva.Tween({
@@ -167,6 +170,23 @@ const HexNodeComponent = (props: HexNodeProps) => {
           return () => tween.destroy();
       }
   }, [isMonument]);
+
+  // Bouncing Arrow Animation
+  useEffect(() => {
+      if (isTargetArrow && arrowRef.current) {
+          const tween = new Konva.Tween({
+              node: arrowRef.current,
+              y: offsetY - 60, // Target Y (Up)
+              duration: 0.6,
+              yoyo: true,
+              easing: Konva.Easings.EaseInOut
+          });
+          // Set initial Y
+          arrowRef.current.y(offsetY - 40);
+          tween.play();
+          return () => tween.destroy();
+      }
+  }, [isTargetArrow, offsetY]);
 
   if (isRealVoid) {
       return (
@@ -183,11 +203,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                  <Group rotation={rotation} perfectDrawEnabled={false}>
                      {/* Depth Rim */}
                      <Path data={BASE_PATH_D} fill="#020617" stroke="#1e293b" strokeWidth={1} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
-                     
-                     {/* Static Abyss - Darker center */}
                      <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} opacity={0.8} perfectDrawEnabled={false} />
-
-                     {/* Blinking Danger Outline */}
                      <Path 
                         ref={voidOutlineRef}
                         data={BASE_PATH_D} 
@@ -200,8 +216,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         perfectDrawEnabled={false}
                         shadowForStrokeEnabled={false}
                      />
-
-                     {/* Grid overlay for sense of scale */}
                      <Path data={BASE_PATH_D} scaleX={0.8} scaleY={0.8} stroke="rgba(56, 189, 248, 0.1)" strokeWidth={1} dash={[2, 4]} listening={false} perfectDrawEnabled={false} />
                  </Group>
              </Group>
@@ -209,24 +223,31 @@ const HexNodeComponent = (props: HexNodeProps) => {
       );
   }
 
-  // Use the specific stroke from theme for outlines
   const strokeColor = isMonument ? '#fcd34d' : theme.stroke;
-  // Increased width to make the "contour" visible as requested
   const strokeWidth = isMonument ? 3.0 : 2.0; 
   
   const fillScale = { x: HEX_SIZE / 32, y: HEX_SIZE / 32 }; 
   const fillOffset = { x: 32, y: 32 }; 
+
+  const getArrowColor = (type: string, part: 'main' | 'shadow') => {
+      const isShadow = part === 'shadow';
+      switch(type) {
+          case 'amber': return isShadow ? '#b45309' : '#fbbf24';
+          case 'cyan': return isShadow ? '#0e7490' : '#22d3ee';
+          case 'red': return isShadow ? '#991b1b' : '#ef4444';
+          default: return isShadow ? '#0f766e' : '#34d399'; // emerald
+      }
+  };
 
   return (
     <Group 
         x={x} y={y} 
         onClick={handleClick} onTap={handleClick}
         onMouseEnter={handleHover} onMouseLeave={handleHoverEnd}
-        perfectDrawEnabled={false} // CRITICAL OPTIMIZATION: Disables expensive buffer canvas
+        perfectDrawEnabled={false}
     >
         {/* 1. WALLS */}
         {neighborLevels.map((nLevel, i) => {
-            // Check visibility first (Optimization + Logic Fix)
             if (!wallData[i].visible) return null;
 
             let nY = 0;
@@ -267,7 +288,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
         {/* 2. TOP FACE */}
         <Group y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
             <Group rotation={rotation} perfectDrawEnabled={false}>
-                {/* Monument Glow Base */}
                 {isMonument && (
                     <Path 
                         ref={monumentGlowRef}
@@ -295,7 +315,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     shadowForStrokeEnabled={false}
                 />
 
-                {/* Monument Star Symbol */}
                 {isMonument && (
                     <Star 
                         numPoints={5}
@@ -311,43 +330,21 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     />
                 )}
 
-                {/* Damage Cracks Overlay */}
                 {damageLevel > 0 && (
                     <Group listening={false} perfectDrawEnabled={false}>
                         {CRACK_PATHS.slice(0, damageLevel).map((path, idx) => (
-                            <Path 
-                                key={idx} 
-                                data={path} 
-                                stroke="#000000" 
-                                strokeWidth={2} 
-                                opacity={0.6} 
-                                lineJoin="round" 
-                                lineCap="round" 
-                                perfectDrawEnabled={false}
-                                shadowForStrokeEnabled={false}
-                            />
+                            <Path key={idx} data={path} stroke="#000000" strokeWidth={2} opacity={0.6} lineJoin="round" lineCap="round" perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                         ))}
                     </Group>
                 )}
 
-                {/* Structural Grid Decor (Only for positive) */}
                 {!isNegative && neighborLevels.map((_, i) => {
                     const next = (i + 1) % 6;
                     return (
-                        <Line 
-                            key={`e-${i}`} 
-                            points={[BASE_POINTS[i].x, BASE_POINTS[i].y, BASE_POINTS[next].x, BASE_POINTS[next].y]} 
-                            stroke={theme.stroke} 
-                            strokeWidth={1} 
-                            opacity={0.3} 
-                            listening={false} 
-                            perfectDrawEnabled={false}
-                            shadowForStrokeEnabled={false}
-                        />
+                        <Line key={`e-${i}`} points={[BASE_POINTS[i].x, BASE_POINTS[i].y, BASE_POINTS[next].x, BASE_POINTS[next].y]} stroke={theme.stroke} strokeWidth={1} opacity={0.3} listening={false} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                     );
                 })}
 
-                {/* Interaction Overlays */}
                 {isSelected && (
                     <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} shadowColor="#06b6d4" shadowBlur={10} listening={false} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                 )}
@@ -355,7 +352,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                 {isTutorialTarget && (
                     <Path 
                         data={BASE_PATH_D} 
-                        stroke={tutorialColor === 'amber' ? '#fbbf24' : (tutorialColor === 'cyan' ? '#06b6d4' : '#22d3ee')} 
+                        stroke={tutorialColor === 'amber' ? '#fbbf24' : (tutorialColor === 'cyan' ? '#06b6d4' : (tutorialColor === 'red' ? '#ef4444' : '#22d3ee'))} 
                         strokeWidth={3} 
                         listening={false} 
                         perfectDrawEnabled={false}
@@ -372,7 +369,31 @@ const HexNodeComponent = (props: HexNodeProps) => {
             </Group>
         </Group>
 
-        {/* 3. BILLBOARD ICONS */}
+        {/* 3. FLOATING OVERLAYS (No Perspective Squash/Rotation applied to container, logic handled by billboard) */}
+        
+        {/* BOUNCING 3D TUTORIAL ARROW */}
+        {isTargetArrow && (
+            <Group ref={arrowRef} y={offsetY - 40} listening={false} perfectDrawEnabled={false}>
+                {/* Shadow/Depth Layer */}
+                <Path 
+                    data={ARROW_SIDE_PATH} 
+                    fill={getArrowColor(tutorialColor, 'shadow')}
+                    perfectDrawEnabled={false}
+                />
+                {/* Main Face */}
+                <Path 
+                    data={ARROW_FACE_PATH} 
+                    fill={getArrowColor(tutorialColor, 'main')}
+                    stroke="rgba(0,0,0,0.5)"
+                    strokeWidth={1}
+                    shadowColor={getArrowColor(tutorialColor, 'main')}
+                    shadowBlur={15}
+                    perfectDrawEnabled={false}
+                />
+            </Group>
+        )}
+
+        {/* ARTIFACTS / COST / PROGRESS */}
         {artifactType && !isRealVoid && (
             <Group y={offsetY - 12} listening={false} perfectDrawEnabled={false}>
                 <Circle radius={9} fill={artifactType.includes('RELIC') ? '#f59e0b' : '#3b82f6'} shadowColor="rgba(0,0,0,0.5)" shadowBlur={4} perfectDrawEnabled={false} />
@@ -397,7 +418,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   );
 };
 
-// Custom comparison function for React.memo to prevent unnecessary re-renders
+// Custom comparison function
 function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.id !== next.id) return false;
     if (prev.x !== next.x || prev.y !== next.y) return false;
@@ -407,17 +428,16 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.isSelected !== next.isSelected) return false;
     if (prev.isPending !== next.isPending) return false;
     if (prev.isTutorialTarget !== next.isTutorialTarget) return false;
+    if (prev.isTargetArrow !== next.isTargetArrow) return false; // Added comparison
     if (prev.isMissingSupport !== next.isMissingSupport) return false;
     if (prev.isOccupied !== next.isOccupied) return false;
     if (prev.isGrowing !== next.isGrowing) return false;
     if (prev.progress !== next.progress) return false;
     if (prev.durability !== next.durability) return false;
     
-    // Deep compare neighborLevels (Array of numbers)
     for (let i = 0; i < 6; i++) {
         if (prev.neighborLevels[i] !== next.neighborLevels[i]) return false;
     }
-    
     return true;
 }
 

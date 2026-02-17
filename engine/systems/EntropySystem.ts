@@ -45,11 +45,6 @@ export class EntropySystem implements System {
           let newType = hex.structureType;
           let hasChanged = false;
 
-          // LOGIC UPDATED:
-          // 50% Peaks (>=1) collapse by -1
-          // 50% Pits (<= -1) fill by +1
-          // 10% Plains (0) become Void
-
           if (hex.currentLevel >= 1) {
               if (Math.random() < ENTROPY_CONFIG.SHIFT_COLLAPSE_CHANCE) {
                   newLevel = hex.currentLevel - 1;
@@ -88,7 +83,6 @@ export class EntropySystem implements System {
       state.grid = { ...state.grid, ...updates };
 
       // 3. Player Damage Logic
-      // If player stood on a hex that changed, they lose 1 Level.
       if (playerHitByShift) {
           if (state.player.playerLevel > 1) {
               state.player.playerLevel -= 1;
@@ -99,7 +93,6 @@ export class EntropySystem implements System {
       }
 
       // 4. Player Death Check (Specific Void Check)
-      // Even if they took damage above, if the hex became VOID, they die.
       const pKey = getHexKey(state.player.q, state.player.r);
       const pHex = state.grid[pKey];
       if (pHex && pHex.structureType === 'VOID') {
@@ -115,7 +108,10 @@ export class EntropySystem implements System {
       state.entropy.current = state.entropy.max;
 
       // 6. Global Game Over Check
-      if (state.entropy.max < ENTROPY_CONFIG.THRESHOLD) {
+      // Overriding threshold for Level 2.3 specifically to allow survival at 5 max entropy
+      const effectiveThreshold = state.activeLevelConfig?.id === '2.3' ? 2 : ENTROPY_CONFIG.THRESHOLD;
+
+      if (state.entropy.max < effectiveThreshold) {
           state.gameStatus = 'DEFEAT';
           const msg = "Sector Reality Collapsed. Entropy Critical.";
           state.messageLog.unshift({ id: `collapse-global-${now}`, text: msg, type: 'ERROR', source: 'SYSTEM', timestamp: now });

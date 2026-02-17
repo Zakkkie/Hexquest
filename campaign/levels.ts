@@ -17,13 +17,12 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     mapConfig: {
       size: 5, 
       type: 'fixed',
-      generateWalls: true, // Auto-generate boundary
-      wallStartRadius: 2, // Play area is Radius 1 (Center + Neighbors)
-      wallType: 'pit_ring', // Negative level boundary
+      generateWalls: true, 
+      wallStartRadius: 2, 
+      wallType: 'pit_ring', 
       customLayout: [
           // Player Start (L1)
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          
           // Neighbors (L0) - Playable Area
           { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
@@ -45,13 +44,11 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     hooks: {
       checkWinCondition: (state) => {
-        // Win Condition: Own 4 hexes (Start + 3 captured)
         const ownedCount = Object.values(state.grid).filter(h => h.ownerId === state.player.id && h.maxLevel >= 1).length;
         return ownedCount >= 4;
       },
       checkLossCondition: (state) => {
         const ownedCount = Object.values(state.grid).filter(h => h.ownerId === state.player.id && h.maxLevel >= 1).length;
-        // Loss if: Out of materials AND goal not met OR Stranded
         if (state.player.storage <= 0 && ownedCount < 4) return true;
         if (isStranded(state)) return true;
         return false;
@@ -63,7 +60,6 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     title: 'Sim 1.2: Solid Ground',
     description: 'Objective: Reach the Capital.\n\nSCANNER: A safe path (Durability 3) detected. Follow it through the void.\n\nDANGER: Environment UNSTABLE (Durability 1). Stepping off the path causes immediate collapse and Rank loss.\n\nFAILURE: Rank drops to 1.',
     
-    // Logic handled by mapGenerator.ts
     mapConfig: {
       size: 8, 
       type: 'fixed', 
@@ -85,7 +81,6 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
         return !!(playerHex && playerHex.structureType === 'CAPITAL');
       },
       checkLossCondition: (state) => {
-        // Loss if Rank drops to 1 (Player cannot sustain another hit)
         if (state.player.playerLevel <= 1) return true;
         if (isStranded(state)) return true;
         return false;
@@ -101,12 +96,11 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       size: 5,
       type: 'fixed',
       generateWalls: true,
-      wallStartRadius: 2, // Play area Radius 1
+      wallStartRadius: 2, 
       wallType: 'pit_ring',
       customLayout: [
           // Center (Goal) - Starts L1
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true, durability: 6 },
-          
           // Neighbors (L0) - Need to be built
           { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
@@ -173,7 +167,6 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       customLayout: [
           // Center (Goal) - Starts L1
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          
           // Surrounding Mounds (L2) - Sources of Material
           { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: 1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
@@ -214,30 +207,24 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '1.5',
     title: 'Sim 1.5: Oxygen March',
-    description: 'Protocol: Emergency Recovery.\n\nObjective: Collect 150 Credits in 60s.\n\nRule: Standard Recovery is single-use. You must MOVE to reset the tool.\n\nMethod: Use RECOVERY (Blue Button) on high sectors. Height yields more Credits.\n\nWARNING: High (Lvl 4+) sectors overheat (Cooldown 15s). Rotate between peaks.',
+    description: 'Protocol: Emergency Recovery.\n\nObjective: Collect 150 Credits in 75s.\n\nRule: Standard Recovery is single-use. You must MOVE to reset the tool.\n\nMethod: Use RECOVERY (Blue Button) on high sectors. Height yields more Credits.\n\nWARNING: High (Lvl 4+) sectors overheat (Cooldown 15s). Rotate between peaks.',
     
     mapConfig: {
       size: 5,
       type: 'fixed',
       generateWalls: true,
-      wallStartRadius: 3, // Playable area Radius 2
+      wallStartRadius: 3, 
       wallType: 'pit_ring',
       customLayout: [
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          
-          // High Value targets nearby
           { q: 2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: -2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: 0, r: 2, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: 0, r: -2, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
-          
-          // Connectors
           { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          
-          // Fillers
           { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
@@ -259,7 +246,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
           return state.player.coins >= 150;
       },
       checkLossCondition: (state) => {
-          const limit = 60 * 1000; 
+          const limit = 75 * 1000; 
           const elapsed = Date.now() - state.sessionStartTime;
           if (elapsed > limit) return true;
           if (isStranded(state)) return true;
@@ -276,16 +263,11 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       size: 4, 
       type: 'fixed',
       generateWalls: true, 
-      wallStartRadius: 3, // Very tight arena
-      wallType: 'pit_ring', // Level -8 boundary
+      wallStartRadius: 3, 
+      wallType: 'pit_ring',
       customLayout: [
-          // Player Side
           { q: 0, r: 2, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          
-          // Old Bot Side -> Neutral Flat
           { q: 0, r: -2, maxLevel: 1, currentLevel: 1, revealed: true },
-
-          // Central Zone
           { q: 0, r: 0, maxLevel: 2, currentLevel: 2, revealed: true }, 
           { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
@@ -326,15 +308,9 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       customLayout: [
           // The Monolith (Goal) - Center - REDUCED HEIGHT TO 3
           { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
-          
-          // Player Start (Edge) - NOT on Monument
           { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          
-          // Terrain (Flat L0) for pathing
           { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          
-          // Surrounding filler
           { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
@@ -353,7 +329,6 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     hooks: {
       checkWinCondition: (state) => {
-          // Goal: Physically stand on the monument (Center)
           const playerHex = state.grid[getHexKey(state.player.q, state.player.r)];
           return playerHex && playerHex.structureType === 'MONUMENT';
       },
@@ -375,17 +350,13 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       wallStartRadius: 4,
       wallType: 'pit_ring',
       customLayout: [
-          // Low Monolith (Level 2 - Easy climb)
-          { q: 0, r: 0, maxLevel: 2, currentLevel: 2, structureType: 'MONUMENT', revealed: true },
-          
-          // Player Start - Edge
+          // Low Monolith (Level 3 for conformity)
+          { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
           { q: -3, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          
-          // "Dig Site" - Pre-lowered terrain to hint where to dig
+          // "Dig Site"
           { q: 2, r: 0, maxLevel: -1, currentLevel: -1, revealed: true }, 
           { q: 2, r: -1, maxLevel: -1, currentLevel: -1, revealed: true },
           { q: 2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
-          
           // Path
           { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
@@ -397,9 +368,9 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     startState: {
       credits: 300, 
-      moves: 30, // Lots of moves for digging
+      moves: 30, 
       rank: 2,
-      materials: 2 // Low mats, forcing digging for items
+      materials: 2 
     },
 
     aiMode: 'none',
@@ -414,7 +385,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '2.3',
     title: 'Sim 2.3: Entropy Rising',
-    description: 'ALERT: Sector instability detected.\n\nObjective: Reach and Activate the Monolith before total collapse.\n\nMechanic: ENTROPY gauge is low. Digging and Building accelerates decay.\n\nOutcome: When Entropy hits 0, terrain shifts and voids open. Hurry.',
+    description: 'ALERT: Sector instability detected.\n\nObjective: Activate the Monolith (Level 4).\n\nMechanic: ENTROPY gauge starts at 10. After the first shift, it drops to 5. A second shift causes critical failure.\n\nTask: Find the specific key required.',
     
     mapConfig: {
       size: 6,
@@ -423,21 +394,13 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       wallStartRadius: 4,
       wallType: 'pit_ring',
       customLayout: [
-          // High Monolith (Level 5)
-          { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
-          
-          // Player Start - Edge
+          // High Monolith (Level 4)
+          { q: 0, r: 0, maxLevel: 4, currentLevel: 4, structureType: 'MONUMENT', revealed: true },
           { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          
-          // A narrow path of L0 that is vulnerable to Entropy Shift
           { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          
-          // Side paths
           { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          
-          // Surrounding hills (sources of mat)
           { q: 1, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
       ]
@@ -454,11 +417,11 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
 
     hooks: {
        checkLossCondition: (state) => {
-           // Loss if player falls into Void generated by Entropy
            const pKey = getHexKey(state.player.q, state.player.r);
            const hex = state.grid[pKey];
            if (hex && hex.structureType === 'VOID') return true;
            if (isStranded(state)) return true;
+           // Entropy Logic handled in EntropySystem but we can double check here
            return false;
        }
     }
@@ -466,7 +429,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
   {
     id: '2.4',
     title: 'Sim 2.4: The Rivalry',
-    description: 'Threat Assessment: Hostile Unit Detected.\n\nObjective: Secure Keys and activate the Spire before the Rival.\n\nIntel: Resources are scarce. If the Rival finds items first, you may need to dig aggressively to beat them to the summit.',
+    description: 'Threat Assessment: Hostile Unit Detected.\n\nObjective: Activate the Monolith (Level 4) with 4 items.\n\nIntel: Entropy starts at 30. Compete against the Rival.',
     
     mapConfig: {
       size: 6,
@@ -475,15 +438,12 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
       wallStartRadius: 4,
       wallType: 'pit_ring',
       customLayout: [
-          // Center Spire
-          { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
-          
-          // Player - Edge
+          // Center Spire (Level 4)
+          { q: 0, r: 0, maxLevel: 4, currentLevel: 4, structureType: 'MONUMENT', revealed: true },
+          // Player
           { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          
-          // Bot - Opposite Edge
+          // Bot
           { q: 0, r: -3, maxLevel: 1, currentLevel: 1, revealed: true }, 
-          
           // Resources
           { q: 2, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: -2, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
@@ -503,7 +463,7 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
     
     hooks: {
         checkWinCondition: (state) => {
-            return false; 
+            return false; // Victory via Monument Activation
         },
         checkLossCondition: (state) => {
             const botWin = state.bots.some(b => {
