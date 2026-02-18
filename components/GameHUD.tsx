@@ -456,7 +456,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       if (campaignMetrics) {
           const isDone = campaignMetrics.current >= campaignMetrics.target;
           return (
-               <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
+               <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono whitespace-nowrap">
                    <span className="text-slate-400 uppercase">{campaignMetrics.label}:</span>
                    <span className={isDone ? "text-emerald-400" : "text-white"}>
                       {campaignMetrics.current}/{campaignMetrics.target}
@@ -466,7 +466,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       }
       if (winCondition?.winType === 'SUMMIT') {
           return (
-               <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
+               <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono whitespace-nowrap">
                    <span className="text-slate-400">SUMMIT:</span>
                    <span className="text-amber-400">LEVEL {winCondition?.targetLevel}</span>
                    <Mountain className="w-3 h-3 text-amber-500" />
@@ -474,7 +474,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           );
       }
       return (
-           <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono">
+           <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold font-mono whitespace-nowrap">
                <span className="text-slate-400">GOAL:</span>
                <span className="text-white">L{winCondition?.targetLevel}</span>
                <span className="text-amber-400">{winCondition?.targetCoins}cr</span>
@@ -748,9 +748,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       {/* HEADER HUD */}
       {isHudVisible && (
       <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-30 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in">
-          <div className="w-full flex justify-between items-start gap-2 md:gap-2 max-w-7xl mx-auto relative">
-               <div className="flex flex-col gap-2">
-                   <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-700/50 shadow-xl px-2 py-1.5 md:px-3 md:py-2 gap-2 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade flex-1 md:flex-none md:w-fit md:shrink-0 max-w-[calc(100vw-80px)] md:max-w-none">
+          <div className="w-full flex justify-between items-start gap-2 md:gap-4 max-w-7xl mx-auto relative pointer-events-none">
+               <div className="flex flex-col gap-2 flex-1 min-w-0">
+                   <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-700/50 shadow-xl px-2 py-1.5 md:px-3 md:py-2 gap-2 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade w-full md:w-fit md:shrink-0">
                        <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
                            <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
                                <Crown className="w-3 h-3 md:w-5 md:h-5 text-white" />
@@ -849,24 +849,26 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   {renderActiveStatuses()}
               </div>
               
-              {/* UNIFIED DOCK CONTAINER */}
-              <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl p-2 md:p-3 pointer-events-auto flex items-center gap-3 md:gap-6 max-w-full">
+              {/* UNIFIED DOCK CONTAINER - UPDATED LAYOUT */}
+              <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl p-2 md:p-3 pointer-events-auto flex items-center justify-between gap-2 md:gap-6 w-full md:w-auto max-w-7xl mx-auto overflow-hidden">
                   
                   {/* LEFT: INVENTORY & MISSION */}
-                  <div className="flex flex-col gap-1.5 shrink-0">
+                  <div className="flex flex-col gap-1.5 shrink min-w-0 flex-1 overflow-hidden">
                       {/* Mission Header */}
                       <div 
-                          className="flex items-center justify-between gap-3 px-3 py-1.5 bg-slate-950/50 rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all" 
+                          className="flex items-center justify-between gap-3 px-3 py-1.5 bg-slate-950/50 rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all max-w-full" 
                           onClick={() => { setShowMissionDetails(true); playUiSound('CLICK'); }}
                       >
-                          {renderMissionStatus()}
-                          <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:bg-indigo-500 group-hover:border-indigo-400 transition-colors">
+                          <div className="truncate flex-1 min-w-0">
+                            {renderMissionStatus()}
+                          </div>
+                          <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:bg-indigo-500 group-hover:border-indigo-400 transition-colors shrink-0">
                               <Info className="w-3 h-3 text-slate-400 group-hover:text-white" />
                           </div>
                       </div>
 
                       {/* Inventory Slots */}
-                      <div className="flex items-center gap-1.5 justify-center">
+                      <div className="flex items-center gap-1.5 justify-start overflow-x-auto no-scrollbar mask-linear-fade-right pr-2">
                           {inventoryList.map(index => {
                               const item = player.inventory[index];
                               const slotSize = "w-8 h-8 md:w-10 md:h-10"; 
@@ -875,7 +877,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                                       key={index} 
                                       onClick={() => item && handleInventoryClick(item)}
                                       className={`
-                                          ${slotSize} rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all
+                                          ${slotSize} rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all shrink-0
                                           ${item 
                                               ? `bg-slate-800 ${getRarityBorder(item.rarity)} shadow-md hover:scale-105 active:scale-95` 
                                               : 'bg-slate-950/50 border-slate-800/50 border-dashed'}
@@ -889,10 +891,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                   </div>
 
                   {/* DIVIDER */}
-                  <div className="w-px h-16 bg-slate-800 mx-1 hidden md:block"></div>
+                  <div className="w-px h-16 bg-slate-800 mx-1 hidden md:block shrink-0"></div>
 
                   {/* RIGHT: ACTION BUTTONS */}
-                  <div className="flex items-end gap-2 md:gap-3 shrink-0">
+                  <div className="flex items-end gap-2 md:gap-3 shrink-0 ml-auto">
                       <HexButton variant="red" size={mainButtonSize} onClick={() => { togglePlayerGrowth('DIG'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
                           <Pickaxe className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
                       </HexButton>
