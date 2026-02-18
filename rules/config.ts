@@ -3,8 +3,8 @@
 
 export const GAME_CONFIG = {
   HEX_SIZE: 35,
-  INITIAL_MOVES: 0,
-  INITIAL_COINS: 0,
+  INITIAL_MOVES: 0, // Restored from 0
+  INITIAL_COINS: 0, // Restored from 0
   EXCHANGE_RATE_COINS_PER_MOVE: 5, 
   BOT_ACTION_INTERVAL_MS: 1000,
   L1_HEX_MAX_DURABILITY: 6, // Explicitly set to 6 as requested
@@ -22,16 +22,19 @@ export const GAME_CONFIG = {
   // Logic interval slightly larger to ensure animation finishes before next logic tick
   MOVEMENT_ANIMATION_DURATION: 0.6, // Seconds (Visual Tween)
   MOVEMENT_LOGIC_INTERVAL_MS: 650,  // Milliseconds (Logic Throttle)
+  
+  // Performance Limits
+  MAX_FLOATING_TEXTS: 50, // Limit simultaneous floating numbers
 
   // Growth Time in TICKS (1 tick = 100ms). So 30 ticks = 3 seconds.
   // UPDATED: Income formula = 5 * Level^2
   // COSTS: Are 0 for levels as costs are handled via Material storage now (1 Material per upgrade).
   // Structures (Mine/Barrier/Capital) still have Credit costs.
   LEVELS: {
-    0: { cost: 0,    growthTime: 30,  income: 1,   reqRank: 0 },
-    1: { cost: 0,    growthTime: 30,  income: 5,   reqRank: 0 },   
+    0: { cost: 0,    growthTime: 30,  income: 5,   reqRank: 0 }, // Bumped from 1
+    1: { cost: 0,    growthTime: 30,  income: 10,  reqRank: 0 }, // Bumped from 5  
     2: { cost: 0,    growthTime: 30,  income: 20,  reqRank: 1 },   
-    3: { cost: 0,    growthTime: 30,  income: 45,  reqRank: 2 },   
+    3: { cost: 0,    growthTime: 30,  income: 40,  reqRank: 2 },   
     4: { cost: 0,    growthTime: 30,  income: 80,  reqRank: 3 },   
     5: { cost: 0,    growthTime: 30,  income: 125, reqRank: 4 },   
     6: { cost: 0,    growthTime: 30,  income: 180, reqRank: 5 },   

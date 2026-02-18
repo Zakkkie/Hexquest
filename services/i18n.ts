@@ -210,6 +210,21 @@ interface Dictionary {
         MINI_LB_TITLE: string;
         MINI_LB_EMPTY: string;
     };
+    TOAST: {
+        RECHARGE_FAILED: string;
+        TOO_FAR_VOID: string;
+        PATH_BLOCKED: string;
+        NEED_CREDITS: string;
+        CONFIRM_MOVE: string;
+        GENERIC_ERROR: string;
+        RESTORE_ERROR: string;
+        WRONG_ITEM: string;
+        SLOTS_FULL: string;
+        ACTIVATION_FAILED: string;
+        NO_HISTORY: string;
+        LOG_DOWNLOADED: string;
+        STORAGE_FULL: string;
+    };
     CAMPAIGN: {
         LEVEL_1_1_TITLE: string;
         LEVEL_1_1_DESC: string;
@@ -481,6 +496,21 @@ export const TEXT: Record<Language, Dictionary> = {
             MINI_LB_TITLE: "Local Sector Rankings",
             MINI_LB_EMPTY: "No active signals."
         },
+        TOAST: {
+            RECHARGE_FAILED: "Recharge Failed",
+            TOO_FAR_VOID: "Too far to stabilize",
+            PATH_BLOCKED: "Path Blocked / Invalid",
+            NEED_CREDITS: "Need {0} credits",
+            CONFIRM_MOVE: "Click again ({0}cr)",
+            GENERIC_ERROR: "Error",
+            RESTORE_ERROR: "Restoration Error",
+            WRONG_ITEM: "Wrong item type!",
+            SLOTS_FULL: "Fill all slots!",
+            ACTIVATION_FAILED: "Activation Failed",
+            NO_HISTORY: "No history.",
+            LOG_DOWNLOADED: "Log Saved",
+            STORAGE_FULL: "Storage Full!"
+        },
         CAMPAIGN: {
             LEVEL_1_1_TITLE: 'Sim 1.1: Expansion Protocol',
             LEVEL_1_1_DESC: 'Mission: Capture 3 NEW sectors.\n\nThe unit requires a foothold. Capture 3 adjacent Neutral Sectors (Lvl 0) to establish a perimeter.\n\nMethod: Move to a neutral hex and use UPGRADE (Amber Button) to build Level 1 (Cost: 1 Mat).\n\nWARNING: Materials are limited. Use them to expand.',
@@ -749,6 +779,21 @@ export const TEXT: Record<Language, Dictionary> = {
             HELP_ENTROPY_GAIN: "▲ ВОССТАНОВЛЕНИЕ: Успешная стабилизация Разлома (предметом) восстанавливает систему.",
             MINI_LB_TITLE: "Локальный Рейтинг",
             MINI_LB_EMPTY: "Нет сигналов."
+        },
+        TOAST: {
+            RECHARGE_FAILED: "Сбой Перезарядки",
+            TOO_FAR_VOID: "Слишком далеко",
+            PATH_BLOCKED: "Путь Заблокирован",
+            NEED_CREDITS: "Нужно {0} кред.",
+            CONFIRM_MOVE: "Нажмите для подтверждения ({0} кред.)",
+            GENERIC_ERROR: "Ошибка",
+            RESTORE_ERROR: "Ошибка Восстановления",
+            WRONG_ITEM: "Неверный предмет!",
+            SLOTS_FULL: "Заполните все слоты!",
+            ACTIVATION_FAILED: "Сбой Активации",
+            NO_HISTORY: "Нет записи истории.",
+            LOG_DOWNLOADED: "Лог Скачан",
+            STORAGE_FULL: "Склад Полон!"
         },
         CAMPAIGN: {
             LEVEL_1_1_TITLE: 'Сим 1.1: Протокол Экспансии',

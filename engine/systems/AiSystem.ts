@@ -1,17 +1,17 @@
 
 import { System } from './System';
-import { GameState, GameEvent, EntityState, EntityType, SessionState, BotLogEntry } from '../../types';
+import { GameEvent, EntityState, SessionState, BotLogEntry } from '../../types';
 import { WorldIndex } from '../WorldIndex';
 import { calculateBotMove } from '../../bot/calculateBotMove';
-import { ActionProcessor } from '../ActionProcessor';
+import { TransactionQueue } from '../../services/transactionQueue';
 import { GAME_CONFIG } from '../../rules/config';
 import { getHexKey } from '../../services/hexUtils';
 
 export class AiSystem implements System {
-  private actionProcessor: ActionProcessor;
+  private transactionQueue: TransactionQueue;
 
-  constructor(actionProcessor: ActionProcessor) {
-    this.actionProcessor = actionProcessor;
+  constructor(transactionQueue: TransactionQueue) {
+    this.transactionQueue = transactionQueue;
   }
 
   update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
@@ -28,7 +28,6 @@ export class AiSystem implements System {
 
     // --- TIME SLICING OPTIMIZATION ---
     // Only process ONE bot per tick to distribute load.
-    // This ensures that even with complex pathfinding, the game loop remains responsive.
     const activeBotIndex = state.currentTurn % state.bots.length;
     const bot = state.bots[activeBotIndex];
 
@@ -36,15 +35,12 @@ export class AiSystem implements System {
     if (bot.state !== EntityState.IDLE) return;
     
     // --- SPEED THROTTLE ---
-    // Bots below level 3 act at half speed (2x interval)
     const baseInterval = GAME_CONFIG.BOT_ACTION_INTERVAL_MS;
     const interval = bot.playerLevel < 3 ? baseInterval * 2 : baseInterval;
     
-    // Initialization Stagger:
-    // If a bot has no history, give it a random offset so they don't all align on the same tick.
     if (!bot.lastActionTime) {
         bot.lastActionTime = now - Math.floor(Math.random() * interval);
-        return; // Skip first frame to let stagger take effect
+        return; 
     }
     
     const lastAct = bot.lastActionTime;
@@ -62,10 +58,10 @@ export class AiSystem implements System {
       state.stateVersion,
       state.difficulty,
       tickReservedKeys,
-      state.bots // V60: Pass all bots for cooperative AI
+      state.bots 
     );
 
-    // PERSIST MEMORY (Crucial for Master Goal logic)
+    // PERSIST MEMORY
     if (aiResult.memory) {
         bot.memory = aiResult.memory;
     }
@@ -88,7 +84,6 @@ export class AiSystem implements System {
         if (tQ !== undefined && tR !== undefined) {
             const h = state.grid[getHexKey(tQ, tR)];
             const lvl = h ? h.currentLevel : '?';
-            // Format: (q,r) L:level
             targetStr = `(${tQ},${tR}) L:${lvl}`;
         }
     }
@@ -101,38 +96,30 @@ export class AiSystem implements System {
         target: targetStr
     };
 
-    // 1. Short-term circular buffer for UI Debugger
     state.botActivityLog.unshift(logEntry);
-    // Limit is enforced in store.ts GC now, but keeping a small safety cap here is harmless
     if (state.botActivityLog.length > 60) state.botActivityLog.pop();
-
-    // 2. Full History for File Export
     state.fullBotHistory.push(logEntry);
 
+    // ENQUEUE ACTION instead of applying immediately
     if (aiResult.action && aiResult.action.type !== 'WAIT') {
-        // The `state` object passed here is the mutable copy from the GameEngine tick.
-        const res = this.actionProcessor.applyAction(state, index, bot.id, aiResult.action);
-        if (!res.ok) {
-            events.push({
-                type: 'ERROR',
-                message: `Bot ${bot.id} action failed: ${res.reason}`,
-                timestamp: now
-            });
-            // If action failed, maybe reset memory/goal to force rethink next tick?
-            if (bot.memory) {
-                bot.memory.lastActionFailed = true;
-                bot.memory.stuckCounter = (bot.memory.stuckCounter || 0) + 1;
+        this.transactionQueue.enqueue({
+            actorId: bot.id,
+            action: aiResult.action,
+            priority: 50, // Standard Bot Priority
+            timestamp: now
+        });
+        
+        // Speculatively reserve the target to prevent other bots in same tick (if we processed >1) from targeting it
+        if (aiResult.action.type === 'MOVE') {
+            const target = aiResult.action.path[aiResult.action.path.length - 1];
+            if (target) {
+                tickReservedKeys.add(getHexKey(target.q, target.r));
             }
-        } else {
-            if (aiResult.action.type === 'MOVE') {
-                const target = aiResult.action.path[aiResult.action.path.length - 1];
-                if (target) {
-                    tickReservedKeys.add(getHexKey(target.q, target.r));
-                }
-            }
-            // Reset stuck counter on success
-            if (bot.memory) bot.memory.stuckCounter = 0;
         }
+    } else {
+        // If waiting, just update time
+        // Reset stuck counter if action succeeded is handled by failure check in next tick or processor feedback
+        // Here we just update timestamp if no action was queued
     }
     
     // Update individual timestamp

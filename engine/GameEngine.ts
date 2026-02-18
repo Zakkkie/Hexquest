@@ -1,5 +1,5 @@
 
-import { GameState, GameAction, GameEvent, ValidationResult, SessionState, EntityState, LeaderboardEntry, Hex } from '../types';
+import { GameAction, GameEvent, ValidationResult, SessionState, EntityState, LeaderboardEntry, Hex } from '../types';
 import { WorldIndex } from './WorldIndex';
 import { System } from './systems/System';
 import { MovementSystem } from './systems/MovementSystem';
@@ -8,6 +8,7 @@ import { AiSystem } from './systems/AiSystem';
 import { VictorySystem } from './systems/VictorySystem';
 import { EntropySystem } from './systems/EntropySystem';
 import { ActionProcessor } from './ActionProcessor';
+import { TransactionQueue } from '../services/transactionQueue';
 import { SAFETY_CONFIG } from '../rules/config';
 import { GameEventFactory } from './events';
 
@@ -21,22 +22,21 @@ export class GameEngine {
   private _index: WorldIndex | null;
   private _systems: System[];
   private _actionProcessor: ActionProcessor | null;
+  private _transactionQueue: TransactionQueue;
 
   constructor(initialState: SessionState) {
-    // CRITICAL: Use object spread (shallow copy) for the top-level session state
-    // instead of JSON serialization to preserve function references in activeLevelConfig.
-    // Deep properties (grid, player, bots) will be cloned separately if modified by systems via Copy-On-Write.
     this._state = { ...initialState };
     this._state.stateVersion = this._state.stateVersion || 0;
     
     this._index = new WorldIndex(this._state!.grid, [this._state!.player, ...this._state!.bots]);
     this._actionProcessor = new ActionProcessor();
+    this._transactionQueue = new TransactionQueue();
     
     this._systems = [
       new GrowthSystem(),
-      new AiSystem(this._actionProcessor!),
+      new AiSystem(this._transactionQueue), // Pass Queue to AI
       new MovementSystem(),
-      new EntropySystem(), // Integrated
+      new EntropySystem(), 
       new VictorySystem()
     ];
   }
@@ -45,11 +45,6 @@ export class GameEngine {
     return this._state;
   }
 
-  /**
-   * Safe Grid Update Helper
-   * Ensures the grid container is copied (Copy-On-Write) before applying updates.
-   * This preserves the immutability of the previous state while batching updates efficiently.
-   */
   public static safeGridUpdate(state: SessionState, updates: Record<string, Partial<Hex>>) {
       const keys = Object.keys(updates);
       if (keys.length === 0) return;
@@ -69,42 +64,25 @@ export class GameEngine {
   private cloneState(source: SessionState): SessionState {
     return {
       ...source,
-      // COPY-ON-WRITE:
-      // We copy the reference to the grid object. Systems handle grid updates via COW.
       grid: source.grid, 
-      
-      player: { ...source.player }, // Shallow copy
-      
-      // OPTIMIZATION: Shallow copy bots array.
+      player: { ...source.player }, 
       bots: [...source.bots], 
-      
-      // Shallow copy logs to prevent mutation of history
       messageLog: [...source.messageLog], 
       botActivityLog: [...source.botActivityLog],
-      
-      // OPTIMIZATION: Do not spread huge history arrays. Reference copy is fine for append-only logs.
       fullBotHistory: source.fullBotHistory,
-      
       growingBotIds: [...source.growingBotIds],
-      
       telemetry: source.telemetry ? [...source.telemetry] : undefined,
-      
-      // Shallow copy effects
       effects: [...source.effects],
-      
-      // Copy Entropy State
       entropy: { ...source.entropy },
-
-      // Preserve activeLevelConfig reference (it contains functions)
       activeLevelConfig: source.activeLevelConfig,
-      
-      // Pending Events
       outgoingEvents: [...(source.outgoingEvents || [])]
     };
   }
 
   public setPlayerIntent(isGrowing: boolean, intent: 'RECOVER' | 'UPGRADE' | 'DIG' | null) {
       if (!this._state) return;
+      // Note: Direct state mutation here can still theoretically race with processTick cloning.
+      // Ideally this should also be an action in the queue, but for UI toggles it's often acceptable.
       const nextState = this.cloneState(this._state);
       nextState.isPlayerGrowing = isGrowing;
       nextState.playerGrowthIntent = intent;
@@ -122,25 +100,37 @@ export class GameEngine {
 
   public applyAction(actorId: string, action: GameAction): ValidationResult {
     if (!this._state || !this._index || !this._actionProcessor) return { ok: false, reason: "Engine Destroyed" };
-    const nextState = this.cloneState(this._state);
-    this._index.syncState(nextState);
-    const result = this._actionProcessor.applyAction(nextState, this._index, actorId, action);
-    if (result.ok) {
-        nextState.stateVersion++;
-        this._state = nextState;
-    }
-    return result;
+    
+    // 1. Optimistic Validation
+    // Validate against current state immediately to provide instant feedback to UI (e.g. "Not enough coins")
+    // This doesn't catch conflicts that might occur when the action is actually processed (rare for player),
+    // but ensures the UI doesn't queue invalid actions.
+    const validation = this._actionProcessor.validateAction(this._state, this._index, actorId, action);
+    if (!validation.ok) return validation;
+
+    // 2. Enqueue for Serialization
+    // Player actions get high priority (100) to be processed before Bot actions (50) in the same tick.
+    const priority = actorId === this._state.player.id ? 100 : 50;
+    this._transactionQueue.enqueue({
+        actorId,
+        action,
+        priority,
+        timestamp: Date.now()
+    });
+
+    // 3. Return Success
+    // The actual state update will happen asynchronously during processTick().
+    return { ok: true };
   }
   
-  public processTick(): TickResult | null {
+  public async processTick(): Promise<TickResult | null> {
     if (!this._state || !this._index) return null;
 
     const nextState = this.cloneState(this._state);
-    this._index.syncGrid(nextState.grid); // Still sync grid structure for pathfinding safety
+    this._index.syncGrid(nextState.grid); 
 
-    // Collect Events: Start with any queued outgoing events from ActionProcessor
     const tickEvents: GameEvent[] = [...nextState.outgoingEvents];
-    nextState.outgoingEvents = []; // Clear queue
+    nextState.outgoingEvents = []; 
 
     // 1. Cleanup old effects
     const now = Date.now();
@@ -149,14 +139,50 @@ export class GameEngine {
         nextState.effects = activeEffects;
     }
 
-    // 2. Update Systems
+    // 2. Update Systems (AI will populate TransactionQueue)
     for (const system of this._systems) {
         system.update(nextState, this._index, tickEvents);
     }
 
+    // 3. Process Transaction Queue (Async)
+    // This serializes all actions generated this tick (Player inputs + AI decisions)
+    if (!this._transactionQueue.isEmpty()) {
+        // Sync index before processing queue to ensure validity
+        this._index.syncState(nextState);
+        
+        await this._transactionQueue.processQueue((actorId, action) => {
+            // Apply action to the pending nextState
+            // Note: actionProcessor updates nextState in place
+            const result = this._actionProcessor!.applyAction(nextState, this._index!, actorId, action);
+            
+            if (result.ok) {
+                // Incremental Index Sync for Movement
+                // If an actor moved, we must update the index immediately so subsequent actions in the same tick 
+                // (e.g. another bot trying to move to the same spot) see the new occupancy.
+                if (action.type === 'MOVE') {
+                    const actor = actorId === nextState.player.id ? nextState.player : nextState.bots.find(b => b.id === actorId);
+                    if (actor) {
+                        // Ideally we'd know the old position to do a cheap update, but full sync is safer here given the complexity
+                        // Optimization: movementSystem handles index updates during its run, but that's separate.
+                        // Here we are applying the action logic which modifies q/r.
+                        // To be safe and collision-proof:
+                        this._index!.syncState(nextState);
+                    }
+                }
+            } else {
+                tickEvents.push({
+                    type: 'ERROR',
+                    message: `Action Failed: ${result.reason}`,
+                    entityId: actorId,
+                    timestamp: Date.now()
+                });
+            }
+            return result;
+        });
+    }
+
     this.enforceSafetyLimits(nextState);
 
-    // CRITICAL FIX: Increment currentTurn so Round-Robin AI scheduling works
     nextState.currentTurn++; 
     nextState.stateVersion++;
     this._state = nextState;
@@ -177,8 +203,6 @@ export class GameEngine {
       if (state.telemetry && state.telemetry.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
           state.telemetry = state.telemetry.slice(state.telemetry.length - SAFETY_CONFIG.MAX_LOG_SIZE);
       }
-      // Note: fullBotHistory is intentionally NOT limited here to allow full session export.
-      // In a real long-running game, we would paginate or stream this, but for a session < 1 hour, it fits in RAM.
 
       const entities = [state.player, ...state.bots];
       for (const ent of entities) {
@@ -189,10 +213,16 @@ export class GameEngine {
       }
   }
 
-  public destroy() {
-    this._systems = [];
+  public dispose() {
+    this._index?.dispose();
     this._index = null;
+    this._systems = [];
     this._state = null;
     this._actionProcessor = null;
+    this._transactionQueue.clear();
+  }
+
+  public destroy() {
+    this.dispose();
   }
 }

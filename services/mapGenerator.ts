@@ -1,5 +1,5 @@
 
-import { Hex } from '../types';
+import { Hex, HexCoord } from '../types';
 import { LevelConfig } from '../campaign/types';
 import { getHexKey, getNeighbors } from './hexUtils';
 import { GAME_CONFIG } from '../rules/config';
@@ -79,8 +79,81 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     };
 };
 
+/**
+ * Checks if a monument has enough low-ground neighbors to build a staircase up to it.
+ * Condition: At least 3 neighbors must be <= Monument Level.
+ */
+export const validateMonumentAccessibility = (
+  monument: HexCoord,
+  grid: Record<string, Hex>
+): boolean => {
+  const hexKey = getHexKey(monument.q, monument.r);
+  const monumentHex = grid[hexKey];
+  
+  if (!monumentHex) return false;
+  
+  const monumentHeight = monumentHex.maxLevel; // Check Max Level
+  const neighbors = getNeighbors(monument.q, monument.r);
+  
+  let accessibleNeighbors = 0;
+  for (const neighbor of neighbors) {
+    const key = getHexKey(neighbor.q, neighbor.r);
+    const hex = grid[key];
+    
+    // Neighbor must exist, not be void, and be accessible (lower or equal)
+    if (hex && hex.structureType !== 'VOID' && hex.maxLevel <= monumentHeight) {
+      accessibleNeighbors++;
+    }
+  }
+  
+  return accessibleNeighbors >= 3; 
+};
+
+/**
+ * Modifies the grid to ensure the monument is reachable.
+ * If validation fails, it forces 4 neighbors to be (MonumentLevel - 1) or lower.
+ */
+export const ensureMonumentAccessibility = (
+  monument: HexCoord,
+  grid: Record<string, Hex>
+): Record<string, Hex> => {
+  if (validateMonumentAccessibility(monument, grid)) {
+    return grid;
+  }
+  
+  console.warn(`[MapGen] Fixing Monument Accessibility at ${monument.q},${monument.r}`);
+
+  const neighbors = getNeighbors(monument.q, monument.r);
+  const updatedGrid = { ...grid };
+  
+  // Force 4 neighbors to be accessible
+  const neighborsToFix = neighbors.slice(0, 4);
+  const monumentHex = grid[getHexKey(monument.q, monument.r)];
+  const targetMaxLevel = monumentHex ? Math.max(0, monumentHex.maxLevel - 1) : 0;
+
+  for (const neighbor of neighborsToFix) {
+    const key = getHexKey(neighbor.q, neighbor.r);
+    const hex = updatedGrid[key];
+    
+    if (hex && hex.structureType !== 'VOID') {
+       // Lower the level if it's higher than target
+       if (hex.maxLevel > targetMaxLevel) {
+           updatedGrid[key] = {
+             ...hex,
+             currentLevel: targetMaxLevel,
+             maxLevel: targetMaxLevel,
+             // Add durability if we lowered it to L1
+             durability: targetMaxLevel === 1 ? GAME_CONFIG.L1_HEX_MAX_DURABILITY : undefined
+           };
+       }
+    }
+  }
+  
+  return updatedGrid;
+};
+
 export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTIC' = 'FLAT'): Record<string, Hex> => {
-  const initialGrid: Record<string, Hex> = {};
+  let initialGrid: Record<string, Hex> = {};
   
   if (levelConfig && levelConfig.mapConfig.customLayout) {
       // --- CUSTOM FIXED LAYOUT (Campaign Puzzles) ---
@@ -213,6 +286,13 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
           id: getHexKey(0,0), q:0, r:0, 
           currentLevel: 0, maxLevel: 0, progress: 0, revealed: true 
       };
+  }
+
+  // --- FINAL PASS: ACCESSIBILITY CHECK ---
+  // Ensure any generated monuments are reachable
+  const monuments = Object.values(initialGrid).filter(h => h.structureType === 'MONUMENT');
+  for (const m of monuments) {
+      initialGrid = ensureMonumentAccessibility({ q: m.q, r: m.r }, initialGrid);
   }
 
   return initialGrid;

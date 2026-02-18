@@ -12,6 +12,7 @@ import { calculateMovementCost } from './rules/movement.ts';
 import { generateMap } from './services/mapGenerator.ts';
 import { TEXT } from './services/i18n.ts';
 import { generateMonumentRecipe } from './rules/items.ts';
+import { effectPool } from './services/effectPool.ts';
 
 // --- CONSTANTS & HELPERS ---
 
@@ -68,7 +69,7 @@ interface GameStore extends GameState {
   downloadSessionLog: () => void;
   
   // Gameplay Actions
-  tick: () => void;
+  tick: () => Promise<void>;
   togglePlayerGrowth: (intent?: 'RECOVER' | 'UPGRADE' | 'DIG') => void;
   rechargeMove: () => void;
   movePlayer: (q: number, r: number) => void;
@@ -92,6 +93,7 @@ interface GameStore extends GameState {
 
 let engine: GameEngine | null = null;
 let tickCount = 0;
+let isProcessingTick = false; // Guard for async tick
 
 // --- SESSION FACTORY ---
 
@@ -261,7 +263,7 @@ export const useGameStore = create<GameStore>()(
       isMusicMuted: false,
       isSfxMuted: false,
       session: null,
-      language: 'RU', // CHANGED: Default to RU
+      language: 'RU', 
       voidDialogTarget: null,
       monumentDialogState: { isOpen: false, slots: [null, null, null] },
       lastVisualEvent: undefined,
@@ -374,7 +376,7 @@ export const useGameStore = create<GameStore>()(
          if (!engine || !engine.state) return;
          const history = engine.state.fullBotHistory;
          if (!history || history.length === 0) {
-             get().showToast("No history recorded.", "info");
+             get().showToast(TEXT[get().language].TOAST.NO_HISTORY, "info");
              return;
          }
          const lines = history.map(e => `${new Date(e.timestamp).toISOString().split('T')[1]} | ${e.botId} | ${e.action} | ${e.target} | ${e.reason}`);
@@ -387,7 +389,7 @@ export const useGameStore = create<GameStore>()(
          a.download = `session_${Date.now()}.txt`;
          a.click();
          URL.revokeObjectURL(url);
-         get().showToast("Log Downloaded", "success");
+         get().showToast(TEXT[get().language].TOAST.LOG_DOWNLOADED, "success");
       },
 
       // --- ACTIONS ---
@@ -415,7 +417,7 @@ export const useGameStore = create<GameStore>()(
             set({ session: engine.state });
           } else {
             audioService.play('ERROR');
-            set({ toast: { message: res.reason || "Recharge Failed", type: 'error', timestamp: Date.now() } });
+            set({ toast: { message: res.reason || TEXT[get().language].TOAST.RECHARGE_FAILED, type: 'error', timestamp: Date.now() } });
           }
       },
 
@@ -465,7 +467,7 @@ export const useGameStore = create<GameStore>()(
           // MOVEMENT LOGIC
           if (targetHex && targetHex.structureType !== 'VOID' && targetHex.maxLevel > session.player.playerLevel) {
               audioService.play('ERROR');
-              set({ toast: { message: TEXT[get().language].HUD.ERROR_RANK || "RANK TOO LOW", type: 'error', timestamp: Date.now() } });
+              set({ toast: { message: TEXT[get().language].HUD.ERROR_RANK, type: 'error', timestamp: Date.now() } });
               return;
           }
 
@@ -476,11 +478,11 @@ export const useGameStore = create<GameStore>()(
             // Void check for far clicks
             if (targetHex?.structureType === 'VOID') {
                  audioService.play('ERROR');
-                 set({ toast: { message: "Too far to stabilize", type: 'error', timestamp: Date.now() } });
+                 set({ toast: { message: TEXT[get().language].TOAST.TOO_FAR_VOID, type: 'error', timestamp: Date.now() } });
                  return;
             }
             audioService.play('ERROR');
-            set({ toast: { message: "Path Blocked / Invalid", type: 'error', timestamp: Date.now() } });
+            set({ toast: { message: TEXT[get().language].TOAST.PATH_BLOCKED, type: 'error', timestamp: Date.now() } });
             return;
           }
 
@@ -488,7 +490,8 @@ export const useGameStore = create<GameStore>()(
 
           if (!costResult.canAfford) {
             audioService.play('ERROR');
-            set({ toast: { message: costResult.reason || `Need ${costResult.deductCoins} credits`, type: 'error', timestamp: Date.now() } });
+            const msg = costResult.reason || TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', costResult.deductCoins.toString());
+            set({ toast: { message: msg, type: 'error', timestamp: Date.now() } });
             return;
           }
           
@@ -496,7 +499,7 @@ export const useGameStore = create<GameStore>()(
             audioService.play('WARNING');
             set({ 
                  pendingConfirmation: { type: 'MOVE_WITH_COINS', data: { path, costMoves: costResult.deductMoves, costCoins: costResult.deductCoins } },
-                 toast: { message: `Click again to confirm (${costResult.deductCoins}cr)`, type: 'info', timestamp: Date.now() } 
+                 toast: { message: TEXT[get().language].TOAST.CONFIRM_MOVE.replace('{0}', costResult.deductCoins.toString()), type: 'info', timestamp: Date.now() } 
             });
             return;
           }
@@ -507,7 +510,7 @@ export const useGameStore = create<GameStore>()(
             set({ session: engine.state });
           } else {
             audioService.play('ERROR');
-            set({ toast: { message: res.reason || "Error", type: 'error', timestamp: Date.now() } });
+            set({ toast: { message: res.reason || TEXT[get().language].TOAST.GENERIC_ERROR, type: 'error', timestamp: Date.now() } });
           }
       },
 
@@ -520,7 +523,7 @@ export const useGameStore = create<GameStore>()(
             set({ session: engine.state, pendingConfirmation: null });
           } else {
             audioService.play('ERROR');
-            set({ toast: { message: res.reason || "Error", type: 'error', timestamp: Date.now() }, pendingConfirmation: null });
+            set({ toast: { message: res.reason || TEXT[get().language].TOAST.GENERIC_ERROR, type: 'error', timestamp: Date.now() }, pendingConfirmation: null });
           }
       },
 
@@ -549,7 +552,7 @@ export const useGameStore = create<GameStore>()(
               set({ session: engine.state, voidDialogTarget: null });
           } else {
               audioService.play('ERROR');
-              set({ toast: { message: res.reason || "Restoration Error", type: 'error', timestamp: Date.now() } });
+              set({ toast: { message: res.reason || TEXT[get().language].TOAST.RESTORE_ERROR, type: 'error', timestamp: Date.now() } });
           }
       },
 
@@ -575,7 +578,7 @@ export const useGameStore = create<GameStore>()(
 
           if (requirements[slotIndex] !== 'ANY' && item.baseId !== requirements[slotIndex]) {
               audioService.play('ERROR');
-              state.showToast("Wrong item type for this slot!", "error");
+              state.showToast(TEXT[state.language].TOAST.WRONG_ITEM, "error");
               return;
           }
 
@@ -604,7 +607,7 @@ export const useGameStore = create<GameStore>()(
           const items = monumentDialogState.slots.filter((i): i is Item => i !== null);
           if (items.length !== reqCount) {
               audioService.play('ERROR');
-              get().showToast("All slots must be filled!", 'error');
+              get().showToast(TEXT[get().language].TOAST.SLOTS_FULL, 'error');
               return;
           }
 
@@ -617,190 +620,196 @@ export const useGameStore = create<GameStore>()(
               set({ monumentDialogState: { isOpen: false, slots: Array(reqCount).fill(null) } });
           } else {
               audioService.play('ERROR');
-              get().showToast(res.reason || "Activation Failed", 'error');
+              get().showToast(res.reason || TEXT[get().language].TOAST.ACTIVATION_FAILED, 'error');
           }
       },
 
       checkTutorialCamera: () => {}, 
 
       // --- GAME LOOP ---
-      tick: () => {
-          if (!engine || !engine.state) return;
+      tick: async () => {
+          if (!engine || !engine.state || isProcessingTick) return;
           if (engine.state.gameStatus !== 'PLAYING' && engine.state.gameStatus !== 'VICTORY') return;
           
+          isProcessingTick = true;
           const prevState = get().session;
-          const result = engine.processTick();
-          if (!result || !result.state) return;
+          
+          try {
+              const result = await engine.processTick();
+              if (!result || !result.state) return;
 
-          tickCount++;
-          const now = Date.now();
+              tickCount++;
+              const now = Date.now();
 
-          // OPTIMIZED GC
-          if (tickCount % 50 === 0) {
-              if (result.state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.messageLog = result.state.messageLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
-              if (result.state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.botActivityLog = result.state.botActivityLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
-              if (result.state.fullBotHistory.length > SAFETY_CONFIG.MAX_HISTORY_SIZE) result.state.fullBotHistory = result.state.fullBotHistory.slice(result.state.fullBotHistory.length - SAFETY_CONFIG.MAX_HISTORY_SIZE);
-              result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
-          }
+              // OPTIMIZED GC
+              if (tickCount % 50 === 0) {
+                  if (result.state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.messageLog = result.state.messageLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
+                  if (result.state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.botActivityLog = result.state.botActivityLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
+                  if (result.state.fullBotHistory.length > SAFETY_CONFIG.MAX_HISTORY_SIZE) result.state.fullBotHistory = result.state.fullBotHistory.slice(result.state.fullBotHistory.length - SAFETY_CONFIG.MAX_HISTORY_SIZE);
+                  result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
+              }
 
-          if (result.events.some(e => e.type === 'MONUMENT_REACHED')) {
-              get().openMonumentDialog();
-          }
+              if (result.events.some(e => e.type === 'MONUMENT_REACHED')) {
+                  get().openMonumentDialog();
+              }
 
-          if (result.events.length > 0) {
-              const lang = get().language;
-              result.events.forEach(event => {
-                const isPlayer = event.entityId === result.state.player.id;
-                
-                if (isPlayer || !event.entityId) {
-                    const sound = EVENT_SOUND_MAP[event.type];
-                    if (sound) audioService.play(sound as any);
-                    if (event.type === 'ENTROPY_SHIFT') {
-                        set({ lastVisualEvent: { type: 'ENTROPY_SHIFT', time: now } });
+              if (result.events.length > 0) {
+                  const lang = get().language;
+                  
+                  const newEffectsData: Omit<FloatingText, 'id' | 'startTime'>[] = [];
+
+                  result.events.forEach(event => {
+                    const isPlayer = event.entityId === result.state.player.id;
+                    
+                    if (isPlayer || !event.entityId) {
+                        const sound = EVENT_SOUND_MAP[event.type];
+                        if (sound) audioService.play(sound as any);
+                        if (event.type === 'ENTROPY_SHIFT') {
+                            set({ lastVisualEvent: { type: 'ENTROPY_SHIFT', time: now } });
+                        }
                     }
-                }
 
-                if (event.type === 'VICTORY') {
-                    const currentId = engine?.state?.activeLevelConfig?.id;
-                    if (currentId) {
-                        const idx = CAMPAIGN_LEVELS.findIndex(l => l.id === currentId);
-                        if (idx !== -1 && idx >= get().campaignProgress) {
-                            const nextP = Math.min(CAMPAIGN_LEVELS.length, idx + 1);
-                            if (nextP > get().campaignProgress) {
-                                set({ campaignProgress: nextP });
+                    if (event.type === 'VICTORY') {
+                        const currentId = engine?.state?.activeLevelConfig?.id;
+                        if (currentId) {
+                            const idx = CAMPAIGN_LEVELS.findIndex(l => l.id === currentId);
+                            if (idx !== -1 && idx >= get().campaignProgress) {
+                                const nextP = Math.min(CAMPAIGN_LEVELS.length, idx + 1);
+                                if (nextP > get().campaignProgress) {
+                                    set({ campaignProgress: nextP });
+                                }
                             }
                         }
                     }
-                }
 
-                if (event.type === 'LEADERBOARD_UPDATE' && event.data?.entry) {
-                    const entry = event.data.entry as LeaderboardEntry;
-                    const user = get().user;
-                    if (user) {
-                        entry.nickname = user.nickname;
-                        entry.avatarColor = user.avatarColor;
-                        entry.headIndex = user.headIndex;
-                        entry.bodyIndex = user.bodyIndex;
-                    }
-                    const currentLB = [...get().leaderboard];
-                    const existingIdx = currentLB.findIndex(e => e.nickname === entry.nickname && e.difficulty === entry.difficulty);
-                    if (existingIdx !== -1) {
-                        if (entry.maxLevel > currentLB[existingIdx].maxLevel || (entry.maxLevel === currentLB[existingIdx].maxLevel && entry.maxCoins > currentLB[existingIdx].maxCoins)) {
-                            currentLB[existingIdx] = entry;
+                    if (event.type === 'LEADERBOARD_UPDATE' && event.data?.entry) {
+                        const entry = event.data.entry as LeaderboardEntry;
+                        const user = get().user;
+                        if (user) {
+                            entry.nickname = user.nickname;
+                            entry.avatarColor = user.avatarColor;
+                            entry.headIndex = user.headIndex;
+                            entry.bodyIndex = user.bodyIndex;
                         }
-                    } else {
-                        currentLB.push(entry);
+                        const currentLB = [...get().leaderboard];
+                        const existingIdx = currentLB.findIndex(e => e.nickname === entry.nickname && e.difficulty === entry.difficulty);
+                        if (existingIdx !== -1) {
+                            if (entry.maxLevel > currentLB[existingIdx].maxLevel || (entry.maxLevel === currentLB[existingIdx].maxLevel && entry.maxCoins > currentLB[existingIdx].maxCoins)) {
+                                currentLB[existingIdx] = entry;
+                            }
+                        } else {
+                            currentLB.push(entry);
+                        }
+                        currentLB.sort((a, b) => b.maxLevel !== a.maxLevel ? b.maxLevel - a.maxLevel : b.maxCoins - a.maxCoins);
+                        const sliced = currentLB.slice(0, 100);
+                        set({ leaderboard: sliced });
                     }
-                    currentLB.sort((a, b) => b.maxLevel !== a.maxLevel ? b.maxLevel - a.maxLevel : b.maxCoins - a.maxCoins);
-                    const sliced = currentLB.slice(0, 100);
-                    set({ leaderboard: sliced });
-                }
 
-                // Floating Text
-                if (event.entityId || event.type === 'HEX_COLLAPSE') {
-                     const entity = isPlayer ? result.state.player : result.state.bots.find(b => b.id === event.entityId);
-                     const targetQ = event.data?.q !== undefined ? Number(event.data.q) : (entity?.q || 0);
-                     const targetR = event.data?.r !== undefined ? Number(event.data.r) : (entity?.r || 0);
+                    // Floating Text
+                    if (event.entityId || event.type === 'HEX_COLLAPSE') {
+                         const entity = isPlayer ? result.state.player : result.state.bots.find(b => b.id === event.entityId);
+                         const targetQ = event.data?.q !== undefined ? Number(event.data.q) : (entity?.q || 0);
+                         const targetR = event.data?.r !== undefined ? Number(event.data.r) : (entity?.r || 0);
 
-                     let text = '', color = '#fff', icon: FloatingText['icon'] = undefined;
+                         let text = '', color = '#fff', icon: FloatingText['icon'] = undefined;
 
-                     switch (event.type) {
-                            case 'LEVEL_UP': text = lang === 'RU' ? "+1 УР" : "+1 LVL"; color = isPlayer ? "#818cf8" : "#f87171"; icon = 'UP'; break;
-                            case 'SECTOR_ACQUIRED': text = lang === 'RU' ? "+1 УР" : "+1 LVL"; color = isPlayer ? "#818cf8" : "#f87171"; icon = 'PLUS'; break;
-                            
-                            case 'SECTOR_EXCAVATED': {
-                                const mat = Number(event.data?.material || 0);
-                                const mvs = Number(event.data?.moves || 0);
+                         switch (event.type) {
+                                case 'LEVEL_UP': text = lang === 'RU' ? "+1 УР" : "+1 LVL"; color = isPlayer ? "#818cf8" : "#f87171"; icon = 'UP'; break;
+                                case 'SECTOR_ACQUIRED': text = lang === 'RU' ? "+1 УР" : "+1 LVL"; color = isPlayer ? "#818cf8" : "#f87171"; icon = 'PLUS'; break;
                                 
-                                if (mat > 0) {
-                                    result.state.effects.push({
-                                         id: `fx-mat-${now}-${Math.random()}`,
-                                         q: targetQ, r: targetR,
-                                         text: lang === 'RU' ? `+${mat} МАТ` : `+${mat} MAT`, 
-                                         color: "#34d399", 
-                                         icon: 'PICKAXE',
-                                         startTime: now, lifetime: 1200 
-                                    });
-                                }
-                                if (mvs > 0) {
-                                    result.state.effects.push({
-                                         id: `fx-mv-${now}-${Math.random()}`,
-                                         q: targetQ, r: targetR,
-                                         text: lang === 'RU' ? `+${mvs} ХОД` : `+${mvs} MOVE`, 
-                                         color: "#60a5fa", 
-                                         icon: 'FOOTPRINTS',
-                                         startTime: now + 50,
-                                         lifetime: 1200 
-                                    });
-                                }
-                                text = ''; // Handled above
-                                break;
-                            }
-
-                            case 'RECOVERY_USED': {
-                                if (isPlayer) {
-                                    if (event.data?.customText) {
-                                        text = String(event.data.customText); color = String(event.data.customColor || '#fbbf24'); icon = 'GEM';
-                                    } else {
-                                        const c = Number(event.data?.coins || 0);
-                                        const m = Number(event.data?.moves || 0);
-                                        
-                                        if (c > 0) {
-                                            result.state.effects.push({
-                                                id: `fx-coin-${now}-${Math.random()}`,
-                                                q: targetQ, r: targetR,
-                                                text: lang === 'RU' ? `+${c} МОН` : `+${c} COIN`,
-                                                color: "#fbbf24",
-                                                icon: 'COIN',
-                                                startTime: now, lifetime: 1200
-                                            });
-                                        }
-                                        
-                                        if (m > 0) {
-                                            result.state.effects.push({
-                                                id: `fx-rec-mv-${now}-${Math.random()}`,
-                                                q: targetQ, r: targetR,
-                                                text: lang === 'RU' ? `+${m} ХОД` : `+${m} MOVE`,
-                                                color: "#60a5fa",
-                                                icon: 'FOOTPRINTS',
-                                                startTime: now + 50,
-                                                lifetime: 1200
-                                            });
-                                        }
-                                        text = ''; // Handled above
+                                case 'SECTOR_EXCAVATED': {
+                                    const mat = Number(event.data?.material || 0);
+                                    const mvs = Number(event.data?.moves || 0);
+                                    
+                                    if (mat > 0) {
+                                        newEffectsData.push({
+                                             q: targetQ, r: targetR,
+                                             text: lang === 'RU' ? `+${mat} МАТ` : `+${mat} MAT`, 
+                                             color: "#34d399", 
+                                             icon: 'PICKAXE',
+                                             lifetime: 1200 
+                                        });
                                     }
+                                    if (mvs > 0) {
+                                        newEffectsData.push({
+                                             q: targetQ, r: targetR,
+                                             text: lang === 'RU' ? `+${mvs} ХОД` : `+${mvs} MOVE`, 
+                                             color: "#60a5fa", 
+                                             icon: 'FOOTPRINTS',
+                                             lifetime: 1200 
+                                        });
+                                    }
+                                    text = ''; // Handled above
+                                    break;
                                 }
-                                break;
-                            }
 
-                            case 'HEX_COLLAPSE': text = lang === 'RU' ? "-1 УР" : "-1 LVL"; color = "#ef4444"; icon = 'DOWN'; break;
-                            case 'ITEM_DROP': text = lang === 'RU' ? "ПРЕДМЕТ!" : "ITEM FOUND!"; color = "#fcd34d"; icon = 'GEM'; break;
-                     }
+                                case 'RECOVERY_USED': {
+                                    if (isPlayer) {
+                                        if (event.data?.customText) {
+                                            text = String(event.data.customText); color = String(event.data.customColor || '#fbbf24'); icon = 'GEM';
+                                        } else {
+                                            const c = Number(event.data?.coins || 0);
+                                            const m = Number(event.data?.moves || 0);
+                                            
+                                            if (c > 0) {
+                                                newEffectsData.push({
+                                                    q: targetQ, r: targetR,
+                                                    text: lang === 'RU' ? `+${c} МОН` : `+${c} COIN`,
+                                                    color: "#fbbf24",
+                                                    icon: 'COIN',
+                                                    lifetime: 1200
+                                                });
+                                            }
+                                            
+                                            if (m > 0) {
+                                                newEffectsData.push({
+                                                    q: targetQ, r: targetR,
+                                                    text: lang === 'RU' ? `+${m} ХОД` : `+${m} MOVE`,
+                                                    color: "#60a5fa",
+                                                    icon: 'FOOTPRINTS',
+                                                    lifetime: 1200
+                                                });
+                                            }
+                                            text = ''; // Handled above
+                                        }
+                                    }
+                                    break;
+                                }
 
-                     if (text) {
-                         result.state.effects.push({
-                             id: `fx-${now}-${Math.random()}`,
-                             q: targetQ, r: targetR,
-                             text, color, icon,
-                             startTime: now, lifetime: 1200 
-                         });
-                     }
-                }
-              });
-          }
+                                case 'HEX_COLLAPSE': text = lang === 'RU' ? "-1 УР" : "-1 LVL"; color = "#ef4444"; icon = 'DOWN'; break;
+                                case 'ITEM_DROP': text = lang === 'RU' ? "ПРЕДМЕТ!" : "ITEM FOUND!"; color = "#fcd34d"; icon = 'GEM'; break;
+                         }
 
-          let newToast = get().toast;
-          const error = result.events.find(e => e.type === 'ACTION_DENIED' || e.type === 'ERROR');
-          if (error && error.entityId === engine?.state?.player.id) {
-              newToast = { message: error.message || 'Error', type: 'error', timestamp: now };
-          }
+                         if (text) {
+                             newEffectsData.push({
+                                 q: targetQ, r: targetR,
+                                 text, color, icon,
+                                 lifetime: 1200 
+                             });
+                         }
+                    }
+                  });
+                  
+                  // Limit effects using EffectPool to prevent canvas overload
+                  result.state.effects = effectPool.addBatch(result.state.effects, newEffectsData);
+              }
 
-          const shouldRender = tickCount % 2 === 0; 
-          const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
-          const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
+              let newToast = get().toast;
+              const error = result.events.find(e => e.type === 'ACTION_DENIED' || e.type === 'ERROR');
+              if (error && error.entityId === engine?.state?.player.id) {
+                  // Fallback for engine errors that don't have explicit store UI handling
+                  newToast = { message: error.message || 'Error', type: 'error', timestamp: now };
+              }
 
-          if (shouldRender || hasCriticalEvents || playerStateChanged) {
-            set({ session: result.state, toast: newToast });
+              const shouldRender = tickCount % 2 === 0; 
+              const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
+              const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
+
+              if (shouldRender || hasCriticalEvents || playerStateChanged) {
+                set({ session: result.state, toast: newToast });
+              }
+          } finally {
+              isProcessingTick = false;
           }
       }
     }),

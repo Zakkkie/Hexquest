@@ -1,9 +1,8 @@
 
+import { textureCache } from './textureCache';
+
 export class TextureService {
   private static instance: TextureService;
-  // Cache key: level_variationIndex (e.g. "5_0", "5_1", etc.)
-  private cacheTop: Map<string, HTMLCanvasElement> = new Map();
-  private cacheSide: Map<number, HTMLCanvasElement> = new Map();
 
   private constructor() {}
 
@@ -18,25 +17,22 @@ export class TextureService {
     const clampedLevel = Math.max(-10, Math.min(10, level));
     const variationCount = 4; 
     const variationIndex = Math.abs((q * 73856093 ^ r * 19349663) % variationCount);
-    const key = `${clampedLevel}_${variationIndex}`;
-
-    if (this.cacheTop.has(key)) {
-      return this.cacheTop.get(key)!;
-    }
     
-    const canvas = this.generateTexture(clampedLevel, 'TOP', variationIndex);
-    this.cacheTop.set(key, canvas);
-    return canvas;
+    // Unique Key for Shared Cache
+    const key = `HEX_TOP_${clampedLevel}_${variationIndex}`;
+
+    return textureCache.getOrCreate(key, () => 
+        this.generateTexture(clampedLevel, 'TOP', variationIndex)
+    );
   }
 
   public getSideTexture(level: number): HTMLCanvasElement {
     const clampedLevel = Math.max(-10, Math.min(10, level));
-    if (this.cacheSide.has(clampedLevel)) {
-      return this.cacheSide.get(clampedLevel)!;
-    }
-    const canvas = this.generateTexture(clampedLevel, 'SIDE', 0);
-    this.cacheSide.set(clampedLevel, canvas);
-    return canvas;
+    const key = `HEX_SIDE_${clampedLevel}`;
+    
+    return textureCache.getOrCreate(key, () => 
+        this.generateTexture(clampedLevel, 'SIDE', 0)
+    );
   }
 
   private generateTexture(level: number, type: 'TOP' | 'SIDE', seed: number): HTMLCanvasElement {

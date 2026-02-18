@@ -1,9 +1,9 @@
 
 import { ItemRarity } from '../types';
+import { textureCache } from './textureCache';
 
 class ItemRenderer {
   private static instance: ItemRenderer;
-  private cache: Map<string, HTMLCanvasElement> = new Map();
 
   private readonly SIZE = 64;
   private readonly CENTER = 32;
@@ -18,34 +18,30 @@ class ItemRenderer {
   }
 
   public getItemImage(visualType: string, color: string, rarity: ItemRarity): HTMLCanvasElement {
-    const key = `${visualType}_${color}_${rarity}_v3`; // Bump version for new visuals
+    const key = `ITEM_${visualType}_${color}_${rarity}_v3`; 
     
-    if (this.cache.has(key)) {
-      return this.cache.get(key)!;
-    }
+    return textureCache.getOrCreate(key, () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.SIZE;
+        canvas.height = this.SIZE;
+        const ctx = canvas.getContext('2d')!;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = this.SIZE;
-    canvas.height = this.SIZE;
-    const ctx = canvas.getContext('2d')!;
+        // Background Glow / Aura based on rarity color
+        const gradient = ctx.createRadialGradient(this.CENTER, this.CENTER, 8, this.CENTER, this.CENTER, 30);
+        gradient.addColorStop(0, `${color}44`); // Transparent center
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, this.SIZE, this.SIZE);
 
-    // Background Glow / Aura based on rarity color
-    const gradient = ctx.createRadialGradient(this.CENTER, this.CENTER, 8, this.CENTER, this.CENTER, 30);
-    gradient.addColorStop(0, `${color}44`); // Transparent center
-    gradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, this.SIZE, this.SIZE);
-
-    ctx.translate(this.CENTER, this.CENTER);
-    
-    // Crisp lines
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    
-    this.drawItem(ctx, visualType, color);
-
-    this.cache.set(key, canvas);
-    return canvas;
+        ctx.translate(this.CENTER, this.CENTER);
+        
+        // Crisp lines
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        
+        this.drawItem(ctx, visualType, color);
+        return canvas;
+    });
   }
 
   private drawItem(ctx: CanvasRenderingContext2D, type: string, color: string) {

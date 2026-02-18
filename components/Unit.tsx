@@ -29,23 +29,25 @@ const getHexVisualHeight = (level: number) => {
     return (Math.abs(level) - 1) * 10;
 };
 
+// Helper for lerp
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
 const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hexLevel, headIndex = 0, bodyIndex = 0, onMoveComplete }) => {
   const groupRef = useRef<Konva.Group>(null);
   const visualGroupRef = useRef<Konva.Group>(null);
   const shadowRef = useRef<Konva.Ellipse>(null);
   const isFirstRender = useRef(true);
   
+  // Ref to track rotation inside the animation loop (for active movement)
+  const latestRotation = useRef(rotation);
+  useLayoutEffect(() => {
+      latestRotation.current = rotation;
+  });
+
   const user = useGameStore(state => state.user);
   
-  // Calculate destination (target) logic coordinates
-  const targetPos = useMemo(() => hexToPixel(q, r, rotation), [q, r, rotation]);
-  const targetZ = getHexVisualHeight(hexLevel);
-
-  // Store previous logical state to calculate deltas accurately
-  const prevLogic = useRef({ q, r, rotation, zOffset: targetZ });
-  const isPlayer = type === EntityType.PLAYER;
-  
   // Resolve Appearance
+  const isPlayer = type === EntityType.PLAYER;
   const finalColor = color || (isPlayer ? (user?.avatarColor || '#3b82f6') : '#ef4444');
   const finalHead = isPlayer ? (user?.headIndex ?? headIndex) : headIndex;
   const finalBody = isPlayer ? (user?.bodyIndex ?? bodyIndex) : bodyIndex;
@@ -55,147 +57,188 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
       return unitRenderer.getUnitImage(finalHead, finalBody, finalColor, type);
   }, [finalHead, finalBody, finalColor, type]);
 
-  // Movement & Jump Logic
+  // Animation State Ref
+  const animState = useRef({
+      startQ: q,
+      startR: r,
+      startTime: 0,
+      isMoving: false,
+      startLevel: hexLevel,
+      targetQ: q,
+      targetR: r,
+      targetLevel: hexLevel
+  });
+
+  // --- SYNC POSITIONING (ANTI-JITTER) ---
+  // This effect ensures that when the camera rotates (rotation changes) OR coords change,
+  // the unit SNAPS to the correct position immediately in the React commit phase.
+  // This prevents the "lag" caused by waiting for the next animation frame.
   useLayoutEffect(() => {
-    const groupNode = groupRef.current;
-    const visualNode = visualGroupRef.current;
-    const shadowNode = shadowRef.current;
+      if (!groupRef.current || !visualGroupRef.current) return;
+      
+      // Only force position if NOT moving. If moving, the animation loop handles it.
+      if (!animState.current.isMoving) {
+          const { x, y } = hexToPixel(q, r, rotation);
+          const z = getHexVisualHeight(hexLevel);
+          
+          groupRef.current.position({ x, y });
+          visualGroupRef.current.y(z);
+          
+          // Reset shadow if needed (ensure it's visible after a jump)
+          if (shadowRef.current) {
+              shadowRef.current.y(0);
+              shadowRef.current.scale({ x: 1, y: 1 });
+              shadowRef.current.opacity(0.4);
+          }
+      }
+  }, [q, r, hexLevel, rotation]);
 
-    if (!groupNode || !visualNode) return;
+  // --- MOVEMENT ANIMATION LOOP ---
+  useLayoutEffect(() => {
+      const groupNode = groupRef.current;
+      const visualNode = visualGroupRef.current;
+      const shadowNode = shadowRef.current;
+      
+      if (!groupNode || !visualNode) return;
 
-    // --- INITIALIZATION ---
-    if (isFirstRender.current) {
-        groupNode.position({ x: targetPos.x, y: targetPos.y });
-        visualNode.y(targetZ);
-        isFirstRender.current = false;
-        prevLogic.current = { q, r, rotation, zOffset: targetZ };
-        return;
-    }
+      // Initialize State on Mount
+      if (isFirstRender.current) {
+          animState.current = {
+              startQ: q,
+              startR: r,
+              startTime: 0,
+              isMoving: false,
+              startLevel: hexLevel,
+              targetQ: q,
+              targetR: r,
+              targetLevel: hexLevel
+          };
+          isFirstRender.current = false;
+      }
 
-    const prev = prevLogic.current;
-    const isMove = prev.q !== q || prev.r !== r;
-    const isLevelChange = prev.zOffset !== targetZ;
-    
-    // Update ref for next render *before* starting async animations
-    prevLogic.current = { q, r, rotation, zOffset: targetZ };
+      // Detect Movement Instruction
+      const hasPosChanged = q !== animState.current.targetQ || r !== animState.current.targetR;
+      const hasLevelChanged = hexLevel !== animState.current.targetLevel;
+      
+      let shouldStartAnim = false;
 
-    let activeTween: Konva.Tween | null = null;
-    let activeJumpAnim: Konva.Animation | null = null;
-    let activeLevelTween: Konva.Tween | null = null;
+      if (hasPosChanged) {
+          // New Move Instruction
+          animState.current.startQ = animState.current.targetQ;
+          animState.current.startR = animState.current.targetR;
+          animState.current.startLevel = animState.current.targetLevel;
+          
+          animState.current.targetQ = q;
+          animState.current.targetR = r;
+          animState.current.targetLevel = hexLevel;
+          
+          animState.current.startTime = Date.now();
+          animState.current.isMoving = true;
+          shouldStartAnim = true;
+      } else if (hasLevelChanged) {
+          // Level changed in place (elevator effect)
+          if (!animState.current.isMoving) {
+               animState.current.startLevel = animState.current.targetLevel;
+               animState.current.startTime = Date.now();
+               animState.current.isMoving = true;
+               animState.current.startQ = q;
+               animState.current.startR = r;
+               shouldStartAnim = true;
+          }
+          animState.current.targetLevel = hexLevel;
+      }
 
-    if (isMove) {
-        // --- MOVEMENT (JUMP) ANIMATION ---
-        
-        // 1. Move X/Y (Tween from CURRENT node position to TARGET)
-        activeTween = new Konva.Tween({
-            node: groupNode,
-            x: targetPos.x, 
-            y: targetPos.y, 
-            duration: GAME_CONFIG.MOVEMENT_ANIMATION_DURATION, 
-            easing: Konva.Easings.EaseInOut,
-            onFinish: () => {
-                if (onMoveComplete) onMoveComplete(targetPos.x, targetPos.y, finalColor);
-            }
-        });
-        activeTween.play();
+      const DURATION = GAME_CONFIG.MOVEMENT_ANIMATION_DURATION * 1000;
 
-        // 2. Elevation (Jump Arc)
-        const startGroundZ = prev.zOffset; 
-        const endGroundZ = targetZ;
-        
-        const duration = GAME_CONFIG.MOVEMENT_ANIMATION_DURATION * 1000;
-        const startTime = Date.now();
-        const jumpPeak = 60; // Jump height
+      const anim = new Konva.Animation((frame) => {
+          if (!groupNode || !visualNode) return;
 
-        activeJumpAnim = new Konva.Animation((frame) => {
-            if (!frame) return;
-            const now = Date.now();
-            const elapsed = now - startTime;
-            const progress = Math.min(1, elapsed / duration);
-            
-            if (!visualNode.getLayer()) {
-                activeJumpAnim?.stop();
-                return;
-            }
+          // Optimization: If logic says we stopped, stop the loop to save CPU and prevent conflict
+          if (!animState.current.isMoving) {
+              anim.stop();
+              return;
+          }
 
-            // Interpolate Ground Height (Where the feet would be if walking)
-            const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-            const currentGroundZ = startGroundZ + (endGroundZ - startGroundZ) * ease;
+          const now = Date.now();
+          const state = animState.current;
+          const currentRot = latestRotation.current; 
 
-            // Calculate Jump Arc (Parabola)
-            const arc = 4 * progress * (1 - progress); 
-            const jumpY = -arc * jumpPeak;
+          const targetPix = hexToPixel(state.targetQ, state.targetR, currentRot);
+          const targetZ = getHexVisualHeight(state.targetLevel);
 
-            // Apply absolute position
-            visualNode.y(currentGroundZ + jumpY);
+          const elapsed = now - state.startTime;
+          const progress = Math.min(1, elapsed / DURATION);
+          
+          // 1. Position Interpolation
+          const startPix = hexToPixel(state.startQ, state.startR, currentRot);
+          
+          const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+          
+          const curX = lerp(startPix.x, targetPix.x, ease);
+          const curY = lerp(startPix.y, targetPix.y, ease);
+          
+          groupNode.position({ x: curX, y: curY });
 
-            // Shadow logic (Stay on ground)
-            if (shadowNode) {
-                shadowNode.y(-jumpY); 
-                const shadowScale = 1 - (arc * 0.4);
-                shadowNode.scaleX(shadowScale);
-                shadowNode.scaleY(shadowScale);
-                shadowNode.opacity(0.4 - (arc * 0.2));
-            }
+          // 2. Height/Jump Interpolation
+          const startZ = getHexVisualHeight(state.startLevel);
+          const curGroundZ = lerp(startZ, targetZ, ease);
+          
+          // Jump Arc
+          const isLateralMove = state.startQ !== state.targetQ || state.startR !== state.targetR;
+          let jumpY = 0;
+          if (isLateralMove) {
+              const jumpPeak = 60;
+              const arc = 4 * progress * (1 - progress); 
+              jumpY = -arc * jumpPeak;
+          }
+          
+          visualNode.y(curGroundZ + jumpY);
 
-            if (progress >= 1) {
-                activeJumpAnim?.stop();
-                visualNode.y(endGroundZ);
-                if(shadowNode) {
-                    shadowNode.y(0);
-                    shadowNode.scale({x:1, y:1});
-                    shadowNode.opacity(0.4);
-                }
-            }
-        }, visualNode.getLayer());
+          // 3. Shadow Logic
+          if (shadowNode && isLateralMove) {
+              shadowNode.y(-jumpY); 
+              const shadowScale = 1 - (4 * progress * (1 - progress) * 0.4);
+              shadowNode.scaleX(shadowScale);
+              shadowNode.scaleY(shadowScale);
+              shadowNode.opacity(0.4 - (4 * progress * (1 - progress) * 0.2));
+          }
 
-        activeJumpAnim.start();
+          // End Check
+          if (progress >= 1) {
+              state.isMoving = false;
+              anim.stop(); // Stop loop immediately
+              
+              // Snap to final exact position
+              groupNode.position({ x: targetPix.x, y: targetPix.y });
+              visualNode.y(targetZ);
+              if (shadowNode) {
+                  shadowNode.y(0);
+                  shadowNode.scale({x:1, y:1});
+                  shadowNode.opacity(0.4);
+              }
+              
+              if (isLateralMove && onMoveComplete) {
+                  onMoveComplete(targetPix.x, targetPix.y, finalColor);
+              }
+              
+              // Update 'Start' to be 'Current' for next time
+              state.startQ = state.targetQ;
+              state.startR = state.targetR;
+              state.startLevel = state.targetLevel;
+          }
 
-    } else {
-        // --- STATIC STATE / ROTATION / ELEVATION CHANGE ---
-        
-        // Immediate Update for X/Y (e.g. Camera Rotation or Correction)
-        // Since rotation animates smoothly frame-by-frame in parent, instant update here appears smooth.
-        groupNode.position({ x: targetPos.x, y: targetPos.y });
-        
-        // Handle Level Change (Growing/Shrinking Hex under unit)
-        if (isLevelChange) {
-             activeLevelTween = new Konva.Tween({
-                 node: visualNode,
-                 y: targetZ,
-                 duration: 0.3,
-                 easing: Konva.Easings.EaseInOut
-             });
-             activeLevelTween.play();
-        } else {
-             // Snap to ensure exact position if no animation needed
-             // Only if not currently animating (could check tween existence, but safe to snap if static)
-             if (!activeLevelTween) visualNode.y(targetZ);
-        }
-        
-        // Reset Shadow if needed
-        if (shadowNode) {
-            shadowNode.y(0);
-            shadowNode.scale({x:1, y:1});
-            shadowNode.opacity(0.4);
-        }
-    }
+      }, groupNode.getLayer());
 
-    return () => {
-        if (activeTween) activeTween.destroy();
-        if (activeLevelTween) activeLevelTween.destroy();
-        if (activeJumpAnim) activeJumpAnim.stop();
-    };
+      if (shouldStartAnim) {
+          anim.start();
+      }
 
-  }, [q, r, rotation, targetZ, targetPos.x, targetPos.y, finalColor, onMoveComplete]);
+      return () => { anim.stop(); };
+
+  }, [q, r, hexLevel, finalColor, onMoveComplete]); 
 
   return (
     <Group>
-      {/* 
-         CRITICAL: Do NOT pass x={targetPos.x} y={targetPos.y} here.
-         Let the ref and imperative Konva calls handle positioning to avoid 
-         React reconciling styles before animations start (causing teleportation).
-      */}
       <Group ref={groupRef} listening={false}>
         <Group ref={visualGroupRef}>
             {/* Shadow */}

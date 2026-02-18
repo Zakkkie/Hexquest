@@ -1,5 +1,5 @@
 
-import { Hex, HexCoord } from '../types';
+import { Hex, HexCoord, Entity } from '../types';
 import { GAME_CONFIG, getLevelConfig, SAFETY_CONFIG } from '../rules/config';
 
 export const getHexKey = (q: number, r: number): string => `${q},${r}`;
@@ -99,6 +99,52 @@ export const calculateReward = (level: number) => {
 };
 
 export const getSecondsToGrow = (level: number) => getLevelConfig(level).growthTime;
+
+/**
+ * Calculates active multipliers and values based on entity status effects.
+ * Iterates through all active statuses to apply stacking effects correctly.
+ */
+export const getStatusModifiers = (actor: Entity): {
+  moveCostMultiplier: number;
+  fogRadius: number;
+  digRewardMultiplier: number;
+} => {
+  let moveCostMultiplier = 1.0;
+  let fogRadius = 2; // Default: Center + 2 Rings
+  let digRewardMultiplier = 1.0;
+
+  if (!actor || !actor.activeStatuses) return { moveCostMultiplier, fogRadius, digRewardMultiplier };
+
+  const now = Date.now();
+  let hasTunnelVision = false;
+
+  for (const status of actor.activeStatuses) {
+      if (status.expiresAt && status.expiresAt <= now) continue;
+
+      switch (status.type) {
+          case 'STATUS_FATIGUE':
+              moveCostMultiplier *= 2.0;
+              break;
+          case 'STATUS_GOLD_RUSH':
+              digRewardMultiplier *= 2.0;
+              break;
+          case 'STATUS_SCANNER_BUFF':
+              fogRadius += 2; // Stacks with multiple scanners
+              break;
+          case 'STATUS_TUNNEL_VISION':
+              hasTunnelVision = true;
+              break;
+          // Add other status effects here as needed
+      }
+  }
+
+  // Tunnel Vision overrides all scanner buffs
+  if (hasTunnelVision) {
+      fogRadius = 0; // Only current hex visible (Center only)
+  }
+
+  return { moveCostMultiplier, fogRadius, digRewardMultiplier };
+};
 
 /**
  * Min-Heap Priority Queue implementation for O(log n) retrievals

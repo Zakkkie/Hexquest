@@ -2,9 +2,9 @@
 import { System } from './System';
 import { GameState, GameEvent, EntityState, Entity, EntityType, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
-import { getHexKey, getNeighbors } from '../../services/hexUtils';
+import { getHexKey, getNeighbors, getStatusModifiers } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';
-import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
+import { checkGrowthCondition, checkDigCondition, checkRecoveryCooldown, applyRecovery, getRecoveryReward } from '../../rules/growth';
 import { getLevelConfig, GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../../rules/config';
 import { rollForLoot, LOOT_COLORS } from '../../rules/loot';
 
@@ -46,8 +46,35 @@ export class GrowthSystem implements System {
     const hasUpgradeCmd = entity.movementQueue.length > 0 && entity.movementQueue[0].upgrade;
     const queuedIntent = hasUpgradeCmd ? entity.movementQueue[0].intent : null;
     const key = getHexKey(entity.q, entity.r);
-    const hex = state.grid[key];
     
+    // We use 'let' here so we can update the reference if we perform maintenance
+    let hex = state.grid[key];
+    const now = Date.now();
+    
+    // Safety check
+    if (!hex) {
+         if (hasUpgradeCmd) entity.movementQueue.shift();
+         entity.state = EntityState.IDLE;
+         return false;
+    }
+
+    // --- MAINTENANCE: HIGH LEVEL COOLDOWN RESET ---
+    // Ensure that if a cooldown has expired, the hex is visually and logically reset immediately,
+    // regardless of whether the player is interacting with it.
+    if (hex.maxLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
+        if (hex.cooldownEndTime && now >= hex.cooldownEndTime) {
+             const updatedHex = {
+                 ...hex,
+                 recoveryCharges: GAME_CONFIG.MAX_RECOVERY_POINTS,
+                 cooldownEndTime: undefined
+             };
+             // Commit to state (Copy-On-Write)
+             state.grid = { ...state.grid, [key]: updatedHex };
+             // Update local reference for the rest of this function
+             hex = updatedHex;
+        }
+    }
+
     // Determine Intent
     let isUserIntentActive = entity.type === EntityType.PLAYER && state.isPlayerGrowing;
     let userIntentType = entity.type === EntityType.PLAYER ? state.playerGrowthIntent : null;
@@ -64,13 +91,6 @@ export class GrowthSystem implements System {
 
     // FSM: Transition to GROWING
     entity.state = EntityState.GROWING;
-    
-    // Safety check
-    if (!hex) {
-         if (hasUpgradeCmd) entity.movementQueue.shift();
-         entity.state = EntityState.IDLE;
-         return false;
-    }
 
     // Determine Effective Intent
     let effectiveIntent: 'UPGRADE' | 'RECOVER' | 'DIG' = 'RECOVER';
@@ -86,17 +106,15 @@ export class GrowthSystem implements System {
         const isHighLevel = hex.maxLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD;
         const isMiningOffline = this.hasStatus(entity, 'STATUS_MINING_OFFLINE');
         
-        // --- 1A: HIGH LEVEL LOGIC (Cooldown + Charges) ---
+        // 1. Check Cooldowns / Eligibility immediately
         if (isHighLevel) {
-            const now = Date.now();
-            const lastUsed = hex.lastRecoveryTime || 0;
-            const cooldown = GAME_CONFIG.RECOVERY_COOLDOWN_MS;
-            const remaining = Math.max(0, cooldown - (now - lastUsed));
-            
-            if (remaining > 0) {
+            // L4+: Check Charges & Cooldown Timer
+            const status = checkRecoveryCooldown(hex, now);
+            if (!status.ready) {
+                // Cooldown Active
                 if (entity.type === EntityType.PLAYER) {
                     state.isPlayerGrowing = false;
-                    const seconds = Math.ceil(remaining / 1000);
+                    const seconds = Math.ceil(status.remaining / 1000);
                     state.messageLog.unshift({
                         id: `cd-${now}`,
                         text: `Sector Recharging: ${seconds}s left`,
@@ -104,98 +122,76 @@ export class GrowthSystem implements System {
                         source: 'SYSTEM',
                         timestamp: now
                     });
+                    events.push(GameEventFactory.create('ACTION_DENIED', `Cooldown: ${seconds}s`, entity.id));
                 }
                 entity.state = EntityState.IDLE;
                 if (hasUpgradeCmd) entity.movementQueue.shift();
                 return false;
             }
-
-            const currentPoints = hex.recoveryPoints ?? GAME_CONFIG.MAX_RECOVERY_POINTS;
-            const needed = getLevelConfig(hex.maxLevel).growthTime;
-            
-            if (hex.progress + 1 >= needed) {
-                const rawReward = (hex.maxLevel || 0) * 5 + 5; 
-                // STATUS CHECK: Mining Offline
-                const coinReward = isMiningOffline ? 0 : Math.max(0, rawReward);
-
-                entity.moves += 1;
-                entity.coins += coinReward;
-                entity.totalCoinsEarned += coinReward;
-                
-                const nextPoints = currentPoints - 1;
-                const newUpdates: Partial<typeof hex> = {
-                    progress: 0,
-                    recoveryPoints: nextPoints,
-                    lastRecoveryTime: now
-                };
-
-                const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
-                
-                if (nextPoints <= 0) {
-                    newUpdates.maxLevel = hex.maxLevel - 1;
-                    newUpdates.currentLevel = hex.currentLevel - 1;
-                    newUpdates.recoveryPoints = GAME_CONFIG.MAX_RECOVERY_POINTS; 
-                    
-                    const msg = `${prefix} Depleted Sector! Level -1.`;
-                    state.messageLog.unshift({ id: `degrade-${now}-${entity.id}`, text: msg, type: 'WARN', source: entity.id, timestamp: now });
-                    events.push(GameEventFactory.create('HEX_DOWNGRADE', msg, entity.id));
-                    events.push(GameEventFactory.create('HEX_COLLAPSE', undefined, entity.id)); 
-                } else {
-                    const msg = `${prefix} Recovered (Uses: ${nextPoints}/${GAME_CONFIG.MAX_RECOVERY_POINTS})`;
-                    state.messageLog.unshift({ id: `rec-high-${now}-${entity.id}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: now });
-                    events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id, { coins: coinReward, moves: 1 }));
-                }
-
-                state.grid = { ...state.grid, [key]: { ...hex, ...newUpdates } };
-
-                if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
-                if (hasUpgradeCmd) entity.movementQueue.shift();
-                entity.state = EntityState.IDLE;
-                return false;
-
-            } else {
-                state.grid = { ...state.grid, [key]: { ...hex, progress: hex.progress + 1 } };
-                return true;
-            }
-
         } else {
-            // --- 1B: LOW LEVEL LOGIC ---
+            // L0-L3: Check Entity Flag
             if (entity.recoveredCurrentHex) {
-                 if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
+                 if (entity.type === EntityType.PLAYER) {
+                     state.isPlayerGrowing = false;
+                     // Optional: Feedback "Move to reset"
+                 }
                  if (hasUpgradeCmd) entity.movementQueue.shift();
                  entity.state = EntityState.IDLE;
                  return false;
             }
+        }
 
-            const config = getLevelConfig(hex.maxLevel); 
-            const needed = config.growthTime;
+        // 2. Process Growth Time
+        const config = getLevelConfig(hex.maxLevel); 
+        const needed = config.growthTime;
 
-            if (hex.progress + 1 >= needed) {
-                const rawReward = (hex.maxLevel || 0) * 5 + 5; 
-                // STATUS CHECK: Mining Offline
-                const coinReward = isMiningOffline ? 0 : Math.max(0, rawReward);
+        if (hex.progress + 1 >= needed) {
+            // ACTION COMPLETE
+            
+            // Calculate Reward
+            const reward = getRecoveryReward(hex);
+            
+            // STATUS CHECK: Mining Offline
+            const coinReward = isMiningOffline ? 0 : reward.credits;
 
-                entity.moves += 1;
-                entity.coins += coinReward;
-                entity.totalCoinsEarned += coinReward;
+            entity.moves = Math.min(entity.moves + reward.moves, 999); // Soft cap moves
+            entity.coins += coinReward;
+            entity.totalCoinsEarned += coinReward;
+            
+            if (!isHighLevel) {
                 entity.recoveredCurrentHex = true; 
-
-                const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
-                const msg = `${prefix} Recovered 1 Move + ${coinReward} Credits`;
-                
-                state.messageLog.unshift({ id: `rec-${Date.now()}-${entity.id}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
-                events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id, { coins: coinReward, moves: 1 }));
-                
-                state.grid = { ...state.grid, [key]: { ...hex, progress: 0 } };
-                
-                if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
-                if (hasUpgradeCmd) entity.movementQueue.shift();
-                entity.state = EntityState.IDLE;
-                return false;
-            } else {
-                state.grid = { ...state.grid, [key]: { ...hex, progress: hex.progress + 1 } };
-                return true;
             }
+
+            // Update Hex State (Charges/Cooldown)
+            const updates = applyRecovery(hex, now);
+            
+            const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
+            
+            let msg = "";
+            if (isHighLevel) {
+                const chargesLeft = updates.recoveryCharges ?? 0;
+                msg = `${prefix} Recovered (Uses: ${chargesLeft}/${GAME_CONFIG.MAX_RECOVERY_POINTS})`;
+                if (chargesLeft === 0) msg += " [COOLDOWN]";
+            } else {
+                msg = `${prefix} Recovered 1 Move + ${coinReward} Credits`;
+            }
+            
+            state.messageLog.unshift({ id: `rec-${now}-${entity.id}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: now });
+            events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id, { coins: coinReward, moves: reward.moves }));
+            
+            // Commit Grid Update
+            state.grid = { ...state.grid, [key]: { ...hex, progress: 0, ...updates } };
+            
+            // Stop Action
+            if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
+            if (hasUpgradeCmd) entity.movementQueue.shift();
+            entity.state = EntityState.IDLE;
+            return false;
+
+        } else {
+            // Tick Progress
+            state.grid = { ...state.grid, [key]: { ...hex, progress: hex.progress + 1 } };
+            return true;
         }
     }
 
@@ -222,7 +218,7 @@ export class GrowthSystem implements System {
              const newLevel = hex.currentLevel - 1;
              
              // --- DIG STATUS CHECKS ---
-             const hasGoldRush = this.hasStatus(entity, 'STATUS_GOLD_RUSH');
+             const { digRewardMultiplier } = getStatusModifiers(entity);
              const hasBreakdownRisk = this.hasStatus(entity, 'STATUS_BREAKDOWN_RISK');
 
              // BREAKDOWN RISK: 10% chance to lose rank or receive error
@@ -238,8 +234,8 @@ export class GrowthSystem implements System {
                  return false;
              }
 
-             // GOLD RUSH: +2 Materials instead of +1
-             const matGain = hasGoldRush ? 2 : 1;
+             // GOLD RUSH: Replaced raw check with unified multiplier
+             const matGain = Math.floor(1 * digRewardMultiplier);
              let actualMatGain = 0;
 
              // CAP MATERIAL AT MAX STORAGE, BUT ALLOW ACTION TO PROCEED
@@ -263,6 +259,7 @@ export class GrowthSystem implements System {
              // Reset Recovery Stats on Level Change
              const newRecoveryPoints = undefined;
              const newLastRecoveryTime = undefined;
+             const newCooldown = undefined;
              
              // Determine new looted levels array to ensure persistence
              let nextLootedLevels = hex.lootedLevels ? [...hex.lootedLevels] : [];
@@ -316,8 +313,9 @@ export class GrowthSystem implements System {
                       progress: 0,
                       structureType: undefined, 
                       durability: newDurability,
-                      recoveryPoints: newRecoveryPoints,
-                      lastRecoveryTime: newLastRecoveryTime,
+                      recoveryCharges: newRecoveryPoints,
+                      lastRecoveryUseTime: newLastRecoveryTime,
+                      cooldownEndTime: newCooldown,
                       lootedLevels: nextLootedLevels // Persist updated loot history
                   }
              };
@@ -399,8 +397,9 @@ export class GrowthSystem implements System {
           let didMaxIncrease = false;
           let newOwnerId = hex.ownerId; 
           let newDurability = hex.durability;
-          let newRecoveryPoints = hex.recoveryPoints;
-          let newLastRecoveryTime = hex.lastRecoveryTime;
+          let newRecoveryCharges = hex.recoveryCharges;
+          let newLastRecoveryTime = hex.lastRecoveryUseTime;
+          let newCooldown = hex.cooldownEndTime;
 
           const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
 
@@ -410,7 +409,6 @@ export class GrowthSystem implements System {
             entity.playerLevel = Math.max(entity.playerLevel, targetLevel);
             
             // STATUS CHECK: SOIL EATER
-            // Destroys one random non-void neighbor to fuel growth
             if (this.hasStatus(entity, 'STATUS_SOIL_EATER')) {
                 const liveNeighbors = neighbors.filter(n => {
                     const h = state.grid[getHexKey(n.q, n.r)];
@@ -466,9 +464,11 @@ export class GrowthSystem implements System {
             }
 
             // INIT RECOVERY POINTS IF LEVEL >= 4
+            // Reset to full charges if hitting L4 threshold or upgrading within high levels
             if (targetLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
-                newRecoveryPoints = GAME_CONFIG.MAX_RECOVERY_POINTS;
-                newLastRecoveryTime = Date.now(); 
+                newRecoveryCharges = GAME_CONFIG.MAX_RECOVERY_POINTS;
+                newLastRecoveryTime = undefined; 
+                newCooldown = undefined;
             }
           }
 
@@ -482,8 +482,9 @@ export class GrowthSystem implements System {
                   progress: 0,
                   ownerId: newOwnerId,
                   durability: newDurability,
-                  recoveryPoints: newRecoveryPoints,
-                  lastRecoveryTime: newLastRecoveryTime
+                  recoveryCharges: newRecoveryCharges,
+                  lastRecoveryUseTime: newLastRecoveryTime,
+                  cooldownEndTime: newCooldown
               }
           };
           

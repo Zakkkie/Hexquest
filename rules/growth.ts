@@ -1,6 +1,6 @@
 
 import { Hex, Entity, HexCoord } from '../types';
-import { getLevelConfig } from './config';
+import { getLevelConfig, GAME_CONFIG } from './config';
 import { getHexKey } from '../services/hexUtils';
 
 export type GrowthCheckResult = {
@@ -26,22 +26,35 @@ export function checkDigCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel - 1;
 
-  // UPDATED: Allow digging even if storage is full (wastes material)
-  // Logic moved to GrowthSystem to handle the capping/warning.
-  
-  // 1. FIRST CUT EXCEPTION
-  // Digging down to -1 (or any level >= -1) is always allowed without support.
-  // This covers leveling hills (5->4) and starting a pit (0->-1).
-  // The restriction is ONLY for going deeper than -1.
+  // 1. HIGH GROUND RULE (User Request)
+  // "Dig up to not reaching 1 level to the level of the nearest hex"
+  // Interpretation: You can dig down, but the new level must strictly be higher than the lowest neighbor.
+  // Example: Neighbors L0. Current L2. Dig to L1? (1 > 0) OK.
+  // Example: Neighbors L0. Current L1. Dig to L0? (0 > 0) False. Blocked.
+  if (currentLevel > 0) {
+      const neighborHexes = neighbors
+          .map(n => grid[getHexKey(n.q, n.r)])
+          .filter(h => h && h.structureType !== 'VOID');
+      
+      if (neighborHexes.length > 0) {
+          const minNeighborLevel = Math.min(...neighborHexes.map(h => h.maxLevel));
+          
+          if (targetLevel <= minNeighborLevel) {
+              return { 
+                  canGrow: false, 
+                  reason: `Gradient Lock! Must stay above L${minNeighborLevel}.`,
+                  missingSupports: neighborHexes.filter(h => h.maxLevel <= targetLevel).map(h => ({q: h.q, r: h.r}))
+              };
+          }
+      }
+  }
+
+  // 2. FIRST CUT EXCEPTION (If not blocked by High Ground Rule above)
   if (targetLevel >= -1) {
       return { canGrow: true };
   }
 
-  // 2. REVERSE STAIRCASE RULE (Deep Digging < -1)
-  // To dig deeper (e.g. -1 -> -2), we need at least 2 neighbors
-  // that are at the SAME depth or deeper to prevent creating a solitary deep shaft.
-  // Example: To go to -2, need supports at -1 or lower.
-  
+  // 3. REVERSE STAIRCASE RULE (Deep Digging < -1)
   const deepNeighbors = neighbors.filter(n => {
       const neighborHex = grid[getHexKey(n.q, n.r)];
       // Void or missing hexes provide no support
@@ -49,19 +62,13 @@ export function checkDigCondition(
       
       const neighborLevel = neighborHex.currentLevel ?? 0;
       // Strict Check: Neighbor must be at same depth (=).
-      // Example: We are at -1. We want to go to -2.
-      // Neighbor at 0?  (0 <= -1) -> False.
-      // Neighbor at -1? (-1 <= -1) -> True.
-      // Neighbor at -2? (-2 <= -1) -> True.
       return neighborLevel === currentLevel;
   });
 
   if (deepNeighbors.length < 2) {
-      // Calculate missing supports for UI visualization
       const potentialSupports = neighbors.filter(n => {
           const h = grid[getHexKey(n.q, n.r)];
           if (!h || h.structureType === 'VOID') return false;
-          // Neighbors that failed the condition (too high)
           const nLevel = h.currentLevel ?? 0;
           return nLevel > currentLevel;
       });
@@ -89,7 +96,6 @@ export function checkGrowthCondition(
 ): GrowthCheckResult {
   if (!hex) return { canGrow: false, reason: 'Invalid Hex' };
 
-  // IMPERATIVE: Monument Hexes cannot be modified by players
   if (hex.structureType === 'MONUMENT') {
       return { canGrow: false, reason: "ANCIENT STRUCTURE (IMMUTABLE)" };
   }
@@ -97,22 +103,15 @@ export function checkGrowthCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel + 1;
 
-  // RECOVERY RULE: If current level is below max level (damaged/decayed), allow free growth
   if (targetLevel <= hex.maxLevel) {
      return { canGrow: true };
   }
 
-  // CONDITION 1: MATERIAL STORAGE
-  // To upgrade (L1->L2+ OR L0->L1), you need Material in storage.
   if (entity.storage < 1) {
       return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
   }
 
-  // CONDITION 2: STAIRCASE SUPPORT RULE
-  // To reach Level L+1, you need neighbors that are at least Level L.
   if (targetLevel > 1) {
-    // 1. SATURATION CHECK ("The Valley Rule")
-    // Exception: If surrounded by high walls (5 or more neighbors are STRICTLY HIGHER level), you can fill the valley.
     const highLevelNeighborsCount = neighbors.filter(n => {
        const h = grid[getHexKey(n.q, n.r)];
        return h && h.structureType !== 'VOID' && h.maxLevel > hex.maxLevel;
@@ -120,20 +119,14 @@ export function checkGrowthCondition(
 
     const isValley = highLevelNeighborsCount >= 5;
 
-    // Only apply strict support rules if NOT in a valley
     if (!isValley) {
-        // Find existing supports
-        // STRICT RULE: Support MUST be exactly the same level.
-        // Neighbors that are Higher Level do NOT count as supports (unless Valley rule triggers).
         const supports = neighbors.filter(n => {
            const h = grid[getHexKey(n.q, n.r)];
-           // Void cannot support structure
            if (!h || h.structureType === 'VOID') return false;
            return h.maxLevel === hex.maxLevel;
         });
 
         if (supports.length < 2) {
-          // Identify missing supports for UI hints (neighbors that are not equal level)
           const potentialSupports = neighbors.filter(n => {
               const h = grid[getHexKey(n.q, n.r)];
               if (!h || h.structureType === 'VOID') return false;
@@ -151,5 +144,77 @@ export function checkGrowthCondition(
 
   return { canGrow: true };
 }
+
+// --- RECOVERY SYSTEM V2 ---
+
+export const getRecoveryReward = (hex: Hex): { moves: number; credits: number } => {
+  // Base Reward: 10 Moves + 50 Credits (L0)
+  // Scaling: +5 Moves/lvl, +25 Credits/lvl
+  const baseLevel = Math.max(0, hex.currentLevel);
+  const moves = 1;
+  const credits = 5 * baseLevel;
+  
+  // Note: High levels (4+) use this formula too, but have 3 charges.
+  return { moves, credits };
+};
+
+export const checkRecoveryCooldown = (hex: Hex, currentTime: number): { ready: boolean; remaining: number } => {
+  // For L0-L3: No specific hex cooldown, handled by Entity's `recoveredCurrentHex` flag in System
+  if (hex.currentLevel < GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
+    return { ready: true, remaining: 0 };
+  }
+  
+  // For L4+: Check charges and cooldown
+  const charges = hex.recoveryCharges ?? GAME_CONFIG.MAX_RECOVERY_POINTS; // Default 3
+  
+  // If we have charges, we are ready
+  if (charges > 0) return { ready: true, remaining: 0 };
+  
+  // If 0 charges, check cooldown
+  const cooldownEnd = hex.cooldownEndTime ?? 0;
+  if (currentTime < cooldownEnd) {
+    return { ready: false, remaining: cooldownEnd - currentTime };
+  }
+  
+  // Cooldown expired, logically ready (will need state update to refill charges)
+  return { ready: true, remaining: 0 };
+};
+
+/**
+ * Updates hex state after a successful recovery action.
+ * Mutates the hex object (or returns props to update).
+ */
+export const applyRecovery = (hex: Hex, currentTime: number): Partial<Hex> => {
+  if (hex.currentLevel < GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
+    // For L0-L3: Just mark time, entity flag handles the "once per visit" rule
+    return { lastRecoveryUseTime: currentTime };
+  } else {
+    // For L4+
+    let charges = hex.recoveryCharges ?? GAME_CONFIG.MAX_RECOVERY_POINTS;
+    
+    // SAFETY: If cooldown expired but charges were 0, we treat it as fully charged before decrementing
+    // This handles race conditions where the maintenance tick hasn't run yet.
+    if (charges === 0 && hex.cooldownEndTime && currentTime >= hex.cooldownEndTime) {
+        charges = GAME_CONFIG.MAX_RECOVERY_POINTS;
+    }
+
+    charges = Math.max(0, charges - 1);
+    
+    const updates: Partial<Hex> = {
+        lastRecoveryUseTime: currentTime,
+        recoveryCharges: charges
+    };
+    
+    // If depleted, start cooldown
+    if (charges === 0) {
+      updates.cooldownEndTime = currentTime + GAME_CONFIG.RECOVERY_COOLDOWN_MS;
+    } else {
+      // Ensure cooldown is cleared if we have charges (e.g. if we just reset from 0->3->2)
+      updates.cooldownEndTime = undefined;
+    }
+    
+    return updates;
+  }
+};
 
 export default checkGrowthCondition;

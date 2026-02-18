@@ -2,7 +2,7 @@
 import { System } from './System';
 import { GameState, GameEvent, EntityState, Entity, SessionState, Hex, EntityType } from '../../types';
 import { WorldIndex } from '../WorldIndex';
-import { getHexKey, getNeighbors, cubeDistance } from '../../services/hexUtils';
+import { getHexKey, getNeighbors, cubeDistance, getStatusModifiers } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';
 import { GAME_CONFIG, ENTROPY_CONFIG } from '../../rules/config';
 import { generateSingleHex } from '../../services/mapGenerator';
@@ -263,9 +263,9 @@ export class MovementSystem implements System {
     }
 
     // D. STANDARD FOG OF WAR (If no monument event overrides)
-    // Check for Scanner Buff
-    const hasScanner = entity.activeStatuses?.some(s => s.type === 'STATUS_SCANNER_BUFF' && (!s.expiresAt || s.expiresAt > Date.now()));
-    const revealRadius = hasScanner ? 2 : 1;
+    // Dynamic Fog Radius based on active statuses
+    const { fogRadius } = getStatusModifiers(entity);
+    const revealRadius = fogRadius;
 
     // Use BFS logic to get hexes in radius
     const visited = new Set<string>();

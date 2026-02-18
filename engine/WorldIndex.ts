@@ -177,4 +177,32 @@ export class WorldIndex {
       }
       return results;
   }
+
+  /**
+   * Clears all indices and releases memory.
+   */
+  public dispose(): void {
+    this.occupiedHexes.clear();
+    this.structureLocations.clear();
+    this.hexesByOwner.clear();
+    this.entities.clear();
+    
+    // Explicitly nullify references
+    (this.grid as any) = null;
+    (this.occupiedHexes as any) = null;
+    (this.structureLocations as any) = null;
+    (this.hexesByOwner as any) = null;
+    (this.entities as any) = null;
+  }
+
+  /**
+   * Development helper for checking memory usage
+   */
+  public getMemoryFootprint(): { hexes: number; entities: number; indices: number } {
+    return {
+      hexes: this.grid ? Object.keys(this.grid).length : 0,
+      entities: this.entities ? this.entities.size : 0,
+      indices: (this.occupiedHexes?.size || 0) + (this.structureLocations?.size || 0) + (this.hexesByOwner?.size || 0)
+    };
+  }
 }

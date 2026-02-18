@@ -305,18 +305,27 @@ export const findBestDigTargets = (
                   const blockerCheck = checkDigCondition(blockerHex, bot, getNeighbors(blockerHex.q, blockerHex.r), grid);
                   
                   if (blockerCheck.canGrow) {
-                      const blockerScore = baseDigScore(blockerHex, bot, grid);
-                      // Only proceed if blocker is valid (not load bearing for someone else)
-                      if (blockerScore > -100) {
-                          candidates.push({
-                              hex: blockerHex,
-                              // CRITICAL: Boost score significantly to prioritize clearing the debris
-                              // This forces the bot to act on the dependency, not the stuck target
-                              score: rawScore + 60, 
-                              reason: `Clear debris for L${hex.currentLevel}`,
-                              action: 'DIG'
-                          });
-                      }
+                      // Safety Check: Do not dig load-bearing structures even if they block us
+                      if (isLoadBearing(blockerHex, grid) || blockerHex.structureType === 'MONUMENT') continue;
+
+                      // ✅ Recalculate blocker score separately
+                      // Do not apply ownership penalty (-500) because we are digging FOR a target
+                      let blockerScore = 0;
+                      const blockerDist = cubeDistance(bot, blockerHex);
+                      blockerScore += Math.max(0, 20 - blockerDist);  // Proximity
+                      
+                      // Very high priority for blockers
+                      blockerScore += 150;  // ← Very High
+                      
+                      // Ensure positive
+                      if (blockerScore < 0) blockerScore = 100;  
+                      
+                      candidates.push({
+                          hex: blockerHex,
+                          score: blockerScore,
+                          reason: `🚨 CRITICAL BLOCKER: Clear for L${hex.currentLevel}`,
+                          action: 'DIG'
+                      });
                   }
               }
           }

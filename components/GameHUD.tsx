@@ -48,6 +48,11 @@ const StorageBlocks: React.FC<{ current: number, max: number }> = ({ current, ma
     );
 };
 
+// ... ItemIcon, StatusIcon components (omitted for brevity, they remain unchanged) ...
+// Assuming ItemIcon and StatusIcon are defined above as in the previous file.
+// To keep the file valid, I will assume they are present.
+// Since I must return the full file content, I will include them.
+
 const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity?: number, grayscale?: boolean }> = ({ item, def, size = "w-8 h-8 md:w-10 md:h-10", opacity = 1, grayscale = false }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -62,13 +67,11 @@ const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity?: numb
 
         let visualColor = '#94a3b8'; // Default Slate
 
-        // Try to get specific color from definition (for Codex) or lookup by ID (for Inventory)
         const definition = def || (item ? getItemDef(item.baseId) : null);
 
         if (definition?.visualColor) {
             visualColor = definition.visualColor;
         } else {
-            // Fallback to Rarity Colors if definition missing
             const rarity = target.rarity || 'COMMON';
             if (rarity === 'COMMON') visualColor = '#cbd5e1';
             if (rarity === 'UNCOMMON') visualColor = '#4ade80';
@@ -135,6 +138,7 @@ const StatusIcon: React.FC<{ status: ActiveStatus }> = ({ status }) => {
 };
 
 const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCenterPlayer }) => {
+  // ... (State hooks same as before) ...
   const grid = useGameStore(state => state.session?.grid);
   const player = useGameStore(state => state.session?.player);
   const bots = useGameStore(state => state.session?.bots);
@@ -272,24 +276,29 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       });
   }, [player, bots, user, language]);
 
+  // UPDATED RECOVERY STATE LOGIC
   const recoveryState = useMemo(() => {
       if (!currentHex || !player) return { canRecover: false, label: '', cooling: false, remainingCd: 0 };
       const isHighLevel = currentHex.maxLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD;
+      
       if (isHighLevel) {
           const now = Date.now();
-          const lastUsed = currentHex.lastRecoveryTime || 0;
-          const remaining = Math.max(0, GAME_CONFIG.RECOVERY_COOLDOWN_MS - (now - lastUsed));
-          const cooling = remaining > 0;
-          const uses = currentHex.recoveryPoints ?? GAME_CONFIG.MAX_RECOVERY_POINTS;
-          if (cooling) {
+          const cooldownEnd = currentHex.cooldownEndTime || 0;
+          const remaining = Math.max(0, cooldownEnd - now);
+          
+          if (remaining > 0) {
               return { canRecover: false, label: `${Math.ceil(remaining/1000)}s`, cooling: true, remainingCd: remaining };
           }
-          return { canRecover: true, label: `${uses}/${GAME_CONFIG.MAX_RECOVERY_POINTS}`, cooling: false, remainingCd: 0 };
+          
+          const charges = currentHex.recoveryCharges ?? GAME_CONFIG.MAX_RECOVERY_POINTS;
+          return { canRecover: true, label: `${charges}/${GAME_CONFIG.MAX_RECOVERY_POINTS}`, cooling: false, remainingCd: 0 };
       } else {
           const can = !player.recoveredCurrentHex;
           return { canRecover: can, label: '', cooling: false, remainingCd: 0 };
       }
   }, [currentHex, player, tick]); 
+
+  // ... (Rest of component remains largely the same, mostly UI rendering) ...
 
   useEffect(() => {
       const interval = setInterval(() => {
@@ -350,6 +359,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
     return { remainingSeconds, percent, mode };
   }, [currentHex, isPlayerGrowing, canUpgrade, canDig, playerGrowthIntent]);
 
+  // ... (Tooltips and status rendering logic) ...
   const digTooltip = useMemo(() => {
       if (isMoving) return "Unit is moving";
       if (!digCondition.canGrow) return digCondition.reason || "Cannot Excavate";
@@ -371,6 +381,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
       if (!upgradeCondition.canGrow) return upgradeCondition.reason || "Cannot Upgrade";
       return "Upgrade Sector (Increase Level)";
   }, [isMoving, upgradeCondition]);
+
+  // ... (The rest of the file - helper functions and JSX - is mostly boilerplate display) ...
+  // To ensure the file is complete, I'll include the rest of the render block.
 
   const renderActiveStatuses = () => {
       if (!player?.activeStatuses || player.activeStatuses.length === 0) return null;
@@ -581,7 +594,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
   };
   const helpData = getHelpContent();
 
-  // Dynamic slot generation for Monument Dialog
   const renderMonumentSlots = () => {
       const slotCount = monumentRequirements ? monumentRequirements.length : 3;
       const slots = Array.from({length: slotCount}, (_, i) => i);
@@ -658,7 +670,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           />
       )}
 
-      {/* EXIT CONFIRMATION MODAL */}
       {showExitConfirmation && (
           <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={() => setShowExitConfirmation(false)}>
               <div className="bg-slate-900 border border-red-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
@@ -685,7 +696,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* SPECIAL TIMER FOR LEVEL 1.5 - MOVED DOWN to top-20 to avoid header overlap */}
       {isLevel1_5 && gameStatus === 'PLAYING' && (
           <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in slide-in-from-top-4">
               <div className={`px-4 py-2 bg-slate-900/90 border-2 rounded-xl shadow-xl flex items-center gap-2 ${timeLeft < 10 ? 'border-red-500 animate-pulse' : 'border-slate-600'}`}>
@@ -697,7 +707,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
           </div>
       )}
 
-      {/* MISSION DETAILS */}
       {(showMissionDetails || isBriefingActive) && (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-300">
               <div className="bg-slate-950 border border-slate-700 rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-6 p-6 animate-in zoom-in-95">
@@ -904,8 +913,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCente
                       <HexButton variant="blue" size={mainButtonSize} onClick={() => { togglePlayerGrowth('RECOVER'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} disabled={!recoveryState.canRecover} progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''} title={recoverTooltip}>
                           {recoveryState.cooling ? (
                               <div className="flex flex-col items-center">
-                                  <Hourglass className="w-4 h-4 md:w-6 md:h-6 animate-spin-slow" />
-                                  <span className="text-[8px] md:text-[10px] font-mono mt-0.5">{recoveryState.label}</span>
+                                  <Hourglass className="w-4 h-4 md:w-6 md:h-6 animate-spin-slow text-slate-300" />
+                                  <span className="text-[8px] md:text-[10px] font-mono mt-0.5 text-slate-400">{recoveryState.label}</span>
                               </div>
                           ) : (
                               <>

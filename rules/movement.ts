@@ -1,6 +1,6 @@
 
 import { Hex, Entity, HexCoord } from '../types';
-import { getHexKey } from '../services/hexUtils';
+import { getHexKey, getStatusModifiers } from '../services/hexUtils';
 import { GAME_CONFIG } from './config';
 
 export interface MovementCostResult {
@@ -20,6 +20,7 @@ export interface MovementCostResult {
  * 4. STRICT: Cannot move if height difference > 1 (Staircase Rule).
  * 5. STRICT: Cannot move into Void.
  * 6. Use entity.moves first, then coins.
+ * 7. Applies modifiers from STATUS_FATIGUE etc.
  */
 export const calculateMovementCost = (
     entity: Entity, 
@@ -28,10 +29,8 @@ export const calculateMovementCost = (
 ): MovementCostResult => {
     let totalPoints = 0;
 
-    // Check for Fatigue (Status Effect)
-    const now = Date.now();
-    const hasFatigue = entity.activeStatuses?.some(s => s.type === 'STATUS_FATIGUE' && (!s.expiresAt || s.expiresAt > now));
-    const costMultiplier = hasFatigue ? 2 : 1;
+    // Apply Status Effects via centralized helper (Handles FATIGUE multiplier)
+    const { moveCostMultiplier } = getStatusModifiers(entity);
 
     // Track position to validate step-by-step physics
     let currentQ = entity.q;
@@ -80,8 +79,8 @@ export const calculateMovementCost = (
         currentR = step.r;
     }
 
-    // Apply Multiplier
-    totalPoints *= costMultiplier;
+    // Apply Multiplier (e.g. Fatigue x2)
+    totalPoints *= moveCostMultiplier;
 
     const movesAvailable = Math.max(0, entity.moves);
     const coinsAvailable = Math.max(0, entity.coins);

@@ -9,7 +9,13 @@ import GameHUD from './GameHUD.tsx';
 import MapRenderer from './MapRenderer.tsx';
 import Fireworks from './Fireworks.tsx';
 import { audioService } from '../services/audioService.ts';
-import { XCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
+import { XCircle, CheckCircle, Info } from 'lucide-react';
+import { safifyCoord } from '../utils/safeCoordinates.ts';
+
+// HELPER: Linear Interpolation
+const lerp = (start: number, end: number, factor: number) => {
+    return start + (end - start) * factor;
+};
 
 // HELPER: Calculate new View State to pivot rotation around a specific screen point
 const calculateRotationAdjustedView = (
@@ -41,12 +47,24 @@ const calculateRotationAdjustedView = (
     const rotatedY = (rawX * sinNew + rawY * cosNew) * 0.8;
 
     // 4. New View Position = Pivot - RotatedLocal * Scale
+    const finalX = pivot.x - rotatedX * currentView.scale;
+    const finalY = pivot.y - rotatedY * currentView.scale;
+    
+    const safePos = safifyCoord(finalX, finalY);
+
     return {
-        x: pivot.x - rotatedX * currentView.scale,
-        y: pivot.y - rotatedY * currentView.scale,
+        x: safePos.x,
+        y: safePos.y,
         scale: currentView.scale
     };
 };
+
+interface CameraState {
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+}
 
 const GameView: React.FC = () => {
   const grid = useGameStore(state => state.session?.grid);
@@ -64,6 +82,7 @@ const GameView: React.FC = () => {
   
   // HUD State
   const [hoveredHexId, setHoveredHexId] = useState<string | null>(null);
+  const [isInteracting, setIsInteracting] = useState(false); // New state for performance optimization
 
   if (!grid || !player) return null;
   
@@ -72,59 +91,56 @@ const GameView: React.FC = () => {
   // RESPONSIVE: Scale Logic based on Device Type
   const getInitialScale = () => {
       switch(deviceType) {
-          case 'MOBILE': return 0.65; // Increased from 0.55 for better touch targets
+          case 'MOBILE': return 0.65;
           case 'TABLET': return 0.8;
           default: return 1.0;
       }
   };
   
-  // Actual Camera Position (for Render)
-  const [viewState, setViewState] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2, scale: getInitialScale() });
+  // --- UNIFIED CAMERA STATE ---
+  // We use Refs for the physics engine source-of-truth to avoid React batching lag during high-frequency events.
+  const initialCamera = { 
+      x: window.innerWidth / 2, 
+      y: window.innerHeight / 2, 
+      scale: getInitialScale(), 
+      rotation: 0 
+  };
+
+  const currentCameraRef = useRef<CameraState>(initialCamera);
+  const targetCameraRef = useRef<CameraState>(initialCamera);
   
-  // Target Camera Position (for Smooth Follow Logic)
-  const targetViewRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  // Render State (Synced from Ref via Animation Loop)
+  const [renderCamera, setRenderCamera] = useState<CameraState>(initialCamera);
   
-  const [cameraRotation, setCameraRotation] = useState(0);
-  const cameraRotationRef = useRef(0); // Stable ref for callbacks to avoid re-creating functions
+  // Interaction State
+  const isRotating = useRef(false);
+  const isDragging = useRef(false);
+  const lastPointerPos = useRef({ x: 0, y: 0 });
   const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 }); 
   
-  const targetRotationRef = useRef(0); 
-  const isRotating = useRef(false);
-  const lastMouseX = useRef(0);
   const stageRef = useRef<Konva.Stage>(null);
-  const animationRef = useRef<Konva.Animation>(null);
-
+  
   // Multi-touch refs
   const lastDist = useRef<number>(0);
   const lastCenter = useRef<{ x: number; y: number } | null>(null);
   const lastAngle = useRef<number>(0);
   const isMultitouch = useRef(false);
   
-  // Sync Ref with State
-  useEffect(() => {
-      cameraRotationRef.current = cameraRotation;
-  }, [cameraRotation]);
-
   // Update scale when device type changes
   useEffect(() => {
-     setViewState(prev => ({ ...prev, scale: getInitialScale() }));
+     const newScale = getInitialScale();
+     targetCameraRef.current = { ...targetCameraRef.current, scale: newScale };
   }, [deviceType]);
 
   // --- AUDIO LIFECYCLE (Start/Stop) ---
   useEffect(() => {
-      // Start music only once when the GameView mounts
       audioService.startMusic();
-      
-      return () => {
-          // Stop music only when GameView unmounts (returning to menu)
-          audioService.stopMusic();
-      };
-  }, []); // Empty dependency array ensures this runs once
+      return () => { audioService.stopMusic(); };
+  }, []);
 
-  // --- AUDIO DYNAMICS (Update Intensity) ---
+  // --- AUDIO DYNAMICS ---
   useEffect(() => {
       if (player && winCondition) {
-          // Update intensity without restarting the engine
           audioService.updateMusic(player.coins, winCondition.targetCoins || 500);
       }
   }, [player.coins, winCondition]);
@@ -132,8 +148,7 @@ const GameView: React.FC = () => {
   // --- SCREEN SHAKE TRIGGER ---
   useEffect(() => {
       if (lastVisualEvent?.type === 'ENTROPY_SHIFT') {
-          // Trigger shake animation
-          let duration = 600; // ms
+          let duration = 600;
           let start = Date.now();
           const shakeAnim = new Konva.Animation((frame) => {
               const now = Date.now();
@@ -143,7 +158,6 @@ const GameView: React.FC = () => {
                   shakeAnim.stop();
                   return;
               }
-              // Dampening shake
               const progress = elapsed / duration;
               const intensity = 10 * (1 - progress); 
               const dx = (Math.random() - 0.5) * intensity * 2;
@@ -168,175 +182,223 @@ const GameView: React.FC = () => {
     }
   }, [toast, hideToast]);
 
+  // --- OPTIMIZED RESIZE HANDLER ---
   useEffect(() => {
-    const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
+    let resizeFrame: number;
+    const handleResize = () => {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(() => {
+            setDimensions({ width: window.innerWidth, height: window.innerHeight });
+        });
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- SMOOTH CAMERA LOOP ---
+  // --- PHYSICS CAMERA LOOP ---
   useEffect(() => {
       const anim = new Konva.Animation((frame) => {
           if (!frame) return;
           
-          setViewState(prev => {
-              // If user is actively multi-touching, skip spring physics to allow direct control
-              if (isMultitouch.current) return prev;
+          const current = currentCameraRef.current;
+          const target = targetCameraRef.current;
+          
+          // Input State
+          const isUserInteracting = isDragging.current || isRotating.current || isMultitouch.current;
+          
+          // Damping Factors
+          // Snappy response when interacting (0.5), smooth drift when released/animating (0.1)
+          const dampingPos = isUserInteracting ? 0.6 : 0.15; 
+          const dampingScale = 0.1;
+          const dampingRot = isUserInteracting ? 0.6 : 0.1;
 
-              const targetX = targetViewRef.current.x;
-              const targetY = targetViewRef.current.y;
-              
-              const damping = 0.08; 
-              
-              if (Math.abs(targetX - prev.x) < 0.5 && Math.abs(targetY - prev.y) < 0.5) {
-                  return prev;
-              }
+          // Interpolate
+          const nextX = lerp(current.x, target.x, dampingPos);
+          const nextY = lerp(current.y, target.y, dampingPos);
+          const nextScale = lerp(current.scale, target.scale, dampingScale);
+          const nextRot = lerp(current.rotation, target.rotation, dampingRot);
 
-              return {
-                  ...prev,
-                  x: prev.x + (targetX - prev.x) * damping,
-                  y: prev.y + (targetY - prev.y) * damping
-              };
-          });
+          // Convergence Check (Optimization)
+          // If very close to target and not interacting, skip update
+          if (
+              Math.abs(nextX - current.x) < 0.05 && 
+              Math.abs(nextY - current.y) < 0.05 && 
+              Math.abs(nextScale - current.scale) < 0.0001 &&
+              Math.abs(nextRot - current.rotation) < 0.01 &&
+              !isUserInteracting
+          ) {
+              // Ensure we report interaction stopped
+              if (isInteracting) setIsInteracting(false);
+              return;
+          }
+
+          // Update Interacting State for LOD
+          // If velocity is high or user is holding, set true
+          const hasVelocity = Math.abs(nextX - current.x) > 1 || Math.abs(nextRot - current.rotation) > 0.5;
+          if (isUserInteracting || hasVelocity) {
+              if (!isInteracting) setIsInteracting(true);
+          } else {
+              if (isInteracting) setIsInteracting(false);
+          }
+
+          const nextState = {
+              x: nextX,
+              y: nextY,
+              scale: nextScale,
+              rotation: nextRot
+          };
+          
+          // Update Authority
+          currentCameraRef.current = nextState;
+          
+          // Sync React State (Triggers Render)
+          // This ensures render is synced with AnimationFrame
+          setRenderCamera(nextState);
+
       }, stageRef.current?.getLayer());
 
       anim.start();
-      animationRef.current = anim;
-
       return () => { anim.stop(); };
-  }, []);
-
-  // --- AUTO-FOLLOW DISABLED ---
-  // The useEffect that previously centered the camera on player movement has been removed 
-  // to satisfy the requirement: "Camera centers only on action button press".
+  }, [isInteracting]); // Re-bind if isInteracting changes logic
 
   const rotateCamera = useCallback((direction: 'left' | 'right') => {
-      // Use Ref to get start position without adding dependency
-      const startRot = cameraRotationRef.current;
-      const currentTarget = targetRotationRef.current;
-      
+      const currentTarget = targetCameraRef.current.rotation;
       const step = 60;
-      // Snap to nearest step relative to target, not current visual rotation
       const currentSnapped = Math.round(currentTarget / step) * step;
       const nextTarget = direction === 'left' ? currentSnapped - step : currentSnapped + step;
       
-      const startTime = performance.now();
-      const duration = 400; 
-
-      const animate = (time: number) => {
-          const elapsed = time - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-          
-          const newRot = startRot + (nextTarget - startRot) * ease;
-          
-          setCameraRotation(newRot);
-          targetRotationRef.current = nextTarget; 
-
-          if (progress < 1) requestAnimationFrame(animate);
+      targetCameraRef.current = {
+          ...targetCameraRef.current,
+          rotation: nextTarget
       };
-      requestAnimationFrame(animate);
-  }, []); // Empty dependency array = Stable Function Reference
+  }, []); 
 
   const centerOnPlayer = useCallback(() => {
-      // Use Ref for calculation to avoid dependency
-      const rot = cameraRotationRef.current;
+      const rot = currentCameraRef.current.rotation;
       const { x: px, y: py } = hexToPixel(player.q, player.r, rot);
       
-      const tx = (dimensions.width / 2) - (px * viewState.scale);
-      const ty = (dimensions.height / 2) - (py * viewState.scale);
+      const tx = (dimensions.width / 2) - (px * targetCameraRef.current.scale);
+      const ty = (dimensions.height / 2) - (py * targetCameraRef.current.scale);
       
-      // Update the TARGET for the spring animation loop
-      targetViewRef.current = { x: tx, y: ty };
-  }, [player.q, player.r, dimensions, viewState.scale]);
+      const safeT = safifyCoord(tx, ty);
+      targetCameraRef.current = { ...targetCameraRef.current, x: safeT.x, y: safeT.y };
+  }, [player.q, player.r, dimensions]);
 
   const handleHexClick = useCallback((q: number, r: number) => {
+      // Prevent click if we were just dragging
+      if (isDragging.current) return;
       movePlayer(q, r);
   }, [movePlayer]);
+
+  // --- INPUT HANDLERS (Update Targets Only) ---
 
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
     const stage = e.target.getStage();
     if (!stage) return;
-    const scaleBy = 1.1;
-    const oldScale = viewState.scale;
+
+    const oldScale = targetCameraRef.current.scale;
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
+
+    // Calculate zoom relative to current target, not current visual state (avoids oscillation)
     const mousePointTo = {
-      x: (pointer.x - viewState.x) / oldScale,
-      y: (pointer.y - viewState.y) / oldScale,
+      x: (pointer.x - targetCameraRef.current.x) / oldScale,
+      y: (pointer.y - targetCameraRef.current.y) / oldScale,
     };
+
+    const scaleBy = 1.1; 
     let newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
     newScale = Math.max(0.4, Math.min(newScale, 2.5));
     
-    const newPos = {
-      x: pointer.x - mousePointTo.x * newScale,
-      y: pointer.y - mousePointTo.y * newScale,
-    };
+    if (isNaN(newScale)) newScale = 1.0;
+
+    const newX = pointer.x - mousePointTo.x * newScale;
+    const newY = pointer.y - mousePointTo.y * newScale;
     
-    setViewState({ x: newPos.x, y: newPos.y, scale: newScale });
-    targetViewRef.current = { x: newPos.x, y: newPos.y }; 
-  }, [viewState]);
+    const safePos = safifyCoord(newX, newY);
+    targetCameraRef.current = { ...targetCameraRef.current, x: safePos.x, y: safePos.y, scale: newScale };
+  }, []);
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
-     if (e.target === e.target.getStage()) {
+     if (e.target === e.target.getStage() && !isDragging.current) {
          cancelPendingAction();
      }
   };
 
-  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-     if (!isRotating.current && !isMultitouch.current) {
-        const x = e.target.x();
-        const y = e.target.y();
-        setViewState(prev => ({ ...prev, x, y }));
-        targetViewRef.current = { x, y };
-     }
-  };
-  
-  // -- Mouse Rotation Handlers (Pivot around Cursor) --
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (e.evt.button === 2) { 
+      // Left Click (0) = Drag, Right Click (2) = Rotate
+      if (e.evt.button === 0) {
+          isDragging.current = true;
+          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
+          setIsInteracting(true); // Trigger LOD
+      } else if (e.evt.button === 2) { 
           isRotating.current = true;
-          lastMouseX.current = e.evt.clientX;
-          if(stageRef.current) stageRef.current.draggable(false);
+          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
+          setIsInteracting(true);
       }
   };
   
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (isRotating.current) {
-          const deltaX = e.evt.clientX - lastMouseX.current;
-          lastMouseX.current = e.evt.clientX;
-          
-          const oldRot = cameraRotationRef.current;
-          const deltaRot = deltaX * 0.5;
-          const newRot = oldRot + deltaRot;
-          
-          setCameraRotation(newRot);
-          // Manually update ref to prevent jitter in fast moves
-          cameraRotationRef.current = newRot;
+      if (isDragging.current) {
+          const dx = e.evt.clientX - lastPointerPos.current.x;
+          const dy = e.evt.clientY - lastPointerPos.current.y;
+          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
 
-          // Adjust Camera to Pivot around Mouse
-          const pivot = { x: e.evt.clientX, y: e.evt.clientY };
-          const adjustedView = calculateRotationAdjustedView(viewState, pivot, oldRot, newRot);
+          // Direct update to target
+          const nx = targetCameraRef.current.x + dx;
+          const ny = targetCameraRef.current.y + dy;
+          const safe = safifyCoord(nx, ny);
           
-          setViewState(adjustedView);
-          targetViewRef.current = { x: adjustedView.x, y: adjustedView.y };
+          targetCameraRef.current = { ...targetCameraRef.current, x: safe.x, y: safe.y };
+      }
+      
+      if (isRotating.current) {
+          const deltaX = e.evt.clientX - lastPointerPos.current.x;
+          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
+          
+          // Use current visual state for pivot math to prevent disorientation
+          const current = currentCameraRef.current;
+          
+          const deltaRot = deltaX * 0.5;
+          const newRot = current.rotation + deltaRot;
+          
+          // Pivot Calculation
+          const pivot = { x: e.evt.clientX, y: e.evt.clientY };
+          const adjustedView = calculateRotationAdjustedView(
+              { x: current.x, y: current.y, scale: current.scale }, 
+              pivot, 
+              current.rotation, 
+              newRot
+          );
+          
+          // Update Target
+          targetCameraRef.current = { 
+              ...targetCameraRef.current, 
+              x: adjustedView.x, 
+              y: adjustedView.y,
+              rotation: newRot 
+          };
       }
   };
   
-  const handleMouseUp = (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (isRotating.current) {
-          isRotating.current = false;
-          if(stageRef.current) stageRef.current.draggable(true);
-      }
+  const handleMouseUp = () => {
+      isDragging.current = false;
+      isRotating.current = false;
+      // Do not set setIsInteracting(false) here, let the animation loop detect when velocity settles.
+      // This prevents "popping" LOD changes.
   };
 
-  // -- Advanced Touch Handlers (Pinch & Rotate around Center) --
+  // -- Touch Handling --
   const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
     const touches = e.evt.touches;
-    if (touches.length === 2) {
+    setIsInteracting(true);
+    if (touches.length === 1) {
+        isDragging.current = true;
+        lastPointerPos.current = { x: touches[0].clientX, y: touches[0].clientY };
+    } else if (touches.length === 2) {
       isMultitouch.current = true;
-      if(stageRef.current) stageRef.current.draggable(false);
+      isDragging.current = false;
       
       const p1 = { x: touches[0].clientX, y: touches[0].clientY };
       const p2 = { x: touches[1].clientX, y: touches[1].clientY };
@@ -349,8 +411,21 @@ const GameView: React.FC = () => {
   
   const handleTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
       const touches = e.evt.touches;
+      
+      if (touches.length === 1 && isDragging.current) {
+          const dx = touches[0].clientX - lastPointerPos.current.x;
+          const dy = touches[0].clientY - lastPointerPos.current.y;
+          lastPointerPos.current = { x: touches[0].clientX, y: touches[0].clientY };
+          
+          const nx = targetCameraRef.current.x + dx;
+          const ny = targetCameraRef.current.y + dy;
+          const safe = safifyCoord(nx, ny);
+          targetCameraRef.current = { ...targetCameraRef.current, x: safe.x, y: safe.y };
+          return;
+      }
+
       if (touches.length === 2 && lastCenter.current) {
-          e.evt.preventDefault(); // Stop browser zoom
+          e.evt.preventDefault();
           
           const p1 = { x: touches[0].clientX, y: touches[0].clientY };
           const p2 = { x: touches[1].clientX, y: touches[1].clientY };
@@ -359,38 +434,32 @@ const GameView: React.FC = () => {
           const center = { x: (p1.x + p2.x)/2, y: (p1.y + p2.y)/2 };
           const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
 
-          // 1. Rotation with Pivot Logic
-          let currentRot = cameraRotationRef.current;
-          let tempViewState = viewState;
-
+          // Using current visual state for smooth pivot
+          let current = currentCameraRef.current;
+          let newRot = current.rotation;
+          
           const dAngle = angle - lastAngle.current;
-          if (Math.abs(dAngle) > 1) { // Lower threshold for better response
-             const newRot = currentRot + dAngle;
-             
-             // Pivot rotation around center of gesture
-             tempViewState = calculateRotationAdjustedView(tempViewState, center, currentRot, newRot);
-             
-             setCameraRotation(newRot);
-             cameraRotationRef.current = newRot;
+          if (Math.abs(dAngle) > 1) { 
+             newRot = current.rotation + dAngle;
+             // Calculate temporary view for pivot
+             const pivotRes = calculateRotationAdjustedView({x: current.x, y: current.y, scale: current.scale}, center, current.rotation, newRot);
+             current = { ...current, x: pivotRes.x, y: pivotRes.y }; // Local override for scale math below
              lastAngle.current = angle;
-             currentRot = newRot;
           }
           
-          // 2. Scale & Pan Logic
           const scaleMult = dist / lastDist.current;
-          let newScale = tempViewState.scale * scaleMult;
+          let newScale = current.scale * scaleMult;
           newScale = Math.max(0.4, Math.min(newScale, 2.5));
+          if (isNaN(newScale)) newScale = 1.0;
 
-          // Pan (Zoom relative to center point of fingers)
-          // Use tempViewState (which includes rotation offset) for calculation
-          const worldFocusX = (lastCenter.current.x - tempViewState.x) / tempViewState.scale;
-          const worldFocusY = (lastCenter.current.y - tempViewState.y) / tempViewState.scale;
-          
-          const newX = center.x - (worldFocusX * newScale);
-          const newY = center.y - (worldFocusY * newScale);
+          const worldFocusX = (lastCenter.current.x - current.x) / current.scale;
+          const worldFocusY = (lastCenter.current.y - current.y) / current.scale;
+          const rawX = center.x - (worldFocusX * newScale);
+          const rawY = center.y - (worldFocusY * newScale);
+          const safePos = safifyCoord(rawX, rawY);
 
-          setViewState({ x: newX, y: newY, scale: newScale });
-          targetViewRef.current = { x: newX, y: newY }; // Sync target to stop drift
+          // Update Target
+          targetCameraRef.current = { x: safePos.x, y: safePos.y, scale: newScale, rotation: newRot };
 
           lastDist.current = dist;
           lastCenter.current = center;
@@ -399,12 +468,11 @@ const GameView: React.FC = () => {
 
   const handleTouchEnd = () => {
       isMultitouch.current = false;
-      if(stageRef.current) stageRef.current.draggable(true);
+      isDragging.current = false;
       lastDist.current = 0;
   };
 
   return (
-    // Added touch-none to prevent browser gestures on mobile
     <div className="relative h-full w-full overflow-hidden bg-[#020617] touch-none" onContextMenu={(e) => e.preventDefault()}>
       
       {/* BACKGROUND */}
@@ -413,7 +481,7 @@ const GameView: React.FC = () => {
          <div className="absolute inset-0 bg-slate-950/20" />
       </div>
 
-      {/* FIREWORKS LAYER (VICTORY) */}
+      {/* FIREWORKS */}
       {gameStatus === 'VICTORY' && <Fireworks />}
 
       {/* CANVAS */}
@@ -422,7 +490,8 @@ const GameView: React.FC = () => {
           ref={stageRef}
           width={dimensions.width} 
           height={dimensions.height} 
-          draggable
+          // Disable native drag to use our physics target system
+          draggable={false}
           onWheel={handleWheel} 
           onMouseDown={handleMouseDown} 
           onMouseMove={handleMouseMove} 
@@ -434,38 +503,38 @@ const GameView: React.FC = () => {
           onClick={handleStageClick} 
           onTap={handleStageClick}
           onDragStart={() => setHoveredHexId(null)}
-          onDragEnd={handleDragEnd}
           onContextMenu={(e) => e.evt.preventDefault()} 
-          x={viewState.x + shakeOffset.x} 
-          y={viewState.y + shakeOffset.y} 
-          scaleX={viewState.scale} 
-          scaleY={viewState.scale}
+          x={renderCamera.x + shakeOffset.x} 
+          y={renderCamera.y + shakeOffset.y} 
+          scaleX={renderCamera.scale} 
+          scaleY={renderCamera.scale}
         >
           <MapRenderer 
-            viewState={viewState}
+            viewState={renderCamera}
             dimensions={dimensions}
-            rotation={cameraRotation}
+            rotation={renderCamera.rotation}
             onHexClick={handleHexClick}
             onHover={setHoveredHexId}
             hoveredHexId={hoveredHexId}
+            isInteracting={isInteracting} // PASSING OPTIMIZATION FLAG
           />
         </Stage>
       </div>
 
       {/* TOAST OVERLAY */}
       {toast && (
-          <div className="absolute top-[15%] left-0 w-full flex justify-center z-[60] pointer-events-none">
+          <div className="absolute top-[15%] left-0 w-full flex justify-center z-[60] pointer-events-none px-4">
               <div className={`
-                  flex items-center gap-3 px-6 py-4 rounded-full backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.5)] border
-                  animate-in slide-in-from-top-4 duration-300
+                  flex items-center gap-2 md:gap-3 px-4 py-3 md:px-6 md:py-4 rounded-2xl md:rounded-full backdrop-blur-md shadow-2xl border
+                  animate-in slide-in-from-top-4 duration-300 max-w-[90vw] md:max-w-max
                   ${toast.type === 'error' ? 'bg-red-950/60 border-red-500/50 text-red-100 animate-pulse' : ''}
                   ${toast.type === 'success' ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-100' : ''}
                   ${toast.type === 'info' ? 'bg-slate-900/80 border-slate-700 text-white' : ''}
               `}>
-                  {toast.type === 'error' && <XCircle className="w-8 h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]" />}
-                  {toast.type === 'success' && <CheckCircle className="w-6 h-6 text-emerald-500" />}
-                  {toast.type === 'info' && <Info className="w-6 h-6 text-blue-400" />}
-                  <span className="text-lg font-black uppercase tracking-widest leading-none drop-shadow-md">{toast.message}</span>
+                  {toast.type === 'error' && <XCircle className="w-5 h-5 md:w-8 md:h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] shrink-0" />}
+                  {toast.type === 'success' && <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-emerald-500 shrink-0" />}
+                  {toast.type === 'info' && <Info className="w-5 h-5 md:w-6 md:h-6 text-blue-400 shrink-0" />}
+                  <span className="text-xs md:text-lg font-black uppercase tracking-wider md:tracking-widest leading-tight drop-shadow-md text-center md:text-left break-words">{toast.message}</span>
               </div>
           </div>
       )}

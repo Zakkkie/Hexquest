@@ -1,5 +1,6 @@
 
 import { EntityType } from '../types';
+import { textureCache } from './textureCache';
 
 /**
  * UnitRenderer acts as a virtual asset factory.
@@ -8,7 +9,6 @@ import { EntityType } from '../types';
  */
 class UnitRenderer {
   private static instance: UnitRenderer;
-  private cache: Map<string, HTMLCanvasElement> = new Map();
 
   // Dimensions
   private readonly WIDTH = 64;
@@ -27,26 +27,22 @@ class UnitRenderer {
 
   public getUnitImage(headIndex: number, bodyIndex: number, color: string, type: EntityType): HTMLCanvasElement {
     // Unique key for cache based on visual parameters
-    const key = `${type}_${headIndex}_${bodyIndex}_${color}_v2`; // Added version suffix to bust old cache
+    const key = `UNIT_${type}_${headIndex}_${bodyIndex}_${color}_v2`; 
     
-    if (this.cache.has(key)) {
-      return this.cache.get(key)!;
-    }
+    return textureCache.getOrCreate(key, () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.WIDTH;
+        canvas.height = this.HEIGHT;
+        const ctx = canvas.getContext('2d', { alpha: true })!;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = this.WIDTH;
-    canvas.height = this.HEIGHT;
-    const ctx = canvas.getContext('2d', { alpha: true })!;
+        // Scaling to fit the 64x64 box nicely, keeping logic similar to original Unit.tsx
+        // Original Unit.tsx drew around (0,0). We translate to center.
+        ctx.translate(this.CENTER_X, this.CENTER_Y);
 
-    // Scaling to fit the 64x64 box nicely, keeping logic similar to original Unit.tsx
-    // Original Unit.tsx drew around (0,0). We translate to center.
-    ctx.translate(this.CENTER_X, this.CENTER_Y);
-
-    this.drawBody(ctx, bodyIndex, color);
-    this.drawHead(ctx, headIndex, color, type === EntityType.PLAYER);
-
-    this.cache.set(key, canvas);
-    return canvas;
+        this.drawBody(ctx, bodyIndex, color);
+        this.drawHead(ctx, headIndex, color, type === EntityType.PLAYER);
+        return canvas;
+    });
   }
 
   private drawBody(ctx: CanvasRenderingContext2D, index: number, color: string) {

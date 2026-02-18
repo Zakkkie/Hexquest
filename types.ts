@@ -25,10 +25,16 @@ export interface Hex extends HexView {
   movePoint?: number;
   artifact?: { type: string };
   
-  // V95 High Level Mechanics
-  recoveryPoints?: number;    // Remaining uses for L4+ hexes (Max 3)
-  lastRecoveryTime?: number;  // Timestamp of last use or upgrade
+  // V95 High Level Mechanics - RECOVERY SYSTEM v2
+  recoveryCharges?: number;        // Current charges for L4+ (0-3)
+  recoveryMaxCharges?: number;     // Always 3 for L4+, 1 for L0-L3 (Virtual)
+  lastRecoveryUseTime?: number;    // Timestamp of last use
+  cooldownEndTime?: number;        // Timestamp when cooldown expires (for L4+)
   
+  // Legacy / Deprecated (Mapped to new system where possible, kept to avoid immediate breakages)
+  recoveryPoints?: number; 
+  lastRecoveryTime?: number;
+
   // Loot History: Tracks negative levels where items/coins were already found
   lootedLevels?: number[];
 }
@@ -124,6 +130,19 @@ export interface BotGoal {
   expiresAt: number; 
 }
 
+export type PlanStep =
+    | { type: 'MOVE_TO'; targetId: string }
+    | { type: 'UPGRADE'; targetId: string }
+    | { type: 'DIG'; targetId: string }
+    | { type: 'MINE_UNTIL_FULL' }
+    | { type: 'RECOVER' };
+
+export interface Plan {
+    steps: PlanStep[];
+    createdAt: number; // stateVersion when plan was created
+    label: string;     // human-readable plan name for debug
+}
+
 export interface BotMemory {
   lastPlayerPos: HexCoord | null;
   currentGoal: BotGoal | null;
@@ -164,7 +183,22 @@ export interface BotMemory {
   
   // V71: Anti-stuck mechanism
   waitCounter?: number;             // Track consecutive WAIT actions
-  lastActionType?: string;          // Track last action type for pattern detection
+  lastActionType?: string | null;   // Track last action type for pattern detection
+  
+  // V95: Hard Anti-Stuck
+  consecutiveWaitCount?: number;    // Counter for infinite loop detection
+  stuckSince?: number;              // Timestamp
+
+  blacklistedTargets?: string[];    // NEW: Hex IDs that are temporarily ignored
+
+  // V100: Planning System
+  waitStreak?: number;
+  plan?: Plan | null;
+
+  // V102: Advanced AI State
+  phase?: 'EXPLORE' | 'STOCKPILE' | 'ASSAULT';
+  exploreAnchor?: HexCoord | null;
+  stockpileWaitTicks?: number;
 }
 
 export interface Entity {
