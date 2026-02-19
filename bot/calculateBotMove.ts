@@ -324,14 +324,17 @@ const buildExplorePlan = (
     stateVersion: number,
     allBots: Entity[]
 ): Plan => {
-    // CRITICAL: Anchor must be stable. If not set, it defaults to current pos, but it should be set in initMemory.
-    // We treat the anchor as the "center" of the spiral.
-    const anchor: HexCoord = (bot.memory?.exploreAnchor as HexCoord | null) ?? { q: bot.q, r: bot.r };
+    // CHANGE: Use (0,0) as the anchor for exploration.
+    // This forces bots to look for unrevealed hexes starting from the CENTER of the map (Ring 0, 1, 2...)
+    // effectively making them rush inward if they spawn on the edge.
+    // Previously used: (bot.memory?.exploreAnchor as HexCoord | null) ?? { q: bot.q, r: bot.r };
+    const anchor: HexCoord = { q: 0, r: 0 };
 
     // ── 1. Find current shell ring ────────────────────────────────────────────
-    let currentRing = 1;
+    let currentRing = 0; // Start searching from center
     let ringCandidates: Hex[] = [];
 
+    // Search range expanded slightly to find any holes in map knowledge
     while (currentRing <= EXPLORE_RADIUS) {
         ringCandidates = Object.values(grid).filter(h => {
             if (h.structureType === 'VOID') return false;
@@ -374,7 +377,8 @@ const buildExplorePlan = (
     };
 
     // FIX: Relax proximity constraint to allow following the ring even if it means a small walk
-    const MAX_RING_WALK = 15; 
+    // Since we are now anchoring to center, we might need to walk far (from spawn to center)
+    const MAX_RING_WALK = 30; 
     const reachableCandidates = ringCandidates.filter(h => dist(bot, h) <= MAX_RING_WALK);
     const pool = reachableCandidates.length > 0 ? reachableCandidates : ringCandidates;
 
@@ -429,7 +433,7 @@ const buildExplorePlan = (
     return {
         steps: pathSteps,
         createdAt:     stateVersion,
-        label:         waypoint ? `Dogleg (${waypoint.q},${waypoint.r}) -> R${currentRing}` : `Explore Direct R${currentRing}`,
+        label:         waypoint ? `Explore Inward (${waypoint.q},${waypoint.r}) -> R${currentRing}` : `Explore Center R${currentRing}`,
         exploreAnchor: anchor,
     } as Plan & { exploreAnchor: HexCoord };
 };

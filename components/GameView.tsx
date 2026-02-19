@@ -96,12 +96,18 @@ const GameView: React.FC = () => {
           default: return 1.0;
       }
   };
+
+  // UI OFFSET: Shift center up to avoid Bottom Dock overlap
+  // Increased to account for larger bottom dock with status icons
+  const getCenterOffset = () => {
+      return deviceType === 'MOBILE' ? 120 : 100;
+  };
   
   // --- UNIFIED CAMERA STATE ---
   // We use Refs for the physics engine source-of-truth to avoid React batching lag during high-frequency events.
   const initialCamera = { 
       x: window.innerWidth / 2, 
-      y: window.innerHeight / 2, 
+      y: (window.innerHeight / 2) - getCenterOffset(), 
       scale: getInitialScale(), 
       rotation: 0 
   };
@@ -277,12 +283,14 @@ const GameView: React.FC = () => {
       const rot = currentCameraRef.current.rotation;
       const { x: px, y: py } = hexToPixel(player.q, player.r, rot);
       
+      const offset = getCenterOffset();
+      
       const tx = (dimensions.width / 2) - (px * targetCameraRef.current.scale);
-      const ty = (dimensions.height / 2) - (py * targetCameraRef.current.scale);
+      const ty = ((dimensions.height / 2) - offset) - (py * targetCameraRef.current.scale);
       
       const safeT = safifyCoord(tx, ty);
       targetCameraRef.current = { ...targetCameraRef.current, x: safeT.x, y: safeT.y };
-  }, [player.q, player.r, dimensions]);
+  }, [player.q, player.r, dimensions, deviceType]);
 
   const handleHexClick = useCallback((q: number, r: number) => {
       // Prevent click if we were just dragging

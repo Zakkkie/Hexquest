@@ -237,6 +237,10 @@ const baseDigScore = (
   if (isLoadBearing(hex, grid)) return -9999;
   if (hex.ownerId === bot.id && hex.maxLevel > 0) return -500; // Prefer not destroying own high ground
   if (hex.structureType === 'MONUMENT') return -9999;
+  
+  // AVOID MAP BOUNDARIES (Walls)
+  // Usually boundaries are generated at -8. Digging them deeper (-9) is useless and traps bots.
+  if (hex.currentLevel <= -7) return -1000;
 
   let score = 0;
   const dist = cubeDistance(bot, hex);
@@ -245,7 +249,6 @@ const baseDigScore = (
   if (hex.currentLevel < 0) {
       // Adjusted Logic:
       // In Skirmish, deep pits (<-5) might contain rare loot, so we incentivize digging.
-      // In Campaign/Arena, boundaries are -8. Digging -8 to -9 is usually pointless and dangerous.
       // Clamp the depth bonus to prevent bots from obsession with boundaries.
       
       const depth = Math.abs(hex.currentLevel);
