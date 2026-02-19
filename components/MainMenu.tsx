@@ -135,14 +135,15 @@ const MenuButton: React.FC<{
   return (
     <button 
       onClick={onClick}
-      className={`group w-full flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 relative overflow-hidden ${getStyle()}`}
+      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden active:scale-95 touch-manipulation ${getStyle()}`}
     >
-      <div className={`p-3 rounded-xl transition-colors relative z-10 ${getIconStyle()}`}>
-        {icon}
+      <div className={`p-3 md:p-3.5 rounded-xl transition-colors relative z-10 ${getIconStyle()}`}>
+        {/* Pass larger icon size down if possible, but container controls visual weight */}
+        {React.cloneElement(icon as React.ReactElement, { className: 'w-6 h-6 md:w-5 md:h-5' })}
       </div>
       <div className="flex flex-col items-start relative z-10 text-left">
-        <span className={`text-sm font-black uppercase tracking-widest ${variant === 'battle' ? 'text-white' : ''}`}>{label}</span>
-        {subLabel && <span className={`text-[10px] font-mono group-hover:text-slate-200 ${variant === 'battle' ? 'text-red-100' : 'text-slate-500'}`}>{subLabel}</span>}
+        <span className={`text-base md:text-sm font-black uppercase tracking-widest ${variant === 'battle' ? 'text-white' : ''}`}>{label}</span>
+        {subLabel && <span className={`text-[11px] md:text-[10px] font-mono group-hover:text-slate-200 ${variant === 'battle' ? 'text-red-100' : 'text-slate-500'}`}>{subLabel}</span>}
       </div>
       
       {/* Shimmer Effect */}

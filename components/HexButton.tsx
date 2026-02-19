@@ -20,12 +20,12 @@ const HexButton: React.FC<HexButtonProps> = ({
 }) => {
   
   // RESPONSIVE SIZE MAPPING
-  // Optimized for cleaner UI footprint
+  // Optimized for cleaner UI footprint but larger touch targets on mobile
   const sizeClasses = {
-    sm: 'w-8 h-8 md:w-10 md:h-10', // Rotation/Small actions
-    md: 'w-10 h-10 md:w-14 md:h-14', // Standard/Grid items
-    lg: 'w-14 h-14 md:w-20 md:h-20', // Action buttons (Primary) - Reduced mobile to 56px
-    xl: 'w-16 h-16 md:w-24 md:h-24' // Active State (Largest)
+    sm: 'w-9 h-9 md:w-10 md:h-10', // Slightly larger on mobile for hit testing
+    md: 'w-12 h-12 md:w-14 md:h-14', // Standard Grid: 48px mobile (was 40), 56px desktop
+    lg: 'w-16 h-16 md:w-20 md:h-20', // Primary Actions: 64px mobile (was 56), 80px desktop
+    xl: 'w-20 h-20 md:w-24 md:h-24' // Active State: 80px mobile, 96px desktop
   };
   
   const sClass = sizeClasses[size];
@@ -42,7 +42,7 @@ const HexButton: React.FC<HexButtonProps> = ({
   const c = colors[variant];
   const pathData = "M50 2 L93 27 L93 73 L50 98 L7 73 L 7 27 Z";
   
-  const baseClasses = `relative flex items-center justify-center select-none transition-all duration-500 ${className}`;
+  const baseClasses = `relative flex items-center justify-center select-none transition-all duration-500 touch-manipulation ${className}`;
   
   // Interactive Classes
   let interactClasses = 'cursor-pointer active:scale-95 hover:brightness-125 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]';

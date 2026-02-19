@@ -25,9 +25,13 @@ const App: React.FC = () => {
     };
 
     window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize); // Handle rotation immediately
     handleResize(); // Init
 
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, [setDeviceType]);
 
   return (
