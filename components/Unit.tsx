@@ -76,8 +76,19 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
   useLayoutEffect(() => {
       if (!groupRef.current || !visualGroupRef.current) return;
       
-      // Only force position if NOT moving. If moving, the animation loop handles it.
-      if (!animState.current.isMoving) {
+      // DETECT PENDING ANIMATION:
+      // If the props (q, r, hexLevel) don't match the internal animation target,
+      // it means a new command has arrived but the animation loop (Effect 2) hasn't processed it yet.
+      // We must NOT snap to the new position in this case, otherwise the sprite will 
+      // teleport to the destination for 1 frame before the tween starts.
+      const isPendingUpdate = 
+          q !== animState.current.targetQ || 
+          r !== animState.current.targetR || 
+          hexLevel !== animState.current.targetLevel;
+      
+      // Only force position if NOT moving AND NOT waiting for a move start.
+      // If moving, the animation loop handles it.
+      if (!animState.current.isMoving && !isPendingUpdate) {
           const { x, y } = hexToPixel(q, r, rotation);
           const z = getHexVisualHeight(hexLevel);
           

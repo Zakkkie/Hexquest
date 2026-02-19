@@ -105,6 +105,7 @@ export const calculateMovementCost = (
         deductMoves,
         deductCoins,
         canAfford,
-        reason: canAfford ? undefined : `Insufficient credits. Need ${deductCoins}, have ${coinsAvailable}.`
+        // Allow UI to localize the reason if it's just a funding issue
+        reason: undefined 
     };
 };

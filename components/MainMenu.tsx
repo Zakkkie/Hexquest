@@ -317,8 +317,10 @@ const MainMenu: React.FC = () => {
       return;
     }
 
+    const safeColor = selectedColor || AVATAR_COLORS[0];
+
     if (authMode === 'GUEST') {
-      loginAsGuest(inputName, selectedColor, selectedHead, selectedBody);
+      loginAsGuest(inputName, safeColor, selectedHead, selectedBody);
       setAuthMode(null);
     } else if (authMode === 'LOGIN') {
       if (!inputPassword.trim()) {
@@ -336,7 +338,7 @@ const MainMenu: React.FC = () => {
         setErrorMessage("Password is required.");
         return;
       }
-      const res = registerUser(inputName, inputPassword, selectedColor, selectedHead, selectedBody);
+      const res = registerUser(inputName, inputPassword, safeColor, selectedHead, selectedBody);
       if (res.success) {
         setAuthMode(null);
       } else {

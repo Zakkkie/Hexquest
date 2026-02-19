@@ -788,7 +788,7 @@ export const TEXT: Record<Language, Dictionary> = {
             RECHARGE_FAILED: "Сбой Перезарядки",
             TOO_FAR_VOID: "Слишком далеко",
             PATH_BLOCKED: "Путь Заблокирован",
-            NEED_CREDITS: "Нужно {0} кред.",
+            NEED_CREDITS: "Требуется {0} кред.",
             CONFIRM_MOVE: "Нажмите для подтверждения ({0} кред.)",
             GENERIC_ERROR: "Ошибка",
             RESTORE_ERROR: "Ошибка Восстановления",
