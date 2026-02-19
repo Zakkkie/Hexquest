@@ -255,7 +255,7 @@ const CampaignMap: React.FC = () => {
                                     )}
                                     
                                     <HexButton 
-                                        size={isCurrent ? 'xl' : (isMobile ? 'md' : 'lg')} 
+                                        size={isMobile ? 'md' : 'lg'} 
                                         variant={isCompleted ? 'emerald' : (isCurrent ? 'amber' : 'slate')} 
                                         active={isCurrent}
                                         pulsate={isCurrent}
@@ -270,13 +270,7 @@ const CampaignMap: React.FC = () => {
                                         disabled={!isUnlocked}
                                         className="relative z-10 hover:scale-110 transition-transform duration-300"
                                     >
-                                        {isCompleted ? (
-                                            <Check className={isCurrent ? "w-8 h-8 md:w-10 md:h-10" : "w-6 h-6 md:w-8 md:h-8"} />
-                                        ) : (isUnlocked ? (
-                                            <Play className={`${isCurrent ? "w-8 h-8 md:w-10 md:h-10" : "w-6 h-6 md:w-8 md:h-8"} fill-current ml-1`} />
-                                        ) : (
-                                            <Lock className="w-5 h-5 md:w-6 md:h-6 opacity-50" />
-                                        ))}
+                                        {isCompleted ? <Check className="w-6 h-6 md:w-8 md:h-8" /> : (isUnlocked ? <Play className="w-6 h-6 md:w-8 md:h-8 fill-current ml-1" /> : <Lock className="w-5 h-5 md:w-6 md:h-6 opacity-50" />)}
                                     </HexButton>
 
                                     {/* Level Badge */}
