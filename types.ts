@@ -9,7 +9,7 @@ export interface HexView {
   r: number;
   currentLevel: number;
   maxLevel: number;
-  structureType?: 'NONE' | 'BARRIER' | 'MINE' | 'CAPITAL' | 'VOID' | 'MONUMENT'; // Added MONUMENT
+  structureType?: 'NONE' | 'BARRIER' | 'CAPITAL' | 'VOID' | 'MONUMENT';
   ownerId?: string; 
 }
 
@@ -19,10 +19,7 @@ export interface Hex extends HexView {
   revealed: boolean;
   structureHp?: number;
   durability?: number; // New: Lives for Level 1 hexes
-  mineTimer?: number;
   trap?: { active: boolean, potency?: number } | null;
-  attackPoint?: number;
-  movePoint?: number;
   artifact?: { type: string };
   
   // V95 High Level Mechanics - RECOVERY SYSTEM v2
@@ -30,10 +27,6 @@ export interface Hex extends HexView {
   recoveryMaxCharges?: number;     // Always 3 for L4+, 1 for L0-L3 (Virtual)
   lastRecoveryUseTime?: number;    // Timestamp of last use
   cooldownEndTime?: number;        // Timestamp when cooldown expires (for L4+)
-  
-  // Legacy / Deprecated (Mapped to new system where possible, kept to avoid immediate breakages)
-  recoveryPoints?: number; 
-  lastRecoveryTime?: number;
 
   // Loot History: Tracks negative levels where items/coins were already found
   lootedLevels?: number[];
@@ -119,17 +112,6 @@ export interface Item {
   negativeEffectDuration?: number;
 }
 
-export type BotGoalType = 'EXPAND' | 'DEFEND' | 'ATTACK' | 'GROWTH' | 'IDLE' | 'PREPARE_CYCLE' | 'BUILD_SUPPORT' | 'GATHER_RESOURCES' | 'AGGRESSOR';
-
-export interface BotGoal {
-  type: BotGoalType;
-  targetHexId?: string;
-  targetQ?: number;
-  targetR?: number;
-  priority: number;
-  expiresAt: number; 
-}
-
 export type PlanStep =
     | { type: 'MOVE_TO'; targetId: string }
     | { type: 'UPGRADE'; targetId: string }
@@ -144,58 +126,23 @@ export interface Plan {
 }
 
 export interface BotMemory {
+  // Navigation & State
   lastPlayerPos: HexCoord | null;
-  currentGoal: BotGoal | null;
-  
-  // V50 Recursive Planning
-  masterGoalId?: string | null; // The ultimate project center (Tower Peak / Pit Center)
-  subGoalId?: string | null;    // The immediate dependency (Support hex)
-  
   stuckCounter: number;
-  lastActionFailed?: boolean;
-  failReason?: string;
-  scanTimer?: number; // V40 Variable Awareness
-  
-  // V20 Compatibility (Legacy)
-  quarryKey?: string | null;    
-  towerKey?: string | null;     
-
-  // V21 Architect Memory
-  mode?: 'GATHER' | 'BUILD' | 'AGGRESSOR';
-  homeBase?: HexCoord;       // Coordinates of Tower Center
-  quarrySite?: HexCoord;     // Coordinates of Quarry Center
-  targetHexId?: string | null;      
-
-  // V29 Settler Memory
-  spawnTime?: number;
-  migrationAngle?: number;
-
-  // V48 Grand Architect
-  projectFailCount?: number;
-  
-  // V60 Cooperative AI & Aggressor
-  botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER';
-  sharedTowerKey?: string | null;   // Shared tower target for cooperative building
-  sharedQuarryKey?: string | null;  // Shared quarry target for cooperative digging
-  targetPlayerHexId?: string | null; // Target hex for aggressor to attack
-  aggressorActive?: boolean;        // Whether aggressor mode is currently active
-  aggressorStuckCount?: number;     // V61: Counter for aggressor being stuck
-  
-  // V71: Anti-stuck mechanism
-  waitCounter?: number;             // Track consecutive WAIT actions
-  lastActionType?: string | null;   // Track last action type for pattern detection
-  
-  // V95: Hard Anti-Stuck
-  consecutiveWaitCount?: number;    // Counter for infinite loop detection
-  stuckSince?: number;              // Timestamp
-
-  blacklistedTargets?: string[];    // NEW: Hex IDs that are temporarily ignored
-
-  // V100: Planning System
   waitStreak?: number;
+  
+  // Role & Identity
+  botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER';
+  mode?: 'GATHER' | 'BUILD' | 'AGGRESSOR';
+  
+  // Execution
+  targetHexId?: string | null;
+  blacklistedTargets?: string[];
   plan?: Plan | null;
+  lastActionType?: string | null;
+  projectFailCount?: number;
 
-  // V102: Advanced AI State
+  // AI Phase Logic (V102)
   phase?: 'EXPLORE' | 'STOCKPILE' | 'ASSAULT';
   exploreAnchor?: HexCoord | null;
   stockpileWaitTicks?: number;
@@ -234,8 +181,6 @@ export interface Entity {
   avatarColor?: string; 
   headIndex: number;
   bodyIndex: number;
-
-  attackTokens?: number;
   
   // Track if "Recovery" ability was used on the current hex
   recoveredCurrentHex?: boolean; 
@@ -446,7 +391,6 @@ export interface SessionState {
   isPlayerGrowing: boolean; 
   playerGrowthIntent: 'RECOVER' | 'UPGRADE' | 'DIG' | null; 
   growingBotIds: string[]; 
-  telemetry?: GameEvent[];
   effects: FloatingText[]; // Visual effects layer
   language: Language; // Language setting for session-level localization (e.g. hooks)
   

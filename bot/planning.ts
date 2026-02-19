@@ -215,19 +215,6 @@ export const findBestBuildTargets = (
     return results.sort((a, b) => b.score - a.score).slice(0, maxResults);
 };
 
-// Legacy support if needed, though mostly replaced by findBestBuildTargets
-export const findStrategicBuildTarget = (
-    bot: Entity,
-    grid: Record<string, Hex>,
-    allBots: Entity[],
-    obstacles: HexCoord[],
-    monument?: Hex
-): HexScore | null => {
-    // Redirect to new logic
-    const targets = findBestBuildTargets(bot, grid, allBots, 1);
-    return targets.length > 0 ? targets[0] : null;
-};
-
 // Base scoring for a hex to see if it's generally desirable to dig
 const baseDigScore = (
   hex: Hex,

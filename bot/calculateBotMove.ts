@@ -184,7 +184,6 @@ const detectGamePhase = (
 
 const initMemory = (bot: Entity): BotMemory => ({
     lastPlayerPos:      null,
-    currentGoal:        null,
     stuckCounter:       0,
     mode:               'GATHER',
     projectFailCount:   0,
@@ -886,7 +885,7 @@ export const calculateBotMove = (
     allBots?: Entity[]
 ): AiResult => {
     if (!bot) {
-        return { action: null, debug: 'ERR:NoBot', memory: { lastPlayerPos: null, currentGoal: null, stuckCounter: 0 } };
+        return { action: null, debug: 'ERR:NoBot', memory: { lastPlayerPos: null, stuckCounter: 0 } };
     }
 
     const mem      = initMemory(bot);

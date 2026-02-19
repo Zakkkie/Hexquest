@@ -153,7 +153,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       totalCoinsEarned: 0, movementQueue: [],
       storage: botStartStorage, maxStorage: maxStorage,
       inventory: [],
-      memory: { lastPlayerPos: null, currentGoal: null, stuckCounter: 0 },
+      memory: { lastPlayerPos: null, stuckCounter: 0 },
       avatarColor: BOT_PALETTE[Math.floor(Math.random() * BOT_PALETTE.length)],
       headIndex: Math.floor(Math.random() * 4),
       bodyIndex: Math.floor(Math.random() * 4),
@@ -235,7 +235,6 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     isPlayerGrowing: false,
     playerGrowthIntent: null,
     growingBotIds: [],
-    telemetry: [],
     effects: [],
     language,
     entropy: {

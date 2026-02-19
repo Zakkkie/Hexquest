@@ -44,7 +44,6 @@ export const GAME_CONFIG = {
   } as Record<number, { cost: number, growthTime: number, income: number, reqRank: number }>,
 
   STRUCTURES: {
-    MINE: { cost: 50, incomePerTick: 1, maxHp: 20 },
     BARRIER: { cost: 20, hpPerLevel: 10 },
     CAPITAL: { cost: 500, defenseBonus: 2 }
   }

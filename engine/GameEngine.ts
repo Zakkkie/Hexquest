@@ -71,7 +71,6 @@ export class GameEngine {
       botActivityLog: [...source.botActivityLog],
       fullBotHistory: source.fullBotHistory,
       growingBotIds: [...source.growingBotIds],
-      telemetry: source.telemetry ? [...source.telemetry] : undefined,
       effects: [...source.effects],
       entropy: { ...source.entropy },
       activeLevelConfig: source.activeLevelConfig,
@@ -199,9 +198,6 @@ export class GameEngine {
       }
       if (state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
           state.botActivityLog = state.botActivityLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
-      }
-      if (state.telemetry && state.telemetry.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
-          state.telemetry = state.telemetry.slice(state.telemetry.length - SAFETY_CONFIG.MAX_LOG_SIZE);
       }
 
       const entities = [state.player, ...state.bots];

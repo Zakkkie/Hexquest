@@ -171,6 +171,14 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
 
     const inventoryList = [0, 1, 2, 3, 4];
 
+    // Helper for Action Clicks
+    const handleActionClick = (intent: 'DIG' | 'UPGRADE' | 'RECOVER') => {
+        togglePlayerGrowth(intent);
+        if (deviceType === 'DESKTOP') {
+            onCenterPlayer();
+        }
+    };
+
     return (
         <div className="absolute inset-x-0 bottom-0 p-2 md:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end z-30">
             <div className="mb-2 pointer-events-auto">
@@ -225,13 +233,13 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
 
                 {/* RIGHT: ACTION BUTTONS */}
                 <div className="flex items-end gap-2 md:gap-3 shrink-0 ml-auto">
-                    <HexButton variant="red" size={mainButtonSize} onClick={() => { togglePlayerGrowth('DIG'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
+                    <HexButton variant="red" size={mainButtonSize} onClick={() => handleActionClick('DIG')} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
                         <Pickaxe className={`w-6 h-6 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
                     </HexButton>
-                    <HexButton variant="amber" size={mainButtonSize} onClick={() => { togglePlayerGrowth('UPGRADE'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} disabled={!canUpgrade} pulsate={canUpgrade && !isPlayerGrowing} progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-1 ring-4 ring-amber-500/20 rounded-full' : ''} title={upgradeTooltip}>
+                    <HexButton variant="amber" size={mainButtonSize} onClick={() => handleActionClick('UPGRADE')} active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} disabled={!canUpgrade} pulsate={canUpgrade && !isPlayerGrowing} progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-1 ring-4 ring-amber-500/20 rounded-full' : ''} title={upgradeTooltip}>
                         <ChevronsUp className={`w-7 h-7 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
                     </HexButton>
-                    <HexButton variant="blue" size={mainButtonSize} onClick={() => { togglePlayerGrowth('RECOVER'); onCenterPlayer(); }} active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} disabled={!recoveryState.canRecover} progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''} title={recoverTooltip}>
+                    <HexButton variant="blue" size={mainButtonSize} onClick={() => handleActionClick('RECOVER')} active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} disabled={!recoveryState.canRecover} progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''} title={recoverTooltip}>
                         {recoveryState.cooling ? (
                             <div className="flex flex-col items-center">
                                 <Hourglass className="w-5 h-5 md:w-6 md:h-6 animate-spin-slow text-slate-300" />

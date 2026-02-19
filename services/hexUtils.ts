@@ -93,11 +93,6 @@ export const getNeighbors = (q: number, r: number): HexCoord[] => {
   return directions.map(d => ({ q: q + d.q, r: r + d.r }));
 };
 
-export const calculateReward = (level: number) => {
-    const cfg = getLevelConfig(level);
-    return { coins: cfg.income, moves: 1 };
-};
-
 export const getSecondsToGrow = (level: number) => getLevelConfig(level).growthTime;
 
 /**
