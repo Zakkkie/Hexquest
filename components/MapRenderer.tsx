@@ -296,13 +296,22 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         const height = dimensions.height * inverseScale;
         
         // Culling Padding (keeps objects visible slightly offscreen)
-        const CULL_PADDING = 150;
+        // Reduced padding as corner calculation is more precise, but keep some for partial hexes
+        const CULL_PADDING = 100;
 
-        const centerX = x0 + width / 2;
-        const centerY = y0 + height / 2;
-        const centerHex = pixelToHex(centerX, centerY, rotation);
-        
-        const radius = Math.ceil(Math.sqrt(width*width + height*height) / (HEX_SIZE * 1.5)) + 2;
+        // Calculate visible range in Hex Coordinates by projecting viewport corners
+        // We use the pixelToHex utility which handles the rotation and perspective (squash)
+        const corners = [
+            pixelToHex(x0 - CULL_PADDING, y0 - CULL_PADDING, rotation), // Top-Left
+            pixelToHex(x0 + width + CULL_PADDING, y0 - CULL_PADDING, rotation), // Top-Right
+            pixelToHex(x0 + width + CULL_PADDING, y0 + height + CULL_PADDING, rotation), // Bottom-Right
+            pixelToHex(x0 - CULL_PADDING, y0 + height + CULL_PADDING, rotation) // Bottom-Left
+        ];
+
+        const qMin = Math.min(...corners.map(c => c.q));
+        const qMax = Math.max(...corners.map(c => c.q));
+        const rMin = Math.min(...corners.map(c => c.r));
+        const rMax = Math.max(...corners.map(c => c.r));
 
         const playerNeighbors = getNeighbors(player.q, player.r);
         const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
@@ -324,20 +333,23 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
             return safifyCoord(px, py);
         };
 
+        const centerHex = pixelToHex(x0 + width / 2, y0 + height / 2, rotation); // Still needed for LOD distance
         const levelId = activeLevelConfig?.id;
 
         // --- OPTIMIZED LOOP: COORDINATE ITERATION ---
-        for (let q = centerHex.q - radius; q <= centerHex.q + radius; q++) {
-            for (let r = centerHex.r - radius; r <= centerHex.r + radius; r++) {
+        for (let q = qMin; q <= qMax; q++) {
+            for (let r = rMin; r <= rMax; r++) {
                 
                 const hexKey = getHexKey(q, r);
                 const hex = grid[hexKey];
                 if (!hex) continue; 
 
+                // We still do a rough frustum check here just in case the AABB is loose due to diagonal rotation,
+                // but strictly speaking the loop range is much tighter now.
+                // We calculate x,y here for rendering anyway.
                 const { x, y } = fastProject(q, r);
                 
-                // FRUSTUM CULLING
-                // Skip rendering if hex is significantly off-screen
+                // FRUSTUM CULLING (Double Check)
                 if (x < x0 - CULL_PADDING || x > x0 + width + CULL_PADDING || y < y0 - CULL_PADDING || y > y0 + height + CULL_PADDING) {
                     continue;
                 }
@@ -554,7 +566,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         items.sort((a, b) => a.depth - b.depth);
         return items;
 
-    }, [grid, player, bots, viewState, rotation, hoveredHexId, pendingConfirmation, isPlayerGrowing, activeLevelConfig, winCondition, memoizedOnHexClick, onHover, spawnDust, projectionCache, isInteracting]); // Added isInteracting dependency
+    }, [grid, player, bots, viewState, rotation, hoveredHexId, pendingConfirmation, isPlayerGrowing, activeLevelConfig, winCondition, memoizedOnHexClick, onHover, spawnDust, projectionCache, isInteracting]);
 
     return (
         <Layer>

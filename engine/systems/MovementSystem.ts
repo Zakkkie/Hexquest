@@ -256,6 +256,7 @@ export class MovementSystem implements System {
                         }
 
                         gridUpdates[hexKey] = baseHex;
+                        index.registerHex(baseHex); // Register new hexes
                     }
                 }
             }
@@ -280,6 +281,7 @@ export class MovementSystem implements System {
         startHex = generateSingleHex(entity.q, entity.r, state.activeLevelConfig, state.winCondition?.mapType);
         startHex.revealed = true;
         gridUpdates[startKey] = startHex;
+        index.registerHex(startHex);
     } else if (!startHex.revealed) {
         gridUpdates[startKey] = { ...startHex, revealed: true };
     }
@@ -328,6 +330,7 @@ export class MovementSystem implements System {
 
                     newHex.revealed = true;
                     gridUpdates[key] = newHex;
+                    index.registerHex(newHex); // Incrementally index
                 } else if (!hex.revealed) {
                     gridUpdates[key] = { ...hex, revealed: true };
                 }

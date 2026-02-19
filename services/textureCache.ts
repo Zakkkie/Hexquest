@@ -1,7 +1,13 @@
 
 export class TextureCache {
     private cache = new Map<string, HTMLCanvasElement>();
-    private maxCacheSize = 300; // Increased to 300 to accommodate hexes, units, and items
+    private maxCacheSize: number;
+
+    constructor() {
+        // Adaptive Cache Size: 100 for Mobile, 300 for Desktop
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        this.maxCacheSize = isMobile ? 100 : 300;
+    }
 
     getOrCreate(key: string, generator: () => HTMLCanvasElement): HTMLCanvasElement {
         // If already in cache, return it

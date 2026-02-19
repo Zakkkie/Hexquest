@@ -308,20 +308,13 @@ const findStaircaseTarget = (
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EXPLORE PLAN BUILDER
+// EXPLORE PLAN BUILDER (UPDATED WITH DOGLEG)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Shell (nautilus) exploration: reveals the map in concentric rings outward
- * from the bot's spawn anchor, like a growing shell.
- *
- * Algorithm:
- *  1. Find the current shell ring R — smallest radius with unrevealed hexes.
- *  2. Pick the ring hex that continues the bot's arc sweep (clockwise).
- *     Each bot has a fixed arc offset so they fan out across the ring.
- *  3. Navigate toward it with a simple MOVE_TO chain — NO mining on the way.
- *     Mining during explore caused deep local pits and plan-fail loops.
- *     Mining happens separately in MINE_UNTIL_FULL steps when storage is low.
+ * Shell (nautilus) exploration with Dogleg movement.
+ * Reveals the map in concentric rings but moves in "L" shapes to avoid
+ * straight-line bias towards map edges.
  */
 const buildExplorePlan = (
     bot: Entity,
@@ -368,8 +361,8 @@ const buildExplorePlan = (
     const separationOffset = (idHash % botCount) * ((2 * Math.PI) / botCount);
     
     // Lead angle (Forces movement along the arc, i.e., CIRCULAR MOTION)
-    // Without this, bot moves radially outward. With this, it moves tangentially.
-    const leadAngle = Math.PI / 4; // 45 degrees ahead
+    // INCREASED to 60deg (PI/3) to force a wider turn ("Dogleg" potential)
+    const leadAngle = Math.PI / 3; 
 
     const angularDist = (h: HexCoord): number => {
         const angle  = hexAngle(h);
@@ -397,16 +390,46 @@ const buildExplorePlan = (
 
     const exploreTarget = pool[0];
 
-    // ── 3. Single MOVE_TO — no mid-plan mining ────────────────────────────────
-    // Post-arrival digging was still causing PlanFail:
-    //   DIG(neighbour) → neighbour becomes pit → MOVE_TO(ring_target) re-paths
-    //   through that pit → path fails → PlanFail.
-    // Mining during EXPLORE phase happens only via the separate MINE_UNTIL_FULL
-    // step when storage is empty (see buildPlan EXPLORE branch).
+    // ── 3. DOGLEG LOGIC (Waypoints) ────────────────────────────────────────────
+    // Instead of moving straight A->B, try to move A->Elbow->B to encourage turning.
+    
+    let pathSteps: PlanStep[] = [];
+    let waypoint: Hex | null = null;
+    
+    if (dist(bot, exploreTarget) > 2) {
+        // Calculate possible "Elbow" coordinates
+        // Elbow 1: Keep Bot Q, take Target R
+        const elbowAKey = hexKey(bot.q, exploreTarget.r);
+        const elbowA = grid[elbowAKey];
+
+        // Elbow 2: Take Target Q, Keep Bot R
+        const elbowBKey = hexKey(exploreTarget.q, bot.r);
+        const elbowB = grid[elbowBKey];
+
+        // Check validity (Exists, Not Void, and is roughly equidistant/sensible)
+        const isValidWaypoint = (h: Hex | undefined) => h && h.structureType !== 'VOID';
+
+        // Prefer the one that exists and is safe
+        if (isValidWaypoint(elbowA)) {
+            waypoint = elbowA!;
+        } else if (isValidWaypoint(elbowB)) {
+            waypoint = elbowB!;
+        }
+    }
+
+    if (waypoint && dist(bot, waypoint) > 0) {
+        pathSteps = [
+            { type: 'MOVE_TO', targetId: waypoint.id },
+            { type: 'MOVE_TO', targetId: exploreTarget.id }
+        ];
+    } else {
+        pathSteps = [{ type: 'MOVE_TO', targetId: exploreTarget.id }];
+    }
+
     return {
-        steps: [{ type: 'MOVE_TO', targetId: exploreTarget.id }],
+        steps: pathSteps,
         createdAt:     stateVersion,
-        label:         `Circle R${currentRing} arc→(${exploreTarget.q},${exploreTarget.r})`,
+        label:         waypoint ? `Dogleg (${waypoint.q},${waypoint.r}) -> R${currentRing}` : `Explore Direct R${currentRing}`,
         exploreAnchor: anchor,
     } as Plan & { exploreAnchor: HexCoord };
 };

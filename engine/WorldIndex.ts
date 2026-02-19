@@ -96,6 +96,14 @@ export class WorldIndex {
 
   // --- Incremental Updates ---
 
+  /**
+   * Registers a single new hex into the index.
+   * Used by procedural generation / lazy loading to avoid full rebuilds.
+   */
+  public registerHex(hex: Hex) {
+      this.indexHex(hex);
+  }
+
   public updateEntityPosition(entityId: string, oldQ: number, oldR: number, newQ: number, newR: number) {
       const oldKey = getHexKey(oldQ, oldR);
       const newKey = getHexKey(newQ, newR);

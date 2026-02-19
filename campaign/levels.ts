@@ -475,5 +475,56 @@ export const CAMPAIGN_LEVELS: LevelConfig[] = [
             return false;
         }
     }
+  },
+  {
+    id: '2.5',
+    title: 'Sim 2.5: The Singularity',
+    description: 'FINAL TEST: Two Hostiles Detected.\n\nObjective: Stabilize the Core (Lvl 5) with 3 RARE items.\n\nCondition: Map is large but crumbling. Deep mining is required to find Rare items, but digging accelerates Entropy.\n\nSurvival: Do not let the bots claim the core.',
+    
+    mapConfig: {
+      size: 7, // Larger map
+      type: 'fixed',
+      generateWalls: true,
+      wallStartRadius: 5,
+      wallType: 'pit_ring',
+      customLayout: [
+          // High Core (L5)
+          { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
+          // Player Start
+          { q: 0, r: 4, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          // Bots (Two Rivals)
+          { q: 4, r: -4, maxLevel: 1, currentLevel: 1, revealed: true }, // Bot 1
+          { q: -4, r: 0, maxLevel: 1, currentLevel: 1, revealed: true }, // Bot 2
+          
+          // Resource Nodes (Deep pits for rare loot)
+          { q: 2, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
+          { q: -2, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
+          { q: 1, r: -3, maxLevel: -3, currentLevel: -3, revealed: true },
+      ]
+    },
+
+    aiMode: 'basic', // Will be overridden to 2 bots in store factory if needed, but handled by Bot logic
+
+    startState: {
+      credits: 500, 
+      moves: 30,
+      rank: 4,
+      materials: 8,
+    },
+    
+    hooks: {
+        checkWinCondition: (state) => {
+            return false; // Victory via Monument Activation
+        },
+        checkLossCondition: (state) => {
+            const botWin = state.bots.some(b => {
+                const hex = state.grid[getHexKey(b.q, b.r)];
+                return hex && hex.structureType === 'MONUMENT';
+            });
+            if (botWin) return true;
+            if (isStranded(state)) return true;
+            return false;
+        }
+    }
   }
 ];

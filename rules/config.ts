@@ -70,7 +70,7 @@ export const DIFFICULTY_SETTINGS = {
 
 // Resource & Computation Guards
 export const SAFETY_CONFIG = {
-  MAX_LOG_SIZE: 50,             // Kept small for UI
+  MAX_LOG_SIZE: 30,             // Reduced to 30 for memory optimization
   MAX_HISTORY_SIZE: 3000,       // Strict limit on full history to prevent lag (approx 20-30 mins of play)
   MAX_PATH_LENGTH: 20,          
   MAX_SEARCH_ITERATIONS: 1000,  

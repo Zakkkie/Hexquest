@@ -246,6 +246,8 @@ interface Dictionary {
         LEVEL_2_3_DESC: string;
         LEVEL_2_4_TITLE: string;
         LEVEL_2_4_DESC: string;
+        LEVEL_2_5_TITLE: string;
+        LEVEL_2_5_DESC: string;
     };
     TOOLTIP: {
         CURRENT_LOC: string;
@@ -531,7 +533,9 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_2_3_TITLE: 'Sim 2.3: Entropy Rising',
             LEVEL_2_3_DESC: 'ALERT: Sector instability detected.\n\nObjective: Reach and Activate the Monolith before total collapse.\n\nMechanic: ENTROPY gauge is low. Digging and Building accelerates decay.\n\nOutcome: When Entropy hits 0, terrain shifts and voids open. Hurry.',
             LEVEL_2_4_TITLE: 'Sim 2.4: The Rivalry',
-            LEVEL_2_4_DESC: 'Threat Assessment: Hostile Unit Detected.\n\nObjective: Secure Keys and activate the Spire before the Rival.\n\nIntel: Resources are scarce. If the Rival finds items first, you may need to dig aggressively to beat them to the summit.'
+            LEVEL_2_4_DESC: 'Threat Assessment: Hostile Unit Detected.\n\nObjective: Secure Keys and activate the Spire before the Rival.\n\nIntel: Resources are scarce. If the Rival finds items first, you may need to dig aggressively to beat them to the summit.',
+            LEVEL_2_5_TITLE: 'Sim 2.5: The Singularity',
+            LEVEL_2_5_DESC: 'FINAL TEST: Two Hostiles Detected.\n\nObjective: Stabilize the Core (Lvl 5) with 3 RARE items.\n\nCondition: Map is large but crumbling. Deep mining is required to find Rare items, but digging accelerates Entropy.\n\nSurvival: Do not let the bots claim the core.'
         },
         TOOLTIP: {
             CURRENT_LOC: "Location",
@@ -815,7 +819,9 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_2_3_TITLE: 'Сим 2.3: Рост Энтропии',
             LEVEL_2_3_DESC: 'ВНИМАНИЕ: Нестабильность сектора.\n\nЦель: Добраться до Монолита и Активировать его до коллапса.\n\nМеханика: Шкала ЭНТРОПИИ падает. Стройка и Копка ускоряют распад.\n\nИсход: При 0 энтропии реальность искажается. Спешите.',
             LEVEL_2_4_TITLE: 'Сим 2.4: Противостояние',
-            LEVEL_2_4_DESC: 'Угроза: Враждебный Юнит.\n\nЦель: Добудьте Ключи и активируйте Шпиль раньше соперника.\n\nРазведка: Ресурсов мало. Если враг найдет предметы первым, вам придется действовать агрессивно.'
+            LEVEL_2_4_DESC: 'Угроза: Враждебный Юнит.\n\nЦель: Добудьте Ключи и активируйте Шпиль раньше соперника.\n\nРазведка: Ресурсов мало. Если враг найдет предметы первым, вам придется действовать агрессивно.',
+            LEVEL_2_5_TITLE: 'Сим 2.5: Сингулярность',
+            LEVEL_2_5_DESC: 'ФИНАЛЬНЫЙ ТЕСТ: Двое врагов.\n\nЦель: Стабилизировать Ядро (Ур. 5) тремя РЕДКИМИ предметами.\n\nУсловия: Карта огромна, но распадается. Глубокие раскопки (Ур. -3) обязательны для поиска Редких ключей, но копка ускоряет Энтропию.\n\nВыживание: Не дайте ботам захватить Ядро.'
         },
         TOOLTIP: {
             CURRENT_LOC: "Позиция",
