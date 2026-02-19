@@ -4,7 +4,7 @@ import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
 import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
-import { LogOut, X, Trophy, XCircle, ArrowRight, RotateCcw, Target, ChevronsUp, Wallet, Footprints, ShieldAlert, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen } from 'lucide-react';
+import { LogOut, X, Trophy, XCircle, ArrowRight, RotateCcw, Target, ChevronsUp, Wallet, Footprints, ShieldAlert, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock } from 'lucide-react';
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
 import { Item, ItemRarity } from '../../types';
 
@@ -330,7 +330,15 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                             <div key={idx} onDrop={(e) => handleDrop(e, idx)} onDragOver={handleAllowDrop} onClick={() => slotItem && removeItemFromMonument(idx)} className={`w-16 h-20 md:w-24 md:h-32 rounded-2xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden ${slotItem ? `bg-slate-900 ${getRarityBorder(slotItem.rarity)}` : 'bg-slate-900/30 border-slate-700 border-dashed hover:border-slate-500'}`}>
                                                 {slotItem ? <ItemIcon item={slotItem} size="w-10 h-10 md:w-16 md:h-16" /> : (
                                                     isWildcard ? <HelpCircle className="w-8 h-8 md:w-12 md:h-12 text-slate-400 opacity-60" /> : 
-                                                    (reqDef ? <ItemIcon def={reqDef} size="w-8 h-8 md:w-12 md:h-12" opacity={0.6} grayscale /> : null)
+                                                    (reqDef ? (
+                                                        <div className="relative">
+                                                            <ItemIcon def={reqDef} size="w-8 h-8 md:w-12 md:h-12" opacity={0.4} grayscale />
+                                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                                <Lock className="w-4 h-4 md:w-6 md:h-6 text-slate-500" />
+                                                            </div>
+                                                            <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[8px] text-center text-slate-300 font-mono">REQ</div>
+                                                        </div>
+                                                    ) : null)
                                                 )}
                                             </div>
                                         );
