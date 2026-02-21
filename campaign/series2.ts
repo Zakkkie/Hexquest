@@ -1,6 +1,6 @@
-import { LevelConfig } from '../../types';
-import { getHexKey } from '../../../services/hexUtils';
-import { isStranded } from '../utils';
+import { LevelConfig } from '../types';
+import { getHexKey } from '../services/hexUtils';
+import { isStranded } from './utils';
 
 export const series2Levels: LevelConfig[] = [
   {
