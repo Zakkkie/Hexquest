@@ -3,7 +3,7 @@ import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hex
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
 import { calculateMovementCost } from '../rules/movement';
-import { findBestBuildTargets, findBestDigTargets, findHiveTarget } from './planning';
+import { findBestDigTargets, findHiveTarget } from './planning';
 import { GAME_CONFIG } from '../rules/config';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -348,7 +348,6 @@ const buildPlan = (
         };
     }
 
-    // ── ИСПРАВЛЕНО: ЛЕСТНИЦА ДОСТРОЕНА -> ИДЕМ НА МОНУМЕНТ ──
     return { 
         steps: [{ type: 'MOVE_TO', targetId: monument!.id }], 
         createdAt: stateVersion, 
@@ -458,17 +457,14 @@ const parachuteAction = (bot: Entity, grid: Record<string, Hex>, navObstacles: H
     const ch = currentHex(bot, grid);
     const rm = { ...mem, stuckCounter: 0, plan: null, targetHexId: null };
 
-    // 1. High up: Dig down
     if (ch && ch.maxLevel >= 2 && checkDigCondition(ch, bot, getNeighbors(bot.q, bot.r), grid).canGrow) {
         return { action: { type: 'DIG', coord: { q: bot.q, r: bot.r }, stateVersion }, debug: 'Parachute:Dig', memory: rm };
     }
     
-    // 2. In a pit with materials: Build up
     if (ch && ch.maxLevel < 0 && bot.storage > 0 && checkGrowthCondition(ch, bot, getNeighbors(bot.q, bot.r), grid, navObstacles).canGrow) {
         return { action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'UPGRADE', stateVersion }, debug: 'Parachute:Build', memory: rm };
     }
     
-    // 3. In a pit WITHOUT materials: Dig a neighbor to get a material!
     if (bot.storage === 0) {
         for (const n of getNeighbors(bot.q, bot.r)) {
             const nbHex = grid[hexKey(n.q, n.r)];
@@ -478,7 +474,6 @@ const parachuteAction = (bot: Entity, grid: Record<string, Hex>, navObstacles: H
         }
     }
 
-    // 4. Yield blindly
     return yieldMove(bot, grid, navObstacles, monument, stateVersion, rm, 'Stuck');
 };
 
@@ -510,25 +505,22 @@ export const calculateBotMove = (
     const monument = Object.values(grid).find(h => h.structureType === 'MONUMENT' && h.revealed) ?? null;
     const bots     = allBots ?? [];
 
-    // ── 1. SURVIVAL & ANTI-SPAM LOGIC ──
     const needsSurvival = bot.moves === 0 && bot.coins < GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE && !bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID';
     
     if (needsSurvival) {
         if (mem.lastActionType === 'UPGRADE') {
-            mem.stuckCounter = (mem.stuckCounter ?? 0) + 1; // Survival failed. Engine rejected it (e.g. L0 hex). Increment Stuck!
+            mem.stuckCounter = (mem.stuckCounter ?? 0) + 1; 
         } else {
             return finalize({ action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'RECOVER', stateVersion }, debug: 'Survival', memory: mem }, mem);
         }
     }
 
-    // ── 2. PARACHUTE ──
     const pc = parachuteAction(bot, grid, navObs, monument, stateVersion, mem);
     if (pc) return finalize(pc, mem);
 
-    // ── 3. PLAN LIFECYCLE ──
     let activeLevelId = undefined;
-    if (winCondition?.label?.includes('3.5') || winCondition?.description?.includes('3.5')) activeLevelId = '3.5';
-    if (winCondition?.label?.includes('3.6') || winCondition?.description?.includes('3.6')) activeLevelId = '3.6';
+    if (winCondition?.label?.includes('3.5')) activeLevelId = '3.5';
+    if (winCondition?.label?.includes('3.6')) activeLevelId = '3.6';
 
     const planStale = (stateVersion - (mem.plan?.createdAt ?? 0)) > PLAN_TTL || (mem.waitStreak ?? 0) >= MAX_WAIT_STREAK;
     if (!mem.plan || mem.plan.steps.length === 0 || planStale) {
@@ -537,7 +529,6 @@ export const calculateBotMove = (
         mem.stuckCounter = 0;
     }
 
-    // ── 4. EXECUTE PLAN ──
     while (mem.plan && mem.plan.steps.length > 0) {
         const result = executeStep(mem.plan.steps[0], bot, grid, navObs, stateVersion, mem, monument, claimed, bots);
         
@@ -551,7 +542,6 @@ export const calculateBotMove = (
             mem.plan = null; 
             mem.targetHexId = null;
             mem.stuckCounter = (mem.stuckCounter ?? 0) + 1;
-            // DO NOT YIELD HERE. Wait for next tick so Parachute can catch it if truly stuck.
             return finalize({ action: { type: 'WAIT', stateVersion }, debug: 'PlanFail', memory: mem }, mem);
         }
         
