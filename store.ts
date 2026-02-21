@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction, Item, ActivateMonumentAction, GameEventType } from './types.ts';
@@ -11,7 +10,7 @@ import { LevelConfig } from './campaign/types.ts';
 import { calculateMovementCost } from './rules/movement.ts';
 import { generateMap } from './services/mapGenerator.ts';
 import { TEXT } from './services/i18n.ts';
-import { generateMonumentRecipe } from './rules/items.ts';
+import { generateMonumentRecipe, getItemDef } from './rules/items.ts';
 import { effectPool } from './services/effectPool.ts';
 
 // --- CONSTANTS & HELPERS ---
@@ -124,6 +123,33 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       startR = playerStartHex.r;
   }
 
+  // Generate Starting Inventory from Config
+  const initialInventory: Item[] = [];
+  if (levelConfig && levelConfig.startState.startInventory) {
+      levelConfig.startState.startInventory.forEach(baseId => {
+          const def = getItemDef(baseId);
+          if (def) {
+              initialInventory.push({
+                  id: `${baseId}-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
+                  baseId: def.idPrefix,
+                  rarity: def.rarity,
+                  name: def.name[language],
+                  description: def.description[language],
+                  timestamp: Date.now(),
+                  visualType: def.visualType,
+                  effectType: def.effectType,
+                  effectValue: def.effectValue,
+                  effectDescription: def.effectLabel[language],
+                  effectDuration: def.effectDuration,
+                  negativeEffectType: def.negativeEffectType,
+                  negativeEffectValue: def.negativeEffectValue,
+                  negativeEffectLabel: def.negativeEffectLabel[language],
+                  negativeEffectDuration: def.negativeEffectDuration
+              });
+          }
+      });
+  }
+
   // Bot Setup
   const botCount = levelConfig ? (levelConfig.aiMode === 'none' ? 0 : 1) : (winCondition?.botCount || 0);
   const bots: Entity[] = [];
@@ -144,6 +170,9 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     // CAMPAIGN HANDICAP: Bots start with 0 resources in campaign
     const botStartMoves = levelConfig ? 0 : startMoves;
     const botStartStorage = 0; 
+    
+    // PATROL ROUTES
+    const botRoute = levelConfig?.botRoutes && levelConfig.botRoutes[i] ? levelConfig.botRoutes[i] : undefined;
 
     bots.push({
       id: `bot-${i+1}`, type: EntityType.BOT, state: EntityState.IDLE, q: sp.q, r: sp.r,
@@ -153,7 +182,13 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       totalCoinsEarned: 0, movementQueue: [],
       storage: botStartStorage, maxStorage: maxStorage,
       inventory: [],
-      memory: { lastPlayerPos: null, stuckCounter: 0 },
+      memory: { 
+          lastPlayerPos: null, 
+          stuckCounter: 0,
+          patrolPath: botRoute,
+          patrolIndex: 0,
+          lastDestroyTime: 0
+      },
       avatarColor: BOT_PALETTE[Math.floor(Math.random() * BOT_PALETTE.length)],
       headIndex: Math.floor(Math.random() * 4),
       bodyIndex: Math.floor(Math.random() * 4),
@@ -181,15 +216,18 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
           monumentRequirements = ['apex_core', 'apex_core', 'apex_core']; // Specific item as requested
       } else if (levelConfig.id === '2.4') {
           monumentRequirements = ['ANY', 'ANY', 'ANY', 'ANY']; // 4 items
+      } else if (levelConfig.id === '3.5') {
+          monumentRequirements = ['ANY', 'ANY', 'ANY']; // 3 items for The Heist
+      } else if (levelConfig.id === '3.6') {
+          monumentRequirements = ['ANY', 'ANY']; // 2 items for The Maze of Echoes
       }
   } else if (winCondition?.winType === 'SUMMIT') {
       monumentRequirements = generateMonumentRecipe(difficulty);
   }
 
-  // Entropy Configuration for specific levels
-  let initialEntropy = ENTROPY_CONFIG.INITIAL_MAX;
-  if (levelConfig?.id === '2.3') initialEntropy = 10;
-  if (levelConfig?.id === '2.4') initialEntropy = 30;
+  // Entropy Configuration
+  // Use explicit config from level if available, otherwise default
+  let initialEntropy = levelConfig?.startState.initialEntropy ?? ENTROPY_CONFIG.INITIAL_MAX;
 
   const initialLog: LogEntry = {
     id: 'init-0',
@@ -217,7 +255,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       totalCoinsEarned: 0, movementQueue: [],
       storage: startStorage, 
       maxStorage: maxStorage,
-      inventory: [], 
+      inventory: initialInventory, 
       recoveredCurrentHex: false,
       recentUpgrades: [],
       avatarColor: stateUser?.avatarColor || '#3b82f6',

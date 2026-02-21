@@ -156,7 +156,8 @@ const CampaignMap: React.FC = () => {
                {CAMPAIGN_LEVELS.map((_, index) => {
                    if (index === CAMPAIGN_LEVELS.length - 1) return null;
                    
-                   const isUnlocked = index < campaignProgress;
+                   // TESTING MODE: Always show paths as unlocked
+                   const isUnlocked = true; 
                    
                    // Coordinate Logic matches the DOM layout
                    const y1 = START_OFFSET + (index * ITEM_HEIGHT) + (isMobile ? 28 : 36); // Center of Hex roughly
@@ -172,9 +173,6 @@ const CampaignMap: React.FC = () => {
                        // Snake Layout Logic
                        const isEven = index % 2 === 0;
                        // These percentages must align with the flexbox layout below
-                       // Left Side: 25% padding -> center is approx 25% + (HexWidth/2)
-                       // Right Side: 25% padding -> center is approx 75% - (HexWidth/2)
-                       // We simplify to 30% and 70% of container width
                        const x1 = isEven ? containerWidth * 0.3 : containerWidth * 0.7;
                        const x2 = !isEven ? containerWidth * 0.3 : containerWidth * 0.7;
                        
@@ -202,7 +200,10 @@ const CampaignMap: React.FC = () => {
             {/* Level Nodes Layer */}
             <div className="relative z-10 w-full pb-24" style={{ paddingTop: START_OFFSET - (isMobile ? 28 : 36) }}>
                 {CAMPAIGN_LEVELS.map((level, index) => {
-                    const isUnlocked = index <= campaignProgress;
+                    // TESTING MODE: Always unlocked
+                    const isUnlocked = true;
+                    
+                    // Original completion logic maintained for badge accuracy
                     const isCompleted = index < campaignProgress;
                     const isCurrent = index === campaignProgress;
                     
@@ -215,8 +216,6 @@ const CampaignMap: React.FC = () => {
                     const displayDesc = TEXT[language].CAMPAIGN[descKey] || level.description;
 
                     // Layout Classes
-                    // Mobile: Always centered
-                    // Desktop: Alternating Left (30%) / Right (70%)
                     const rowStyle = isMobile 
                         ? { justifyContent: 'center' }
                         : { 
@@ -225,9 +224,6 @@ const CampaignMap: React.FC = () => {
                             paddingRight: index % 2 !== 0 ? '20%' : '0'
                           };
 
-                    // Direction of text relative to hex
-                    // Mobile: Text below
-                    // Desktop: Text to the side (Away from center)
                     const contentDir = isMobile 
                         ? 'flex-col' 
                         : (index % 2 === 0 ? 'flex-row' : 'flex-row-reverse text-right');
@@ -235,7 +231,7 @@ const CampaignMap: React.FC = () => {
                     return (
                         <div 
                             key={level.id} 
-                            className="flex w-full px-4 mb-[20px]" // mb helps spacing, but ITEM_HEIGHT handles main vertical rhythm
+                            className="flex w-full px-4 mb-[20px]" 
                             style={{ 
                                 height: ITEM_HEIGHT, 
                                 ...rowStyle 

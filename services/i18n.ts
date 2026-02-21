@@ -248,6 +248,18 @@ interface Dictionary {
         LEVEL_2_4_DESC: string;
         LEVEL_2_5_TITLE: string;
         LEVEL_2_5_DESC: string;
+        LEVEL_3_1_TITLE: string;
+        LEVEL_3_1_DESC: string;
+        LEVEL_3_2_TITLE: string;
+        LEVEL_3_2_DESC: string;
+        LEVEL_3_3_TITLE: string;
+        LEVEL_3_3_DESC: string;
+        LEVEL_3_4_TITLE: string;
+        LEVEL_3_4_DESC: string;
+        LEVEL_3_5_TITLE: string;
+        LEVEL_3_5_DESC: string;
+        LEVEL_3_6_TITLE: string;
+        LEVEL_3_6_DESC: string;
     };
     TOOLTIP: {
         CURRENT_LOC: string;
@@ -535,7 +547,19 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_2_4_TITLE: 'Sim 2.4: The Rivalry',
             LEVEL_2_4_DESC: 'Threat Assessment: Hostile Unit Detected.\n\nObjective: Secure Keys and activate the Spire before the Rival.\n\nIntel: Resources are scarce. If the Rival finds items first, you may need to dig aggressively to beat them to the summit.',
             LEVEL_2_5_TITLE: 'Sim 2.5: The Singularity',
-            LEVEL_2_5_DESC: 'FINAL TEST: Two Hostiles Detected.\n\nObjective: Stabilize the Core (Lvl 5) with 3 RARE items.\n\nCondition: Map is large but crumbling. Deep mining is required to find Rare items, but digging accelerates Entropy.\n\nSurvival: Do not let the bots claim the core.'
+            LEVEL_2_5_DESC: 'FINAL TEST: Two Hostiles Detected.\n\nObjective: Stabilize the Core (Lvl 5) with 3 RARE items.\n\nCondition: Map is large but crumbling. Deep mining is required to find Rare items, but digging accelerates Entropy.\n\nSurvival: Do not let the bots claim the core.',
+            LEVEL_3_1_TITLE: 'Sim 3.1: The Bridge',
+            LEVEL_3_1_DESC: 'PUZZLE: Path Construction.\n\nObjective: Reach the CAPITAL on the far side.\n\nProblem: A void chasm separates you from the goal. Build a bridge of L1 hexes across the gap.\n\nConstraint: Materials are scarce — no room for mistakes.',
+            LEVEL_3_2_TITLE: 'Sim 3.2: The Harvest',
+            LEVEL_3_2_DESC: 'PUZZLE: Resource Optimization.\n\nObjective: Accumulate 480-520 Credits.\n\nCatch: Standing on a Mine for 3+ ticks DESTROYS it. Rotate between mines to maximize yield.\n\nOvershoot Warning: Going above 520 also fails.',
+            LEVEL_3_3_TITLE: 'Sim 3.3: The Cascade',
+            LEVEL_3_3_DESC: 'PUZZLE: Chain Reaction.\n\nObjective: Build a Level 5 hex at the summit.\n\nRule: Each upgrade requires 2 neighbors at the SAME level. Plan your upgrades in correct order.\n\nResources: Exactly 14 Materials — no waste allowed.',
+            LEVEL_3_4_TITLE: 'Sim 3.4: The Gauntlet',
+            LEVEL_3_4_DESC: 'PUZZLE: Entropy Survival.\n\nObjective: Survive 120 seconds without losing your Capital.\n\nEntropy starts LOW and decays fast. Use Recovery and items to stabilize.\n\nStrategy: Rotate between recovery stations.',
+            LEVEL_3_5_TITLE: 'Sim 3.5: The Heist',
+            LEVEL_3_5_DESC: 'PUZZLE: Item Race.\n\nObjective: Collect 3 items and activate the Monument before the Rival.\n\nTwist: Items have negative effects — choose wisely.\n\nEntropy is low. Race, but don\'t rush blindly.',
+            LEVEL_3_6_TITLE: 'Sim 3.6: The Maze of Echoes',
+            LEVEL_3_6_DESC: 'FINAL PUZZLE: Multi-objective Mastery.\n\nAchieve ALL simultaneously:\n  1. Own 5+ hexes at L2+\n  2. 300+ Credits\n  3. Activate Monument with 2 items\n\nTwo rival bots patrol the maze. Every 30s a new void appears.'
         },
         TOOLTIP: {
             CURRENT_LOC: "Location",
@@ -821,7 +845,19 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_2_4_TITLE: 'Сим 2.4: Противостояние',
             LEVEL_2_4_DESC: 'Угроза: Враждебный Юнит.\n\nЦель: Добудьте Ключи и активируйте Шпиль раньше соперника.\n\nРазведка: Ресурсов мало. Если враг найдет предметы первым, вам придется действовать агрессивно.',
             LEVEL_2_5_TITLE: 'Сим 2.5: Сингулярность',
-            LEVEL_2_5_DESC: 'ФИНАЛЬНЫЙ ТЕСТ: Двое врагов.\n\nЦель: Стабилизировать Ядро (Ур. 5) тремя РЕДКИМИ предметами.\n\nУсловия: Карта огромна, но распадается. Глубокие раскопки (Ур. -3) обязательны для поиска Редких ключей, но копка ускоряет Энтропию.\n\nВыживание: Не дайте ботам захватить Ядро.'
+            LEVEL_2_5_DESC: 'ФИНАЛЬНЫЙ ТЕСТ: Двое врагов.\n\nЦель: Стабилизировать Ядро (Ур. 5) тремя РЕДКИМИ предметами.\n\nУсловия: Карта огромна, но распадается. Глубокие раскопки (Ур. -3) обязательны для поиска Редких ключей, но копка ускоряет Энтропию.\n\nВыживание: Не дайте ботам захватить Ядро.',
+            LEVEL_3_1_TITLE: 'Сим 3.1: Мост',
+            LEVEL_3_1_DESC: 'ПАЗЗЛ: Строительство пути.\n\nЦель: Добраться до СТОЛИЦЫ на другой стороне.\n\nПроблема: Пропасть пустоты разделяет вас и цель. Постройте мост из L1 секторов.\n\nОграничение: Материалов впритык — ошибки недопустимы.',
+            LEVEL_3_2_TITLE: 'Сим 3.2: Жатва',
+            LEVEL_3_2_DESC: 'ПАЗЗЛ: Оптимизация ресурсов.\n\nЦель: Набрать 480-520 Кредитов.\n\nПодвох: Стоянка на Шахте 3+ тика УНИЧТОЖАЕТ её. Чередуйте шахты.\n\nОсторожно: Превышение 520 тоже приводит к поражению.',
+            LEVEL_3_3_TITLE: 'Сим 3.3: Каскад',
+            LEVEL_3_3_DESC: 'ПАЗЗЛ: Цепная реакция.\n\nЦель: Построить сектор Уровня 5 на вершине.\n\nПравило: Для повышения нужно 2 соседа ТОГО ЖЕ уровня. Планируйте апгрейды в правильном порядке.\n\nРесурсы: Ровно 14 Материалов — без потерь.',
+            LEVEL_3_4_TITLE: 'Сим 3.4: Перчатка',
+            LEVEL_3_4_DESC: 'ПАЗЗЛ: Выживание в Энтропии.\n\nЦель: Продержаться 120 секунд, сохранив Столицу.\n\nЭнтропия стартует НИЗКО и падает быстро. Используйте Восстановление и предметы.\n\nСтратегия: Чередуйте станции восстановления.',
+            LEVEL_3_5_TITLE: 'Сим 3.5: Ограбление',
+            LEVEL_3_5_DESC: 'ПАЗЗЛ: Гонка за предметами.\n\nЦель: Собрать 3 предмета и активировать Монумент раньше Соперника.\n\nПодвох: У предметов есть негативные эффекты — выбирайте с умом.\n\nЭнтропия низкая. Спешите, но не безрассудно.',
+            LEVEL_3_6_TITLE: 'Сим 3.6: Лабиринт Эха',
+            LEVEL_3_6_DESC: 'ФИНАЛЬНЫЙ ПАЗЗЛ: Многоцелевое мастерство.\n\nВыполните ВСЁ одновременно:\n  1. Владейте 5+ секторами L2+\n  2. 300+ Кредитов\n  3. Активируйте Монумент двумя предметами\n\nДва бота патрулируют лабиринт. Каждые 30с появляется новая пустота.'
         },
         TOOLTIP: {
             CURRENT_LOC: "Позиция",

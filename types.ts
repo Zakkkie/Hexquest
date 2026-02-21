@@ -1,4 +1,3 @@
-
 // In a stricter setup, we would move shared types to a 'core' module.
 export type HexCoord = { q: number; r: number; upgrade?: boolean; intent?: 'UPGRADE' | 'RECOVER' | 'DIG' };
 
@@ -9,7 +8,7 @@ export interface HexView {
   r: number;
   currentLevel: number;
   maxLevel: number;
-  structureType?: 'NONE' | 'BARRIER' | 'CAPITAL' | 'VOID' | 'MONUMENT';
+  structureType?: 'NONE' | 'BARRIER' | 'CAPITAL' | 'VOID' | 'MONUMENT' | 'MINE';
   ownerId?: string; 
 }
 
@@ -132,9 +131,14 @@ export interface BotMemory {
   waitStreak?: number;
   
   // Role & Identity
-  botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER';
+  botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER' | 'MINER' | 'DESTROYER';
   mode?: 'GATHER' | 'BUILD' | 'AGGRESSOR';
   
+  // Patrol Logic (Destroyer)
+  patrolPath?: HexCoord[];
+  patrolIndex?: number;
+  lastDestroyTime?: number;
+
   // Execution
   targetHexId?: string | null;
   blacklistedTargets?: string[];
@@ -347,7 +351,11 @@ export interface LevelConfig {
     moves: number;
     rank: number;
     materials?: number; // Added materials support
+    startInventory?: string[]; // Array of baseIds for starting items
+    initialEntropy?: number; // Override starting entropy
   };
+
+  botRoutes?: HexCoord[][]; // Pre-defined patrol routes for bots
 
   aiMode: 'none' | 'dummy' | 'basic';
 
