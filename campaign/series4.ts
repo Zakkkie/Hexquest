@@ -35,6 +35,7 @@ export const series4Levels: LevelConfig[] = [
         return levelTwoNeighbors >= 3;
       },
       checkLossCondition: (state) => {
+        if (state.currentTurn === 0) return false;
         if (state.player.storage <= 0) {
           const center = state.grid[getHexKey(0, 0)];
           const neighbors = getNeighbors(0, 0);
@@ -90,9 +91,15 @@ export const series4Levels: LevelConfig[] = [
         return leftBeacon?.ownerId === state.player.id && rightBeacon?.ownerId === state.player.id;
       },
       checkLossCondition: (state) => {
-        if (state.player.inventory.filter(i => i === 'recovery_beacon').length > 0) {
+        if (state.currentTurn === 0) return false;
+        
+        // FIX 1: Проверяем свойство .id у объекта в инвентаре (или .type, в зависимости от твоих типов)
+        const hasBeacons = state.player.inventory.some((i: any) => i === 'recovery_beacon' || i.id === 'recovery_beacon');
+        
+        if (hasBeacons) {
           return isStranded(state);
         }
+        
         const leftBeacon = state.grid[getHexKey(-2, 0)];
         const rightBeacon = state.grid[getHexKey(2, 0)];
         if (!(leftBeacon?.ownerId === state.player.id && rightBeacon?.ownerId === state.player.id)) {
@@ -128,11 +135,11 @@ export const series4Levels: LevelConfig[] = [
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => {
-        // Check for 2 L3 hexes
         const l3Hexes = Object.values(state.grid).filter(h => h.maxLevel === 3).length;
         return l3Hexes >= 2;
       },
       checkLossCondition: (state) => {
+        if (state.currentTurn === 0) return false;
         const l3Hexes = Object.values(state.grid).filter(h => h.maxLevel === 3).length;
         if (state.player.storage <= 0 && l3Hexes < 2) return true;
         return isStranded(state);
@@ -180,6 +187,7 @@ export const series4Levels: LevelConfig[] = [
     hooks: {
       checkWinCondition: (state) => state.grid[getHexKey(0, 0)]?.maxLevel >= 4,
       checkLossCondition: (state) => {
+        if (state.currentTurn === 0) return false;
         if ((state.entropy?.current || 0) >= 100) return true;
         if (state.grid[getHexKey(0, 0)]?.maxLevel < 4 && state.player.storage <= 0) return true;
         return isStranded(state);
@@ -197,19 +205,16 @@ export const series4Levels: LevelConfig[] = [
           { q: -3, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
           { q: 3, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
           
-          // Player's path
           { q: -2, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: -2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           
-          // Bot's path
           { q: 2, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: 1, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },
           { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: 2, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
           
-          // Resources in chaos
           { q: 0, r: 1, maxLevel: -2, currentLevel: -2, revealed: true },
           { q: 0, r: -1, maxLevel: 4, currentLevel: 4, revealed: true },
           { q: -1, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
@@ -237,7 +242,7 @@ export const series4Levels: LevelConfig[] = [
         return conditionsMet >= 2;
       },
       checkLossCondition: (state) => {
-        // Bot reaches monument
+        if (state.currentTurn === 0) return false;
         if (state.bots?.some(b => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT')) {
           return true;
         }
@@ -271,30 +276,30 @@ export const series4Levels: LevelConfig[] = [
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => {
-        // Track cascades in metadata (simplified: count L3 hexes)
         const l3Count = Object.values(state.grid).filter(h => h.maxLevel === 3).length;
-        return l3Count >= 10; // Result of cascades
+        return l3Count >= 10;
       },
       checkLossCondition: (state) => {
+        if (state.currentTurn === 0) return false;
         const l3Count = Object.values(state.grid).filter(h => h.maxLevel === 3).length;
         if (state.player.storage <= 0 && l3Count < 10) return true;
         return isStranded(state);
       },
-      onAfterAction: (state, action) => {
-        // Simplified cascade: if hex reached L3, upgrade adjacent L2 hexes
-        if (action.type === 'UPGRADE' && action.intent !== 'RECOVER') {
-          const upgraded = state.grid[getHexKey(action.coord.q, action.coord.r)];
-          if (upgraded && upgraded.maxLevel === 3) {
-            const neighbors = getNeighbors(action.coord.q, action.coord.r);
-            neighbors.forEach(n => {
-              const neighbor = state.grid[getHexKey(n.q, n.r)];
-              if (neighbor && neighbor.maxLevel === 2 && neighbor.ownerId === state.player.id) {
-                neighbor.maxLevel = 3;
-                neighbor.currentLevel = 3;
-              }
-            });
-          }
-        }
+      // FIX 2: Убрал второй аргумент 'action'. Теперь хук просто сканирует всю сетку каждый ход.
+      // Если он находит гекс 3-го уровня, он повышает всех его соседей 2-го уровня.
+      onAfterAction: (state) => {
+        const allL3Hexes = Object.values(state.grid).filter(h => h.maxLevel === 3 && h.ownerId === state.player.id);
+        
+        allL3Hexes.forEach(hex => {
+          const neighbors = getNeighbors(hex.q, hex.r);
+          neighbors.forEach(n => {
+            const neighbor = state.grid[getHexKey(n.q, n.r)];
+            if (neighbor && neighbor.maxLevel === 2 && neighbor.ownerId === state.player.id) {
+              neighbor.maxLevel = 3;
+              neighbor.currentLevel = 3;
+            }
+          });
+        });
       }
     }
   },
@@ -305,25 +310,22 @@ export const series4Levels: LevelConfig[] = [
     mapConfig: {
       size: 7, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
-          { q: -2, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true }, // Nexus start
-          { q: 2, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },  // Core start
-          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },                        // Bridge
+          { q: -2, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true }, 
+          { q: 2, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },  
+          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },                        
           
-          // Nexus cluster (left)
           { q: -3, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           
-          // Core cluster (right)
           { q: 3, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           
-          // Chaos nodes
           { q: -3, r: 1, maxLevel: -2, currentLevel: -2, revealed: true },
           { q: 3, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
           { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
@@ -343,6 +345,7 @@ export const series4Levels: LevelConfig[] = [
         return nexusL3 >= 6 && coreL4 >= 4;
       },
       checkLossCondition: (state) => {
+        if (state.currentTurn === 0) return false;
         const nexusL3 = Object.values(state.grid).filter(
           h => h.ownerId === state.player.id && h.maxLevel === 3
         ).length;
@@ -365,15 +368,13 @@ export const series4Levels: LevelConfig[] = [
           { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
           { q: 4, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
           
-          // Terrain diversity setup
-          { q: -3, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },  // L0 terrain
+          { q: -3, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },  
           { q: -2, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },  // L2 terrain
-          { q: 1, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },   // L3 terrain
+          { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },  
+          { q: 1, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },   
           { q: 2, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
           { q: 3, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },
           
-          // Support structures
           { q: -2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
           { q: -2, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
@@ -387,7 +388,6 @@ export const series4Levels: LevelConfig[] = [
           { q: 3, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
           { q: 3, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
           
-          // Chaos resources
           { q: -4, r: 1, maxLevel: 5, currentLevel: 5, revealed: true },
           { q: 4, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
           { q: -3, r: 1, maxLevel: -2, currentLevel: -2, revealed: true },
@@ -398,24 +398,19 @@ export const series4Levels: LevelConfig[] = [
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => {
-        // Phase 1: Terrain diversity
         const hasL0 = Object.values(state.grid).some(h => h.ownerId === state.player.id && h.maxLevel === 0);
         const hasL2 = Object.values(state.grid).some(h => h.ownerId === state.player.id && h.maxLevel === 2);
         const hasL3 = Object.values(state.grid).some(h => h.ownerId === state.player.id && h.maxLevel === 3);
         const terrainDiverse = hasL0 && hasL2 && hasL3;
         
-        // Phase 2: Credits
         const hasCredits = state.player.coins >= 800;
-        
-        // Phase 3: Monument
         const onMonument = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
-        
-        // Phase 4: Entropy
         const entropySafe = (state.entropy?.current || 0) < 60;
         
         return terrainDiverse && hasCredits && onMonument && entropySafe;
       },
       checkLossCondition: (state) => {
+        if (state.currentTurn === 0) return false;
         const onMonument = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
         if ((state.entropy?.current || 0) >= 100) return true;
         if (onMonument && (state.entropy?.current || 0) < 60 && state.player.coins >= 800) return false;
