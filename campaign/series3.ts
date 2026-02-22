@@ -1,6 +1,6 @@
-import { LevelConfig } from '../types';
+import { LevelConfig } from '../campaign/types';
 import { getHexKey, getNeighbors } from '../services/hexUtils';
-import { isStranded } from './utils';
+import { isStranded } from '../campaign/utils';
 
 export const series3Levels: LevelConfig[] = [
   {
@@ -310,6 +310,100 @@ export const series3Levels: LevelConfig[] = [
               }
           }
       }
+    }
+  },
+  {
+    id: '3.7',
+    title: 'Sim 3.7: Twin Protocol',
+    description: `ADVANCED PUZZLE: Two viable doctrines.\n\nObjective: Reach the Monument while proving one strategy:\n  A) 4 owned sectors at Level 3+ (engineering route), OR\n  B) 280+ Credits (economic route).\n\nDesign: The map contains two legal corridors to the objective. The upper ridge is safer for upgrades, the lower basin is richer but entropy-heavy.\n\nAnti-exploit: Mission fails if you stall beyond 45 actions.`,
+    mapConfig: {
+      size: 8, type: 'fixed', generateWalls: true, wallStartRadius: 6, wallType: 'pit_ring',
+      customLayout: [
+        { q: -3, r: 2, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 3, r: -2, maxLevel: 4, currentLevel: 4, structureType: 'MONUMENT', revealed: true },
+        { q: -2, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 0, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },
+        { q: 1, r: -1, maxLevel: 3, currentLevel: 3, revealed: true },
+        { q: 2, r: -2, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: -2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
+        { q: -1, r: 0, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 0, r: -1, maxLevel: -1, currentLevel: -1, revealed: true },
+        { q: 1, r: -2, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 2, r: -3, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 3, r: -3, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: -1, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 2, r: -1, maxLevel: 3, currentLevel: 3, revealed: true },
+        { q: 0, r: -2, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: -1, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: -3, r: 1, maxLevel: 5, currentLevel: 5, revealed: true },
+        { q: -2, r: 3, maxLevel: 5, currentLevel: 5, revealed: true },
+        { q: 0, r: 2, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 1, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 2, r: 0, maxLevel: 5, currentLevel: 5, revealed: true },
+        { q: 3, r: -1, maxLevel: -3, currentLevel: -3, revealed: true }
+      ]
+    },
+    startState: { credits: 120, moves: 34, rank: 4, materials: 9, initialEntropy: 20 },
+    aiMode: 'none',
+    hooks: {
+      checkWinCondition: (state) => {
+        const ownedL3Plus = Object.values(state.grid).filter(h => h.ownerId === state.player.id && h.maxLevel >= 3).length;
+        const playerOnMonument = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
+        return playerOnMonument && (ownedL3Plus >= 4 || state.player.coins >= 280);
+      },
+      checkLossCondition: (state) => state.currentTurn > 45 || isStranded(state)
+    }
+  },
+  {
+    id: '3.8',
+    title: 'Sim 3.8: Fractured Supply Line',
+    description: `MASTER PUZZLE: Secure logistics under pressure.\n\nObjective:\n  1) Capture relay beacons at (0,2) and (2,0)\n  2) Hold 320+ Credits\n  3) Reach the Monument\n\nPlanned challenge: Solve through either a northern climb or a southern excavation route.\n\nAnti-exploit: Hard turn cap prevents infinite farming loops.`,
+    mapConfig: {
+      size: 8, type: 'fixed', generateWalls: true, wallStartRadius: 6, wallType: 'pit_ring',
+      customLayout: [
+        { q: -3, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 0, r: 2, maxLevel: 2, currentLevel: 2, structureType: 'CAPITAL', revealed: true },
+        { q: 2, r: 0, maxLevel: 2, currentLevel: 2, structureType: 'CAPITAL', revealed: true },
+        { q: 4, r: -2, maxLevel: 4, currentLevel: 4, structureType: 'MONUMENT', revealed: true },
+        { q: -2, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 1, r: 1, maxLevel: 3, currentLevel: 3, revealed: true },
+        { q: 2, r: 1, maxLevel: 3, currentLevel: 3, revealed: true },
+        { q: 3, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: -2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
+        { q: -1, r: 1, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 0, r: 0, maxLevel: -1, currentLevel: -1, revealed: true },
+        { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 2, r: -1, maxLevel: 3, currentLevel: 3, revealed: true },
+        { q: 3, r: -1, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: -1, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 3, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 2, r: -2, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 3, r: -2, maxLevel: -1, currentLevel: -1, revealed: true },
+        { q: -3, r: 1, maxLevel: 5, currentLevel: 5, revealed: true },
+        { q: -3, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 1, r: 2, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 2, r: 2, maxLevel: 5, currentLevel: 5, revealed: true },
+        { q: 4, r: -1, maxLevel: -3, currentLevel: -3, revealed: true }
+      ]
+    },
+    startState: { credits: 140, moves: 38, rank: 4, materials: 10, initialEntropy: 24 },
+    aiMode: 'none',
+    hooks: {
+      checkWinCondition: (state) => {
+        const relayA = state.grid[getHexKey(0, 2)];
+        const relayB = state.grid[getHexKey(2, 0)];
+        const hasRelays = relayA?.ownerId === state.player.id && relayB?.ownerId === state.player.id;
+        const hasCredits = state.player.coins >= 320;
+        const onMonument = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
+        return !!(hasRelays && hasCredits && onMonument);
+      },
+      checkLossCondition: (state) => state.currentTurn > 48 || isStranded(state)
     }
   }
 ];
