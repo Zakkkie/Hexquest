@@ -47,9 +47,9 @@ export const series2Levels: LevelConfig[] = [
           { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
           { q: -3, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           
-          { q: 2, r: 0, maxLevel: -1, currentLevel: -1, revealed: true }, 
-          { q: 2, r: -1, maxLevel: -1, currentLevel: -1, revealed: true },
-          { q: 2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
+          { q: 2, r: 0, maxLevel: -1, currentLevel: -1, revealed: true, artifact: { type: 'matter_prism' } }, 
+          { q: 2, r: -1, maxLevel: -1, currentLevel: -1, revealed: true, artifact: { type: 'matter_prism' } },
+          { q: 2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true, artifact: { type: 'matter_prism' } },
           
           // Golden Path (+/- 1)
           { q: -2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
@@ -71,7 +71,15 @@ export const series2Levels: LevelConfig[] = [
     },
     startState: { credits: 300, moves: 30, rank: 2, materials: 2 },
     aiMode: 'none',
-    hooks: { checkLossCondition: (state) => isStranded(state) }
+    hooks: { 
+      checkWinCondition: (state) => {
+        const playerHex = state.grid[getHexKey(state.player.q, state.player.r)];
+        const onMonument = playerHex && playerHex.structureType === 'MONUMENT';
+        const hasItems = state.player.inventory.length >= 1;
+        return !!(onMonument && hasItems);
+      },
+      checkLossCondition: (state) => isStranded(state) 
+    }
   },
   {
     id: '2.3',
@@ -102,6 +110,7 @@ export const series2Levels: LevelConfig[] = [
     startState: { credits: 1000, moves: 15, rank: 3, materials: 10, initialEntropy: 12 },
     aiMode: 'none',
     hooks: {
+       checkWinCondition: (state) => !!(state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT'),
        checkLossCondition: (state) => state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'VOID' || isStranded(state)
     }
   },
