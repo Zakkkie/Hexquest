@@ -225,7 +225,12 @@ export const series3Levels: LevelConfig[] = [
     ],
     aiMode: 'basic', 
     hooks: {
-      checkWinCondition: () => false, 
+      checkWinCondition: (state) => {
+        const playerHex = state.grid[getHexKey(state.player.q, state.player.r)];
+        const onMonument = playerHex && playerHex.structureType === 'MONUMENT';
+        const hasItems = state.player.inventory && state.player.inventory.length >= 3;
+        return !!(onMonument && hasItems);
+      },
       checkLossCondition: (state) => isStranded(state)
     }
   },
