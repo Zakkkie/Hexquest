@@ -146,7 +146,14 @@ export const series2Levels: LevelConfig[] = [
     aiMode: 'basic',
     startState: { credits: 300, moves: 20, rank: 3, materials: 5 },
     hooks: {
-        checkWinCondition: () => false,
+        checkWinCondition: (state) => {
+            const playerHex = state.grid[getHexKey(state.player.q, state.player.r)];
+            const onMonument = playerHex && playerHex.structureType === 'MONUMENT';
+            // Check for 4 items (any items, based on description "with 4 items")
+            // Assuming state.player.inventory is an array of items
+            const hasItems = state.player.inventory && state.player.inventory.length >= 4;
+            return !!(onMonument && hasItems);
+        },
         checkLossCondition: (state) => state.bots.some(b => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT') || isStranded(state)
     }
   },
@@ -204,7 +211,13 @@ export const series2Levels: LevelConfig[] = [
     aiMode: 'basic', 
     startState: { credits: 500, moves: 30, rank: 4, materials: 8 },
     hooks: {
-        checkWinCondition: () => false, 
+        checkWinCondition: (state) => {
+            const playerHex = state.grid[getHexKey(state.player.q, state.player.r)];
+            const onMonument = playerHex && playerHex.structureType === 'MONUMENT';
+            // Check for 3 items
+            const hasItems = state.player.inventory && state.player.inventory.length >= 3;
+            return !!(onMonument && hasItems);
+        }, 
         checkLossCondition: (state) => state.bots.some(b => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT') || isStranded(state)
     }
   }
