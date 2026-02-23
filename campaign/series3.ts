@@ -8,41 +8,33 @@ export const series3Levels: LevelConfig[] = [
     title: 'Sim 3.1: The Bridge',
     description: 'PUZZLE: Path Construction.\n\nObjective: Reach the CAPITAL on the far side.\n\nProblem: A void chasm separates you. Use inventory to STABILIZE the void hexes.',
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
+      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
-        { q: -3, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-        { q: 3, r: 0, maxLevel: 1, currentLevel: 1, structureType: 'CAPITAL', revealed: true },
+        { q: -2, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+        { q: 2, r: 0, maxLevel: 1, currentLevel: 1, structureType: 'CAPITAL', revealed: true },
 
-        // VOID PATH
-        { q: -2, r: 0, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
+        // VOID PATH (3 hexes)
         { q: -1, r: 0, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 0, r: 0, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 1, r: 0, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
-        { q: 2, r: 0, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
 
         // VOID SURROUNDINGS
-        { q: -3, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: -2, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: -1, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 0, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 1, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 2, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
-        { q: 3, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
 
-        { q: -3, r: -1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: -2, r: -1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: -1, r: -1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 0, r: -1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 1, r: -1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 2, r: -1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
-        { q: 3, r: -1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         
-        { q: -2, r: 2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: -1, r: 2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 0, r: 2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 1, r: 2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         
-        { q: -2, r: -2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: -1, r: -2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 0, r: -2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
         { q: 1, r: -2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },

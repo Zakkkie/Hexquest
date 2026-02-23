@@ -34,6 +34,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const t = TEXT[language].HUD;
     const isMoving = player?.state === 'MOVING';
     const isLevel1_5 = activeLevelConfig?.id === '1.5';
+    const isLevel3_2 = activeLevelConfig?.id === '3.2';
 
     // Click Outside for System Menu
     useEffect(() => {
@@ -46,29 +47,31 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Timer Logic for L1.5
+    // Timer Logic for L1.5 and L3.2
     useEffect(() => {
-        if (isLevel1_5 && gameStatus === 'PLAYING') {
+        const isTimedLevel = isLevel1_5 || isLevel3_2;
+        if (isTimedLevel && gameStatus === 'PLAYING') {
+            const timeLimit = isLevel3_2 ? 180 : 75; // 3 minutes for 3.2, 75s for 1.5
             const interval = setInterval(() => {
                 const elapsed = Date.now() - (sessionStartTime || 0);
-                const remaining = Math.max(0, 75 - Math.floor(elapsed / 1000));
+                const remaining = Math.max(0, timeLimit - Math.floor(elapsed / 1000));
                 setTimeLeft(remaining);
             }, 250);
             return () => clearInterval(interval);
         }
-    }, [isLevel1_5, gameStatus, sessionStartTime]);
+    }, [isLevel1_5, isLevel3_2, gameStatus, sessionStartTime]);
 
     if (!player) return null;
 
     return (
         <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-30 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in">
-            {/* L1.5 Timer Overlay */}
-            {isLevel1_5 && gameStatus === 'PLAYING' && (
+            {/* Timer Overlay */}
+            {(isLevel1_5 || isLevel3_2) && gameStatus === 'PLAYING' && (
                 <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in slide-in-from-top-4">
                     <div className={`px-4 py-2 bg-slate-900/90 border-2 rounded-xl shadow-xl flex items-center gap-2 ${timeLeft < 10 ? 'border-red-500 animate-pulse' : 'border-slate-600'}`}>
                         <Clock className={`w-5 h-5 ${timeLeft < 10 ? 'text-red-500' : 'text-amber-400'}`} />
                         <span className={`text-xl font-black font-mono leading-none ${timeLeft < 10 ? 'text-red-400' : 'text-white'}`}>
-                            {timeLeft}s
+                            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                         </span>
                     </div>
                 </div>

@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '../store.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
-import { ArrowLeft, Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Globe, Radar } from 'lucide-react';
+import { ArrowLeft, Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Globe, Radar, Layers } from 'lucide-react';
 import HexButton from './HexButton.tsx';
 import { audioService } from '../services/audioService.ts';
 import { TEXT } from '../services/i18n.ts';
@@ -87,10 +87,7 @@ const CampaignMap: React.FC = () => {
   const isMobile = deviceType === 'MOBILE';
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Constants for layout mathematics
-  const ITEM_HEIGHT = isMobile ? 140 : 180; // Distance between row centers
-  const START_OFFSET = isMobile ? 80 : 100; // Top padding inside scroll view
+  const currentLevelRef = useRef<HTMLDivElement>(null);
 
   const t = TEXT[language].CAMPAIGN_MAP;
 
@@ -107,6 +104,65 @@ const CampaignMap: React.FC = () => {
     
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Scroll to current level on mount
+  useEffect(() => {
+    if (currentLevelRef.current) {
+        setTimeout(() => {
+            currentLevelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 500);
+    }
+  }, [campaignProgress]);
+
+  // --- LAYOUT CALCULATION ---
+  const layoutData = useMemo(() => {
+    const ITEM_HEIGHT = isMobile ? 160 : 220;
+    const START_OFFSET = 120;
+    const positions: Array<{
+        x: number;
+        y: number;
+        hasHeader: boolean;
+        seriesId: string;
+        level: typeof CAMPAIGN_LEVELS[0];
+        index: number;
+    }> = [];
+    
+    let currentY = START_OFFSET;
+    let lastSeries = '';
+
+    CAMPAIGN_LEVELS.forEach((level, index) => {
+        const series = level.id.split('.')[0];
+        let hasHeader = false;
+
+        // Add extra space for series header
+        if (series !== lastSeries) {
+            if (index > 0) currentY += 80;
+            hasHeader = true;
+            lastSeries = series;
+        }
+
+        // Calculate X position
+        // Mobile: Center
+        // Desktop: Zig-Zag (Left 35% / Right 65%)
+        const isLeft = index % 2 === 0;
+        const x = isMobile 
+            ? containerWidth / 2 
+            : (isLeft ? containerWidth * 0.35 : containerWidth * 0.65);
+
+        positions.push({
+            x,
+            y: currentY,
+            hasHeader,
+            seriesId: series,
+            level,
+            index
+        });
+
+        currentY += ITEM_HEIGHT;
+    });
+
+    return { positions, totalHeight: currentY + 200 };
+  }, [containerWidth, isMobile]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-300">
@@ -138,7 +194,7 @@ const CampaignMap: React.FC = () => {
         <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar">
             
             {/* SVG Layer for Connections */}
-            <svg className="absolute inset-0 w-full pointer-events-none z-0" style={{ height: (CAMPAIGN_LEVELS.length * ITEM_HEIGHT) + 200 }}>
+            <svg className="absolute inset-0 w-full pointer-events-none z-0" style={{ height: layoutData.totalHeight }}>
                <defs>
                  <linearGradient id="pathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.6" />
@@ -153,38 +209,24 @@ const CampaignMap: React.FC = () => {
                  </filter>
                </defs>
 
-               {CAMPAIGN_LEVELS.map((_, index) => {
-                   if (index === CAMPAIGN_LEVELS.length - 1) return null;
+               {layoutData.positions.map((pos, i) => {
+                   if (i === layoutData.positions.length - 1) return null;
                    
-                   // TESTING MODE: Always show paths as unlocked
-                   const isUnlocked = true; 
+                   const nextPos = layoutData.positions[i + 1];
                    
-                   // Coordinate Logic matches the DOM layout
-                   const y1 = START_OFFSET + (index * ITEM_HEIGHT) + (isMobile ? 28 : 36); // Center of Hex roughly
-                   const y2 = START_OFFSET + ((index + 1) * ITEM_HEIGHT) + (isMobile ? 28 : 36);
+                   // Determine if path is unlocked (if current level is unlocked)
+                   // Logic: Path is unlocked if the NEXT level is unlocked or if current is completed
+                   const isUnlocked = true; // i < campaignProgress;
 
-                   let pathD = "";
-
-                   if (isMobile) {
-                       // Straight line down center
-                       const cx = containerWidth / 2;
-                       pathD = `M ${cx} ${y1} L ${cx} ${y2}`;
-                   } else {
-                       // Snake Layout Logic
-                       const isEven = index % 2 === 0;
-                       // These percentages must align with the flexbox layout below
-                       const x1 = isEven ? containerWidth * 0.3 : containerWidth * 0.7;
-                       const x2 = !isEven ? containerWidth * 0.3 : containerWidth * 0.7;
-                       
-                       const cpY1 = y1 + (ITEM_HEIGHT * 0.5);
-                       const cpY2 = y2 - (ITEM_HEIGHT * 0.5);
-                       
-                       pathD = `M ${x1} ${y1} C ${x1} ${cpY1}, ${x2} ${cpY2}, ${x2} ${y2}`;
-                   }
+                   // Bezier Curve Logic
+                   const cpY1 = pos.y + (nextPos.y - pos.y) * 0.5;
+                   const cpY2 = nextPos.y - (nextPos.y - pos.y) * 0.5;
+                   
+                   const pathD = `M ${pos.x} ${pos.y} C ${pos.x} ${cpY1}, ${nextPos.x} ${cpY2}, ${nextPos.x} ${nextPos.y}`;
 
                    return (
                        <path 
-                         key={`path-${index}`}
+                         key={`path-${i}`}
                          d={pathD}
                          fill="none"
                          stroke={isUnlocked ? 'url(#pathGradient)' : '#1e293b'}
@@ -198,121 +240,133 @@ const CampaignMap: React.FC = () => {
             </svg>
 
             {/* Level Nodes Layer */}
-            <div className="relative z-10 w-full pb-24" style={{ paddingTop: START_OFFSET - (isMobile ? 28 : 36) }}>
-                {CAMPAIGN_LEVELS.map((level, index) => {
-                    // TESTING MODE: Always unlocked
-                    const isUnlocked = true;
-                    
-                    // Original completion logic maintained for badge accuracy
-                    const isCompleted = index < campaignProgress;
-                    const isCurrent = index === campaignProgress;
+            <div className="relative z-10 w-full" style={{ height: layoutData.totalHeight }}>
+                {layoutData.positions.map((pos, i) => {
+                    const isUnlocked = true; // i <= campaignProgress; // Current level is unlocked
+                    const isCompleted = i < campaignProgress;
+                    const isCurrent = i === campaignProgress;
                     
                     // Lookup translation
-                    const levelKey = level.id.replace('.', '_');
+                    const levelKey = pos.level.id.replace('.', '_');
                     const titleKey = `LEVEL_${levelKey}_TITLE` as keyof typeof TEXT.EN.CAMPAIGN;
                     const descKey = `LEVEL_${levelKey}_DESC` as keyof typeof TEXT.EN.CAMPAIGN;
                     
-                    const displayTitle = TEXT[language].CAMPAIGN[titleKey] || level.title;
-                    const displayDesc = TEXT[language].CAMPAIGN[descKey] || level.description;
+                    const displayTitle = TEXT[language].CAMPAIGN[titleKey] || pos.level.title;
+                    const displayDesc = TEXT[language].CAMPAIGN[descKey] || pos.level.description;
 
-                    // Layout Classes
-                    const rowStyle = isMobile 
-                        ? { justifyContent: 'center' }
-                        : { 
-                            justifyContent: index % 2 === 0 ? 'flex-start' : 'flex-end',
-                            paddingLeft: index % 2 === 0 ? '20%' : '0',
-                            paddingRight: index % 2 !== 0 ? '20%' : '0'
-                          };
-
-                    const contentDir = isMobile 
-                        ? 'flex-col' 
-                        : (index % 2 === 0 ? 'flex-row' : 'flex-row-reverse text-right');
+                    const isLeft = i % 2 === 0;
+                    // On mobile, always center column. On desktop, alternate.
+                    // If left aligned (35%), text should be on RIGHT.
+                    // If right aligned (65%), text should be on LEFT.
+                    const textOnRight = isLeft; 
 
                     return (
-                        <div 
-                            key={level.id} 
-                            className="flex w-full px-4 mb-[20px]" 
-                            style={{ 
-                                height: ITEM_HEIGHT, 
-                                ...rowStyle 
-                            }}
-                        >
-                            <div className={`
-                                flex items-center gap-4 md:gap-8 transition-all duration-500 group
-                                ${contentDir}
-                                ${isUnlocked ? 'opacity-100 translate-y-0' : 'opacity-40 grayscale translate-y-2'}
-                            `}>
-                                
-                                {/* HEX BUTTON WRAPPER */}
-                                <div className="relative shrink-0">
-                                    {/* Pulse Effect for Current */}
-                                    {isCurrent && (
-                                        <div className="absolute inset-0 bg-amber-500/30 rounded-full blur-xl animate-pulse" />
-                                    )}
-                                    
-                                    <HexButton 
-                                        size={isMobile ? 'md' : 'lg'} 
-                                        variant={isCompleted ? 'emerald' : (isCurrent ? 'amber' : 'slate')} 
-                                        active={isCurrent}
-                                        pulsate={isCurrent}
-                                        onClick={() => {
-                                            if (isUnlocked) {
-                                                startCampaignLevel(level.id);
-                                                playUiSound('CLICK');
-                                            } else {
-                                                playUiSound('ERROR');
-                                            }
-                                        }}
-                                        disabled={!isUnlocked}
-                                        className="relative z-10 hover:scale-110 transition-transform duration-300"
-                                    >
-                                        {isCompleted ? <Check className="w-6 h-6 md:w-8 md:h-8" /> : (isUnlocked ? <Play className="w-6 h-6 md:w-8 md:h-8 fill-current ml-1" /> : <Lock className="w-5 h-5 md:w-6 md:h-6 opacity-50" />)}
-                                    </HexButton>
-
-                                    {/* Level Badge */}
-                                    <div className={`
-                                        absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border shadow-lg z-20 whitespace-nowrap
-                                        ${isCurrent ? 'bg-amber-500 text-slate-900 border-amber-400 animate-bounce' : 'bg-slate-800 text-slate-400 border-slate-600'}
-                                    `}>
-                                        {isCurrent ? t.BADGE_CURRENT : (isCompleted ? t.BADGE_DONE : t.BADGE_LOCKED)}
+                        <React.Fragment key={pos.level.id}>
+                            {/* Series Header */}
+                            {pos.hasHeader && (
+                                <div 
+                                    className="absolute left-0 right-0 flex items-center justify-center pointer-events-none"
+                                    style={{ top: pos.y - (isMobile ? 100 : 120) }}
+                                >
+                                    <div className="flex items-center gap-4 px-6 py-2 bg-slate-900/80 backdrop-blur-md border border-indigo-500/30 rounded-full shadow-2xl shadow-indigo-500/10">
+                                        <Layers className="w-4 h-4 text-indigo-400" />
+                                        <span className="text-sm font-black uppercase tracking-[0.3em] text-indigo-200">
+                                            Series {pos.seriesId}
+                                        </span>
+                                        <div className="h-px w-12 bg-indigo-500/50" />
                                     </div>
                                 </div>
+                            )}
 
-                                {/* INFO CARD */}
+                            {/* Level Node */}
+                            <div 
+                                ref={isCurrent ? currentLevelRef : null}
+                                className="absolute flex items-center justify-center transition-all duration-500"
+                                style={{ 
+                                    left: pos.x, 
+                                    top: pos.y,
+                                    transform: 'translate(-50%, -50%)',
+                                    width: isMobile ? '100%' : 'auto'
+                                }}
+                            >
                                 <div className={`
-                                    flex flex-col bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-3 md:p-4 rounded-xl shadow-xl max-w-[200px] md:max-w-xs transition-all duration-300
-                                    ${isCurrent ? 'border-amber-500/30 shadow-amber-900/20' : 'hover:border-slate-500'}
+                                    relative flex items-center gap-4 md:gap-8 group
+                                    ${isMobile ? 'flex-col' : (textOnRight ? 'flex-row' : 'flex-row-reverse text-right')}
+                                    ${isUnlocked ? 'opacity-100' : 'opacity-40 grayscale'}
                                 `}>
-                                    <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 ${isUnlocked ? 'text-indigo-400' : 'text-slate-600'}`}>
-                                        {t.MISSION_PREFIX} {level.id}
-                                    </span>
-                                    <h3 className={`text-sm md:text-lg font-black uppercase leading-tight mb-2 ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>
-                                        {displayTitle.replace(/Simulation\s[\d.]+:\s|Сим\s[\d.]+:\s/, '')}
-                                    </h3>
                                     
-                                    {isUnlocked ? (
-                                        <div className="flex flex-col gap-1">
-                                            <p className="text-[10px] text-slate-400 font-mono line-clamp-2 leading-relaxed">
-                                                {displayDesc.split('\n')[0]}
-                                            </p>
-                                            {level.aiMode !== 'none' && (
-                                                <div className="flex items-center gap-1 text-[9px] text-red-400 mt-1 font-bold">
-                                                    <ShieldAlert className="w-3 h-3" /> {t.HOSTILES}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2 text-slate-600">
-                                            <div className="h-1 flex-1 bg-slate-800 rounded overflow-hidden">
-                                                <div className="h-full bg-slate-700 w-1/2 animate-pulse"></div>
-                                            </div>
-                                            <span className="text-[9px] font-mono">{t.ENCRYPTED}</span>
-                                        </div>
-                                    )}
-                                </div>
+                                    {/* HEX BUTTON WRAPPER */}
+                                    <div className="relative shrink-0 z-20">
+                                        {/* Pulse Effect for Current */}
+                                        {isCurrent && (
+                                            <div className="absolute inset-0 bg-amber-500/30 rounded-full blur-xl animate-pulse" />
+                                        )}
+                                        
+                                        <HexButton 
+                                            size={isMobile ? 'md' : 'lg'} 
+                                            variant={isCompleted ? 'emerald' : (isCurrent ? 'amber' : 'slate')} 
+                                            active={isCurrent}
+                                            pulsate={isCurrent}
+                                            onClick={() => {
+                                                if (isUnlocked) {
+                                                    startCampaignLevel(pos.level.id);
+                                                    playUiSound('CLICK');
+                                                } else {
+                                                    playUiSound('ERROR');
+                                                }
+                                            }}
+                                            disabled={!isUnlocked}
+                                            className="relative z-10 hover:scale-110 transition-transform duration-300"
+                                        >
+                                            {isCompleted ? <Check className="w-6 h-6 md:w-8 md:h-8" /> : (isUnlocked ? <Play className="w-6 h-6 md:w-8 md:h-8 fill-current ml-1" /> : <Lock className="w-5 h-5 md:w-6 md:h-6 opacity-50" />)}
+                                        </HexButton>
 
+                                        {/* Level Badge */}
+                                        <div className={`
+                                            absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border shadow-lg z-20 whitespace-nowrap
+                                            ${isCurrent ? 'bg-amber-500 text-slate-900 border-amber-400 animate-bounce' : 'bg-slate-800 text-slate-400 border-slate-600'}
+                                        `}>
+                                            {isCurrent ? t.BADGE_CURRENT : (isCompleted ? t.BADGE_DONE : t.BADGE_LOCKED)}
+                                        </div>
+                                    </div>
+
+                                    {/* INFO CARD */}
+                                    <div className={`
+                                        flex flex-col bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-3 md:p-4 rounded-xl shadow-xl w-[200px] md:w-[280px] transition-all duration-300 z-10
+                                        ${isCurrent ? 'border-amber-500/30 shadow-amber-900/20' : 'hover:border-slate-500'}
+                                        ${isMobile ? 'text-center items-center' : (textOnRight ? 'text-left items-start' : 'text-right items-end')}
+                                    `}>
+                                        <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 ${isUnlocked ? 'text-indigo-400' : 'text-slate-600'}`}>
+                                            {t.MISSION_PREFIX} {pos.level.id}
+                                        </span>
+                                        <h3 className={`text-sm md:text-lg font-black uppercase leading-tight mb-2 ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>
+                                            {displayTitle.replace(/Simulation\s[\d.]+:\s|Сим\s[\d.]+:\s/, '')}
+                                        </h3>
+                                        
+                                        {isUnlocked ? (
+                                            <div className={`flex flex-col gap-1 ${isMobile ? 'items-center' : (textOnRight ? 'items-start' : 'items-end')}`}>
+                                                <p className="text-[10px] text-slate-400 font-mono line-clamp-2 leading-relaxed">
+                                                    {displayDesc.split('\n')[0]}
+                                                </p>
+                                                {pos.level.aiMode !== 'none' && (
+                                                    <div className="flex items-center gap-1 text-[9px] text-red-400 mt-1 font-bold">
+                                                        <ShieldAlert className="w-3 h-3" /> {t.HOSTILES}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-slate-600 w-full">
+                                                <div className="h-1 flex-1 bg-slate-800 rounded overflow-hidden">
+                                                    <div className="h-full bg-slate-700 w-1/2 animate-pulse"></div>
+                                                </div>
+                                                <span className="text-[9px] font-mono">{t.ENCRYPTED}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                </div>
                             </div>
-                        </div>
+                        </React.Fragment>
                     );
                 })}
             </div>

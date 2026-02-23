@@ -235,7 +235,34 @@ const HexNodeComponent = (props: HexNodeProps) => {
             onMouseEnter={handleHover} 
             onMouseLeave={handleHoverEnd}
         >
-             {/* Match perspective and rotation of standard hexes */}
+             {/* 1. VOID WALLS (Real 3D Geometry) */}
+             {wallData && neighborLevels.map((nLevel, i) => {
+                 if (!wallData[i].visible) return null;
+                 
+                 const { t1, t2 } = wallData[i];
+                 const VOID_DEPTH = 12; // Thickness of the void slab
+                 
+                 const b1x = t2.x;
+                 const b1y = t2.y + VOID_DEPTH;
+                 const b2x = t1.x;
+                 const b2y = t1.y + VOID_DEPTH;
+
+                 return (
+                    <Path 
+                        key={`vw-${i}`}
+                        data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
+                        fill="#020617" 
+                        stroke="#1e293b" 
+                        strokeWidth={1}
+                        perfectDrawEnabled={false} 
+                        listening={false} 
+                        closed={true} 
+                        shadowForStrokeEnabled={false}
+                    />
+                 );
+             })}
+
+             {/* 2. VOID TOP FACE */}
              <Group scaleY={0.8} perfectDrawEnabled={false}>
                  <Group rotation={rotation} perfectDrawEnabled={false}>
                      {/* Depth Rim */}

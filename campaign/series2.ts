@@ -127,9 +127,9 @@ export const series2Levels: LevelConfig[] = [
           { q: -1, r: -1, maxLevel: 3, currentLevel: 3, revealed: true },
 
           // Resources hidden in Chaos
-          { q: 2, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: -2, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
+          { q: 2, r: -1, maxLevel: -2, currentLevel: -2, revealed: true, artifact: { type: 'matter_prism' } },
+          { q: -2, r: 1, maxLevel: -3, currentLevel: -3, revealed: true, artifact: { type: 'matter_prism' } },
+          { q: 2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true, artifact: { type: 'matter_prism' } },
 
           // Chaos [-3, 4]
           { q: -1, r: 3, maxLevel: 4, currentLevel: 4, revealed: true },
@@ -139,7 +139,7 @@ export const series2Levels: LevelConfig[] = [
           { q: -1, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
           { q: -1, r: 0, maxLevel: -2, currentLevel: -2, revealed: true },
           { q: 0, r: -1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: 0, r: -2, maxLevel: -3, currentLevel: -3, revealed: true },
+          { q: 0, r: -2, maxLevel: -3, currentLevel: -3, revealed: true, artifact: { type: 'matter_prism' } },
           { q: 1, r: -2, maxLevel: 3, currentLevel: 3, revealed: true },
       ]
     },
@@ -187,9 +187,9 @@ export const series2Levels: LevelConfig[] = [
           { q: -2, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
 
           // Deep Resource Nodes
-          { q: 2, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: -2, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 1, r: -3, maxLevel: -3, currentLevel: -3, revealed: true },
+          { q: 2, r: 1, maxLevel: -3, currentLevel: -3, revealed: true, artifact: { type: 'cortex_overclocker' } },
+          { q: -2, r: -1, maxLevel: -3, currentLevel: -3, revealed: true, artifact: { type: 'cortex_overclocker' } },
+          { q: 1, r: -3, maxLevel: -3, currentLevel: -3, revealed: true, artifact: { type: 'cortex_overclocker' } },
 
           // Chaos [-3, 4]
           { q: 1, r: 3, maxLevel: -3, currentLevel: -3, revealed: true },

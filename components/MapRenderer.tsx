@@ -385,7 +385,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                         }
                     }
                     // Level 1.2: Reach Capital (Arrow on Capital)
-                    else if (levelId === '1.2') {
+                    else if (levelId === '1.2' || levelId === '3.1') {
                         if (hex.structureType === 'CAPITAL') {
                             isTutorial = true;
                             isArrow = true;
