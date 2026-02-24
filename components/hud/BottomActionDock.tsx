@@ -207,7 +207,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
                     <div className="flex items-center gap-1.5 justify-start overflow-x-auto no-scrollbar mask-linear-fade-right pr-2">
                         {inventoryList.map(index => {
                             const item = player.inventory[index];
-                            const slotSize = "w-8 h-8 md:w-10 md:h-10"; 
+                            const slotSize = "w-7 h-7 md:w-8 md:h-8"; 
                             return (
                                 <div 
                                     key={index} 

@@ -92,16 +92,13 @@ interface GameStore extends GameState {
 
 let engine: GameEngine | null = null;
 let tickCount = 0;
-let isProcessingTick = false; // Guard for async tick
+let isProcessingTick = false; 
 
 // --- SESSION FACTORY ---
 
 const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig, language: Language = 'EN'): SessionState => {
-  // Use mapType from winCondition if available (Skirmish), default to FLAT
   const mapType = winCondition?.mapType || 'FLAT';
   const initialGrid = generateMap(levelConfig, mapType);
-  
-  // Access store state for user preferences to apply to new session player entity
   const stateUser = useGameStore.getState().user; 
 
   // Difficulty & Config Setup
@@ -123,7 +120,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       startR = playerStartHex.r;
   }
 
-  // Generate Starting Inventory from Config
+  // Generate Starting Inventory
   const initialInventory: Item[] = [];
   if (levelConfig && levelConfig.startState.startInventory) {
       levelConfig.startState.startInventory.forEach(baseId => {
@@ -150,14 +147,36 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       });
   }
 
-  // Bot Setup
-  const botCount = levelConfig ? (levelConfig.aiMode === 'none' ? 0 : 1) : (winCondition?.botCount || 0);
-  const bots: Entity[] = [];
-  const spawnPoints = [{ q: 0, r: -2 }, { q: 2, r: -2 }, { q: 2, r: 0 }, { q: 0, r: 2 }, { q: -2, r: 2 }, { q: -2, r: 0 }];
+  // --- BOT SETUP & CUSTOM SPAWNS ---
+  let botCount = 0;
+  if (levelConfig) {
+      if (levelConfig.aiMode !== 'none') {
+          if (levelConfig.id === '2.5') botCount = 2;
+          else if (levelConfig.botRoutes) botCount = levelConfig.botRoutes.length;
+          else botCount = 1;
+      }
+  } else {
+      botCount = winCondition?.botCount || 0;
+  }
 
-  for (let i = 0; i < Math.min(botCount, spawnPoints.length); i++) {
-    const sp = spawnPoints[i];
-    // Create/Ensure bot spawn hex
+  const bots: Entity[] = [];
+  const defaultSpawnPoints = [{ q: 0, r: -2 }, { q: 2, r: -2 }, { q: 2, r: 0 }, { q: 0, r: 2 }, { q: -2, r: 2 }, { q: -2, r: 0 }];
+  
+  // Точные координаты спавнов ботов из архитектуры уровней кампании
+  const campaignBotSpawns: Record<string, HexCoord[]> = {
+      '2.4': [{ q: 0, r: -3 }],
+      '2.5': [{ q: 3, r: -3 }, { q: -3, r: 0 }],
+      '3.5': [{ q: 3, r: 0 }],
+      '3.6': [{ q: -1, r: 0 }],
+      '4.5': [{ q: 0, r: -3 }],
+  };
+
+  const levelSpawns = levelConfig ? campaignBotSpawns[levelConfig.id] : null;
+
+  for (let i = 0; i < botCount; i++) {
+    const sp = levelSpawns && levelSpawns[i] ? levelSpawns[i] : defaultSpawnPoints[i % defaultSpawnPoints.length];
+    
+    // Гарантируем, что гекс существует, чтобы не было "островов" для дефолтных координат
     const key = getHexKey(sp.q, sp.r);
     if (!initialGrid[key]) {
         initialGrid[key] = { id: key, q: sp.q, r: sp.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true };
@@ -167,16 +186,14 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
         });
     }
 
-    // CAMPAIGN HANDICAP: Bots start with 0 resources in campaign
-    const botStartMoves = levelConfig ? 0 : startMoves;
-    const botStartStorage = 0; 
-    
-    // PATROL ROUTES
+    // Выдаем 2 хода в кампании, чтобы бот мог выкопать под собой ресы и не застрять в needsSurvival-лупе
+    const botStartMoves = levelConfig ? 2 : startMoves;
+    const botStartStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0; 
     const botRoute = levelConfig?.botRoutes && levelConfig.botRoutes[i] ? levelConfig.botRoutes[i] : undefined;
 
     bots.push({
       id: `bot-${i+1}`, type: EntityType.BOT, state: EntityState.IDLE, q: sp.q, r: sp.r,
-      playerLevel: 0, 
+      playerLevel: startRank, 
       coins: startCredits,
       moves: botStartMoves,
       totalCoinsEarned: 0, movementQueue: [],
@@ -198,7 +215,6 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     });
   }
 
-  // Secret Monument Calculation (Skirmish Summit Mode)
   let secretMonumentCoord: HexCoord | undefined = undefined;
   if (!levelConfig && winCondition?.winType === 'SUMMIT') {
       const angle = Math.random() * Math.PI * 2;
@@ -206,27 +222,23 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       secretMonumentCoord = { q: Math.round(Math.cos(angle) * dist), r: Math.round(Math.sin(angle) * dist) };
   }
 
-  // Monument Requirements
+  // --- MONUMENT REQUIREMENTS SYNCHRONIZATION ---
   let monumentRequirements: string[] | undefined;
   
   if (levelConfig) {
-      if (levelConfig.id === '2.2') {
-          monumentRequirements = ['ANY', 'ANY', 'ANY'];
-      } else if (levelConfig.id === '2.3') {
-          monumentRequirements = ['apex_core', 'apex_core', 'apex_core']; // Specific item as requested
-      } else if (levelConfig.id === '2.4') {
-          monumentRequirements = ['ANY', 'ANY', 'ANY', 'ANY']; // 4 items
-      } else if (levelConfig.id === '3.5') {
-          monumentRequirements = ['ANY', 'ANY', 'ANY']; // 3 items for The Heist
-      } else if (levelConfig.id === '3.6') {
-          monumentRequirements = ['ANY', 'ANY']; // 2 items for The Maze of Echoes
+      switch (levelConfig.id) {
+          case '2.2': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
+          case '2.4': monumentRequirements = ['ANY', 'ANY']; break;
+          case '2.5': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
+          case '3.5': monumentRequirements = ['ANY', 'ANY', 'ANY']; break;
+          case '3.8': monumentRequirements = ['ANY', 'ANY']; break;
+          case '4.8': monumentRequirements = ['ANY', 'ANY']; break;
+          default: monumentRequirements = undefined;
       }
   } else if (winCondition?.winType === 'SUMMIT') {
       monumentRequirements = generateMonumentRecipe(difficulty);
   }
 
-  // Entropy Configuration
-  // Use explicit config from level if available, otherwise default
   let initialEntropy = levelConfig?.startState.initialEntropy ?? ENTROPY_CONFIG.INITIAL_MAX;
 
   const initialLog: LogEntry = {
@@ -512,7 +524,6 @@ export const useGameStore = create<GameStore>()(
           const path = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles);
           
           if (!path) {
-            // Void check for far clicks
             if (targetHex?.structureType === 'VOID') {
                  audioService.play('ERROR');
                  set({ toast: { message: TEXT[get().language].TOAST.TOO_FAR_VOID, type: 'error', timestamp: Date.now() } });
@@ -594,7 +605,6 @@ export const useGameStore = create<GameStore>()(
       },
 
       openMonumentDialog: () => { 
-          // Initialize slots based on requirements size (Dynamic for 2.4)
           const state = get().session;
           const count = state?.monumentRequirements?.length || 3;
           const slots = Array(count).fill(null);
@@ -604,7 +614,6 @@ export const useGameStore = create<GameStore>()(
       },
       closeMonumentDialog: () => { 
           audioService.play('UI_CLICK'); 
-          // Reset to 3 or dynamic? Doesn't matter if closed.
           set({ monumentDialogState: { isOpen: false, slots: [null, null, null] } }); 
       },
 
@@ -692,7 +701,6 @@ export const useGameStore = create<GameStore>()(
 
               if (result.events.length > 0) {
                   const lang = get().language;
-                  
                   const newEffectsData: Omit<FloatingText, 'id' | 'startTime'>[] = [];
 
                   result.events.forEach(event => {
@@ -776,7 +784,6 @@ export const useGameStore = create<GameStore>()(
                                              lifetime: 1200 
                                         });
                                     }
-                                    text = ''; // Handled above
                                     break;
                                 }
 
@@ -797,7 +804,6 @@ export const useGameStore = create<GameStore>()(
                                                     lifetime: 1200
                                                 });
                                             }
-                                            
                                             if (m > 0) {
                                                 newEffectsData.push({
                                                     q: targetQ, r: targetR,
@@ -807,7 +813,6 @@ export const useGameStore = create<GameStore>()(
                                                     lifetime: 1200
                                                 });
                                             }
-                                            text = ''; // Handled above
                                         }
                                     }
                                     break;
@@ -818,23 +823,17 @@ export const useGameStore = create<GameStore>()(
                          }
 
                          if (text) {
-                             newEffectsData.push({
-                                 q: targetQ, r: targetR,
-                                 text, color, icon,
-                                 lifetime: 1200 
-                             });
+                             newEffectsData.push({ q: targetQ, r: targetR, text, color, icon, lifetime: 1200 });
                          }
                     }
                   });
                   
-                  // Limit effects using EffectPool to prevent canvas overload
                   result.state.effects = effectPool.addBatch(result.state.effects, newEffectsData);
               }
 
               let newToast = get().toast;
               const error = result.events.find(e => e.type === 'ACTION_DENIED' || e.type === 'ERROR');
               if (error && error.entityId === engine?.state?.player.id) {
-                  // Fallback for engine errors that don't have explicit store UI handling
                   newToast = { message: error.message || 'Error', type: 'error', timestamp: now };
               }
 

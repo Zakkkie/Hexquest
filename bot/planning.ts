@@ -7,7 +7,7 @@ export interface ScoredTarget {
     hex: Hex;
     score: number;
     reason: string;
-    actionType: 'UPGRADE' | 'DIG' | 'MOVE_ONLY'; // <-- ДОБАВЛЕНО 'MOVE_ONLY'
+    actionType: 'UPGRADE' | 'DIG' | 'MOVE_ONLY';
 }
 
 const MAX_RECURSION_DEPTH = 3;
@@ -16,19 +16,26 @@ const MAX_RECURSION_DEPTH = 3;
  * Проверка: Не рухнет ли башня, если мы выкопаем этот гекс?
  */
 export const isLoadBearing = (hex: Hex, grid: Record<string, Hex>): boolean => {
+    // ФУНДАМЕНТАЛЬНОЕ ИСПРАВЛЕНИЕ: Гексы уровня 0 и ниже физически не могут быть опорами!
+    // Опоры требуются только зданиям L2 и выше (им нужны соседи L1+).
+    if (hex.maxLevel < 1) return false;
+
     const nbs = getNeighbors(hex.q, hex.r);
     for (const nCoord of nbs) {
         const neighbor = grid[getHexKey(nCoord.q, nCoord.r)];
-        if (neighbor && neighbor.maxLevel > hex.maxLevel) {
+        
+        // Проверяем, является ли текущий гекс РЕАЛЬНОЙ опорой для соседа
+        if (neighbor && neighbor.maxLevel >= 2 && hex.maxLevel === neighbor.maxLevel - 1) {
             const nNeighbors = getNeighbors(neighbor.q, neighbor.r);
             let otherSupports = 0;
             for (const nn of nNeighbors) {
-                if (nn.q === hex.q && nn.r === hex.r) continue; 
+                if (nn.q === hex.q && nn.r === hex.r) continue; // Себя не считаем
                 const sup = grid[getHexKey(nn.q, nn.r)];
                 if (sup && sup.maxLevel >= neighbor.maxLevel - 1) {
                     otherSupports++;
                 }
             }
+            // Если у соседа останется меньше 2 других опор, то наш гекс сносить НЕЛЬЗЯ
             if (otherSupports < 2) return true; 
         }
     }
@@ -133,7 +140,7 @@ export const findDestroyerTarget = (
         const nextTargetHex = grid[getHexKey(nextTargetCoord.q, nextTargetCoord.r)];
 
         // --- DESTRUCTION LOGIC (Dynamic Scan) ---
-        const scanRadiusForDestroyer = 3; // Бот сканирует в радиусе 3 гексов, а не только соседей
+        const scanRadiusForDestroyer = 3; 
         const structuresInSight = index.getHexesInRange({q: bot.q, r: bot.r}, scanRadiusForDestroyer)
             .filter(h => h && h.ownerId === player.id && h.maxLevel > 0 && h.structureType !== 'VOID');
         
@@ -141,7 +148,7 @@ export const findDestroyerTarget = (
             const lastDestroy = bot.memory?.lastDestroyTime || 0;
             const now = Date.now();
             
-            if (now > lastDestroy + 5000) { // Кулдаун снижен до 5 секунд
+            if (now > lastDestroy + 5000) { 
                 const victim = structuresInSight.sort((a, b) => b.maxLevel - a.maxLevel)[0];
                 const digChain = resolveDigChain(victim, bot, grid, 0);
                 if (digChain) {
@@ -171,6 +178,9 @@ export const findDestroyerTarget = (
 
     for (const hex of candidates) {
         if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
+        
+        // НОВОЕ ИСПРАВЛЕНИЕ: Игнорируем гексы, на которые бот не может залезть из-за ранга
+        if (hex.maxLevel > bot.playerLevel) continue;
         
         let score = 0;
         if (hex.ownerId === player.id) {
@@ -229,13 +239,20 @@ export const findHiveTarget = (
     for (const hex of candidates) {
         if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
 
+        // НОВОЕ ИСПРАВЛЕНИЕ: Игнорируем гексы, на которые бот не может залезть из-за ранга
+        if (hex.maxLevel > bot.playerLevel) continue;
+
         let potentialScore = 0;
         let chainResult: ScoredTarget | null = null;
         const d = cubeDistance(bot, hex);
 
         if (role === 'MINER') {
-            if (hex.currentLevel > 0) continue; 
+            // ИСПРАВЛЕНИЕ 3 (УМНАЯ ЗАЩИТА): Шахтер не должен сносить ПОСТРОЙКИ (свои или чужие).
+            // Но природные ничейные горы (currentLevel > 0 без ownerId) копать МОЖНО!
+            if (hex.currentLevel > 0 && hex.ownerId) continue;
+            
             potentialScore = (Math.abs(hex.currentLevel) * 10) - d;
+            if (hex.currentLevel > 0) potentialScore = (hex.currentLevel * 15) - d; // Приоритет природным горам
             if (hex.currentLevel < -5) potentialScore -= 50; 
             chainResult = resolveDigChain(hex, bot, grid, 0);
         } 
@@ -283,31 +300,36 @@ export const findBestDigTargets = (
         if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
         if (restrictedArea && restrictedArea.has(hex.id)) continue;
         
+        // НОВОЕ ИСПРАВЛЕНИЕ: Игнорируем гексы, на которые бот не может залезть из-за ранга
+        if (hex.maxLevel > bot.playerLevel) continue;
+
         // Защита: не копаем чужие базы, если мы не DESTROYER
         if (hex.ownerId && hex.ownerId !== bot.id && hex.maxLevel > 0) continue;
 
-        // Не копаем несущие конструкции (защита от саморазрушения)
+        // ИСПРАВЛЕНИЕ 3 (УМНАЯ ЗАЩИТА СЕБЯ): Не сносим свои собственные постройки ради ресурсов!
+        // (свои ямы currentLevel <= 0 копать можно)
+        if (hex.currentLevel > 0 && hex.ownerId === bot.id) continue;
+
         if (isLoadBearing(hex, grid)) continue;
 
         const d = cubeDistance(botPos, hex);
-        if (d > 20) continue; // Не уходим слишком далеко
+        if (d > 20) continue; 
 
-        const check = checkDigCondition(hex, bot, getNeighbors(bot.q, bot.r), grid);
+        // ИСПРАВЛЕНИЕ 2 (КРИТИЧЕСКОЕ): Передаем соседей ИСКОМОГО гекса (hex.q, hex.r), а не бота!
+        const check = checkDigCondition(hex, bot, getNeighbors(hex.q, hex.r), grid);
         if (!check.canGrow) continue;
 
-        // Чем выше гекс (если это естественная гора) или чем ближе он, тем выше приоритет
         let score = 0;
         if (hex.currentLevel > 0) {
-            score += hex.currentLevel * 10; // Выгодно срывать горы
+            score += hex.currentLevel * 10; 
         } else {
-            score += Math.abs(hex.currentLevel) * 5; // Выгодно копать ямы для лута
+            score += Math.abs(hex.currentLevel) * 5; 
         }
         
-        score -= d * 2; // Штраф за дальность
+        score -= d * 2; 
 
         candidates.push({ hex, score });
     }
 
-    // Сортируем от лучших к худшим и возвращаем верхние
     return candidates.sort((a, b) => b.score - a.score).slice(0, limit);
 };

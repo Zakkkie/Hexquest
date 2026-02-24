@@ -500,6 +500,17 @@ export const calculateBotMove = (
     const mem = initMemory(bot);
     if (!mem.exploreAnchor) mem.exploreAnchor = { q: bot.q, r: bot.r };
 
+    // --- ИСПРАВЛЕНИЕ: МГНОВЕННАЯ СИНХРОНИЗАЦИЯ РАНГА ---
+    // Форсируем пересчет ранга бота на основе его построек, чтобы он не ждал 3 секунды.
+    let highestOwnedLevel = bot.playerLevel;
+    for (const hex of Object.values(grid)) {
+        if (hex.ownerId === bot.id && hex.maxLevel > highestOwnedLevel) {
+            highestOwnedLevel = hex.maxLevel;
+        }
+    }
+    bot.playerLevel = highestOwnedLevel; // Ранг равен максимальному уровню его баз
+    // ---------------------------------------------------
+
     const navObs   = buildNavObstacles(bot, obstacles, reservedHexKeys);
     const claimed  = buildClaimedSet(bot, allBots ?? []);
     const monument = Object.values(grid).find(h => h.structureType === 'MONUMENT' && h.revealed) ?? null;
