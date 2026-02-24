@@ -88,11 +88,11 @@ export const series3Levels: LevelConfig[] = [
     startState: {
       credits: 0, moves: 5, rank: 1, materials: 0,
       // Player starts with 4 items for VOID sacrifice
-      items: [
-        { baseId: 'cargo_prism', rarity: 'UNCOMMON' },
-        { baseId: 'hornet_drill', rarity: 'UNCOMMON' },
-        { baseId: 'fuel_cell', rarity: 'COMMON' },
-        { baseId: 'reality_patch', rarity: 'COMMON' },
+      startInventory: [
+        'cargo_prism',
+        'hornet_drill',
+        'fuel_cell',
+        'reality_patch'
       ]
     },
     aiMode: 'none',
