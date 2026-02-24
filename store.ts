@@ -227,6 +227,8 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
   
   if (levelConfig) {
       switch (levelConfig.id) {
+          // НОВАЯ СТРОКА: Для 2.1 слоты не нужны, только кнопка Activate
+          case '2.1': monumentRequirements = []; break; 
           case '2.2': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
           case '2.4': monumentRequirements = ['ANY', 'ANY']; break;
           case '2.5': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
