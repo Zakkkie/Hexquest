@@ -155,7 +155,6 @@ export const series1Levels: LevelConfig[] = [
     },
     startState: { credits: 30, moves: 2, rank: 1, materials: 2 },
     aiMode: 'basic',
-    startState: { credits: 10, moves: 2, rank: 1, materials: 2 },
     hooks: {
       checkWinCondition: (state) => state.player.playerLevel >= 4,
       checkLossCondition: (state) => isStranded(state)
