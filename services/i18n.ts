@@ -260,6 +260,26 @@ interface Dictionary {
         LEVEL_3_5_DESC: string;
         LEVEL_3_6_TITLE: string;
         LEVEL_3_6_DESC: string;
+        LEVEL_3_7_TITLE: string;
+        LEVEL_3_7_DESC: string;
+        LEVEL_3_8_TITLE: string;
+        LEVEL_3_8_DESC: string;
+        LEVEL_4_1_TITLE: string;
+        LEVEL_4_1_DESC: string;
+        LEVEL_4_2_TITLE: string;
+        LEVEL_4_2_DESC: string;
+        LEVEL_4_3_TITLE: string;
+        LEVEL_4_3_DESC: string;
+        LEVEL_4_4_TITLE: string;
+        LEVEL_4_4_DESC: string;
+        LEVEL_4_5_TITLE: string;
+        LEVEL_4_5_DESC: string;
+        LEVEL_4_6_TITLE: string;
+        LEVEL_4_6_DESC: string;
+        LEVEL_4_7_TITLE: string;
+        LEVEL_4_7_DESC: string;
+        LEVEL_4_8_TITLE: string;
+        LEVEL_4_8_DESC: string;
     };
     TOOLTIP: {
         CURRENT_LOC: string;
