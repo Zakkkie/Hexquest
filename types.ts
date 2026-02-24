@@ -352,6 +352,7 @@ export interface LevelConfig {
     rank: number;
     materials?: number; // Added materials support
     startInventory?: string[]; // Array of baseIds for starting items
+    items?: { baseId: string; rarity: ItemRarity }[]; // Support for specific item objects
     initialEntropy?: number; // Override starting entropy
   };
 

@@ -1,420 +1,372 @@
 import { LevelConfig } from '../types';
-import { getHexKey, getNeighbors } from '../services/hexUtils';
-import { isStranded } from './utils';
+import { getHexKey } from '../services/hexUtils';
+
+/**
+ * SERIES 4: ADVANCED PUZZLES (8 levels)
+ * Full economic model — see Series 2 header for reference.
+ * All starts: minimal resources, player earns through gameplay.
+ */
+
+const isStranded = (s: any): boolean => {
+  const p = s.player;
+  return p.moves <= 0 && p.coins < 5 && !p.recoveredCurrentHex;
+};
+
+// Helper: count player-owned hexes at given level
+const countOwned = (state: any, minLevel: number): number =>
+  Object.values(state.grid).filter((h: any) => h.ownerId === 'player-1' && h.maxLevel >= minLevel).length;
 
 export const series4Levels: LevelConfig[] = [
+
+  // 4.1 RESONANCE — Build 3 adjacent L2 hexes
+  // Economy: DIG 9× → 9mat +12mv. Upgrade 9× → 150cr income. ~20 actions.
   {
     id: '4.1',
     title: 'Sim 4.1: Resonance Protocol',
-    description: `PUZZLE: Harmonic Construction.\n\nObjective: Create a "Resonance Ring" - upgrade 3 DIFFERENT hexes to the SAME level.\n\nRule: All 3 hexes must be adjacent to your starting position and reach Level 2 simultaneously.\n\nTip: Build symmetrically. Balanced structures are more stable.`,
+    description: 'Objective: Build 3 adjacent hexes to Level 2.\n\nRule: L2 needs 2 neighbors at L1. Plan your build order.\nStart empty — Dig for materials first.',
     mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
+      size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
           { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
       ]
     },
-    startState: { credits: 400, moves: 12, rank: 2, materials: 6 },
+    startState: { credits: 0, moves: 3, rank: 1, materials: 0 },
+    aiMode: 'none',
+    hooks: {
+      checkWinCondition: (state) => countOwned(state, 2) >= 3,
+      checkLossCondition: (state) => isStranded(state)
+    }
+  },
+
+  // 4.2 MIRROR MAZE — Own symmetric positions (-2,0) and (2,0)
+  // Economy: Recovery cycles for fuel. DIG 2× for mat. ~17 actions.
+  {
+    id: '4.2',
+    title: 'Sim 4.2: Mirror Maze',
+    description: 'Objective: Own BOTH (-2,0) and (2,0) at Level 1+.\n\nDirect east path blocked by VOID. Find detours or sacrifice items to restore.',
+    mapConfig: {
+      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
+      customLayout: [
+          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+          // WEST PATH (clear)
+          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          // EAST PATH (blocked by VOID)
+          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
+          { q: 2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          // EAST DETOUR (south route)
+          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          // DIG SITES
+          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          // WALLS
+          { q: 1, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
+          { q: -2, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
+      ]
+    },
+    startState: {
+      credits: 0, moves: 3, rank: 0, materials: 0,
+      items: [
+        { baseId: 'fuel_cell', rarity: 'COMMON' },
+        { baseId: 'reality_patch', rarity: 'COMMON' },
+      ]
+    },
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => {
-        const center = state.grid[getHexKey(0, 0)];
-        if (!center || center.maxLevel < 2) return false;
-        
-        const neighbors = getNeighbors(0, 0);
-        const levelTwoNeighbors = neighbors.filter(n => {
-          const hex = state.grid[getHexKey(n.q, n.r)];
-          return hex && hex.maxLevel === 2;
-        }).length;
-        
-        return levelTwoNeighbors >= 3;
+        const a = state.grid[getHexKey(-2, 0)];
+        const b = state.grid[getHexKey(2, 0)];
+        return !!(a?.ownerId === 'player-1' && a.maxLevel >= 1 && b?.ownerId === 'player-1' && b.maxLevel >= 1);
       },
+      checkLossCondition: (state) => isStranded(state)
+    }
+  },
+
+  // 4.3 RECURSION ENGINE — Build 2 hexes to L3
+  // Economy: ~16mat from digging. Upgrade chain: L1→L2→L3. Income: 2×70cr=140cr. ~25 actions.
+  {
+    id: '4.3',
+    title: 'Sim 4.3: Recursion Engine',
+    description: 'Objective: Build 2 hexes to Level 3.\n\nEach level requires 2 neighbors at same level as support.\nPlan your upgrade chain carefully — build wide before building tall.',
+    mapConfig: {
+      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
+      customLayout: [
+          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+      ]
+    },
+    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
+    aiMode: 'none',
+    hooks: {
+      checkWinCondition: (state) => countOwned(state, 3) >= 2,
+      checkLossCondition: (state) => isStranded(state)
+    }
+  },
+
+  // 4.4 THERMAL EQUILIBRIUM — Upgrade to L4 under entropy pressure
+  // Entropy: +3 per action (via hook). Starts at 70 (of 100). At 100 → loss.
+  // Player has ~10 actions before entropy overflows.
+  // Economy: DIG 4× (+4mat,+6mv). Upgrade 4× (L0→L4 chain). Recovery for credits.
+  // But: need rank 3 for L4! Start rank=3.
+  {
+    id: '4.4',
+    title: 'Sim 4.4: Thermal Equilibrium',
+    description: 'Objective: Build center hex to Level 4.\n\nHazard: Each action adds +3 Entropy. Starting at 70/100.\nAt 100 → sector collapse.\n\nYou have ~10 actions. Every move must count.\nPre-built staircase: focus on upgrading, not pathfinding.',
+    mapConfig: {
+      size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
+      customLayout: [
+          // Pre-built staircase to reduce action count
+          { q: 0, r: 0, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
+          // L2 neighbors (support for center → L3)
+          { q: 1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
+          { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+          // L3 neighbors (support for center → L4, after upgrading these to L3)
+          { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+          { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
+          { q: 0, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
+          { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
+      ]
+    },
+    startState: { credits: 50, moves: 8, rank: 3, materials: 4, initialEntropy: 70 },
+    aiMode: 'none',
+    hooks: {
+      onAfterAction: (state) => {
+        state.entropy.current = Math.min(100, (state.entropy.current ?? 70) + 3);
+        return state;
+      },
+      checkWinCondition: (state) => (state.grid[getHexKey(0, 0)]?.maxLevel ?? 0) >= 4,
       checkLossCondition: (state) => {
-        if (state.currentTurn === 0) return false;
-        if (state.player.storage <= 0) {
-          const center = state.grid[getHexKey(0, 0)];
-          const neighbors = getNeighbors(0, 0);
-          const levelTwoNeighbors = neighbors.filter(n => {
-            const hex = state.grid[getHexKey(n.q, n.r)];
-            return hex && hex.maxLevel === 2;
-          }).length;
-          if (center?.maxLevel < 2 || levelTwoNeighbors < 3) return true;
-        }
+        if ((state.entropy.current ?? 0) >= 100) return true;
         return isStranded(state);
       }
     }
   },
+
+  // 4.5 CONVERGENCE POINT — Achieve 2 of 3 goals before bot
+  // Goals: (A) 5 owned L2+, (B) 200cr, (C) stand on monument.
+  // Economy: DIG-heavy start. ~20 actions. Bot arrives in ~16.
   {
-    id: '4.2',
-    title: 'Sim 4.2: Mirror Maze',
-    description: `PUZZLE: Bilateral Navigation.\n\nObjective: Place 2 Recovery Beacons (use items) at symmetric positions relative to center.\n\nTerrain: Map is divided into LEFT and RIGHT halves. Chaos on both sides.\n\nStrategy: Find identical landing spots on each side. Use terrain memory.`,
+    id: '4.5',
+    title: 'Sim 4.5: Convergence Point',
+    description: 'Objective: Achieve 2 of 3 goals BEFORE the Rival:\n  A) Own 5+ hexes at L2+\n  B) Accumulate 200 Credits\n  C) Stand on the Monument\n\nThe Rival approaches in ~16 actions. Choose 2 goals and commit.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          
-          // LEFT SIDE (chaos)
-          { q: -2, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: -1, r: 0, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: -2, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: -2, r: -1, maxLevel: 3, currentLevel: 3, revealed: true },
-          { q: -3, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
-          { q: -3, r: -1, maxLevel: 4, currentLevel: 4, revealed: true },
+          { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
+          { q: 0, r: 3, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+          { q: 0, r: -3, maxLevel: 2, currentLevel: 2, revealed: true }, // Bot
+          // PLAYER BUILD AREA
+          { q: 0, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: -1, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
-          
-          // RIGHT SIDE (identical chaos)
-          { q: 2, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: 1, r: 0, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: 2, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 2, r: -1, maxLevel: 3, currentLevel: 3, revealed: true },
-          { q: 3, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
-          { q: 3, r: -1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: 1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 1, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
+          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          // BOT PATH
+          { q: 0, r: -2, maxLevel: 3, currentLevel: 3, revealed: true },
+          { q: 0, r: -1, maxLevel: 3, currentLevel: 3, revealed: true },
+          // WALLS
+          { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+          { q: -1, r: 0, maxLevel: 5, currentLevel: 5, revealed: true },
       ]
     },
-    startState: { 
-      credits: 250, moves: 28, rank: 3, materials: 2,
-      startInventory: ['recovery_beacon', 'recovery_beacon']
-    },
-    aiMode: 'none',
+    aiMode: 'basic',
+    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     hooks: {
       checkWinCondition: (state) => {
-        const leftBeacon = state.grid[getHexKey(-2, 0)];
-        const rightBeacon = state.grid[getHexKey(2, 0)];
-        return leftBeacon?.ownerId === state.player.id && rightBeacon?.ownerId === state.player.id;
+        let goals = 0;
+        if (countOwned(state, 2) >= 5) goals++;
+        if ((state.player.coins ?? 0) >= 200) goals++;
+        if (state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT') goals++;
+        return goals >= 2;
       },
       checkLossCondition: (state) => {
-        if (state.currentTurn === 0) return false;
-        
-        // FIX 1: Проверяем свойство .id у объекта в инвентаре (или .type, в зависимости от твоих типов)
-        const hasBeacons = state.player.inventory.some((i: any) => i === 'recovery_beacon' || i.id === 'recovery_beacon');
-        
-        if (hasBeacons) {
-          return isStranded(state);
-        }
-        
-        const leftBeacon = state.grid[getHexKey(-2, 0)];
-        const rightBeacon = state.grid[getHexKey(2, 0)];
-        if (!(leftBeacon?.ownerId === state.player.id && rightBeacon?.ownerId === state.player.id)) {
-          return isStranded(state);
-        }
-        return false;
+        if (state.bots?.some((b: any) => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT')) return true;
+        return isStranded(state);
       }
     }
   },
+
+  // 4.6 CASCADE PROTOCOL — Chain reaction: L3 auto-upgrades neighbors
+  // Hook: After each upgrade, if hex reaches L3, all adjacent L2 hexes auto-upgrade to L3.
+  // Win: 8+ hexes at L3+.
+  // Economy: Build L2 cluster, then trigger cascade by upgrading one to L3.
   {
-    id: '4.3',
-    title: 'Sim 4.3: Recursion Engine',
-    description: `PUZZLE: Fractal Building.\n\nObjective: Build a "Fractal Tower" - each level requires the previous level's support structure.\n  - Level 1: 2 hexes at L1\n  - Level 2: 4 hexes at L2 (neighbors of L1 group)\n  - Level 3: 2 hexes at L3 (neighbors of L2 group)\n\nResources: Exactly 16 Materials. No waste.`,
+    id: '4.6',
+    title: 'Sim 4.6: Cascade Protocol',
+    description: 'Objective: 8+ hexes at Level 3.\n\nSpecial: When a hex reaches L3, all adjacent L2 hexes INSTANTLY upgrade to L3!\n\nStrategy: Build a large L2 cluster, then trigger the chain reaction.\n\nWarning: Cascading costs NO material but each triggered upgrade is an action (entropy drain).',
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
+      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
           { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          // LARGE BUILD AREA (19-hex flower: center + 2 rings)
           { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          // RING 2
+          { q: 2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: -2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: -2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 2, r: -2, maxLevel: 0, currentLevel: 0, revealed: true },
+      ]
+    },
+    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
+    aiMode: 'none',
+    hooks: {
+      onAfterAction: (state) => {
+        // CASCADE: Any hex that just reached L3 triggers adjacent L2→L3
+        let cascaded = true;
+        while (cascaded) {
+          cascaded = false;
+          const hexes = Object.values(state.grid) as any[];
+          for (const hex of hexes) {
+            if (hex.maxLevel === 3 && hex.ownerId === 'player-1') {
+              const neighbors = [
+                { q: hex.q + 1, r: hex.r }, { q: hex.q - 1, r: hex.r },
+                { q: hex.q, r: hex.r + 1 }, { q: hex.q, r: hex.r - 1 },
+                { q: hex.q + 1, r: hex.r - 1 }, { q: hex.q - 1, r: hex.r + 1 }
+              ];
+              for (const n of neighbors) {
+                const nHex = state.grid[getHexKey(n.q, n.r)];
+                if (nHex && nHex.maxLevel === 2 && nHex.ownerId === 'player-1') {
+                  state.grid[getHexKey(n.q, n.r)] = {
+                    ...nHex, currentLevel: 3, maxLevel: 3
+                  };
+                  cascaded = true;
+                }
+              }
+            }
+          }
+        }
+        return state;
+      },
+      checkWinCondition: (state) => countOwned(state, 3) >= 8,
+      checkLossCondition: (state) => isStranded(state)
+    }
+  },
+
+  // 4.7 DUALITY ENGINE — Build 4×L3 AND 2×L4 simultaneously
+  // Economy: ~20mat from digging. Heavy upgrade chain. ~35 actions.
+  {
+    id: '4.7',
+    title: 'Sim 4.7: Duality Engine',
+    description: 'Objective: Own 4 hexes at L3+ AND 2 hexes at L4+ simultaneously.\n\nChallenge: L4 requires Rank 3 and neighbors at L3.\nYou must build wide (4×L3) AND tall (2×L4) from scratch.\n\nDig deep for materials. Plan your support chains.',
+    mapConfig: {
+      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
+      customLayout: [
+          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+          // LARGE BUILD AREA (same as 4.6 but slightly different)
+          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-      ]
-    },
-    startState: { credits: 3000, moves: 60, rank: 5, materials: 16 },
-    aiMode: 'none',
-    hooks: {
-      checkWinCondition: (state) => {
-        const l3Hexes = Object.values(state.grid).filter(h => h.maxLevel === 3).length;
-        return l3Hexes >= 2;
-      },
-      checkLossCondition: (state) => {
-        if (state.currentTurn === 0) return false;
-        const l3Hexes = Object.values(state.grid).filter(h => h.maxLevel === 3).length;
-        if (state.player.storage <= 0 && l3Hexes < 2) return true;
-        return isStranded(state);
-      },
-      onBeforeAction: (state, action) => {
-        if (action.type === 'UPGRADE' && action.intent !== 'RECOVER') {
-          const hex = state.grid[getHexKey(action.coord.q, action.coord.r)];
-          if (!hex) return { ok: true };
-          
-          const targetLevel = hex.maxLevel + 1;
-          const neighbors = getNeighbors(hex.q, hex.r);
-          const supportingNeighbors = neighbors.filter(n => {
-            const h = state.grid[getHexKey(n.q, n.r)];
-            return h && h.maxLevel === targetLevel - 1;
-          }).length;
-          
-          if (targetLevel <= 2 && supportingNeighbors < 1) {
-            return { ok: false, reason: `Need 1+ neighbor at Level ${targetLevel - 1}` };
-          }
-          
-          return { ok: true };
-        }
-        return { ok: true };
-      }
-    }
-  },
-  {
-    id: '4.4',
-    title: 'Sim 4.4: Thermal Equilibrium',
-    description: `PUZZLE: Heat Dissipation.\n\nObjective: Maintain Entropy below 50 while upgrading Center to Level 4.\n\nMechanic: Each UPGRADE adds +8 Entropy. Each RECOVERY reduces by -5. Entropy ceiling is 100 (auto-loss).\n\nStrategy: Balance aggression with maintenance. Plan your moves like a cooling system.`,
-    mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
-      customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-      ]
-    },
-    startState: { credits: 800, moves: 25, rank: 3, materials: 8, initialEntropy: 20 },
-    aiMode: 'none',
-    hooks: {
-      checkWinCondition: (state) => state.grid[getHexKey(0, 0)]?.maxLevel >= 4,
-      checkLossCondition: (state) => {
-        if (state.currentTurn === 0) return false;
-        if ((state.entropy?.current || 0) >= 100) return true;
-        if (state.grid[getHexKey(0, 0)]?.maxLevel < 4 && state.player.storage <= 0) return true;
-        return isStranded(state);
-      }
-    }
-  },
-  {
-    id: '4.5',
-    title: 'Sim 4.5: Convergence Point',
-    description: `PUZZLE: Multi-Objective Race.\n\nObjective: Achieve ANY 2 of 3 goals BEFORE the Neutral Bot reaches its Monument:\n  A) 6 owned hexes at Level 2+\n  B) 600 Credits\n  C) Stand on the Central Monolith\n\nPressure: Bot moves every 3 of YOUR actions. First to complete their objective wins.`,
-    mapConfig: {
-      size: 7, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
-      customLayout: [
-          { q: 0, r: 0, maxLevel: 4, currentLevel: 4, structureType: 'MONUMENT', revealed: true },
-          { q: -3, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          { q: 3, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-          
-          { q: -2, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          
-          { q: 2, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 1, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },
-          { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 2, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          
-          { q: 0, r: 1, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: 0, r: -1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: -1, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 1, r: 1, maxLevel: 3, currentLevel: 3, revealed: true },
-          { q: 1, r: -2, maxLevel: -1, currentLevel: -1, revealed: true },
-          { q: -2, r: -1, maxLevel: 5, currentLevel: 5, revealed: true },
-      ]
-    },
-    startState: { credits: 200, moves: 30, rank: 3, materials: 5 },
-    aiMode: 'basic',
-    botRoutes: [
-      [{q: 3, r: 0}, {q: 2, r: 0}, {q: 1, r: 0}, {q: 0, r: 0}]
-    ],
-    hooks: {
-      checkWinCondition: (state) => {
-        const ownedL2Plus = Object.values(state.grid).filter(
-          h => h.ownerId === state.player.id && h.maxLevel >= 2
-        ).length;
-        const onMonument = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
-        const conditionsMet = [
-          ownedL2Plus >= 6,
-          state.player.coins >= 600,
-          onMonument
-        ].filter(c => c).length;
-        return conditionsMet >= 2;
-      },
-      checkLossCondition: (state) => {
-        if (state.currentTurn === 0) return false;
-        if (state.bots?.some(b => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT')) {
-          return true;
-        }
-        return isStranded(state);
-      }
-    }
-  },
-  {
-    id: '4.6',
-    title: 'Sim 4.6: Cascade Protocol',
-    description: `PUZZLE: Chain Reaction Builder.\n\nObjective: Trigger a "Cascade" - when you reach Level 3, automatically upgrade all adjacent Level 2 hexes to Level 3.\n\nChallenge: Set up a domino pattern. 5 cascades must occur to win.\n\nLimitation: Manual upgrades only trigger cascades when reaching L3. Plan carefully.`,
-    mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
-      customLayout: [
-          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: -2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: -2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
       ]
     },
-    startState: { credits: 1500, moves: 50, rank: 4, materials: 18 },
+    startState: { credits: 0, moves: 3, rank: 3, materials: 0 },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: (state) => {
-        const l3Count = Object.values(state.grid).filter(h => h.maxLevel === 3).length;
-        return l3Count >= 10;
-      },
-      checkLossCondition: (state) => {
-        if (state.currentTurn === 0) return false;
-        const l3Count = Object.values(state.grid).filter(h => h.maxLevel === 3).length;
-        if (state.player.storage <= 0 && l3Count < 10) return true;
-        return isStranded(state);
-      },
-      // FIX 2: Убрал второй аргумент 'action'. Теперь хук просто сканирует всю сетку каждый ход.
-      // Если он находит гекс 3-го уровня, он повышает всех его соседей 2-го уровня.
-      onAfterAction: (state) => {
-        const allL3Hexes = Object.values(state.grid).filter(h => h.maxLevel === 3 && h.ownerId === state.player.id);
-        
-        allL3Hexes.forEach(hex => {
-          const neighbors = getNeighbors(hex.q, hex.r);
-          neighbors.forEach(n => {
-            const neighbor = state.grid[getHexKey(n.q, n.r)];
-            if (neighbor && neighbor.maxLevel === 2 && neighbor.ownerId === state.player.id) {
-              neighbor.maxLevel = 3;
-              neighbor.currentLevel = 3;
-            }
-          });
-        });
-      }
+      checkWinCondition: (state) => countOwned(state, 3) >= 4 && countOwned(state, 4) >= 2,
+      checkLossCondition: (state) => isStranded(state)
     }
   },
-  {
-    id: '4.7',
-    title: 'Sim 4.7: Duality Engine',
-    description: `PUZZLE: Two Brains, One Body.\n\nObjective: Own BOTH a "Logic Nexus" (6+ hexes at L3) AND an "Energy Core" (4+ hexes at L4).\n\nTwist: You must support BOTH structures simultaneously with materials flowing between them.\n\nDesign Challenge: Manage two growth fronts with limited resources. Strategic patience required.`,
-    mapConfig: {
-      size: 7, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
-      customLayout: [
-          { q: -2, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true }, 
-          { q: 2, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },  
-          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },                        
-          
-          { q: -3, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          
-          { q: 3, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          
-          { q: -3, r: 1, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: 3, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-      ]
-    },
-    startState: { credits: 700, moves: 45, rank: 4, materials: 20 },
-    aiMode: 'none',
-    hooks: {
-      checkWinCondition: (state) => {
-        const nexusL3 = Object.values(state.grid).filter(
-          h => h.ownerId === state.player.id && h.maxLevel === 3
-        ).length;
-        const coreL4 = Object.values(state.grid).filter(
-          h => h.ownerId === state.player.id && h.maxLevel === 4
-        ).length;
-        return nexusL3 >= 6 && coreL4 >= 4;
-      },
-      checkLossCondition: (state) => {
-        if (state.currentTurn === 0) return false;
-        const nexusL3 = Object.values(state.grid).filter(
-          h => h.ownerId === state.player.id && h.maxLevel === 3
-        ).length;
-        const coreL4 = Object.values(state.grid).filter(
-          h => h.ownerId === state.player.id && h.maxLevel === 4
-        ).length;
-        if (state.player.storage <= 0 && !(nexusL3 >= 6 && coreL4 >= 4)) return true;
-        return isStranded(state);
-      }
-    }
-  },
+
+  // 4.8 OMEGA SYNTHESIS — Final trial. 4 simultaneous conditions + entropy.
+  // Win: 3 L3+ hexes AND 300cr AND stand on monument AND ≥2 items.
+  // Entropy: +2 per action. Start at 50/100. ~25 actions max.
   {
     id: '4.8',
     title: 'Sim 4.8: Omega Synthesis',
-    description: `FINAL TRIAL: Complete Mastery.\n\nObjective: Multi-phase victory:\n  Phase 1: Stabilize 3 different terrain types (L0, L2, L3 sectors owned)\n  Phase 2: Accumulate 800 Credits\n  Phase 3: Reach and activate the Omega Monument (L5)\n  Phase 4: Maintain Entropy below 60\n\nRewards: Unlocks advanced modes. You are the architect of worlds.`,
+    description: 'ULTIMATE TRIAL: All Systems Critical.\n\nAchieve ALL simultaneously:\n  1. Own 3+ hexes at Level 3+\n  2. 300+ Credits\n  3. Stand on Monument with 2+ items\n\nEntropy: +2 per action. Start: 50/100. ~25 actions max.\n\nThis is everything. Dig, build, collect, navigate. No margin for error.',
     mapConfig: {
-      size: 8, type: 'fixed', generateWalls: true, wallStartRadius: 6, wallType: 'pit_ring',
+      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
-          { q: -4, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
-          { q: 4, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-          
-          { q: -3, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },  
-          { q: -2, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },  
-          { q: 1, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },   
-          { q: 2, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: 3, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },
-          
-          { q: -2, r: 1, maxLevel: -1, currentLevel: -1, revealed: true },
-          { q: -2, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
+          { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
+          { q: 0, r: 3, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+          // STAIRCASE to monument
+          { q: 0, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 0, r: -1, maxLevel: -1, currentLevel: -1, revealed: true },
-          { q: 1, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: 1, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 2, r: 1, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: 2, r: -1, maxLevel: 3, currentLevel: 3, revealed: true },
-          { q: 3, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 3, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-          
-          { q: -4, r: 1, maxLevel: 5, currentLevel: 5, revealed: true },
-          { q: 4, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: -3, r: 1, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: 4, r: -1, maxLevel: 4, currentLevel: 4, revealed: true },
+          // BUILD AREA (player zone)
+          { q: 1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 2, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+          // DIG SITES
+          { q: 2, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 4, maxLevel: 0, currentLevel: 0, revealed: true },
+          // WALLS
+          { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+          { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+          { q: 0, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
       ]
     },
-    startState: { credits: 300, moves: 50, rank: 5, materials: 20, initialEntropy: 30 },
+    startState: { credits: 0, moves: 3, rank: 2, materials: 0, initialEntropy: 50 },
     aiMode: 'none',
     hooks: {
+      onAfterAction: (state) => {
+        state.entropy.current = Math.min(100, (state.entropy.current ?? 50) + 2);
+        return state;
+      },
       checkWinCondition: (state) => {
-        const hasL0 = Object.values(state.grid).some(h => h.ownerId === state.player.id && h.maxLevel === 0);
-        const hasL2 = Object.values(state.grid).some(h => h.ownerId === state.player.id && h.maxLevel === 2);
-        const hasL3 = Object.values(state.grid).some(h => h.ownerId === state.player.id && h.maxLevel === 3);
-        const terrainDiverse = hasL0 && hasL2 && hasL3;
-        
-        const hasCredits = state.player.coins >= 800;
-        const onMonument = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
-        const entropySafe = (state.entropy?.current || 0) < 60;
-        
-        return terrainDiverse && hasCredits && onMonument && entropySafe;
+        const onMon = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
+        const l3 = countOwned(state, 3);
+        const coins = state.player.coins ?? 0;
+        const items = state.player.inventory?.length ?? 0;
+        return !!(onMon && l3 >= 3 && coins >= 300 && items >= 2);
       },
       checkLossCondition: (state) => {
-        if (state.currentTurn === 0) return false;
-        const onMonument = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
-        if ((state.entropy?.current || 0) >= 100) return true;
-        if (onMonument && (state.entropy?.current || 0) < 60 && state.player.coins >= 800) return false;
-        if (state.player.storage <= 0 && state.player.coins < 800) return true;
+        if ((state.entropy.current ?? 0) >= 100) return true;
         return isStranded(state);
       }
     }
