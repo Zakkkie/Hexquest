@@ -1,4 +1,3 @@
-
 import { Language } from '../types';
 
 interface Dictionary {
@@ -179,14 +178,13 @@ interface Dictionary {
         TUT_1_6_RIVAL: string;
         ERROR_RANK: string;
         
-        // NEW KEYS FOR MONUMENT & VOID
         VOID_TITLE: string;
         VOID_SUB: string;
         VOID_DESC: string;
         VOID_WARN: string;
         VOID_SELECT: string;
         VOID_EMPTY: string;
-        VOID_BTN_SACRIFICE: string; // New Key
+        VOID_BTN_SACRIFICE: string; 
         MONUMENT_TITLE: string;
         MONUMENT_SUB: string;
         MONUMENT_DESC_1: string;
@@ -199,9 +197,8 @@ interface Dictionary {
         MONUMENT_REQ_EASY: string;
         MONUMENT_REQ_MED: string;
         MONUMENT_REQ_HARD: string;
-        EMPTY: string; // Added Missing Key
+        EMPTY: string; 
 
-        // ENTROPY SPECIFIC
         HELP_ENTROPY_TITLE: string;
         HELP_ENTROPY_DESC: string;
         HELP_ENTROPY_DRAIN: string;
@@ -260,6 +257,7 @@ interface Dictionary {
         LEVEL_3_5_DESC: string;
         LEVEL_3_6_TITLE: string;
         LEVEL_3_6_DESC: string;
+        // MISSING KEYS ADDED HERE
         LEVEL_3_7_TITLE: string;
         LEVEL_3_7_DESC: string;
         LEVEL_3_8_TITLE: string;
@@ -320,7 +318,7 @@ interface Dictionary {
         HEADER_CREDITS: string;
         HEADER_RANK: string;
         EMPTY: string;
-        LB_TERRAIN_DATA: string; // New Key
+        LB_TERRAIN_DATA: string;
     }
 }
 
@@ -579,7 +577,29 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_3_5_TITLE: 'Sim 3.5: The Heist',
             LEVEL_3_5_DESC: 'PUZZLE: Item Race.\n\nObjective: Collect 3 items and activate the Monument before the Rival.\n\nTwist: Items have negative effects — choose wisely.\n\nEntropy is low. Race, but don\'t rush blindly.',
             LEVEL_3_6_TITLE: 'Sim 3.6: The Maze of Echoes',
-            LEVEL_3_6_DESC: 'FINAL PUZZLE: Multi-objective Mastery.\n\nAchieve ALL simultaneously:\n  1. Own 5+ hexes at L2+\n  2. 300+ Credits\n  3. Activate Monument with 2 items\n\nTwo rival bots patrol the maze. Every 30s a new void appears.'
+            LEVEL_3_6_DESC: 'FINAL PUZZLE: Multi-objective Mastery.\n\nAchieve ALL simultaneously:\n  1. Own 5+ hexes at L2+\n  2. 300+ Credits\n  3. Activate Monument with 2 items\n\nTwo rival bots patrol the maze. Every 30s a new void appears.',
+            
+            // MISSING EN TRANSLATIONS ADDED
+            LEVEL_3_7_TITLE: 'Sim 3.7: Twin Protocol',
+            LEVEL_3_7_DESC: 'PUZZLE: Choose your path.\n\nObjective: Either 4 hexes at Lvl 3+, OR 250 Credits.\n\nTwo paths to victory. Pick one strategy and commit to it.',
+            LEVEL_3_8_TITLE: 'Sim 3.8: Fractured Supply Line',
+            LEVEL_3_8_DESC: 'FINAL EXAM: All systems required.\n\nObjective: 2 hexes Lvl 3+, 200 Credits, reach Monument, 2 items.\n\nTurn limit: 45 actions. Act fast.',
+            LEVEL_4_1_TITLE: 'Sim 4.1: Resonance Protocol',
+            LEVEL_4_1_DESC: 'PUZZLE: Harmonic Construction.\n\nObjective: Create a "Resonance Ring" - upgrade 3 DIFFERENT hexes to Lvl 2 simultaneously.\n\nRule: All 3 hexes must be adjacent to the start.',
+            LEVEL_4_2_TITLE: 'Sim 4.2: Mirror Maze',
+            LEVEL_4_2_DESC: 'PUZZLE: Symmetry.\n\nObjective: Place 2 Recovery Beacons symmetrically relative to the center.\n\nThe chaos on the left and right is identical. Use your memory.',
+            LEVEL_4_3_TITLE: 'Sim 4.3: Recursion Engine',
+            LEVEL_4_3_DESC: 'PUZZLE: Fractal Tower.\n\nObjective: Build the structure:\n  - Lvl 1: 2 hexes\n  - Lvl 2: 4 hexes\n  - Lvl 3: 2 hexes\n\nResources are strictly limited.',
+            LEVEL_4_4_TITLE: 'Sim 4.4: Thermal Equilibrium',
+            LEVEL_4_4_DESC: 'PUZZLE: Cooling.\n\nObjective: Upgrade Center to Lvl 4, keeping Entropy below 50.\n\nEach upgrade heats the system (+8 Entropy). Recovery cools it (-5).',
+            LEVEL_4_5_TITLE: 'Sim 4.5: Convergence Point',
+            LEVEL_4_5_DESC: 'RACE: Multitasking.\n\nObjective: Complete 2 of 3 tasks BEFORE the Bot reaches the Monument:\n  A) 6 hexes Lvl 2+\n  B) 600 Credits\n  C) Stand on the Monument',
+            LEVEL_4_6_TITLE: 'Sim 4.6: Cascade Protocol',
+            LEVEL_4_6_DESC: 'PUZZLE: Chain Reaction.\n\nObjective: Trigger a "Cascade" - 10 hexes at Level 3.\n\nUpon reaching Lvl 3, a hex automatically upgrades its Lvl 2 neighbors.',
+            LEVEL_4_7_TITLE: 'Sim 4.7: Duality Engine',
+            LEVEL_4_7_DESC: 'PUZZLE: Two Cores.\n\nObjective: Own a "Logic Core" (6+ hexes Lvl 3) AND a "Power Block" (4+ hexes Lvl 4).\n\nBalance resources between two operational centers.',
+            LEVEL_4_8_TITLE: 'Sim 4.8: Omega Synthesis',
+            LEVEL_4_8_DESC: 'FINAL: Total Mastery.\n\nObjective: Complete 4 phases:\n  1. Varied terrain (Lvl 0, 2, 3)\n  2. 800 Credits\n  3. Monument (Lvl 5)\n  4. Entropy < 60'
         },
         TOOLTIP: {
             CURRENT_LOC: "Location",
