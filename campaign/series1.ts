@@ -142,22 +142,28 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.6',
     title: 'Sim 1.6: Vertical Limit',
-    description: 'Protocol: Altitude Test.\n\nObjective: Reach Level 4.\n\nConstraint: Space is extremely limited. Manage your footprint carefully.',
+    description: 'Protocol: Altitude Test.\n\nObjective: Reach Level 4.\n\nConstraint: Space is extremely limited. A rival is competing for the same peak. Manage your footprint carefully.',
     mapConfig: {
       size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 2, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 0, r: -2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 0, maxLevel: 2, currentLevel: 2, revealed: true }, 
+          { q: 0, r: 2,  maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          { q: 0, r: -2, maxLevel: 1, currentLevel: 1, ownerId: 'bot-1',    revealed: true },
+          { q: 0, r: 0,  maxLevel: 2, currentLevel: 2, revealed: true },
           { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
       ]
     },
-    startState: { credits: 30, moves: 2, rank: 1, materials: 2 },
+    startState: { credits: 30, moves: 3, rank: 1, materials: 4 },
+    botSpawnPoints: [{ q: 0, r: -2 }],
     aiMode: 'basic',
     hooks: {
       checkWinCondition: (state) => state.player.playerLevel >= 4,
-      checkLossCondition: (state) => isStranded(state)
+      checkLossCondition: (state) => {
+        // Бот побеждает если достиг Rank 4 раньше игрока
+        const bot = state.bots[0];
+        if (bot && bot.playerLevel >= 4) return true;
+        return isStranded(state);
+      }
     }
   }
 ];

@@ -164,6 +164,7 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
   
   // Точные координаты спавнов ботов из архитектуры уровней кампании
   const campaignBotSpawns: Record<string, HexCoord[]> = {
+      '1.6': [{ q: 0, r: -2 }],
       '2.4': [{ q: 0, r: -3 }],
       '2.5': [{ q: 3, r: -3 }, { q: -3, r: 0 }],
       '3.5': [{ q: 3, r: 0 }],

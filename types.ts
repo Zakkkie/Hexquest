@@ -8,7 +8,8 @@ export interface HexView {
   r: number;
   currentLevel: number;
   maxLevel: number;
-  structureType?: 'NONE' | 'BARRIER' | 'CAPITAL' | 'VOID' | 'MONUMENT' | 'MINE';
+  // ДОБАВЛЕНО: MINI_MONUMENT
+  structureType?: 'NONE' | 'BARRIER' | 'CAPITAL' | 'VOID' | 'MONUMENT' | 'MINE' | 'MINI_MONUMENT';
   ownerId?: string; 
 }
 
@@ -29,6 +30,11 @@ export interface Hex extends HexView {
 
   // Loot History: Tracks negative levels where items/coins were already found
   lootedLevels?: number[];
+
+  // НОВЫЕ МЕХАНИКИ КАМПАНИИ: Мини-монументы и пинги
+  miniMonumentActivatedBy?: string[];
+  lootHighlighted?: boolean;
+  lootHighlightUntil?: number;
 }
 
 export enum EntityType {
@@ -58,11 +64,10 @@ export type ItemEffectType =
     | 'LEVEL_UP' 
     | 'EXPAND_INVENTORY' 
     | 'GOD_MODE'
-    // Status Effects (Positive)
     | 'STATUS_GOLD_RUSH'
     | 'STATUS_FREE_BUILD'
     | 'STATUS_SCANNER_BUFF'
-    | 'STATUS_ENTROPY_INVERSION'; // New: Actions add entropy instead of draining
+    | 'STATUS_ENTROPY_INVERSION';
 
 export type NegativeEffectType =
     | 'LOSE_CREDITS'
@@ -70,41 +75,37 @@ export type NegativeEffectType =
     | 'LOSE_RANK'
     | 'RESET_MATERIALS'
     | 'FULL_RESET'
-    | 'AMNESIA' // Fog reset
-    // Status Effects (Negative)
-    | 'STATUS_FATIGUE'      // 2x Move Cost
-    | 'STATUS_MINING_OFFLINE' // No passive income (not used in core loop yet, but tracked)
-    | 'STATUS_TUNNEL_VISION'  // Fog radius 1
-    | 'STATUS_GOLD_CURSE'     // No Loot
-    | 'STATUS_SOIL_EATER'     // Upgrade destroys neighbor
-    | 'STATUS_BREAKDOWN_RISK'; // Digging causes damage
+    | 'AMNESIA' 
+    | 'STATUS_FATIGUE'      
+    | 'STATUS_MINING_OFFLINE' 
+    | 'STATUS_TUNNEL_VISION'  
+    | 'STATUS_GOLD_CURSE'     
+    | 'STATUS_SOIL_EATER'     
+    | 'STATUS_BREAKDOWN_RISK'; 
 
 export interface ActiveStatus {
     type: ItemEffectType | NegativeEffectType;
-    label: string; // "Fatigue", "Gold Rush"
-    expiresAt?: number; // Timestamp (Optional for permanent effects)
-    icon?: string; // Icon identifier
-    description?: string; // Detailed description for tooltip
+    label: string; 
+    expiresAt?: number; 
+    icon?: string; 
+    description?: string; 
 }
 
 export interface Item {
   id: string;
-  baseId: string; // NEW: The type identifier (e.g. 'fuel_cell')
+  baseId: string; 
   rarity: ItemRarity;
-  name: string; // Localized name
-  description: string; // Visual description
+  name: string; 
+  description: string; 
   timestamp: number;
   
-  // New props for specific mechanics
   visualType: string;
   
-  // Positive (Success)
   effectType: ItemEffectType;
   effectValue: number;
-  effectDescription: string; // "Recycle: +3 Moves"
-  effectDuration?: number; // ms for status effects
+  effectDescription: string; 
+  effectDuration?: number; 
 
-  // Negative (Failure)
   negativeEffectType?: NegativeEffectType;
   negativeEffectValue?: number;
   negativeEffectLabel?: string;
@@ -120,33 +121,28 @@ export type PlanStep =
 
 export interface Plan {
     steps: PlanStep[];
-    createdAt: number; // stateVersion when plan was created
-    label: string;     // human-readable plan name for debug
+    createdAt: number; 
+    label: string;     
 }
 
 export interface BotMemory {
-  // Navigation & State
   lastPlayerPos: HexCoord | null;
   stuckCounter: number;
   waitStreak?: number;
   
-  // Role & Identity
   botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER' | 'MINER' | 'DESTROYER';
   mode?: 'GATHER' | 'BUILD' | 'AGGRESSOR';
   
-  // Patrol Logic (Destroyer)
   patrolPath?: HexCoord[];
   patrolIndex?: number;
   lastDestroyTime?: number;
 
-  // Execution
   targetHexId?: string | null;
   blacklistedTargets?: string[];
   plan?: Plan | null;
   lastActionType?: string | null;
   projectFailCount?: number;
 
-  // AI Phase Logic (V102)
   phase?: 'EXPLORE' | 'STOCKPILE' | 'ASSAULT';
   exploreAnchor?: HexCoord | null;
   stockpileWaitTicks?: number;
@@ -166,33 +162,23 @@ export interface Entity {
   moves: number;
   recentUpgrades: string[]; 
   
-  // NEW: Material Storage Logic
   storage: number;
   maxStorage: number;
 
-  // NEW: Loot Inventory
   inventory: Item[];
-  maxInventorySize?: number; // Expandable inventory
+  maxInventorySize?: number; 
 
-  // NEW: Active Status Effects
   activeStatuses: ActiveStatus[];
 
   movementQueue: HexCoord[]; 
-  
   memory?: BotMemory; 
   
-  // Visual Customization
   avatarColor?: string; 
   headIndex: number;
   bodyIndex: number;
   
-  // Track if "Recovery" ability was used on the current hex
   recoveredCurrentHex?: boolean; 
-  
-  // Timestamp of the last physical move to throttle logic to animation speed
   lastMoveTime?: number; 
-
-  // Timestamp of last AI action
   lastActionTime?: number;
 }
 
@@ -217,7 +203,7 @@ export type GameEventType =
   | 'HEX_RESTORE_FAILED' 
   | 'MONUMENT_REACHED'
   | 'STATUS_APPLIED'
-  | 'ENTROPY_SHIFT'; // New
+  | 'ENTROPY_SHIFT'; 
 
 export interface GameEvent {
   type: GameEventType;
@@ -273,7 +259,6 @@ export interface PendingConfirmation {
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type Language = 'EN' | 'RU';
 
-// UPDATED WIN CONDITION FOR CAMPAIGN
 export interface WinCondition {
   levelId: number;
   targetLevel: number;
@@ -282,10 +267,10 @@ export interface WinCondition {
   botCount: number; 
   difficulty: Difficulty;
   queueSize: number;     
-  winType: 'OR' | 'AND' | 'SUMMIT'; // Added SUMMIT type
+  winType: 'OR' | 'AND' | 'SUMMIT'; 
   isTutorial?: boolean;
-  initialStorage?: number; // Custom override for max storage capacity
-  mapType?: 'FLAT' | 'CHAOTIC'; // New: Terrain generation preference
+  initialStorage?: number; 
+  mapType?: 'FLAT' | 'CHAOTIC'; 
 }
 
 export interface LeaderboardEntry {
@@ -311,23 +296,45 @@ export interface FloatingText {
   icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE' | 'GEM' | 'SKULL' | 'FOOTPRINTS';
 }
 
-// MOVED FROM campaign/types.ts to resolve circular dependency
 export interface ScenarioHooks {
-  // Check for victory condition (called every tick/action)
-  // Returns true if victory achieved
   checkWinCondition?: (state: SessionState) => boolean;
-
-  // Check for loss condition (called every tick/action)
-  // Returns true if defeat condition met
   checkLossCondition?: (state: SessionState) => boolean;
-  
-  // Validate a move before it happens or provide custom feedback
-  // Returns a ValidationResult. If ok=false, the action is blocked with the reason.
   onBeforeAction?: (state: SessionState, action: GameAction) => ValidationResult | null;
-  
-  // Trigger events after an action
   onAfterAction?: (state: SessionState) => void;
 }
+
+// --- НОВЫЕ МЕХАНИКИ КАМПАНИИ (ЧЕРТЕЖИ И РЕЦЕПТЫ) ---
+
+export interface Blueprint {
+  q: number;
+  r: number;
+  targetLevel: number;
+  label?: string;
+  color?: string;
+}
+
+export interface RecipeSlot {
+  rarity?: ItemRarity;
+  minRarity?: ItemRarity;
+  any?: boolean;
+  hint?: string;
+}
+
+export interface MonumentRecipe {
+  mode: 'ALL' | 'ANY_COMBO';
+  slots: RecipeSlot[];
+  combos?: RecipeSlot[][];
+}
+
+export interface ObjectiveHex {
+  q: number;
+  r: number;
+  targetLevel: number;
+  label?: string;
+  color?: string;
+}
+
+// ------------------------------
 
 export interface LevelConfig {
   id: string;
@@ -341,8 +348,6 @@ export interface LevelConfig {
     wallStartRadius?: number; 
     wallStartLevel?: number;  
     wallType?: 'classic' | 'void_shatter' | 'pit_ring'; 
-    
-    // NEW: Allow explicit hex definitions for puzzle levels
     customLayout?: Partial<Hex>[];
   };
 
@@ -350,16 +355,23 @@ export interface LevelConfig {
     credits: number;
     moves: number;
     rank: number;
-    materials?: number; // Added materials support
-    startInventory?: string[]; // Array of baseIds for starting items
-    items?: { baseId: string; rarity: ItemRarity }[]; // Support for specific item objects
-    initialEntropy?: number; // Override starting entropy
+    materials?: number; 
+    startInventory?: string[]; 
+    items?: { baseId: string; rarity: ItemRarity }[]; 
+    initialEntropy?: number; 
   };
 
-  botRoutes?: HexCoord[][]; // Pre-defined patrol routes for bots
+  // --- ИСПРАВЛЕНИЕ: МАССИВЫ КООРДИНАТ ДЛЯ БОТОВ ---
+  botRoutes?: HexCoord[][]; // Маршруты патрулей
+  botSpawnPoints?: HexCoord[]; // ФИКС: Явные точки спавна для ИИ!
+
+  objectiveHexes?: ObjectiveHex[];          
+  blueprints?: Blueprint[];                  
+  monumentRecipe?: MonumentRecipe;           
+  miniMonumentCoords?: HexCoord[];           
+  preGeneratedLootHexes?: HexCoord[];        
 
   aiMode: 'none' | 'dummy' | 'basic';
-
   hooks: ScenarioHooks;
 }
 
@@ -369,23 +381,16 @@ export interface EntropyState {
   threshold: number;
 }
 
-// Authoritative state for a single game session, managed by GameEngine
 export interface SessionState {
   stateVersion: number;
   sessionId: string; 
   sessionStartTime: number; 
   
-  // Legacy WinCondition kept for Skirmish compatibility
   winCondition: WinCondition | null;
-  
-  // NEW: Campaign Configuration (Injected)
   activeLevelConfig?: LevelConfig; 
-  
-  // NEW: Store the secret coordinate for the Monument
   secretMonumentCoord?: HexCoord;
-  
-  // NEW: Monument Recipe (Array of required baseIds)
   monumentRequirements?: string[];
+  activeLootPings?: Record<string, number>; // Для Мини-монументов
 
   difficulty: Difficulty;
   grid: Record<string, Hex>; 
@@ -394,51 +399,43 @@ export interface SessionState {
   currentTurn: number;
   gameStatus: 'BRIEFING' | 'PLAYING' | 'VICTORY' | 'DEFEAT';
   messageLog: LogEntry[]; 
-  botActivityLog: BotLogEntry[]; // Circular buffer for UI
-  fullBotHistory: BotLogEntry[]; // Full history for file export
+  botActivityLog: BotLogEntry[]; 
+  fullBotHistory: BotLogEntry[]; 
   lastBotActionTime: number; 
   isPlayerGrowing: boolean; 
   playerGrowthIntent: 'RECOVER' | 'UPGRADE' | 'DIG' | null; 
   growingBotIds: string[]; 
-  effects: FloatingText[]; // Visual effects layer
-  language: Language; // Language setting for session-level localization (e.g. hooks)
+  effects: FloatingText[]; 
+  language: Language; 
   
-  // ENTROPY
   entropy: EntropyState;
-  
-  // Events queue from actions (to be consumed by renderer/store)
   outgoingEvents: GameEvent[];
 }
 
-// State for the entire application, managed by Zustand
 export interface GameState {
   uiState: UIState;
-  deviceType: DeviceType; // Added Device Type
+  deviceType: DeviceType; 
   user: UserProfile | null;
   toast: ToastMessage | null;
   pendingConfirmation: PendingConfirmation | null;
   
-  // Cross-session state
   leaderboard: LeaderboardEntry[];
-  campaignProgress: number; // Highest unlocked level index (0-based)
+  campaignProgress: number; 
   hasActiveSession: boolean;
   isMusicMuted: boolean;
   isSfxMuted: boolean;
   language: Language;
   
-  // UI Dialog States
-  voidDialogTarget: HexCoord | null; // Target hex for void restoration
-  
-  // Monument Activation State
+  voidDialogTarget: HexCoord | null; 
   monumentDialogState: {
       isOpen: boolean;
-      slots: (Item | null)[]; // Fixed size 3
+      slots: (Item | null)[]; 
   };
 
-  // Triggers for View-level effects (Shake, Flash, etc)
   lastVisualEvent?: { type: string; time: number };
 }
 
+// --- ACTION TYPES ---
 export type MoveAction = { type: 'MOVE'; path: { q: number; r: number }[]; stateVersion?: number };
 export type UpgradeAction = { type: 'UPGRADE'; coord: { q: number; r: number }; intent?: 'UPGRADE' | 'RECOVER' | 'DIG'; upgradeType?: 'DEFAULT' | 'BARRIER' | 'MINE' | 'CAPITAL'; stateVersion?: number };
 export type DigAction = { type: 'DIG'; coord: { q: number; r: number }; stateVersion?: number };
@@ -447,11 +444,11 @@ export type RechargeAction = { type: 'RECHARGE_MOVE'; stateVersion?: number };
 export type DestroyItemAction = { type: 'DESTROY_ITEM'; itemId: string; stateVersion?: number };
 export type RestoreHexAction = { type: 'RESTORE_HEX'; coord: HexCoord; itemId: string; stateVersion?: number };
 export type ActivateMonumentAction = { type: 'ACTIVATE_MONUMENT'; itemIds: string[]; stateVersion?: number };
+export type ActivateMiniMonumentAction = { type: 'ACTIVATE_MINI_MONUMENT'; entityId: string; miniMonumentHexKey: string; stateVersion?: number }; // НОВОЕ ДЕЙСТВИЕ
 
 export type BotAction = MoveAction | UpgradeAction | DigAction | WaitAction | RechargeAction;
-export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction | ActivateMonumentAction;
+export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction | ActivateMonumentAction | ActivateMiniMonumentAction;
 
-// Validates result of logic before execution (Architecture Requirement)
 export interface ValidationResult {
     ok: boolean;
     reason?: string;

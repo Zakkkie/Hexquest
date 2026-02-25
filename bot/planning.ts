@@ -300,22 +300,24 @@ export const findBestDigTargets = (
         if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
         if (restrictedArea && restrictedArea.has(hex.id)) continue;
         
-        // НОВОЕ ИСПРАВЛЕНИЕ: Игнорируем гексы, на которые бот не может залезть из-за ранга
-        if (hex.maxLevel > bot.playerLevel) continue;
+        // 1. Игнорируем гексы, на которые бот не может залезть из-за ранга
+        // (Но если он уже стоит на нём — игнорировать не нужно!)
+        if (hex.maxLevel > bot.playerLevel && cubeDistance(botPos, hex) > 0) continue;
 
-        // Защита: не копаем чужие базы, если мы не DESTROYER
+        // 2. Защита: не копаем чужие базы (если мы не DESTROYER)
         if (hex.ownerId && hex.ownerId !== bot.id && hex.maxLevel > 0) continue;
 
-        // ИСПРАВЛЕНИЕ 3 (УМНАЯ ЗАЩИТА СЕБЯ): Не сносим свои собственные постройки ради ресурсов!
-        // (свои ямы currentLevel <= 0 копать можно)
-        if (hex.currentLevel > 0 && hex.ownerId === bot.id) continue;
+        const d = cubeDistance(botPos, hex);
+
+        // 3. УМНАЯ ЗАЩИТА СЕБЯ: Не сносим свои собственные постройки (базы > 0).
+        // ИСКЛЮЧЕНИЕ: Если мы стоим прямо на этой базе (d === 0), у нас 0 материалов, 
+        // и мы застряли (потому что ищем цель для раскопок), то снести её под собой МОЖНО!
+        if (hex.currentLevel > 0 && hex.ownerId === bot.id && d > 0) continue;
 
         if (isLoadBearing(hex, grid)) continue;
-
-        const d = cubeDistance(botPos, hex);
         if (d > 20) continue; 
 
-        // ИСПРАВЛЕНИЕ 2 (КРИТИЧЕСКОЕ): Передаем соседей ИСКОМОГО гекса (hex.q, hex.r), а не бота!
+        // 4. Проверка геометрии (можем ли вообще выкопать этот гекс)
         const check = checkDigCondition(hex, bot, getNeighbors(hex.q, hex.r), grid);
         if (!check.canGrow) continue;
 
@@ -326,6 +328,12 @@ export const findBestDigTargets = (
             score += Math.abs(hex.currentLevel) * 5; 
         }
         
+        // Если это наша собственная база под нами, даем ей очень высокий приоритет,
+        // чтобы бот мгновенно снес её и спустился, а не зависал, глядя на недоступные L0.
+        if (d === 0 && hex.currentLevel > 0 && hex.ownerId === bot.id) {
+            score += 100;
+        }
+
         score -= d * 2; 
 
         candidates.push({ hex, score });

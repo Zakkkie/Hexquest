@@ -1,4 +1,3 @@
-
 import { System } from './System';
 import { GameEvent, EntityState, SessionState, BotLogEntry } from '../../types';
 import { WorldIndex } from '../WorldIndex';
@@ -36,7 +35,9 @@ export class AiSystem implements System {
     
     // --- SPEED THROTTLE ---
     const baseInterval = GAME_CONFIG.BOT_ACTION_INTERVAL_MS;
-    const interval = bot.playerLevel < 3 ? baseInterval * 2 : baseInterval;
+    // В кампании не замедляем бота по рангу — на закрытых картах он и так ограничен ресурсами
+    const isCampaign = !!state.activeLevelConfig;
+    const interval = (!isCampaign && bot.playerLevel < 3) ? baseInterval * 2 : baseInterval;
     
     if (!bot.lastActionTime) {
         bot.lastActionTime = now - Math.floor(Math.random() * interval);
@@ -58,7 +59,8 @@ export class AiSystem implements System {
       state.stateVersion,
       state.difficulty,
       tickReservedKeys,
-      state.bots 
+      state.bots,
+      state.activeLevelConfig?.id  // <-- передаём ID уровня напрямую
     );
 
     // PERSIST MEMORY
@@ -116,10 +118,6 @@ export class AiSystem implements System {
                 tickReservedKeys.add(getHexKey(target.q, target.r));
             }
         }
-    } else {
-        // If waiting, just update time
-        // Reset stuck counter if action succeeded is handled by failure check in next tick or processor feedback
-        // Here we just update timestamp if no action was queued
     }
     
     // Update individual timestamp
