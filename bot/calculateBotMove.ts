@@ -292,82 +292,52 @@ const buildCompetePlan = (
     }
 
     // Шаг 2: есть материалы — найти лучший гекс для апгрейда
-    // Приоритет: свои гексы > ближние свободные гексы
-    const ownedHexes = Object.values(grid)
-        .filter(h => h.ownerId === bot.id && h.structureType !== 'VOID')
-        .sort((a, b) => b.maxLevel - a.maxLevel);
-
-    // Попытаться апгрейдить свой самый высокий гекс
-    for (const owned of ownedHexes) {
-        if ((mem.blacklistedTargets || []).includes(owned.id)) continue;
-        const nbs = getNeighbors(owned.q, owned.r);
-        const check = checkGrowthCondition(owned, bot, nbs, grid, navObstacles);
-        if (check.canGrow) {
-            return {
-                steps: [
-                    { type: 'MOVE_TO', targetId: owned.id },
-                    { type: 'UPGRADE', targetId: owned.id },
-                ],
-                createdAt: stateVersion,
-                label: `Compete:UpgradeOwned L${owned.maxLevel}`
-            };
-        }
-    }
-
-    // Шаг 3: захватить свободный соседний гекс
-    for (const owned of ownedHexes) {
-        const nbs = getNeighbors(owned.q, owned.r);
-        for (const nb of nbs) {
-            const nbHex = grid[hexKey(nb.q, nb.r)];
-            if (!nbHex || nbHex.ownerId || nbHex.structureType === 'VOID') continue;
-            if (claimedSet.has(nbHex.id) || (mem.blacklistedTargets || []).includes(nbHex.id)) continue;
-            const nbCheck = checkGrowthCondition(nbHex, bot, getNeighbors(nb.q, nb.r), grid, navObstacles);
-            if (nbCheck.canGrow) {
-                return {
-                    steps: [
-                        { type: 'MOVE_TO', targetId: nbHex.id },
-                        { type: 'UPGRADE', targetId: nbHex.id },
-                    ],
-                    createdAt: stateVersion,
-                    label: 'Compete:Expand'
-                };
-            }
-        }
-    }
-
-    // Шаг 3.5: Если нет своих гексов или не смогли расшириться, строим где угодно (нейтральные)
+    // В кампании 1.6 цель - построить L4. Ищем самый высокий гекс, который мы можем апгрейдить.
     const botPos = { q: bot.q, r: bot.r };
-    let bestNeutral: Hex | null = null;
+    let bestBuild: Hex | null = null;
     let bestScore = -9999;
 
     for (const hex of Object.values(grid)) {
         if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
-        if (hex.ownerId && hex.ownerId !== bot.id) continue;
+        
+        // Не можем строить на чужих базах (но можем на нейтральных или своих)
+        if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
+        
+        // Не можем залезть, если ранг слишком мал (кроме случая когда мы уже стоим на нем)
         if (hex.maxLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
         
         if (claimedSet.has(hex.id) || (mem.blacklistedTargets || []).includes(hex.id)) continue;
-        
+
         const check = checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, navObstacles);
         if (check.canGrow) {
             const d = dist(botPos, hex);
-            let score = -d;
-            if (hex.currentLevel === 0) score += 5; // Предпочитаем плоскую землю
+            let score = -d * 2; // Штраф за дальность
+            
+            // Приоритет: Чем выше уровень, тем лучше (стремимся к L4)
+            score += hex.currentLevel * 50;
+            
+            // Бонус за строительство под собой
+            if (d === 0) score += 20;
+            
+            // Небольшой бонус за свои гексы
+            if (hex.ownerId === bot.id) score += 10;
+
             if (score > bestScore) {
                 bestScore = score;
-                bestNeutral = hex;
+                bestBuild = hex;
             }
         }
     }
 
-    if (bestNeutral) {
+    if (bestBuild) {
         return {
-            steps: [{ type: 'MOVE_TO', targetId: bestNeutral.id }, { type: 'UPGRADE', targetId: bestNeutral.id }],
+            steps: [{ type: 'MOVE_TO', targetId: bestBuild.id }, { type: 'UPGRADE', targetId: bestBuild.id }],
             createdAt: stateVersion,
-            label: 'Compete:BuildAnywhere'
+            label: `Compete:Build L${bestBuild.currentLevel}->${bestBuild.currentLevel+1}`
         };
     }
 
-    // Шаг 4: нет вариантов — копать (если есть место)
+    // Шаг 3: нет вариантов — копать (если есть место)
     if (bot.storage < (bot.maxStorage ?? 4)) {
         const digTargets2 = findBestDigTargets(bot, grid, [], 3, undefined);
         for (const t of digTargets2) {

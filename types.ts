@@ -219,6 +219,11 @@ export interface BotLogEntry {
   reason: string;
   target?: string;
   timestamp: number;
+  phase?: string;
+  role?: string;
+  planLabel?: string;
+  resources?: string;
+  rank?: number;
 }
 
 export interface LogEntry {

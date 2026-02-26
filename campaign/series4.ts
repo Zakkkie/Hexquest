@@ -23,7 +23,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.1',
     title: 'Sim 4.1: Resonance Protocol',
-    description: 'Objective: Build 3 adjacent hexes to Level 2.\n\nRule: L2 needs 2 neighbors at L1. Plan your build order.\nStart empty — Dig for materials first.',
+    description: 'Objective: Create a "Ring of Resonance" - upgrade 3 DIFFERENT hexes to Level 2 simultaneously.\n\nRule: L2 needs 2 neighbors at L1. Plan your build order.\nStart empty — Dig for materials first.',
     mapConfig: {
       size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -171,7 +171,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.5',
     title: 'Sim 4.5: Convergence Point',
-    description: 'Objective: Achieve 2 of 3 goals BEFORE the Rival:\n  A) Own 5+ hexes at L2+\n  B) Accumulate 200 Credits\n  C) Stand on the Monument\n\nThe Rival approaches in ~16 actions. Choose 2 goals and commit.',
+    description: 'Objective: Achieve 2 of 3 goals BEFORE the Rival:\n  A) Own 6+ hexes at L2+\n  B) Accumulate 200 Credits\n  C) Stand on the Monument\n\nThe Rival approaches in ~16 actions. Choose 2 goals and commit.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -187,6 +187,7 @@ export const series4Levels: LevelConfig[] = [
           { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
           { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 0, r: 4, maxLevel: 0, currentLevel: 0, revealed: true }, // Added one more for 6-hex goal
           // BOT PATH
           { q: 0, r: -2, maxLevel: 3, currentLevel: 3, revealed: true },
           { q: 0, r: -1, maxLevel: 3, currentLevel: 3, revealed: true },
@@ -200,7 +201,7 @@ export const series4Levels: LevelConfig[] = [
     hooks: {
       checkWinCondition: (state) => {
         let goals = 0;
-        if (countOwned(state, 2) >= 5) goals++;
+        if (countOwned(state, 2) >= 6) goals++;
         if ((state.player.coins ?? 0) >= 200) goals++;
         if (state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT') goals++;
         return goals >= 2;
@@ -267,6 +268,8 @@ export const series4Levels: LevelConfig[] = [
                   state.grid[getHexKey(n.q, n.r)] = {
                     ...nHex, currentLevel: 3, maxLevel: 3
                   };
+                  // Cascading drain: each triggered upgrade reduces entropy by 1%
+                  state.entropy.current = Math.max(0, (state.entropy.current ?? 100) - 1);
                   cascaded = true;
                 }
               }
@@ -322,7 +325,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.8',
     title: 'Sim 4.8: Omega Synthesis',
-    description: 'ULTIMATE TRIAL: All Systems Critical.\n\nAchieve ALL simultaneously:\n  1. Own 3+ hexes at Level 3+\n  2. 300+ Credits\n  3. Stand on Monument with 2+ items\n\nEntropy: +2 per action. Start: 50/100. ~25 actions max.\n\nThis is everything. Dig, build, collect, navigate. No margin for error.',
+    description: 'ULTIMATE TRIAL: All Systems Critical.\n\nAchieve ALL simultaneously:\n  1. Own 3+ hexes at Level 3+\n  2. Accumulate 300+ Credits\n  3. Stand on Monument with 2+ items\n  4. Keep Entropy below 60/100\n\nEntropy: +2 per action. Start: 40/100. ~30 actions max.\n\nThis is the end. Use everything you have learned.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -351,11 +354,11 @@ export const series4Levels: LevelConfig[] = [
           { q: 0, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 3, rank: 2, materials: 0, initialEntropy: 50 },
+    startState: { credits: 0, moves: 3, rank: 2, materials: 0, initialEntropy: 40 },
     aiMode: 'none',
     hooks: {
       onAfterAction: (state) => {
-        state.entropy.current = Math.min(100, (state.entropy.current ?? 50) + 2);
+        state.entropy.current = Math.min(100, (state.entropy.current ?? 40) + 2);
         return state;
       },
       checkWinCondition: (state) => {
@@ -363,7 +366,8 @@ export const series4Levels: LevelConfig[] = [
         const l3 = countOwned(state, 3);
         const coins = state.player.coins ?? 0;
         const items = state.player.inventory?.length ?? 0;
-        return !!(onMon && l3 >= 3 && coins >= 300 && items >= 2);
+        const cool = (state.entropy.current ?? 0) < 60;
+        return !!(onMon && l3 >= 3 && coins >= 300 && items >= 2 && cool);
       },
       checkLossCondition: (state) => {
         if ((state.entropy.current ?? 0) >= 100) return true;
