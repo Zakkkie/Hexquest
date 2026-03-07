@@ -68,10 +68,10 @@ export class GrowthSystem implements System {
                  recoveryCharges: GAME_CONFIG.MAX_RECOVERY_POINTS,
                  cooldownEndTime: undefined
              };
-             // Commit to state (Copy-On-Write)
-             state.grid = { ...state.grid, [key]: updatedHex };
+             // Commit to state (Mutate draft)
+             Object.assign(state.grid[key], updatedHex);
              // Update local reference for the rest of this function
-             hex = updatedHex;
+             hex = state.grid[key];
         }
     }
 
@@ -179,8 +179,8 @@ export class GrowthSystem implements System {
             state.messageLog.unshift({ id: `rec-${now}-${entity.id}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: now });
             events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id, { coins: coinReward, moves: reward.moves }));
             
-            // Commit Grid Update
-            state.grid = { ...state.grid, [key]: { ...hex, progress: 0, ...updates } };
+            // Commit Grid Update (Mutate draft)
+            Object.assign(state.grid[key], { progress: 0, ...updates });
             
             // Stop Action
             if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
@@ -190,7 +190,7 @@ export class GrowthSystem implements System {
 
         } else {
             // Tick Progress
-            state.grid = { ...state.grid, [key]: { ...hex, progress: hex.progress + 1 } };
+            state.grid[key].progress++;
             return true;
         }
     }
@@ -303,22 +303,18 @@ export class GrowthSystem implements System {
                  }
              }
 
-             // Update Hex (Copy-On-Write)
-             state.grid = { 
-                  ...state.grid, 
-                  [key]: { 
-                      ...hex, 
-                      currentLevel: newLevel, 
-                      maxLevel: newLevel, 
-                      progress: 0,
-                      structureType: undefined, 
-                      durability: newDurability,
-                      recoveryCharges: newRecoveryPoints,
-                      lastRecoveryUseTime: newLastRecoveryTime,
-                      cooldownEndTime: newCooldown,
-                      lootedLevels: nextLootedLevels // Persist updated loot history
-                  }
-             };
+             // Update Hex (Mutate draft)
+             Object.assign(state.grid[key], { 
+                 currentLevel: newLevel, 
+                 maxLevel: newLevel, 
+                 progress: 0,
+                 structureType: undefined, 
+                 durability: newDurability,
+                 recoveryCharges: newRecoveryPoints,
+                 lastRecoveryUseTime: newLastRecoveryTime,
+                 cooldownEndTime: newCooldown,
+                 lootedLevels: nextLootedLevels // Persist updated loot history
+             });
              
              // --- ENTROPY COST ---
              const entropyCost = hex.currentLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(hex.currentLevel));
@@ -351,7 +347,7 @@ export class GrowthSystem implements System {
              if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
              return false;
         } else {
-             state.grid = { ...state.grid, [key]: { ...hex, progress: hex.progress + 1 } };
+             state.grid[key].progress++;
              return true;
         }
     }
@@ -472,21 +468,17 @@ export class GrowthSystem implements System {
             }
           }
 
-          // Update Hex (Copy-On-Write)
-          state.grid = { 
-              ...state.grid, 
-              [key]: { 
-                  ...hex, 
-                  currentLevel: targetLevel, 
-                  maxLevel: newMaxLevel, 
-                  progress: 0,
-                  ownerId: newOwnerId,
-                  durability: newDurability,
-                  recoveryCharges: newRecoveryCharges,
-                  lastRecoveryUseTime: newLastRecoveryTime,
-                  cooldownEndTime: newCooldown
-              }
-          };
+          // Update Hex (Mutate draft)
+          Object.assign(state.grid[key], { 
+              currentLevel: targetLevel, 
+              maxLevel: newMaxLevel, 
+              progress: 0,
+              ownerId: newOwnerId,
+              durability: newDurability,
+              recoveryCharges: newRecoveryCharges,
+              lastRecoveryUseTime: newLastRecoveryTime,
+              cooldownEndTime: newCooldown
+          });
           
           let shouldContinue = targetLevel < newMaxLevel;
           
@@ -508,7 +500,7 @@ export class GrowthSystem implements System {
           return true;
 
         } else {
-          state.grid = { ...state.grid, [key]: { ...hex, progress: hex.progress + 1 } };
+          state.grid[key].progress++;
           return true;
         }
     }

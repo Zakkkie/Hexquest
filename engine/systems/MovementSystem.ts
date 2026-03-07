@@ -342,7 +342,7 @@ export class MovementSystem implements System {
 
     // --- APPLY BATCH UPDATE ---
     if (Object.keys(gridUpdates).length > 0) {
-        state.grid = { ...state.grid, ...gridUpdates };
+        Object.assign(state.grid, gridUpdates);
     }
 
     // 4. Update State

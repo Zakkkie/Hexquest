@@ -65,13 +65,12 @@ export class EntropySystem implements System {
           }
 
           if (hasChanged) {
-              updates[key] = {
-                  ...hex,
+              Object.assign(state.grid[key], {
                   currentLevel: newLevel,
                   maxLevel: newLevel, // Sync max level
                   structureType: newType,
                   progress: 0
-              };
+              });
 
               // Check if player is standing on this shifting hex
               if (key === playerHexKey) {
@@ -79,8 +78,6 @@ export class EntropySystem implements System {
               }
           }
       }
-
-      state.grid = { ...state.grid, ...updates };
 
       // 3. Player Damage Logic
       if (playerHitByShift) {

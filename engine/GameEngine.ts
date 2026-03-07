@@ -11,6 +11,7 @@ import { ActionProcessor } from './ActionProcessor';
 import { TransactionQueue } from '../services/transactionQueue';
 import { SAFETY_CONFIG } from '../rules/config';
 import { GameEventFactory } from './events';
+import { createDraft, finishDraft } from 'immer';
 
 export interface TickResult {
   state: SessionState;
@@ -49,16 +50,13 @@ export class GameEngine {
       const keys = Object.keys(updates);
       if (keys.length === 0) return;
       
-      const nextGrid = { ...state.grid };
-      
+      // Since state.grid is now an immer draft during the tick, we can just mutate it directly!
       for (const key of keys) {
-          const old = nextGrid[key];
+          const old = state.grid[key];
           if (old) {
-              nextGrid[key] = { ...old, ...updates[key] };
+              Object.assign(old, updates[key]);
           }
       }
-      
-      state.grid = nextGrid;
   }
 
   private cloneState(source: SessionState): SessionState {
@@ -80,8 +78,6 @@ export class GameEngine {
 
   public setPlayerIntent(isGrowing: boolean, intent: 'RECOVER' | 'UPGRADE' | 'DIG' | null) {
       if (!this._state) return;
-      // Note: Direct state mutation here can still theoretically race with processTick cloning.
-      // Ideally this should also be an action in the queue, but for UI toggles it's often acceptable.
       const nextState = this.cloneState(this._state);
       nextState.isPlayerGrowing = isGrowing;
       nextState.playerGrowthIntent = intent;
@@ -100,15 +96,9 @@ export class GameEngine {
   public applyAction(actorId: string, action: GameAction): ValidationResult {
     if (!this._state || !this._index || !this._actionProcessor) return { ok: false, reason: "Engine Destroyed" };
     
-    // 1. Optimistic Validation
-    // Validate against current state immediately to provide instant feedback to UI (e.g. "Not enough coins")
-    // This doesn't catch conflicts that might occur when the action is actually processed (rare for player),
-    // but ensures the UI doesn't queue invalid actions.
     const validation = this._actionProcessor.validateAction(this._state, this._index, actorId, action);
     if (!validation.ok) return validation;
 
-    // 2. Enqueue for Serialization
-    // Player actions get high priority (100) to be processed before Bot actions (50) in the same tick.
     const priority = actorId === this._state.player.id ? 100 : 50;
     this._transactionQueue.enqueue({
         actorId,
@@ -117,8 +107,6 @@ export class GameEngine {
         timestamp: Date.now()
     });
 
-    // 3. Return Success
-    // The actual state update will happen asynchronously during processTick().
     return { ok: true };
   }
   
@@ -126,6 +114,11 @@ export class GameEngine {
     if (!this._state || !this._index) return null;
 
     const nextState = this.cloneState(this._state);
+    
+    // Create an immer draft for the grid to enable structural sharing without GC pressure
+    const gridDraft = createDraft(nextState.grid);
+    nextState.grid = gridDraft as any;
+    
     this._index.syncGrid(nextState.grid); 
 
     const tickEvents: GameEvent[] = [...nextState.outgoingEvents];
@@ -144,27 +137,16 @@ export class GameEngine {
     }
 
     // 3. Process Transaction Queue (Async)
-    // This serializes all actions generated this tick (Player inputs + AI decisions)
     if (!this._transactionQueue.isEmpty()) {
-        // Sync index before processing queue to ensure validity
         this._index.syncState(nextState);
         
         await this._transactionQueue.processQueue((actorId, action) => {
-            // Apply action to the pending nextState
-            // Note: actionProcessor updates nextState in place
             const result = this._actionProcessor!.applyAction(nextState, this._index!, actorId, action);
             
             if (result.ok) {
-                // Incremental Index Sync for Movement
-                // If an actor moved, we must update the index immediately so subsequent actions in the same tick 
-                // (e.g. another bot trying to move to the same spot) see the new occupancy.
                 if (action.type === 'MOVE') {
                     const actor = actorId === nextState.player.id ? nextState.player : nextState.bots.find(b => b.id === actorId);
                     if (actor) {
-                        // Ideally we'd know the old position to do a cheap update, but full sync is safer here given the complexity
-                        // Optimization: movementSystem handles index updates during its run, but that's separate.
-                        // Here we are applying the action logic which modifies q/r.
-                        // To be safe and collision-proof:
                         this._index!.syncState(nextState);
                     }
                 }
@@ -189,6 +171,12 @@ export class GameEngine {
 
     nextState.currentTurn++; 
     nextState.stateVersion++;
+    
+    // Finalize the grid draft
+    const finalGrid = finishDraft(gridDraft);
+    nextState.grid = finalGrid as any;
+    this._index.syncGrid(nextState.grid);
+    
     this._state = nextState;
 
     return {
