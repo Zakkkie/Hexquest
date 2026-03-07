@@ -16,6 +16,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const gameStatus = useGameStore(state => state.session?.gameStatus);
     const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
     const sessionStartTime = useGameStore(state => state.session?.sessionStartTime);
+    const entropy = useGameStore(state => state.session?.entropy);
     
     const language = useGameStore(state => state.language);
     const isMusicMuted = useGameStore(state => state.isMusicMuted);
@@ -81,53 +82,61 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                 
                 {/* STATS STRIP */}
                 <div className="flex flex-col gap-2 flex-1 min-w-0">
-                    <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-700/50 shadow-xl px-2 py-1.5 md:px-3 md:py-2 gap-2 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade w-full md:w-fit md:shrink-0">
+                    <div className="pointer-events-auto flex items-center bg-slate-900/95 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-700/50 shadow-xl px-2 py-1.5 md:px-3 md:py-2 gap-1.5 md:gap-4 transition-all duration-300 hover:border-slate-600/50 overflow-x-auto no-scrollbar mask-linear-fade w-full md:w-fit md:shrink-0">
                         <div onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                            <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-                                <Crown className="w-3 h-3 md:w-5 md:h-5 text-white" />
+                            <div className="w-6 h-6 md:w-10 md:h-10 rounded-md md:rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                                <Crown className="w-3.5 h-3.5 md:w-5 md:h-5 text-white" />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.RANK}</span>
-                                <span className="text-xs md:text-xl font-black text-white leading-none">{player.playerLevel}</span>
+                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.RANK}</span>
+                                <span className="text-sm md:text-xl font-black text-white leading-none">{player.playerLevel}</span>
                             </div>
                         </div>
                         <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0"></div>
                         <div onClick={() => { setHelpTopic('MATERIAL'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                            <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/20 transition-colors">
-                                <Box className="w-3 h-3 md:w-5 md:h-5 text-emerald-400" />
+                            <div className="w-6 h-6 md:w-10 md:h-10 rounded-md md:rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/20 transition-colors">
+                                <Box className="w-3.5 h-3.5 md:w-5 md:h-5 text-emerald-400" />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MATERIAL}</span>
+                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MATERIAL}</span>
                                 <StorageBlocks current={player.storage} max={player.maxStorage} />
                             </div>
                         </div>
                         <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0"></div>
                         <div onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                            <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
-                                <Wallet className="w-3 h-3 md:w-5 md:h-5 text-amber-400" />
+                            <div className="w-6 h-6 md:w-10 md:h-10 rounded-md md:rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
+                                <Wallet className="w-3.5 h-3.5 md:w-5 md:h-5 text-amber-400" />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.CREDITS}</span>
-                                <span className="text-xs md:text-xl font-black text-white leading-none">{player.coins}</span>
+                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.CREDITS}</span>
+                                <span className="text-sm md:text-xl font-black text-white leading-none">{player.coins}</span>
                             </div>
                         </div>
                         <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0"></div>
                         <div onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0 pr-1">
-                            <div className={`w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${isMoving ? 'bg-blue-600 animate-pulse' : 'bg-blue-500/10 border border-blue-500/30'}`}>
-                                <Footprints className={`w-3 h-3 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
+                            <div className={`w-6 h-6 md:w-10 md:h-10 rounded-md md:rounded-lg flex items-center justify-center transition-colors ${isMoving ? 'bg-blue-600 animate-pulse' : 'bg-blue-500/10 border border-blue-500/30'}`}>
+                                <Footprints className={`w-3.5 h-3.5 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MOVES}</span>
-                                <span className="text-xs md:text-xl font-black text-white leading-none">{player.moves}</span>
+                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MOVES}</span>
+                                <span className="text-sm md:text-xl font-black text-white leading-none">{player.moves}</span>
                             </div>
                         </div>
                         <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0"></div>
                         <div onClick={() => { setHelpTopic('ENTROPY'); playUiSound('CLICK'); }} className="relative flex items-center gap-1.5 md:gap-2 cursor-pointer group shrink-0">
-                            <div className="w-4.5 h-4.5 md:w-10 md:h-10 rounded-lg bg-slate-800 flex items-center justify-center border border-slate-700">
-                                <EntropyGauge className="w-4 h-4 md:w-8 md:h-8" />
+                            <div className="w-6 h-6 md:w-10 md:h-10 rounded-md md:rounded-lg bg-slate-800 flex items-center justify-center border border-slate-700">
+                                <EntropyGauge className="w-5 h-5 md:w-8 md:h-8" />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">STABLE</span>
+                                <span className={`text-[8px] md:text-[9px] font-bold uppercase tracking-wider leading-none mb-0.5 ${
+                                    entropy && entropy.current / entropy.max < 0.3 ? 'text-red-400' :
+                                    entropy && entropy.current / entropy.max < 0.6 ? 'text-amber-400' :
+                                    'text-slate-400'
+                                }`}>
+                                    {entropy && entropy.current / entropy.max < 0.3 ? 'CRIT' :
+                                     entropy && entropy.current / entropy.max < 0.6 ? 'WARN' :
+                                     'STABLE'}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -136,8 +145,8 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                 {/* SYSTEM MENU */}
                 <div className="pointer-events-auto flex items-start shrink-0 relative z-50">
                     <div className="relative">
-                        <button onClick={() => { setIsSystemMenuOpen(!isSystemMenuOpen); playUiSound('CLICK'); }} className={`w-9 h-9 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'}`}>
-                            {isSystemMenuOpen ? <X className="w-4 h-4 md:w-5 md:h-5" /> : <Settings className="w-4 h-4 md:w-5 md:h-5" />}
+                        <button onClick={() => { setIsSystemMenuOpen(!isSystemMenuOpen); playUiSound('CLICK'); }} className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'}`}>
+                            {isSystemMenuOpen ? <X className="w-5 h-5 md:w-5 md:h-5" /> : <Settings className="w-5 h-5 md:w-5 md:h-5" />}
                         </button>
                         {isSystemMenuOpen && (
                             <div ref={systemMenuRef} className="absolute top-full right-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[180px] z-[60] animate-in slide-in-from-top-2 duration-200">

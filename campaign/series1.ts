@@ -19,7 +19,7 @@ export const series1Levels: LevelConfig[] = [
           { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
       ]
     },
-    startState: { credits: 500, moves: 5, rank: 1, materials: 5 },
+    startState: { credits: 500, moves: 5, rank: 1, materials: 5, initialEntropy: 15 },
     aiMode: 'none', 
     hooks: {
       checkWinCondition: (state) => {
@@ -38,8 +38,9 @@ export const series1Levels: LevelConfig[] = [
     title: 'Sim 1.2: Solid Ground',
     description: 'Objective: Reach the Capital.\n\nSCANNER: A safe path (Durability 3) detected. Follow it through the void.\n\nDANGER: Environment UNSTABLE (Durability 1). Stepping off the path causes immediate collapse and Rank loss.\n\nFAILURE: Rank drops to 1.',
     mapConfig: { size: 8, type: 'fixed', generateWalls: false },
-    startState: { credits: 0, moves: 20, rank: 5, materials: 0 },
-    aiMode: 'none', 
+    startState: { credits: 0, moves: 20, rank: 5, materials: 0, initialEntropy: 15 },
+    goalText: 'Reach the Capital',
+    aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => !!(state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'CAPITAL'),
       checkLossCondition: (state) => state.player.playerLevel <= 1 || isStranded(state)
@@ -61,7 +62,7 @@ export const series1Levels: LevelConfig[] = [
           { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
       ]
     },
-    startState: { credits: 300, moves: 10, rank: 2, materials: 3 },
+    startState: { credits: 300, moves: 10, rank: 2, materials: 3, initialEntropy: 15 },
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => (state.grid[getHexKey(0,0)]?.maxLevel >= 2),
@@ -97,7 +98,7 @@ export const series1Levels: LevelConfig[] = [
           { q: 0, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
       ]
     },
-    startState: { credits: 1000, moves: 20, rank: 3, materials: 0 },
+    startState: { credits: 1000, moves: 20, rank: 3, materials: 0, initialEntropy: 15 },
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => (state.grid[getHexKey(0,0)]?.maxLevel >= 3),
@@ -132,7 +133,7 @@ export const series1Levels: LevelConfig[] = [
           { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 6, rank: 5, materials: 0 },
+    startState: { credits: 0, moves: 6, rank: 5, materials: 0, initialEntropy: 15 },
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => state.player.coins >= 150,
@@ -147,14 +148,18 @@ export const series1Levels: LevelConfig[] = [
       size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
           { q: 0, r: 2,  maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 0, r: -2, maxLevel: 1, currentLevel: 1, ownerId: 'bot-1',    revealed: true },
-          { q: 0, r: 0,  maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
+          { q: 0, r: 1,  maxLevel: 1, currentLevel: 1, revealed: true },   // Bridge (player → center)
+          { q: 0, r: 0,  maxLevel: 2, currentLevel: 2, revealed: true },   // Central L2 (starting point for L3)
+          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },   // Bridge (center → bot)
+          { q: 0, r: -2, maxLevel: 1, currentLevel: 1, ownerId: 'bot-1',   revealed: true },
+          // L2 support neighbors to enable L3 progression (pre-built)
+          { q: 1, r: 0,  maxLevel: 2, currentLevel: 2, revealed: true },   // L2 support (east)
+          { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },   // L2 support (west)
       ]
     },
-    startState: { credits: 30, moves: 3, rank: 1, materials: 4 },
+    startState: { credits: 30, moves: 5, rank: 1, materials: 8, initialEntropy: 30 },
     botSpawnPoints: [{ q: 0, r: -2 }],
+    botObjective: 'COMPETE_RANK',
     aiMode: 'basic',
     hooks: {
       checkWinCondition: (state) => state.player.playerLevel >= 4,

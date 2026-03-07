@@ -452,7 +452,7 @@ export class GrowthSystem implements System {
 
             if (targetLevel === 1) {
                  newOwnerId = entity.id;
-                 newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY; 
+                 newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
                  const msg = `${prefix} Sector L1 Built (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
                  state.messageLog.unshift({ id: `acq-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
                  events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id, { level: 1 }));

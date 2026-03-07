@@ -186,6 +186,7 @@ export const series2Levels: LevelConfig[] = [
       ]
     },
     aiMode: 'basic',
+    botSpawnPoints: [{ q: 0, r: -3 }],
     startState: { credits: 0, moves: 2, rank: 2, materials: 0 },
     hooks: {
       // Victory is handled strictly via the Monument UI (ACTIVATE_MONUMENT action)
@@ -235,6 +236,7 @@ export const series2Levels: LevelConfig[] = [
       ]
     },
     aiMode: 'basic',
+    botSpawnPoints: [{ q: 3, r: -3 }, { q: -3, r: 0 }],
     startState: { credits: 0, moves: 2, rank: 4, materials: 0 },
     hooks: {
       // Victory is handled strictly via the Monument UI (ACTIVATE_MONUMENT action)

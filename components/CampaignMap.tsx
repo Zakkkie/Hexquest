@@ -116,7 +116,7 @@ const CampaignMap: React.FC = () => {
 
   // --- LAYOUT CALCULATION ---
   const layoutData = useMemo(() => {
-    const ITEM_HEIGHT = isMobile ? 160 : 220;
+    const ITEM_HEIGHT = isMobile ? 140 : 220;
     const START_OFFSET = 120;
     const positions: Array<{
         x: number;
@@ -136,17 +136,17 @@ const CampaignMap: React.FC = () => {
 
         // Add extra space for series header
         if (series !== lastSeries) {
-            if (index > 0) currentY += 80;
+            if (index > 0) currentY += (isMobile ? 60 : 80);
             hasHeader = true;
             lastSeries = series;
         }
 
         // Calculate X position
-        // Mobile: Center
+        // Mobile: Fixed left offset for timeline view
         // Desktop: Zig-Zag (Left 35% / Right 65%)
         const isLeft = index % 2 === 0;
         const x = isMobile 
-            ? containerWidth / 2 
+            ? 60 
             : (isLeft ? containerWidth * 0.35 : containerWidth * 0.65);
 
         positions.push({
@@ -161,7 +161,7 @@ const CampaignMap: React.FC = () => {
         currentY += ITEM_HEIGHT;
     });
 
-    return { positions, totalHeight: currentY + 200 };
+    return { positions, totalHeight: currentY + (isMobile ? 100 : 200) };
   }, [containerWidth, isMobile]);
 
   return (
@@ -286,12 +286,10 @@ const CampaignMap: React.FC = () => {
                                     left: pos.x, 
                                     top: pos.y,
                                     transform: 'translate(-50%, -50%)',
-                                    width: isMobile ? '100%' : 'auto'
                                 }}
                             >
                                 <div className={`
-                                    relative flex items-center gap-4 md:gap-8 group
-                                    ${isMobile ? 'flex-col' : (textOnRight ? 'flex-row' : 'flex-row-reverse text-right')}
+                                    relative flex items-center justify-center group
                                     ${isUnlocked ? 'opacity-100' : 'opacity-40 grayscale'}
                                 `}>
                                     
@@ -332,9 +330,13 @@ const CampaignMap: React.FC = () => {
 
                                     {/* INFO CARD */}
                                     <div className={`
-                                        flex flex-col bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-3 md:p-4 rounded-xl shadow-xl w-[200px] md:w-[280px] transition-all duration-300 z-10
+                                        absolute flex flex-col bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-3 md:p-4 rounded-xl shadow-xl w-[calc(100vw-120px)] md:w-[280px] max-w-[280px] transition-all duration-300 z-10
                                         ${isCurrent ? 'border-amber-500/30 shadow-amber-900/20' : 'hover:border-slate-500'}
-                                        ${isMobile ? 'text-center items-center' : (textOnRight ? 'text-left items-start' : 'text-right items-end')}
+                                        ${isMobile 
+                                            ? 'left-full ml-4 text-left items-start' 
+                                            : (textOnRight 
+                                                ? 'left-full ml-8 text-left items-start' 
+                                                : 'right-full mr-8 text-right items-end')}
                                     `}>
                                         <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 ${isUnlocked ? 'text-indigo-400' : 'text-slate-600'}`}>
                                             {t.MISSION_PREFIX} {pos.level.id}
@@ -344,7 +346,7 @@ const CampaignMap: React.FC = () => {
                                         </h3>
                                         
                                         {isUnlocked ? (
-                                            <div className={`flex flex-col gap-1 ${isMobile ? 'items-center' : (textOnRight ? 'items-start' : 'items-end')}`}>
+                                            <div className={`flex flex-col gap-1 ${isMobile ? 'items-start' : (textOnRight ? 'items-start' : 'items-end')}`}>
                                                 <p className="text-[10px] text-slate-400 font-mono line-clamp-2 leading-relaxed">
                                                     {displayDesc.split('\n')[0]}
                                                 </p>

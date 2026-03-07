@@ -60,7 +60,7 @@ export class AiSystem implements System {
       state.difficulty,
       tickReservedKeys,
       state.bots,
-      state.activeLevelConfig?.id  // <-- передаём ID уровня напрямую
+      state.activeLevelConfig  // передаём полный конфиг уровня (содержит botObjective)
     );
 
     // PERSIST MEMORY

@@ -367,10 +367,11 @@ const buildCampaignPlan = (
     mem: BotMemory,
     player: Entity,
     index: WorldIndex,
-    activeLevelId: string
+    activeLevelId: string,
+    activeLevelConfig?: any
 ): Plan => {
     // 1. HUNT_PLAYER (3.5, 3.6)
-    if (activeLevelId === '3.5' || activeLevelId === '3.6') {
+    if (activeLevelConfig?.botObjective === 'DESTROY_PLAYER' || activeLevelId === '3.5' || activeLevelId === '3.6') {
         mem.botRole = 'DESTROYER';
         const targetInfo = findHiveTarget(bot, grid, index, 'DESTROYER', HIVE_RADIUS, player);
         if (targetInfo) {
@@ -382,7 +383,7 @@ const buildCampaignPlan = (
     }
 
     // 2. COMPETE_RANK (1.6, 3.7)
-    if (activeLevelId === '1.6' || activeLevelId === '3.7') {
+    if (activeLevelConfig?.botObjective === 'COMPETE_RANK' || activeLevelId === '1.6' || activeLevelId === '3.7') {
         return buildCompetePlan(bot, grid, navObstacles, claimedSet, stateVersion, mem);
     }
 
@@ -519,11 +520,12 @@ const buildPlan = (
     mem: BotMemory,
     player: Entity,
     index: WorldIndex,
-    activeLevelId?: string
+    activeLevelId?: string,
+    activeLevelConfig?: any
 ): Plan => {
 
     if (activeLevelId) {
-        return buildCampaignPlan(bot, grid, monument, navObstacles, claimedSet, stateVersion, allBots, mem, player, index, activeLevelId);
+        return buildCampaignPlan(bot, grid, monument, navObstacles, claimedSet, stateVersion, allBots, mem, player, index, activeLevelId, activeLevelConfig);
     }
 
     // SKIRMISH MODE
@@ -724,7 +726,7 @@ export const calculateBotMove = (
     difficulty: Difficulty,
     reservedHexKeys?: Set<string>,
     allBots?: Entity[],
-    activeLevelId?: string
+    activeLevelConfig?: any // Changed from string to any to match AiSystem
 ): AiResult => {
     if (!bot) return { action: null, debug: 'ERR', memory: { lastPlayerPos: null, stuckCounter: 0 } };
 
@@ -761,10 +763,11 @@ export const calculateBotMove = (
     if (pc) return finalize(pc, mem);
 
     // activeLevelId передаётся напрямую из AiSystem (state.activeLevelConfig?.id)
+    const activeLevelId = activeLevelConfig?.id;
 
     const planStale = (stateVersion - (mem.plan?.createdAt ?? 0)) > PLAN_TTL || (mem.waitStreak ?? 0) >= MAX_WAIT_STREAK;
     if (!mem.plan || mem.plan.steps.length === 0 || planStale) {
-        mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, activeLevelId);
+        mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, activeLevelId, activeLevelConfig);
         mem.waitStreak = 0;
         mem.stuckCounter = 0;
     }

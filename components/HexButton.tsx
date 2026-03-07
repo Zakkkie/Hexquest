@@ -22,10 +22,10 @@ const HexButton: React.FC<HexButtonProps> = ({
   // RESPONSIVE SIZE MAPPING
   // Optimized for cleaner UI footprint but larger touch targets on mobile
   const sizeClasses = {
-    sm: 'w-9 h-9 md:w-10 md:h-10', // Slightly larger on mobile for hit testing
-    md: 'w-12 h-12 md:w-14 md:h-14', // Standard Grid: 48px mobile (was 40), 56px desktop
-    lg: 'w-16 h-16 md:w-20 md:h-20', // Primary Actions: 64px mobile (was 56), 80px desktop
-    xl: 'w-20 h-20 md:w-24 md:h-24' // Active State: 80px mobile, 96px desktop
+    sm: 'w-8 h-8 md:w-10 md:h-10',
+    md: 'w-10 h-10 md:w-14 md:h-14',
+    lg: 'w-14 h-14 md:w-20 md:h-20',
+    xl: 'w-16 h-16 md:w-24 md:h-24'
   };
   
   const sClass = sizeClasses[size];

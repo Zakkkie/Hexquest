@@ -94,8 +94,6 @@ let engine: GameEngine | null = null;
 let tickCount = 0;
 let isProcessingTick = false; 
 
-// --- SESSION FACTORY ---
-
 const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig, language: Language = 'EN'): SessionState => {
   const mapType = winCondition?.mapType || 'FLAT';
   const initialGrid = generateMap(levelConfig, mapType);
@@ -162,7 +160,6 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
   const bots: Entity[] = [];
   const defaultSpawnPoints = [{ q: 0, r: -2 }, { q: 2, r: -2 }, { q: 2, r: 0 }, { q: 0, r: 2 }, { q: -2, r: 2 }, { q: -2, r: 0 }];
   
-  // Точные координаты спавнов ботов из архитектуры уровней кампании
   const campaignBotSpawns: Record<string, HexCoord[]> = {
       '1.6': [{ q: 0, r: -2 }],
       '2.4': [{ q: 0, r: -3 }],
@@ -172,12 +169,11 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       '4.5': [{ q: 0, r: -3 }],
   };
 
-  const levelSpawns = levelConfig ? campaignBotSpawns[levelConfig.id] : null;
+  const levelSpawns = levelConfig ? (levelConfig.botSpawnPoints || campaignBotSpawns[levelConfig.id]) : null;
 
   for (let i = 0; i < botCount; i++) {
     const sp = levelSpawns && levelSpawns[i] ? levelSpawns[i] : defaultSpawnPoints[i % defaultSpawnPoints.length];
     
-    // Гарантируем, что гекс существует, чтобы не было "островов" для дефолтных координат
     const key = getHexKey(sp.q, sp.r);
     if (!initialGrid[key]) {
         initialGrid[key] = { id: key, q: sp.q, r: sp.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true };
@@ -187,7 +183,6 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
         });
     }
 
-    // Выдаем 2 хода в кампании, чтобы бот мог выкопать под собой ресы и не застрять в needsSurvival-лупе
     const botStartMoves = levelConfig ? 2 : startMoves;
     const botStartStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0; 
     const botRoute = levelConfig?.botRoutes && levelConfig.botRoutes[i] ? levelConfig.botRoutes[i] : undefined;
@@ -223,12 +218,10 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
       secretMonumentCoord = { q: Math.round(Math.cos(angle) * dist), r: Math.round(Math.sin(angle) * dist) };
   }
 
-  // --- MONUMENT REQUIREMENTS SYNCHRONIZATION ---
   let monumentRequirements: string[] | undefined;
   
   if (levelConfig) {
       switch (levelConfig.id) {
-          // НОВАЯ СТРОКА: Для 2.1 слоты не нужны, только кнопка Activate
           case '2.1': monumentRequirements = []; break; 
           case '2.2': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
           case '2.4': monumentRequirements = ['ANY', 'ANY']; break;
@@ -607,13 +600,15 @@ export const useGameStore = create<GameStore>()(
           }
       },
 
-      openMonumentDialog: () => { 
+      openMonumentDialog: () => {
           const state = get().session;
-          const count = state?.monumentRequirements?.length || 3;
+          // Only open if this level uses ACTIVATE_MONUMENT (has explicit requirements set)
+          if (state?.monumentRequirements === undefined) return;
+          const count = state.monumentRequirements.length;
           const slots = Array(count).fill(null);
-          
-          audioService.play('SUCCESS'); 
-          set({ monumentDialogState: { isOpen: true, slots } }); 
+
+          audioService.play('SUCCESS');
+          set({ monumentDialogState: { isOpen: true, slots } });
       },
       closeMonumentDialog: () => { 
           audioService.play('UI_CLICK'); 
@@ -625,10 +620,21 @@ export const useGameStore = create<GameStore>()(
           const requirements = state.session?.monumentRequirements;
           if (!requirements || requirements.length <= slotIndex) { audioService.play('ERROR'); return; }
 
-          if (requirements[slotIndex] !== 'ANY' && item.baseId !== requirements[slotIndex]) {
-              audioService.play('ERROR');
-              state.showToast(TEXT[state.language].TOAST.WRONG_ITEM, "error");
-              return;
+          const reqId = requirements[slotIndex];
+          const revealedSlots = state.session?.monumentRevealedSlots;
+          const isUnrevealed = !!(revealedSlots && !revealedSlots[slotIndex]);
+
+          if (!isUnrevealed && reqId !== 'ANY') {
+              const isRarityWild = reqId === 'COMMON' || reqId === 'UNCOMMON' || reqId === 'RARE' || reqId === 'LEGENDARY';
+              const isOneOf = reqId === 'ONE_OF';
+              const alts = state.session?.monumentAlternatives ?? [];
+              const mismatch = isOneOf ? !alts.includes(item.baseId)
+                  : isRarityWild ? item.rarity !== reqId : item.baseId !== reqId;
+              if (mismatch) {
+                  audioService.play('ERROR');
+                  state.showToast(TEXT[state.language].TOAST.WRONG_ITEM, "error");
+                  return;
+              }
           }
 
           audioService.play('UI_CLICK');
@@ -651,7 +657,7 @@ export const useGameStore = create<GameStore>()(
       activateMonument: () => {
           if (!engine || !engine.state) return;
           const { monumentDialogState, session } = get();
-          const reqCount = session?.monumentRequirements?.length || 3;
+          const reqCount = session?.monumentRequirements?.length ?? 3;
           
           const items = monumentDialogState.slots.filter((i): i is Item => i !== null);
           if (items.length !== reqCount) {

@@ -130,7 +130,7 @@ export interface BotMemory {
   stuckCounter: number;
   waitStreak?: number;
   
-  botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER' | 'MINER' | 'DESTROYER';
+  botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER' | 'MINER' | 'DESTROYER' | 'GUARDIAN';
   mode?: 'GATHER' | 'BUILD' | 'AGGRESSOR';
   
   patrolPath?: HexCoord[];
@@ -341,6 +341,14 @@ export interface ObjectiveHex {
 
 // ------------------------------
 
+/** Describes what behaviour the campaign bot should pursue on a given level */
+export type BotObjective =
+    | 'COMPETE_RANK'    // Race the player to the highest-level structure (rank win)
+    | 'MONUMENT_RACE'   // Collect items & activate the Monument before the player
+    | 'DESTROY_PLAYER'  // Hunt and dig down player-owned structures
+    | 'GUARD_HEXES'     // Restore dug/damaged hexes back to their maxLevel state
+    | 'OWN_HEXES';      // Try to claim more hexes than the player
+
 export interface LevelConfig {
   id: string;
   title: string;
@@ -366,15 +374,21 @@ export interface LevelConfig {
     initialEntropy?: number; 
   };
 
-  // --- ИСПРАВЛЕНИЕ: МАССИВЫ КООРДИНАТ ДЛЯ БОТОВ ---
+  // --- МАССИВЫ КООРДИНАТ ДЛЯ БОТОВ ---
   botRoutes?: HexCoord[][]; // Маршруты патрулей
-  botSpawnPoints?: HexCoord[]; // ФИКС: Явные точки спавна для ИИ!
+  botSpawnPoints?: HexCoord[]; // Явные точки спавна для ИИ
 
-  objectiveHexes?: ObjectiveHex[];          
-  blueprints?: Blueprint[];                  
-  monumentRecipe?: MonumentRecipe;           
-  miniMonumentCoords?: HexCoord[];           
-  preGeneratedLootHexes?: HexCoord[];        
+  /** Цель бота в кампании — определяет стратегию buildCampaignPlan */
+  botObjective?: BotObjective;
+
+  /** Короткий текст цели миссии (≤35 символов), отображается в нижнем тулбаре */
+  goalText?: string;
+
+  objectiveHexes?: ObjectiveHex[];
+  blueprints?: Blueprint[];
+  monumentRecipe?: MonumentRecipe;
+  miniMonumentCoords?: HexCoord[];
+  preGeneratedLootHexes?: HexCoord[];
 
   aiMode: 'none' | 'dummy' | 'basic';
   hooks: ScenarioHooks;
@@ -395,6 +409,8 @@ export interface SessionState {
   activeLevelConfig?: LevelConfig; 
   secretMonumentCoord?: HexCoord;
   monumentRequirements?: string[];
+  monumentAlternatives?: string[];          // baseIds for ONE_OF slot (level 2.5)
+  monumentRevealedSlots?: boolean[];        // which monument slots have been revealed by visiting obelisks
   activeLootPings?: Record<string, number>; // Для Мини-монументов
 
   difficulty: Difficulty;

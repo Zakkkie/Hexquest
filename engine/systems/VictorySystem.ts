@@ -8,10 +8,6 @@ import { getHexKey } from '../../services/hexUtils';
 export class VictorySystem implements System {
   update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
     if (state.gameStatus === 'VICTORY' || state.gameStatus === 'DEFEAT') {
-        const alreadyUpdated = events.some(e => e.type === 'LEADERBOARD_UPDATE');
-        if (!alreadyUpdated) {
-            this.generateLeaderboardEvent(state, events);
-        }
         return;
     }
 

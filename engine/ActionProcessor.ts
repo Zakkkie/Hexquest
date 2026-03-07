@@ -54,27 +54,35 @@ export class ActionProcessor {
           actor.activeStatuses = [];
       }
 
+      let result: ValidationResult;
       switch (action.type) {
           case 'MOVE':
-              return this.handleMove(state, index, actor, action);
+              result = this.handleMove(state, index, actor, action); break;
           case 'UPGRADE':
-              return this.handleUpgrade(state, index, actor, action);
+              result = this.handleUpgrade(state, index, actor, action); break;
           case 'DIG':
-              return this.handleDig(state, index, actor, action);
+              result = this.handleDig(state, index, actor, action); break;
           case 'RECHARGE_MOVE':
-              return this.handleRecharge(state, actor);
+              result = this.handleRecharge(state, actor); break;
           case 'DESTROY_ITEM':
-              return this.handleDestroyItem(state, actor, action);
+              result = this.handleDestroyItem(state, actor, action); break;
           case 'RESTORE_HEX':
-              return this.handleRestoreHex(state, actor, action);
+              result = this.handleRestoreHex(state, actor, action); break;
           case 'ACTIVATE_MONUMENT':
-              return this.handleActivateMonument(state, actor, action);
+              result = this.handleActivateMonument(state, actor, action); break;
           case 'WAIT':
-              // Do nothing, just consume turn/cycle if needed
-              return { ok: true };
+              result = { ok: true }; break;
           default:
               return { ok: false, reason: 'Unknown Action' };
       }
+
+      // Fire onAfterAction for real player actions (not bots, not WAIT)
+      if (result.ok && actorId === state.player?.id && action.type !== 'WAIT'
+          && state.activeLevelConfig?.hooks?.onAfterAction) {
+          state.activeLevelConfig.hooks.onAfterAction(state);
+      }
+
+      return result;
   }
 
   private handleMove(state: SessionState, index: WorldIndex, actor: Entity, action: MoveAction): ValidationResult {
@@ -316,34 +324,55 @@ export class ActionProcessor {
   }
 
   private handleActivateMonument(state: SessionState, actor: Entity, action: any): ValidationResult {
-      if (!action.itemIds || action.itemIds.length !== 3) return { ok: false, reason: 'Requires 3 Keys' };
-      
-      const requirements = state.monumentRequirements;
-      
-      if (!requirements || requirements.length !== 3) {
-          return { ok: false, reason: "No active monument requirements" };
+      // Actor must be standing on a Monument hex to activate it
+      const currentHex = state.grid[getHexKey(actor.q, actor.r)];
+      if (!currentHex || currentHex.structureType !== 'MONUMENT') {
+          return { ok: false, reason: 'Must be standing on the Monument to activate it' };
       }
 
-      const items = [];
-      
-      for (const id of action.itemIds) {
-          const item = actor.inventory.find(i => i.id === id);
-          if (!item) return { ok: false, reason: `Key ${id} missing` };
+      const requirements = state.monumentRequirements ?? [];
+
+      // Validate item count matches requirements
+      if (!action.itemIds) action.itemIds = [];
+      if (action.itemIds.length !== requirements.length) {
+          return { ok: false, reason: `Requires ${requirements.length} items, got ${action.itemIds.length}` };
+      }
+
+      // Validate each item exists, is unique, and matches requirement
+      const items: Item[] = [];
+      const usedIds = new Set<string>();
+      for (let i = 0; i < action.itemIds.length; i++) {
+          const id = action.itemIds[i];
+          if (usedIds.has(id)) return { ok: false, reason: `Duplicate item id: ${id}` };
+          usedIds.add(id);
+          const item = actor.inventory.find(inv => inv.id === id);
+          if (!item) return { ok: false, reason: `Item ${id} not in inventory` };
+
+          // Check if item matches requirement: ANY wildcard, rarity wildcard, ONE_OF, or specific baseId
+          const req = requirements[i];
+          const isRarityWild = req === 'COMMON' || req === 'UNCOMMON' || req === 'RARE' || req === 'LEGENDARY';
+          const isOneOf = req === 'ONE_OF';
+          if (req !== 'ANY') {
+              if (isOneOf) {
+                  const alts = state.monumentAlternatives ?? [];
+                  if (!alts.includes(item.baseId)) {
+                      return { ok: false, reason: `Slot ${i+1}: item not in the required set` };
+                  }
+              } else if (isRarityWild && item.rarity !== req) {
+                  return { ok: false, reason: `Slot ${i+1}: need ${req} item, got ${item.rarity}` };
+              } else if (!isRarityWild && item.baseId !== req) {
+                  return { ok: false, reason: `Slot ${i+1}: need ${req}, got ${item.baseId}` };
+              }
+          }
           items.push(item);
       }
 
-      // Check if items match requirements
-      // The order matters based on how slots are filled in UI
-      for (let i = 0; i < 3; i++) {
-          // FIX: Allow ANY wildcard
-          if (requirements[i] !== 'ANY' && items[i].baseId !== requirements[i]) {
-              return { ok: false, reason: `Slot ${i+1} incorrect item` };
-          }
-      }
-
+      // Remove used items from inventory
       actor.inventory = actor.inventory.filter(i => !action.itemIds.includes(i.id));
+
+      // Victory!
       state.gameStatus = 'VICTORY';
-      
+
       return { ok: true };
   }
 }

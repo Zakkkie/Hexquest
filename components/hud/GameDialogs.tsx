@@ -38,6 +38,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     // Monument/Void Specifics
     const monumentDialogState = useGameStore(state => state.monumentDialogState);
     const monumentRequirements = useGameStore(state => state.session?.monumentRequirements);
+    const monumentAlternatives = useGameStore(state => state.session?.monumentAlternatives);
+    const monumentRevealedSlots = useGameStore(state => state.session?.monumentRevealedSlots);
     const closeMonumentDialog = useGameStore(state => state.closeMonumentDialog);
     const removeItemFromMonument = useGameStore(state => state.removeItemFromMonument);
     const activateMonument = useGameStore(state => state.activateMonument);
@@ -113,7 +115,13 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         const item = player?.inventory.find(i => i.id === itemId);
         if (item && monumentRequirements && monumentRequirements.length > slotIndex) {
             const reqId = monumentRequirements[slotIndex];
-            if (reqId !== 'ANY' && item.baseId !== reqId) { playUiSound('ERROR'); return; }
+            const isUnrevealed = !!(monumentRevealedSlots && !monumentRevealedSlots[slotIndex]);
+            if (!isUnrevealed && reqId !== 'ANY') {
+                const isRarityWild = reqId === 'COMMON' || reqId === 'UNCOMMON' || reqId === 'RARE' || reqId === 'LEGENDARY';
+                const isOneOf = reqId === 'ONE_OF';
+                if (isOneOf && !(monumentAlternatives ?? []).includes(item.baseId)) { playUiSound('ERROR'); return; }
+                if (!isOneOf && !(isRarityWild ? item.rarity === reqId : item.baseId === reqId)) { playUiSound('ERROR'); return; }
+            }
             if (!monumentDialogState.slots.some(s => s?.id === itemId)) placeItemInMonument(item, slotIndex);
         }
     };
@@ -159,22 +167,22 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* MISSION BRIEFING / DETAILS */}
             {(activeModal === 'MISSION' || gameStatus === 'BRIEFING') && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-300">
-                    <div className="bg-slate-950 border border-slate-700 rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-6 p-6 animate-in zoom-in-95">
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 md:p-6 pointer-events-auto animate-in fade-in duration-300">
+                    <div className="bg-slate-950 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-4 md:gap-6 p-4 md:p-6 animate-in zoom-in-95">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
-                        <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-6 h-6"/></button>
+                        <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 md:h-6"/></button>
                         <div className="flex flex-col items-center text-center mt-2">
-                            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-4 border border-slate-800 shadow-inner"><Target className="w-8 h-8 text-indigo-400" /></div>
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{briefingTitle}</h2>
+                            <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-900 rounded-xl md:rounded-2xl flex items-center justify-center mb-3 md:mb-4 border border-slate-800 shadow-inner"><Target className="w-6 h-6 md:w-8 md:h-8 text-indigo-400" /></div>
+                            <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter">{briefingTitle}</h2>
                             <div className="flex items-center gap-2 mt-2">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${difficulty === 'HARD' ? 'bg-red-900/30 text-red-400' : 'bg-amber-900/30 text-amber-400'}`}>{difficulty || 'NORMAL'}</span>
-                                {bots && bots.length > 0 && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-900/20 text-red-400 border border-red-900/30 flex items-center gap-1"><Swords className="w-3 h-3"/> {t.BRIEFING_RIVAL}</span>}
+                                <span className={`px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold uppercase ${difficulty === 'HARD' ? 'bg-red-900/30 text-red-400' : 'bg-amber-900/30 text-amber-400'}`}>{difficulty || 'NORMAL'}</span>
+                                {bots && bots.length > 0 && <span className="px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold uppercase bg-red-900/20 text-red-400 border border-red-900/30 flex items-center gap-1"><Swords className="w-3 h-3"/> {t.BRIEFING_RIVAL}</span>}
                             </div>
                         </div>
-                        <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-800/50 max-h-[40vh] overflow-y-auto no-scrollbar">
-                            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-mono">{briefingDesc}</p>
+                        <div className="bg-slate-900/50 rounded-xl p-3 md:p-4 border border-slate-800/50 max-h-[45vh] md:max-h-[40vh] overflow-y-auto no-scrollbar">
+                            <p className="text-xs md:text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-mono">{briefingDesc}</p>
                         </div>
-                        <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl transition-all active:scale-95">{gameStatus === 'BRIEFING' ? t.BRIEFING_BTN_START : t.BTN_READY}</button>
+                        <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="w-full py-3 md:py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl transition-all active:scale-95 text-sm md:text-base">{gameStatus === 'BRIEFING' ? t.BRIEFING_BTN_START : t.BTN_READY}</button>
                     </div>
                 </div>
             )}
@@ -252,24 +260,24 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* ITEM INSPECTION */}
             {inspectedItem && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-6 pointer-events-auto animate-in fade-in duration-200" onClick={closeInspect}>
-                    <div className="bg-slate-950 border border-slate-700 rounded-3xl shadow-2xl max-w-sm w-full relative overflow-hidden flex flex-col gap-6 p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-                        <button onClick={closeInspect} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-6 h-6"/></button>
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 md:p-6 pointer-events-auto animate-in fade-in duration-200" onClick={closeInspect}>
+                    <div className="bg-slate-950 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl max-w-sm w-full relative overflow-hidden flex flex-col gap-4 md:gap-6 p-4 md:p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                        <button onClick={closeInspect} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 md:h-6"/></button>
                         {(() => {
                             const data = resolveItemText(inspectedItem, language);
                             return (
                                 <>
                                     <div className="flex flex-col items-center">
-                                        <div className="w-32 h-32 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 shadow-inner"><ItemIcon item={inspectedItem} size="w-24 h-24" /></div>
-                                        <h3 className="text-xl font-black text-white uppercase tracking-tight text-center">{data.name}</h3>
-                                        <span className={`text-xs font-bold uppercase mt-1 px-2 py-0.5 rounded-full bg-slate-900 border ${getRarityBorder(inspectedItem.rarity)} text-slate-300`}>{inspectedItem.rarity}</span>
+                                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-xl md:rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-3 md:mb-4 shadow-inner"><ItemIcon item={inspectedItem} size="w-16 h-16 md:w-24 md:h-24" /></div>
+                                        <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tight text-center">{data.name}</h3>
+                                        <span className={`text-[10px] md:text-xs font-bold uppercase mt-1 px-2 py-0.5 rounded-full bg-slate-900 border ${getRarityBorder(inspectedItem.rarity)} text-slate-300`}>{inspectedItem.rarity}</span>
                                     </div>
-                                    <p className="text-sm text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800 py-4">"{data.description}"</p>
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-950/30 border border-emerald-900/50"><CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" /><div><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">Success</span><span className="text-xs text-emerald-100 font-mono">{data.effectDesc}</span></div></div>
-                                        {inspectedItem.negativeEffectType && <div className="flex items-start gap-3 p-3 rounded-xl bg-red-950/30 border border-red-900/50"><AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" /><div><span className="text-[10px] font-bold text-red-400 uppercase tracking-widest block mb-0.5">Failure</span><span className="text-xs text-red-100 font-mono">{data.negDesc}</span></div></div>}
+                                    <p className="text-xs md:text-sm text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800 py-3 md:py-4">"{data.description}"</p>
+                                    <div className="flex flex-col gap-2 md:gap-3">
+                                        <div className="flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-xl bg-emerald-950/30 border border-emerald-900/50"><CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-emerald-500 shrink-0 mt-0.5" /><div><span className="text-[9px] md:text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">Success</span><span className="text-[10px] md:text-xs text-emerald-100 font-mono">{data.effectDesc}</span></div></div>
+                                        {inspectedItem.negativeEffectType && <div className="flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-xl bg-red-950/30 border border-red-900/50"><AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-500 shrink-0 mt-0.5" /><div><span className="text-[9px] md:text-[10px] font-bold text-red-400 uppercase tracking-widest block mb-0.5">Failure</span><span className="text-[10px] md:text-xs text-red-100 font-mono">{data.negDesc}</span></div></div>}
                                     </div>
-                                    <div className="flex gap-3 mt-2"><button onClick={() => { destroyItem(inspectedItem.id); closeInspect(); }} className="flex-1 py-3 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-800 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors flex items-center justify-center gap-2 group"><Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" /> Discard</button><button onClick={closeInspect} className="flex-1 py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-wider text-xs transition-colors">Close</button></div>
+                                    <div className="flex gap-2 md:gap-3 mt-1 md:mt-2"><button onClick={() => { destroyItem(inspectedItem.id); closeInspect(); }} className="flex-1 py-2.5 md:py-3 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-800 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs transition-colors flex items-center justify-center gap-1.5 md:gap-2 group"><Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4 group-hover:scale-110 transition-transform" /> Discard</button><button onClick={closeInspect} className="flex-1 py-2.5 md:py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-wider text-[10px] md:text-xs transition-colors">Close</button></div>
                                 </>
                             );
                         })()}
@@ -296,22 +304,29 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* MONUMENT DIALOG */}
             {monumentDialogState.isOpen && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300 pointer-events-auto">
-                    <div className="bg-slate-950 border border-amber-900/50 p-6 rounded-3xl shadow-2xl max-w-2xl w-full relative overflow-hidden flex flex-col gap-6 animate-in zoom-in-95">
+                    <div className="bg-slate-950 border border-amber-900/50 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl max-w-2xl w-full relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                        <button onClick={closeMonumentDialog} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-6 h-6"/></button>
-                        <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
-                            <div className="p-3 bg-amber-950/50 rounded-xl border border-amber-900/50 shadow-inner"><Crown className="w-8 h-8 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" /></div>
-                            <div><h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.MONUMENT_TITLE}</h3><p className="text-xs text-amber-600 uppercase tracking-widest font-mono mt-1">{t.MONUMENT_SUB}</p></div>
+                        <button onClick={closeMonumentDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
+                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4">
+                            <div className="p-2 md:p-3 bg-amber-950/50 rounded-xl border border-amber-900/50 shadow-inner"><Crown className="w-6 h-6 md:w-8 md:h-8 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" /></div>
+                            <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.MONUMENT_TITLE}</h3><p className="text-[10px] md:text-xs text-amber-600 uppercase tracking-widest font-mono mt-1">{t.MONUMENT_SUB}</p></div>
                         </div>
-                        <div className="flex flex-col md:flex-row gap-6 h-[300px]">
-                            <div className="flex-1 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden">
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-auto md:h-[300px]">
+                            <div className="flex-1 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden min-h-[150px] md:min-h-0">
                                 <div className="p-2 border-b border-slate-800 bg-slate-900"><span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.MONUMENT_KEYS}</span></div>
                                 <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
                                     {availableInventory.length === 0 ? <div className="text-center text-slate-600 text-xs italic py-10">{t.MONUMENT_EMPTY_INV}</div> : availableInventory.map(item => (
                                         <div key={item.id} draggable onDragStart={(e) => e.dataTransfer.setData("itemId", item.id)} onClick={() => { 
                                             // Auto-add logic
                                             const reqs = monumentRequirements || Array(3).fill('ANY');
-                                            const idx = reqs.findIndex((r, i) => (r === 'ANY' || r === item.baseId) && !monumentDialogState.slots[i]);
+                                            const idx = reqs.findIndex((r: string, i: number) => {
+                                                if (monumentDialogState.slots[i]) return false;
+                                                const isUnrev = !!(monumentRevealedSlots && !monumentRevealedSlots[i]);
+                                                if (isUnrev || r === 'ANY') return true;
+                                                if (r === 'ONE_OF') return (monumentAlternatives ?? []).includes(item.baseId);
+                                                const isRarityWild = r === 'COMMON' || r === 'UNCOMMON' || r === 'RARE' || r === 'LEGENDARY';
+                                                return isRarityWild ? item.rarity === r : item.baseId === r;
+                                            });
                                             if (idx !== -1) placeItemInMonument(item, idx);
                                         }} className={`flex items-center gap-3 p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border cursor-grab active:cursor-grabbing group transition-all ${getRarityBorder(item.rarity)}`}>
                                             <div className="w-8 h-8 rounded bg-slate-950 flex items-center justify-center border border-slate-800 overflow-hidden"><ItemIcon item={item} size="w-8 h-8" /></div>
@@ -321,15 +336,41 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 </div>
                             </div>
                             <div className="flex-[1.2] flex flex-col justify-center items-center gap-4 relative">
-                                <div className="flex gap-4 relative z-10 flex-wrap justify-center">
+                                <div className="flex gap-2 md:gap-4 relative z-10 flex-wrap justify-center">
                                     {(monumentRequirements || Array(3).fill('ANY')).map((reqId, idx) => {
                                         const slotItem = monumentDialogState.slots[idx];
+                                        const isUnrevealed = !!(monumentRevealedSlots && !monumentRevealedSlots[idx]);
                                         const isWildcard = reqId === 'ANY';
-                                        const reqDef = !isWildcard ? getItemDef(reqId) : undefined;
+                                        const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'] as const;
+                                        const isRarityWild = (RARITIES as readonly string[]).includes(reqId);
+                                        const rarityColor: Record<string, string> = { COMMON: 'text-slate-300 border-slate-500', UNCOMMON: 'text-emerald-400 border-emerald-600', RARE: 'text-purple-400 border-purple-600', LEGENDARY: 'text-amber-400 border-amber-600' };
+                                        const reqDef = !isUnrevealed && !isWildcard && !isRarityWild && reqId !== 'ONE_OF' ? getItemDef(reqId) : undefined;
                                         return (
-                                            <div key={idx} onDrop={(e) => handleDrop(e, idx)} onDragOver={handleAllowDrop} onClick={() => slotItem && removeItemFromMonument(idx)} className={`w-16 h-20 md:w-24 md:h-32 rounded-2xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden ${slotItem ? `bg-slate-900 ${getRarityBorder(slotItem.rarity)}` : 'bg-slate-900/30 border-slate-700 border-dashed hover:border-slate-500'}`}>
-                                                {slotItem ? <ItemIcon item={slotItem} size="w-10 h-10 md:w-16 md:h-16" /> : (
-                                                    isWildcard ? <HelpCircle className="w-8 h-8 md:w-12 md:h-12 text-slate-400 opacity-60" /> : 
+                                            <div key={idx} onDrop={(e) => handleDrop(e, idx)} onDragOver={handleAllowDrop} onClick={() => slotItem && removeItemFromMonument(idx)} className={`w-16 h-20 md:w-24 md:h-32 rounded-xl md:rounded-2xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden ${slotItem ? `bg-slate-900 ${getRarityBorder(slotItem.rarity)}` : isUnrevealed ? 'bg-slate-900/20 border-slate-600 border-dashed hover:border-slate-400' : 'bg-slate-900/30 border-slate-700 border-dashed hover:border-slate-500'}`}>
+                                                {slotItem ? <ItemIcon item={slotItem} size="w-10 h-10 md:w-16 md:h-16" /> : isUnrevealed ? (
+                                                    <div className="flex flex-col items-center gap-1 animate-pulse">
+                                                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-slate-800/80 border border-slate-500 flex items-center justify-center shadow-[0_0_8px_rgba(148,163,184,0.3)]">
+                                                            <span className="text-base md:text-xl font-black text-slate-400 select-none">?</span>
+                                                        </div>
+                                                        <span className="text-[7px] md:text-[9px] text-slate-500 uppercase font-mono tracking-wider">OBELISK</span>
+                                                    </div>
+                                                ) : (
+                                                    reqId === 'ONE_OF' ? (
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <div className="flex gap-0.5">
+                                                                {(monumentAlternatives ?? []).map((altId, ai) => {
+                                                                    const altDef = getItemDef(altId);
+                                                                    return altDef ? <ItemIcon key={ai} def={altDef} size="w-4 h-4 md:w-5 md:h-5" opacity={0.3} grayscale /> : null;
+                                                                })}
+                                                            </div>
+                                                            <span className="text-[8px] text-slate-500 uppercase font-mono tracking-wider">1 OF 3</span>
+                                                        </div>
+                                                    ) : isRarityWild ? (
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <HelpCircle className={`w-7 h-7 md:w-10 md:h-10 ${rarityColor[reqId]?.split(' ')[0] ?? 'text-slate-400'} opacity-80`} />
+                                                            <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-wider border px-1 rounded ${rarityColor[reqId] ?? 'text-slate-400 border-slate-500'}`}>{reqId}</span>
+                                                        </div>
+                                                    ) : isWildcard ? <HelpCircle className="w-8 h-8 md:w-12 md:h-12 text-slate-400 opacity-60" /> :
                                                     (reqDef ? (
                                                         <div className="relative">
                                                             <ItemIcon def={reqDef} size="w-8 h-8 md:w-12 md:h-12" opacity={0.4} grayscale />
@@ -344,9 +385,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         );
                                     })}
                                 </div>
-                                <div className="w-full px-4">
-                                    <button onClick={activateMonument} disabled={!isMonumentReady} className={`w-full py-4 rounded-xl font-black uppercase tracking-[0.2em] shadow-lg transition-all flex items-center justify-center gap-2 ${isMonumentReady ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed grayscale'}`}>
-                                        {isMonumentReady ? <><Zap className="w-5 h-5 fill-current" /> {t.MONUMENT_BTN_ACTIVE}</> : t.MONUMENT_BTN_INACTIVE}
+                                <div className="w-full px-2 md:px-4">
+                                    <button onClick={activateMonument} disabled={!isMonumentReady} className={`w-full py-3 md:py-4 rounded-xl font-black uppercase tracking-[0.2em] shadow-lg transition-all flex items-center justify-center gap-2 text-sm md:text-base ${isMonumentReady ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed grayscale'}`}>
+                                        {isMonumentReady ? <><Zap className="w-4 h-4 md:w-5 md:h-5 fill-current" /> {t.MONUMENT_BTN_ACTIVE}</> : t.MONUMENT_BTN_INACTIVE}
                                     </button>
                                 </div>
                             </div>
@@ -358,22 +399,22 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* VOID DIALOG */}
             {voidDialogTarget && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300 pointer-events-auto" onClick={closeVoidDialog}>
-                    <div className="bg-slate-950 border border-red-900/50 p-6 rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                    <div className="bg-slate-950 border border-red-900/50 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                         <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                        <button onClick={closeVoidDialog} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-6 h-6"/></button>
-                        <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
-                            <div className="p-3 bg-red-950/50 rounded-xl border border-red-900/50 shadow-inner animate-pulse"><AlertTriangle className="w-8 h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" /></div>
-                            <div><h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.VOID_TITLE}</h3><p className="text-xs text-red-400 uppercase tracking-widest font-mono mt-1">{t.VOID_SUB}</p></div>
+                        <button onClick={closeVoidDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
+                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4">
+                            <div className="p-2 md:p-3 bg-red-950/50 rounded-xl border border-red-900/50 shadow-inner animate-pulse"><AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" /></div>
+                            <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.VOID_TITLE}</h3><p className="text-[10px] md:text-xs text-red-400 uppercase tracking-widest font-mono mt-1">{t.VOID_SUB}</p></div>
                         </div>
-                        <p className="text-sm text-slate-400 leading-relaxed text-center px-4">{t.VOID_DESC}<br/><span className="text-xs text-red-400 font-bold mt-2 block">{t.VOID_WARN}</span></p>
-                        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden max-h-[300px]">
+                        <p className="text-xs md:text-sm text-slate-400 leading-relaxed text-center px-2 md:px-4">{t.VOID_DESC}<br/><span className="text-xs text-red-400 font-bold mt-2 block">{t.VOID_WARN}</span></p>
+                        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden max-h-[250px] md:max-h-[300px]">
                             <div className="p-2 border-b border-slate-800 bg-slate-900"><span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.VOID_SELECT}</span></div>
                             <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
                                 {player?.inventory.length === 0 ? <div className="text-center text-slate-600 text-xs italic py-10">{t.VOID_EMPTY}</div> : player?.inventory.map(item => (
-                                    <div key={item.id} onClick={() => restoreVoidHex(item.id)} className={`flex items-center gap-3 p-3 rounded-lg bg-slate-800 hover:bg-slate-700 border cursor-pointer group transition-all ${getRarityBorder(item.rarity)}`}>
-                                        <div className="w-10 h-10 rounded bg-slate-950 flex items-center justify-center border border-slate-800 overflow-hidden shrink-0"><ItemIcon item={item} size="w-10 h-10" /></div>
+                                    <div key={item.id} onClick={() => restoreVoidHex(item.id)} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-slate-800 hover:bg-slate-700 border cursor-pointer group transition-all ${getRarityBorder(item.rarity)}`}>
+                                        <div className="w-8 h-8 md:w-10 md:h-10 rounded bg-slate-950 flex items-center justify-center border border-slate-800 overflow-hidden shrink-0"><ItemIcon item={item} size="w-8 h-8 md:w-10 md:h-10" /></div>
                                         <div className="flex flex-col min-w-0 flex-1"><span className="text-xs font-bold text-white group-hover:text-red-200 truncate">{resolveItemText(item, language).name}</span><span className="text-[9px] text-slate-500 uppercase">{item.rarity}</span></div>
-                                        <div className="px-3 py-1 bg-red-900/20 border border-red-900/50 rounded text-[9px] text-red-400 font-bold uppercase whitespace-nowrap group-hover:bg-red-900/40 transition-colors">{t.VOID_BTN_SACRIFICE}</div>
+                                        <div className="px-2 py-1 md:px-3 md:py-1 bg-red-900/20 border border-red-900/50 rounded text-[9px] text-red-400 font-bold uppercase whitespace-nowrap group-hover:bg-red-900/40 transition-colors">{t.VOID_BTN_SACRIFICE}</div>
                                     </div>
                                 ))}
                             </div>

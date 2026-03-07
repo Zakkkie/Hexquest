@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { Layer, Group, Line, Circle, Text } from 'react-konva';
+import { Layer, Group, Line, Circle, Text, Path } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { getHexKey, getNeighbors, pixelToHex, cubeDistance } from '../services/hexUtils.ts';
@@ -8,7 +8,7 @@ import { HexNode, HexNodeTheme, HexRenderMode } from './HexNode.tsx';
 import Unit from './Unit.tsx';
 import { EntityType, EntityState, FloatingText, Hex, Entity } from '../types.ts';
 import { checkGrowthCondition } from '../rules/growth.ts';
-import { EXCHANGE_RATE_COINS_PER_MOVE, HEX_SIZE } from '../rules/config.ts';
+import { EXCHANGE_RATE_COINS_PER_MOVE, HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { safifyCoord } from '../utils/safeCoordinates.ts';
 
 const VOID_LEVEL_FLAG = -99;
@@ -28,6 +28,25 @@ const DUST_FADE_DURATION_VARIANCE = 0.2;
 const DUST_LIFETIME_MS = 600;
 const DUST_DISPERSION_MIN = 10;
 const DUST_DISPERSION_VARIANCE = 10;
+
+// BASE PATH FOR SELECTION GLOW
+const DEG_TO_RAD = Math.PI / 180;
+const BASE_POINTS = [];
+for (let i = 0; i < 6; i++) {
+    const angle = (60 * i + 30) * DEG_TO_RAD;
+    BASE_POINTS.push({ x: Math.cos(angle) * HEX_SIZE, y: Math.sin(angle) * HEX_SIZE });
+}
+let BASE_PATH_D = `M ${BASE_POINTS[0].x} ${BASE_POINTS[0].y}`;
+for (let i = 1; i < 6; i++) BASE_PATH_D += ` L ${BASE_POINTS[i].x} ${BASE_POINTS[i].y}`;
+BASE_PATH_D += " Z";
+
+const SelectionGlow = React.memo(({ x, y, offsetY, rotation }: any) => (
+    <Group x={x} y={y} scaleY={0.8} perfectDrawEnabled={false} listening={false}>
+        <Group rotation={rotation} y={offsetY} perfectDrawEnabled={false}>
+            <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} shadowColor="#06b6d4" shadowBlur={10} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
+        </Group>
+    </Group>
+));
 
 // LOD CONFIGURATION
 const LOD_LEVELS = {
@@ -288,24 +307,17 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
 
         const items: any[] = [];
         const inverseScale = 1 / viewState.scale;
-        
-        // Calculate viewport bounds in stage local coordinates
         const x0 = -viewState.x * inverseScale;
         const y0 = -viewState.y * inverseScale;
         const width = dimensions.width * inverseScale;
         const height = dimensions.height * inverseScale;
-        
-        // Culling Padding (keeps objects visible slightly offscreen)
-        // Reduced padding as corner calculation is more precise, but keep some for partial hexes
-        const CULL_PADDING = 100;
+        const CULL_PADDING = 150;
 
-        // Calculate visible range in Hex Coordinates by projecting viewport corners
-        // We use the pixelToHex utility which handles the rotation and perspective (squash)
         const corners = [
-            pixelToHex(x0 - CULL_PADDING, y0 - CULL_PADDING, rotation), // Top-Left
-            pixelToHex(x0 + width + CULL_PADDING, y0 - CULL_PADDING, rotation), // Top-Right
-            pixelToHex(x0 + width + CULL_PADDING, y0 + height + CULL_PADDING, rotation), // Bottom-Right
-            pixelToHex(x0 - CULL_PADDING, y0 + height + CULL_PADDING, rotation) // Bottom-Left
+            pixelToHex(x0 - CULL_PADDING, y0 - CULL_PADDING, rotation),
+            pixelToHex(x0 + width + CULL_PADDING, y0 - CULL_PADDING, rotation),
+            pixelToHex(x0 + width + CULL_PADDING, y0 + height + CULL_PADDING, rotation),
+            pixelToHex(x0 - CULL_PADDING, y0 + height + CULL_PADDING, rotation)
         ];
 
         const qMin = Math.min(...corners.map(c => c.q));
@@ -317,7 +329,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
         const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
 
-        // Retrieve pre-calculated values
         const { cos, sin } = projectionCache;
         const SQRT3 = Math.sqrt(3);
         const SQRT3_2 = SQRT3 / 2;
@@ -326,35 +337,26 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         const fastProject = (q: number, r: number) => {
             const rawX = HEX_SIZE * (SQRT3 * q + SQRT3_2 * r);
             const rawY = HEX_SIZE * (ONE_POINT_FIVE * r);
-            
             const px = rawX * cos - rawY * sin;
             const py = (rawX * sin + rawY * cos) * 0.8;
-            
             return safifyCoord(px, py);
         };
 
-        const centerHex = pixelToHex(x0 + width / 2, y0 + height / 2, rotation); // Still needed for LOD distance
+        const centerHex = pixelToHex(x0 + width / 2, y0 + height / 2, rotation);
         const levelId = activeLevelConfig?.id;
 
-        // --- OPTIMIZED LOOP: COORDINATE ITERATION ---
         for (let q = qMin; q <= qMax; q++) {
             for (let r = rMin; r <= rMax; r++) {
-                
                 const hexKey = getHexKey(q, r);
                 const hex = grid[hexKey];
                 if (!hex) continue; 
 
-                // We still do a rough frustum check here just in case the AABB is loose due to diagonal rotation,
-                // but strictly speaking the loop range is much tighter now.
-                // We calculate x,y here for rendering anyway.
                 const { x, y } = fastProject(q, r);
                 
-                // FRUSTUM CULLING (Double Check)
                 if (x < x0 - CULL_PADDING || x > x0 + width + CULL_PADDING || y < y0 - CULL_PADDING || y > y0 + height + CULL_PADDING) {
                     continue;
                 }
                 
-                // Calculate LOD
                 const distToCamera = cubeDistance(centerHex, { q, r });
                 const renderMode = getHexRenderMode(distToCamera, isInteracting);
 
@@ -373,80 +375,53 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                 let isArrow = false;
                 let tutColor: any = 'emerald';
                 
-                // --- CAMPAIGN TUTORIAL LOGIC ---
-                // Only process if in close view (LOD Optimization)
                 if (renderMode.showDetails && !isPlayerGrowing && (hex.structureType as string) !== 'VOID') {
-                    // Level 1.1: Expansion (Arrows on neutral L0)
                     if (levelId === '1.1') {
                         if (hex.maxLevel === 0 && !hex.ownerId && !isOccupiedByPlayer) {
-                            isTutorial = true;
-                            isArrow = true;
-                            tutColor = 'amber';
+                            isTutorial = true; isArrow = true; tutColor = 'amber';
                         }
-                    }
-                    // Level 1.2: Reach Capital (Arrow on Capital)
-                    else if (levelId === '1.2' || levelId === '3.1') {
+                    } else if (levelId === '1.2' || levelId === '3.1') {
                         if (hex.structureType === 'CAPITAL') {
-                            isTutorial = true;
-                            isArrow = true;
-                            tutColor = 'emerald';
+                            isTutorial = true; isArrow = true; tutColor = 'emerald';
                         }
-                    }
-                    // Level 1.3: Support (Arrow on Center after supports built)
-                    else if (levelId === '1.3') {
-                        // Check if center (0,0) needs upgrade
+                    } else if (levelId === '1.3') {
                         const center = grid[getHexKey(0,0)];
                         if (center) {
-                            // Count L1+ neighbors around center
                             const cn = getNeighbors(0,0);
                             const supportCount = cn.filter(n => {
                                 const h = grid[getHexKey(n.q, n.r)];
                                 return h && h.maxLevel >= 1 && h.structureType !== 'VOID';
                             }).length;
-
                             if (supportCount >= 2 && center.maxLevel < 2) {
-                                // Point to Center
                                 if (hex.q === 0 && hex.r === 0) {
                                     isTutorial = true; isArrow = true; tutColor = 'amber';
                                 }
                             } else if (center.maxLevel < 2) {
-                                // Point to neighbors to build them
                                 const isNeighbor = cn.some(n => n.q === hex.q && n.r === hex.r);
                                 if (isNeighbor && hex.maxLevel < 1 && !isOccupiedByPlayer) {
                                     isTutorial = true; isArrow = true; tutColor = 'cyan';
                                 }
                             }
                         }
-                    }
-                    // Level 1.4: Excavation (Center Logic Improved)
-                    else if (levelId === '1.4') {
+                    } else if (levelId === '1.4') {
                         const center = grid[getHexKey(0,0)];
                         const isPlayerOnCenter = player.q === 0 && player.r === 0;
-
-                        // 1. If player stepped away, guide them BACK to the center if it needs upgrading
                         if (center && center.maxLevel < 3 && !isPlayerOnCenter) {
                              if (hex.q === 0 && hex.r === 0) {
                                  isTutorial = true; isArrow = true; tutColor = 'amber';
                              }
-                        }
-                        // 2. If player is ON center
-                        else if (isPlayerOnCenter && center && center.maxLevel < 3) {
+                        } else if (isPlayerOnCenter && center && center.maxLevel < 3) {
                             if (player.storage >= 1) {
-                                // Has mats -> Upgrade center (Show arrow on self to click button, or center hex)
                                 if (hex.q === 0 && hex.r === 0) {
                                     isTutorial = true; isArrow = true; tutColor = 'amber';
                                 }
                             } else {
-                                // Needs mats -> Dig mounds
                                 if (hex.maxLevel >= 2 && hex.id !== getHexKey(0,0)) {
                                     isTutorial = true; isArrow = true; tutColor = 'red';
                                 }
                             }
                         }
-                    }
-                    // Level 1.6: Vertical Limit (Arrow on Summit)
-                    else if (levelId === '1.6') {
-                        // For 1.6 specifically, let's point to (0,0) as it's the center conflict zone.
+                    } else if (levelId === '1.6') {
                         if (hex.q === 0 && hex.r === 0 && !isOccupiedByPlayer) {
                              isTutorial = true; isArrow = true; tutColor = 'amber';
                         }
@@ -468,14 +443,14 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                         structureType: hex.structureType as string,
                         neighborLevels,
                         theme: getTheme((hex.structureType as string) === 'VOID' ? 0 : hex.maxLevel),
-                        isSelected: selectedHexId === hex.id,
+                        isSelected: selectedHexId === hex.id, 
                         isPending,
                         pendingCost: isPending && pendingConfirmation ? pendingConfirmation.data.costCoins : null,
                         isTutorialTarget: isTutorial,
                         isTargetArrow: isArrow, 
                         tutorialColor: tutColor,
                         isMissingSupport: false, 
-                        isOccupied: isOccupiedByPlayer || bots?.some(b => b.q===hex.q && b.r===hex.r),
+                        isOccupied: isOccupiedByPlayer || bots?.some(b => b.q===hex.q && b.r===hex.r), 
                         isGrowing: hex.progress > 0 && (hex.structureType as string) !== 'VOID',
                         isRankLocked: hex.maxLevel > player.playerLevel,
                         progress: hex.progress,
@@ -483,7 +458,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                         artifactType: hex.artifact?.type,
                         onHexClick: memoizedOnHexClick,
                         onHover: onHover,
-                        renderMode: renderMode // Pass LOD Mode
+                        renderMode
                     }
                 });
             }
@@ -492,7 +467,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         const allEntities = [{ ...player, isPlayer: true }, ...(bots || []).map(b => ({ ...b, isPlayer: false }))];
         for (const u of allEntities) {
             const px = fastProject(u.q, u.r);
-            // Viewport culling for entities
             if (px.x < x0 - CULL_PADDING || px.x > x0 + width + CULL_PADDING || px.y < y0 - CULL_PADDING || px.y > y0 + height + CULL_PADDING) continue;
             
             const uHex = grid[getHexKey(u.q, u.r)];
@@ -528,11 +502,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                 const nKey = getHexKey(n.q, n.r);
                 const nHex = grid[nKey];
                 
-                // --- CULLING FOR CONNECTORS ---
-                // We use the player's position, assuming connections are local.
-                // If player is visible, connectors likely are. If player is culled, units loop handled it.
-                // But double checking neighbor pos doesn't hurt.
-                
                 const isBot = bots?.some(b => b.q===n.q && b.r===n.r);
                 const isVoid = (nHex?.structureType as string) === 'VOID';
                 if (isBot || isVoid) continue;
@@ -544,9 +513,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
 
                 const level = nHex ? nHex.maxLevel : 0;
                 const cost = level > 1 ? level : 1;
-                
                 const canAfford = player.moves >= cost || player.coins >= (cost * EXCHANGE_RATE_COINS_PER_MOVE);
-
                 const connId = `conn-${pStart.x.toFixed(0)}-${pStart.y.toFixed(0)}-${nPos.x.toFixed(0)}-${nPos.y.toFixed(0)}`;
 
                 items.push({
@@ -564,25 +531,28 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         }
 
         items.sort((a, b) => a.depth - b.depth);
+
         return items;
 
     }, [grid, player, bots, viewState, rotation, hoveredHexId, pendingConfirmation, isPlayerGrowing, activeLevelConfig, winCondition, memoizedOnHexClick, onHover, spawnDust, projectionCache, isInteracting]);
 
     return (
-        <Layer>
-            {renderList.map((item, i) => {
-                const key = item.props.id || `item-${i}`;
-                            
-                if (item.type === 'HEX') return <HexNode key={key} {...item.props} />;
-                if (item.type === 'UNIT') return <Unit key={key} {...item.props} />;
-                if (item.type === 'CONN') return <Line key={key} {...item.props} strokeWidth={2} listening={false} perfectDrawEnabled={false} />;
-                return null;
-            })}
-            
-            {particles.map(p => <DustCloud key={p.id} {...p} onComplete={removeParticle} />)}
-            {/* Render stacked floating effects */}
-            {stackedEffects.map(eff => <FloatingEffect key={eff.id} effect={eff} rotation={rotation} stackIndex={eff.stackIndex} />)}
-        </Layer>
+        <>
+            <Layer>
+                {renderList.map((item, i) => {
+                    const key = item.props.id || `item-${i}`;
+                    if (item.type === 'HEX') return <HexNode key={key} {...item.props} />;
+                    if (item.type === 'UNIT') return <Unit key={key} {...item.props} />;
+                    if (item.type === 'CONN') return <Line key={key} {...item.props} strokeWidth={2} listening={false} perfectDrawEnabled={false} />;
+                    return null;
+                })}
+            </Layer>
+
+            <Layer listening={false}>
+                {particles.map(p => <DustCloud key={p.id} {...p} onComplete={removeParticle} />)}
+                {stackedEffects.map(eff => <FloatingEffect key={eff.id} effect={eff} rotation={rotation} stackIndex={eff.stackIndex} />)}
+            </Layer>
+        </>
     );
 };
 

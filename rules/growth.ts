@@ -37,13 +37,13 @@ export function checkDigCondition(
           .filter(h => h && h.structureType !== 'VOID');
       
       if (neighborHexes.length > 0) {
-          const minNeighborLevel = Math.min(...neighborHexes.map(h => h.maxLevel));
-          
+          const minNeighborLevel = Math.min(...neighborHexes.map(h => h.currentLevel));
+
           if (targetLevel <= minNeighborLevel) {
-              return { 
-                  canGrow: false, 
+              return {
+                  canGrow: false,
                   reason: `Gradient Lock! Must stay above L${minNeighborLevel}.`,
-                  missingSupports: neighborHexes.filter(h => h.maxLevel <= targetLevel).map(h => ({q: h.q, r: h.r}))
+                  missingSupports: neighborHexes.filter(h => h.currentLevel <= targetLevel).map(h => ({q: h.q, r: h.r}))
               };
           }
       }

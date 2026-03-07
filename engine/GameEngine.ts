@@ -180,6 +180,11 @@ export class GameEngine {
         });
     }
 
+    // 4. Campaign Hook: onAfterAction
+    if (nextState.activeLevelConfig?.hooks?.onAfterAction) {
+        nextState.activeLevelConfig.hooks.onAfterAction(nextState);
+    }
+
     this.enforceSafetyLimits(nextState);
 
     nextState.currentTurn++; 

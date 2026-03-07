@@ -3,17 +3,21 @@ import { getHexKey } from '../services/hexUtils';
 
 /**
  * ============================================================================
- *  SERIES 3: PUZZLE LEVELS  (8 levels)
+ *  SERIES 3: OBELISK CHRONICLES  (8 levels)
  * ============================================================================
  *
- *  Same economic model as Series 2 (see header there).
- *  Key additions:
- *  ─ VOID RESTORE: sacrifice item → C:25% U:40% R:65% L:90% → hex becomes L0.
- *  ─ On FAIL: item consumed + negative effect applied.
- *  ─ On SUCCESS: +3% entropy restored.
- *  ─ UPGRADE needs 2 neighbors at SAME maxLevel for L2+.
- *  ─ L1 hexes have 6 durability. Each step OFF an L1 costs 1 durability.
- *    At 0 durability → collapses to VOID.
+ *  New mechanics:
+ *  ─ OBELISK (MINI_MONUMENT at L3): visit to reveal a monument slot's silhouette.
+ *    Without visiting, the slot shows '??' — player can still guess.
+ *  ─ MONUMENT at L5+: activate with correct items to win.
+ *  ─ TWO STRIKES: entropy depletes in exactly 2 fixed spikes.
+ *    Spike every N turns; 2nd spike = defeat.
+ *    initialEntropy / 2 = damage → bar shows "2 lives remaining".
+ *
+ *  Navigation:
+ *  ─ Player starts with rank 5 (can navigate any pre-built terrain).
+ *  ─ Pre-built staircases: each L step costs that many moves.
+ *  ─ Path L1→L2→L3→L4→L5 costs 1+2+3+4+5 = 15 moves total.
  */
 
 const isStranded = (state: any): boolean => {
@@ -24,632 +28,662 @@ const isStranded = (state: any): boolean => {
 export const series3Levels: LevelConfig[] = [
 
   // ═══════════════════════════════════════════════════════════════════
-  //  3.1  THE BRIDGE — Navigate VOID Gaps (Items Required)
+  //  3.1  FIRST INSCRIPTION — 1 slot, 1 obelisk, linear map
   // ═══════════════════════════════════════════════════════════════════
   //
-  //  LESSON: VOID restoration mechanic. Items are consumed on use.
+  //  LESSON: Obelisk reveals monument slot silhouette. Guess or verify.
   //
-  //  MAP: Linear path from (0,3) to monument (0,0)L2.
-  //  3 VOID hexes block the path: (0,2), (0,1) are VOID.
-  //  Actually: only 3 VOIDs total to keep it tight per user request.
-  //  Path: (0,3)L1 → (0,2)VOID → (0,1)VOID → (0,0)L2★
-  //  Player needs to restore (0,2) and (0,1) to pass.
-  //  Alternative: restore just (0,2), then detour through (-1,1)L1→(-1,0)L2→(0,0)L2.
-  //  But (-1,1) and (-1,0) only exist if we add them.
+  //  MAP: Vertical shaft. Obelisk L3 branches off main path.
+  //  Main: (0,5)L0 → (0,4)L1 → (0,3)L2 → (0,2)L3 → (0,1)L4 → (0,0)L5 MONUMENT
+  //  Branch: (0,2)L3 → (-1,2)L3 OBELISK (reveals slot 0: 'cargo_prism')
+  //  From obelisk: player can continue to (0,1)L4 directly ((-1,2) neighbors (0,1) ✓).
   //
-  //  DESIGN: 3 VOIDs in a line. Player starts with 4 items (some common, some uncommon).
-  //  Must sacrifice items to restore VOIDs. Common=25% success.
-  //  With 4 items: probability of restoring at least 2 VOIDs:
-  //    2 UNCOMMON (40% each) + 2 COMMON (25% each).
-  //    P(at least 2 success out of 4) ≈ 70%.
-  //  Need to restore 2 of 3 VOIDs (can take side path around 1).
+  //  START INVENTORY: fuel_cell (COMMON), cargo_prism (UNCOMMON ← correct),
+  //                   reality_patch (COMMON)
   //
-  //  ECONOMY (Start: 5mv, 0cr, 0mat, 4 items in inventory):
-  //  Move to VOID neighbor: 1mv. Sacrifice item: 0mv 0cr.
-  //  If success: VOID→L0. Move onto it: 1mv.
-  //  If fail: try next item.
-  //  Path after restoring 2 VOIDs: (0,3)→(0,2)L0→(0,1)L0→(0,0)L2.
-  //  Cost: 1+1+2 = 4mv. With initial approach: 5mv total.
-  //  Start: 5mv. Barely enough. Can recover on start hex (+1mv,+5cr) for safety.
+  //  Direct path (no obelisk):  1+2+3+4+5 = 15 mv
+  //  Path via obelisk:          1+2+3+3+4+5 = 18 mv  (3mv detour)
+  //  Budget: 20mv. Both paths viable.
   //
-  //  SUCCESS RATE: ~65% (depends on VOID restore RNG)
+  //  TWO STRIKES: entropy=20, interval=20, damage=10 → loss at turn 40.
   //
   {
     id: '3.1',
-    title: 'Sim 3.1: The Bridge',
-    description: 'DANGER: Void anomalies detected ahead.\n\nObjective: Cross the Void Bridge to reach the Monolith.\n\nMechanic: Stand adjacent to a VOID hex and sacrifice an ITEM to attempt restoration.\nHigher rarity = higher success chance (Common: 25%, Uncommon: 40%).\n\nYou have 4 items. 3 VOID gaps. Plan your sacrifices wisely.',
+    title: 'First Inscription',
+    description: 'An ancient transmission carved into stone.\n\nObjective: Activate the Monument at the summit.\n\nMechanic: Obelisks (L3 pillars) inscribe the required item silhouette into the Monument interface. Visit one to learn what it needs — or guess.\n\nEntropic Warning: Two stability events will occur. The second ends the mission.',
     mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
+      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 2, currentLevel: 2, structureType: 'MONUMENT', revealed: true },
-          { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-
-          // THE BRIDGE (3 VOIDs in a line)
-          { q: 0, r: 2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
-          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
-
-          // SIDE PATH (detour if one VOID can't be restored)
-          // If (0,2) restored but (0,1) fails: use (-1,1)L1→(-1,0)L2→(0,0)
-          { q: -1, r: 2, maxLevel: 1, currentLevel: 1, revealed: true }, // neighbor(0,2) ✓
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true }, // neighbor(-1,2) ✓
-          { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true }, // neighbor(-1,1) ✓, diff 1→2 ✓, neighbor(0,0) ✓
-
-          // VOID on side (optional extra challenge)
-          { q: 1, r: 2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
-
-          // SCENERY
-          { q: 1, r: 3, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: -1, r: 3, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: 0, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 1, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
+        // MAIN STAIRCASE
+        { q: 0, r: 5, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 0, r: 4, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 3, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 0, r: 2, maxLevel: 3, currentLevel: 3, revealed: true },
+        { q: 0, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
+        // OBELISK BRANCH (accessible from (0,2)L3, connects back to (0,1)L4)
+        { q: -1, r: 2, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },
+        // DECORATIVE PITS
+        { q: 1, r: 4, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: -1, r: 4, maxLevel: -1, currentLevel: -1, revealed: true },
+        { q: 1, r: 2, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: -1, r: 3, maxLevel: -1, currentLevel: -1, revealed: true },
+        { q: 1, r: 0, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
       ]
     },
     startState: {
-      credits: 0, moves: 5, rank: 1, materials: 0,
-      // Player starts with 4 items for VOID sacrifice
-      startInventory: [
-        'cargo_prism',
-        'hornet_drill',
-        'fuel_cell',
-        'reality_patch'
-      ]
+      credits: 0, moves: 20, rank: 5, materials: 0, initialEntropy: 20,
+      startInventory: ['fuel_cell', 'cargo_prism', 'reality_patch']
     },
-    aiMode: 'none',
-    hooks: {
-      checkWinCondition: (state) =>
-        state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT',
-      checkLossCondition: (state) => {
-        // Lost if no items left AND path still blocked by VOIDs
-        const items = state.player.inventory?.length ?? 0;
-        const v1 = state.grid[getHexKey(0, 2)]?.structureType === 'VOID';
-        const v2 = state.grid[getHexKey(0, 1)]?.structureType === 'VOID';
-        const sideBlocked = state.grid[getHexKey(-1, 1)]?.structureType === 'VOID';
-        // If both direct VOIDs remain AND side path blocked AND no items → stuck
-        if (items === 0 && v1 && v2 && sideBlocked) return true;
-        // Also check if direct path needs both restored but only 1 done + no items
-        if (items === 0 && (v1 || v2)) {
-          // Can still win if side path is clear
-          if (!sideBlocked) return false;
-          // Check if at least one direct VOID is cleared
-          if (!v1 && !v2) return false; // both cleared
-          if (!v1) return false; // (0,2) cleared, can reach side path
-        }
-        return isStranded(state);
-      }
-    }
-  },
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  3.2  THE HARVEST — Earn Credits Through Recovery Cycling
-  // ═══════════════════════════════════════════════════════════════════
-  //
-  //  LESSON: Recovery income scaling (higher level = more credits).
-  //
-  //  MAP: Recovery stations at L2 (+10cr), L3 (+15cr), L4 (3×+20cr).
-  //  Win: Accumulate 200 credits.
-  //
-  //  ECONOMY (Start: 3mv, 0cr, 0mat):
-  //  Station A: (1,0)L2. Recover: +1mv, +10cr. Single use.
-  //  Station B: (-1,0)L3. Recover: +1mv, +15cr. Single use.
-  //  Station C: (0,-1)L4. Recover: +1mv, +20cr. 3 charges!
-  //
-  //  Cycle: Start (0,0)L0 → move to A (1mv) → recover (+1mv,+10cr) → move back (2mv cost for L2 step)
-  //  Wait — L2 costs 2mv to step onto? No, move cost is level of TARGET hex.
-  //  Move from (0,0)L0 to (1,0)L2: diff=2 → BLOCKED by staircase rule!
-  //
-  //  Fix: add stepping stones. (0,0)L0 → (1,1)L1 → (1,0)L2.
-  //  Cost: 1(L1) + 2(L2) = 3mv to reach station A.
-  //
-  //  Full cycle to station A and back: 3mv out + 1(L1 back) + 1(L0 back) = 5mv round trip.
-  //  Recover gives +1mv. Net: −4mv, +10cr.
-  //  Not sustainable alone. Need to combine with other income.
-  //
-  //  Better: use L4 station. It has 3 charges.
-  //  Path to L4: (0,0)L0 → (0,1)L1 → (-1,1)L2 → (-1,0)L3 → (0,-1)L4.
-  //  Cost: 1+2+3+4 = 10mv. Recover 3×: +3mv, +60cr. Return: 4+3+2+1=10mv.
-  //  Round trip: 20mv − 3mv earned = 17mv needed, earns 60cr.
-  //
-  //  With start 3mv: can't reach L4 directly. Must bootstrap.
-  //  Recover on (0,0)L0 owned: +1mv,+0cr = 4mv.
-  //  Move to (0,1)L1: −1mv = 3mv. Step on L1, it's L1 so cost=1. OK 3mv.
-  //  Recover on L1 (if owned after stepping on it): +1mv,+5cr = 4mv,5cr.
-  //  Move to (-1,1)L2: −2mv = 2mv. Recover: +1mv,+10cr = 3mv,15cr.
-  //
-  //  Actually let's simplify. Stations close to start, all L0-L2.
-  //  3 stations at L2 (each +10cr, single use) + 1 at L3 (+15cr) + 1 at L4 (3×20cr).
-  //  Total from all: 3×10 + 15 + 60 = 105cr. Not enough for 200cr.
-  //
-  //  Add DIG income: dig sites give items that can be destroyed for credits.
-  //  Or: reduce target to 120cr. Or: allow recovery cycling on L2-L3 by moving away+back.
-  //
-  //  REDESIGN: Compact map. All hexes reachable within 2-3 moves.
-  //  Flower pattern: center (0,0)L0 player, 6 neighbors at various levels.
-  //  L2 hex: recover +10cr. Move away (1mv) + back (2mv) = 3mv per cycle. Earn +1mv,+10cr.
-  //  Net: −2mv per cycle, +10cr. After 5mv start: 2 cycles = 20cr, 1mv left.
-  //  Need: more moves. DIG a L0 neighbor: +1mat, +1mv. Then upgrade it to L1 (+10cr income).
-  //  Upgrade L0→L1: −1mat, earn +10cr. Now have credits to exchange for moves.
-  //
-  //  OK this is getting complex. Let me design a clean level:
-  //
-  //  MAP: Center (0,0)L0 player. Ring of L1 hexes. One L3 hex. One L4 hex.
-  //  All hexes connected with ≤1 diff. Player cycles between them.
-  //
-  //  Optimal play:
-  //  1. Recover on (0,0)L0: +1mv,+0cr. Total: 4mv.
-  //  2. Move to (1,0)L1: −1mv = 3mv. Recover: +1mv,+5cr = 4mv,5cr.
-  //  3. Move to (0,0)L0: −1mv = 3mv. Recover: can't (already used). 
-  //     Hmm, recoveredCurrentHex resets when you MOVE. So move back clears it.
-  //     But (0,0) recovery already used once. Wait — "single use per visit".
-  //     Moving away resets the flag. So: move to (1,0), move back to (0,0), recover again.
-  //
-  //  Cycle (0,0)↔(1,0): 
-  //    At (0,0): recover +1mv,+0cr. Move to (1,0): −1mv. 
-  //    At (1,0): recover +1mv,+5cr. Move to (0,0): −1mv.
-  //    Net per full cycle: 0mv change, +5cr. 4 actions per cycle.
-  //
-  //  200cr / 5cr per cycle = 40 cycles = 160 actions. Too slow!
-  //
-  //  Fix: include higher-level stations and dig sites.
-  //
-  //  FINAL DESIGN:
-  //  Map: center L0, ring of L1, + L3 and L4 stations accessible via staircase.
-  //  Player digs for materials, upgrades nearby hexes to L2 (earn +20cr each),
-  //  then cycles recovery on L4 station (3×20cr = 60cr per visit).
-  //
-  //  Start: 3mv, 0cr, 0mat.
-  //  Step 1: DIG on (0,0)→L-1: +1mat, +1mv = 4mv, 1mat.
-  //  Step 2: Move to (1,0)L1 (1mv) = 3mv. Upgrade to L2: −1mat, +20cr = 3mv,20cr,0mat.
-  //         Wait — needs 2 neighbors at L1. (1,0) neighbors: (0,0),(2,0),(1,-1),(0,1),(2,-1),(1,1).
-  //         (0,0) is now L-1 (we dug it). So only L1 neighbors... need to check map.
-  //         Let me make sure (1,0)L1 has 2+ neighbors at L1: (0,1)L1 and (1,-1)L1. ✓
-  //
-  //  Step 3: Exchange 20cr→4mv = 7mv. DIG (0,0)→L-2: +1mat, +2mv = 9mv, 1mat.
-  //  Step 4: Move to (0,1)L1 (1mv), upgrade to L2: +20cr. Total: 40cr.
-  //  Step 5: Continue upgrading L1s to L2 for 20cr each.
-  //  Step 6: Reach L4 station, recover 3×20cr = 60cr.
-  //
-  //  Budget: 6 L1→L2 upgrades = 120cr. L4 station = 60cr. L3 = 15cr. Total: 195cr.
-  //  Plus recovery cycling on L2 hexes: 2× +10cr = 20cr. Grand total: 215cr ≥ 200. ✓
-  //
-  //  SUCCESS RATE: ~75%
-  //
-  {
-    id: '3.2',
-    title: 'Sim 3.2: The Harvest',
-    description: 'Protocol: Resource Extraction.\n\nObjective: Accumulate 200 Credits.\n\nMethods:\n• RECOVERY (Blue) on owned hexes earns Credits (higher level = more).\n• UPGRADE (Amber) earns income (+20cr for L2, +40cr for L3).\n• DIG (Red) earns Materials + Moves to fuel upgrades.\n• Move away from a hex to reset Recovery for another use.\n\nBuild an economy: Dig → Upgrade → Recover → Repeat.',
-    mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
-      customLayout: [
-          // CENTER
-          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          // INNER RING (L1, upgradeable to L2 with 2 neighbor support)
-          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },   // neighbors at L1: (0,1),(1,-1)
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },   // neighbors at L1: (1,0),(-1,1)
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },  // neighbors at L1: (0,1),(-1,0)
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },  // neighbors at L1: (-1,1),(0,-1)
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },  // neighbors at L1: (-1,0),(1,-1)
-          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },  // neighbors at L1: (0,-1),(1,0)
-          // OUTER (staircase to L3 and L4)
-          { q: 2, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },  // neighbor(1,0) ✓, diff 1→2 ✓
-          { q: 2, r: -2, maxLevel: 3, currentLevel: 3, revealed: true },  // neighbor(2,-1) ✓, diff 2→3 ✓
-          { q: 1, r: -2, maxLevel: 2, currentLevel: 2, revealed: true },  // neighbor(0,-1) ✓, neighbor(2,-2) ✓
-          // L4 STATION
-          { q: 2, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },   // neighbor(1,0) ✓, neighbor(2,-1) ✓
-          // Actually we need an L4. Let me add proper staircase:
-          // (1,0)L1 → (2,-1)L2 → (2,-2)L3 → (1,-2)L4
-          // Check: (2,-2)→(1,-2): neighbor(q-1,r)=(1,-2) ✓. diff 3→4 ✓.
-          // But (1,-2) needs to exist and be L4.
-          // Wait, I already have (1,-2) as L2. Change it:
-      ]
-    },
-    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
-    aiMode: 'none',
-    hooks: {
-      checkWinCondition: (state) => (state.player.coins ?? 0) >= 200,
-      checkLossCondition: (state) => {
-        if (Date.now() - state.sessionStartTime > 180000) return true; // 3 minutes
-        return isStranded(state);
-      }
-    }
-  },
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  3.3  THE CASCADE — Build Center to L3 (Support Rules)
-  // ═══════════════════════════════════════════════════════════════════
-  //
-  //  LESSON: Upgrade support requirements (2 neighbors at same level).
-  //
-  //  MAP: Center (0,0)L0 player. 6 neighbors at L0.
-  //  To upgrade center to L1: no support needed. Costs 1 mat.
-  //  To L2: need 2 neighbors at L1. Must upgrade 2 neighbors first.
-  //  To L3: need 2 neighbors at L2. Must upgrade 2 neighbors to L2 first.
-  //    But each neighbor upgrade to L2 also needs 2 of ITS neighbors at L1.
-  //
-  //  ECONOMY (Start: 3mv, 0cr, 0mat):
-  //  Need: 1mat(center L1) + 2mat(2 neighbors to L1) + 2mat(2 neighbors to L2)
-  //       + 1mat(center to L2) + 2mat(2 neighbors to L2→L3... wait, center to L3 needs
-  //       2 neighbors at L2, which we've done) + 1mat(center to L3) = 9 mat total.
-  //
-  //  Actually: center L0→L1 (1mat), 2 adj L0→L1 (2mat), center L1→L2 (1mat, needs 2 L1 neighbors ✓),
-  //  2 adj L1→L2 (2mat, each needs 2 L1 neighbors), center L2→L3 (1mat, needs 2 L2 neighbors ✓).
-  //  Total: 7 mat minimum.
-  //
-  //  DIG source: neighbors. DIG each L0→L-1: +1mat, +1mv.
-  //  6 neighbors × 1 dig = 6mat, +6mv. Need 7mat. Must dig 1 hex deeper.
-  //  DIG to -2: +1mat, +2mv. Total: 7mat, +8mv.
-  //
-  //  Upgrade income: L0→L1 = +10cr × 3 upgrades = 30cr.
-  //  L1→L2 = +20cr × 3 upgrades = 60cr. Total: 90cr.
-  //
-  //  Moves: 3(start) + 8(dig) + exchange from 90cr(18mv) = 29mv.
-  //  Spend: ~7 move actions (to/from dig sites) + 7 upgrade actions = 14 actions.
-  //  Surplus moves: ~15. Comfortable.
-  //
-  //  SUCCESS RATE: ~80%
-  //
-  {
-    id: '3.3',
-    title: 'Sim 3.3: The Cascade',
-    description: 'Protocol: Vertical Construction.\n\nObjective: Upgrade center hex to Level 3.\n\nRule: To upgrade to L2+, you need 2 neighbors at the SAME level.\n\nPlan: Dig neighbors for Material → Build L1 foundations → Build L2 supports → Crown the center L3.\n\nDifficulty: Material management. You have 0 to start.',
-    mapConfig: {
-      size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
-      customLayout: [
-          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          // 6 NEIGHBORS (all L0, diggable + upgradeable)
-          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-      ]
-    },
-    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
-    aiMode: 'none',
-    hooks: {
-      checkWinCondition: (state) => (state.grid[getHexKey(0, 0)]?.maxLevel ?? 0) >= 3,
-      checkLossCondition: (state) => isStranded(state)
-    }
-  },
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  3.4  THE GAUNTLET — Survive Entropy Spikes
-  // ═══════════════════════════════════════════════════════════════════
-  //
-  //  LESSON: Entropy management. Entropy spikes every 5 actions.
-  //
-  //  Win: Accumulate 100 credits AND survive 20+ actions.
-  //  Loss: Entropy hits 0.
-  //
-  //  ECONOMY (Start: 3mv, 0cr, 0mat):
-  //  Entropy starts at 30. Every 5 actions: −8 entropy.
-  //  After 20 actions: 4 spikes × 8 = 32 drain. But start at 30, so hits 0 at action 18!
-  //  Fix: start entropy at 50. After 20 actions: 50−32=18 remaining.
-  //  VOID restore SUCCESS: +3 entropy. If player restores 2 VOIDs: +6.
-  //
-  //  Income: L3 recovery stations (3 hexes). Each: +15cr single use.
-  //  3×15 = 45cr. Plus upgrade income from building: 2 L1→L2 = 40cr.
-  //  Plus recovery cycling on L2: +10cr per visit.
-  //  After 5 cycles: 50cr. Total: 45+40+50 = 135cr ≥ 100. ✓
-  //
-  //  Move budget: dig 3× on start (+6mv) + 3(start) = 9mv.
-  //  Plus exchange from credits earned early. Comfortable.
-  //
-  //  SUCCESS RATE: ~60% (entropy management is the challenge)
-  //
-  {
-    id: '3.4',
-    title: 'Sim 3.4: The Gauntlet',
-    description: 'CRITICAL: Entropy cascade detected.\n\nObjective: Accumulate 100 Credits AND survive 20 actions.\n\nHazard: Every 5 actions → Entropy Spike (−8 stability).\nStarting stability: 50. At 0 → sector collapses.\n\nStrategy: Earn fast, don\'t waste actions. Recovery stations are your lifeline.',
-    mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
-      customLayout: [
-          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          // RECOVERY STATIONS
-          { q: 1, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },  // +15cr, neighbor(0,0) diff 0→3... BLOCKED!
-          // Fix: staircase to L3.
-          // (0,0)L0 → (1,-1)L1 → (1,0)L2 → ... no. Let me make it work:
-          // Center L0, immediate ring L1, outer ring L2, then L3.
-          // INNER RING
-          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          // L2 STATIONS (neighbor pairs exist at L1)
-          { q: 1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },   // neighbors at L1: (1,-1),(0,1)? No. (1,0) neighbors: (0,0),(2,0),(1,-1),(0,1),(2,-1),(1,1). (1,-1) is L1 ✓.
-          { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },  // neighbors: (0,1)L1 ✓, (-1,0)L1 ✓
-          // L3 STATION
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true }, // neighbor(-1,0)L1 ✓, (0,-1)L1 ✓
-          // Hmm, I realize I'm overcomplicating. Let me just provide a clean flower with accessible levels.
-      ]
-    },
-    startState: { credits: 0, moves: 3, rank: 2, materials: 0, initialEntropy: 50 },
+    goalText: 'Activate the Monument',
     aiMode: 'none',
     hooks: {
       onAfterAction: (state) => {
-        const actionCount = state.currentTurn ?? 0;
-        if (actionCount > 0 && actionCount % 5 === 0) {
-          state.entropy.current = Math.max(0, state.entropy.current - 8);
+        // Entropy spikes
+        const turn = state.currentTurn ?? 0;
+        if (turn > 0 && turn % 20 === 0) {
+          state.entropy.current = Math.max(0, state.entropy.current - 10);
         }
-        return state;
+        // Obelisk at (-1,2): reveals slot 0
+        if (state.player.q === -1 && state.player.r === 2) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false];
+          if (!state.monumentRevealedSlots[0]) {
+            state.monumentRevealedSlots = [true];
+          }
+        }
       },
-      checkWinCondition: (state) => {
-        const coins = state.player.coins ?? 0;
-        const turns = state.currentTurn ?? 0;
-        return coins >= 100 && turns >= 20;
-      },
+      checkWinCondition: () => false, // Victory set by ACTIVATE_MONUMENT
       checkLossCondition: (state) => {
-        if (state.entropy.current <= 0) return true;
+        if (Math.floor((state.currentTurn ?? 0) / 20) >= 2) return true;
         return isStranded(state);
       }
     }
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  //  3.5  THE HEIST — Collect Items vs Patrol Bot
+  //  3.2  TWIN BEACONS — 2 slots, 2 obelisks, Y-shape
   // ═══════════════════════════════════════════════════════════════════
   //
-  //  LESSON: Item collection under bot pressure. Route planning.
+  //  LESSON: Two obelisks, each reveals one slot. Choose which to visit.
   //
-  //  Win: Collect 3 items + activate Monument.
-  //  Bot patrols a fixed route (doesn't hunt).
+  //  MAP: Y-shape. Both L3 obelisks are mandatory stepping stones from L2 to L4.
+  //  Player MUST go through at least one obelisk to reach monument.
+  //  The second obelisk is a costly detour (~7mv extra).
   //
-  //  ECONOMY (Start: 3mv, 0cr, 0mat):
-  //  3 dig sites along edges. DIG ×3 per site: +6mv, ~0.9 items each.
-  //  9 digs total: +18mv, ~2.7 items. Need luck or 12 digs for 3 items.
-  //  Path to monument after collecting: ~6mv.
-  //  Budget: 3+18=21mv. Minus travel(~8mv) = 13 surplus. Comfortable.
-  //  Must avoid bot patrol timing.
+  //  Start: (0,4)L0 → (0,3)L1 → (0,2)L2 → branch:
+  //    Left:  (-1,2)L2 → (-1,1)L3 OBELISK_1 → (0,1)L4
+  //    Right: (1,2)L2  → (1,1)L3  OBELISK_2 → (0,1)L4
+  //  Junction: (0,1)L4 → (0,0)L5 MONUMENT
   //
-  //  SUCCESS RATE: ~60% (item RNG + bot avoidance)
+  //  One-obelisk path: 1+2+2+3+4+5 = 17mv
+  //  Both obelisks:    1+2+2+3+4+3+4+5 = 24mv (backtrack through (0,1))
+  //  Budget: 22mv + 10cr(=2mv) = 24mv — both obelisks achievable!
+  //
+  //  TWO STRIKES: entropy=20, interval=20, damage=10 → loss at turn 40.
+  //
+  {
+    id: '3.2',
+    title: 'Twin Beacons',
+    description: 'Two obelisks flank the summit. Each holds half the inscription.\n\nObjective: Activate the 2-slot Monument.\n\nPath: The route splits. Each branch leads through one obelisk. Visit both for full information — but it costs moves.\n\nStrategy: Can you infer the second slot from your inventory alone?',
+    mapConfig: {
+      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
+      customLayout: [
+        // STEM
+        { q: 0, r: 4, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 0, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        // LEFT BRANCH
+        { q: -1, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: -1, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },  // OBELISK_1: slot 0
+        // RIGHT BRANCH
+        { q: 1, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 1, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },   // OBELISK_2: slot 1
+        // JUNCTION AND SUMMIT
+        { q: 0, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
+        // DECORATIVE
+        { q: -2, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 2, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 0, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
+      ]
+    },
+    startState: {
+      credits: 10, moves: 22, rank: 5, materials: 0, initialEntropy: 20,
+      startInventory: ['data_disc', 'hornet_drill', 'cargo_prism', 'emergency_gen', 'rusted_scanner']
+    },
+    goalText: 'Activate the 2-slot Monument',
+    aiMode: 'none',
+    hooks: {
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        if (turn > 0 && turn % 20 === 0) {
+          state.entropy.current = Math.max(0, state.entropy.current - 10);
+        }
+        // OBELISK_1 at (-1,1): reveals slot 0 (hornet_drill)
+        if (state.player.q === -1 && state.player.r === 1) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false, false];
+          if (!state.monumentRevealedSlots[0]) {
+            state.monumentRevealedSlots = [true, state.monumentRevealedSlots[1] ?? false];
+          }
+        }
+        // OBELISK_2 at (1,1): reveals slot 1 (emergency_gen)
+        if (state.player.q === 1 && state.player.r === 1) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false, false];
+          if (!state.monumentRevealedSlots[1]) {
+            state.monumentRevealedSlots = [state.monumentRevealedSlots[0] ?? false, true];
+          }
+        }
+      },
+      checkWinCondition: () => false,
+      checkLossCondition: (state) => {
+        if (Math.floor((state.currentTurn ?? 0) / 20) >= 2) return true;
+        return isStranded(state);
+      }
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  3.3  ECLIPSE DEPTH — rarity slot, obelisk on mandatory path, VOID walls
+  // ═══════════════════════════════════════════════════════════════════
+  //
+  //  LESSON: Rarity requirements (UNCOMMON). Obelisk on the only valid path.
+  //
+  //  MAP: Linear path. VOID hexes block both side routes.
+  //  Obelisk at L3 is the mandatory stepping stone from L2 to L4.
+  //  Player ALWAYS visits the obelisk — it reveals the UNCOMMON rarity requirement.
+  //
+  //  Path: (0,4)L0 → (0,3)L1 → (0,2)L2 → (0,1)L3 OBELISK → (0,0)L4 → (0,-1)L5 MONUMENT
+  //  Cost: 1+2+3+4+5 = 15mv
+  //
+  //  VOID walls: (-1,2) and (1,2) block side access — only central path exists.
+  //
+  //  START INVENTORY: fuel_cell (COMMON), cargo_prism (UNCOMMON ← correct),
+  //                   data_disc (COMMON)
+  //  Obelisk reveals: UNCOMMON rarity badge. Player sees cargo_prism matches.
+  //
+  //  TWO STRIKES: entropy=20, interval=18, damage=10 → loss at turn 36.
+  //
+  {
+    id: '3.3',
+    title: 'Eclipse Depth',
+    description: 'The inscription demands quality, not identity.\n\nObjective: Activate the Monument with an UNCOMMON item.\n\nThe obelisk on your path reveals the rarity requirement. A common item will not suffice.\n\nVoid walls close both flanks. There is only one way forward.',
+    mapConfig: {
+      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
+      customLayout: [
+        // MAIN PATH
+        { q: 0, r: 4, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 0, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 0, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },  // OBELISK: slot 0 = UNCOMMON
+        { q: 0, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: 0, r: -1, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
+        // VOID WALLS (block flanks)
+        { q: -1, r: 2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
+        { q: 1, r: 2, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
+        { q: -1, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
+        { q: 1, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
+        // DECORATIVE DEPTH
+        { q: -1, r: 3, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 1, r: 3, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+      ]
+    },
+    startState: {
+      credits: 0, moves: 20, rank: 5, materials: 0, initialEntropy: 20,
+      startInventory: ['fuel_cell', 'cargo_prism', 'data_disc']
+    },
+    goalText: 'Activate the Monument (UNCOMMON item)',
+    aiMode: 'none',
+    hooks: {
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        if (turn > 0 && turn % 18 === 0) {
+          state.entropy.current = Math.max(0, state.entropy.current - 10);
+        }
+        // OBELISK at (0,1): reveals slot 0 (UNCOMMON)
+        if (state.player.q === 0 && state.player.r === 1) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false];
+          if (!state.monumentRevealedSlots[0]) {
+            state.monumentRevealedSlots = [true];
+          }
+        }
+      },
+      checkWinCondition: () => false,
+      checkLossCondition: (state) => {
+        if (Math.floor((state.currentTurn ?? 0) / 18) >= 2) return true;
+        return isStranded(state);
+      }
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  3.4  ENTROPIC DISPATCH — 2 slots, 2 obelisks, TIGHT timer
+  // ═══════════════════════════════════════════════════════════════════
+  //
+  //  LESSON: Time pressure. Choose one obelisk branch — can't visit both.
+  //
+  //  MAP: Fork from start. Two symmetric branches, each with one obelisk.
+  //  Both paths converge at (0,1)L4 → (0,0)L5 MONUMENT.
+  //
+  //  Left:  (0,3)L0 → (-1,3)L1 → (-1,2)L2 → (-1,1)L3 OBELISK_1 → (0,1)L4
+  //  Right: (0,3)L0 → (1,3)L1  → (1,2)L2  → (1,1)L3  OBELISK_2 → (0,1)L4
+  //
+  //  One-path cost: 1+2+3+4+5 = 15mv. Budget: 16mv. 1 spare.
+  //  Two-path cost: ~22mv. IMPOSSIBLE within budget — player must choose.
+  //
+  //  TWO STRIKES: entropy=50, interval=10, damage=25 → loss at turn 20!
+  //  (Only 19 turns. Player has NO room for detours.)
+  //
+  //  NOTE: reality_patch is slot 0, any RARE is slot 1.
+  //  Left obelisk reveals slot 0. Right obelisk reveals slot 1.
+  //  Player has both — the challenge is EFFICIENCY, not item discovery.
+  //
+  {
+    id: '3.4',
+    title: 'Entropic Dispatch',
+    description: 'Stability is collapsing. You have moments.\n\nObjective: Activate the 2-slot Monument before the second event.\n\nHazard: A stability event occurs every 10 actions. Two events = mission failure.\n\nDecision: Two obelisks flank the path. You can only reach one. Choose wisely — or trust your inventory.',
+    mapConfig: {
+      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
+      customLayout: [
+        // START
+        { q: 0, r: 3, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        // LEFT BRANCH
+        { q: -1, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: -1, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: -1, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },  // OBELISK_1: slot 0
+        // RIGHT BRANCH
+        { q: 1, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 1, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 1, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },   // OBELISK_2: slot 1
+        // CONVERGENCE
+        { q: 0, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
+        // WALLS (block shortcuts)
+        { q: 0, r: 2, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: -2, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 2, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+      ]
+    },
+    startState: {
+      credits: 5, moves: 16, rank: 5, materials: 0, initialEntropy: 50,
+      startInventory: ['reality_patch', 'cortex_overclocker', 'fuel_cell', 'architect_nanites']
+    },
+    goalText: 'Activate the Monument (fast)',
+    aiMode: 'none',
+    hooks: {
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        if (turn > 0 && turn % 10 === 0) {
+          state.entropy.current = Math.max(0, state.entropy.current - 25);
+        }
+        // OBELISK_1 at (-1,1): reveals slot 0 (reality_patch)
+        if (state.player.q === -1 && state.player.r === 1) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false, false];
+          if (!state.monumentRevealedSlots[0]) {
+            state.monumentRevealedSlots = [true, state.monumentRevealedSlots[1] ?? false];
+          }
+        }
+        // OBELISK_2 at (1,1): reveals slot 1 (RARE)
+        if (state.player.q === 1 && state.player.r === 1) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false, false];
+          if (!state.monumentRevealedSlots[1]) {
+            state.monumentRevealedSlots = [state.monumentRevealedSlots[0] ?? false, true];
+          }
+        }
+      },
+      checkWinCondition: () => false,
+      checkLossCondition: (state) => {
+        if (Math.floor((state.currentTurn ?? 0) / 10) >= 2) return true;
+        return isStranded(state);
+      }
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  3.5  GUARDIAN'S KEEP — RARE slot, DESTROY bot guards obelisk
+  // ═══════════════════════════════════════════════════════════════════
+  //
+  //  LESSON: Bot pressure. Obelisk near hostile territory.
+  //
+  //  MAP: Main path up the center. Obelisk branches off at junction L3.
+  //  Bot spawns near the junction — player must time visit to dodge it.
+  //
+  //  Path (no obelisk): (0,4)L0→(0,3)L1→(0,2)L2→(0,1)L3→(0,0)L4→(0,-1)L5 = 15mv
+  //  Obelisk at (-1,1)L3: from (0,1)L3, costs 3mv there + 3mv back + continue = +6mv
+  //  Budget: 20mv + 10cr(=2mv) = 22mv. Obelisk path = 21mv. Feasible.
+  //
+  //  Bot at (1,1)L1: patrols near junction, threatens player approaching obelisk.
+  //
+  //  TWO STRIKES: entropy=30, interval=15, damage=15 → loss at turn 30.
   //
   {
     id: '3.5',
-    title: 'Sim 3.5: The Heist',
-    description: 'STEALTH MISSION: Item Recovery.\n\nObjective: Collect 3 items and activate the Monument.\n\nHazard: A patrol bot circles the perimeter. Avoid its path.\n\nMethod: DIG sites along the edges for items. Deep digs have better odds.\nPlan your route around the bot\'s patrol cycle.',
+    title: "Guardian's Keep",
+    description: 'Something watches the inscription.\n\nObjective: Activate the Monument with a RARE item.\n\nThreat: A guardian bot patrols the junction. The obelisk reveals which RARE item is needed — but reaching it is dangerous.\n\nStrategy: Can you recognize the RARE item you carry without visiting the obelisk?',
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
+      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 4, currentLevel: 4, structureType: 'MONUMENT', revealed: true },
-          { q: 0, r: 3, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          { q: 3, r: 0, maxLevel: 1, currentLevel: 1, revealed: true }, // Bot spawn
-
-          // STAIRCASE to monument (L0 -> L1 -> L2 -> L3 -> L4)
-          { q: 0, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 0, r: 1, maxLevel: 3, currentLevel: 3, revealed: true },
-
-          // DIG SITES (3 locations, L0)
-          { q: 1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-
-          // BOT PATROL TERRITORY
-          { q: 2, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 2, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 3, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 2, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-
-          // WALLS
-          { q: 1, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: -1, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: 0, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
+        // MAIN PATH
+        { q: 0, r: 4, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 0, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 0, r: 1, maxLevel: 3, currentLevel: 3, revealed: true },
+        { q: 0, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: 0, r: -1, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
+        // OBELISK BRANCH (off junction at (0,1)L3)
+        { q: -1, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },  // OBELISK: slot 0 = RARE
+        // BOT TERRITORY
+        { q: 1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 1, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 1, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 2, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
+        // WALLS
+        { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: -1, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: -1, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
       ]
     },
     aiMode: 'basic',
-    startState: { credits: 0, moves: 3, rank: 1, materials: 0 },
+    botObjective: 'DESTROY_PLAYER',
+    botSpawnPoints: [{ q: 1, r: 1 }],
+    startState: {
+      credits: 10, moves: 20, rank: 5, materials: 0, initialEntropy: 30,
+      startInventory: ['fuel_cell', 'architect_nanites', 'data_disc']
+    },
+    goalText: 'Activate the Monument (RARE item)',
     hooks: {
-      checkWinCondition: (state) => {
-        const onMon = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
-        const items = state.player.inventory?.length ?? 0;
-        return !!(onMon && items >= 3);
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        if (turn > 0 && turn % 15 === 0) {
+          state.entropy.current = Math.max(0, state.entropy.current - 15);
+        }
+        // OBELISK at (-1,1): reveals slot 0 (RARE)
+        if (state.player.q === -1 && state.player.r === 1) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false];
+          if (!state.monumentRevealedSlots[0]) {
+            state.monumentRevealedSlots = [true];
+          }
+        }
       },
+      checkWinCondition: () => false,
       checkLossCondition: (state) => {
-        if (state.bots?.some(b => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT')) return true;
+        if (Math.floor((state.currentTurn ?? 0) / 15) >= 2) return true;
         return isStranded(state);
       }
     }
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  //  3.6  THE MAZE OF ECHOES — Multi-Objective
+  //  3.6  THREE WHISPERS — 1 slot ONE_OF, 3 obelisks
   // ═══════════════════════════════════════════════════════════════════
   //
-  //  Win: Own 3+ hexes at L2+ AND accumulate 150 credits AND stand on Monument.
+  //  LESSON: ONE_OF mechanic. Any of 3 fixed items activates the slot.
+  //          Three obelisks each "whisper" the same secret: one slot that
+  //          accepts cargo_prism, hornet_drill, OR emergency_gen.
   //
-  //  ECONOMY (Start: 3mv, 0cr, 0mat):
-  //  DIG for materials (6 hexes available). 6 digs: +6mat, +6mv.
-  //  Upgrade 3 hexes L0→L1→L2: 6mat. Income: 3×(10+20) = 90cr.
-  //  Recovery on L2 hexes: 3×10cr = 30cr. Total: 120cr.
-  //  Need 150cr. DIG deeper for coin loot + more recovery cycles.
-  //  2 extra recovery cycles: +20cr. Total: 140cr. Close.
-  //  Coin loot from digs: ~15cr expected. Total: ~155cr ≥ 150. ✓
+  //  MAP: Central junction with 3 obelisk branches + monument above.
+  //  One obelisk (center) is on the mandatory path.
+  //  Two others are optional side branches.
   //
-  //  Path to Monument (L2): need staircase. If player upgraded neighbors to L2,
-  //  can reach Monument directly.
+  //  (0,4)L0 → (0,3)L1 → (0,2)L2 → (0,1)L3 OBELISK_3 → (0,0)L4 → (0,-1)L5 MONUMENT
+  //  Branch left:  (0,2)L2 → (-1,2)L2 → (-1,1)L3 OBELISK_1
+  //  Branch right: (0,3)L1 → (1,2)L2  → (1,1)L3  OBELISK_2  (1,2 = neighbor of (0,3) ✓)
   //
-  //  SUCCESS RATE: ~55% (multi-objective + tight credits)
+  //  Mandatory obelisk (center, at (0,1)) always reveals slot 0.
+  //  Side obelisks give the same info — they're "echoes" of the same inscription.
+  //
+  //  START INVENTORY: rusted_scanner (COMMON), cargo_prism (UNCOMMON ← one of 3),
+  //                   reality_patch (COMMON), fuel_cell (COMMON)
+  //
+  //  TWO STRIKES: entropy=20, interval=20, damage=10 → loss at turn 40.
   //
   {
     id: '3.6',
-    title: 'Sim 3.6: The Maze of Echoes',
-    description: 'FINAL PUZZLE: Multi-objective Mastery.\n\nAchieve ALL simultaneously:\n  1. Own 3+ hexes at Level 2+\n  2. Accumulate 150+ Credits\n  3. Stand on the Monument\n\nPlan: Dig→Build→Recover→Advance. Every resource matters.',
+    title: 'Three Whispers',
+    description: 'The monument speaks in three voices — all saying the same thing.\n\nObjective: Activate the Monument with one of three possible items.\n\nThree obelisks have carved the same inscription: the slot accepts any of 3 specific UNCOMMON items. Find even one to win.\n\nThe center obelisk is unavoidable. The others reveal only echoes.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 2, currentLevel: 2, structureType: 'MONUMENT', revealed: true },
-          { q: 0, r: 2, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          // BUILDABLE AREA (flower around center, all L0)
-          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true }, // stepping stone
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          // EXTRA (near player start)
-          { q: 1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          // STAIRCASE: (0,2)L0→(0,1)L1→(0,0)L2 monument. Diff: 0→1→2 all ≤1 ✓
-          // WALLS
-          { q: -2, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 2, r: -1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: -1, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
+        // MAIN PATH
+        { q: 0, r: 4, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 0, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 0, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },  // OBELISK_3 (center, mandatory)
+        { q: 0, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: 0, r: -1, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
+        // LEFT OBELISK BRANCH
+        { q: -1, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: -1, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },  // OBELISK_1
+        // RIGHT OBELISK BRANCH (from (0,3)L1 → (1,2)L2 → (1,1)L3)
+        { q: 1, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 1, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },   // OBELISK_2
+        // WALLS
+        { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: -2, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 2, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 0, r: -2, maxLevel: -2, currentLevel: -2, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 3, rank: 1, materials: 0 },
-    aiMode: 'basic',
-    botRoutes: [
-        [{q: -1, r: 0}, {q: -1, r: 1}, {q: 0, r: 1}, {q: 1, r: 0}, {q: 1, r: -1}, {q: 0, r: -1}]
-    ],
+    startState: {
+      credits: 5, moves: 20, rank: 5, materials: 0, initialEntropy: 20,
+      startInventory: ['rusted_scanner', 'cargo_prism', 'reality_patch', 'fuel_cell']
+    },
+    goalText: 'Activate the Monument (1 of 3 items)',
+    aiMode: 'none',
     hooks: {
-      checkWinCondition: (state) => {
-        const onMon = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
-        const l2count = Object.values(state.grid).filter(
-          (h: any) => h.ownerId === 'player-1' && h.maxLevel >= 2
-        ).length;
-        const coins = state.player.coins ?? 0;
-        return !!(onMon && l2count >= 3 && coins >= 150);
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        if (turn > 0 && turn % 20 === 0) {
+          state.entropy.current = Math.max(0, state.entropy.current - 10);
+        }
+        // Any obelisk visit reveals slot 0 (ONE_OF — all 3 reveal the same slot)
+        const px = state.player.q, py = state.player.r;
+        const isOnObelisk = (px === 0 && py === 1) || (px === -1 && py === 1) || (px === 1 && py === 1);
+        if (isOnObelisk) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false];
+          if (!state.monumentRevealedSlots[0]) {
+            state.monumentRevealedSlots = [true];
+          }
+        }
       },
+      checkWinCondition: () => false,
       checkLossCondition: (state) => {
-        // Loss if bot collides with player
-        if (state.bots?.some(b => b.q === state.player.q && b.r === state.player.r)) return true;
+        if (Math.floor((state.currentTurn ?? 0) / 20) >= 2) return true;
         return isStranded(state);
       }
     }
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  //  3.7  TWIN PROTOCOL — Choose Your Path
+  //  3.7  ASCENDANCY — 2 slots, COMPETE bot, race to monument
   // ═══════════════════════════════════════════════════════════════════
   //
-  //  Win: EITHER (4 hexes at L3+) OR (accumulate 250 credits).
-  //  Two strategies, player picks one.
+  //  LESSON: Two-slot monument under competitive pressure.
   //
-  //  ENGINEER PATH (4×L3):
-  //  Need: 4 hexes → L1→L2→L3. Per hex: 3 mat (L1+L2+L3) + 2 neighbors at each level.
-  //  Total: ~16 mat. DIG 16× = 16 actions + ~36 extra moves.
-  //  Upgrade 12 times (4×3 levels) = 12 actions + income 4×(10+20+40)=280cr.
-  //  Plus recovery cycling for moves. ~35 actions total.
+  //  MAP: Same Y-shape as 3.2 but with a COMPETE bot racing for rank.
+  //  Bot won't activate monument but adds movement pressure and entropy noise.
   //
-  //  ECONOMIST PATH (250cr):
-  //  Recovery farm on L4 station (3×20cr=60cr per visit, 15s cooldown).
-  //  Plus upgrade income. ~30 actions.
+  //  Slots: hornet_drill (slot 0) + matter_prism (slot 1).
+  //  Both obelisks optional — player has both items in inventory.
   //
-  //  ECONOMY (Start: 3mv, 0cr, 0mat):
-  //  DIG to bootstrap in both paths.
-  //
-  //  SUCCESS RATE: ~65% (clear dual-path design)
+  //  TWO STRIKES: entropy=30, interval=15, damage=15 → loss at turn 30.
+  //  Tight: 29 turns to visit 1-2 obelisks + reach monument + activate.
   //
   {
     id: '3.7',
-    title: 'Sim 3.7: Twin Protocol',
-    description: 'DUAL OBJECTIVE: Choose your victory.\n\nPath A (Engineer): Own 4 hexes at Level 3+.\nPath B (Economist): Accumulate 250 Credits.\n\nBoth paths start from scratch. DIG for materials, then commit to your strategy.\n\nTip: You can switch mid-game, but focus wins faster.',
+    title: 'Ascendancy',
+    description: 'Another agent races for the summit.\n\nObjective: Activate the 2-slot Monument before entropy fails.\n\nCompetition: A rival agent builds toward rank, adding pressure. They won\'t activate the monument — but they consume time.\n\nTwo obelisks hold the inscription. Can you reach both within 29 actions?',
     mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
+      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          // LARGE BUILDABLE AREA
-          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          // OUTER RING (more building space)
-          { q: 2, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -2, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: -2, maxLevel: 0, currentLevel: 0, revealed: true },
-          // L4 STATION (for economist path) — needs staircase
-          // Via: (2,-1)→(2,-2)L1→... too far. Just include pre-built L4.
-          // Staircase: (1,-1)L0 → (2,-1)L0 → (2,-2)L1 → (3,-2)L2 → (3,-3)L3 → (2,-3)L4
-          // Too many hexes. Instead: one L4 hex adjacent to outer ring with staircase.
-          // Add: (2,-2) pre-built at L4 with staircase (2,-1)L0→... no, staircase diff.
-          // Simpler: player builds their own L4 station from scratch.
+        // STEM
+        { q: 0, r: 4, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 0, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        // LEFT BRANCH
+        { q: -1, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: -1, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },  // OBELISK_1: slot 0
+        // RIGHT BRANCH
+        { q: 1, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 1, r: 1, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },   // OBELISK_2: slot 1
+        // JUNCTION AND SUMMIT
+        { q: 0, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
+        // BOT TERRITORY (far side, buildable area)
+        { q: 2, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 3, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 2, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 3, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 3, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+        // WALLS
+        { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 0, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 3, rank: 3, materials: 0 },
-    aiMode: 'none',
+    aiMode: 'basic',
+    botObjective: 'COMPETE_RANK',
+    botSpawnPoints: [{ q: 3, r: 3 }],
+    startState: {
+      credits: 10, moves: 22, rank: 5, materials: 0, initialEntropy: 30,
+      startInventory: ['rusted_scanner', 'hornet_drill', 'matter_prism', 'fuel_cell']
+    },
+    goalText: 'Activate the 2-slot Monument',
     hooks: {
-      checkWinCondition: (state) => {
-        const l3count = Object.values(state.grid).filter(
-          (h: any) => h.ownerId === 'player-1' && h.maxLevel >= 3
-        ).length;
-        const coins = state.player.coins ?? 0;
-        return l3count >= 4 || coins >= 250;
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        if (turn > 0 && turn % 15 === 0) {
+          state.entropy.current = Math.max(0, state.entropy.current - 15);
+        }
+        // OBELISK_1 at (-1,1): reveals slot 0 (hornet_drill)
+        if (state.player.q === -1 && state.player.r === 1) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false, false];
+          if (!state.monumentRevealedSlots[0]) {
+            state.monumentRevealedSlots = [true, state.monumentRevealedSlots[1] ?? false];
+          }
+        }
+        // OBELISK_2 at (1,1): reveals slot 1 (matter_prism)
+        if (state.player.q === 1 && state.player.r === 1) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false, false];
+          if (!state.monumentRevealedSlots[1]) {
+            state.monumentRevealedSlots = [state.monumentRevealedSlots[0] ?? false, true];
+          }
+        }
       },
-      checkLossCondition: (state) => isStranded(state)
+      checkWinCondition: () => false,
+      checkLossCondition: (state) => {
+        if (Math.floor((state.currentTurn ?? 0) / 15) >= 2) return true;
+        return isStranded(state);
+      }
     }
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  //  3.8  FRACTURED SUPPLY LINE — Final Exam (All Mechanics)
+  //  3.8  THE ARCHIVE — 3 slots, 3 obelisks, VOID maze, DESTROY bot
   // ═══════════════════════════════════════════════════════════════════
   //
-  //  Win: Own 2 hexes at L3+ AND 200 credits AND stand on Monument AND ≥2 items.
+  //  LESSON: Final exam. 3-slot monument, all obelisks nearly mandatory,
+  //          hostile bot, VOID blocking, extreme time pressure.
   //
-  //  ECONOMY (Start: 3mv, 0cr, 0mat):
-  //  Must DIG for everything. ~25-30 actions expected.
-  //  DIG 10×: +10mat, +~15mv, ~3 items expected.
-  //  Upgrade 6×: −6mat, +income ~130cr.
-  //  Recovery cycling: ~70cr.
-  //  Total: ~200cr. Need 2 items from 10 digs = ~3 expected. ✓
-  //  Path to monument: ~6mv.
-  //  Turn limit: 45 to prevent infinite farming.
+  //  MAP:
+  //  Start → L1 → L2(junction) → L3(center obelisk OB1) [mandatory] → L4 → L5 MONUMENT
+  //  From L2 junction: branch to OB2 at (-1,2)L3 and OB3 at (1,2)L3
+  //  From OB2/OB3: reach (0,1)L4 via separate paths
+  //  VOID at (-1,1) blocks shortcut left of center
   //
-  //  SUCCESS RATE: ~50% (final exam, all mechanics tested)
+  //  Visiting all 3 obelisks:
+  //  (0,5)→(0,4)→(0,3)→(1,2)[ob3]→(0,2)[ob1]→(-1,2)[ob2]→(0,1)→(0,0) = 1+2+3+3+3+4+5=21mv
+  //  Mandatory OB1 path (skip others): 1+2+3+4+5=15mv
+  //
+  //  Budget: 22mv + 15cr(=3mv) = 25mv. Full obelisk run: 21mv → 4 spare ✓
+  //  But 23-turn limit means visiting all 3 costs ~21 turns + activate = 22 turns. BARELY OK!
+  //
+  //  TWO STRIKES: entropy=40, interval=12, damage=20 → loss at turn 24.
   //
   {
     id: '3.8',
-    title: 'Sim 3.8: Fractured Supply Line',
-    description: 'FINAL EXAM: All Systems Required.\n\nAchieve ALL:\n  1. Own 2+ hexes at Level 3+\n  2. 200+ Credits\n  3. Stand on Monument with 2+ items\n\nTurn limit: 45 actions.\n\nThis is everything you\'ve learned. Dig, build, recover, explore.',
+    title: 'The Archive',
+    description: 'Final entry. Three inscriptions. One monument.\n\nObjective: Activate the 3-slot Monument.\n\nThree obelisks hold three slot revelations. The central one is unavoidable. Side obelisks require detours — but without them, you guess blind.\n\nA hostile agent patrols the upper levels. You have 23 actions.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 2, currentLevel: 2, structureType: 'MONUMENT', revealed: true },
-          { q: 0, r: 3, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          // STAIRCASE
-          { q: 0, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          // BUILDABLE AREA (large L0 field)
-          { q: 1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 2, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -2, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          // DIG SITES (deeper terrain for loot)
-          { q: 2, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -2, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          // WALLS
-          { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 0, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
+        // MAIN PATH
+        { q: 0, r: 5, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 0, r: 4, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 3, maxLevel: 2, currentLevel: 2, revealed: true },
+        // CENTER OBELISK (mandatory L3 stepping stone)
+        { q: 0, r: 2, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },   // OB1: slot 0
+        // SIDE OBELISK 2 (branch from (0,3)L2 via (-1,3)L2)
+        { q: -1, r: 3, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: -1, r: 2, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },  // OB2: slot 1
+        // SIDE OBELISK 3 (branch from (0,3)L2 via (1,3)L2... but (1,3) is neighbor of (0,4)L1 ✓)
+        // Actually (1,2) is neighbor of (0,3)L2: neighbors of (0,3) include (1,2)?
+        // neighbors of (0,3): (1,3),(-1,3),(0,4),(0,2),(1,2),(-1,4). YES (1,2) ✓ diff|2-3|=1 ✓
+        { q: 1, r: 2, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },   // OB3: slot 2
+        // JUNCTION (accessible from OB1, OB2)
+        { q: 0, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
+        { q: 0, r: 0, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true },
+        // VOID (blocks shortcut below OB2)
+        { q: -1, r: 1, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
+        // BOT TERRITORY
+        { q: 2, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 2, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+        // WALLS/PITS
+        { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
+        { q: -2, r: 3, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 2, r: 3, maxLevel: -2, currentLevel: -2, revealed: true },
+        { q: 0, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
-    aiMode: 'none',
+    aiMode: 'basic',
+    botObjective: 'DESTROY_PLAYER',
+    botSpawnPoints: [{ q: 2, r: 2 }],
+    startState: {
+      credits: 15, moves: 22, rank: 5, materials: 0, initialEntropy: 40,
+      startInventory: ['cargo_prism', 'stability_scanner', 'matter_prism', 'fuel_cell', 'data_disc']
+    },
+    goalText: 'Activate the 3-slot Monument',
     hooks: {
-      checkWinCondition: (state) => {
-        const onMon = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
-        const l3count = Object.values(state.grid).filter(
-          (h: any) => h.ownerId === 'player-1' && h.maxLevel >= 3
-        ).length;
-        const coins = state.player.coins ?? 0;
-        const items = state.player.inventory?.length ?? 0;
-        return !!(onMon && l3count >= 2 && coins >= 200 && items >= 2);
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        if (turn > 0 && turn % 12 === 0) {
+          state.entropy.current = Math.max(0, state.entropy.current - 20);
+        }
+        // OB1 at (0,2): slot 0 (cargo_prism = UNCOMMON)
+        if (state.player.q === 0 && state.player.r === 2) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false, false, false];
+          if (!state.monumentRevealedSlots[0]) {
+            state.monumentRevealedSlots = [true, state.monumentRevealedSlots[1] ?? false, state.monumentRevealedSlots[2] ?? false];
+          }
+        }
+        // OB2 at (-1,2): slot 1 (stability_scanner = UNCOMMON)
+        if (state.player.q === -1 && state.player.r === 2) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false, false, false];
+          if (!state.monumentRevealedSlots[1]) {
+            state.monumentRevealedSlots = [state.monumentRevealedSlots[0] ?? false, true, state.monumentRevealedSlots[2] ?? false];
+          }
+        }
+        // OB3 at (1,2): slot 2 (matter_prism = RARE)
+        if (state.player.q === 1 && state.player.r === 2) {
+          if (!state.monumentRevealedSlots) state.monumentRevealedSlots = [false, false, false];
+          if (!state.monumentRevealedSlots[2]) {
+            state.monumentRevealedSlots = [state.monumentRevealedSlots[0] ?? false, state.monumentRevealedSlots[1] ?? false, true];
+          }
+        }
       },
+      checkWinCondition: () => false,
       checkLossCondition: (state) => {
-        if ((state.currentTurn ?? 0) > 45) return true;
+        if (Math.floor((state.currentTurn ?? 0) / 12) >= 2) return true;
         return isStranded(state);
       }
     }
