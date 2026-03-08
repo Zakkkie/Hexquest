@@ -22,7 +22,16 @@ interface GameDialogsProps {
 const GameDialogs: React.FC<GameDialogsProps> = ({ 
     activeModal, closeModal, helpTopic, closeHelp, inspectedItem, closeInspect, victoryStage, setVictoryStage
 }) => {
-    const session = useGameStore(state => state.session);
+    const gameStatus = useGameStore(state => state.session?.gameStatus);
+    const player = useGameStore(state => state.session?.player);
+    const grid = useGameStore(state => state.session?.grid);
+    const bots = useGameStore(state => state.session?.bots);
+    const winCondition = useGameStore(state => state.session?.winCondition);
+    const difficulty = useGameStore(state => state.session?.difficulty);
+    const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
+    const messageLog = useGameStore(state => state.session?.messageLog);
+    const botActivityLog = useGameStore(state => state.session?.botActivityLog);
+    
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
     const user = useGameStore(state => state.user);
@@ -50,12 +59,6 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const restoreVoidHex = useGameStore(state => state.restoreVoidHex);
 
     const t = TEXT[language].HUD;
-    const player = session?.player;
-    const bots = session?.bots;
-    const winCondition = session?.winCondition;
-    const activeLevelConfig = session?.activeLevelConfig;
-    const gameStatus = session?.gameStatus;
-    const difficulty = session?.difficulty;
 
     // --- LOGIC ---
 

@@ -422,7 +422,6 @@ export interface SessionState {
   gameStatus: 'BRIEFING' | 'PLAYING' | 'VICTORY' | 'DEFEAT';
   messageLog: LogEntry[]; 
   botActivityLog: BotLogEntry[]; 
-  fullBotHistory: BotLogEntry[]; 
   lastBotActionTime: number; 
   isPlayerGrowing: boolean; 
   playerGrowthIntent: 'RECOVER' | 'UPGRADE' | 'DIG' | null; 

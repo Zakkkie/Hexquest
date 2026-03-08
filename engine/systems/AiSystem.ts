@@ -5,6 +5,7 @@ import { calculateBotMove } from '../../bot/calculateBotMove';
 import { TransactionQueue } from '../../services/transactionQueue';
 import { GAME_CONFIG } from '../../rules/config';
 import { getHexKey } from '../../services/hexUtils';
+import { historyService } from '../../services/historyService';
 
 export class AiSystem implements System {
   private transactionQueue: TransactionQueue;
@@ -100,7 +101,7 @@ export class AiSystem implements System {
 
     state.botActivityLog.unshift(logEntry);
     if (state.botActivityLog.length > 60) state.botActivityLog.pop();
-    state.fullBotHistory.push(logEntry);
+    historyService.addEntry(logEntry);
 
     // ENQUEUE ACTION instead of applying immediately
     if (aiResult.action && aiResult.action.type !== 'WAIT') {

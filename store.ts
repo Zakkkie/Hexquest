@@ -12,6 +12,7 @@ import { generateMap } from './services/mapGenerator.ts';
 import { TEXT } from './services/i18n.ts';
 import { generateMonumentRecipe, getItemDef } from './rules/items.ts';
 import { effectPool } from './services/effectPool.ts';
+import { historyService } from './services/historyService.ts';
 
 // --- CONSTANTS & HELPERS ---
 
@@ -275,7 +276,6 @@ const createInitialSessionData = (winCondition: WinCondition | null, levelConfig
     currentTurn: 0,
     messageLog: [initialLog],
     botActivityLog: [],
-    fullBotHistory: [], 
     gameStatus: levelConfig ? 'BRIEFING' : 'PLAYING',
     lastBotActionTime: Date.now(),
     isPlayerGrowing: false,
@@ -413,13 +413,13 @@ export const useGameStore = create<GameStore>()(
           if (engine) {
               engine.destroy();
               engine = null;
+              historyService.clear();
               set({ session: null, hasActiveSession: false, uiState: 'MENU', voidDialogTarget: null, monumentDialogState: { isOpen: false, slots: [null, null, null] }, lastVisualEvent: undefined });
           }
       },
 
       downloadSessionLog: () => {
-         if (!engine || !engine.state) return;
-         const history = engine.state.fullBotHistory;
+         const history = historyService.getHistory();
          if (!history || history.length === 0) {
              get().showToast(TEXT[get().language].TOAST.NO_HISTORY, "info");
              return;
@@ -697,12 +697,7 @@ export const useGameStore = create<GameStore>()(
               const now = Date.now();
 
               // OPTIMIZED GC
-              if (tickCount % 50 === 0) {
-                  if (result.state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.messageLog.splice(SAFETY_CONFIG.MAX_LOG_SIZE);
-                  if (result.state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.botActivityLog.splice(SAFETY_CONFIG.MAX_LOG_SIZE);
-                  if (result.state.fullBotHistory.length > SAFETY_CONFIG.MAX_HISTORY_SIZE) result.state.fullBotHistory.splice(0, result.state.fullBotHistory.length - SAFETY_CONFIG.MAX_HISTORY_SIZE);
-                  result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
-              }
+              result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
 
               if (result.events.some(e => e.type === 'MONUMENT_REACHED')) {
                   get().openMonumentDialog();

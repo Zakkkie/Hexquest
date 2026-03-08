@@ -21,14 +21,6 @@ export interface HexNodeTheme {
     stroke: string;
 }
 
-// LOD Interface
-export interface HexRenderMode {
-    detailLevel: 'minimal' | 'reduced' | 'normal' | 'full';
-    showTexture: boolean;
-    showGlow: boolean;
-    showDetails: boolean;
-}
-
 export interface HexNodeProps {
   x: number;
   y: number;
@@ -57,7 +49,7 @@ export interface HexNodeProps {
   onHexClick: (q: number, r: number) => void; 
   onHover: (id: string | null) => void;
   id: string;
-  renderMode: HexRenderMode; // LOD Mode
+  opacity?: number;
 }
 
 // Precompute the base (unsquashed) hexagon path centered at 0,0
@@ -88,19 +80,17 @@ const HexNodeComponent = (props: HexNodeProps) => {
       isGrowing, isRankLocked, progress, durability, artifactType,
       q, r, id,
       onHexClick, onHover,
-      renderMode
+      opacity = 1
   } = props;
 
-  // Optimally load textures only if needed
+  // Textures are now always loaded since LOD is removed
   const topTexture = useMemo(() => {
-      if (!renderMode.showTexture) return null;
       return textureService.getTexture(maxLevel, q, r);
-  }, [maxLevel, q, r, renderMode.showTexture]);
+  }, [maxLevel, q, r]);
 
   const sideTexture = useMemo(() => {
-      if (!renderMode.showTexture) return null;
       return textureService.getSideTexture(maxLevel);
-  }, [maxLevel, renderMode.showTexture]);
+  }, [maxLevel]);
 
   const isRealVoid = structureType === 'VOID';
   const isMonument = structureType === 'MONUMENT';
@@ -108,10 +98,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Wall Geometry & Visibility
   const wallData = useMemo(() => {
-      // Skip wall calculation for minimal LOD if possible (though we need shape for even minimal)
-      // Actually, minimal LOD usually implies just top face, or very simple block.
-      if (renderMode.detailLevel === 'minimal') return null;
-
       const angleOffset = rotation * DEG_TO_RAD;
       const walls = [];
       const pts = [];
@@ -139,7 +125,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
           });
       }
       return walls;
-  }, [offsetY, rotation, renderMode.detailLevel]);
+  }, [offsetY, rotation]);
 
   const handleClick = (e: any) => {
       if (e.evt && e.evt.button !== undefined && e.evt.button !== 0) return;
@@ -152,11 +138,10 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Damage indicators (Cracks)
   const damageLevel = useMemo(() => {
-      if (!renderMode.showDetails) return 0;
       if (maxLevel !== 1 || durability === undefined) return 0;
       const maxD = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
       return Math.max(0, maxD - durability);
-  }, [maxLevel, durability, renderMode.showDetails]);
+  }, [maxLevel, durability]);
 
   // Void Animation Ref
   const voidOutlineRef = useRef<Konva.Path>(null);
@@ -164,27 +149,25 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const arrowRef = useRef<Konva.Group>(null);
 
   useEffect(() => {
-      if (isRealVoid && voidOutlineRef.current && renderMode.showGlow) {
+      if (isRealVoid && voidOutlineRef.current) {
           const tween = new Konva.Tween({
               node: voidOutlineRef.current,
               duration: 0.8,
               opacity: 0.4,
               strokeWidth: 1.5,
-              shadowBlur: 5,
               yoyo: true,
               easing: Konva.Easings.EaseInOut
           });
           tween.play();
           return () => tween.destroy();
       }
-  }, [isRealVoid, renderMode.showGlow]);
+  }, [isRealVoid]);
 
   useEffect(() => {
-      if (isMonument && monumentGlowRef.current && renderMode.showGlow) {
+      if (isMonument && monumentGlowRef.current) {
           const tween = new Konva.Tween({
               node: monumentGlowRef.current,
               duration: 1.5,
-              shadowBlur: 30,
               strokeWidth: 4,
               yoyo: true,
               easing: Konva.Easings.EaseInOut
@@ -192,11 +175,11 @@ const HexNodeComponent = (props: HexNodeProps) => {
           tween.play();
           return () => tween.destroy();
       }
-  }, [isMonument, renderMode.showGlow]);
+  }, [isMonument]);
 
   // Bouncing Arrow Animation
   useEffect(() => {
-      if (isTargetArrow && arrowRef.current && renderMode.showDetails) {
+      if (isTargetArrow && arrowRef.current) {
           const tween = new Konva.Tween({
               node: arrowRef.current,
               y: offsetY - 60, // Target Y (Up)
@@ -209,21 +192,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
           tween.play();
           return () => tween.destroy();
       }
-  }, [isTargetArrow, offsetY, renderMode.showDetails]);
-
-  // MINIMAL RENDER: Just top face, simple color
-  if (renderMode.detailLevel === 'minimal' && !isRealVoid) {
-      return (
-        <Group x={x} y={y} scaleY={0.8} perfectDrawEnabled={false}>
-             <Path 
-                data={BASE_PATH_D} 
-                fill={theme.main}
-                perfectDrawEnabled={false}
-                shadowForStrokeEnabled={false}
-             />
-        </Group>
-      );
-  }
+  }, [isTargetArrow, offsetY]);
 
   if (isRealVoid) {
       return (
@@ -234,6 +203,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
             onTap={handleClick}
             onMouseEnter={handleHover} 
             onMouseLeave={handleHoverEnd}
+            opacity={opacity}
         >
              {/* 1. VOID WALLS (Real 3D Geometry) */}
              {wallData && neighborLevels.map((nLevel, i) => {
@@ -269,20 +239,16 @@ const HexNodeComponent = (props: HexNodeProps) => {
                      <Path data={BASE_PATH_D} fill="#020617" stroke="#1e293b" strokeWidth={1} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                      <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} opacity={0.8} perfectDrawEnabled={false} />
                      
-                     {renderMode.showDetails && (
-                         <Path 
-                            ref={voidOutlineRef}
-                            data={BASE_PATH_D} 
-                            stroke="#ef4444" 
-                            strokeWidth={3} 
-                            opacity={1}
-                            shadowColor={renderMode.showGlow ? "#ef4444" : undefined}
-                            shadowBlur={renderMode.showGlow ? 15 : 0}
-                            listening={false} 
-                            perfectDrawEnabled={false}
-                            shadowForStrokeEnabled={false}
-                         />
-                     )}
+                     <Path 
+                        ref={voidOutlineRef}
+                        data={BASE_PATH_D} 
+                        stroke="#ef4444" 
+                        strokeWidth={3} 
+                        opacity={1}
+                        listening={false} 
+                        perfectDrawEnabled={false}
+                        shadowForStrokeEnabled={false}
+                     />
                      <Path data={BASE_PATH_D} scaleX={0.8} scaleY={0.8} stroke="rgba(56, 189, 248, 0.1)" strokeWidth={1} dash={[2, 4]} listening={false} perfectDrawEnabled={false} />
                  </Group>
              </Group>
@@ -312,6 +278,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
         onClick={handleClick} onTap={handleClick}
         onMouseEnter={handleHover} onMouseLeave={handleHoverEnd}
         perfectDrawEnabled={false}
+        opacity={opacity}
     >
         {/* 1. WALLS */}
         {wallData && neighborLevels.map((nLevel, i) => {
@@ -355,14 +322,12 @@ const HexNodeComponent = (props: HexNodeProps) => {
         {/* 2. TOP FACE */}
         <Group y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
             <Group rotation={rotation} perfectDrawEnabled={false}>
-                {isMonument && renderMode.showGlow && (
+                {isMonument && (
                     <Path 
                         ref={monumentGlowRef}
                         data={BASE_PATH_D} 
                         stroke="#f59e0b" 
                         strokeWidth={2}
-                        shadowColor="#fbbf24"
-                        shadowBlur={15}
                         listening={false}
                         perfectDrawEnabled={false}
                         shadowForStrokeEnabled={false}
@@ -371,7 +336,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
                 <Path 
                     data={BASE_PATH_D} 
-                    fillPatternImage={topTexture as any} // Null if !showTexture
+                    fillPatternImage={topTexture as any}
                     fill={topTexture ? undefined : theme.main} // Fallback fill
                     fillPatternScale={fillScale}
                     fillPatternOffset={fillOffset}
@@ -391,8 +356,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         fill="#fbbf24"
                         stroke="#78350f"
                         strokeWidth={2}
-                        shadowColor={renderMode.showGlow ? "#f59e0b" : undefined}
-                        shadowBlur={renderMode.showGlow ? 10 : 0}
                         listening={false}
                         perfectDrawEnabled={false}
                     />
@@ -406,18 +369,18 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     </Group>
                 )}
 
-                {!isNegative && renderMode.showDetails && neighborLevels.map((_, i) => {
+                {!isNegative && neighborLevels.map((_, i) => {
                     const next = (i + 1) % 6;
                     return (
                         <Line key={`e-${i}`} points={[BASE_POINTS[i].x, BASE_POINTS[i].y, BASE_POINTS[next].x, BASE_POINTS[next].y]} stroke={theme.stroke} strokeWidth={1} opacity={0.3} listening={false} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                     );
                 })}
 
-                {isSelected && renderMode.showGlow && (
-                    <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} shadowColor="#06b6d4" shadowBlur={10} listening={false} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
+                {isSelected && (
+                    <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} listening={false} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                 )}
                 
-                {isTutorialTarget && renderMode.showDetails && (
+                {isTutorialTarget && (
                     <Path 
                         data={BASE_PATH_D} 
                         stroke={tutorialColor === 'amber' ? '#fbbf24' : (tutorialColor === 'cyan' ? '#06b6d4' : (tutorialColor === 'red' ? '#ef4444' : '#22d3ee'))} 
@@ -428,7 +391,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     />
                 )}
 
-                {isMissingSupport && renderMode.showDetails && (
+                {isMissingSupport && (
                     <Group listening={false} perfectDrawEnabled={false}>
                         <Path data={BASE_PATH_D} stroke="#ef4444" strokeWidth={2} dash={[5, 5]} fill="rgba(239, 68, 68, 0.15)" perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                         <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="#ef4444" opacity={0.8} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
@@ -440,7 +403,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
         {/* 3. FLOATING OVERLAYS (No Perspective Squash/Rotation applied to container, logic handled by billboard) */}
         
         {/* BOUNCING 3D TUTORIAL ARROW */}
-        {isTargetArrow && renderMode.showDetails && (
+        {isTargetArrow && (
             <Group ref={arrowRef} y={offsetY - 40} listening={false} perfectDrawEnabled={false}>
                 {/* Shadow/Depth Layer */}
                 <Path 
@@ -454,38 +417,34 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     fill={getArrowColor(tutorialColor, 'main')}
                     stroke="rgba(0,0,0,0.5)"
                     strokeWidth={1}
-                    shadowColor={getArrowColor(tutorialColor, 'main')}
-                    shadowBlur={15}
                     perfectDrawEnabled={false}
                 />
             </Group>
         )}
 
         {/* ARTIFACTS / COST / PROGRESS */}
-        {renderMode.showDetails && (
-            <>
-                {artifactType && !isRealVoid && (
-                    <Group y={offsetY - 12} listening={false} perfectDrawEnabled={false}>
-                        <Circle radius={9} fill={artifactType.includes('RELIC') ? '#f59e0b' : '#3b82f6'} shadowColor="rgba(0,0,0,0.5)" shadowBlur={4} perfectDrawEnabled={false} />
-                        <Text text={artifactType.includes('RELIC') ? '★' : '?'} fontSize={13} fontStyle="bold" fill="white" offsetX={4.5} offsetY={6.5} perfectDrawEnabled={false} />
-                    </Group>
-                )}
+        <>
+            {artifactType && !isRealVoid && (
+                <Group y={offsetY - 12} listening={false} perfectDrawEnabled={false}>
+                    <Circle radius={9} fill={artifactType.includes('RELIC') ? '#f59e0b' : '#3b82f6'} perfectDrawEnabled={false} />
+                    <Text text={artifactType.includes('RELIC') ? '★' : '?'} fontSize={13} fontStyle="bold" fill="white" offsetX={4.5} offsetY={6.5} perfectDrawEnabled={false} />
+                </Group>
+            )}
 
-                {isPending && (
-                    <Group y={offsetY - 38} listening={false} perfectDrawEnabled={false}>
-                        <Circle radius={15} fill="#fbbf24" stroke="#92400e" strokeWidth={2} shadowBlur={10} shadowColor="rgba(251, 191, 36, 0.4)" perfectDrawEnabled={false} />
-                        <Text text={`${pendingCost}`} y={-6} fontSize={13} fontStyle="bold" fill="#78350f" align="center" width={30} offsetX={15} perfectDrawEnabled={false} />
-                    </Group>
-                )}
-                
-                {isGrowing && (
-                    <Group y={offsetY - 18} listening={false} perfectDrawEnabled={false}>
-                        <Rect x={-18} y={0} width={36} height={5} fill="rgba(0,0,0,0.7)" cornerRadius={2} perfectDrawEnabled={false} />
-                        <Rect x={-18} y={0} width={36 * Math.min(1, progress / (30))} height={5} fill={isRankLocked ? "#f59e0b" : "#10b981"} cornerRadius={2} perfectDrawEnabled={false} />
-                    </Group>
-                )}
-            </>
-        )}
+            {isPending && (
+                <Group y={offsetY - 38} listening={false} perfectDrawEnabled={false}>
+                    <Circle radius={15} fill="#fbbf24" stroke="#92400e" strokeWidth={2} perfectDrawEnabled={false} />
+                    <Text text={`${pendingCost}`} y={-6} fontSize={13} fontStyle="bold" fill="#78350f" align="center" width={30} offsetX={15} perfectDrawEnabled={false} />
+                </Group>
+            )}
+            
+            {isGrowing && (
+                <Group y={offsetY - 18} listening={false} perfectDrawEnabled={false}>
+                    <Rect x={-18} y={0} width={36} height={5} fill="rgba(0,0,0,0.7)" cornerRadius={2} perfectDrawEnabled={false} />
+                    <Rect x={-18} y={0} width={36 * Math.min(1, progress / (30))} height={5} fill={isRankLocked ? "#f59e0b" : "#10b981"} cornerRadius={2} perfectDrawEnabled={false} />
+                </Group>
+            )}
+        </>
     </Group>
   );
 };
@@ -506,9 +465,7 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.isGrowing !== next.isGrowing) return false;
     if (prev.progress !== next.progress) return false;
     if (prev.durability !== next.durability) return false;
-    
-    // Compare LOD Mode
-    if (prev.renderMode.detailLevel !== next.renderMode.detailLevel) return false;
+    if (prev.opacity !== next.opacity) return false;
     
     for (let i = 0; i < 6; i++) {
         if (prev.neighborLevels[i] !== next.neighborLevels[i]) return false;

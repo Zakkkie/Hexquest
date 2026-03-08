@@ -88,9 +88,18 @@ export const cubeDistance = (a: HexCoord, b: HexCoord): number => {
   return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
 };
 
+const NEIGHBOR_DIRECTIONS = [
+  { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 }, 
+  { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+];
+
 export const getNeighbors = (q: number, r: number): HexCoord[] => {
-  const directions = [{ q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 }, { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }];
-  return directions.map(d => ({ q: q + d.q, r: r + d.r }));
+  const neighbors: HexCoord[] = [];
+  for (let i = 0; i < 6; i++) {
+    const d = NEIGHBOR_DIRECTIONS[i];
+    neighbors.push({ q: q + d.q, r: r + d.r });
+  }
+  return neighbors;
 };
 
 export const getSecondsToGrow = (level: number) => getLevelConfig(level).growthTime;

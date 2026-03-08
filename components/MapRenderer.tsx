@@ -4,7 +4,7 @@ import { Layer, Group, Line, Circle, Text, Path } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { getHexKey, getNeighbors, pixelToHex, cubeDistance } from '../services/hexUtils.ts';
-import { HexNode, HexNodeTheme, HexRenderMode } from './HexNode.tsx';
+import { HexNode, HexNodeTheme } from './HexNode.tsx';
 import Unit from './Unit.tsx';
 import { EntityType, EntityState, FloatingText, Hex, Entity } from '../types.ts';
 import { checkGrowthCondition } from '../rules/growth.ts';
@@ -13,10 +13,97 @@ import { safifyCoord } from '../utils/safeCoordinates.ts';
 
 const VOID_LEVEL_FLAG = -99;
 
-// VISUAL CONSTANTS
-const FLOATING_EFFECT_VERTICAL_SPACING = 25;
+// CHUNK CONFIGURATION
+const CHUNK_SIZE = 8; // 8x8 hexes per chunk
+
+const getChunkKey = (q: number, r: number) => {
+    const cq = Math.floor(q / CHUNK_SIZE);
+    const cr = Math.floor(r / CHUNK_SIZE);
+    return `${cq},${cr}`;
+};
+
+// Optimized Tutorial Status Check
+const getTutorialData = (grid: Record<string, Hex>, player: Entity, levelId?: string) => {
+    if (!levelId) return null;
+    
+    const data: any = { levelId };
+    
+    if (levelId === '1.3') {
+        data.center = grid[getHexKey(0,0)];
+        if (data.center) {
+            data.centerNeighbors = getNeighbors(0,0).map(n => getHexKey(n.q, n.r));
+            data.supportCount = data.centerNeighbors.filter((key: string) => {
+                const h = grid[key];
+                return h && h.maxLevel >= 1 && h.structureType !== 'VOID';
+            }).length;
+        }
+    } else if (levelId === '1.4') {
+        data.center = grid[getHexKey(0,0)];
+        data.isPlayerOnCenter = player.q === 0 && player.r === 0;
+    }
+    
+    return data;
+};
+
+const getHexTutorialStatus = (hex: Hex, player: Entity, grid: Record<string, Hex>, tutorialData: any) => {
+    if (!tutorialData) return { isTutorial: false, isArrow: false, tutColor: 'emerald' };
+    
+    const { levelId } = tutorialData;
+    const isOccupiedByPlayer = hex.q === player.q && hex.r === player.r;
+    let isTutorial = false;
+    let isArrow = false;
+    let tutColor: any = 'emerald';
+
+    if (levelId === '1.1') {
+        if (hex.maxLevel === 0 && !hex.ownerId && !isOccupiedByPlayer) {
+            isTutorial = true; isArrow = true; tutColor = 'amber';
+        }
+    } else if (levelId === '1.2' || levelId === '3.1') {
+        if (hex.structureType === 'CAPITAL') {
+            isTutorial = true; isArrow = true; tutColor = 'emerald';
+        }
+    } else if (levelId === '1.3') {
+        const { center, centerNeighbors, supportCount } = tutorialData;
+        if (center) {
+            if (supportCount >= 2 && center.maxLevel < 2) {
+                if (hex.q === 0 && hex.r === 0) {
+                    isTutorial = true; isArrow = true; tutColor = 'amber';
+                }
+            } else if (center.maxLevel < 2) {
+                const isNeighbor = centerNeighbors.includes(hex.id);
+                if (isNeighbor && hex.maxLevel < 1 && !isOccupiedByPlayer) {
+                    isTutorial = true; isArrow = true; tutColor = 'cyan';
+                }
+            }
+        }
+    } else if (levelId === '1.4') {
+        const { center, isPlayerOnCenter } = tutorialData;
+        if (center && center.maxLevel < 3 && !isPlayerOnCenter) {
+             if (hex.q === 0 && hex.r === 0) {
+                 isTutorial = true; isArrow = true; tutColor = 'amber';
+             }
+        } else if (isPlayerOnCenter && center && center.maxLevel < 3) {
+            if (player.storage >= 1) {
+                if (hex.q === 0 && hex.r === 0) {
+                    isTutorial = true; isArrow = true; tutColor = 'amber';
+                }
+            } else {
+                if (hex.maxLevel >= 2 && hex.id !== getHexKey(0,0)) {
+                    isTutorial = true; isArrow = true; tutColor = 'red';
+                }
+            }
+        }
+    } else if (levelId === '1.6') {
+        if (hex.q === 0 && hex.r === 0 && !isOccupiedByPlayer) {
+             isTutorial = true; isArrow = true; tutColor = 'amber';
+        }
+    }
+    return { isTutorial, isArrow, tutColor };
+};
+
 const FLOATING_EFFECT_RISE_DISTANCE = 80;
 const FLOATING_EFFECT_BASE_Y_OFFSET = 20;
+const FLOATING_EFFECT_VERTICAL_SPACING = 24;
 const FLOATING_EFFECT_TEXT_WIDTH = 100;
 const FLOATING_EFFECT_TEXT_X_OFFSET = -50;
 const FLOATING_EFFECT_FONT_SIZE = 16;
@@ -43,38 +130,10 @@ BASE_PATH_D += " Z";
 const SelectionGlow = React.memo(({ x, y, offsetY, rotation }: any) => (
     <Group x={x} y={y} scaleY={0.8} perfectDrawEnabled={false} listening={false}>
         <Group rotation={rotation} y={offsetY} perfectDrawEnabled={false}>
-            <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} shadowColor="#06b6d4" shadowBlur={10} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
+            <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
         </Group>
     </Group>
 ));
-
-// LOD CONFIGURATION
-const LOD_LEVELS = {
-    VERY_FAR: { maxDistance: 25, detail: 'minimal' },
-    FAR: { maxDistance: 15, detail: 'reduced' },
-    MEDIUM: { maxDistance: 8, detail: 'normal' },
-    CLOSE: { maxDistance: 3, detail: 'full' }
-};
-
-const INTERACTION_LOD_RADIUS = 10;
-
-const getHexRenderMode = (dist: number, isInteracting: boolean): HexRenderMode => {
-    // DYNAMIC LOD: Force reduced detail during interaction (rotation/drag) to maintain high FPS
-    // Optimization: Only downgrade quality for hexes far from center (focus), preserving detail near cursor/center.
-    if (isInteracting && dist > INTERACTION_LOD_RADIUS) {
-        return { detailLevel: 'reduced', showTexture: false, showGlow: false, showDetails: false };
-    }
-
-    if (dist > LOD_LEVELS.VERY_FAR.maxDistance) {
-        return { detailLevel: 'minimal', showTexture: false, showGlow: false, showDetails: false };
-    } else if (dist > LOD_LEVELS.FAR.maxDistance) {
-        return { detailLevel: 'reduced', showTexture: false, showGlow: false, showDetails: false };
-    } else if (dist > LOD_LEVELS.MEDIUM.maxDistance) {
-        return { detailLevel: 'normal', showTexture: true, showGlow: false, showDetails: true }; // Normal: Textures but no glow
-    } else {
-        return { detailLevel: 'full', showTexture: true, showGlow: true, showDetails: true }; // Full: Everything
-    }
-};
 
 // THEME CONFIGURATION
 const THEME_PALETTE: Record<string, HexNodeTheme> = {
@@ -234,23 +293,31 @@ const FloatingEffect: React.FC<{ effect: FloatingText; rotation: number; stackIn
         // Apply starting vertical offset here
         <Group x={x} y={y - FLOATING_EFFECT_BASE_Y_OFFSET - verticalOffset} listening={false} perfectDrawEnabled={false}>
             <Group ref={animRef} perfectDrawEnabled={false}>
-                <Text text={effect.text} fontSize={FLOATING_EFFECT_FONT_SIZE} fontStyle="bold" fill={effect.color} x={FLOATING_EFFECT_TEXT_X_OFFSET} width={FLOATING_EFFECT_TEXT_WIDTH} align="center" shadowColor={effect.color} shadowBlur={10} perfectDrawEnabled={false} />
+                <Text text={effect.text} fontSize={FLOATING_EFFECT_FONT_SIZE} fontStyle="bold" fill={effect.color} x={FLOATING_EFFECT_TEXT_X_OFFSET} width={FLOATING_EFFECT_TEXT_WIDTH} align="center" perfectDrawEnabled={false} />
             </Group>
         </Group>
     );
 });
 
+
+// Constant render mode since LOD is removed
+const FULL_RENDER_MODE = { 
+    detailLevel: 'full', 
+    showTexture: true, 
+    showGlow: true, 
+    showDetails: true 
+};
+
 interface MapRendererProps {
-    viewState: { x: number, y: number, scale: number };
+    viewState: { x: number, y: number, scale: number, rotation: number };
     dimensions: { width: number, height: number };
     rotation: number;
     onHexClick: (q: number, r: number) => void;
     onHover: (id: string | null) => void;
     hoveredHexId: string | null;
-    isInteracting: boolean; // OPTIMIZATION FLAG
 }
 
-const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotation, onHexClick, onHover, hoveredHexId, isInteracting }) => {
+const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotation, onHexClick, onHover, hoveredHexId }) => {
     const grid = useGameStore(state => state.session?.grid) as Record<string, Hex> | undefined;
     const player = useGameStore(state => state.session?.player) as Entity | undefined;
     const bots = useGameStore(state => state.session?.bots) as Entity[] | undefined;
@@ -259,7 +326,11 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
     const pendingConfirmation = useGameStore(state => state.pendingConfirmation);
     const winCondition = useGameStore(state => state.session?.winCondition);
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
-    const selectedHexId = useGameStore(state => state.session?.grid && state.session.player ? getHexKey(state.session.player.q, state.session.player.r) : null);
+    const playerQ = useGameStore(state => state.session?.player.q);
+    const playerR = useGameStore(state => state.session?.player.r);
+    const selectedHexId = useMemo(() => 
+        (playerQ !== undefined && playerR !== undefined) ? getHexKey(playerQ, playerR) : null
+    , [playerQ, playerR]);
 
     const [particles, setParticles] = useState<VisualParticle[]>([]);
     
@@ -302,173 +373,183 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         };
     }, [rotation]);
 
-    const renderList = useMemo(() => {
-        if (!grid || !player) return [];
-
-        const items: any[] = [];
-        const inverseScale = 1 / viewState.scale;
-        const x0 = -viewState.x * inverseScale;
-        const y0 = -viewState.y * inverseScale;
-        const width = dimensions.width * inverseScale;
-        const height = dimensions.height * inverseScale;
-        const CULL_PADDING = 150;
-
-        const corners = [
-            pixelToHex(x0 - CULL_PADDING, y0 - CULL_PADDING, rotation),
-            pixelToHex(x0 + width + CULL_PADDING, y0 - CULL_PADDING, rotation),
-            pixelToHex(x0 + width + CULL_PADDING, y0 + height + CULL_PADDING, rotation),
-            pixelToHex(x0 - CULL_PADDING, y0 + height + CULL_PADDING, rotation)
-        ];
-
-        const qMin = Math.min(...corners.map(c => c.q));
-        const qMax = Math.max(...corners.map(c => c.q));
-        const rMin = Math.min(...corners.map(c => c.r));
-        const rMax = Math.max(...corners.map(c => c.r));
-
-        const playerNeighbors = getNeighbors(player.q, player.r);
-        const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
-        const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
+    const connections = useMemo(() => {
+        if (!grid || !player || isPlayerGrowing || player.state === EntityState.MOVING) return [];
 
         const { cos, sin } = projectionCache;
         const SQRT3 = Math.sqrt(3);
         const SQRT3_2 = SQRT3 / 2;
         const ONE_POINT_FIVE = 1.5;
 
-        const fastProject = (q: number, r: number) => {
-            const rawX = HEX_SIZE * (SQRT3 * q + SQRT3_2 * r);
-            const rawY = HEX_SIZE * (ONE_POINT_FIVE * r);
-            const px = rawX * cos - rawY * sin;
-            const py = (rawX * sin + rawY * cos) * 0.8;
-            return safifyCoord(px, py);
-        };
+        const rawPX = HEX_SIZE * (SQRT3 * player.q + SQRT3_2 * player.r);
+        const rawPY = HEX_SIZE * (ONE_POINT_FIVE * player.r);
+        const ppx = rawPX * cos - rawPY * sin;
+        const ppy = (rawPX * sin + rawPY * cos) * 0.8;
 
-        const centerHex = pixelToHex(x0 + width / 2, y0 + height / 2, rotation);
-        const levelId = activeLevelConfig?.id;
+        const pHex = grid[getHexKey(player.q, player.r)];
+        const startH = pHex ? (10 + pHex.maxLevel * 6) : 10;
+        const neighbors = getNeighbors(player.q, player.r);
+        const conns: any[] = [];
 
-        for (let q = qMin; q <= qMax; q++) {
-            for (let r = rMin; r <= rMax; r++) {
-                const hexKey = getHexKey(q, r);
-                const hex = grid[hexKey];
-                if (!hex) continue; 
+        for (const n of neighbors) {
+            const nHex = grid[getHexKey(n.q, n.r)];
+            const isReallyVoid = (nHex?.structureType as string) === 'VOID';
+            if (isReallyVoid) continue;
 
-                const { x, y } = fastProject(q, r);
-                
-                if (x < x0 - CULL_PADDING || x > x0 + width + CULL_PADDING || y < y0 - CULL_PADDING || y > y0 + height + CULL_PADDING) {
-                    continue;
+            const rawNX = HEX_SIZE * (SQRT3 * n.q + SQRT3_2 * n.r);
+            const rawNY = HEX_SIZE * (ONE_POINT_FIVE * n.r);
+            const npx = rawNX * cos - rawNY * sin;
+            const npy = (rawNX * sin + rawNY * cos) * 0.8;
+
+            const endH = nHex ? (10 + nHex.maxLevel * 6) : 10;
+            
+            if (Math.abs((pHex?.maxLevel||0) - (nHex?.maxLevel||0)) > 1) continue;
+
+            const level = nHex ? nHex.maxLevel : 0;
+            const cost = level > 1 ? level : 1;
+            const canAfford = player.moves >= cost || player.coins >= (cost * EXCHANGE_RATE_COINS_PER_MOVE);
+
+            conns.push({
+                points: [ppx, ppy - startH, npx, npy - endH],
+                stroke: canAfford ? '#3b82f6' : '#ef4444',
+                dash: [5, 5],
+                opacity: (nHex && nHex.maxLevel > player.playerLevel) ? 0.2 : 0.6
+            });
+        }
+        return conns;
+    }, [grid, player, isPlayerGrowing, projectionCache]);
+
+    const chunks = useMemo(() => {
+        if (!grid) return {};
+        const newChunks: Record<string, Hex[]> = {};
+        Object.values(grid).forEach(hex => {
+            const key = getChunkKey(hex.q, hex.r);
+            if (!newChunks[key]) newChunks[key] = [];
+            newChunks[key].push(hex);
+        });
+        return newChunks;
+    }, [grid]);
+
+    const visibleChunks = useMemo(() => {
+        if (!grid) return [];
+        // Simple culling: only chunks near the player (since we have radial fog anyway)
+        const playerChunkKey = getChunkKey(playerQ || 0, playerR || 0);
+        const [pcq, pcr] = playerChunkKey.split(',').map(Number);
+        
+        const visible: string[] = [];
+        const CHUNK_RADIUS = 2; // Render chunks within this radius of player chunk
+        
+        for (let cq = pcq - CHUNK_RADIUS; cq <= pcq + CHUNK_RADIUS; cq++) {
+            for (let cr = pcr - CHUNK_RADIUS; cr <= pcr + CHUNK_RADIUS; cr++) {
+                const key = `${cq},${cr}`;
+                if (chunks[key]) visible.push(key);
+            }
+        }
+        return visible;
+    }, [chunks, playerQ, playerR]);
+
+    const { cos, sin } = projectionCache;
+    const SQRT3 = Math.sqrt(3);
+    const SQRT3_2 = SQRT3 / 2;
+    const ONE_POINT_FIVE = 1.5;
+
+    const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
+    const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
+
+    const tutorialData = useMemo(() => {
+        if (!grid || !player) return null;
+        return getTutorialData(grid, player, activeLevelConfig?.id);
+    }, [grid, player, activeLevelConfig?.id]);
+
+    const NEIGHBOR_OFFSETS = [
+    { q: 0, r: 1 }, { q: -1, r: 1 }, { q: -1, r: 0 }, 
+    { q: 0, r: -1 }, { q: 1, r: -1 }, { q: 1, r: 0 }
+];
+
+const renderList = useMemo(() => {
+        if (!grid || !player) return { items: [] };
+
+        const items: any[] = [];
+        
+        // 1. Collect Hexes from visible chunks
+        for (const chunkKey of visibleChunks) {
+            const hexes = chunks[chunkKey];
+            if (!hexes) continue;
+
+            for (const hex of hexes) {
+                const distToPlayer = cubeDistance({ q: player.q, r: player.r }, { q: hex.q, r: hex.r });
+                // Still keep some culling for extreme distances to prevent browser crash, but no visual LOD
+                if (distToPlayer > 25) continue;
+
+                const rawX = HEX_SIZE * (SQRT3 * hex.q + SQRT3_2 * hex.r);
+                const rawY = HEX_SIZE * (ONE_POINT_FIVE * hex.r);
+                const px = rawX * cos - rawY * sin;
+                const py = (rawX * sin + rawY * cos) * 0.8;
+
+                let opacity = 1.0;
+                if (distToPlayer > 20) {
+                    opacity = Math.max(0, 1.0 - (distToPlayer - 20) / 5);
                 }
-                
-                const distToCamera = cubeDistance(centerHex, { q, r });
-                const renderMode = getHexRenderMode(distToCamera, isInteracting);
+                if (opacity <= 0) continue;
 
-                const neighborLevels = new Array(6);
-                const rawN = getNeighbors(hex.q, hex.r);
-                for(let i=0; i<6; i++) {
-                    const neighborIdx = 5 - i;
-                    const nHex = grid[getHexKey(rawN[neighborIdx].q, rawN[neighborIdx].r)];
-                    neighborLevels[i] = (nHex && (nHex.structureType as string) !== 'VOID') ? (nHex.currentLevel ?? 0) : VOID_LEVEL_FLAG;
-                }
+                const isVoid = (hex.structureType as string) === 'VOID';
+                const offsetY = isVoid ? -2 : getHeightOffset(isVoid ? 0 : hex.maxLevel);
+                const theme = THEME_PALETTE[isVoid ? 0 : hex.maxLevel] || THEME_PALETTE['0'];
 
                 const isPending = hex.id === pendingKey;
                 const isOccupiedByPlayer = hex.q === player.q && hex.r === player.r;
-                
-                let isTutorial = false;
-                let isArrow = false;
-                let tutColor: any = 'emerald';
-                
-                if (renderMode.showDetails && !isPlayerGrowing && (hex.structureType as string) !== 'VOID') {
-                    if (levelId === '1.1') {
-                        if (hex.maxLevel === 0 && !hex.ownerId && !isOccupiedByPlayer) {
-                            isTutorial = true; isArrow = true; tutColor = 'amber';
-                        }
-                    } else if (levelId === '1.2' || levelId === '3.1') {
-                        if (hex.structureType === 'CAPITAL') {
-                            isTutorial = true; isArrow = true; tutColor = 'emerald';
-                        }
-                    } else if (levelId === '1.3') {
-                        const center = grid[getHexKey(0,0)];
-                        if (center) {
-                            const cn = getNeighbors(0,0);
-                            const supportCount = cn.filter(n => {
-                                const h = grid[getHexKey(n.q, n.r)];
-                                return h && h.maxLevel >= 1 && h.structureType !== 'VOID';
-                            }).length;
-                            if (supportCount >= 2 && center.maxLevel < 2) {
-                                if (hex.q === 0 && hex.r === 0) {
-                                    isTutorial = true; isArrow = true; tutColor = 'amber';
-                                }
-                            } else if (center.maxLevel < 2) {
-                                const isNeighbor = cn.some(n => n.q === hex.q && n.r === hex.r);
-                                if (isNeighbor && hex.maxLevel < 1 && !isOccupiedByPlayer) {
-                                    isTutorial = true; isArrow = true; tutColor = 'cyan';
-                                }
-                            }
-                        }
-                    } else if (levelId === '1.4') {
-                        const center = grid[getHexKey(0,0)];
-                        const isPlayerOnCenter = player.q === 0 && player.r === 0;
-                        if (center && center.maxLevel < 3 && !isPlayerOnCenter) {
-                             if (hex.q === 0 && hex.r === 0) {
-                                 isTutorial = true; isArrow = true; tutColor = 'amber';
-                             }
-                        } else if (isPlayerOnCenter && center && center.maxLevel < 3) {
-                            if (player.storage >= 1) {
-                                if (hex.q === 0 && hex.r === 0) {
-                                    isTutorial = true; isArrow = true; tutColor = 'amber';
-                                }
-                            } else {
-                                if (hex.maxLevel >= 2 && hex.id !== getHexKey(0,0)) {
-                                    isTutorial = true; isArrow = true; tutColor = 'red';
-                                }
-                            }
-                        }
-                    } else if (levelId === '1.6') {
-                        if (hex.q === 0 && hex.r === 0 && !isOccupiedByPlayer) {
-                             isTutorial = true; isArrow = true; tutColor = 'amber';
-                        }
-                    }
+                const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, player, grid, tutorialData);
+
+                let neighborLevels = new Array(6);
+                for(let i=0; i<6; i++) {
+                    const d = NEIGHBOR_OFFSETS[i];
+                    const nKey = `${hex.q + d.q},${hex.r + d.r}`;
+                    const nHex = grid[nKey];
+                    neighborLevels[i] = (nHex && (nHex.structureType as string) !== 'VOID') ? (nHex.currentLevel ?? 0) : VOID_LEVEL_FLAG;
                 }
 
                 items.push({
                     type: 'HEX',
-                    depth: y, 
+                    depth: py,
                     props: {
-                        x, y,
-                        rotation,
-                        q: hex.q,
-                        r: hex.r,
-                        id: hex.id, 
-                        offsetY: (hex.structureType as string) === 'VOID' ? -2 : getHeightOffset((hex.structureType as string) === 'VOID' ? 0 : hex.maxLevel),
+                        x: px, y: py,
+                        rotation: rotation,
+                        q: hex.q, r: hex.r,
+                        id: hex.id,
+                        offsetY,
                         level: hex.currentLevel ?? 0,
                         maxLevel: hex.maxLevel,
                         structureType: hex.structureType as string,
                         neighborLevels,
-                        theme: getTheme((hex.structureType as string) === 'VOID' ? 0 : hex.maxLevel),
-                        isSelected: selectedHexId === hex.id, 
+                        theme,
+                        isSelected: selectedHexId === hex.id,
                         isPending,
                         pendingCost: isPending && pendingConfirmation ? pendingConfirmation.data.costCoins : null,
                         isTutorialTarget: isTutorial,
-                        isTargetArrow: isArrow, 
+                        isTargetArrow: isArrow,
                         tutorialColor: tutColor,
-                        isMissingSupport: false, 
-                        isOccupied: isOccupiedByPlayer || bots?.some(b => b.q===hex.q && b.r===hex.r), 
-                        isGrowing: hex.progress > 0 && (hex.structureType as string) !== 'VOID',
+                        isMissingSupport: false,
+                        isOccupied: isOccupiedByPlayer || bots?.some((b: any) => b.q===hex.q && b.r===hex.r),
+                        isGrowing: hex.progress > 0 && !isVoid,
                         isRankLocked: hex.maxLevel > player.playerLevel,
                         progress: hex.progress,
                         durability: hex.durability,
                         artifactType: hex.artifact?.type,
-                        onHexClick: memoizedOnHexClick,
-                        onHover: onHover,
-                        renderMode
+                        renderMode: FULL_RENDER_MODE,
+                        opacity
                     }
                 });
             }
         }
 
+        // 2. Collect Units
         const allEntities = [{ ...player, isPlayer: true }, ...(bots || []).map(b => ({ ...b, isPlayer: false }))];
         for (const u of allEntities) {
-            const px = fastProject(u.q, u.r);
-            if (px.x < x0 - CULL_PADDING || px.x > x0 + width + CULL_PADDING || px.y < y0 - CULL_PADDING || px.y > y0 + height + CULL_PADDING) continue;
-            
+            const rawX = HEX_SIZE * (SQRT3 * u.q + SQRT3_2 * u.r);
+            const rawY = HEX_SIZE * (ONE_POINT_FIVE * u.r);
+            const upx = rawX * cos - rawY * sin;
+            const upy = (rawX * sin + rawY * cos) * 0.8;
+
             const uHex = grid[getHexKey(u.q, u.r)];
             const hLevel = uHex ? uHex.maxLevel : 0;
             const isMoving = u.state === EntityState.MOVING;
@@ -476,13 +557,14 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
 
             items.push({
                 type: 'UNIT',
-                depth: px.y + depthBias, 
+                depth: upy + depthBias,
                 props: {
                     id: u.id,
                     q: u.q, r: u.r,
+                    x: upx, y: upy,
                     type: u.isPlayer ? EntityType.PLAYER : EntityType.BOT,
                     color: u.avatarColor,
-                    rotation,
+                    rotation: rotation,
                     hexLevel: hLevel,
                     totalCoinsEarned: u.totalCoinsEarned,
                     upgradePointCount: u.recentUpgrades?.length || 0,
@@ -493,60 +575,41 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
             });
         }
 
-        if (!isPlayerGrowing && player.state !== EntityState.MOVING) {
-            const pStart = fastProject(player.q, player.r);
-            const pHex = grid[getHexKey(player.q, player.r)];
-            const startH = pHex ? (10 + pHex.maxLevel * 6) : 10;
-
-            for (const n of playerNeighbors) {
-                const nKey = getHexKey(n.q, n.r);
-                const nHex = grid[nKey];
-                
-                const isBot = bots?.some(b => b.q===n.q && b.r===n.r);
-                const isVoid = (nHex?.structureType as string) === 'VOID';
-                if (isBot || isVoid) continue;
-
-                const nPos = fastProject(n.q, n.r);
-                const endH = nHex ? (10 + nHex.maxLevel * 6) : 10;
-                
-                if (Math.abs((pHex?.maxLevel||0) - (nHex?.maxLevel||0)) > 1) continue;
-
-                const level = nHex ? nHex.maxLevel : 0;
-                const cost = level > 1 ? level : 1;
-                const canAfford = player.moves >= cost || player.coins >= (cost * EXCHANGE_RATE_COINS_PER_MOVE);
-                const connId = `conn-${pStart.x.toFixed(0)}-${pStart.y.toFixed(0)}-${nPos.x.toFixed(0)}-${nPos.y.toFixed(0)}`;
-
-                items.push({
-                    type: 'CONN',
-                    depth: Math.min(pStart.y, nPos.y),
-                    props: {
-                        id: connId,
-                        points: [pStart.x, pStart.y - startH, nPos.x, nPos.y - endH],
-                        stroke: canAfford ? '#3b82f6' : '#ef4444',
-                        dash: [5, 5],
-                        opacity: (nHex && nHex.maxLevel > player.playerLevel) ? 0.2 : 0.6
-                    }
-                });
-            }
-        }
-
+        // 3. Sort by depth
         items.sort((a, b) => a.depth - b.depth);
 
-        return items;
-
-    }, [grid, player, bots, viewState, rotation, hoveredHexId, pendingConfirmation, isPlayerGrowing, activeLevelConfig, winCondition, memoizedOnHexClick, onHover, spawnDust, projectionCache, isInteracting]);
+        return { items };
+    }, [grid, player, bots, visibleChunks, chunks, cos, sin, rotation, pendingKey, pendingConfirmation, tutorialData, selectedHexId, spawnDust]);
 
     return (
         <>
             <Layer>
-                {renderList.map((item, i) => {
-                    const key = item.props.id || `item-${i}`;
-                    if (item.type === 'HEX') return <HexNode key={key} {...item.props} />;
-                    if (item.type === 'UNIT') return <Unit key={key} {...item.props} />;
-                    if (item.type === 'CONN') return <Line key={key} {...item.props} strokeWidth={2} listening={false} perfectDrawEnabled={false} />;
-                    return null;
+                {renderList.items.map(item => {
+                    if (item.type === 'HEX') {
+                        return (
+                            <HexNode 
+                                key={item.props.id} 
+                                {...item.props} 
+                                onHexClick={memoizedOnHexClick} 
+                                onHover={onHover} 
+                                isHovered={hoveredHexId === item.props.id} 
+                            />
+                        );
+                    } else {
+                        return (
+                            <Unit 
+                                key={item.props.id} 
+                                {...item.props} 
+                            />
+                        );
+                    }
                 })}
+
+                {connections.map((conn, i) => (
+                    <Line key={`conn-${i}`} {...conn} strokeWidth={2} listening={false} perfectDrawEnabled={false} />
+                ))}
             </Layer>
+
 
             <Layer listening={false}>
                 {particles.map(p => <DustCloud key={p.id} {...p} onComplete={removeParticle} />)}
@@ -556,4 +619,4 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
     );
 };
 
-export default MapRenderer;
+export default React.memo(MapRenderer);

@@ -82,7 +82,6 @@ const GameView: React.FC = () => {
   
   // HUD State
   const [hoveredHexId, setHoveredHexId] = useState<string | null>(null);
-  const [isInteracting, setIsInteracting] = useState(false); // New state for performance optimization
 
   if (!grid || !player) return null;
   
@@ -215,10 +214,10 @@ const GameView: React.FC = () => {
           const isUserInteracting = isDragging.current || isRotating.current || isMultitouch.current;
           
           // Damping Factors
-          // Snappy response when interacting (0.5), smooth drift when released/animating (0.1)
-          const dampingPos = isUserInteracting ? 0.6 : 0.15; 
+          // Snappy response when interacting (0.4), smooth drift when released/animating (0.08)
+          const dampingPos = isUserInteracting ? 0.4 : 0.12; 
           const dampingScale = 0.1;
-          const dampingRot = isUserInteracting ? 0.6 : 0.1;
+          const dampingRot = isUserInteracting ? 0.4 : 0.08;
 
           // Interpolate
           const nextX = lerp(current.x, target.x, dampingPos);
@@ -235,18 +234,7 @@ const GameView: React.FC = () => {
               Math.abs(nextRot - current.rotation) < 0.01 &&
               !isUserInteracting
           ) {
-              // Ensure we report interaction stopped
-              if (isInteracting) setIsInteracting(false);
               return;
-          }
-
-          // Update Interacting State for LOD
-          // If velocity is high or user is holding, set true
-          const hasVelocity = Math.abs(nextX - current.x) > 1 || Math.abs(nextRot - current.rotation) > 0.5;
-          if (isUserInteracting || hasVelocity) {
-              if (!isInteracting) setIsInteracting(true);
-          } else {
-              if (isInteracting) setIsInteracting(false);
           }
 
           const nextState = {
@@ -268,7 +256,7 @@ const GameView: React.FC = () => {
           const dy = nextState.y - cullingCameraRef.current.y;
           const ds = nextState.scale - cullingCameraRef.current.scale;
           const dr = nextState.rotation - cullingCameraRef.current.rotation;
-          if (Math.abs(dx) > 100 || Math.abs(dy) > 100 || Math.abs(ds) > 0.1 || Math.abs(dr) > 5) {
+          if (Math.abs(dx) > 100 || Math.abs(dy) > 100 || Math.abs(ds) > 0.1 || Math.abs(dr) > 2) {
               cullingCameraRef.current = nextState;
               setCullingViewState(nextState);
           }
@@ -277,19 +265,29 @@ const GameView: React.FC = () => {
 
       anim.start();
       return () => { anim.stop(); };
-  }, [isInteracting]); // Re-bind if isInteracting changes logic
+  }, []); 
 
   const rotateCamera = useCallback((direction: 'left' | 'right') => {
-      const currentTarget = targetCameraRef.current.rotation;
+      const current = targetCameraRef.current;
       const step = 60;
-      const currentSnapped = Math.round(currentTarget / step) * step;
+      const currentSnapped = Math.round(current.rotation / step) * step;
       const nextTarget = direction === 'left' ? currentSnapped - step : currentSnapped + step;
       
+      const pivot = { x: dimensions.width / 2, y: dimensions.height / 2 };
+      const adjustedView = calculateRotationAdjustedView(
+          { x: current.x, y: current.y, scale: current.scale },
+          pivot,
+          current.rotation,
+          nextTarget
+      );
+
       targetCameraRef.current = {
-          ...targetCameraRef.current,
+          ...current,
+          x: adjustedView.x,
+          y: adjustedView.y,
           rotation: nextTarget
       };
-  }, []); 
+  }, [dimensions]); 
 
   const centerOnPlayer = useCallback(() => {
       const rot = currentCameraRef.current.rotation;
@@ -329,7 +327,7 @@ const GameView: React.FC = () => {
 
     const scaleBy = 1.1; 
     let newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
-    newScale = Math.max(0.4, Math.min(newScale, 2.5));
+    newScale = Math.max(0.6, Math.min(newScale, 2.5));
     
     if (isNaN(newScale)) newScale = 1.0;
 
@@ -351,11 +349,9 @@ const GameView: React.FC = () => {
       if (e.evt.button === 0) {
           isDragging.current = true;
           lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
-          setIsInteracting(true); // Trigger LOD
       } else if (e.evt.button === 2) { 
           isRotating.current = true;
           lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
-          setIsInteracting(true);
       }
   };
   
@@ -383,8 +379,8 @@ const GameView: React.FC = () => {
           const deltaRot = deltaX * 0.5;
           const newRot = current.rotation + deltaRot;
           
-          // Pivot Calculation
-          const pivot = { x: e.evt.clientX, y: e.evt.clientY };
+          // Pivot Calculation: Center of the screen
+          const pivot = { x: dimensions.width / 2, y: dimensions.height / 2 };
           const adjustedView = calculateRotationAdjustedView(
               { x: current.x, y: current.y, scale: current.scale }, 
               pivot, 
@@ -406,13 +402,12 @@ const GameView: React.FC = () => {
       isDragging.current = false;
       isRotating.current = false;
       // Do not set setIsInteracting(false) here, let the animation loop detect when velocity settles.
-      // This prevents "popping" LOD changes.
+      // This prevents "popping" visual changes.
   };
 
   // -- Touch Handling --
   const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
     const touches = e.evt.touches;
-    setIsInteracting(true);
     if (touches.length === 1) {
         isDragging.current = true;
         lastPointerPos.current = { x: touches[0].clientX, y: touches[0].clientY };
@@ -469,7 +464,7 @@ const GameView: React.FC = () => {
           
           const scaleMult = dist / lastDist.current;
           let newScale = current.scale * scaleMult;
-          newScale = Math.max(0.4, Math.min(newScale, 2.5));
+          newScale = Math.max(0.6, Math.min(newScale, 2.5));
           if (isNaN(newScale)) newScale = 1.0;
 
           const worldFocusX = (lastCenter.current.x - current.x) / current.scale;
@@ -536,7 +531,6 @@ const GameView: React.FC = () => {
             onHexClick={handleHexClick}
             onHover={setHoveredHexId}
             hoveredHexId={hoveredHexId}
-            isInteracting={isInteracting} // PASSING OPTIMIZATION FLAG
           />
         </Stage>
       </div>

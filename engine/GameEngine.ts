@@ -106,11 +106,11 @@ export class GameEngine {
     const tickEvents: GameEvent[] = [...nextState.outgoingEvents];
     nextState.outgoingEvents = []; 
 
-    // 1. Cleanup old effects
+    // 1. Cleanup old effects every tick
     const now = Date.now();
-    const activeEffects = nextState.effects.filter(e => now - e.startTime < e.lifetime);
-    if (activeEffects.length !== nextState.effects.length) {
-        nextState.effects = activeEffects;
+    nextState.effects = nextState.effects.filter(e => now - e.startTime < e.lifetime);
+    if (nextState.effects.length > 30) {
+        nextState.effects.splice(0, nextState.effects.length - 30);
     }
 
     // 2. Update Systems (AI will populate TransactionQueue)
@@ -169,14 +169,23 @@ export class GameEngine {
   }
 
   private enforceSafetyLimits(state: SessionState) {
-      if (state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
-          state.messageLog.splice(SAFETY_CONFIG.MAX_LOG_SIZE);
-      }
-      if (state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
-          state.botActivityLog.splice(SAFETY_CONFIG.MAX_LOG_SIZE);
-      }
+    // 1. Cleanup old effects every tick to prevent accumulation
+    const now = Date.now();
+    state.effects = state.effects.filter(e => now - e.startTime < e.lifetime);
+    
+    // Limit total effects to prevent state bloat
+    if (state.effects.length > 30) {
+        state.effects.splice(0, state.effects.length - 30);
+    }
+    
+    if (state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
+        state.messageLog.splice(0, state.messageLog.length - SAFETY_CONFIG.MAX_LOG_SIZE);
+    }
+    if (state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
+        state.botActivityLog.splice(0, state.botActivityLog.length - SAFETY_CONFIG.MAX_LOG_SIZE);
+    }
 
-      const entities = [state.player, ...state.bots];
+    const entities = [state.player, ...state.bots];
       for (const ent of entities) {
           if (ent.movementQueue.length > SAFETY_CONFIG.MAX_MOVEMENT_QUEUE) {
               ent.movementQueue.splice(SAFETY_CONFIG.MAX_MOVEMENT_QUEUE);

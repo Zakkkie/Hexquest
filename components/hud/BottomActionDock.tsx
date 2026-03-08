@@ -17,20 +17,19 @@ interface BottomActionDockProps {
 }
 
 const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onOpenMission, onInspectItem }) => {
-    const session = useGameStore(state => state.session);
+    const player = useGameStore(state => state.session?.player);
+    const grid = useGameStore(state => state.session?.grid);
+    const bots = useGameStore(state => state.session?.bots);
+    const winCondition = useGameStore(state => state.session?.winCondition);
+    const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
+    const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
+    const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
+    const currentTurn = useGameStore(state => state.session?.currentTurn);
+    
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
     const togglePlayerGrowth = useGameStore(state => state.togglePlayerGrowth);
     const deviceType = useGameStore(state => state.deviceType);
-    
-    // Derived props from store
-    const player = session?.player;
-    const grid = session?.grid;
-    const bots = session?.bots;
-    const winCondition = session?.winCondition;
-    const activeLevelConfig = session?.activeLevelConfig;
-    const isPlayerGrowing = session?.isPlayerGrowing;
-    const playerGrowthIntent = session?.playerGrowthIntent;
     
     const t = TEXT[language].HUD;
     const isMobile = deviceType === 'MOBILE';
@@ -79,7 +78,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
             const can = !player.recoveredCurrentHex;
             return { canRecover: can, label: '', cooling: false };
         }
-    }, [currentHex, player, session?.currentTurn]); // Use turn or tick for reactivity
+    }, [currentHex, player, currentTurn]); // Use turn or tick for reactivity
 
     // Progress
     const timeData = useMemo(() => {
@@ -157,7 +156,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
         if (levelId === '4.7') return { current: ownedByLevel(4), target: 2, label: 'L4 HEXES' };
 
         return null;
-    }, [grid, player, activeLevelConfig, t, session?.currentTurn]);
+    }, [grid, player, activeLevelConfig, t, currentTurn]);
 
     // Mission Status
     const renderMissionStatus = () => {

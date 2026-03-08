@@ -12,6 +12,8 @@ interface UnitProps {
   id?: string;
   q: number;
   r: number;
+  x?: number;
+  y?: number;
   type: EntityType;
   color?: string; 
   rotation: number;
@@ -21,6 +23,7 @@ interface UnitProps {
   headIndex?: number;
   bodyIndex?: number;
   onMoveComplete?: (x: number, y: number, color: string) => void;
+  opacity?: number;
 }
 
 const getHexVisualHeight = (level: number) => {
@@ -32,7 +35,7 @@ const getHexVisualHeight = (level: number) => {
 // Helper for lerp
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hexLevel, headIndex = 0, bodyIndex = 0, onMoveComplete }) => {
+const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hexLevel, headIndex = 0, bodyIndex = 0, onMoveComplete, opacity = 1 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const visualGroupRef = useRef<Konva.Group>(null);
   const shadowRef = useRef<Konva.Ellipse>(null);
@@ -249,7 +252,7 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
   }, [q, r, hexLevel, finalColor, onMoveComplete]); 
 
   return (
-    <Group>
+    <Group opacity={opacity}>
       <Group ref={groupRef} listening={false}>
         <Group ref={visualGroupRef}>
             {/* Shadow */}
