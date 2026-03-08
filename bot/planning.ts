@@ -148,7 +148,7 @@ export const findDestroyerTarget = (
             const lastDestroy = bot.memory?.lastDestroyTime || 0;
             const now = Date.now();
             
-            if (now > lastDestroy + 5000) { 
+            if (now > lastDestroy + 15000) { 
                 const victim = structuresInSight.sort((a, b) => b.maxLevel - a.maxLevel)[0];
                 const digChain = resolveDigChain(victim, bot, grid, 0);
                 if (digChain) {
@@ -172,7 +172,9 @@ export const findDestroyerTarget = (
         }
     }
 
-    const candidates = index.getHexesInRange({q:bot.q, r:bot.r}, scanRadius);
+    // Fallback if no patrol path: scan in a small radius
+    const scanRadiusForDestroyerFallback = 3;
+    const candidates = index.getHexesInRange({q:bot.q, r:bot.r}, scanRadiusForDestroyerFallback);
     let bestTarget: ScoredTarget | null = null;
     let maxScore = -9999;
 

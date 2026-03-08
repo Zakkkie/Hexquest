@@ -114,9 +114,11 @@ const GameView: React.FC = () => {
 
   const currentCameraRef = useRef<CameraState>(initialCamera);
   const targetCameraRef = useRef<CameraState>(initialCamera);
+  const cullingCameraRef = useRef<CameraState>(initialCamera);
   
   // Render State (Synced from Ref via Animation Loop)
   const [renderCamera, setRenderCamera] = useState<CameraState>(initialCamera);
+  const [cullingViewState, setCullingViewState] = useState<CameraState>(initialCamera);
   
   // Interaction State
   const isRotating = useRef(false);
@@ -260,6 +262,16 @@ const GameView: React.FC = () => {
           // Sync React State (Triggers Render)
           // This ensures render is synced with AnimationFrame
           setRenderCamera(nextState);
+
+          // Update culling state if moved significantly
+          const dx = nextState.x - cullingCameraRef.current.x;
+          const dy = nextState.y - cullingCameraRef.current.y;
+          const ds = nextState.scale - cullingCameraRef.current.scale;
+          const dr = nextState.rotation - cullingCameraRef.current.rotation;
+          if (Math.abs(dx) > 100 || Math.abs(dy) > 100 || Math.abs(ds) > 0.1 || Math.abs(dr) > 5) {
+              cullingCameraRef.current = nextState;
+              setCullingViewState(nextState);
+          }
 
       }, stageRef.current?.getLayer());
 
@@ -518,7 +530,7 @@ const GameView: React.FC = () => {
           scaleY={renderCamera.scale}
         >
           <MapRenderer 
-            viewState={renderCamera}
+            viewState={cullingViewState}
             dimensions={dimensions}
             rotation={renderCamera.rotation}
             onHexClick={handleHexClick}

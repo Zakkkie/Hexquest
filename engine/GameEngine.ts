@@ -11,7 +11,9 @@ import { ActionProcessor } from './ActionProcessor';
 import { TransactionQueue } from '../services/transactionQueue';
 import { SAFETY_CONFIG } from '../rules/config';
 import { GameEventFactory } from './events';
-import { createDraft, finishDraft } from 'immer';
+import { createDraft, finishDraft, setAutoFreeze } from 'immer';
+
+setAutoFreeze(false);
 
 export interface TickResult {
   state: SessionState;
@@ -59,38 +61,21 @@ export class GameEngine {
       }
   }
 
-  private cloneState(source: SessionState): SessionState {
-    return {
-      ...source,
-      grid: source.grid, 
-      player: { ...source.player }, 
-      bots: [...source.bots], 
-      messageLog: [...source.messageLog], 
-      botActivityLog: [...source.botActivityLog],
-      fullBotHistory: source.fullBotHistory,
-      growingBotIds: [...source.growingBotIds],
-      effects: [...source.effects],
-      entropy: { ...source.entropy },
-      activeLevelConfig: source.activeLevelConfig,
-      outgoingEvents: [...(source.outgoingEvents || [])]
-    };
-  }
-
   public setPlayerIntent(isGrowing: boolean, intent: 'RECOVER' | 'UPGRADE' | 'DIG' | null) {
       if (!this._state) return;
-      const nextState = this.cloneState(this._state);
+      const nextState = createDraft(this._state);
       nextState.isPlayerGrowing = isGrowing;
       nextState.playerGrowthIntent = intent;
       nextState.stateVersion++;
-      this._state = nextState;
+      this._state = finishDraft(nextState) as SessionState;
   }
 
   public startMission() {
       if (!this._state) return;
-      const nextState = this.cloneState(this._state);
+      const nextState = createDraft(this._state);
       nextState.gameStatus = 'PLAYING';
       nextState.stateVersion++;
-      this._state = nextState;
+      this._state = finishDraft(nextState) as SessionState;
   }
 
   public applyAction(actorId: string, action: GameAction): ValidationResult {
@@ -113,11 +98,8 @@ export class GameEngine {
   public async processTick(): Promise<TickResult | null> {
     if (!this._state || !this._index) return null;
 
-    const nextState = this.cloneState(this._state);
-    
-    // Create an immer draft for the grid to enable structural sharing without GC pressure
-    const gridDraft = createDraft(nextState.grid);
-    nextState.grid = gridDraft as any;
+    // Create an immer draft for the entire state to enable structural sharing without GC pressure
+    const nextState = createDraft(this._state);
     
     this._index.syncGrid(nextState.grid); 
 
@@ -172,12 +154,13 @@ export class GameEngine {
     nextState.currentTurn++; 
     nextState.stateVersion++;
     
-    // Finalize the grid draft
-    const finalGrid = finishDraft(gridDraft);
-    nextState.grid = finalGrid as any;
-    this._index.syncGrid(nextState.grid);
+    // Finalize the state draft
+    const finalState = finishDraft(nextState) as SessionState;
+    this._state = finalState;
     
-    this._state = nextState;
+    // Sync index with final immutable state
+    this._index.syncState(this._state);
+    this._index.syncGrid(this._state.grid);
 
     return {
         state: this._state,
@@ -187,16 +170,16 @@ export class GameEngine {
 
   private enforceSafetyLimits(state: SessionState) {
       if (state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
-          state.messageLog = state.messageLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
+          state.messageLog.splice(SAFETY_CONFIG.MAX_LOG_SIZE);
       }
       if (state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {
-          state.botActivityLog = state.botActivityLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
+          state.botActivityLog.splice(SAFETY_CONFIG.MAX_LOG_SIZE);
       }
 
       const entities = [state.player, ...state.bots];
       for (const ent of entities) {
           if (ent.movementQueue.length > SAFETY_CONFIG.MAX_MOVEMENT_QUEUE) {
-              ent.movementQueue = ent.movementQueue.slice(0, SAFETY_CONFIG.MAX_MOVEMENT_QUEUE);
+              ent.movementQueue.splice(SAFETY_CONFIG.MAX_MOVEMENT_QUEUE);
               ent.state = EntityState.IDLE; 
           }
       }

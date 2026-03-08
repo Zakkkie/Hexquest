@@ -641,6 +641,7 @@ class AudioService {
       gain.connect(this.musicBus);
       
       noise.start(time);
+      noise.stop(time + 0.05);
       noise.onended = () => { noise.disconnect(); filter.disconnect(); gain.disconnect(); };
   }
 
@@ -652,17 +653,17 @@ class AudioService {
     
     const t = this.ctx.currentTime;
     
-    const playOsc = (freq: number, type: OscillatorType, dur: number, vol: number) => {
+    const playOsc = (freq: number, type: OscillatorType, dur: number, vol: number, startTime: number = t) => {
         const osc = this.ctx!.createOscillator();
         const g = this.ctx!.createGain();
         osc.type = type;
-        osc.frequency.setValueAtTime(freq, t);
-        g.gain.setValueAtTime(vol, t);
-        g.gain.exponentialRampToValueAtTime(0.01, t + dur);
+        osc.frequency.setValueAtTime(freq, startTime);
+        g.gain.setValueAtTime(vol, startTime);
+        g.gain.exponentialRampToValueAtTime(0.01, startTime + dur);
         osc.connect(g);
         g.connect(this.sfxBus!);
-        osc.start(t);
-        osc.stop(t + dur);
+        osc.start(startTime);
+        osc.stop(startTime + dur);
         
         osc.onended = () => { osc.disconnect(); g.disconnect(); };
     };
@@ -672,8 +673,8 @@ class AudioService {
       case 'UI_HOVER': playOsc(400, 'sine', 0.05, 0.02); break;
       case 'ERROR': playOsc(150, 'sawtooth', 0.2, 0.1); break;
       case 'SUCCESS': 
-        playOsc(523, 'sine', 0.3, 0.1); 
-        setTimeout(() => playOsc(659, 'sine', 0.3, 0.1), 100);
+        playOsc(523, 'sine', 0.3, 0.1, t); 
+        playOsc(659, 'sine', 0.3, 0.1, t + 0.1);
         break;
       case 'COIN': playOsc(1200, 'sine', 0.4, 0.05); break;
       case 'MOVE': 
@@ -687,12 +688,14 @@ class AudioService {
         f.type = 'lowpass'; f.frequency.setValueAtTime(500, t); f.frequency.linearRampToValueAtTime(100, t+0.1);
         const g = this.ctx.createGain();
         g.gain.setValueAtTime(0.1, t); g.gain.linearRampToValueAtTime(0, t+0.1);
-        src.connect(f); f.connect(g); g.connect(this.sfxBus); src.start(t);
+        src.connect(f); f.connect(g); g.connect(this.sfxBus); 
+        src.start(t);
+        src.stop(t + 0.1);
         src.onended = () => { src.disconnect(); f.disconnect(); g.disconnect(); };
         break;
       case 'LEVEL_UP':
-         playOsc(440, 'triangle', 0.6, 0.1);
-         setTimeout(() => playOsc(880, 'triangle', 0.6, 0.1), 200);
+         playOsc(440, 'triangle', 0.6, 0.1, t);
+         playOsc(880, 'triangle', 0.6, 0.1, t + 0.2);
          break;
       case 'COLLAPSE': playOsc(60, 'sawtooth', 0.6, 0.3); break;
       case 'CRACK': playOsc(300, 'square', 0.05, 0.2); break;
@@ -719,6 +722,8 @@ class AudioService {
           filter.connect(gain);
           gain.connect(this.sfxBus);
           noise.start(t);
+          noise.stop(t + 0.5);
+          noise.onended = () => { noise.disconnect(); filter.disconnect(); gain.disconnect(); };
           break;
       }
     }

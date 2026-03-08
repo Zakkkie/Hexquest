@@ -197,6 +197,7 @@ export const series4Levels: LevelConfig[] = [
       ]
     },
     aiMode: 'basic',
+    botObjective: 'MONUMENT_RACE',
     botSpawnPoints: [{ q: 0, r: -3 }],
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     hooks: {

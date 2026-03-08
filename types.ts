@@ -146,6 +146,7 @@ export interface BotMemory {
   phase?: 'EXPLORE' | 'STOCKPILE' | 'ASSAULT';
   exploreAnchor?: HexCoord | null;
   stockpileWaitTicks?: number;
+  isCampaign?: boolean;
 }
 
 export interface Entity {

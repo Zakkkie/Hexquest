@@ -698,9 +698,9 @@ export const useGameStore = create<GameStore>()(
 
               // OPTIMIZED GC
               if (tickCount % 50 === 0) {
-                  if (result.state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.messageLog = result.state.messageLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
-                  if (result.state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.botActivityLog = result.state.botActivityLog.slice(0, SAFETY_CONFIG.MAX_LOG_SIZE);
-                  if (result.state.fullBotHistory.length > SAFETY_CONFIG.MAX_HISTORY_SIZE) result.state.fullBotHistory = result.state.fullBotHistory.slice(result.state.fullBotHistory.length - SAFETY_CONFIG.MAX_HISTORY_SIZE);
+                  if (result.state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.messageLog.splice(SAFETY_CONFIG.MAX_LOG_SIZE);
+                  if (result.state.botActivityLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) result.state.botActivityLog.splice(SAFETY_CONFIG.MAX_LOG_SIZE);
+                  if (result.state.fullBotHistory.length > SAFETY_CONFIG.MAX_HISTORY_SIZE) result.state.fullBotHistory.splice(0, result.state.fullBotHistory.length - SAFETY_CONFIG.MAX_HISTORY_SIZE);
                   result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
               }
 

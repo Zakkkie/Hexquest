@@ -58,10 +58,11 @@ const buildClaimedSet = (bot: Entity, allBots: Entity[]): Set<string> => {
     return claimed;
 };
 
-const buildMonumentRestriction = (monument: Hex, grid: Record<string, Hex>): Set<string> => {
+const buildMonumentRestriction = (monument: Hex, grid: Record<string, Hex>, isCampaign?: boolean): Set<string> => {
     const restricted = new Set<string>();
+    const radius = isCampaign ? 2 : MONUMENT_ZONE_R;
     for (const hex of Object.values(grid)) {
-        if (dist(monument, hex) <= MONUMENT_ZONE_R) restricted.add(hex.id); 
+        if (dist(monument, hex) <= radius) restricted.add(hex.id); 
     }
     return restricted;
 };
@@ -244,7 +245,7 @@ const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, navObstacles: 
 // ─────────────────────────────────────────────────────────────────────────────
 
 const buildMinePlan = (bot: Entity, grid: Record<string, Hex>, navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], monument: Hex | null, mem: BotMemory): Plan => {
-    const restriction = monument ? buildMonumentRestriction(monument, grid) : undefined;
+    const restriction = monument ? buildMonumentRestriction(monument, grid, mem.isCampaign) : undefined;
     const digTargets  = findBestDigTargets(bot, grid, allBots, 10, restriction);
 
     for (const t of digTargets) {
@@ -387,14 +388,14 @@ const buildCampaignPlan = (
         return buildCompetePlan(bot, grid, navObstacles, claimedSet, stateVersion, mem);
     }
 
-    // 3. MONUMENT_RACE (2.4, 2.5)
-    if (activeLevelId === '2.4' || activeLevelId === '2.5') {
-        const requiredItems = activeLevelId === '2.4' ? 2 : 3;
+    // 3. MONUMENT_RACE (2.4, 2.5, 4.5)
+    if (activeLevelConfig?.botObjective === 'MONUMENT_RACE' || activeLevelId === '2.4' || activeLevelId === '2.5' || activeLevelId === '4.5') {
+        const requiredItems = activeLevelId === '2.4' ? 2 : (activeLevelId === '4.5' ? 0 : 3);
         const currentItems = bot.inventory?.length || 0;
 
         if (currentItems < requiredItems) {
             if (bot.storage === 0) {
-                const restriction = monument ? buildMonumentRestriction(monument, grid) : undefined;
+                const restriction = monument ? buildMonumentRestriction(monument, grid, mem.isCampaign) : undefined;
                 const digTargets = findBestDigTargets(bot, grid, allBots, 10, restriction);
                 for (const t of digTargets) {
                     if (claimedSet.has(t.hex.id) || (mem.blacklistedTargets || []).includes(t.hex.id)) continue;
@@ -468,7 +469,7 @@ const buildCampaignPlan = (
                 
                 // If we STILL couldn't build, and we have space to dig, dig.
                 if (bot.storage < (bot.maxStorage ?? 4)) {
-                    const restriction = monument ? buildMonumentRestriction(monument, grid) : undefined;
+                    const restriction = monument ? buildMonumentRestriction(monument, grid, mem.isCampaign) : undefined;
                     const digTargets = findBestDigTargets(bot, grid, allBots, 10, restriction);
                     for (const t of digTargets) {
                         if (claimedSet.has(t.hex.id) || (mem.blacklistedTargets || []).includes(t.hex.id)) continue;
@@ -492,7 +493,7 @@ const buildCampaignPlan = (
                             label: `Race:Staircase ×${upgrades}`,
                         };
                     } else if (levelsNeeded > 0 && bot.storage === 0) {
-                        const restriction = buildMonumentRestriction(monument, grid);
+                        const restriction = buildMonumentRestriction(monument, grid, mem.isCampaign);
                         const digTargets = findBestDigTargets(bot, grid, allBots, 10, restriction);
                         for (const t of digTargets) {
                             if (claimedSet.has(t.hex.id) || (mem.blacklistedTargets || []).includes(t.hex.id)) continue;
@@ -536,6 +537,14 @@ const buildPlan = (
     mem.phase   = phase; 
 
     if (phase === 'EXPLORE') {
+        // Fallback for campaign/skirmish: if bot is poor, prioritize economy over aimless wandering
+        if ((bot.moves ?? 0) < 15 && (bot.coins ?? 0) < 50) {
+            const competePlan = buildCompetePlan(bot, grid, navObstacles, claimedSet, stateVersion, mem);
+            if (competePlan.steps.length > 0 && !competePlan.label.includes('Idle')) {
+                return competePlan;
+            }
+        }
+
         if (bot.storage === 0) {
             const quickMine = buildMinePlan(bot, grid, navObstacles, claimedSet, stateVersion, allBots, null, mem);
             if (quickMine.steps.length > 0) return quickMine;
@@ -631,7 +640,7 @@ const executeStep = (step: PlanStep, bot: Entity, grid: Record<string, Hex>, nav
 
     if (step.type === 'MINE_UNTIL_FULL') {
         if (bot.storage >= (bot.maxStorage ?? 4)) return 'STEP_DONE';
-        const restriction = monument ? buildMonumentRestriction(monument, grid) : undefined;
+        const restriction = monument ? buildMonumentRestriction(monument, grid, mem.isCampaign) : undefined;
         const target = findBestDigTargets(bot, grid, allBots, 10, restriction).find(t => !claimedSet.has(t.hex.id) && !(mem.blacklistedTargets || []).includes(t.hex.id))?.hex;
         if (!target) return 'STEP_FAILED';
         mem.targetHexId = target.id;
@@ -731,6 +740,7 @@ export const calculateBotMove = (
     if (!bot) return { action: null, debug: 'ERR', memory: { lastPlayerPos: null, stuckCounter: 0 } };
 
     const mem = initMemory(bot);
+    mem.isCampaign = !!activeLevelConfig;
     if (!mem.exploreAnchor) mem.exploreAnchor = { q: bot.q, r: bot.r };
 
     // --- ИСПРАВЛЕНИЕ: МГНОВЕННАЯ СИНХРОНИЗАЦИЯ РАНГА ---
