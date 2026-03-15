@@ -86,14 +86,38 @@ export const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity
             if (rarity === 'LEGENDARY') visualColor = '#fbbf24';
         }
 
-        const img = itemRenderer.getItemImage(target.visualType, visualColor, target.rarity || 'COMMON');
-        ctx.clearRect(0,0,64,64);
+        const itemId = target.baseId || target.idPrefix;
+        const img = itemRenderer.getItemImage(target.visualType, visualColor, target.rarity || 'COMMON', definition?.iconUrl, itemId);
         
-        ctx.globalAlpha = opacity;
-        if (grayscale) ctx.filter = 'grayscale(100%) brightness(0.7)';
-        ctx.drawImage(img, 0,0,64,64);
-        ctx.filter = 'none';
-        ctx.globalAlpha = 1.0;
+        const draw = () => {
+            ctx.clearRect(0,0,64,64);
+            ctx.globalAlpha = opacity;
+            if (grayscale) ctx.filter = 'grayscale(100%) brightness(0.7)';
+            ctx.drawImage(img, 0,0,64,64);
+            ctx.filter = 'none';
+            ctx.globalAlpha = 1.0;
+        };
+
+        if (img instanceof HTMLImageElement && !img.complete) {
+            img.addEventListener('load', draw);
+            const handleError = () => {
+                console.warn('Failed to load image, falling back to procedural:', img.src);
+                const fallbackImg = itemRenderer.getItemImage(target.visualType, visualColor, target.rarity || 'COMMON', undefined, itemId);
+                ctx.clearRect(0,0,64,64);
+                ctx.globalAlpha = opacity;
+                if (grayscale) ctx.filter = 'grayscale(100%) brightness(0.7)';
+                ctx.drawImage(fallbackImg, 0,0,64,64);
+                ctx.filter = 'none';
+                ctx.globalAlpha = 1.0;
+            };
+            img.addEventListener('error', handleError);
+            return () => {
+                img.removeEventListener('load', draw);
+                img.removeEventListener('error', handleError);
+            };
+        } else {
+            draw();
+        }
 
     }, [item, def, opacity, grayscale]);
 

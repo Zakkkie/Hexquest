@@ -136,7 +136,7 @@ const SelectionGlow = React.memo(({ x, y, offsetY, rotation }: any) => (
 ));
 
 // THEME CONFIGURATION
-const THEME_PALETTE: Record<string, HexNodeTheme> = {
+export const THEME_PALETTE: Record<string, HexNodeTheme> = {
     '0': { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' }, 
     '1': { main: '#0f172a', light: '#1e293b', dark: '#020617', stroke: '#0c4a6e' }, 
     '2': { main: '#172554', light: '#1e3a8a', dark: '#0f172a', stroke: '#0284c7' }, 
@@ -158,7 +158,7 @@ const THEME_PALETTE: Record<string, HexNodeTheme> = {
     '-8': { main: '#fff7ed', light: '#ffedd5', dark: '#c2410c', stroke: '#ffffff' },
 };
 
-const getTheme = (level: number): HexNodeTheme => {
+export const getTheme = (level: number): HexNodeTheme => {
     if (level > 8) return THEME_PALETTE['10'];
     if (level < -8) return THEME_PALETTE['-8'];
     const key = String(level);
@@ -387,7 +387,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         const ppy = (rawPX * sin + rawPY * cos) * 0.8;
 
         const pHex = grid[getHexKey(player.q, player.r)];
-        const startH = pHex ? (10 + pHex.maxLevel * 6) : 10;
+        const startH = pHex ? (10 + pHex.maxLevel * 10) : 10;
         const neighbors = getNeighbors(player.q, player.r);
         const conns: any[] = [];
 
@@ -401,7 +401,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
             const npx = rawNX * cos - rawNY * sin;
             const npy = (rawNX * sin + rawNY * cos) * 0.8;
 
-            const endH = nHex ? (10 + nHex.maxLevel * 6) : 10;
+            const endH = nHex ? (10 + nHex.maxLevel * 10) : 10;
             
             if (Math.abs((pHex?.maxLevel||0) - (nHex?.maxLevel||0)) > 1) continue;
 
@@ -493,7 +493,7 @@ const renderList = useMemo(() => {
                 if (opacity <= 0) continue;
 
                 const isVoid = (hex.structureType as string) === 'VOID';
-                const offsetY = isVoid ? -2 : getHeightOffset(isVoid ? 0 : hex.maxLevel);
+                const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : hex.maxLevel);
                 const theme = THEME_PALETTE[isVoid ? 0 : hex.maxLevel] || THEME_PALETTE['0'];
 
                 const isPending = hex.id === pendingKey;

@@ -17,8 +17,8 @@ class ItemRenderer {
     return ItemRenderer.instance;
   }
 
-  public getItemImage(visualType: string, color: string, rarity: ItemRarity): HTMLCanvasElement {
-    const key = `ITEM_${visualType}_${color}_${rarity}_v3`; 
+  public getItemImage(visualType: string, color: string, rarity: ItemRarity, iconUrl?: string, itemId?: string): HTMLCanvasElement | HTMLImageElement {
+    const key = `ITEM_${visualType}_${color}_${rarity}_${itemId || 'none'}_v4`; 
     
     return textureCache.getOrCreate(key, () => {
         const canvas = document.createElement('canvas');
@@ -39,12 +39,12 @@ class ItemRenderer {
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         
-        this.drawItem(ctx, visualType, color);
+        this.drawItem(ctx, visualType, color, itemId);
         return canvas;
     });
   }
 
-  private drawItem(ctx: CanvasRenderingContext2D, type: string, color: string) {
+  private drawItem(ctx: CanvasRenderingContext2D, type: string, color: string, itemId?: string) {
       ctx.shadowColor = color;
       ctx.shadowBlur = 10;
 
@@ -492,6 +492,530 @@ class ItemRenderer {
                   ctx.shadowBlur = 0;
               }
               break;
+          case 'ARMOR':
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(-14, -10);
+              ctx.lineTo(14, -10);
+              ctx.lineTo(16, -4);
+              ctx.lineTo(10, -2);
+              ctx.lineTo(10, 10);
+              ctx.lineTo(4, 14);
+              ctx.lineTo(-4, 14);
+              ctx.lineTo(-10, 10);
+              ctx.lineTo(-10, -2);
+              ctx.lineTo(-16, -4);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(-6, -10); ctx.lineTo(-6, 12);
+              ctx.moveTo(6, -10); ctx.lineTo(6, 12);
+              ctx.moveTo(-10, 2); ctx.lineTo(10, 2);
+              ctx.stroke();
+              
+              ctx.fillStyle = '#0f172a';
+              ctx.beginPath();
+              ctx.arc(0, -12, 5, 0, Math.PI);
+              ctx.fill();
+              break;
+          case 'BOOTS':
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(-12, -6);
+              ctx.lineTo(-4, -6);
+              ctx.lineTo(-4, 8);
+              ctx.lineTo(-2, 12);
+              ctx.lineTo(-14, 12);
+              ctx.lineTo(-12, 8);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.beginPath();
+              ctx.moveTo(4, -6);
+              ctx.lineTo(12, -6);
+              ctx.lineTo(12, 8);
+              ctx.lineTo(14, 12);
+              ctx.lineTo(2, 12);
+              ctx.lineTo(4, 8);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(-10, -4, 4, 8);
+              ctx.strokeRect(6, -4, 4, 8);
+              break;
+          case 'RING':
+              ctx.strokeStyle = '#fbbf24'; 
+              if (itemId?.includes('silver')) ctx.strokeStyle = '#cbd5e1';
+              ctx.lineWidth = 4;
+              ctx.beginPath();
+              ctx.ellipse(0, 2, 10, 6, 0, 0, Math.PI * 2);
+              ctx.stroke();
+              
+              ctx.fillStyle = '#fbbf24';
+              if (itemId?.includes('silver')) ctx.fillStyle = '#cbd5e1';
+              ctx.fillRect(-4, -6, 8, 6);
+              
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(0, -8);
+              ctx.lineTo(4, -4);
+              ctx.lineTo(0, 0);
+              ctx.lineTo(-4, -4);
+              ctx.closePath();
+              ctx.fill();
+              break;
+          case 'NECKLACE':
+              ctx.strokeStyle = '#fbbf24'; 
+              if (itemId?.includes('silver') || itemId?.includes('diamond')) ctx.strokeStyle = '#cbd5e1';
+              ctx.lineWidth = 2;
+              ctx.setLineDash([2, 2]);
+              ctx.beginPath();
+              ctx.arc(0, -2, 12, 0, Math.PI);
+              ctx.stroke();
+              ctx.setLineDash([]);
+              
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(0, 14);
+              ctx.lineTo(6, 6);
+              ctx.lineTo(-6, 6);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.fillStyle = 'rgba(255,255,255,0.5)';
+              ctx.beginPath();
+              ctx.moveTo(0, 12);
+              ctx.lineTo(2, 8);
+              ctx.lineTo(-2, 8);
+              ctx.closePath();
+              ctx.fill();
+              break;
+          case 'HELMET':
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.arc(0, 2, 12, Math.PI, 0);
+              ctx.lineTo(12, 10);
+              ctx.lineTo(6, 14);
+              ctx.lineTo(-6, 14);
+              ctx.lineTo(-12, 10);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.fillStyle = '#0f172a';
+              if (itemId === 'scrap_visor') {
+                  ctx.fillRect(-8, 0, 16, 4);
+                  ctx.fillStyle = '#ef4444'; 
+                  ctx.beginPath();
+                  ctx.arc(-4, 2, 2, 0, Math.PI*2);
+                  ctx.fill();
+              } else {
+                  ctx.fillRect(-2, -4, 4, 14);
+                  ctx.fillRect(-8, -2, 16, 4);
+              }
+              break;
+          case 'FOOD':
+              if (itemId === 'food_banana') {
+                  ctx.fillStyle = color;
+                  ctx.beginPath();
+                  ctx.arc(0, 0, 12, 0, Math.PI);
+                  ctx.lineTo(12, -10);
+                  ctx.arc(0, -5, 15, 0, Math.PI, true);
+                  ctx.closePath();
+                  ctx.fill();
+              } else if (itemId === 'food_bread' || itemId === 'food_bread_02') {
+                  ctx.fillStyle = color;
+                  ctx.beginPath();
+                  ctx.ellipse(0, 0, 14, 8, 0, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.strokeStyle = '#78350f';
+                  ctx.lineWidth = 2;
+                  ctx.beginPath();
+                  ctx.moveTo(-6, -4); ctx.lineTo(-2, 2);
+                  ctx.moveTo(0, -4); ctx.lineTo(4, 2);
+                  ctx.moveTo(6, -4); ctx.lineTo(10, 2);
+                  ctx.stroke();
+              } else if (itemId === 'food_cherry') {
+                  ctx.fillStyle = color;
+                  ctx.beginPath();
+                  ctx.arc(-5, 5, 6, 0, Math.PI * 2);
+                  ctx.arc(5, 5, 6, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.strokeStyle = '#22c55e';
+                  ctx.lineWidth = 2;
+                  ctx.beginPath();
+                  ctx.moveTo(-5, -1); ctx.lineTo(0, -10);
+                  ctx.moveTo(5, -1); ctx.lineTo(0, -10);
+                  ctx.stroke();
+                  ctx.fillStyle = '#22c55e';
+                  ctx.beginPath();
+                  ctx.ellipse(2, -12, 4, 2, Math.PI/4, 0, Math.PI * 2);
+                  ctx.fill();
+              } else {
+                  ctx.fillStyle = color;
+                  ctx.beginPath();
+                  ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.fillStyle = '#22c55e';
+                  ctx.fillRect(-2, -14, 4, 6);
+              }
+              break;
+          case 'POTION':
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(-4, -10);
+              ctx.lineTo(-4, -4);
+              ctx.lineTo(-12, 8);
+              ctx.arc(0, 8, 12, Math.PI, 0, true);
+              ctx.lineTo(4, -4);
+              ctx.lineTo(4, -10);
+              ctx.closePath();
+              ctx.stroke();
+              
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(-10, 6);
+              ctx.arc(0, 8, 10, Math.PI, 0, true);
+              ctx.lineTo(10, 6);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.fillStyle = '#78350f';
+              ctx.fillRect(-5, -14, 10, 4);
+              
+              ctx.fillStyle = 'rgba(255,255,255,0.5)';
+              ctx.beginPath();
+              ctx.arc(-4, 6, 3, 0, Math.PI * 2);
+              ctx.fill();
+              break;
+          case 'GEM':
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(0, -14);
+              ctx.lineTo(12, -4);
+              ctx.lineTo(8, 12);
+              ctx.lineTo(-8, 12);
+              ctx.lineTo(-12, -4);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+              
+              ctx.beginPath();
+              ctx.moveTo(-8, -4); ctx.lineTo(8, -4);
+              ctx.moveTo(-8, -4); ctx.lineTo(0, 4);
+              ctx.moveTo(8, -4); ctx.lineTo(0, 4);
+              ctx.moveTo(0, 4); ctx.lineTo(0, 12);
+              ctx.moveTo(-8, -4); ctx.lineTo(-12, -4);
+              ctx.moveTo(8, -4); ctx.lineTo(12, -4);
+              ctx.moveTo(0, -14); ctx.lineTo(-8, -4);
+              ctx.moveTo(0, -14); ctx.lineTo(8, -4);
+              ctx.stroke();
+              break;
+          case 'BAR':
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(-8, -6);
+              ctx.lineTo(8, -6);
+              ctx.lineTo(12, 0);
+              ctx.lineTo(-4, 0);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.fillStyle = '#d97706'; 
+              if (color !== '#fbbf24') ctx.fillStyle = 'rgba(0,0,0,0.3)'; 
+              ctx.beginPath();
+              ctx.moveTo(-4, 0);
+              ctx.lineTo(12, 0);
+              ctx.lineTo(8, 6);
+              ctx.lineTo(-8, 6);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.fillStyle = '#fef08a'; 
+              if (color !== '#fbbf24') ctx.fillStyle = 'rgba(255,255,255,0.3)'; 
+              ctx.beginPath();
+              ctx.moveTo(8, -6);
+              ctx.lineTo(12, 0);
+              ctx.lineTo(8, 6);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(-8, -6); ctx.lineTo(8, -6); ctx.lineTo(12, 0);
+              ctx.moveTo(-4, 0); ctx.lineTo(12, 0);
+              ctx.stroke();
+              break;
+          case 'SWORD':
+              ctx.translate(0, 0);
+              ctx.rotate(Math.PI / 4);
+              
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(-4, -4);
+              ctx.lineTo(0, -20);
+              ctx.lineTo(4, -4);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(0, -4);
+              ctx.lineTo(0, -18);
+              ctx.stroke();
+
+              ctx.fillStyle = '#fbbf24';
+              ctx.fillRect(-8, -4, 16, 4);
+              
+              ctx.fillStyle = '#78350f';
+              ctx.fillRect(-2, 0, 4, 10);
+              
+              ctx.fillStyle = '#fbbf24';
+              ctx.beginPath();
+              ctx.arc(0, 10, 3, 0, Math.PI * 2);
+              ctx.fill();
+              
+              ctx.rotate(-Math.PI / 4);
+              break;
+          case 'DAGGER':
+              ctx.rotate(Math.PI / 4);
+              
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(-2, -2);
+              ctx.lineTo(0, -14);
+              ctx.lineTo(2, -2);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.fillStyle = '#94a3b8';
+              ctx.fillRect(-5, -2, 10, 2);
+              
+              ctx.fillStyle = '#78350f';
+              ctx.fillRect(-1, 0, 2, 6);
+              
+              ctx.fillStyle = '#94a3b8';
+              ctx.beginPath();
+              ctx.arc(0, 7, 2, 0, Math.PI * 2);
+              ctx.fill();
+              
+              if (itemId === 'dagger_poison') {
+                  ctx.fillStyle = '#22c55e';
+                  ctx.beginPath();
+                  ctx.arc(0, -16, 1.5, 0, Math.PI*2);
+                  ctx.fill();
+              }
+              
+              ctx.rotate(-Math.PI / 4);
+              break;
+          case 'AXE':
+              ctx.rotate(Math.PI / 4);
+              
+              ctx.fillStyle = '#78350f';
+              ctx.fillRect(-2, -12, 4, 24);
+              
+              ctx.fillStyle = color;
+              if (itemId === 'tool_pickaxe') {
+                  ctx.beginPath();
+                  ctx.moveTo(-12, -8);
+                  ctx.quadraticCurveTo(0, -12, 12, -8);
+                  ctx.lineTo(10, -4);
+                  ctx.quadraticCurveTo(0, -8, -10, -4);
+                  ctx.closePath();
+                  ctx.fill();
+              } else if (itemId === 'axe_battle') {
+                  ctx.beginPath();
+                  ctx.moveTo(-2, -8);
+                  ctx.lineTo(-12, -14);
+                  ctx.lineTo(-14, -2);
+                  ctx.lineTo(-2, -4);
+                  ctx.closePath();
+                  ctx.fill();
+                  
+                  ctx.beginPath();
+                  ctx.moveTo(2, -8);
+                  ctx.lineTo(12, -14);
+                  ctx.lineTo(14, -2);
+                  ctx.lineTo(2, -4);
+                  ctx.closePath();
+                  ctx.fill();
+              } else {
+                  ctx.beginPath();
+                  ctx.moveTo(2, -8);
+                  ctx.lineTo(12, -12);
+                  ctx.lineTo(12, 0);
+                  ctx.lineTo(2, -4);
+                  ctx.closePath();
+                  ctx.fill();
+              }
+              
+              ctx.rotate(-Math.PI / 4);
+              break;
+          case 'MACE':
+              ctx.rotate(Math.PI / 4);
+              
+              ctx.fillStyle = '#78350f';
+              ctx.fillRect(-2, -10, 4, 22);
+              
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.arc(0, -12, 6, 0, Math.PI * 2);
+              ctx.fill();
+              
+              ctx.fillStyle = '#f8fafc';
+              for (let i = 0; i < 8; i++) {
+                  const angle = (i / 8) * Math.PI * 2;
+                  ctx.beginPath();
+                  ctx.arc(Math.cos(angle) * 6, -12 + Math.sin(angle) * 6, 1.5, 0, Math.PI * 2);
+                  ctx.fill();
+              }
+              
+              ctx.rotate(-Math.PI / 4);
+              break;
+          case 'SPEAR':
+              ctx.rotate(Math.PI / 4);
+              
+              ctx.fillStyle = '#78350f';
+              ctx.fillRect(-1.5, -12, 3, 28);
+              
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(-3, -12);
+              ctx.lineTo(0, -22);
+              ctx.lineTo(3, -12);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.rotate(-Math.PI / 4);
+              break;
+          case 'STAFF':
+              ctx.rotate(Math.PI / 4);
+              
+              ctx.fillStyle = '#78350f';
+              ctx.fillRect(-2, -14, 4, 28);
+              
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.arc(0, -16, 5, 0, Math.PI * 2);
+              ctx.fill();
+              
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+              ctx.beginPath();
+              ctx.arc(-2, -18, 2, 0, Math.PI * 2);
+              ctx.fill();
+              
+              ctx.rotate(-Math.PI / 4);
+              break;
+          case 'BOW':
+              ctx.rotate(Math.PI / 4);
+              
+              ctx.strokeStyle = '#78350f';
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.arc(0, 0, 14, -Math.PI/2, Math.PI/2);
+              ctx.stroke();
+              
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(0, -14);
+              ctx.lineTo(0, 14);
+              ctx.stroke();
+              
+              ctx.fillStyle = color;
+              ctx.fillRect(-4, -2, 4, 4);
+              
+              ctx.rotate(-Math.PI / 4);
+              break;
+          case 'GUN':
+              ctx.fillStyle = '#475569';
+              ctx.fillRect(-8, 0, 6, 12);
+              ctx.fillStyle = color;
+              ctx.fillRect(-10, -6, 20, 8);
+              ctx.fillStyle = '#0ea5e9';
+              ctx.fillRect(6, -4, 4, 4);
+              
+              ctx.fillStyle = '#334155';
+              ctx.fillRect(-10, -6, 2, 8);
+              ctx.fillRect(-2, 2, 6, 2);
+              break;
+          case 'FIST':
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.arc(0, 2, 10, 0, Math.PI * 2);
+              ctx.fill();
+              
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+              ctx.beginPath();
+              ctx.arc(0, 2, 8, 0, Math.PI * 2);
+              ctx.fill();
+              
+              ctx.fillStyle = '#fff';
+              ctx.fillRect(-8, -10, 4, 6);
+              ctx.fillRect(-2, -12, 4, 6);
+              ctx.fillRect(4, -10, 4, 6);
+              break;
+          case 'THROWING':
+              ctx.rotate(Math.PI / 4);
+              
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.moveTo(0, -14);
+              ctx.lineTo(4, 0);
+              ctx.lineTo(0, 14);
+              ctx.lineTo(-4, 0);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+              ctx.beginPath();
+              ctx.moveTo(0, -10);
+              ctx.lineTo(2, 0);
+              ctx.lineTo(0, 10);
+              ctx.lineTo(-2, 0);
+              ctx.closePath();
+              ctx.fill();
+              
+              ctx.rotate(-Math.PI / 4);
+              break;
+          case 'BOOK':
+              ctx.fillStyle = '#78350f';
+              ctx.fillRect(-12, -14, 24, 28);
+              
+              ctx.fillStyle = color;
+              ctx.fillRect(-10, -12, 20, 24);
+              
+              ctx.fillStyle = '#f8fafc';
+              ctx.fillRect(-8, -10, 16, 20);
+              
+              ctx.fillStyle = color;
+              ctx.fillRect(-6, -6, 12, 2);
+              ctx.fillRect(-6, -2, 12, 2);
+              ctx.fillRect(-6, 2, 8, 2);
+              
+              if (itemId === 'skill_fire_01') {
+                  ctx.fillStyle = '#ef4444';
+                  ctx.beginPath();
+                  ctx.arc(0, 0, 4, 0, Math.PI*2);
+                  ctx.fill();
+              } else if (itemId === 'book_ancient') {
+                  ctx.fillStyle = '#fbbf24';
+                  ctx.beginPath();
+                  ctx.moveTo(0, -5); ctx.lineTo(3, 0); ctx.lineTo(0, 5); ctx.lineTo(-3, 0);
+                  ctx.fill();
+              }
+              break;
+
       }
   }
 

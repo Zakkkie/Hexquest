@@ -85,23 +85,23 @@ const Leaderboard: React.FC = () => {
   const rankRange = Array.from({ length: 21 }, (_, i) => i - 10);
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4 md:p-12 pointer-events-auto">
-      <div className="w-full max-w-4xl bg-slate-900/95 backdrop-blur border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="w-full h-full flex items-center justify-center p-2 md:p-12 pointer-events-auto">
+      <div className="w-full max-w-4xl bg-slate-900/95 backdrop-blur border border-slate-800 rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh]">
         
         {/* Header */}
-        <div className="p-4 md:p-8 border-b border-slate-800 flex items-center justify-between bg-black/20 shrink-0">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="p-2 md:p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20">
-              <Trophy className="w-6 h-6 md:w-8 md:h-8 text-amber-500" />
+        <div className="p-3 md:p-8 border-b border-slate-800 flex items-center justify-between bg-black/20 shrink-0">
+          <div className="flex items-center gap-2 md:gap-4">
+            <div className="p-1.5 md:p-3 bg-amber-500/10 rounded-xl md:rounded-2xl border border-amber-500/20">
+              <Trophy className="w-5 h-5 md:w-8 md:h-8 text-amber-500" />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">{t.TITLE}</h2>
-              <p className="text-slate-500 text-[10px] md:text-xs font-mono tracking-widest uppercase">{t.SUBTITLE}</p>
+              <h2 className="text-lg md:text-2xl font-black text-white uppercase tracking-wider leading-none">{t.TITLE}</h2>
+              <p className="text-slate-500 text-[8px] md:text-xs font-mono tracking-widest uppercase mt-1">{t.SUBTITLE}</p>
             </div>
           </div>
           <button 
             onClick={() => setUIState('MENU')}
-            className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-[10px] md:text-xs font-bold uppercase tracking-wider"
+            className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-6 md:py-3 rounded-lg md:rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-[9px] md:text-xs font-bold uppercase tracking-wider"
           >
             <ArrowLeft className="w-3 h-3 md:w-4 md:h-4" /> <span className="hidden md:inline">{t.BTN_BACK}</span>
           </button>
@@ -125,44 +125,44 @@ const Leaderboard: React.FC = () => {
             <div 
               key={`${entry.nickname}-${index}`}
               className={`
-                flex flex-row items-center justify-between px-4 py-3 border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors
+                flex flex-row items-center justify-between px-3 py-2 border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors
                 md:grid md:grid-cols-12 md:gap-4 md:px-8 md:py-5
-                ${isSelf ? 'bg-indigo-900/20 border-l-4 border-l-indigo-500 pl-3 md:pl-[30px]' : ''}
+                ${isSelf ? 'bg-indigo-900/20 border-l-4 border-l-indigo-500 pl-2 md:pl-[30px]' : ''}
               `}
             >
               {/* Left Group: Rank, Avatar, Name */}
-              <div className="flex items-center gap-3 md:gap-4 md:col-span-8 overflow-hidden">
+              <div className="flex items-center gap-2 md:gap-4 md:col-span-8 overflow-hidden">
                  {/* Rank Number */}
-                 <div className="font-mono text-slate-500 font-bold w-6 text-center text-xs md:text-base md:col-span-1">
+                 <div className="font-mono text-slate-500 font-bold w-5 text-center text-[10px] md:text-base md:col-span-1">
                     {index + 1}
                  </div>
 
                  {/* Avatar */}
-                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0 border border-white/10 flex items-center justify-center shadow-lg" style={{ backgroundColor: entry.avatarColor }}>
-                    <IconCmp className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                 <div className="w-7 h-7 md:w-10 md:h-10 rounded-full flex-shrink-0 border border-white/10 flex items-center justify-center shadow-lg" style={{ backgroundColor: entry.avatarColor }}>
+                    <IconCmp className="w-3.5 h-3.5 md:w-5 md:h-5 text-white" />
                  </div>
 
                  {/* Name & Date */}
                  <div className="flex flex-col min-w-0">
-                    <span className={`text-sm md:text-base font-bold truncate ${isSelf ? 'text-indigo-400' : 'text-white'}`}>
+                    <span className={`text-xs md:text-base font-bold truncate ${isSelf ? 'text-indigo-400' : 'text-white'}`}>
                         {entry.nickname}
                     </span>
-                    <span className="text-[9px] text-slate-600 font-mono mt-0.5 hidden md:block">
+                    <span className="text-[8px] text-slate-600 font-mono mt-0.5 hidden md:block">
                         {new Date(entry.timestamp).toLocaleDateString()}
                     </span>
                  </div>
               </div>
 
               {/* Right Group: Stats */}
-              <div className="flex flex-col items-end gap-1 md:contents">
+              <div className="flex flex-col items-end gap-0.5 md:contents">
                   {/* Credits */}
-                  <div className="md:col-span-2 text-right font-mono text-amber-500 font-bold flex items-center justify-end gap-1.5 text-xs md:text-base">
-                    {entry.maxCoins} <Coins className="w-3 h-3 md:w-4 md:h-4 opacity-70" />
+                  <div className="md:col-span-2 text-right font-mono text-amber-500 font-bold flex items-center justify-end gap-1 text-[10px] md:text-base">
+                    {entry.maxCoins} <Coins className="w-2.5 h-2.5 md:w-4 md:h-4 opacity-70" />
                   </div>
 
                   {/* Rank */}
-                  <div className="md:col-span-2 text-right font-mono text-emerald-400 font-bold flex items-center justify-end gap-1.5 text-xs md:text-base">
-                    L{entry.maxLevel} <Layers className="w-3 h-3 md:w-4 md:h-4 opacity-70" />
+                  <div className="md:col-span-2 text-right font-mono text-emerald-400 font-bold flex items-center justify-end gap-1 text-[10px] md:text-base">
+                    L{entry.maxLevel} <Layers className="w-2.5 h-2.5 md:w-4 md:h-4 opacity-70" />
                   </div>
               </div>
 

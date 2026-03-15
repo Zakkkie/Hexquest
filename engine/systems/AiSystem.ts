@@ -69,6 +69,13 @@ export class AiSystem implements System {
         bot.memory = aiResult.memory;
     }
 
+    // Sync bot rank to its highest owned hex level (instant, no 3s delay)
+    for (const hex of Object.values(state.grid)) {
+        if (hex.ownerId === bot.id && hex.maxLevel > bot.playerLevel) {
+            bot.playerLevel = hex.maxLevel;
+        }
+    }
+
     // --- ENHANCED LOGGING ---
     let targetStr: string | undefined = undefined;
     if (aiResult.action) {

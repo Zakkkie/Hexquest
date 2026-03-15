@@ -47,7 +47,7 @@ export const calculateMovementCost = (
         
         // 1. Void Check
         if (nextHex && nextHex.structureType === 'VOID') {
-             return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "Path Blocked: Void" };
+             return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "VOID" };
         }
 
         const currentLevel = currentHex ? currentHex.maxLevel : 0;
@@ -61,7 +61,7 @@ export const calculateMovementCost = (
                  deductMoves: 0, 
                  deductCoins: 0, 
                  canAfford: false, 
-                 reason: `Too Steep! (L${currentLevel} -> L${nextLevel})` 
+                 reason: "STEEP" 
              };
         }
 
@@ -105,7 +105,6 @@ export const calculateMovementCost = (
         deductMoves,
         deductCoins,
         canAfford,
-        // Allow UI to localize the reason if it's just a funding issue
-        reason: undefined 
+        reason: !canAfford ? "INSUFFICIENT_FUNDS" : undefined 
     };
 };

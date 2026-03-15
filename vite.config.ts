@@ -4,7 +4,6 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  mode: 'production',
   plugins: [react()],
   base: './', // CRITICAL: Allows assets to load via file:// protocol in Electron
   server: {

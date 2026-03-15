@@ -327,7 +327,7 @@ const GameView: React.FC = () => {
 
     const scaleBy = 1.1; 
     let newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
-    newScale = Math.max(0.6, Math.min(newScale, 2.5));
+    newScale = Math.max(0.8, Math.min(newScale, 2.5));
     
     if (isNaN(newScale)) newScale = 1.0;
 
@@ -464,7 +464,7 @@ const GameView: React.FC = () => {
           
           const scaleMult = dist / lastDist.current;
           let newScale = current.scale * scaleMult;
-          newScale = Math.max(0.6, Math.min(newScale, 2.5));
+          newScale = Math.max(0.8, Math.min(newScale, 2.5));
           if (isNaN(newScale)) newScale = 1.0;
 
           const worldFocusX = (lastCenter.current.x - current.x) / current.scale;

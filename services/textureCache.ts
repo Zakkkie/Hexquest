@@ -1,6 +1,6 @@
 
 export class TextureCache {
-    private cache = new Map<string, HTMLCanvasElement>();
+    private cache = new Map<string, HTMLCanvasElement | HTMLImageElement>();
     private maxCacheSize: number;
 
     constructor() {
@@ -9,7 +9,7 @@ export class TextureCache {
         this.maxCacheSize = isMobile ? 100 : 300;
     }
 
-    getOrCreate(key: string, generator: () => HTMLCanvasElement): HTMLCanvasElement {
+    getOrCreate<T extends HTMLCanvasElement | HTMLImageElement>(key: string, generator: () => T): T {
         // If already in cache, return it
         if (this.cache.has(key)) {
             const item = this.cache.get(key)!;
@@ -17,14 +17,15 @@ export class TextureCache {
             // This ensures frequently used textures stay in cache
             this.cache.delete(key);
             this.cache.set(key, item);
-            return item;
+            return item as T;
         }
 
         // If cache full, evict oldest (first inserted)
         if (this.cache.size >= this.maxCacheSize) {
             const firstKey = this.cache.keys().next().value;
-            // Optional: Could manually free canvas memory if needed, but GC usually handles it once ref is lost
-            this.cache.delete(firstKey);
+            if (firstKey !== undefined) {
+                this.cache.delete(firstKey);
+            }
         }
 
         // Generate and cache

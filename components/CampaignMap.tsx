@@ -181,13 +181,6 @@ const CampaignMap: React.FC = () => {
             </h2>
             <p className="text-indigo-400/60 text-[10px] md:text-xs font-mono tracking-[0.2em] uppercase pl-1">{t.HEADER_SUBTITLE}</p>
           </div>
-          <button 
-            onClick={() => { setUIState('MENU'); playUiSound('CLICK'); }}
-            className="group flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white transition-all shadow-lg active:scale-95 backdrop-blur-sm"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 
-            <span className="text-xs font-bold uppercase tracking-wider">{t.BTN_BACK}</span>
-          </button>
         </div>
 
         {/* Scrollable Map Area */}

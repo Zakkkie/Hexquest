@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction, Item, ActivateMonumentAction, GameEventType } from './types.ts';
+import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction, Item, ActivateMonumentAction, GameEventType, OverworldState } from './types.ts';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG, ENTROPY_CONFIG } from './rules/config.ts';
 import { getHexKey, getNeighbors, findPath, cubeDistance } from './services/hexUtils.ts';
 import { GameEngine } from './engine/GameEngine.ts';
@@ -13,8 +13,14 @@ import { TEXT } from './services/i18n.ts';
 import { generateMonumentRecipe, getItemDef } from './rules/items.ts';
 import { effectPool } from './services/effectPool.ts';
 import { historyService } from './services/historyService.ts';
+import { EVENT_REGISTRY } from './rules/events.ts';
+import { runtimeEventCache, getGeneratedEvent } from './services/EventComposer.ts';
+import { pickOverworldEvent } from './services/eventPicker.ts';
+import { getHexHeight } from './services/OverworldGenerator.ts';
 
 // --- CONSTANTS & HELPERS ---
+
+import { createInitialSessionData } from './services/sessionFactory.ts';
 
 const MOCK_USER_DB: Record<string, { password: string; avatarColor: string; headIndex: number; bodyIndex: number }> = {};
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e']; 
@@ -66,6 +72,7 @@ interface GameStore extends GameState {
   startCampaignLevel: (levelId: string) => void;
   startMission: () => void;
   abandonSession: () => void;
+  resetProgress: () => void;
   downloadSessionLog: () => void;
   
   // Gameplay Actions
@@ -89,208 +96,28 @@ interface GameStore extends GameState {
   activateMonument: () => void;
   
   checkTutorialCamera: (deltaX: number) => void;
+
+  // Overworld
+  initOverworld: () => void;
+  moveOverworldPlayer: (path: HexCoord[]) => Promise<void>;
+  exploreOverworld: () => void;
+  digOverworld: () => void;
+  buildOverworld: () => void;
+  restOverworld: () => void;
+  interactOverworld: () => void;
+  setOverworldActionProgress: (progress: number) => void;
+  setOverworldActiveAction: (action: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null) => void;
+  enterRift: (riftId: string) => void;
+  returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => void;
+  triggerEvent: (eventId: string) => void;
+  resolveEventChoice: (choice: import('./types.ts').OverworldEventChoice) => void;
+  equipItem: (itemId: string, slot: 'head' | 'body' | 'tool' | 'artifact', bagIndex: number) => void;
+  unequipItem: (slot: 'head' | 'body' | 'tool' | 'artifact') => void;
 }
 
 let engine: GameEngine | null = null;
 let tickCount = 0;
 let isProcessingTick = false; 
-
-const createInitialSessionData = (winCondition: WinCondition | null, levelConfig?: LevelConfig, language: Language = 'EN'): SessionState => {
-  const mapType = winCondition?.mapType || 'FLAT';
-  const initialGrid = generateMap(levelConfig, mapType);
-  const stateUser = useGameStore.getState().user; 
-
-  // Difficulty & Config Setup
-  const difficulty: Difficulty = winCondition?.difficulty || 'MEDIUM';
-  const diffSettings = DIFFICULTY_SETTINGS[difficulty];
-  const maxStorage = winCondition?.initialStorage ?? diffSettings.maxStorage; 
-  
-  // Determine Start State
-  const startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;
-  const startMoves = levelConfig ? levelConfig.startState.moves : GAME_CONFIG.INITIAL_MOVES;
-  const startRank = levelConfig ? levelConfig.startState.rank : 1;
-  const startStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0;
-  
-  // Player Position
-  let startQ = 0, startR = 0;
-  const playerStartHex = Object.values(initialGrid).find(h => h.ownerId === 'player-1');
-  if (playerStartHex) {
-      startQ = playerStartHex.q;
-      startR = playerStartHex.r;
-  }
-
-  // Generate Starting Inventory
-  const initialInventory: Item[] = [];
-  if (levelConfig && levelConfig.startState.startInventory) {
-      levelConfig.startState.startInventory.forEach(baseId => {
-          const def = getItemDef(baseId);
-          if (def) {
-              initialInventory.push({
-                  id: `${baseId}-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
-                  baseId: def.idPrefix,
-                  rarity: def.rarity,
-                  name: def.name[language],
-                  description: def.description[language],
-                  timestamp: Date.now(),
-                  visualType: def.visualType,
-                  effectType: def.effectType,
-                  effectValue: def.effectValue,
-                  effectDescription: def.effectLabel[language],
-                  effectDuration: def.effectDuration,
-                  negativeEffectType: def.negativeEffectType,
-                  negativeEffectValue: def.negativeEffectValue,
-                  negativeEffectLabel: def.negativeEffectLabel[language],
-                  negativeEffectDuration: def.negativeEffectDuration
-              });
-          }
-      });
-  }
-
-  // --- BOT SETUP & CUSTOM SPAWNS ---
-  let botCount = 0;
-  if (levelConfig) {
-      if (levelConfig.aiMode !== 'none') {
-          if (levelConfig.id === '2.5') botCount = 2;
-          else if (levelConfig.botRoutes) botCount = levelConfig.botRoutes.length;
-          else botCount = 1;
-      }
-  } else {
-      botCount = winCondition?.botCount || 0;
-  }
-
-  const bots: Entity[] = [];
-  const defaultSpawnPoints = [{ q: 0, r: -2 }, { q: 2, r: -2 }, { q: 2, r: 0 }, { q: 0, r: 2 }, { q: -2, r: 2 }, { q: -2, r: 0 }];
-  
-  const campaignBotSpawns: Record<string, HexCoord[]> = {
-      '1.6': [{ q: 0, r: -2 }],
-      '2.4': [{ q: 0, r: -3 }],
-      '2.5': [{ q: 3, r: -3 }, { q: -3, r: 0 }],
-      '3.5': [{ q: 3, r: 0 }],
-      '3.6': [{ q: -1, r: 0 }],
-      '4.5': [{ q: 0, r: -3 }],
-  };
-
-  const levelSpawns = levelConfig ? (levelConfig.botSpawnPoints || campaignBotSpawns[levelConfig.id]) : null;
-
-  for (let i = 0; i < botCount; i++) {
-    const sp = levelSpawns && levelSpawns[i] ? levelSpawns[i] : defaultSpawnPoints[i % defaultSpawnPoints.length];
-    
-    const key = getHexKey(sp.q, sp.r);
-    if (!initialGrid[key]) {
-        initialGrid[key] = { id: key, q: sp.q, r: sp.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true };
-        getNeighbors(sp.q, sp.r).forEach(n => {
-            const nk = getHexKey(n.q, n.r);
-            if (!initialGrid[nk]) initialGrid[nk] = { id: nk, q: n.q, r: n.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true };
-        });
-    }
-
-    const botStartMoves = levelConfig ? 2 : startMoves;
-    const botStartStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0; 
-    const botRoute = levelConfig?.botRoutes && levelConfig.botRoutes[i] ? levelConfig.botRoutes[i] : undefined;
-
-    bots.push({
-      id: `bot-${i+1}`, type: EntityType.BOT, state: EntityState.IDLE, q: sp.q, r: sp.r,
-      playerLevel: startRank, 
-      coins: startCredits,
-      moves: botStartMoves,
-      totalCoinsEarned: 0, movementQueue: [],
-      storage: botStartStorage, maxStorage: maxStorage,
-      inventory: [],
-      memory: { 
-          lastPlayerPos: null, 
-          stuckCounter: 0,
-          patrolPath: botRoute,
-          patrolIndex: 0,
-          lastDestroyTime: 0
-      },
-      avatarColor: BOT_PALETTE[Math.floor(Math.random() * BOT_PALETTE.length)],
-      headIndex: Math.floor(Math.random() * 4),
-      bodyIndex: Math.floor(Math.random() * 4),
-      recoveredCurrentHex: false,
-      recentUpgrades: [],
-      activeStatuses: []
-    });
-  }
-
-  let secretMonumentCoord: HexCoord | undefined = undefined;
-  if (!levelConfig && winCondition?.winType === 'SUMMIT') {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 4 + Math.floor(Math.random() * 3);
-      secretMonumentCoord = { q: Math.round(Math.cos(angle) * dist), r: Math.round(Math.sin(angle) * dist) };
-  }
-
-  let monumentRequirements: string[] | undefined;
-  
-  if (levelConfig) {
-      switch (levelConfig.id) {
-          case '2.1': monumentRequirements = []; break; 
-          case '2.2': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
-          case '2.4': monumentRequirements = ['ANY', 'ANY']; break;
-          case '2.5': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
-          case '3.5': monumentRequirements = ['ANY', 'ANY', 'ANY']; break;
-          case '3.8': monumentRequirements = ['ANY', 'ANY']; break;
-          case '4.8': monumentRequirements = ['ANY', 'ANY']; break;
-          default: monumentRequirements = undefined;
-      }
-  } else if (winCondition?.winType === 'SUMMIT') {
-      monumentRequirements = generateMonumentRecipe(difficulty);
-  }
-
-  let initialEntropy = levelConfig?.startState.initialEntropy ?? ENTROPY_CONFIG.INITIAL_MAX;
-
-  const initialLog: LogEntry = {
-    id: 'init-0',
-    text: levelConfig ? levelConfig.description : `Mission: Rank ${winCondition?.targetLevel} ${winCondition?.winType} ${winCondition?.targetCoins} Credits.`,
-    type: 'INFO',
-    source: 'SYSTEM',
-    timestamp: Date.now()
-  };
-
-  return {
-    stateVersion: 0,
-    sessionId: Math.random().toString(36).substring(2, 15),
-    sessionStartTime: Date.now(),
-    winCondition,
-    activeLevelConfig: levelConfig,
-    secretMonumentCoord,
-    monumentRequirements,
-    difficulty,
-    grid: initialGrid,
-    player: {
-      id: 'player-1', type: EntityType.PLAYER, state: EntityState.IDLE, q: startQ, r: startR,
-      playerLevel: startRank, 
-      coins: startCredits, 
-      moves: startMoves,
-      totalCoinsEarned: 0, movementQueue: [],
-      storage: startStorage, 
-      maxStorage: maxStorage,
-      inventory: initialInventory, 
-      recoveredCurrentHex: false,
-      recentUpgrades: [],
-      avatarColor: stateUser?.avatarColor || '#3b82f6',
-      headIndex: stateUser?.headIndex || 0,
-      bodyIndex: stateUser?.bodyIndex || 0,
-      activeStatuses: []
-    },
-    bots,
-    currentTurn: 0,
-    messageLog: [initialLog],
-    botActivityLog: [],
-    gameStatus: levelConfig ? 'BRIEFING' : 'PLAYING',
-    lastBotActionTime: Date.now(),
-    isPlayerGrowing: false,
-    playerGrowthIntent: null,
-    growingBotIds: [],
-    effects: [],
-    language,
-    entropy: {
-        current: initialEntropy,
-        max: initialEntropy,
-        threshold: ENTROPY_CONFIG.THRESHOLD
-    },
-    outgoingEvents: []
-  };
-};
 
 // --- STORE IMPLEMENTATION ---
 
@@ -298,6 +125,7 @@ export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
       uiState: 'MENU',
+      introNextState: 'GAME',
       deviceType: getDeviceType(),
       user: null,
       toast: null,
@@ -312,6 +140,22 @@ export const useGameStore = create<GameStore>()(
       voidDialogTarget: null,
       monumentDialogState: { isOpen: false, slots: [null, null, null] },
       lastVisualEvent: undefined,
+      overworld: {
+          grid: {},
+          player: {
+              q: 0, r: 0, hp: 100, maxHp: 100, energy: 50, maxEnergy: 50, credits: 0,
+              equipment: {}, bag: [], reputation: 0, stepCount: 0
+          },
+          isGenerated: false,
+          seed: 0,
+          flags: {},
+          activeEventId: null,
+          activeEventNodeId: null,
+          actionProgress: 0,
+          activeAction: null,
+          visitedHexes: {},
+          isOverworldMoving: false
+      },
       
       // --- UI SETTERS ---
       setLanguage: (lang) => set({ language: lang }),
@@ -391,9 +235,11 @@ export const useGameStore = create<GameStore>()(
               };
           }
 
-          const initialSessionState = createInitialSessionData(effectiveWin, levelConfig, get().language);
+          const stateUser = get().user;
+          const overworldState = get().overworld;
+          const initialSessionState = createInitialSessionData(effectiveWin, levelConfig, get().language, stateUser, overworldState);
           engine = new GameEngine(initialSessionState); 
-          set({ session: engine.state, hasActiveSession: true, uiState: 'GAME' });
+          set({ session: engine.state, hasActiveSession: true, uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME' });
       },
 
       startCampaignLevel: (levelId) => {
@@ -413,9 +259,14 @@ export const useGameStore = create<GameStore>()(
           if (engine) {
               engine.destroy();
               engine = null;
-              historyService.clear();
-              set({ session: null, hasActiveSession: false, uiState: 'MENU', voidDialogTarget: null, monumentDialogState: { isOpen: false, slots: [null, null, null] }, lastVisualEvent: undefined });
           }
+          historyService.clear();
+          set({ session: null, hasActiveSession: false, uiState: 'MENU', voidDialogTarget: null, monumentDialogState: { isOpen: false, slots: [null, null, null] }, lastVisualEvent: undefined });
+      },
+
+      resetProgress: () => {
+          get().abandonSession();
+          set({ campaignProgress: 0, overworld: undefined });
       },
 
       downloadSessionLog: () => {
@@ -507,7 +358,19 @@ export const useGameStore = create<GameStore>()(
               }
           }
 
-          if (session.player.state === EntityState.MOVING) return;
+          if (session.player.state === EntityState.MOVING) {
+              audioService.play('ERROR');
+              set({ toast: { message: TEXT[get().language].TOAST.ACTOR_MOVING, type: 'error', timestamp: Date.now() } });
+              return;
+          }
+          
+          if (dist === 0 && targetHex?.structureType !== 'MONUMENT') return;
+
+          if (!targetHex) {
+              audioService.play('ERROR');
+              set({ toast: { message: TEXT[get().language].TOAST.INVALID_HEX, type: 'error', timestamp: Date.now() } });
+              return;
+          }
           
           // MOVEMENT LOGIC
           if (targetHex && targetHex.structureType !== 'VOID' && targetHex.maxLevel > session.player.playerLevel) {
@@ -517,16 +380,24 @@ export const useGameStore = create<GameStore>()(
           }
 
           const obstacles = session.bots.map(b => ({ q: b.q, r: b.r }));
-          const path = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles);
+          const pathResult = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles);
+          const path = pathResult.path;
           
           if (!path) {
-            if (targetHex?.structureType === 'VOID') {
-                 audioService.play('ERROR');
-                 set({ toast: { message: TEXT[get().language].TOAST.TOO_FAR_VOID, type: 'error', timestamp: Date.now() } });
-                 return;
-            }
             audioService.play('ERROR');
-            set({ toast: { message: TEXT[get().language].TOAST.PATH_BLOCKED, type: 'error', timestamp: Date.now() } });
+            let msg = TEXT[get().language].TOAST.PATH_BLOCKED;
+            if (pathResult.reason === 'VOID' || targetHex?.structureType === 'VOID') {
+                 msg = TEXT[get().language].TOAST.PATH_VOID;
+            } else if (pathResult.reason === 'RANK') {
+                 msg = TEXT[get().language].HUD.ERROR_RANK;
+            } else if (pathResult.reason === 'STEEP') {
+                 msg = TEXT[get().language].TOAST.TOO_STEEP;
+            } else if (pathResult.reason === 'TOO_FAR') {
+                 msg = TEXT[get().language].TOAST.TOO_FAR;
+            } else if (pathResult.reason === 'OBSTACLE') {
+                 msg = TEXT[get().language].TOAST.PATH_BLOCKED;
+            }
+            set({ toast: { message: msg, type: 'error', timestamp: Date.now() } });
             return;
           }
 
@@ -534,7 +405,12 @@ export const useGameStore = create<GameStore>()(
 
           if (!costResult.canAfford) {
             audioService.play('ERROR');
-            const msg = costResult.reason || TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', costResult.deductCoins.toString());
+            let msg = TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', costResult.deductCoins.toString());
+            if (costResult.reason === 'VOID') msg = TEXT[get().language].TOAST.PATH_VOID;
+            else if (costResult.reason === 'STEEP') msg = TEXT[get().language].TOAST.TOO_STEEP;
+            else if (costResult.reason === 'INSUFFICIENT_FUNDS') msg = TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', costResult.deductCoins.toString());
+            else if (costResult.reason) msg = costResult.reason;
+            
             set({ toast: { message: msg, type: 'error', timestamp: Date.now() } });
             return;
           }
@@ -554,7 +430,12 @@ export const useGameStore = create<GameStore>()(
             set({ session: engine.state });
           } else {
             audioService.play('ERROR');
-            set({ toast: { message: res.reason || TEXT[get().language].TOAST.GENERIC_ERROR, type: 'error', timestamp: Date.now() } });
+            let msg = res.reason || TEXT[get().language].TOAST.GENERIC_ERROR;
+            if (res.reason === 'VOID') msg = TEXT[get().language].TOAST.PATH_VOID;
+            else if (res.reason === 'STEEP') msg = TEXT[get().language].TOAST.TOO_STEEP;
+            else if (res.reason === 'RANK') msg = TEXT[get().language].HUD.ERROR_RANK;
+            
+            set({ toast: { message: msg, type: 'error', timestamp: Date.now() } });
           }
       },
 
@@ -680,6 +561,920 @@ export const useGameStore = create<GameStore>()(
       },
 
       checkTutorialCamera: () => {}, 
+
+      // --- OVERWORLD ---
+      initOverworld: async () => {
+          set({ uiState: 'INTRO', introNextState: 'OVERWORLD' });
+          try {
+              const { generateOverworld } = await import('./services/OverworldGenerator.ts');
+              const seed = Math.random();
+              const grid = generateOverworld(20, seed); // Radius 20
+              set(state => ({
+                  overworld: {
+                      ...state.overworld,
+                      grid,
+                      isGenerated: true,
+                      seed,
+                      player: {
+                          q: 0, r: 0, hp: 100, maxHp: 100, energy: 50, maxEnergy: 50, credits: 0,
+                          equipment: {}, bag: [], reputation: 0, stepCount: 0
+                      },
+                      flags: {},
+                      activeEventId: null,
+                      activeEventNodeId: null,
+                      visitedHexes: { [getHexKey(0, 0)]: true },
+                      isOverworldMoving: false
+                  }
+              }));
+          } catch (err) {
+              console.error('Failed to init overworld:', err);
+              get().showToast(TEXT[get().language].TOAST.WORLD_INIT_FAILED, 'error');
+              set({ uiState: 'OVERWORLD' });
+          }
+      },
+
+      moveOverworldPlayer: async (path: HexCoord[]) => {
+          if (path.length === 0 || get().overworld.isOverworldMoving) return;
+          
+          set(state => ({ overworld: { ...state.overworld, isOverworldMoving: true } }));
+          
+          const { generateHexData, getSpecialFeature, getHexHeight } = await import('./services/OverworldGenerator.ts');
+          
+          try {
+              for (const step of path) {
+                  const state = get();
+                  const currentOverworld = state.overworld;
+                  const player = currentOverworld.player;
+                  const key = getHexKey(step.q, step.r);
+                  let hex = currentOverworld.grid[key];
+
+                  // Lazy generation: if hex doesn't exist, generate it to check moveCost
+                  if (!hex) {
+                      const baseHex = generateHexData(step.q, step.r, currentOverworld.seed);
+                      const special = getSpecialFeature(step.q, step.r, currentOverworld.seed, 20);
+                      hex = {
+                          ...baseHex,
+                          ...special,
+                          height: special.terrainType ? getHexHeight(special.terrainType) : baseHex.height
+                      };
+                  }
+
+                  if (player.hp <= 0) {
+                      get().showToast(TEXT[state.language].TOAST.NEED_HP.replace('{0}', '1'), 'error');
+                      break;
+                  }
+
+                  if (player.energy < hex.moveCost) {
+                      get().showToast(TEXT[state.language].TOAST.NEED_ENERGY.replace('{0}', hex.moveCost.toString()), 'error');
+                      break;
+                  }
+
+                  let shouldBreak = false;
+                  set(state => {
+                      const newOverworld = { ...state.overworld };
+                      if (!newOverworld.flags) newOverworld.flags = {};
+                      newOverworld.visitedHexes = { ...(newOverworld.visitedHexes || {}) };
+                      
+                      const player = { ...newOverworld.player };
+                      const grid = { ...newOverworld.grid };
+                      
+                      // Ensure hex is in grid
+                      if (!grid[key]) {
+                          grid[key] = hex;
+                      }
+                      
+                      if (hex.moveCost >= 999) {
+                          shouldBreak = true;
+                          return state;
+                      }
+                      
+                      player.energy -= hex.moveCost;
+                      player.q = step.q;
+                      player.r = step.r;
+                      player.stepCount = (player.stepCount ?? 0) + 1;
+                      
+                      // Reveal fog of war (radius 1)
+                      const revealRadius = 1;
+                      for (let dq = -revealRadius; dq <= revealRadius; dq++) {
+                          for (let dr = Math.max(-revealRadius, -dq - revealRadius); dr <= Math.min(revealRadius, -dq + revealRadius); dr++) {
+                              const nq = step.q + dq;
+                              const nr = step.r + dr;
+                              const nk = getHexKey(nq, nr);
+                              
+                              if (!grid[nk]) {
+                                  // Generate neighbors too if they don't exist
+                                  const baseN = generateHexData(nq, nr, newOverworld.seed);
+                                  const specialN = getSpecialFeature(nq, nr, newOverworld.seed, 20);
+                                  grid[nk] = {
+                                      ...baseN,
+                                      ...specialN,
+                                      height: specialN.terrainType ? getHexHeight(specialN.terrainType) : baseN.height
+                                  };
+                              }
+                              
+                              grid[nk] = { ...grid[nk], isRevealed: true };
+                          }
+                      }
+                      
+                      newOverworld.player = player;
+                      newOverworld.grid = grid;
+                      
+                      // Check if already visited to prevent repeating events
+                      const alreadyVisited = !!newOverworld.visitedHexes[key];
+                      newOverworld.visitedHexes[key] = true;
+
+                      if (!alreadyVisited) {
+                          // Random event chance on step, or guaranteed event on POI/CITY
+                          if (hex.poiId || hex.terrainType === 'CITY') {
+                              // High chance to trigger a specific event for POIs or Cities
+                              if (Math.random() < 0.5) {
+                                  const flags = newOverworld.flags || {};
+                                  const eventId = pickOverworldEvent(hex.terrainType, flags, player.reputation ?? 0, player.stepCount ?? 0);
+                                  if (eventId) {
+                                      setTimeout(() => get().triggerEvent(eventId), 10);
+                                      shouldBreak = true;
+                                  }
+                              }
+                          } else if (!hex.riftId) {
+                              const chance = hex.terrainType === 'ROAD' ? 0.15 : 0.08;
+                              if (Math.random() < chance) {
+                                  const flags = newOverworld.flags || {};
+                                  const eventId = pickOverworldEvent(hex.terrainType, flags, player.reputation ?? 0, player.stepCount ?? 0);
+                                  if (eventId) {
+                                      setTimeout(() => get().triggerEvent(eventId), 10);
+                                      shouldBreak = true;
+                                  }
+                              }
+                          }
+                      }
+
+                      return { overworld: newOverworld };
+                  });
+                  
+                  if (shouldBreak) break;
+                  
+                  // Wait for animation
+                  await new Promise(resolve => setTimeout(resolve, 400));
+              }
+          } finally {
+              set(state => ({ overworld: { ...state.overworld, isOverworldMoving: false } }));
+          }
+      },
+
+      exploreOverworld: () => {
+          const state = get();
+          if (state.overworld.activeAction) return;
+
+          const player = state.overworld.player;
+          if (player.hp < 10) {
+              get().showToast(TEXT[get().language].TOAST.NEED_HP.replace('{0}', '10'), 'error');
+              return;
+          }
+          if (player.energy < 3) {
+              get().showToast(TEXT[get().language].TOAST.NEED_ENERGY.replace('{0}', '3'), 'error');
+              return;
+          }
+
+          // Start action
+          get().setOverworldActiveAction('EXPLORE');
+          
+          const duration = 3000;
+          const interval = 100;
+          let elapsed = 0;
+
+          const timer = setInterval(() => {
+              elapsed += interval;
+              const progress = Math.min(100, (elapsed / duration) * 100);
+              get().setOverworldActionProgress(progress);
+
+              if (elapsed >= duration) {
+                  clearInterval(timer);
+                  set(state => {
+                      const newOverworld = { ...state.overworld };
+                      const player = { ...newOverworld.player };
+                      player.bag = [...(player.bag ?? [])];
+
+                      newOverworld.activeAction = null;
+                      newOverworld.actionProgress = 0;
+
+                      player.energy -= 3;
+                      
+                      const roll = Math.random();
+                      
+                      // 30% chance to trigger an event
+                      if (roll < 0.3) {
+                          const flags = newOverworld.flags || {};
+                          const currentHex = newOverworld.grid[getHexKey(player.q, player.r)];
+                          const eventId = pickOverworldEvent(currentHex?.terrainType || 'PLAINS', flags, player.reputation ?? 0, player.stepCount ?? 0);
+                          if (eventId) {
+                              setTimeout(() => get().triggerEvent(eventId), 10);
+                              newOverworld.player = player;
+                              return { overworld: newOverworld };
+                          }
+                      }
+                      
+                      // Normal exploration (70% chance)
+                      if (roll < 0.7) {
+                          // Success
+                          const rewardRoll = Math.random();
+                          if (rewardRoll < 0.33) {
+                              player.credits += 10;
+                              get().showToast(TEXT[get().language].TOAST.FOUND_CREDITS.replace('{0}', '10'), 'success');
+                          } else if (rewardRoll < 0.66) {
+                              player.bag.push('SUPPLIES');
+                              get().showToast(TEXT[get().language].TOAST.FOUND_SUPPLIES, 'success');
+                          } else {
+                              player.bag.push('SCRAP');
+                              get().showToast(TEXT[get().language].TOAST.FOUND_SCRAP, 'success');
+                          }
+                      } else {
+                          // Failure
+                          player.hp -= 10;
+                          get().showToast(TEXT[get().language].TOAST.TRAP_HIT.replace('{0}', '10'), 'error');
+                          if (player.hp <= 0) {
+                              player.hp = player.maxHp;
+                              player.energy = player.maxEnergy;
+                              player.credits = Math.floor(player.credits * 0.5);
+                              const cityHex = Object.values(newOverworld.grid).find(h => h.terrainType === 'CITY');
+                              if (cityHex) {
+                                  player.q = cityHex.q;
+                                  player.r = cityHex.r;
+                              } else {
+                                  player.q = 0;
+                                  player.r = 0;
+                              }
+                              get().showToast(TEXT[get().language].TOAST.DEATH_OVERWORLD, 'error');
+                          }
+                      }
+
+                      newOverworld.player = player;
+                      return { overworld: newOverworld };
+                  });
+              }
+          }, interval);
+      },
+
+      setOverworldActionProgress: (progress: number) => {
+          set(state => ({
+              overworld: { ...state.overworld, actionProgress: progress }
+          }));
+      },
+
+      setOverworldActiveAction: (action: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null) => {
+          set(state => ({
+              overworld: { ...state.overworld, activeAction: action, actionProgress: 0 }
+          }));
+      },
+
+      digOverworld: () => {
+          const state = get();
+          if (state.overworld.activeAction) return;
+
+          const player = state.overworld.player;
+          const key = getHexKey(player.q, player.r);
+          const hex = state.overworld.grid[key];
+
+          if (player.hp < 5) {
+              get().showToast(TEXT[get().language].TOAST.NEED_HP.replace('{0}', '5'), 'error');
+              return;
+          }
+          if (player.energy < 2) {
+              get().showToast(TEXT[get().language].TOAST.NEED_ENERGY.replace('{0}', '2'), 'error');
+              return;
+          }
+
+          if (hex.terrainType === 'CITY' || hex.riftId) {
+              get().showToast(TEXT[get().language].TOAST.CANNOT_DIG, 'error');
+              return;
+          }
+
+          const currentHeight = hex.height ?? getHexHeight(hex.terrainType);
+          const targetHeight = currentHeight - 1;
+
+          // 1. HIGH GROUND RULE
+          if (currentHeight > 0) {
+              const neighbors = getNeighbors(player.q, player.r);
+              const neighborHexes = neighbors
+                  .map(n => state.overworld.grid[getHexKey(n.q, n.r)])
+                  .filter(h => h);
+              
+              if (neighborHexes.length > 0) {
+                  const minNeighborLevel = Math.min(...neighborHexes.map(h => h.height ?? getHexHeight(h.terrainType)));
+                  if (targetHeight <= minNeighborLevel) {
+                      get().showToast(TEXT[get().language].TOAST.GRADIENT_LOCK.replace('{0}', minNeighborLevel.toString()), 'error');
+                      return;
+                  }
+              }
+          } else if (targetHeight < -1) {
+              // 3. REVERSE STAIRCASE RULE (Deep Digging < -1)
+              const neighbors = getNeighbors(player.q, player.r);
+              const deepNeighbors = neighbors.filter(n => {
+                  const h = state.overworld.grid[getHexKey(n.q, n.r)];
+                  if (!h) return false;
+                  const hHeight = h.height ?? getHexHeight(h.terrainType);
+                  return hHeight === currentHeight;
+              });
+              if (deepNeighbors.length < 2) {
+                  const reqLvlStr = currentHeight >= 0 ? `L${currentHeight}` : `${currentHeight}`;
+                  get().showToast(TEXT[get().language].TOAST.UNSTABLE_DIG.replace('{0}', reqLvlStr), 'error');
+                  return;
+              }
+          }
+
+          // Start action
+          get().setOverworldActiveAction('DIG');
+          
+          const duration = 3000;
+          const interval = 100;
+          let elapsed = 0;
+
+          const timer = setInterval(() => {
+              elapsed += interval;
+              const progress = Math.min(100, (elapsed / duration) * 100);
+              get().setOverworldActionProgress(progress);
+
+              if (elapsed >= duration) {
+                  clearInterval(timer);
+                  set(state => {
+                      const newOverworld = { ...state.overworld };
+                      const player = { ...newOverworld.player };
+                      const key = getHexKey(player.q, player.r);
+                      const hex = { ...newOverworld.grid[key] };
+                      hex.height = targetHeight;
+                      newOverworld.grid[key] = hex;
+                      
+                      player.energy -= 2;
+                      newOverworld.player = player;
+                      newOverworld.activeAction = null;
+                      newOverworld.actionProgress = 0;
+                      
+                      audioService.play('CRACK');
+                      get().showToast(TEXT[get().language].TOAST.EXCAVATED, 'success');
+
+                      return { overworld: newOverworld };
+                  });
+              }
+          }, interval);
+      },
+
+      buildOverworld: () => {
+          const state = get();
+          if (state.overworld.activeAction) return;
+
+          const player = state.overworld.player;
+          const key = getHexKey(player.q, player.r);
+          const hex = state.overworld.grid[key];
+
+          if (player.hp < 5) {
+              get().showToast(TEXT[get().language].TOAST.NEED_HP.replace('{0}', '5'), 'error');
+              return;
+          }
+          if (player.energy < 2) {
+              get().showToast(TEXT[get().language].TOAST.NEED_ENERGY.replace('{0}', '2'), 'error');
+              return;
+          }
+
+          if (hex.terrainType === 'WATER') {
+              get().showToast(TEXT[get().language].TOAST.CANNOT_BUILD_WATER, 'error');
+              return;
+          }
+
+          if (hex.terrainType === 'CITY' || hex.riftId) {
+              get().showToast(TEXT[get().language].TOAST.CANNOT_BUILD, 'error');
+              return;
+          }
+
+          const currentHeight = hex.height ?? getHexHeight(hex.terrainType);
+          const targetHeight = currentHeight + 1;
+
+          if (targetHeight > 1) {
+              const neighbors = getNeighbors(player.q, player.r);
+              const supports = neighbors.filter(n => {
+                  const h = state.overworld.grid[getHexKey(n.q, n.r)];
+                  if (!h) return false;
+                  const hHeight = h.height ?? getHexHeight(h.terrainType);
+                  return hHeight >= currentHeight;
+              });
+              if (supports.length < 2) {
+                  get().showToast(TEXT[get().language].TOAST.UNSTABLE_BUILD.replace('{0}', currentHeight.toString()), 'error');
+                  return;
+              }
+          }
+
+          // Start action
+          get().setOverworldActiveAction('BUILD');
+          
+          const duration = 3000;
+          const interval = 100;
+          let elapsed = 0;
+
+          const timer = setInterval(() => {
+              elapsed += interval;
+              const progress = Math.min(100, (elapsed / duration) * 100);
+              get().setOverworldActionProgress(progress);
+
+              if (elapsed >= duration) {
+                  clearInterval(timer);
+                  set(state => {
+                      const newOverworld = { ...state.overworld };
+                      const player = { ...newOverworld.player };
+                      const key = getHexKey(player.q, player.r);
+                      const hex = { ...newOverworld.grid[key] };
+                      hex.height = targetHeight;
+                      newOverworld.grid[key] = hex;
+                      
+                      player.energy -= 2;
+                      newOverworld.player = player;
+                      newOverworld.activeAction = null;
+                      newOverworld.actionProgress = 0;
+                      
+                      audioService.play('GROWTH_START');
+                      get().showToast(TEXT[get().language].TOAST.RAISED_TERRAIN, 'success');
+
+                      return { overworld: newOverworld };
+                  });
+              }
+          }, interval);
+      },
+
+      restOverworld: () => {
+          const state = get();
+          if (state.overworld.activeAction) return;
+
+          const player = state.overworld.player;
+          const key = getHexKey(player.q, player.r);
+          const hex = state.overworld.grid[key];
+
+          // Check prerequisites
+          if (hex.terrainType === 'CITY') {
+              if (player.credits < 5) {
+                  get().showToast(TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', '5'), 'error');
+                  return;
+              }
+          } else {
+              const supplyIndex = player.bag.indexOf('SUPPLIES');
+              if (supplyIndex === -1 && player.hp <= 10) {
+                  // If no supplies and low HP, we might die, but we can still try to rest
+              }
+          }
+
+          // Start action
+          get().setOverworldActiveAction('REST');
+          
+          const duration = 3000;
+          const interval = 100;
+          let elapsed = 0;
+
+          const timer = setInterval(() => {
+              elapsed += interval;
+              const progress = Math.min(100, (elapsed / duration) * 100);
+              get().setOverworldActionProgress(progress);
+
+              if (elapsed >= duration) {
+                  clearInterval(timer);
+                  let toastMsg = '';
+                  let toastType: 'success' | 'error' | 'info' = 'success';
+
+                  set(state => {
+                      const newOverworld = { ...state.overworld };
+                      const player = { ...newOverworld.player };
+                      player.bag = [...(player.bag ?? [])];
+                      const key = getHexKey(player.q, player.r);
+                      const hex = newOverworld.grid[key];
+
+                      newOverworld.activeAction = null;
+                      newOverworld.actionProgress = 0;
+
+                      if (hex.terrainType === 'CITY') {
+                          if (player.credits >= 5) {
+                              player.credits -= 5;
+                              player.energy = player.maxEnergy;
+                              player.hp = Math.min(player.maxHp, player.hp + 20);
+                              toastMsg = TEXT[get().language].TOAST.REST_CITY;
+                              toastType = 'success';
+                          } else {
+                              toastMsg = TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', '5');
+                              toastType = 'error';
+                          }
+                      } else {
+                          const supplyIndex = player.bag.indexOf('SUPPLIES');
+                          if (supplyIndex !== -1) {
+                              player.bag.splice(supplyIndex, 1);
+                              player.energy = player.maxEnergy;
+                              player.hp = Math.min(player.maxHp, player.hp + 20);
+                              toastMsg = TEXT[get().language].TOAST.REST_SUPPLIES;
+                              toastType = 'success';
+                          } else {
+                              if (player.hp <= 10) {
+                                  player.hp = 0;
+                                  player.energy = player.maxEnergy;
+                                  player.credits = Math.floor(player.credits * 0.5);
+                                  const cityHex = Object.values(newOverworld.grid).find(h => h.terrainType === 'CITY');
+                                  if (cityHex) {
+                                      player.q = cityHex.q;
+                                      player.r = cityHex.r;
+                                  } else {
+                                      player.q = 0;
+                                      player.r = 0;
+                                  }
+                                  player.hp = player.maxHp;
+                                  toastMsg = TEXT[get().language].TOAST.STARVED_OVERWORLD;
+                                  toastType = 'error';
+                              } else {
+                                  player.energy = Math.min(player.maxEnergy, player.energy + Math.floor(player.maxEnergy / 2));
+                                  player.hp -= 10;
+                                  toastMsg = TEXT[get().language].TOAST.REST_STARVING;
+                                  toastType = 'error';
+                              }
+                          }
+                      }
+
+                      newOverworld.player = player;
+                      return { overworld: newOverworld };
+                  });
+
+                  if (toastMsg) {
+                      get().showToast(toastMsg, toastType);
+                  }
+              }
+          }, interval);
+      },
+
+      interactOverworld: () => {
+          const state = get();
+          const player = state.overworld.player;
+          const key = getHexKey(player.q, player.r);
+          const hex = state.overworld.grid[key];
+          const flags = state.overworld.flags || {};
+
+          if (hex.poiId) {
+              const eventDef = EVENT_REGISTRY[hex.poiId];
+              const isCompleted = flags[`${hex.poiId}_completed`];
+              
+              if (eventDef?.isUnique && isCompleted) {
+                  state.showToast(TEXT[state.language].TOAST.NOTHING_HERE, 'info');
+              } else {
+                  state.triggerEvent(hex.poiId);
+              }
+          } else if (hex.riftId) {
+              // Check if rift is unlocked
+              const series = hex.riftId.split('.')[0];
+              const progress = state.campaignProgress;
+              
+              // Series 1: 0-5, Series 2: 6-10, Series 3: 11-18, Series 4: 19-26
+              let isLocked = false;
+              if (series === '2' && progress < 6) isLocked = true;
+              if (series === '3' && progress < 11) isLocked = true;
+              if (series === '4' && progress < 19) isLocked = true;
+
+              if (isLocked) {
+                  state.showToast(TEXT[state.language].TOAST.RIFT_LOCKED, 'info');
+                  audioService.play('ERROR');
+              } else {
+                  state.enterRift(hex.riftId);
+              }
+          } else if (hex.terrainType === 'CITY') {
+              state.triggerEvent('city_hub');
+          } else if (hex.terrainType === 'OUTPOST') {
+              state.triggerEvent('outpost_checkpoint');
+          } else if (hex.terrainType === 'RUINS') {
+              const f = state.overworld.flags || {};
+              const eventId = !f['ruins_inscription_completed']
+                  ? 'ruins_inscription'
+                  : !f['hidden_cache_completed']
+                  ? 'hidden_cache'
+                  : f['ruins_curse_active']
+                  ? 'ruins_nightmare'
+                  : f['ruins_inscription_copied']
+                  ? 'ruins_echo'
+                  : 'ancient_ruins';
+              state.triggerEvent(eventId);
+          } else if (hex.terrainType === 'MERCHANT_CAMP') {
+              state.triggerEvent('merchant_camp_visit');
+          } else if (hex.terrainType === 'ROAD') {
+              const f = state.overworld.flags || {};
+              const eventId = !f['wounded_courier_completed'] ? 'wounded_courier' : 'road_pilgrims';
+              state.triggerEvent(eventId);
+          } else {
+              state.showToast(TEXT[state.language].TOAST.NOTHING_INTERACT, 'info');
+          }
+      },
+
+      enterRift: (riftId: string) => {
+          const state = get();
+          const player = state.overworld.player;
+          
+          if (player.hp < 20) {
+              get().showToast(TEXT[get().language].TOAST.NEED_HP.replace('{0}', '20'), 'error');
+              return;
+          }
+          if (player.energy < 10) {
+              get().showToast(TEXT[get().language].TOAST.NEED_ENERGY.replace('{0}', '10'), 'error');
+              return;
+          }
+
+          get().startCampaignLevel(riftId);
+      },
+
+      returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              const player = { ...newOverworld.player };
+              const key = getHexKey(player.q, player.r);
+              const hex = newOverworld.grid[key];
+
+              if (result === 'VICTORY') {
+                  // Reward
+                  player.credits += 50;
+                  get().showToast(TEXT[get().language].TOAST.RIFT_VICTORY.replace('{0}', '50'), 'success');
+                  
+                  // Close the rift
+                  if (hex && hex.riftId) {
+                      newOverworld.grid = {
+                          ...newOverworld.grid,
+                          [key]: { ...hex, riftId: undefined, isRevealed: true }
+                      };
+                  }
+
+                  // Check for Campaign Victory
+                  const remainingRifts = Object.values(newOverworld.grid).filter(h => h.riftId).length;
+                  if (remainingRifts === 0) {
+                      setTimeout(() => {
+                          set({ uiState: 'INTRO', introNextState: 'MENU' });
+                          get().showToast(TEXT[get().language].TOAST.CAMPAIGN_COMPLETE, 'success');
+                      }, 2000);
+                  }
+              } else {
+                  // Penalty
+                  player.hp -= 30;
+                  get().showToast(TEXT[get().language].TOAST.RIFT_DEFEAT.replace('{0}', '30'), 'error');
+                  if (player.hp <= 0) {
+                      player.hp = player.maxHp;
+                      player.energy = player.maxEnergy;
+                      player.credits = Math.floor(player.credits * 0.5); // Lose half credits
+                      
+                      // Find city to respawn
+                      const cityHex = Object.values(newOverworld.grid).find(h => h.terrainType === 'CITY');
+                      if (cityHex) {
+                          player.q = cityHex.q;
+                          player.r = cityHex.r;
+                      } else {
+                          player.q = 0;
+                          player.r = 0;
+                      }
+                      get().showToast(TEXT[get().language].TOAST.DEATH_OVERWORLD, 'error');
+                  }
+              }
+
+              newOverworld.player = player;
+
+              // Cleanup game session
+              if (engine) {
+                  engine.destroy();
+                  engine = null;
+              }
+
+              return { 
+                  overworld: newOverworld,
+                  session: null,
+                  hasActiveSession: false,
+                  uiState: 'OVERWORLD',
+                  voidDialogTarget: null,
+                  monumentDialogState: { isOpen: false, slots: [null, null, null] },
+                  lastVisualEvent: undefined
+              };
+          });
+      },
+
+      triggerEvent: (eventId: string) => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              const event = EVENT_REGISTRY[eventId] ?? runtimeEventCache[eventId];
+              if (!event) return state;
+              newOverworld.activeEventId = eventId;
+              newOverworld.activeEventNodeId = event.startNodeId;
+              return { overworld: newOverworld };
+          });
+      },
+
+      resolveEventChoice: (choice: import('./types.ts').OverworldEventChoice) => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              if (!newOverworld.flags) newOverworld.flags = {};
+              const player = { ...newOverworld.player };
+              player.bag = [...(player.bag ?? [])];
+              const eventId = newOverworld.activeEventId;
+              
+              if (!eventId) return state;
+
+              // Validate prerequisites before processing
+              if (choice.reqCredits && player.credits < choice.reqCredits) {
+                  get().showToast(TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', choice.reqCredits.toString()), 'error');
+                  return state;
+              }
+              if (choice.reqItem && !player.bag.includes(choice.reqItem)) {
+                  get().showToast(TEXT[get().language].TOAST.WRONG_ITEM, 'error');
+                  return state;
+              }
+              if (choice.reqFlag && !newOverworld.flags[choice.reqFlag]) return state;
+              if (choice.reqFlagAbsent && newOverworld.flags[choice.reqFlagAbsent]) return state;
+              const rep = player.reputation ?? 0;
+              if (choice.reqRepMin !== undefined && rep < choice.reqRepMin) return state;
+              if (choice.reqRepMax !== undefined && rep > choice.reqRepMax) return state;
+              if (choice.reqStepMin !== undefined && (player.stepCount ?? 0) < choice.reqStepMin) return state;
+
+              // Apply rewards
+              if (choice.reward) {
+                  if (choice.reward.credits) player.credits += choice.reward.credits;
+                  if (choice.reward.hp) player.hp = Math.min(player.maxHp, player.hp + choice.reward.hp);
+                  if (choice.reward.energy) player.energy = Math.min(player.maxEnergy, player.energy + choice.reward.energy);
+                  if (choice.reward.items) player.bag.push(...choice.reward.items);
+              }
+
+              // Apply penalties
+              if (choice.penalty) {
+                  if (choice.penalty.credits) player.credits = Math.max(0, player.credits - choice.penalty.credits);
+                  if (choice.penalty.hp) player.hp = Math.max(0, player.hp - choice.penalty.hp);
+                  if (choice.penalty.energy) player.energy = Math.max(0, player.energy - choice.penalty.energy);
+                  if (choice.penalty.items) {
+                      choice.penalty.items.forEach(item => {
+                          const idx = player.bag.indexOf(item);
+                          if (idx > -1) player.bag.splice(idx, 1);
+                      });
+                  }
+                  
+                  if (player.hp <= 0) {
+                      player.hp = player.maxHp;
+                      player.energy = player.maxEnergy;
+                      player.credits = Math.floor(player.credits * 0.5);
+                      const cityHex = Object.values(newOverworld.grid).find(h => h.terrainType === 'CITY');
+                      if (cityHex) {
+                          player.q = cityHex.q;
+                          player.r = cityHex.r;
+                      } else {
+                          player.q = 0;
+                          player.r = 0;
+                      }
+                      get().showToast(TEXT[get().language].TOAST.DEATH_OVERWORLD, 'error');
+                      newOverworld.activeEventId = null;
+                      newOverworld.activeEventNodeId = null;
+                      newOverworld.player = player;
+                      return { overworld: newOverworld };
+                  }
+              }
+
+              // Apply reputation change
+              if (choice.addReputation) {
+                  player.reputation = Math.max(-100, Math.min(100, (player.reputation ?? 0) + choice.addReputation));
+              }
+
+              newOverworld.player = player;
+
+              // Apply flag changes
+              if (choice.setFlag) {
+                  const flags = Array.isArray(choice.setFlag) ? choice.setFlag : [choice.setFlag];
+                  flags.forEach(f => { newOverworld.flags[f] = true; });
+              }
+              if (choice.clearFlag) delete newOverworld.flags[choice.clearFlag];
+
+              // Handle action
+              switch (choice.action) {
+                  case 'CLOSE':
+                      newOverworld.flags[`${eventId}_completed`] = true;
+                      newOverworld.activeEventId = null;
+                      newOverworld.activeEventNodeId = null;
+                      break;
+                  case 'GOTO_NODE':
+                      if (choice.nextNode) {
+                          newOverworld.activeEventNodeId = choice.nextNode;
+                      } else {
+                          newOverworld.activeEventId = null;
+                          newOverworld.activeEventNodeId = null;
+                      }
+                      break;
+                  case 'START_BATTLE':
+                      newOverworld.flags[`${eventId}_completed`] = true;
+                      newOverworld.activeEventId = null;
+                      newOverworld.activeEventNodeId = null;
+                      if (choice.riftId) {
+                          setTimeout(() => get().enterRift(choice.riftId!), 100);
+                      }
+                      break;
+                  case 'ROLL_DICE':
+                      const roll = Math.random();
+                      if (roll < (choice.probability ?? 0.5)) {
+                          newOverworld.activeEventNodeId = choice.successNode || null;
+                      } else {
+                          newOverworld.activeEventNodeId = choice.failNode || null;
+                      }
+                      if (!newOverworld.activeEventNodeId) {
+                          newOverworld.activeEventId = null;
+                      }
+                      break;
+                  case 'AUTO_WIN':
+                      if (choice.reqItem) {
+                          const itemIndex = player.bag.indexOf(choice.reqItem);
+                          if (itemIndex !== -1) {
+                              player.bag.splice(itemIndex, 1);
+                              newOverworld.activeEventNodeId = choice.nextNode || null;
+                              if (!newOverworld.activeEventNodeId) {
+                                  newOverworld.activeEventId = null;
+                              }
+                          } else {
+                              get().showToast(TEXT[get().language].TOAST.MISSING_ITEM.replace('{0}', choice.reqItem), 'error');
+                          }
+                      }
+                      break;
+              }
+
+              return { overworld: newOverworld };
+          });
+      },
+
+      equipItem: (itemId: string, slot: 'head' | 'body' | 'tool' | 'artifact' | 'feet' | 'necklace' | 'ring', bagIndex: number) => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              const player = { ...newOverworld.player };
+              player.bag = [...(player.bag ?? [])];
+              const eq = { ...player.equipment };
+              
+              // If there's already an item in the slot, put it back in the bag
+              const currentItem = eq[slot];
+              
+              // Remove the new item from the bag
+              player.bag.splice(bagIndex, 1);
+              
+              if (currentItem) {
+                  player.bag.push(currentItem);
+                  const currentDef = getItemDef(currentItem);
+                  if (currentDef?.maxHpBonus) {
+                      player.maxHp -= currentDef.maxHpBonus;
+                      player.hp = Math.min(player.hp, player.maxHp);
+                  }
+                  if (currentDef?.maxEnergyBonus) {
+                      player.maxEnergy -= currentDef.maxEnergyBonus;
+                      player.energy = Math.min(player.energy, player.maxEnergy);
+                  }
+              }
+              
+              // Apply new item effects
+              const newDef = getItemDef(itemId);
+              if (newDef?.maxHpBonus) {
+                  player.maxHp += newDef.maxHpBonus;
+                  player.hp += newDef.maxHpBonus;
+              }
+              if (newDef?.maxEnergyBonus) {
+                  player.maxEnergy += newDef.maxEnergyBonus;
+                  player.energy += newDef.maxEnergyBonus;
+              }
+              
+              eq[slot] = itemId;
+              player.equipment = eq;
+              newOverworld.player = player;
+              
+              get().showToast(TEXT[get().language].TOAST.ITEM_EQUIPPED, 'success');
+              
+              return { overworld: newOverworld };
+          });
+      },
+
+      unequipItem: (slot: 'head' | 'body' | 'tool' | 'artifact' | 'feet' | 'necklace' | 'ring') => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              const player = { ...newOverworld.player };
+              player.bag = [...(player.bag ?? [])];
+              const eq = { ...player.equipment };
+              
+              const currentItem = eq[slot];
+              if (currentItem) {
+                  if (player.bag.length >= 20) {
+                      get().showToast(TEXT[get().language].TOAST.BAG_FULL, 'error');
+                      return state;
+                  }
+                  player.bag.push(currentItem);
+                  
+                  const currentDef = getItemDef(currentItem);
+                  if (currentDef?.maxHpBonus) {
+                      player.maxHp -= currentDef.maxHpBonus;
+                      player.hp = Math.min(player.hp, player.maxHp);
+                  }
+                  if (currentDef?.maxEnergyBonus) {
+                      player.maxEnergy -= currentDef.maxEnergyBonus;
+                      player.energy = Math.min(player.energy, player.maxEnergy);
+                  }
+                  
+                  delete eq[slot];
+                  
+                  player.equipment = eq;
+                  newOverworld.player = player;
+                  
+                  get().showToast(TEXT[get().language].TOAST.ITEM_UNEQUIPPED, 'success');
+                  return { overworld: newOverworld };
+              }
+              
+              return state;
+          });
+      },
 
       // --- GAME LOOP ---
       tick: async () => {
@@ -862,7 +1657,8 @@ export const useGameStore = create<GameStore>()(
           campaignProgress: state.campaignProgress,
           isMusicMuted: state.isMusicMuted,
           isSfxMuted: state.isSfxMuted,
-          language: state.language
+          language: state.language,
+          overworld: state.overworld
       })
     }
   )

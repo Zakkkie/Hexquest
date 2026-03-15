@@ -211,7 +211,12 @@ interface Dictionary {
         RECHARGE_FAILED: string;
         TOO_FAR_VOID: string;
         PATH_BLOCKED: string;
+        TOO_STEEP: string;
+        IMPASSABLE: string;
+        TOO_FAR: string;
         NEED_CREDITS: string;
+        NEED_ENERGY: string;
+        NEED_HP: string;
         CONFIRM_MOVE: string;
         GENERIC_ERROR: string;
         RESTORE_ERROR: string;
@@ -221,6 +226,51 @@ interface Dictionary {
         NO_HISTORY: string;
         LOG_DOWNLOADED: string;
         STORAGE_FULL: string;
+        DEATH_OVERWORLD: string;
+        STARVED_OVERWORLD: string;
+        TRAP_HIT: string;
+        RIFT_DEFEAT: string;
+        RIFT_VICTORY: string;
+        FOUND_CREDITS: string;
+        FOUND_SUPPLIES: string;
+        FOUND_SCRAP: string;
+        NOTHING_HERE: string;
+        WORLD_INIT_FAILED: string;
+        CANNOT_DIG: string;
+        GRADIENT_LOCK: string;
+        UNSTABLE_DIG: string;
+        EXCAVATED: string;
+        CANNOT_BUILD_WATER: string;
+        CANNOT_BUILD: string;
+        UNSTABLE_BUILD: string;
+        RAISED_TERRAIN: string;
+        REST_CITY: string;
+        REST_SUPPLIES: string;
+        REST_STARVING: string;
+        RIFT_LOCKED: string;
+        PATH_VOID: string;
+        NOTHING_INTERACT: string;
+        CAMPAIGN_COMPLETE: string;
+        MISSING_ITEM: string;
+        ITEM_EQUIPPED: string;
+        BAG_FULL: string;
+        ITEM_UNEQUIPPED: string;
+        ENTITY_NOT_FOUND: string;
+        ACTOR_LOCKED: string;
+        ACTOR_MOVING: string;
+        UNKNOWN_ACTION: string;
+        CANNOT_AFFORD_MOVE: string;
+        MUST_BE_ON_TARGET: string;
+        INSUFFICIENT_FUNDS: string;
+        ITEM_NOT_FOUND: string;
+        NOT_A_VOID: string;
+        STABILIZATION_FAILED: string;
+        MONUMENT_STAND_REQUIRED: string;
+        MONUMENT_WRONG_ITEMS: string;
+        INDESTRUCTIBLE_MONUMENT: string;
+        NEED_MATERIAL: string;
+        ANCIENT_STRUCTURE: string;
+        INVALID_HEX: string;
     };
     CAMPAIGN: {
         LEVEL_1_1_TITLE: string;
@@ -530,8 +580,14 @@ export const TEXT: Record<Language, Dictionary> = {
         TOAST: {
             RECHARGE_FAILED: "Recharge Failed",
             TOO_FAR_VOID: "Too far to stabilize",
+            PATH_VOID: "Path Blocked: Void",
             PATH_BLOCKED: "Path Blocked / Invalid",
+            TOO_STEEP: "Too Steep!",
+            IMPASSABLE: "Impassable Terrain",
+            TOO_FAR: "Target Too Far",
             NEED_CREDITS: "Need {0} credits",
+            NEED_ENERGY: "Need {0} energy",
+            NEED_HP: "Need {0} health",
             CONFIRM_MOVE: "Click again ({0}cr)",
             GENERIC_ERROR: "Error",
             RESTORE_ERROR: "Restoration Error",
@@ -540,7 +596,51 @@ export const TEXT: Record<Language, Dictionary> = {
             ACTIVATION_FAILED: "Activation Failed",
             NO_HISTORY: "No history.",
             LOG_DOWNLOADED: "Log Saved",
-            STORAGE_FULL: "Storage Full!"
+            STORAGE_FULL: "Storage Full!",
+            DEATH_OVERWORLD: "You died in the overworld... Respawned in the city. Lost half credits.",
+            STARVED_OVERWORLD: "You starved to death... Respawned in the city. Lost half credits.",
+            TRAP_HIT: "Triggered a trap! -{0} HP",
+            RIFT_DEFEAT: "Defeated in the Rift! -{0} HP",
+            RIFT_VICTORY: "Rift cleared! +{0} Credits",
+            FOUND_CREDITS: "Found {0} Credits!",
+            FOUND_SUPPLIES: "Found Supplies!",
+            FOUND_SCRAP: "Found Scrap Material!",
+            NOTHING_HERE: "There is nothing left here.",
+            WORLD_INIT_FAILED: "Failed to initialize world",
+            CANNOT_DIG: "Cannot dig here!",
+            GRADIENT_LOCK: "Gradient Lock! Must stay above L{0}.",
+            UNSTABLE_DIG: "UNSTABLE! Dig 2 neighbors to {0} or lower.",
+            EXCAVATED: "Excavated the ground.",
+            CANNOT_BUILD_WATER: "Cannot build on water!",
+            CANNOT_BUILD: "Cannot build here!",
+            UNSTABLE_BUILD: "UNSTABLE! Need 2 neighbors at Level {0} to build higher.",
+            RAISED_TERRAIN: "Raised the terrain.",
+            REST_CITY: "Rested safely in the city (-5 Credits)",
+            REST_SUPPLIES: "Rested using Supplies",
+            REST_STARVING: "Rested without supplies... Starving! (-10 HP)",
+            RIFT_LOCKED: "Rift is locked. Complete previous series.",
+            NOTHING_INTERACT: "Nothing to interact with here",
+            CAMPAIGN_COMPLETE: "Campaign Completed! Congratulations!",
+            MISSING_ITEM: "Missing required item: {0}",
+            ITEM_EQUIPPED: "Item equipped",
+            BAG_FULL: "Bag is full!",
+            ITEM_UNEQUIPPED: "Item unequipped",
+            ENTITY_NOT_FOUND: "Entity not found",
+            ACTOR_LOCKED: "Actor is locked",
+            ACTOR_MOVING: "Actor is moving",
+            UNKNOWN_ACTION: "Unknown action",
+            CANNOT_AFFORD_MOVE: "Cannot afford move",
+            MUST_BE_ON_TARGET: "Must be on target hex",
+            INSUFFICIENT_FUNDS: "Insufficient funds",
+            ITEM_NOT_FOUND: "Item not found",
+            NOT_A_VOID: "Target is not a void",
+            STABILIZATION_FAILED: "Stabilization failed",
+            MONUMENT_STAND_REQUIRED: "Must stand on monument",
+            MONUMENT_WRONG_ITEMS: "Wrong items for monument",
+            INDESTRUCTIBLE_MONUMENT: "Monument is indestructible",
+            NEED_MATERIAL: "Need material",
+            ANCIENT_STRUCTURE: "Ancient structure",
+            INVALID_HEX: "Invalid hex",
         },
         CAMPAIGN: {
             LEVEL_1_1_TITLE: 'Sim 1.1: Expansion Protocol',
@@ -848,8 +948,14 @@ export const TEXT: Record<Language, Dictionary> = {
         TOAST: {
             RECHARGE_FAILED: "Сбой Перезарядки",
             TOO_FAR_VOID: "Слишком далеко",
+            PATH_VOID: "Путь заблокирован: Пустота",
             PATH_BLOCKED: "Путь Заблокирован",
+            TOO_STEEP: "Слишком круто!",
+            IMPASSABLE: "Непроходимая местность",
+            TOO_FAR: "Слишком далеко",
             NEED_CREDITS: "Требуется {0} кред.",
+            NEED_ENERGY: "Нужно {0} энергии",
+            NEED_HP: "Нужно {0} здоровья",
             CONFIRM_MOVE: "Нажмите для подтверждения ({0} кред.)",
             GENERIC_ERROR: "Ошибка",
             RESTORE_ERROR: "Ошибка Восстановления",
@@ -858,7 +964,51 @@ export const TEXT: Record<Language, Dictionary> = {
             ACTIVATION_FAILED: "Сбой Активации",
             NO_HISTORY: "Нет записи истории.",
             LOG_DOWNLOADED: "Лог Скачан",
-            STORAGE_FULL: "Склад Полон!"
+            STORAGE_FULL: "Склад Полон!",
+            DEATH_OVERWORLD: "Вы погибли в пустошах... Возрождение в городе. Потеряна половина кредитов.",
+            STARVED_OVERWORLD: "Вы умерли от голода... Возрождение в городе. Потеряна половина кредитов.",
+            TRAP_HIT: "Попали в ловушку! -{0} ОЗ",
+            RIFT_DEFEAT: "Поражение в Разломе! -{0} ОЗ",
+            RIFT_VICTORY: "Разлом зачищен! +{0} Кред.",
+            FOUND_CREDITS: "Найдено {0} Кред.!",
+            FOUND_SUPPLIES: "Найдены припасы!",
+            FOUND_SCRAP: "Найден металлолом!",
+            NOTHING_HERE: "Здесь больше ничего нет.",
+            WORLD_INIT_FAILED: "Не удалось инициализировать мир",
+            CANNOT_DIG: "Здесь нельзя копать!",
+            GRADIENT_LOCK: "Блокировка градиента! Нужно оставаться выше уровня {0}.",
+            UNSTABLE_DIG: "НЕСТАБИЛЬНО! Раскопайте 2 соседние клетки до уровня {0} или ниже.",
+            EXCAVATED: "Земля раскопана.",
+            CANNOT_BUILD_WATER: "Нельзя строить на воде!",
+            CANNOT_BUILD: "Здесь нельзя строить!",
+            UNSTABLE_BUILD: "НЕСТАБИЛЬНО! Нужно 2 соседние клетки уровня {0}, чтобы строить выше.",
+            RAISED_TERRAIN: "Терраса поднята.",
+            REST_CITY: "Безопасный отдых в городе (-5 Кредитов)",
+            REST_SUPPLIES: "Отдых с использованием припасов",
+            REST_STARVING: "Отдых без припасов... Голодание! (-10 ОЗ)",
+            RIFT_LOCKED: "Разлом заблокирован. Завершите предыдущие серии.",
+            NOTHING_INTERACT: "Здесь не с чем взаимодействовать",
+            CAMPAIGN_COMPLETE: "Кампания Завершена! Поздравляем!",
+            MISSING_ITEM: "Отсутствует необходимый предмет: {0}",
+            ITEM_EQUIPPED: "Предмет экипирован",
+            BAG_FULL: "Сумка полна!",
+            ITEM_UNEQUIPPED: "Предмет снят",
+            ENTITY_NOT_FOUND: "Сущность не найдена",
+            ACTOR_LOCKED: "Действие заблокировано",
+            ACTOR_MOVING: "Сущность в движении",
+            UNKNOWN_ACTION: "Неизвестное действие",
+            CANNOT_AFFORD_MOVE: "Недостаточно средств для перемещения",
+            MUST_BE_ON_TARGET: "Нужно находиться на целевом гексе",
+            INSUFFICIENT_FUNDS: "Недостаточно средств",
+            ITEM_NOT_FOUND: "Предмет не найден",
+            NOT_A_VOID: "Цель не является пустотой",
+            STABILIZATION_FAILED: "Стабилизация не удалась",
+            MONUMENT_STAND_REQUIRED: "Нужно стоять на монументе",
+            MONUMENT_WRONG_ITEMS: "Неверные предметы для монумента",
+            INDESTRUCTIBLE_MONUMENT: "Монумент неразрушим",
+            NEED_MATERIAL: "Нужен материал",
+            ANCIENT_STRUCTURE: "Древнее строение",
+            INVALID_HEX: "Неверный гекс",
         },
         CAMPAIGN: {
             LEVEL_1_1_TITLE: 'Сим 1.1: Протокол Экспансии',

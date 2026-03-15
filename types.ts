@@ -73,6 +73,7 @@ export type NegativeEffectType =
     | 'LOSE_CREDITS'
     | 'LOSE_MOVES'
     | 'LOSE_RANK'
+    | 'LOSE_ENTROPY'
     | 'RESET_MATERIALS'
     | 'FULL_RESET'
     | 'AMNESIA' 
@@ -100,11 +101,15 @@ export interface Item {
   timestamp: number;
   
   visualType: string;
+  iconUrl?: string;
   
   effectType: ItemEffectType;
   effectValue: number;
   effectDescription: string; 
   effectDuration?: number; 
+
+  maxHpBonus?: number;
+  maxEnergyBonus?: number;
 
   negativeEffectType?: NegativeEffectType;
   negativeEffectValue?: number;
@@ -241,7 +246,105 @@ export interface ToastMessage {
   timestamp: number;
 }
 
-export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP';
+export type TerrainType = 'PLAINS' | 'FOREST' | 'SWAMP' | 'WATER' | 'MOUNTAINS' | 'ROAD' | 'CITY' | 'RUINS' | 'OUTPOST' | 'MERCHANT_CAMP';
+
+export interface OverworldHex {
+  q: number;
+  r: number;
+  terrainType: TerrainType;
+  moveCost: number;
+  isRevealed: boolean;
+  height?: number;
+  entityId?: string;
+  riftId?: string;
+  poiId?: string;
+  eventTriggered?: boolean;
+  lootedLevels?: number[];
+}
+
+export interface OverworldPlayer {
+  q: number;
+  r: number;
+  hp: number;
+  maxHp: number;
+  energy: number;
+  maxEnergy: number;
+  credits: number;
+  equipment: {
+    head?: string;
+    body?: string;
+    feet?: string;
+    necklace?: string;
+    ring?: string;
+    tool?: string;
+    artifact?: string;
+  };
+  bag: string[];
+  /** Moral alignment: -100 (outcast) to +100 (guardian). Starts 0. */
+  reputation: number;
+  /** Total steps taken on overworld. 1 "day" = every 20 steps. */
+  stepCount: number;
+}
+
+export interface OverworldEventChoice {
+  label: string;
+  action: 'START_BATTLE' | 'ROLL_DICE' | 'AUTO_WIN' | 'CLOSE' | 'GOTO_NODE';
+  riftId?: string;
+  successNode?: string;
+  failNode?: string;
+  nextNode?: string;
+  reqItem?: string;
+  reqCredits?: number;
+  probability?: number;
+  /** Set flag(s) when this choice is taken */
+  setFlag?: string | string[];
+  /** Clear a flag when this choice is taken */
+  clearFlag?: string;
+  /** Only show this choice if this flag IS set */
+  reqFlag?: string;
+  /** Only show this choice if this flag is NOT set */
+  reqFlagAbsent?: string;
+  /** Modify reputation when this choice is taken (clamped to [-100, 100]) */
+  addReputation?: number;
+  /** Only show if player.reputation >= this value */
+  reqRepMin?: number;
+  /** Only show if player.reputation <= this value */
+  reqRepMax?: number;
+  /** Only show after player.stepCount >= this value */
+  reqStepMin?: number;
+  reward?: { credits?: number; hp?: number; energy?: number; items?: string[] };
+  penalty?: { credits?: number; hp?: number; energy?: number; items?: string[] };
+}
+
+export interface OverworldEventNode {
+  id: string;
+  image?: string;
+  text: string;
+  choices: OverworldEventChoice[];
+}
+
+export interface OverworldEvent {
+  id: string;
+  isUnique?: boolean;
+  nodes: Record<string, OverworldEventNode>;
+  startNodeId: string;
+}
+
+export interface OverworldState {
+  grid: Record<string, OverworldHex>;
+  player: OverworldPlayer;
+  isGenerated: boolean;
+  seed: number;
+  flags: Record<string, boolean>;
+  activeEventId: string | null;
+  activeEventNodeId: string | null;
+  actionProgress?: number;
+  activeAction?: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null;
+  visitedHexes?: Record<string, boolean>;
+  isOverworldMoving?: boolean;
+}
+
+export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'OVERWORLD' | 'INTRO' | 'CAMPAIGN_LOADING';
 export type DeviceType = 'MOBILE' | 'TABLET' | 'DESKTOP';
 
 export interface UserProfile {
@@ -422,6 +525,7 @@ export interface SessionState {
   gameStatus: 'BRIEFING' | 'PLAYING' | 'VICTORY' | 'DEFEAT';
   messageLog: LogEntry[]; 
   botActivityLog: BotLogEntry[]; 
+  fullBotHistory: BotLogEntry[];
   lastBotActionTime: number; 
   isPlayerGrowing: boolean; 
   playerGrowthIntent: 'RECOVER' | 'UPGRADE' | 'DIG' | null; 
@@ -435,6 +539,7 @@ export interface SessionState {
 
 export interface GameState {
   uiState: UIState;
+  introNextState: UIState;
   deviceType: DeviceType; 
   user: UserProfile | null;
   toast: ToastMessage | null;
@@ -454,6 +559,7 @@ export interface GameState {
   };
 
   lastVisualEvent?: { type: string; time: number };
+  overworld: OverworldState;
 }
 
 // --- ACTION TYPES ---
@@ -469,6 +575,11 @@ export type ActivateMiniMonumentAction = { type: 'ACTIVATE_MINI_MONUMENT'; entit
 
 export type BotAction = MoveAction | UpgradeAction | DigAction | WaitAction | RechargeAction;
 export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction | ActivateMonumentAction | ActivateMiniMonumentAction;
+
+export interface PathResult {
+    path: HexCoord[] | null;
+    reason?: string;
+}
 
 export interface ValidationResult {
     ok: boolean;

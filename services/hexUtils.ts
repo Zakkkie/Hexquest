@@ -1,6 +1,7 @@
 
-import { Hex, HexCoord, Entity } from '../types';
+import { Hex, HexCoord, Entity, OverworldHex, PathResult } from '../types';
 import { GAME_CONFIG, getLevelConfig, SAFETY_CONFIG } from '../rules/config';
+import { getHexHeight } from './OverworldGenerator.ts';
 
 export const getHexKey = (q: number, r: number): string => `${q},${r}`;
 export const getCoordinatesFromKey = (key: string): HexCoord => {
@@ -233,23 +234,23 @@ export const findPath = (
   grid: Record<string, Hex>, 
   rank: number, 
   obstacles: HexCoord[]
-): HexCoord[] | null => {
+): PathResult => {
   const startKey = getHexKey(start.q, start.r);
   const endKey = getHexKey(end.q, end.r);
   
   // 1. Immediate checks - Return empty array if already at destination (Success, no movement needed)
-  if (startKey === endKey) return [];
+  if (startKey === endKey) return { path: [] };
   
   // DESTINATION VALIDITY CHECK
   const endHex = grid[endKey];
-  if (endHex && endHex.structureType === 'VOID') return null; // Cannot move into a hole
+  if (endHex && endHex.structureType === 'VOID') return { path: null, reason: 'VOID' }; // Cannot move into a hole
 
   // Quick pre-check distance to avoid searching impossible paths
-  if (cubeDistance(start, end) > SAFETY_CONFIG.MAX_PATH_LENGTH) return null;
+  if (cubeDistance(start, end) > SAFETY_CONFIG.MAX_PATH_LENGTH) return { path: null, reason: 'TOO_FAR' };
 
   // O(1) Obstacle Lookup
   const obsKeys = new Set(obstacles.map(o => getHexKey(o.q, o.r)));
-  if (obsKeys.has(endKey)) return null;
+  if (obsKeys.has(endKey)) return { path: null, reason: 'OBSTACLE' };
 
   // 2. Setup Data Structures
   const openSet = new PriorityQueue<string>();
@@ -261,11 +262,13 @@ export const findPath = (
   openSet.push(startKey, cubeDistance(start, end));
 
   let iterations = 0;
+  let blockedByRank = false;
+  let blockedByHeight = false;
 
   // 3. Main Loop
   while (openSet.length > 0) {
     // Safety Break
-    if (iterations++ > SAFETY_CONFIG.MAX_SEARCH_ITERATIONS) return null;
+    if (iterations++ > SAFETY_CONFIG.MAX_SEARCH_ITERATIONS) return { path: null, reason: 'TIMEOUT' };
 
     const currentKey = openSet.pop()!;
     
@@ -283,7 +286,7 @@ export const findPath = (
         if (!parent) break; // Should not happen if path exists
         currKey = getHexKey(parent.q, parent.r);
       }
-      return path;
+      return { path };
     }
 
     const currentCoord = getCoordinatesFromKey(currentKey);
@@ -305,11 +308,17 @@ export const findPath = (
       if (neighborHex && neighborHex.structureType === 'VOID') continue;
 
       // 1. Rank Check: Cannot enter hex higher than player rank
-      if (neighborHex && neighborHex.maxLevel > rank) continue; 
+      if (neighborHex && neighborHex.maxLevel > rank) {
+        blockedByRank = true;
+        continue; 
+      }
       
       // 2. Height/Jump Check: Cannot jump more than 1 level difference
       const nextLevel = neighborHex ? neighborHex.maxLevel : 0;
-      if (Math.abs(currentLevel - nextLevel) > 1) continue;
+      if (Math.abs(currentLevel - nextLevel) > 1) {
+        blockedByHeight = true;
+        continue;
+      }
 
       // -- Cost Calculation --
       // Update logic: Positive (>1) costs level. Negative/Flat (<2) costs 1.
@@ -329,5 +338,145 @@ export const findPath = (
   }
 
   // No path found
-  return null;
+  let finalReason = 'BLOCKED';
+  if (blockedByRank) finalReason = 'RANK';
+  if (blockedByHeight) finalReason = 'STEEP';
+  
+  return { path: null, reason: finalReason };
+};
+
+export const findOverworldPath = (
+  start: HexCoord, 
+  end: HexCoord, 
+  grid: Record<string, OverworldHex>
+): PathResult => {
+  const startKey = getHexKey(start.q, start.r);
+  const endKey = getHexKey(end.q, end.r);
+  
+  if (startKey === endKey) return { path: [] };
+  
+  const endHex = grid[endKey];
+  if (endHex && endHex.moveCost >= 999) return { path: null, reason: 'IMPASSABLE' };
+
+  if (cubeDistance(start, end) > 50) return { path: null, reason: 'TOO_FAR' };
+
+  const openSet = new PriorityQueue<string>();
+  const cameFrom = new Map<string, HexCoord>();
+  const gScore = new Map<string, number>();
+  
+  openSet.push(startKey, cubeDistance(start, end));
+  gScore.set(startKey, 0);
+
+  let iterations = 0;
+  let blockedByHeight = false;
+  let blockedByVoid = false;
+  
+  while (openSet.length > 0 && iterations < 2000) {
+    iterations++;
+    const currentKey = openSet.pop();
+    if (!currentKey) break;
+    
+    const currentCoord = getCoordinatesFromKey(currentKey);
+
+    if (currentKey === endKey) {
+      const path: HexCoord[] = [];
+      let curr = endKey;
+      while (cameFrom.has(curr)) {
+        const c = getCoordinatesFromKey(curr);
+        path.unshift(c);
+        curr = getHexKey(cameFrom.get(curr)!.q, cameFrom.get(curr)!.r);
+      }
+      return { path };
+    }
+
+    const currentHex = grid[currentKey];
+    const currentHeight = currentHex ? (currentHex.height ?? getHexHeight(currentHex.terrainType)) : 0;
+
+    const neighbors = getNeighbors(currentCoord.q, currentCoord.r);
+    for (const neighbor of neighbors) {
+      const nKey = getHexKey(neighbor.q, neighbor.r);
+      const neighborHex = grid[nKey];
+      
+      if (!neighborHex) {
+        blockedByVoid = true;
+        continue;
+      }
+      if (neighborHex.moveCost >= 999) continue;
+
+      const neighborHeight = neighborHex.height ?? getHexHeight(neighborHex.terrainType);
+      if (Math.abs(currentHeight - neighborHeight) > 1) {
+        blockedByHeight = true;
+        continue; // Staircase rule
+      }
+
+      const moveCost = neighborHex.moveCost;
+      const tentativeG = (gScore.get(currentKey) ?? Infinity) + moveCost;
+
+      if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
+        cameFrom.set(nKey, currentCoord);
+        gScore.set(nKey, tentativeG);
+        
+        const fScore = tentativeG + cubeDistance(neighbor, end);
+        openSet.push(nKey, fScore);
+      }
+    }
+  }
+
+  let finalReason = 'BLOCKED';
+  if (blockedByVoid) finalReason = 'VOID';
+  if (blockedByHeight) finalReason = 'STEEP';
+  if (iterations >= 2000) finalReason = 'TOO_FAR';
+
+  return { path: null, reason: finalReason };
+};
+
+/**
+ * Finds all reachable hexes from a starting position given an energy budget.
+ * Uses Dijkstra-like BFS with a priority queue.
+ */
+export const getReachableOverworldHexes = (
+  start: HexCoord,
+  energy: number,
+  grid: Record<string, OverworldHex>
+): Set<string> => {
+  const reachable = new Set<string>();
+  const startKey = getHexKey(start.q, start.r);
+  const costs = new Map<string, number>();
+  
+  const queue = new PriorityQueue<string>();
+  // @ts-ignore - PriorityQueue is defined in this file
+  queue.push(startKey, 0);
+  costs.set(startKey, 0);
+  reachable.add(startKey);
+
+  while (queue.length > 0) {
+    // @ts-ignore
+    const currentKey = queue.pop()!;
+    const currentCost = costs.get(currentKey)!;
+    const currentCoord = getCoordinatesFromKey(currentKey);
+    const currentHex = grid[currentKey];
+    const currentHeight = currentHex ? (currentHex.height ?? getHexHeight(currentHex.terrainType)) : 0;
+
+    const neighbors = getNeighbors(currentCoord.q, currentCoord.r);
+    for (const neighbor of neighbors) {
+      const nKey = getHexKey(neighbor.q, neighbor.r);
+      const neighborHex = grid[nKey];
+      
+      if (!neighborHex || neighborHex.moveCost >= 999) continue;
+
+      const neighborHeight = neighborHex.height ?? getHexHeight(neighborHex.terrainType);
+      if (Math.abs(currentHeight - neighborHeight) > 1) continue; // Staircase rule
+
+      const totalCost = currentCost + neighborHex.moveCost;
+      if (totalCost <= energy) {
+        if (!costs.has(nKey) || totalCost < costs.get(nKey)!) {
+          costs.set(nKey, totalCost);
+          reachable.add(nKey);
+          // @ts-ignore
+          queue.push(nKey, totalCost);
+        }
+      }
+    }
+  }
+  return reachable;
 };

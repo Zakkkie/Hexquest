@@ -218,6 +218,7 @@ export class ActionProcessor {
                 break;
           case 'LOSE_MOVES': actor.moves = Math.max(0, actor.moves - (val || 0)); break;
           case 'LOSE_RANK': actor.playerLevel = Math.max(1, actor.playerLevel - (val || 0)); break;
+          case 'LOSE_ENTROPY': state.entropy.current = Math.max(0, state.entropy.current - (val || 0)); break;
           case 'RESET_MATERIALS': actor.storage = 0; break;
           case 'FULL_RESET': 
                 actor.playerLevel = 1; 

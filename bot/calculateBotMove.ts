@@ -154,7 +154,8 @@ const findStaircaseTarget = (bot: Entity, grid: Record<string, Hex>, monument: H
                 let reachable = dist(bot, current) <= 1;
                 if (!reachable && pathChecks < MAX_PATH_CHECKS) {
                     pathChecks++;
-                    const p = findPath({ q: bot.q, r: bot.r }, { q: current.q, r: current.r }, grid, bot.playerLevel, navObstacles);
+                    const pathResult = findPath({ q: bot.q, r: bot.r }, { q: current.q, r: current.r }, grid, bot.playerLevel, navObstacles);
+                    const p = pathResult.path;
                     reachable = !!(p && p.length > 0);
                 }
                 if (reachable || pathChecks >= MAX_PATH_CHECKS) {
@@ -616,7 +617,8 @@ const moveAndAct = (bot: Entity, target: Hex, actionType: 'UPGRADE' | 'DIG', gri
         return { action: { type: 'WAIT', stateVersion }, debug: `${debugPrefix}:Blocked`, memory: { ...mem, stuckCounter: (mem.stuckCounter ?? 0) + 1 } };
     }
 
-    const path = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles);
+    const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles);
+    const path = pathResult.path;
     if (path && path.length > 0) {
         const cost = calculateMovementCost(bot, [path[0]], grid);
         if (cost.canAfford) return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: `${debugPrefix}:Move`, memory: { ...mem, waitStreak: 0, stuckCounter: 0 } };
@@ -653,7 +655,8 @@ const executeStep = (step: PlanStep, bot: Entity, grid: Record<string, Hex>, nav
         mem.targetHexId = step.targetId;
         if (dist(bot, target) === 0) return 'STEP_DONE';
 
-        const path = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles);
+        const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles);
+        const path = pathResult.path;
         if (!path || path.length === 0) {
             if (dist(bot, target) === 1 && bot.storage > 0) {
                 const ch = currentHex(bot, grid);
@@ -742,17 +745,6 @@ export const calculateBotMove = (
     const mem = initMemory(bot);
     mem.isCampaign = !!activeLevelConfig;
     if (!mem.exploreAnchor) mem.exploreAnchor = { q: bot.q, r: bot.r };
-
-    // --- ИСПРАВЛЕНИЕ: МГНОВЕННАЯ СИНХРОНИЗАЦИЯ РАНГА ---
-    // Форсируем пересчет ранга бота на основе его построек, чтобы он не ждал 3 секунды.
-    let highestOwnedLevel = bot.playerLevel;
-    for (const hex of Object.values(grid)) {
-        if (hex.ownerId === bot.id && hex.maxLevel > highestOwnedLevel) {
-            highestOwnedLevel = hex.maxLevel;
-        }
-    }
-    bot.playerLevel = highestOwnedLevel; // Ранг равен максимальному уровню его баз
-    // ---------------------------------------------------
 
     const navObs   = buildNavObstacles(bot, obstacles, reservedHexKeys);
     const claimed  = buildClaimedSet(bot, allBots ?? []);

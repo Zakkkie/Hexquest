@@ -2,12 +2,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
-import { Crown, Box, Wallet, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, Clock } from 'lucide-react';
+import { Crown, Box, Wallet, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, Clock, RotateCcw } from 'lucide-react';
 import EntropyGauge from '../EntropyGauge';
 import { StorageBlocks } from './HudShared';
 
 interface TopStatsBarProps {
-    onOpenModal: (modal: 'EXIT' | 'RANKINGS' | 'CODEX' | 'LOG') => void;
+    onOpenModal: (modal: 'EXIT' | 'RANKINGS' | 'CODEX' | 'LOG' | 'RESTART') => void;
     setHelpTopic: (topic: 'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | 'ENTROPY') => void;
 }
 
@@ -166,14 +166,18 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                     <Trophy className="w-4 h-4 text-amber-500" />
                                     <span className="text-xs font-bold uppercase">{t.LEADERBOARD_TITLE}</span>
                                 </button>
-                                <button onClick={() => { downloadSessionLog(); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 hover:text-indigo-200 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left">
+                                <button onClick={() => { onOpenModal('LOG'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 hover:text-indigo-200 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left">
                                     <FileText className="w-4 h-4" />
-                                    <span className="text-xs font-bold uppercase">Session Log</span>
+                                    <span className="text-xs font-bold uppercase">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
                                 </button>
                                 <div className="h-px bg-slate-700/50 my-1"></div>
+                                <button onClick={() => { onOpenModal('RESTART'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-900/10 hover:bg-amber-900/30 text-amber-400 hover:text-amber-200 border border-amber-900/30 hover:border-amber-500/50 transition-colors w-full text-left">
+                                    <RotateCcw className="w-4 h-4" />
+                                    <span className="text-xs font-bold uppercase">{t.BTN_RETRY}</span>
+                                </button>
                                 <button onClick={() => { onOpenModal('EXIT'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-900/10 hover:bg-red-900/30 text-red-400 hover:text-red-200 border border-red-900/30 hover:border-red-500/50 transition-colors w-full text-left">
                                     <LogOut className="w-4 h-4" />
-                                    <span className="text-xs font-bold uppercase">{t.BTN_CONFIRM}</span>
+                                    <span className="text-xs font-bold uppercase">{t.BTN_MENU}</span>
                                 </button>
                             </div>
                         )}

@@ -5,6 +5,9 @@ import GameView from './components/GameView.tsx';
 import MainMenu from './components/MainMenu.tsx';
 import Leaderboard from './components/Leaderboard.tsx';
 import CampaignMap from './components/CampaignMap.tsx';
+import OverworldView from './components/OverworldView.tsx';
+import IntroSequence from './components/IntroSequence.tsx';
+import CampaignLoading from './components/CampaignLoading.tsx';
 import Background from './components/Background.tsx';
 import { DeviceType } from './types.ts';
 
@@ -15,6 +18,14 @@ const App: React.FC = () => {
   const setDeviceType = useGameStore(state => state.setDeviceType);
 
   useEffect(() => {
+    // One-time migration: reset overworld progress for v1 users
+    try {
+      if (!localStorage.getItem('reset-v1')) {
+        useGameStore.getState().resetProgress();
+        localStorage.setItem('reset-v1', 'true');
+      }
+    } catch { /* localStorage unavailable (e.g. private browsing) */ }
+
     const handleResize = () => {
       const w = window.innerWidth;
       let type: DeviceType = 'DESKTOP';
@@ -68,6 +79,9 @@ const App: React.FC = () => {
         {uiState === 'GAME' && <GameView key={sessionId} />}
         {uiState === 'LEADERBOARD' && <Leaderboard />}
         {uiState === 'CAMPAIGN_MAP' && <CampaignMap />}
+        {uiState === 'OVERWORLD' && <OverworldView />}
+        {uiState === 'INTRO' && <IntroSequence />}
+        {uiState === 'CAMPAIGN_LOADING' && <CampaignLoading />}
       </div>
 
     </div>

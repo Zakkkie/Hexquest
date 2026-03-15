@@ -12,7 +12,7 @@ const ARROW_UP_PATH = "M12 4l-8 8h6v8h4v-8h6z";
 const ARROW_FACE_PATH = "M -8 -10 H 8 V 0 H 16 L 0 16 L -16 0 H -8 Z";
 const ARROW_SIDE_PATH = "M -8 -6 H 8 V 4 H 16 L 0 20 L -16 4 H -8 Z"; // Shifted Y+4 for depth
 
-const MAX_WALL_DEPTH = HEX_SIZE * 4; 
+const MAX_WALL_DEPTH = 200; 
 
 export interface HexNodeTheme {
     main: string;
@@ -299,21 +299,36 @@ const HexNodeComponent = (props: HexNodeProps) => {
                 const b2x = t1.x;
                 const b2y = t1.y + heightDiff;
 
+                // Shading based on wall index (0-5)
+                // 0: bottom-right, 1: bottom, 2: bottom-left, 3: top-left, 4: top, 5: top-right
+                // We only render front-facing walls (0, 1, 2)
+                const shading = i === 1 ? 0 : (i === 0 ? -0.2 : -0.1);
+                const wallColor = isMonument ? '#78350f' : theme.dark;
+
                 return (
-                    <Path 
-                        key={`w-${i}`}
-                        data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
-                        fillPatternImage={sideTexture as any}
-                        fillPatternScale={{ x: 1, y: heightDiff / 64 }}
-                        fill={isMonument ? '#78350f' : theme.dark} 
-                        stroke={isMonument ? '#b45309' : theme.stroke} 
-                        strokeWidth={1.5} 
-                        perfectDrawEnabled={false} 
-                        listening={false} 
-                        closed={true} 
-                        opacity={1} 
-                        shadowForStrokeEnabled={false}
-                    />
+                    <Group key={`w-group-${i}`} listening={false} perfectDrawEnabled={false}>
+                        <Path 
+                            key={`w-${i}`}
+                            data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
+                            fillPatternImage={sideTexture as any}
+                            fillPatternScale={{ x: 1, y: heightDiff / 64 }}
+                            fill={wallColor} 
+                            stroke={isMonument ? '#b45309' : theme.stroke} 
+                            strokeWidth={1.5} 
+                            perfectDrawEnabled={false} 
+                            listening={false} 
+                            closed={true} 
+                            opacity={1} 
+                            shadowForStrokeEnabled={false}
+                        />
+                        {/* Shading Overlay */}
+                        <Path 
+                            data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
+                            fill={shading > 0 ? `rgba(255,255,255,${shading})` : `rgba(0,0,0,${Math.abs(shading)})`}
+                            listening={false}
+                            perfectDrawEnabled={false}
+                        />
+                    </Group>
                 );
             }
             return null;
@@ -346,6 +361,17 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     shadowEnabled={false} 
                     perfectDrawEnabled={false}
                     shadowForStrokeEnabled={false}
+                />
+
+                {/* Rim Highlight */}
+                <Path 
+                    data={BASE_PATH_D}
+                    scaleX={0.94}
+                    scaleY={0.94}
+                    stroke="rgba(255,255,255,0.25)"
+                    strokeWidth={1.2}
+                    listening={false}
+                    perfectDrawEnabled={false}
                 />
 
                 {isMonument && (

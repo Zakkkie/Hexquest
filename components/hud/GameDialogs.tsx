@@ -4,7 +4,7 @@ import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
 import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
-import { LogOut, X, Trophy, XCircle, ArrowRight, RotateCcw, Target, ChevronsUp, Wallet, Footprints, ShieldAlert, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock } from 'lucide-react';
+import { LogOut, X, Trophy, XCircle, ArrowRight, RotateCcw, Target, ChevronsUp, Wallet, Footprints, ShieldAlert, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw } from 'lucide-react';
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
 import { Item, ItemRarity } from '../../types';
 
@@ -43,6 +43,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const startNewGame = useGameStore(state => state.startNewGame);
     const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
     const destroyItem = useGameStore(state => state.destroyItem);
+    const returnToOverworld = useGameStore(state => state.returnToOverworld);
+    const isOverworldGenerated = useGameStore(state => state.overworld.isGenerated);
+    const hasActiveSession = useGameStore(state => state.hasActiveSession);
     
     // Monument/Void Specifics
     const monumentDialogState = useGameStore(state => state.monumentDialogState);
@@ -60,10 +63,25 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const t = TEXT[language].HUD;
 
+    const resetProgress = useGameStore(state => state.resetProgress);
+    const initOverworld = useGameStore(state => state.initOverworld);
+
     // --- LOGIC ---
+
+    const handleNewGame = () => {
+        playUiSound('CLICK');
+        if (window.confirm(language === 'RU' ? 'Начать новую игру? Весь текущий прогресс будет сброшен.' : 'Start a new game? All current progress will be reset.')) {
+            resetProgress();
+            initOverworld();
+        }
+    };
 
     const handleNextLevel = () => {
         playUiSound('CLICK');
+        if (isOverworldGenerated) {
+            returnToOverworld('VICTORY');
+            return;
+        }
         if (activeLevelConfig) {
             const currentIdx = CAMPAIGN_LEVELS.findIndex(l => l.id === activeLevelConfig.id);
             const nextLevel = CAMPAIGN_LEVELS[currentIdx + 1];
@@ -76,9 +94,28 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const handleRetry = () => {
         playUiSound('CLICK');
-        if (activeLevelConfig) startCampaignLevel(activeLevelConfig.id);
-        else if (winCondition) startNewGame(winCondition);
-        else abandonSession();
+        if (activeLevelConfig) {
+            startCampaignLevel(activeLevelConfig.id);
+            return;
+        }
+        if (winCondition) {
+            startNewGame(winCondition);
+            return;
+        }
+        if (isOverworldGenerated && hasActiveSession) {
+            returnToOverworld('DEFEAT');
+            return;
+        }
+        abandonSession();
+    };
+
+    const handleMenu = () => {
+        playUiSound('CLICK');
+        if (isOverworldGenerated && hasActiveSession) {
+            returnToOverworld(gameStatus === 'VICTORY' ? 'VICTORY' : 'DEFEAT');
+        } else {
+            abandonSession();
+        }
     };
 
     // Rankings Logic
@@ -162,7 +199,31 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         <p className="text-xs text-slate-400 mb-6">{t.ABORT_DESC}</p>
                         <div className="flex gap-3">
                             <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition-colors">{t.BTN_CANCEL}</button>
-                            <button onClick={() => { abandonSession(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-red-900/20">{t.BTN_CONFIRM}</button>
+                            <button onClick={() => { handleMenu(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-red-900/20">{t.BTN_CONFIRM}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* RESTART CONFIRMATION */}
+            {activeModal === 'RESTART' && (
+                <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
+                    <div className="bg-slate-900 border border-amber-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
+                        <div className="w-12 h-12 rounded-full bg-amber-900/20 flex items-center justify-center mx-auto mb-4 border border-amber-500/30"><RotateCcw className="w-6 h-6 text-amber-500" /></div>
+                        <h3 className="text-lg font-black text-white uppercase mb-2">{t.BTN_RETRY}?</h3>
+                        <p className="text-xs text-slate-400 mb-6">{language === 'RU' ? 'Начать уровень заново? Текущий прогресс будет потерян.' : 'Restart the level? Current progress will be lost.'}</p>
+                        <div className="flex flex-col gap-3">
+                            <div className="flex gap-3">
+                                <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition-colors">{t.BTN_CANCEL}</button>
+                                <button onClick={() => { handleRetry(); closeModal(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-amber-900/20">{t.BTN_CONFIRM}</button>
+                            </div>
+                            <button 
+                                onClick={() => { handleNewGame(); closeModal(); }} 
+                                className="w-full py-3 rounded-xl bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/30 hover:border-red-500/50 font-bold uppercase text-xs transition-all flex items-center justify-center gap-2"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                {language === 'RU' ? 'Новая Игра (Сброс)' : 'New Game (Reset)'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -210,6 +271,33 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                     </div>
                                 ))}</div>
                             }
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* LOG */}
+            {activeModal === 'LOG' && (
+                <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md md:max-w-2xl h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                            <div className="flex items-center gap-3"><FileText className="w-5 h-5 text-indigo-500" /><h3 className="text-sm font-black uppercase tracking-widest text-white">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</h3></div>
+                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-2">
+                            {messageLog && messageLog.length > 0 ? (
+                                messageLog.map((log) => (
+                                    <div key={log.id} className="flex flex-col gap-1 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-mono text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                            <span className={`text-[10px] font-bold uppercase ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : log.type === 'SUCCESS' ? 'text-emerald-400' : 'text-slate-400'}`}>{log.type}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-300 font-mono">{log.text}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-8 text-center text-slate-500 text-xs font-mono">{language === 'RU' ? 'Журнал пуст' : 'Log is empty'}</div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -296,9 +384,31 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         <h1 className={`text-4xl md:text-5xl font-black uppercase tracking-tighter mb-2 text-transparent bg-clip-text ${gameStatus === 'VICTORY' ? 'bg-gradient-to-b from-emerald-300 to-emerald-600' : 'bg-gradient-to-b from-red-300 to-red-600'}`}>{gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}</h1>
                         <p className="text-slate-400 font-mono text-sm tracking-widest uppercase mb-8">{gameStatus === 'VICTORY' ? t.MISSION_COMPLETE : t.MISSION_FAILED}</p>
                         <div className="w-full flex flex-col gap-3">
-                            {gameStatus === 'VICTORY' && <button onClick={handleNextLevel} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-900/30 transition-all active:scale-95 flex items-center justify-center gap-2">{t.BTN_NEXT} <ArrowRight className="w-5 h-5" /></button>}
-                            <button onClick={handleRetry} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"><RotateCcw className="w-4 h-4" /> {t.BTN_RETRY}</button>
-                            <button onClick={() => abandonSession()} className="w-full py-4 bg-transparent hover:bg-slate-800/50 text-slate-500 hover:text-white font-bold rounded-xl uppercase tracking-widest transition-colors text-xs">{t.BTN_MENU}</button>
+                            {isOverworldGenerated ? (
+                                <div className="flex flex-col gap-3 w-full">
+                                    <button 
+                                        onClick={handleMenu} 
+                                        className={`w-full py-4 ${gameStatus === 'VICTORY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-800 hover:bg-slate-700'} text-white font-black rounded-xl uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2`}
+                                    >
+                                        {gameStatus === 'VICTORY' ? 'RETURN TO OVERWORLD' : 'EXIT TO OVERWORLD'} 
+                                        <ArrowRight className="w-5 h-5" />
+                                    </button>
+                                    {gameStatus === 'DEFEAT' && (
+                                        <button 
+                                            onClick={handleRetry} 
+                                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-indigo-900/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            <RotateCcw className="w-5 h-5" /> {t.BTN_RETRY}
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <>
+                                    {gameStatus === 'VICTORY' && <button onClick={handleNextLevel} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-900/30 transition-all active:scale-95 flex items-center justify-center gap-2">{t.BTN_NEXT} <ArrowRight className="w-5 h-5" /></button>}
+                                    <button onClick={handleRetry} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"><RotateCcw className="w-4 h-4" /> {t.BTN_RETRY}</button>
+                                    <button onClick={handleMenu} className="w-full py-4 bg-transparent hover:bg-slate-800/50 text-slate-500 hover:text-white font-bold rounded-xl uppercase tracking-widest transition-colors text-xs">{t.BTN_MENU}</button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
