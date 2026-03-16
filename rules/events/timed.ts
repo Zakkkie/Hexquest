@@ -123,13 +123,13 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
       },
       helped: {
         id: 'helped',
-        text: 'Вы помогаете врачу с сортировкой больных. Риск заражения — реальный. Но деревня справляется с вашей помощью быстрее. «Если есть Старший Травник — он нужен здесь.»',
+        text: 'Вы помогаете врачу с сортировкой больных. Риск заражения — реальный. Но деревня справляется с вашей помощью быстрее. «Если есть Лечебное Зелье — оно нужно здесь.»',
         choices: [
           {
-            label: 'Передать Старший Травник',
+            label: 'Передать Красное Зелье',
             action: 'CLOSE',
-            reqItem: 'ELDER_HERB',
-            penalty: { items: ['ELDER_HERB'] },
+            reqItem: 'potion_red_01',
+            penalty: { items: ['potion_red_01'] },
             reward: { credits: 50 },
             addReputation: 12,
             setFlag: 'plague_contained',
@@ -167,19 +167,19 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
         text: 'По городу ходят слухи о нехватке продовольствия. На рынке — пустые прилавки. Очереди у хлебных лавок. Торговцы провизией подняли цены втрое.',
         choices: [
           {
-            label: 'Продать свои запасы по рыночной цене (+45 кредитов)',
+            label: 'Продать свои запасы еды по рыночной цене (+45 кредитов)',
             action: 'GOTO_NODE',
             nextNode: 'sold',
-            reqItem: 'SUPPLIES',
+            reqItem: 'food_bread',
             reqStepMin: 60,
-            penalty: { items: ['SUPPLIES'] },
+            penalty: { items: ['food_bread'] },
           },
           {
-            label: 'Отдать запасы нуждающимся бесплатно',
+            label: 'Отдать еду нуждающимся бесплатно',
             action: 'CLOSE',
-            reqItem: 'SUPPLIES',
+            reqItem: 'food_bread',
             reqStepMin: 60,
-            penalty: { items: ['SUPPLIES'] },
+            penalty: { items: ['food_bread'] },
             addReputation: 15,
           },
           {
@@ -264,10 +264,10 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
         text: 'Торговцы на дорогах кивают вам по-особому — условный знак Братства. «Торговые маршруты открыты. Если знаете знак — проходите без пошлин.»',
         choices: [
           {
-            label: 'Воспользоваться знаком Сопротивления',
+            label: 'Воспользоваться Железной Пластиной Братства',
             action: 'GOTO_NODE',
             nextNode: 'used_sign',
-            reqItem: 'RESISTANCE_BADGE',
+            reqItem: 'iron_plate',
             reqStepMin: 80,
           },
           {
@@ -285,7 +285,7 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
           {
             label: 'Воспользоваться преимуществами',
             action: 'CLOSE',
-            reward: { credits: 40, items: ['SUPPLIES'], energy: 3 },
+            reward: { credits: 40, items: ['food_bread'], energy: 3 },
             setFlag: 'brotherhood_trade_active',
           },
         ],
@@ -442,7 +442,7 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
           {
             label: 'Взять то, что можно унести',
             action: 'CLOSE',
-            reward: { items: ['RUNIC_TABLET'], credits: 30 },
+            reward: { items: ['data_disc'], credits: 30 },
             setFlag: 'ancient_library_visited',
           },
         ],
@@ -486,17 +486,17 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
       start: {
         id: 'start',
         image: 'https://picsum.photos/seed/month2_heartstone_pulse/800/350',
-        text: 'Карта начинает светиться. Если она у вас есть — вы чувствуете пульс. Ровный, как сердцебиение. Что-то зовёт с севера. Источник зова — не человеческий.',
+        text: 'Древняя Реликвия начинает светиться. Если она у вас есть — вы чувствуете пульс. Ровный, как сердцебиение. Что-то зовёт с севера. Источник зова — не человеческий.',
         choices: [
           {
-            label: 'Следовать за пульсом Карты',
+            label: 'Следовать за пульсом Реликвии',
             action: 'GOTO_NODE',
             nextNode: 'followed',
-            reqItem: 'HEARTSTONE_MAP',
+            reqItem: 'ancient_relic',
             reqStepMin: 120,
           },
           {
-            label: 'У меня нет карты — но я слышу зов',
+            label: 'У меня нет реликвии — но я слышу зов',
             action: 'GOTO_NODE',
             nextNode: 'no_map',
             reqStepMin: 120,
@@ -505,19 +505,19 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
       },
       followed: {
         id: 'followed',
-        text: 'Карта ведёт к заброшенной башне. Внутри — кристалл размером с кулак, пульсирующий тем же ритмом, что и карта. Краеугольный Камень. Настоящий.',
+        text: 'Реликвия ведёт к заброшенной башне. Внутри — кристалл размером с кулак, пульсирующий тем же ритмом, что и реликвия. Краеугольный Камень. Настоящий.',
         choices: [
           {
             label: 'Взять Краеугольный Камень',
             action: 'CLOSE',
-            reward: { items: ['HEARTSTONE_MAP'] },
+            reward: { items: ['ancient_relic'] },
             setFlag: 'heartstone_found',
           },
         ],
       },
       no_map: {
         id: 'no_map',
-        text: 'Зов ведёт вас к башне, но без карты — дверь заперта. За стеклом видно нечто светящееся. Нужен ключ или карта.',
+        text: 'Зов ведёт вас к башне, но без реликвии — дверь заперта. За стеклом видно нечто светящееся. Нужен ключ или реликвия.',
         choices: [
           {
             label: 'Искать способ войти позже',
@@ -555,9 +555,9 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
           {
             label: 'Раздать провизию',
             action: 'CLOSE',
-            reqItem: 'SUPPLIES',
+            reqItem: 'food_bread',
             reqStepMin: 120,
-            penalty: { items: ['SUPPLIES'] },
+            penalty: { items: ['food_bread'] },
             addReputation: 15,
             reward: { energy: 3 },
           },
@@ -659,10 +659,10 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
             addReputation: 10,
           },
           {
-            label: 'Использовать Образец Пустоты для переговоров',
+            label: 'Использовать Осколок Пустоты для переговоров',
             action: 'GOTO_NODE',
             nextNode: 'void_parley',
-            reqItem: 'VOID_SAMPLE',
+            reqItem: 'void_shard',
             reqStepMin: 150,
           },
           {
@@ -780,10 +780,10 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
         text: 'Старик в развалинах хватает вас за руку: «Слушай. Краеугольный Камень нельзя уничтожить. Его можно только перенести. Туда, где Пустота не дотянется. Ты знаешь это место?»',
         choices: [
           {
-            label: '«Знаю» — если Краеугольный Камень найден',
+            label: '«Знаю» — если Древняя Реликвия найдена',
             action: 'GOTO_NODE',
             nextNode: 'knows',
-            reqItem: 'HEARTSTONE_MAP',
+            reqItem: 'ancient_relic',
             reqStepMin: 200,
           },
           {
@@ -808,7 +808,7 @@ export const TIMED_EVENTS: Record<string, OverworldEvent> = {
       },
       doesnt_know: {
         id: 'doesnt_know',
-        text: 'Старик вздыхает. «Тогда найди Карту Краеугольного Камня. Без неё ты слеп.» Он называет место, где её искать — если ещё не поздно.',
+        text: 'Старик вздыхает. «Тогда найди Древнюю Реликвию. Без неё ты слеп.» Он называет место, где её искать — если ещё не поздно.',
         choices: [
           {
             label: 'Записать координаты',

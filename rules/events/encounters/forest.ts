@@ -17,11 +17,11 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
             nextNode: 'approach',
           },
           {
-            label: 'Предложить Руническую таблицу как дар',
+            label: 'Предложить Древнюю реликвию как дар',
             action: 'CLOSE',
-            reqItem: 'RUNIC_TABLET',
-            penalty: { items: ['RUNIC_TABLET'] },
-            reward: { hp: 40, energy: 20, items: ['HEARTSTONE_MAP'] },
+            reqItem: 'ancient_relic',
+            penalty: { items: ['ancient_relic'] },
+            reward: { hp: 40, energy: 20, items: ['data_disc'] },
             addReputation: 20,
           },
           {
@@ -45,7 +45,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Ответить: «Я ищу путь, а не власть»',
             action: 'CLOSE',
-            reward: { energy: 15, items: ['ELDER_HERB'] },
+            reward: { energy: 15, items: ['food_bread'] },
             addReputation: 15,
           },
           {
@@ -107,10 +107,10 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
             failNode: 'bitten',
           },
           {
-            label: 'Использовать Травы целителя, чтобы усыпить его',
+            label: 'Использовать Свежий хлеб, чтобы усыпить его',
             action: 'GOTO_NODE',
             nextNode: 'sedate',
-            reqItem: 'ELDER_HERB',
+            reqItem: 'food_bread',
           },
           {
             label: 'Добить раненого зверя',
@@ -131,7 +131,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять амулет',
             action: 'CLOSE',
-            reward: { items: ['HEARTSTONE_MAP'], hp: 10 },
+            reward: { items: ['data_disc'], hp: 10 },
             addReputation: 15,
           },
         ],
@@ -154,14 +154,14 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Обыскать мешок охотника',
             action: 'CLOSE',
-            penalty: { items: ['ELDER_HERB'] },
+            penalty: { items: ['food_bread'] },
             reward: { credits: 40, energy: 10 },
             addReputation: 5,
           },
           {
             label: 'Уйти с чистой совестью',
             action: 'CLOSE',
-            penalty: { items: ['ELDER_HERB'] },
+            penalty: { items: ['food_bread'] },
             reward: { energy: 15 },
             addReputation: 20,
           },
@@ -219,7 +219,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Отказаться и предложить обмен информацией',
             action: 'CLOSE',
-            reward: { items: ['MONASTERY_SCROLL'], credits: 20 },
+            reward: { items: ['data_disc'], credits: 20 },
             addReputation: 5,
           },
         ],
@@ -255,7 +255,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять и уйти быстро',
             action: 'CLOSE',
-            reward: { credits: 50, items: ['ELDER_HERB', 'VOID_SAMPLE'] },
+            reward: { credits: 50, items: ['food_bread', 'reality_patch'] },
             addReputation: -20,
           },
         ],
@@ -293,7 +293,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Обыскать лагерь на предмет снаряжения',
             action: 'CLOSE',
-            reward: { credits: 35, items: ['BLUEPRINT'] },
+            reward: { credits: 35, items: ['data_disc'] },
             addReputation: -5,
           },
           {
@@ -312,7 +312,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять дневник с собой — это ценные данные',
             action: 'CLOSE',
-            reward: { credits: 40, items: ['RUNIC_TABLET'] },
+            reward: { credits: 40, items: ['ancient_relic'] },
             setFlag: 'knows_underground_structure',
             addReputation: 5,
           },
@@ -331,13 +331,13 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
             label: 'Взять карту и вывести его из леса',
             action: 'CLOSE',
             penalty: { energy: 15 },
-            reward: { items: ['ELDER_MAP'] },
+            reward: { items: ['data_disc'] },
             addReputation: 20,
           },
           {
             label: 'Взять только карту',
             action: 'CLOSE',
-            reward: { items: ['ELDER_MAP'] },
+            reward: { items: ['data_disc'] },
             addReputation: -10,
           },
         ],
@@ -384,9 +384,9 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
             nextNode: 'take_sample',
           },
           {
-            label: 'Использовать Образец Пустоты для изучения',
+            label: 'Использовать Лоскут Реальности для изучения',
             action: 'CLOSE',
-            reqItem: 'VOID_SAMPLE',
+            reqItem: 'reality_patch',
             reward: { credits: 60 },
             addReputation: 10,
             setFlag: 'corruption_analyzed',
@@ -400,7 +400,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять кристалл',
             action: 'CLOSE',
-            reward: { credits: 50, items: ['VOID_SAMPLE'] },
+            reward: { credits: 50, items: ['reality_patch'] },
             penalty: { hp: 20 },
             addReputation: 10,
           },
@@ -424,7 +424,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Уйти с образцом',
             action: 'CLOSE',
-            reward: { items: ['VOID_SAMPLE'] },
+            reward: { items: ['reality_patch'] },
             penalty: { hp: 10 },
             addReputation: 5,
           },
@@ -556,7 +556,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
             label: 'Согласиться и помочь донести груз',
             action: 'CLOSE',
             penalty: { energy: 15 },
-            reward: { credits: 55, items: ['SCRAP'] },
+            reward: { credits: 55, items: ['raw_container'] },
             addReputation: -5,
           },
           {
@@ -573,7 +573,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять брошенный груз',
             action: 'CLOSE',
-            reward: { credits: 65, items: ['SCRAP'] },
+            reward: { credits: 65, items: ['raw_container'] },
             addReputation: -10,
           },
         ],
@@ -654,7 +654,7 @@ export const FOREST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Продать позже',
             action: 'CLOSE',
-            reward: { credits: 70, items: ['ELDER_HERB'] },
+            reward: { credits: 70, items: ['food_bread'] },
             addReputation: 5,
           },
         ],

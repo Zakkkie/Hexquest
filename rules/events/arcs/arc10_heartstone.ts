@@ -3,7 +3,7 @@ import { OverworldEvent } from '../../../types.ts';
 // Arc 10 — Сердечный Камень (The Heartstone Finale)
 // Prerequisites: forest_elder_grateful + HEARTSTONE_MAP in bag + ≥3 arcs completed
 // Flag chain: heartstone_map_decoded → heartstone_path_cleared → heartstone_guardian_passed → heartstone_restored
-// Items: HEARTSTONE_MAP, MONASTERY_SCROLL, RUNIC_TABLET (all three needed)
+// Items: ancient_relic, data_disc, data_disc (all three needed)
 
 export const ARC10_EVENTS: Record<string, OverworldEvent> = {
 
@@ -18,10 +18,17 @@ export const ARC10_EVENTS: Record<string, OverworldEvent> = {
         text: 'Карта в вашем кармане начинает светиться — золотым, пульсирующим светом. Старец Леса говорил об этом: «Когда мир готов исцелиться, карта покажет дорогу.» Символы на ней — те же, что на руническом планшете.',
         choices: [
           {
-            label: 'Использовать RUNIC_TABLET для расшифровки',
+            label: 'Использовать data_disc для расшифровки',
             action: 'GOTO_NODE',
             nextNode: 'decode_with_tablet',
-            reqItem: 'RUNIC_TABLET',
+            reqItem: 'data_disc',
+            reqFlag: 'forest_elder_grateful',
+          },
+          {
+            label: 'Использовать Stability Scanner для анализа карты',
+            action: 'GOTO_NODE',
+            nextNode: 'decode_with_scanner',
+            reqItem: 'stability_scanner',
             reqFlag: 'forest_elder_grateful',
           },
           {
@@ -48,7 +55,19 @@ export const ARC10_EVENTS: Record<string, OverworldEvent> = {
             action: 'CLOSE',
             setFlag: 'heartstone_map_decoded',
             reward: { energy: 20 },
-            penalty: { items: ['RUNIC_TABLET'] },
+            penalty: { items: ['data_disc'] },
+          },
+        ],
+      },
+      decode_with_scanner: {
+        id: 'decode_with_scanner',
+        text: 'Сканер Стабильности улавливает тончайшие частоты, исходящие от карты. Он проецирует путь прямо в ваш интерфейс. Маршрут чист и понятен. «Путь открыт,» — подтверждает сканер.',
+        choices: [
+          {
+            label: 'Запомнить маршрут',
+            action: 'CLOSE',
+            setFlag: 'heartstone_map_decoded',
+            reward: { energy: 30 },
           },
         ],
       },
@@ -89,10 +108,17 @@ export const ARC10_EVENTS: Record<string, OverworldEvent> = {
         text: 'Тропа к долине заросла — не за годы, а намеренно. Кто-то не хотел, чтобы это место нашли. Впереди — три препятствия: обвалившийся мост, патруль Синдиката и заросли ядовитого плюща.',
         choices: [
           {
-            label: 'Починить мост (использовать MONASTERY_SCROLL)',
+            label: 'Починить мост (использовать data_disc)',
             action: 'GOTO_NODE',
             nextNode: 'fix_bridge',
-            reqItem: 'MONASTERY_SCROLL',
+            reqItem: 'data_disc',
+            reqFlag: 'heartstone_map_decoded',
+          },
+          {
+            label: 'Восстановить мост буром Hornet Drill Bit',
+            action: 'GOTO_NODE',
+            nextNode: 'fix_bridge_drill',
+            reqItem: 'hornet_drill',
             reqFlag: 'heartstone_map_decoded',
           },
           {
@@ -119,8 +145,20 @@ export const ARC10_EVENTS: Record<string, OverworldEvent> = {
             label: 'Пройти по мосту',
             action: 'CLOSE',
             setFlag: 'heartstone_path_cleared',
-            penalty: { items: ['MONASTERY_SCROLL'] },
+            penalty: { items: ['data_disc'] },
             reward: { energy: 15 },
+          },
+        ],
+      },
+      fix_bridge_drill: {
+        id: 'fix_bridge_drill',
+        text: 'Бур «Шершень» идеально подходит для закрепления опор. Вы быстро восстанавливаете основные узлы моста. Он скрипит, но держит. Патруль Синдиката решает не связываться с вооружённым инженером.',
+        choices: [
+          {
+            label: 'Пройти по мосту',
+            action: 'CLOSE',
+            setFlag: 'heartstone_path_cleared',
+            reward: { energy: 10 },
           },
         ],
       },

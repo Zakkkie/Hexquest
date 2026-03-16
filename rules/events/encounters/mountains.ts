@@ -92,10 +92,10 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'На высоте воздух разрежен. У вас кружится голова, каждый шаг даётся тяжелее прошлого. Перед глазами — рябь. Тело требует остановиться, но горный перевал ещё далеко, а погода ухудшается.',
         choices: [
           {
-            label: 'Использовать Травы целителя',
+            label: 'Использовать Свежий хлеб',
             action: 'CLOSE',
-            reqItem: 'ELDER_HERB',
-            penalty: { items: ['ELDER_HERB'] },
+            reqItem: 'food_bread',
+            penalty: { items: ['food_bread'] },
             reward: { hp: 25, energy: 20 },
           },
           {
@@ -164,7 +164,7 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
             label: 'Оставить птице еду в знак уважения',
             action: 'GOTO_NODE',
             nextNode: 'offering',
-            reqItem: 'SUPPLIES',
+            reqItem: 'food_banana',
           },
           {
             label: 'Понаблюдать и продолжить путь',
@@ -175,12 +175,12 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       nest_reached: {
         id: 'nest_reached',
-        text: 'Орёл позволяет вам забраться. В гнезде — блестящий фрагмент устройства, явно не природного происхождения, и пара монет, явно принесённых птицей откуда-то снизу.',
+        text: 'Орёл позволяет вам забраться. В гнезде — битый диск данных, явно не природного происхождения, и пара монет, явно принесённых птицей откуда-то снизу.',
         choices: [
           {
-            label: 'Взять фрагмент',
+            label: 'Взять диск',
             action: 'CLOSE',
-            reward: { credits: 40, items: ['PROTOTYPE_DEVICE'] },
+            reward: { credits: 40, items: ['data_disc'] },
             addReputation: 5,
           },
         ],
@@ -203,7 +203,7 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Принять дар',
             action: 'CLOSE',
-            penalty: { items: ['SUPPLIES'] },
+            penalty: { items: ['food_banana'] },
             reward: { credits: 55 },
             addReputation: 15,
           },
@@ -230,7 +230,7 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Обыскать только входную камеру',
             action: 'CLOSE',
-            reward: { credits: 30, items: ['SCRAP'] },
+            reward: { credits: 30, items: ['raw_container'] },
           },
           {
             label: 'Заблокировать вход и уйти',
@@ -241,12 +241,12 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       deep: {
         id: 'deep',
-        text: 'Туннели ведут к подземному залу. В центре — механизм неизвестного назначения, всё ещё работающий. Стены покрыты схемами и расчётами. Кто-то работал здесь десятилетиями.',
+        text: 'Туннели ведут к подземному залу. В центре — механизм неизвестного назначения, всё ещё работающий. Стены покрыты схемами и данными. Кто-то работал здесь десятилетиями.',
         choices: [
           {
-            label: 'Скопировать схемы',
+            label: 'Скопировать данные',
             action: 'CLOSE',
-            reward: { items: ['BLUEPRINT', 'RUNIC_TABLET'] },
+            reward: { items: ['data_disc', 'ancient_relic'] },
             penalty: { energy: 15 },
             addReputation: 10,
           },
@@ -260,7 +260,7 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять детали механизма на металлолом',
             action: 'CLOSE',
-            reward: { credits: 50, items: ['SCRAP'] },
+            reward: { credits: 50, items: ['raw_container'] },
             addReputation: -10,
           },
         ],
@@ -352,7 +352,7 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Исследовать нишу',
             action: 'CLOSE',
-            reward: { credits: 35, items: ['ANCIENT_MAP'] },
+            reward: { credits: 35, items: ['data_disc'] },
             addReputation: 5,
           },
         ],
@@ -384,14 +384,14 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Зарисовать символы',
             action: 'CLOSE',
-            reward: { items: ['RUNIC_TABLET'], credits: 20 },
+            reward: { items: ['ancient_relic'], credits: 20 },
             addReputation: 5,
           },
           {
-            label: 'Попробовать прочитать с помощью Рунической таблицы',
+            label: 'Попробовать прочитать с помощью Древней реликвии',
             action: 'GOTO_NODE',
             nextNode: 'decode',
-            reqItem: 'RUNIC_TABLET',
+            reqItem: 'ancient_relic',
           },
           {
             label: 'Пройти мимо — не ваша область знаний',
@@ -401,19 +401,19 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       decode: {
         id: 'decode',
-        text: 'Таблица резонирует при сближении с барельефом. Символы вспыхивают голубым — и в вашей памяти всплывает смысл: «Несущий Пустоту найдёт здесь начало пути. Несущий страх — его конец». Под одной из плит что-то есть.',
+        text: 'Реликвия резонирует при сближении с барельефом. Символы вспыхивают голубым — и в вашей памяти всплывает смысл: «Несущий Пустоту найдёт здесь начало пути. Несущий страх — его конец». Под одной из плит что-то есть.',
         choices: [
           {
             label: 'Поднять плиту',
             action: 'CLOSE',
-            reward: { items: ['ANCIENT_KEY', 'ELDER_MAP'] },
-            penalty: { items: ['RUNIC_TABLET'] },
+            reward: { items: ['silver_ring', 'data_disc'] },
+            penalty: { items: ['ancient_relic'] },
             addReputation: 15,
           },
           {
             label: 'Оставить как есть — предупреждение серьёзное',
             action: 'CLOSE',
-            penalty: { items: ['RUNIC_TABLET'] },
+            penalty: { items: ['ancient_relic'] },
             reward: { energy: 10 },
             addReputation: 10,
           },
@@ -488,7 +488,7 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять ценное и бежать',
             action: 'CLOSE',
-            reward: { credits: 80, items: ['PROTOTYPE_DEVICE', 'SCRAP'] },
+            reward: { credits: 80, items: ['data_disc', 'raw_container'] },
             addReputation: -5,
           },
         ],
@@ -529,10 +529,10 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
             addReputation: 10,
           },
           {
-            label: 'Показать Паломнический жетон',
+            label: 'Показать Серебряное кольцо',
             action: 'CLOSE',
-            reqItem: 'PILGRIM_TOKEN',
-            reward: { items: ['MONASTERY_SCROLL'], credits: 30 },
+            reqItem: 'silver_ring',
+            reward: { items: ['data_disc'], credits: 30 },
             addReputation: 20,
           },
           {
@@ -543,12 +543,12 @@ export const MOUNTAIN_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       dream_talk: {
         id: 'dream_talk',
-        text: 'Старик описывает сон с поразительной точностью — ваш путь, ваши решения, лицо человека, которого вы потеряли. «Я не пророк», — говорит он. — «Просто горы шепчут тем, кто умеет слушать». Он протягивает свиток.',
+        text: 'Старик описывает сон с поразительной точностью — ваш путь, ваши решения, лицо человека, которого вы потеряли. «Я не пророк», — говорит он. — «Просто горы шепчут тем, кто умеет слушать». Он протягивает диск данных.',
         choices: [
           {
-            label: 'Принять свиток',
+            label: 'Принять диск',
             action: 'CLOSE',
-            reward: { items: ['MONASTERY_SCROLL'] },
+            reward: { items: ['data_disc'] },
             addReputation: 15,
           },
           {

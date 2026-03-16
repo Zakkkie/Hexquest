@@ -98,7 +98,7 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Забрать',
             action: 'CLOSE',
-            reward: { items: ['ANCIENT_KEY'], credits: 10 },
+            reward: { items: ['silver_ring'], credits: 10 },
           },
         ],
       },
@@ -164,10 +164,10 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
             failNode: 'fight_lost',
           },
           {
-            label: 'Достать Запечатанное Письмо и показать',
+            label: 'Достать Диск данных и показать',
             action: 'GOTO_NODE',
             nextNode: 'letter_shown',
-            reqItem: 'SEALED_LETTER',
+            reqItem: 'data_disc',
           },
           {
             label: 'Сесть и молча выдержать унижение',
@@ -334,7 +334,7 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Уйти с добычей',
             action: 'CLOSE',
-            reward: { items: ['SUPPLIES'], credits: 30 },
+            reward: { items: ['food_banana'], credits: 30 },
             addReputation: -3,
           },
         ],
@@ -353,24 +353,24 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'Подворотня. Запах сырости. Торговец с бегающими глазами шепчет: «Есть всё, чего нет на рынке. Печати, документы, артефакты. Дорого — но настоящее.»',
         choices: [
           {
-            label: 'Купить Жетон Сопротивления (−50 кредитов)',
+            label: 'Купить Серебряное кольцо (−50 кредитов)',
             action: 'CLOSE',
             reqCredits: 50,
             penalty: { credits: 50 },
-            reward: { items: ['RESISTANCE_BADGE'] },
+            reward: { items: ['silver_ring'] },
           },
           {
-            label: 'Купить Запечатанное Письмо (−40 кредитов)',
+            label: 'Купить Диск данных (−40 кредитов)',
             action: 'CLOSE',
             reqCredits: 40,
             penalty: { credits: 40 },
-            reward: { items: ['SEALED_LETTER'] },
+            reward: { items: ['data_disc'] },
           },
           {
-            label: 'Предложить Комиссию Восса взамен на скидки',
+            label: 'Предложить Диск данных взамен на скидки',
             action: 'GOTO_NODE',
             nextNode: 'voss_deal',
-            reqItem: 'VOSS_COMMISSION',
+            reqItem: 'data_disc',
           },
           {
             label: 'Уйти — слишком рискованно',
@@ -385,8 +385,8 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Принять обмен',
             action: 'CLOSE',
-            penalty: { items: ['VOSS_COMMISSION'] },
-            reward: { credits: 80, items: ['RESISTANCE_BADGE'] },
+            penalty: { items: ['data_disc'] },
+            reward: { credits: 80, items: ['silver_ring'] },
           },
         ],
       },
@@ -465,10 +465,10 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
             reqFlag: 'voss_knows_player',
           },
           {
-            label: 'Предъявить Комиссию Восса — может, убийца отступит',
+            label: 'Предъявить Диск данных — может, он опознает своих',
             action: 'GOTO_NODE',
             nextNode: 'commission_shown',
-            reqItem: 'VOSS_COMMISSION',
+            reqItem: 'data_disc',
             reqFlag: 'voss_knows_player',
           },
           {

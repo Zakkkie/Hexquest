@@ -3,7 +3,7 @@ import { OverworldEvent } from '../../../types.ts';
 // Arc 7 — Охотники на Пустоту (Void Hunters)
 // Flag chain: void_hunters_met → void_hunters_quest → void_corruption_active → void_hunters_ended
 // Terrain: SWAMP, WATER, RUINS
-// Key items: RUNIC_TABLET, VOID_SAMPLE (new quest item)
+// Key items: data_disc, void_shard (new quest item)
 
 export const ARC7_EVENTS: Record<string, OverworldEvent> = {
 
@@ -135,10 +135,24 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
             reqFlag: 'void_hunters_quest',
           },
           {
-            label: 'Использовать RUNIC_TABLET для безопасного извлечения',
+            label: 'Использовать data_disc для безопасного извлечения',
             action: 'GOTO_NODE',
             nextNode: 'safe_extract',
-            reqItem: 'RUNIC_TABLET',
+            reqItem: 'data_disc',
+            reqFlag: 'void_hunters_quest',
+          },
+          {
+            label: 'Использовать Stability Scanner для анализа',
+            action: 'GOTO_NODE',
+            nextNode: 'safe_extract_scanner',
+            reqItem: 'stability_scanner',
+            reqFlag: 'void_hunters_quest',
+          },
+          {
+            label: 'Применить Reality Patch для стабилизации',
+            action: 'GOTO_NODE',
+            nextNode: 'safe_extract_patch',
+            reqItem: 'reality_patch',
             reqFlag: 'void_hunters_quest',
           },
           {
@@ -161,7 +175,7 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
             label: 'Сохранить образец',
             action: 'CLOSE',
             setFlag: 'void_sample_collected',
-            reward: { items: ['VOID_SAMPLE'] },
+            reward: { items: ['void_shard'] },
           },
         ],
       },
@@ -173,7 +187,7 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
             label: 'Принять это — образец стоит риска',
             action: 'CLOSE',
             setFlag: ['void_sample_collected', 'void_corruption_active'],
-            reward: { items: ['VOID_SAMPLE'] },
+            reward: { items: ['void_shard'] },
             penalty: { hp: 20 },
           },
         ],
@@ -186,8 +200,33 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
             label: 'Взять образец',
             action: 'CLOSE',
             setFlag: 'void_sample_collected',
-            reward: { items: ['VOID_SAMPLE'] },
-            penalty: { items: ['RUNIC_TABLET'] },
+            reward: { items: ['void_shard'] },
+            penalty: { items: ['data_disc'] },
+          },
+        ],
+      },
+      safe_extract_scanner: {
+        id: 'safe_extract_scanner',
+        text: 'Сканер Стабильности анализирует частоту Пустоты. Вы подстраиваете резонанс, и кристалл сам выпадает в ваши руки, полностью нейтрализованный. Сканер перегревается, но образец чист.',
+        choices: [
+          {
+            label: 'Взять образец',
+            action: 'CLOSE',
+            setFlag: 'void_sample_collected',
+            reward: { items: ['void_shard'], energy: 10 },
+          },
+        ],
+      },
+      safe_extract_patch: {
+        id: 'safe_extract_patch',
+        text: 'Вы обклеиваете область Лоскутами Реальности. Пространство вокруг кристалла застывает. Вы выламываете его из земли — он всё ещё пульсирует, но Лоскуты сдерживают энергию.',
+        choices: [
+          {
+            label: 'Взять образец',
+            action: 'CLOSE',
+            setFlag: 'void_sample_collected',
+            reward: { items: ['void_shard'] },
+            penalty: { items: ['reality_patch'] },
           },
         ],
       },
@@ -233,7 +272,7 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
           {
             label: 'Взять вакцину',
             action: 'CLOSE',
-            reward: { items: ['ELDER_HERB'], energy: 20 },
+            reward: { items: ['food_bread'], energy: 20 },
             setFlag: 'void_corruption_handled',
           },
         ],
@@ -278,10 +317,17 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
         text: 'Риа ведёт вас к древнему камню посреди болота — идеальный круг, покрытый рунами. «Ритуал очищения. Он изгонит заражение из области. Но требует жертвы — либо припасы, либо твою кровь.»',
         choices: [
           {
-            label: 'Использовать SUPPLIES для ритуала',
+            label: 'Использовать food_bread для ритуала',
             action: 'GOTO_NODE',
             nextNode: 'ritual_supplies',
-            reqItem: 'SUPPLIES',
+            reqItem: 'food_bread',
+            reqFlag: 'void_hunters_quest',
+          },
+          {
+            label: 'Применить Architect Nanites для восстановления',
+            action: 'GOTO_NODE',
+            nextNode: 'ritual_nanites',
+            reqItem: 'architect_nanites',
             reqFlag: 'void_hunters_quest',
           },
           {
@@ -304,9 +350,23 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
             label: 'Завершить ритуал',
             action: 'CLOSE',
             setFlag: 'void_purification_done',
-            penalty: { items: ['SUPPLIES'] },
+            penalty: { items: ['food_bread'] },
             reward: { credits: 40, energy: 15 },
             addReputation: 20,
+          },
+        ],
+      },
+      ritual_nanites: {
+        id: 'ritual_nanites',
+        text: 'Наниты-Архитекторы роем покрывают камень. Они не просто активируют руны — они перестраивают саму структуру почвы, вытесняя Пустоту. Свет камня становится ослепительно белым. «Невероятно,» — шепчет Риа. — «Это очищение навсегда.»',
+        choices: [
+          {
+            label: 'Завершить процесс',
+            action: 'CLOSE',
+            setFlag: 'void_purification_done',
+            penalty: { items: ['architect_nanites'] },
+            reward: { credits: 100, energy: 30 },
+            addReputation: 40,
           },
         ],
       },
@@ -403,7 +463,7 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
             label: 'Хранить молчание',
             action: 'CLOSE',
             setFlag: 'void_truth_secret',
-            reward: { items: ['ANCIENT_MAP'] },
+            reward: { items: ['ancient_relic'] },
           },
         ],
       },
@@ -421,10 +481,10 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
         text: 'Посреди руин вы видите то, что охотники искали годами: ворота Пустоты. Восьмигранная арка из чёрного камня пульсирует. За ней — тьма, не похожая на обычную темноту. Риа смотрит на вас: «Образец — ключ. Выбор за тобой.»',
         choices: [
           {
-            label: 'Запечатать ворота (пожертвовать VOID_SAMPLE)',
+            label: 'Запечатать ворота (пожертвовать void_shard)',
             action: 'GOTO_NODE',
             nextNode: 'seal_gate',
-            reqItem: 'VOID_SAMPLE',
+            reqItem: 'void_shard',
           },
           {
             label: 'Пройти сквозь ворота',
@@ -447,7 +507,7 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
             label: 'Принять итог',
             action: 'CLOSE',
             setFlag: 'void_hunters_ended',
-            penalty: { items: ['VOID_SAMPLE'] },
+            penalty: { items: ['void_shard'] },
             reward: { hp: 40, credits: 100, energy: 30 },
             addReputation: 30,
           },
@@ -474,7 +534,7 @@ export const ARC7_EVENTS: Record<string, OverworldEvent> = {
             label: 'Отступить и запечатать',
             action: 'GOTO_NODE',
             nextNode: 'seal_gate',
-            reqItem: 'VOID_SAMPLE',
+            reqItem: 'void_shard',
           },
           {
             label: 'Уйти — пусть охотники решают',

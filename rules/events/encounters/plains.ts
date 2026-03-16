@@ -27,10 +27,10 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
             addReputation: -5,
           },
           {
-            label: 'Показать знак Сопротивления',
+            label: 'Показать Железную Пластину',
             action: 'GOTO_NODE',
             nextNode: 'resistance_talk',
-            reqItem: 'RESISTANCE_BADGE',
+            reqItem: 'iron_plate',
             addReputation: 10,
           },
           {
@@ -92,10 +92,10 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'Среди пожухлой травы раскинулся лагерь беженцев — сотни людей, едва укрытых промокшей парусиной. Детский плач и запах болезни висят в воздухе. Старейшина, опираясь на палку, медленно поднимается вам навстречу.',
         choices: [
           {
-            label: 'Отдать запасы провизии',
+            label: 'Отдать Свежий Хлеб',
             action: 'CLOSE',
-            reqItem: 'SUPPLIES',
-            penalty: { items: ['SUPPLIES'] },
+            reqItem: 'food_bread',
+            penalty: { items: ['food_bread'] },
             reward: { credits: 30 },
             addReputation: 20,
           },
@@ -142,7 +142,7 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Принять дар',
             action: 'CLOSE',
-            reward: { credits: 60, items: ['ELDER_MAP'] },
+            reward: { credits: 60, items: ['data_disc'] },
             penalty: { energy: 15 },
             addReputation: 20,
           },
@@ -199,7 +199,7 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Забрать всё',
             action: 'CLOSE',
-            reward: { credits: 50, items: ['SCRAP'] },
+            reward: { credits: 50, items: ['iron_plate'] },
             addReputation: -5,
           },
         ],
@@ -229,7 +229,7 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять с собой детали для будущего использования',
             action: 'CLOSE',
-            reward: { items: ['BLUEPRINT'] },
+            reward: { items: ['data_disc'] },
             addReputation: -5,
           },
         ],
@@ -256,8 +256,8 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Оставить еду и указать направление к ближайшему поселению',
             action: 'CLOSE',
-            reqItem: 'SUPPLIES',
-            penalty: { items: ['SUPPLIES'] },
+            reqItem: 'food_bread',
+            penalty: { items: ['food_bread'] },
             addReputation: 10,
           },
           {
@@ -336,10 +336,10 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
             addReputation: 5,
           },
           {
-            label: 'Использовать травы целителя для защиты',
+            label: 'Использовать Банан для защиты',
             action: 'CLOSE',
-            reqItem: 'ELDER_HERB',
-            penalty: { items: ['ELDER_HERB'] },
+            reqItem: 'food_banana',
+            penalty: { items: ['food_banana'] },
             reward: { energy: 5 },
             addReputation: 10,
           },
@@ -396,9 +396,9 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
             failNode: 'fight_lose',
           },
           {
-            label: 'Предъявить Мандат Восса',
+            label: 'Предъявить Битый Диск Данных',
             action: 'CLOSE',
-            reqItem: 'VOSS_COMMISSION',
+            reqItem: 'data_disc',
             addReputation: 5,
             reward: { credits: 20 },
           },
@@ -493,7 +493,7 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Сказать правду — война давно окончена',
             action: 'CLOSE',
-            reward: { credits: 30, items: ['ANCIENT_MAP'] },
+            reward: { credits: 30, items: ['data_disc'] },
             addReputation: 10,
           },
           {
@@ -511,7 +511,7 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Поднять ключ',
             action: 'CLOSE',
-            reward: { items: ['ANCIENT_KEY'] },
+            reward: { items: ['data_disc'] },
             addReputation: 5,
           },
         ],
@@ -564,9 +564,9 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'Из темноты выходит женщина с перевязанным плечом. Она из разведотряда — потеряла своих и ждёт эвакуации. Ей нужна ваша помощь, или хотя бы молчание.',
         choices: [
           {
-            label: 'Передать ей знак Сопротивления',
+            label: 'Передать ей Железную Пластину',
             action: 'CLOSE',
-            reqItem: 'RESISTANCE_BADGE',
+            reqItem: 'iron_plate',
             reward: { credits: 40, energy: 10 },
             addReputation: 20,
           },
@@ -637,7 +637,7 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Воспользоваться хаосом и подобрать рассыпанный товар',
             action: 'CLOSE',
-            reward: { credits: 35, items: ['SCRAP'] },
+            reward: { credits: 35, items: ['iron_plate'] },
             addReputation: -15,
           },
           {
@@ -759,7 +759,7 @@ export const PLAINS_ENCOUNTERS: Record<string, OverworldEvent> = {
             label: 'Вынести офицера с поля боя',
             action: 'CLOSE',
             penalty: { hp: 20, energy: 20 },
-            reward: { credits: 70, items: ['SEALED_LETTER'] },
+            reward: { credits: 70, items: ['data_disc'] },
             addReputation: 20,
           },
           {

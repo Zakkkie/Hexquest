@@ -90,8 +90,8 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Отдать провизию вместо денег',
             action: 'CLOSE',
-            reqItem: 'SUPPLIES',
-            penalty: { items: ['SUPPLIES'] },
+            reqItem: 'food_banana',
+            penalty: { items: ['food_banana'] },
             addReputation: 10,
           },
         ],
@@ -135,7 +135,7 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять запасы',
             action: 'CLOSE',
-            reward: { credits: 45, items: ['SUPPLIES'], energy: 15 },
+            reward: { credits: 45, items: ['food_banana'], energy: 15 },
             addReputation: 5,
           },
         ],
@@ -153,12 +153,12 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       catch_attempt: {
         id: 'catch_attempt',
-        text: 'Огонёк не убегает. Ваши руки смыкаются вокруг него — и он гаснет, оставив в ладонях тёплый осколок кристалла, светящийся изнутри.',
+        text: 'Огонёк не убегает. Ваши руки смыкаются вокруг него — и он гаснет, оставив в ладонях тёплый лоскут реальности, светящийся изнутри.',
         choices: [
           {
-            label: 'Взять кристалл',
+            label: 'Взять лоскут',
             action: 'CLOSE',
-            reward: { items: ['VOID_SAMPLE'] },
+            reward: { items: ['reality_patch'] },
             addReputation: 5,
           },
         ],
@@ -186,7 +186,7 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Собрать то, что плавает на поверхности',
             action: 'CLOSE',
-            reward: { credits: 25, items: ['SCRAP'] },
+            reward: { credits: 25, items: ['raw_container'] },
           },
           {
             label: 'Поискать выживших',
@@ -202,12 +202,12 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       dive_success: {
         id: 'dive_success',
-        text: 'Видимость под водой лучше, чем ожидалось. В одном из домов — запаянный сундук, ещё не проржавевший. Внутри — документы, личные вещи и немного монет.',
+        text: 'Видимость под водой лучше, чем ожидалось. В одном из домов — запаянный сундук, ещё не проржавевший. Внутри — диск данных, личные вещи и немного монет.',
         choices: [
           {
             label: 'Взять всё',
             action: 'CLOSE',
-            reward: { credits: 60, items: ['SEALED_LETTER'] },
+            reward: { credits: 60, items: ['data_disc'] },
             addReputation: -10,
           },
           {
@@ -231,12 +231,12 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       search_survivors: {
         id: 'search_survivors',
-        text: 'На крыше самого высокого дома сидит старуха, обнявшая котёнка. Она смотрит на вас без страха. «Я никуда не уйду», — говорит она. — «Но если вы возьмёте это письмо — я буду благодарна».',
+        text: 'На крыше самого высокого дома сидит старуха, обнявшая котёнка. Она смотрит на вас без страха. «Я никуда не уйду», — говорит она. — «Но если вы возьмёте этот диск данных — я буду благодарна».',
         choices: [
           {
-            label: 'Взять письмо и пообещать доставить',
+            label: 'Взять диск и пообещать доставить',
             action: 'CLOSE',
-            reward: { items: ['SEALED_LETTER'], credits: 20 },
+            reward: { items: ['data_disc'], credits: 20 },
             addReputation: 20,
           },
           {
@@ -274,10 +274,10 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
             failNode: 'breath_hold_fail',
           },
           {
-            label: 'Использовать Травы как фильтр',
+            label: 'Использовать Свежий хлеб как фильтр',
             action: 'CLOSE',
-            reqItem: 'ELDER_HERB',
-            penalty: { items: ['ELDER_HERB'] },
+            reqItem: 'food_bread',
+            penalty: { items: ['food_bread'] },
             reward: { energy: 5 },
           },
           {
@@ -340,7 +340,7 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
             label: 'Бросить провизию в сторону — отвлечь',
             action: 'GOTO_NODE',
             nextNode: 'distract',
-            reqItem: 'SUPPLIES',
+            reqItem: 'food_banana',
           },
         ],
       },
@@ -384,7 +384,7 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Пройти пока оно отвлеклось',
             action: 'CLOSE',
-            penalty: { items: ['SUPPLIES'] },
+            penalty: { items: ['food_banana'] },
             addReputation: 0,
           },
         ],
@@ -483,10 +483,10 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
             reward: { energy: 15 },
           },
           {
-            label: 'Предложить Жетон Паломника',
+            label: 'Предложить Серебряное кольцо',
             action: 'GOTO_NODE',
             nextNode: 'pilgrim_token_offer',
-            reqItem: 'PILGRIM_TOKEN',
+            reqItem: 'silver_ring',
           },
           {
             label: 'Поторговаться',
@@ -504,7 +504,7 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       pilgrim_token_offer: {
         id: 'pilgrim_token_offer',
-        text: 'Перевозчик смотрит на жетон долго. Что-то меняется в его пустых глазах. «Ты из тех, кто идёт к святилищу. Таким я не беру платы». Он переправляет вас и молчит всю дорогу.',
+        text: 'Перевозчик смотрит на кольцо долго. Что-то меняется в его пустых глазах. «Ты из тех, кто идёт к святилищу. Таким я не беру платы». Он переправляет вас и молчит всю дорогу.',
         choices: [
           {
             label: 'Переправиться',
@@ -563,11 +563,11 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
             addReputation: 5,
           },
           {
-            label: 'Предложить Образец Пустоты для его исследований',
+            label: 'Предложить Лоскут Реальности для его исследований',
             action: 'CLOSE',
-            reqItem: 'VOID_SAMPLE',
-            penalty: { items: ['VOID_SAMPLE'] },
-            reward: { hp: 40, energy: 25, items: ['ELDER_HERB'] },
+            reqItem: 'reality_patch',
+            penalty: { items: ['reality_patch'] },
+            reward: { hp: 40, energy: 25, items: ['food_bread'] },
             addReputation: 15,
           },
           {
@@ -590,8 +590,8 @@ export const SWAMP_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Дать провизию',
             action: 'CLOSE',
-            reqItem: 'SUPPLIES',
-            penalty: { items: ['SUPPLIES'] },
+            reqItem: 'food_banana',
+            penalty: { items: ['food_banana'] },
             reward: { hp: 30, energy: 10 },
           },
           {

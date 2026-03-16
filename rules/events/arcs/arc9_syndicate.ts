@@ -3,7 +3,7 @@ import { OverworldEvent } from '../../../types.ts';
 // Arc 9 — Гражданская война Синдиката
 // Flag chain: syndicate_war_aware → syndicate_chose_resistance|voss → war_ended → resistance_victory|voss_victory
 // Reputation: Resistance path req rep ≥ 0, Voss path always open (−20 rep)
-// Key items: SEALED_LETTER, EXILE_MARK, PILGRIM_TOKEN, RESISTANCE_BADGE, VOSS_COMMISSION
+// Key items: data_disc, ancient_relic, silver_ring, scrap_visor
 
 export const ARC9_EVENTS: Record<string, OverworldEvent> = {
 
@@ -27,7 +27,7 @@ export const ARC9_EVENTS: Record<string, OverworldEvent> = {
             label: 'Сказать паломнику, что знаете убежище',
             action: 'GOTO_NODE',
             nextNode: 'help_pilgrim',
-            reqItem: 'PILGRIM_TOKEN',
+            reqItem: 'silver_ring',
             addReputation: 15,
           },
           {
@@ -106,23 +106,23 @@ export const ARC9_EVENTS: Record<string, OverworldEvent> = {
             reqFlag: 'syndicate_war_aware',
           },
           {
-            label: 'Показать EXILE_MARK',
+            label: 'Показать древнюю реликвию',
             action: 'GOTO_NODE',
-            nextNode: 'show_exile_mark',
-            reqItem: 'EXILE_MARK',
+            nextNode: 'show_ancient_relic',
+            reqItem: 'ancient_relic',
           },
         ],
       },
       join_resistance: {
         id: 'join_resistance',
         image: 'https://picsum.photos/seed/resistance_badge/800/350',
-        text: 'Елена улыбается — коротко, не по-военному. «Нам нужны люди с репутацией. Не солдаты — разведчики.» Она кладёт на стол нагрудный знак — простой металлический диск с изображением дороги. «Добро пожаловать в Сопротивление.»',
+        text: 'Елена улыбается — коротко, не по-военному. «Нам нужны люди с репутацией. Не солдаты — разведчики.» Она кладёт на стол визор из металлолома. «Это поможет тебе видеть скрытое и узнавать своих. Добро пожаловать в Сопротивление.»',
         choices: [
           {
-            label: 'Взять знак и вступить',
+            label: 'Взять визор и вступить',
             action: 'CLOSE',
             setFlag: 'syndicate_chose_resistance',
-            reward: { items: ['RESISTANCE_BADGE'] },
+            reward: { items: ['scrap_visor'] },
             addReputation: 20,
           },
         ],
@@ -142,15 +142,15 @@ export const ARC9_EVENTS: Record<string, OverworldEvent> = {
           },
         ],
       },
-      show_exile_mark: {
-        id: 'show_exile_mark',
-        text: 'Елена смотрит на знак долго. «Это — личный символ Марко. Ты видел его?» Когда вы рассказываете — её взгляд темнеет. «Он был нашим. Значит, посмертно передал тебя мне.»',
+      show_ancient_relic: {
+        id: 'show_ancient_relic',
+        text: 'Елена смотрит на реликвию долго. «Это — вещь Марко. Ты видел его?» Когда вы рассказываете — её взгляд темнеет. «Он был нашим. Значит, посмертно передал тебя мне.»',
         choices: [
           {
             label: 'Вступить в Сопротивление с двойным доверием',
             action: 'CLOSE',
             setFlag: 'syndicate_chose_resistance',
-            reward: { items: ['RESISTANCE_BADGE'], credits: 50 },
+            reward: { items: ['scrap_visor'], credits: 50 },
             addReputation: 25,
           },
         ],
@@ -176,16 +176,22 @@ export const ARC9_EVENTS: Record<string, OverworldEvent> = {
             failNode: 'caught',
           },
           {
+            label: 'Использовать Stability Scanner для обнаружения хвоста',
+            action: 'GOTO_NODE',
+            nextNode: 'scan_spy',
+            reqItem: 'stability_scanner',
+          },
+          {
             label: 'Остановиться и встретить его',
             action: 'GOTO_NODE',
             nextNode: 'confront_spy',
             addReputation: 10,
           },
           {
-            label: 'Привести его к Елене (req RESISTANCE_BADGE)',
+            label: 'Привести его к Елене (нужен визор)',
             action: 'GOTO_NODE',
             nextNode: 'lead_to_elena',
-            reqItem: 'RESISTANCE_BADGE',
+            reqItem: 'scrap_visor',
           },
         ],
       },
@@ -194,6 +200,18 @@ export const ARC9_EVENTS: Record<string, OverworldEvent> = {
         text: 'Узкие переулки, изменение маршрута. Слежка потеряна. Агент бродит в толпе, не зная, куда вы делись.',
         choices: [
           { label: 'Уйти', action: 'CLOSE' },
+        ],
+      },
+      scan_spy: {
+        id: 'scan_spy',
+        text: 'Сканер Стабильности подсвечивает тепловой след и частоту передатчика агента. Вы не просто видите его — вы знаете, куда он пойдёт. Вы заманиваете его в ловушку и аккуратно нейтрализуете.',
+        choices: [
+          {
+            label: 'Забрать его снаряжение',
+            action: 'CLOSE',
+            reward: { credits: 60 },
+            addReputation: 5,
+          },
         ],
       },
       caught: {
@@ -268,11 +286,17 @@ export const ARC9_EVENTS: Record<string, OverworldEvent> = {
         text: 'Три пути к складу: через главные ворота, через канализацию, или с крыши соседнего здания.',
         choices: [
           {
-            label: 'Главные ворота — используй VOSS_COMMISSION или убедительность',
+            label: 'Главные ворота — используй диск данных или убедительность',
             action: 'ROLL_DICE',
             probability: 0.45,
             successNode: 'sabotage_done',
             failNode: 'sabotage_alarm',
+          },
+          {
+            label: 'Использовать Emergency Generator для перегрузки сети',
+            action: 'GOTO_NODE',
+            nextNode: 'sabotage_generator',
+            reqItem: 'emergency_gen',
           },
           {
             label: 'Канализация — медленно, но незаметно',
@@ -293,6 +317,20 @@ export const ARC9_EVENTS: Record<string, OverworldEvent> = {
             penalty: { hp: 15, energy: 20 },
             reward: { credits: 80 },
             addReputation: 20,
+          },
+        ],
+      },
+      sabotage_generator: {
+        id: 'sabotage_generator',
+        text: 'Вы подключаете Аварийный Генератор к центральному узлу склада и запускаете обратную связь. Вспышка ослепляет камеры, а последующий взрыв уничтожает всё снабжение. Чистая работа.',
+        choices: [
+          {
+            label: 'Уйти под прикрытием дыма',
+            action: 'CLOSE',
+            setFlag: 'resistance_sabotage_done',
+            penalty: { items: ['emergency_gen'] },
+            reward: { credits: 120 },
+            addReputation: 30,
           },
         ],
       },
@@ -331,7 +369,7 @@ export const ARC9_EVENTS: Record<string, OverworldEvent> = {
       start: {
         id: 'start',
         image: 'https://picsum.photos/seed/voss_task/800/350',
-        text: 'Агент Синдиката предлагает встречу в закрытой комнате. «Командор Восс хочет вас нанять. Лично. Вот условия.» Он кладёт запечатанный пакет. Внутри — список имён и приказ об их слежке.',
+        text: 'Агент Синдиката предлагает встречу в закрытой комнате. «Командор Восс хочет вас нанять. Лично. Вот условия.» Он кладёт битый диск данных. Внутри — список имён и приказ об их слежке.',
         choices: [
           {
             label: 'Принять задание Восса',
@@ -356,13 +394,13 @@ export const ARC9_EVENTS: Record<string, OverworldEvent> = {
       },
       accept_voss: {
         id: 'accept_voss',
-        text: 'Агент кивает. «Умный выбор.» Вам выдают приказ Командора — официальную бумагу с личной печатью Восса. Это открывает двери в Синдикате.',
+        text: 'Агент кивает. «Умный выбор.» Вам выдают диск данных с кодами доступа Синдиката. Это открывает многие двери.',
         choices: [
           {
-            label: 'Принять комиссию',
+            label: 'Принять диск данных',
             action: 'CLOSE',
             setFlag: 'syndicate_chose_voss',
-            reward: { items: ['VOSS_COMMISSION'], credits: 80 },
+            reward: { items: ['data_disc'], credits: 80 },
           },
         ],
       },

@@ -19,10 +19,10 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
             failNode: 'sentinel_attacks',
           },
           {
-            label: 'Предъявить Прототип устройства — может, он опознает своих',
+            label: 'Предъявить Древнюю реликвию — может, она опознает своих',
             action: 'GOTO_NODE',
             nextNode: 'device_recognition',
-            reqItem: 'PROTOTYPE_DEVICE',
+            reqItem: 'ancient_relic',
           },
           {
             label: 'Обойти стороной',
@@ -45,7 +45,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять контейнер',
             action: 'CLOSE',
-            reward: { items: ['BLUEPRINT'], credits: 50 },
+            reward: { items: ['data_disc'], credits: 50 },
             addReputation: 10,
           },
         ],
@@ -74,7 +74,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Войти вглубь и исследовать',
             action: 'CLOSE',
-            reward: { credits: 60, items: ['RUNIC_TABLET'] },
+            reward: { credits: 60, items: ['data_disc'] },
             penalty: { energy: 15 },
           },
         ],
@@ -86,7 +86,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять всё',
             action: 'CLOSE',
-            reward: { credits: 70, items: ['SCRAP', 'PROTOTYPE_DEVICE'] },
+            reward: { credits: 70, items: ['iron_plate', 'ancient_relic'] },
             addReputation: -10,
           },
         ],
@@ -172,7 +172,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять кристалл',
             action: 'CLOSE',
-            reward: { items: ['VOID_SAMPLE'], credits: 40 },
+            reward: { items: ['void_shard'], credits: 40 },
             addReputation: -15,
           },
           {
@@ -203,7 +203,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять всё, что можно унести',
             action: 'CLOSE',
-            reward: { credits: 55, items: ['MONASTERY_SCROLL', 'RUNIC_TABLET'] },
+            reward: { credits: 55, items: ['data_disc'] },
             addReputation: -5,
           },
           {
@@ -222,7 +222,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Скопировать ключевые страницы',
             action: 'CLOSE',
-            reward: { items: ['RUNIC_TABLET'], credits: 40 },
+            reward: { items: ['data_disc'], credits: 40 },
             setFlag: 'knows_void_counter',
             penalty: { energy: 15 },
             addReputation: 15,
@@ -230,7 +230,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять весь архив с собой',
             action: 'CLOSE',
-            reward: { items: ['ELDER_MAP', 'RUNIC_TABLET', 'MONASTERY_SCROLL'] },
+            reward: { items: ['ancient_relic', 'data_disc'] },
             penalty: { energy: 25 },
             addReputation: 10,
           },
@@ -243,7 +243,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять трактат',
             action: 'CLOSE',
-            reward: { items: ['VOID_SAMPLE'], credits: 50 },
+            reward: { items: ['void_shard'], credits: 50 },
             setFlag: 'void_weakpoints_known',
             addReputation: 15,
           },
@@ -281,15 +281,15 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
             failNode: 'pillar_touch_bad',
           },
           {
-            label: 'Подключить Прототип устройства',
+            label: 'Подключить Древнюю реликвию',
             action: 'GOTO_NODE',
             nextNode: 'connect_device',
-            reqItem: 'PROTOTYPE_DEVICE',
+            reqItem: 'ancient_relic',
           },
           {
             label: 'Взять образец материала',
             action: 'CLOSE',
-            reward: { items: ['VOID_SAMPLE'] },
+            reward: { items: ['void_shard'] },
             penalty: { hp: 15 },
           },
           {
@@ -328,7 +328,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Прервать загрузку, сохранив данные',
             action: 'CLOSE',
-            reward: { items: ['BLUEPRINT'], credits: 60 },
+            reward: { items: ['data_disc'], credits: 60 },
             addReputation: 10,
           },
           {
@@ -347,7 +347,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять устройство с данными',
             action: 'CLOSE',
-            reward: { items: ['BLUEPRINT', 'RUNIC_TABLET'], credits: 80 },
+            reward: { items: ['data_disc', 'ancient_relic'], credits: 80 },
             addReputation: 15,
           },
         ],
@@ -359,7 +359,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Уйти с обломками',
             action: 'CLOSE',
-            penalty: { items: ['PROTOTYPE_DEVICE'], energy: 10 },
+            penalty: { items: ['ancient_relic'], energy: 10 },
           },
         ],
       },
@@ -402,7 +402,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Сохранить документ как улику',
             action: 'CLOSE',
-            reward: { items: ['SEALED_LETTER'], credits: 20 },
+            reward: { items: ['data_disc'], credits: 20 },
             setFlag: 'has_atrocity_evidence',
             addReputation: 20,
           },
@@ -440,7 +440,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Изучить символы на камнях',
             action: 'CLOSE',
-            reward: { items: ['RUNIC_TABLET'], credits: 25 },
+            reward: { items: ['data_disc'], credits: 25 },
             addReputation: 5,
           },
           {
@@ -459,7 +459,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять журнал',
             action: 'CLOSE',
-            reward: { items: ['ELDER_MAP'], credits: 35 },
+            reward: { items: ['ancient_relic'], credits: 35 },
             setFlag: 'knows_missing_container',
             addReputation: 10,
           },
@@ -478,7 +478,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Скачать навигационные данные',
             action: 'CLOSE',
-            reward: { items: ['ANCIENT_MAP', 'BLUEPRINT'], credits: 60 },
+            reward: { items: ['ancient_relic', 'data_disc'], credits: 60 },
             addReputation: 10,
           },
         ],
@@ -515,10 +515,10 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
             failNode: 'partial_decode',
           },
           {
-            label: 'Использовать Руническую таблицу',
+            label: 'Использовать Диск данных',
             action: 'GOTO_NODE',
             nextNode: 'tablet_decode',
-            reqItem: 'RUNIC_TABLET',
+            reqItem: 'data_disc',
           },
           {
             label: 'Сделать эстамп и двигаться дальше',
@@ -558,9 +558,9 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Запомнить всё',
             action: 'CLOSE',
-            reward: { items: ['ANCIENT_MAP'], credits: 50 },
+            reward: { items: ['ancient_relic'], credits: 50 },
             setFlag: ['knows_balance_stone_truth', 'inscription_fully_read'],
-            penalty: { items: ['RUNIC_TABLET'] },
+            penalty: { items: ['data_disc'] },
             addReputation: 15,
           },
         ],
@@ -604,7 +604,7 @@ export const RUINS_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Взять ключ',
             action: 'CLOSE',
-            reward: { items: ['ANCIENT_KEY'], credits: 60 },
+            reward: { items: ['ancient_relic'], credits: 60 },
             addReputation: 10,
           },
         ],

@@ -3,7 +3,7 @@ import { OverworldEvent } from '../../../types.ts';
 // Arc 8 — Наследие Инженера (Engineer's Legacy)
 // Flag chain: engineer_blueprint_found → engineer_parts_gathered → engineer_device_built → engineer_truth_known
 // Terrain: RUINS, OUTPOST, MOUNTAINS, CITY
-// Key items: BLUEPRINT, PROTOTYPE_DEVICE (quest items)
+// Key items: data_disc, ancient_relic (quest items)
 
 export const ARC8_EVENTS: Record<string, OverworldEvent> = {
 
@@ -15,13 +15,19 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
       start: {
         id: 'start',
         image: 'https://picsum.photos/seed/engineer_workshop/800/350',
-        text: 'В руинах старого квартала — замурованная дверь с инженерным замком. Символы на ней — не Синдикатские, древние. Ваш ANCIENT_KEY дрожит в кармане, будто реагирует.',
+        text: 'В руинах старого квартала — замурованная дверь с инженерным замком. Символы на ней — не Синдикатские, древние. Ваш ancient_relic дрожит в кармане, будто реагирует.',
         choices: [
           {
-            label: 'Открыть замком ANCIENT_KEY',
+            label: 'Открыть замком ancient_relic',
             action: 'GOTO_NODE',
             nextNode: 'enter_with_key',
-            reqItem: 'ANCIENT_KEY',
+            reqItem: 'ancient_relic',
+          },
+          {
+            label: 'Вскрыть дверь буром Hornet Drill Bit',
+            action: 'GOTO_NODE',
+            nextNode: 'drill_in',
+            reqItem: 'hornet_drill',
           },
           {
             label: 'Взломать механически (риск тревоги)',
@@ -54,6 +60,18 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
           },
         ],
       },
+      drill_in: {
+        id: 'drill_in',
+        text: 'Бур «Шершень» с визгом вгрызается в замок. Искры летят во все стороны, но через минуту механизм сдаётся. Вы внутри, но шум наверняка привлёк внимание.',
+        choices: [
+          {
+            label: 'Быстро войти',
+            action: 'GOTO_NODE',
+            nextNode: 'enter_with_key',
+            addReputation: -5,
+          },
+        ],
+      },
       take_blueprint: {
         id: 'take_blueprint',
         text: 'Чертёж — подробная схема устройства. Вы не понимаете всего, но видите: это реактор Пустоты. Что-то в комнате щёлкает — активировалась скрытая сигнализация. Нужно уходить.',
@@ -62,7 +80,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             label: 'Схватить чертёж и бежать',
             action: 'CLOSE',
             setFlag: 'engineer_blueprint_found',
-            reward: { items: ['BLUEPRINT'] },
+            reward: { items: ['data_disc'] },
           },
         ],
       },
@@ -75,7 +93,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             label: 'Взять дневник и чертёж',
             action: 'CLOSE',
             setFlag: 'engineer_blueprint_found',
-            reward: { items: ['BLUEPRINT', 'MONASTERY_SCROLL'] },
+            reward: { items: ['data_disc', 'data_disc'] },
           },
         ],
       },
@@ -87,7 +105,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             label: 'Уйти с чертежом',
             action: 'CLOSE',
             setFlag: 'engineer_blueprint_found',
-            reward: { items: ['BLUEPRINT'] },
+            reward: { items: ['data_disc'] },
           },
         ],
       },
@@ -131,7 +149,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             label: 'Показать чертёж Инженера',
             action: 'GOTO_NODE',
             nextNode: 'show_blueprint',
-            reqItem: 'BLUEPRINT',
+            reqItem: 'data_disc',
           },
           {
             label: 'Предложить помощь без вопросов',
@@ -253,10 +271,17 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             reqFlag: 'engineer_apprentice_found',
           },
           {
-            label: 'Использовать SUPPLIES для обмена',
+            label: 'Использовать food_bread для обмена',
             action: 'GOTO_NODE',
             nextNode: 'trade_supplies',
-            reqItem: 'SUPPLIES',
+            reqItem: 'food_bread',
+            reqFlag: 'engineer_apprentice_found',
+          },
+          {
+            label: 'Предложить Emergency Generator в обмен',
+            action: 'GOTO_NODE',
+            nextNode: 'trade_generator',
+            reqItem: 'emergency_gen',
             reqFlag: 'engineer_apprentice_found',
           },
         ],
@@ -270,7 +295,21 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             action: 'CLOSE',
             setFlag: 'engineer_parts_gathered',
             penalty: { credits: 60 },
-            reward: { items: ['BLUEPRINT'] },
+            reward: { items: ['data_disc'] },
+          },
+        ],
+      },
+      trade_generator: {
+        id: 'trade_generator',
+        text: 'Аварийный Генератор — это сокровище для аванпоста. Офицер не верит своим глазам. «Это решит все наши проблемы с энергией! Бери что хочешь, странник.» Вы забираете лучшие детали.',
+        choices: [
+          {
+            label: 'Завершить сделку',
+            action: 'CLOSE',
+            setFlag: 'engineer_parts_gathered',
+            penalty: { items: ['emergency_gen'] },
+            reward: { credits: 50, energy: 20 },
+            addReputation: 20,
           },
         ],
       },
@@ -304,7 +343,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             label: 'Завершить обмен',
             action: 'CLOSE',
             setFlag: 'engineer_parts_gathered',
-            penalty: { items: ['SUPPLIES'] },
+            penalty: { items: ['food_bread'] },
           },
         ],
       },
@@ -344,7 +383,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             label: 'Взять прототип',
             action: 'CLOSE',
             setFlag: 'engineer_device_built',
-            reward: { items: ['PROTOTYPE_DEVICE'] },
+            reward: { items: ['ancient_relic'] },
           },
         ],
       },
@@ -356,7 +395,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             label: 'Получить прототип',
             action: 'CLOSE',
             setFlag: 'engineer_device_built',
-            reward: { items: ['PROTOTYPE_DEVICE'] },
+            reward: { items: ['ancient_relic'] },
           },
         ],
       },
@@ -428,7 +467,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             label: 'Взять награду',
             action: 'CLOSE',
             setFlag: 'engineer_truth_known',
-            penalty: { items: ['PROTOTYPE_DEVICE'] },
+            penalty: { items: ['ancient_relic'] },
             reward: { credits: 150 },
           },
         ],
@@ -442,7 +481,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             action: 'CLOSE',
             setFlag: 'engineer_truth_known',
             addReputation: 20,
-            penalty: { items: ['PROTOTYPE_DEVICE'] },
+            penalty: { items: ['ancient_relic'] },
           },
         ],
       },
@@ -512,7 +551,7 @@ export const ARC8_EVENTS: Record<string, OverworldEvent> = {
             label: 'Хранить тайну',
             action: 'CLOSE',
             setFlag: 'engineer_revelation_done',
-            reward: { items: ['ANCIENT_MAP'] },
+            reward: { items: ['ancient_relic'] },
           },
         ],
       },

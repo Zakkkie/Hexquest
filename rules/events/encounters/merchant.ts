@@ -13,18 +13,18 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'На торговой площадке разложен необычный товар. Торговец — пожилая женщина с острым взглядом — ведёт тихий аукцион среди немногих покупателей. «Только для серьёзных людей. Смотрите, но не трогайте.»',
         choices: [
           {
-            label: 'Купить Древнюю Карту (−60 кредитов)',
+            label: 'Купить Битый Диск Данных (−60 кредитов)',
             action: 'CLOSE',
             reqCredits: 60,
             penalty: { credits: 60 },
-            reward: { items: ['ANCIENT_MAP'] },
+            reward: { items: ['data_disc'] },
           },
           {
-            label: 'Купить Руническую Табличку (−50 кредитов)',
+            label: 'Купить Древнюю Реликвию (−50 кредитов)',
             action: 'CLOSE',
             reqCredits: 50,
             penalty: { credits: 50 },
-            reward: { items: ['RUNIC_TABLET'] },
+            reward: { items: ['ancient_relic'] },
           },
           {
             label: 'Поторговаться за лучшую цену',
@@ -44,11 +44,11 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'Торговка удивлена вашей настойчивостью. Небольшая уступка — двадцать кредитов. «Один раз. Больше не просите.»',
         choices: [
           {
-            label: 'Купить Древнюю Карту (−40 кредитов)',
+            label: 'Купить Битый Диск Данных (−40 кредитов)',
             action: 'CLOSE',
             reqCredits: 40,
             penalty: { credits: 40 },
-            reward: { items: ['ANCIENT_MAP'] },
+            reward: { items: ['data_disc'] },
           },
           {
             label: 'Уйти — всё равно дорого',
@@ -103,9 +103,9 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'Торговец благодарен до слёз. «Вы спасли меня. Берите что хотите — в разумных пределах, конечно.» Он открывает лучший ящик.',
         choices: [
           {
-            label: 'Взять провизию',
+            label: 'Взять Свежий Хлеб',
             action: 'CLOSE',
-            reward: { items: ['SUPPLIES'], energy: 4 },
+            reward: { items: ['food_bread'], energy: 4 },
           },
           {
             label: 'Взять деньги',
@@ -168,11 +168,11 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'Торговец краснеет, потом вдруг расплывается в улыбке. «Хорошо замечено. Вы из тех, кого не обманешь. За это — реальный товар по честной цене.» Он достаёт другой ящик.',
         choices: [
           {
-            label: 'Купить провизию (−20 кредитов)',
+            label: 'Купить Свежий Хлеб (−20 кредитов)',
             action: 'CLOSE',
             reqCredits: 20,
             penalty: { credits: 20 },
-            reward: { items: ['SUPPLIES'] },
+            reward: { items: ['food_bread'] },
           },
           {
             label: 'Уйти',
@@ -225,14 +225,14 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       left_merchant: {
         id: 'left_merchant',
-        text: 'Провизия обходится дёшево, но качество среднее. Впрочем, голод не тётка.',
+        text: 'Свежий хлеб обходится дёшево, но качество среднее. Впрочем, голод не тётка.',
         choices: [
           {
             label: 'Купить (−20 кредитов)',
             action: 'CLOSE',
             reqCredits: 20,
             penalty: { credits: 20 },
-            reward: { items: ['SUPPLIES'] },
+            reward: { items: ['food_bread'] },
           },
         ],
       },
@@ -245,7 +245,7 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
             action: 'CLOSE',
             reqCredits: 35,
             penalty: { credits: 35 },
-            reward: { items: ['SUPPLIES'], energy: 2 },
+            reward: { items: ['food_bread'], energy: 2 },
           },
         ],
       },
@@ -256,7 +256,7 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Забрать выигрыш',
             action: 'CLOSE',
-            reward: { items: ['SUPPLIES'], credits: 20, energy: 2 },
+            reward: { items: ['food_bread'], credits: 20, energy: 2 },
           },
         ],
       },
@@ -288,7 +288,7 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
             action: 'CLOSE',
             reqCredits: 25,
             penalty: { credits: 25 },
-            reward: { items: ['SUPPLIES'], credits: 15 },
+            reward: { items: ['food_bread'], credits: 15 },
             addReputation: -5,
           },
           {
@@ -328,18 +328,18 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'Торговец протягивает потрёпанный каталог без обложки. «Специальный заказ. Всё что здесь — можно достать. Не спрашивайте как.» На страницах — предметы с символами Пустоты.',
         choices: [
           {
-            label: 'Заказать Образец Пустоты (−70 кредитов)',
+            label: 'Заказать Осколок Пустоты (−70 кредитов)',
             action: 'CLOSE',
             reqCredits: 70,
             penalty: { credits: 70 },
-            reward: { items: ['VOID_SAMPLE'] },
+            reward: { items: ['void_shard'] },
           },
           {
-            label: 'Заказать Схему (−50 кредитов)',
+            label: 'Заказать Битый Диск Данных (−50 кредитов)',
             action: 'CLOSE',
             reqCredits: 50,
             penalty: { credits: 50 },
-            reward: { items: ['BLUEPRINT'] },
+            reward: { items: ['data_disc'] },
           },
           {
             label: 'Спросить об источнике товаров',
@@ -357,11 +357,11 @@ export const MERCHANT_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: '«Источник? Везде и нигде. Некоторые вещи... выходят из Пустоты сами. Мы просто собираем.» Он закрывает каталог. «Если решитесь — я здесь до заката.»',
         choices: [
           {
-            label: 'Заказать Образец Пустоты (−70 кредитов)',
+            label: 'Заказать Осколок Пустоты (−70 кредитов)',
             action: 'CLOSE',
             reqCredits: 70,
             penalty: { credits: 70 },
-            reward: { items: ['VOID_SAMPLE'] },
+            reward: { items: ['void_shard'] },
           },
           {
             label: 'Уйти',

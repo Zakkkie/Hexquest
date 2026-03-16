@@ -19,10 +19,10 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
             addReputation: -15,
           },
           {
-            label: 'Дать взятку Комиссией Восса',
+            label: 'Дать взятку Битым Диском Данных',
             action: 'GOTO_NODE',
             nextNode: 'voss_bribe',
-            reqItem: 'VOSS_COMMISSION',
+            reqItem: 'data_disc',
           },
           {
             label: 'Отказаться',
@@ -45,7 +45,7 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       voss_bribe: {
         id: 'voss_bribe',
-        text: 'Капитан смотрит на Комиссию Восса и бледнеет. Это документ, подписанный его прямым начальством. Он мгновенно теряет весь лоск. «П-проходите. Ничего не было.»',
+        text: 'Капитан смотрит на Битый Диск Данных и бледнеет. Это устройство, содержащее информацию о его прямом начальстве. Он мгновенно теряет весь лоск. «П-проходите. Ничего не было.»',
         choices: [
           {
             label: 'Пройти с достоинством',
@@ -157,10 +157,10 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
             addReputation: 10,
           },
           {
-            label: 'Показать Метку Изгоя — дать надежду',
+            label: 'Показать Серебряное Кольцо — дать надежду',
             action: 'GOTO_NODE',
             nextNode: 'mark_shown',
-            reqItem: 'EXILE_MARK',
+            reqItem: 'silver_ring',
           },
           {
             label: 'Пройти мимо',
@@ -194,7 +194,7 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       mark_shown: {
         id: 'mark_shown',
-        text: 'Заключённый смотрит на Метку. «Ты один из нас. Слушай — в третьей комнате слева хранят конфискованные вещи. Там кое-что важное для Братства.»',
+        text: 'Заключённый смотрит на Кольцо. «Ты один из нас. Слушай — в третьей комнате слева хранят конфискованные вещи. Там кое-что важное для Братства.»',
         choices: [
           {
             label: 'Запомнить подсказку',
@@ -217,7 +217,7 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Уйти с добычей',
             action: 'CLOSE',
-            reward: { credits: 45, items: ['RESISTANCE_BADGE'] },
+            reward: { credits: 45, items: ['iron_plate'] },
           },
         ],
       },
@@ -254,7 +254,7 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
           {
             label: 'Оставить себе',
             action: 'CLOSE',
-            reward: { items: ['SUPPLIES'], credits: 20 },
+            reward: { items: ['food_bread'], credits: 20 },
           },
           {
             label: 'Раздать деревенским',
@@ -368,7 +368,7 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
             label: 'Передать в руки Сопротивления',
             action: 'GOTO_NODE',
             nextNode: 'resistance_sent',
-            reqItem: 'RESISTANCE_BADGE',
+            reqItem: 'iron_plate',
             addReputation: 10,
           },
         ],
@@ -411,16 +411,16 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'В подвале ближайшего здания — голоса. Люди в капюшонах, карты на столе. Один оборачивается. «Ты пришёл в неудачное время. Или удачное — зависит от того, кто ты.»',
         choices: [
           {
-            label: 'Показать Метку Изгоя как знак',
+            label: 'Показать Серебряное Кольцо как знак',
             action: 'GOTO_NODE',
             nextNode: 'exile_mark',
-            reqItem: 'EXILE_MARK',
+            reqItem: 'silver_ring',
           },
           {
-            label: 'Показать Знак Сопротивления',
+            label: 'Показать Железную Пластину',
             action: 'GOTO_NODE',
             nextNode: 'resistance_mark',
-            reqItem: 'RESISTANCE_BADGE',
+            reqItem: 'iron_plate',
           },
           {
             label: 'Ничего не показывать — назвать себя другом',
@@ -433,7 +433,7 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       exile_mark: {
         id: 'exile_mark',
-        text: 'Метка Изгоя — сигнал для подполья. Собравшиеся переглядываются. «Один из нас.» Вас вводят в курс дела. Планируется операция против склада Синдиката.',
+        text: 'Серебряное Кольцо — сигнал для подполья. Собравшиеся переглядываются. «Один из нас.» Вас вводят в курс дела. Планируется операция против склада Синдиката.',
         choices: [
           {
             label: 'Присоединиться к планированию',
@@ -445,7 +445,7 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       resistance_mark: {
         id: 'resistance_mark',
-        text: 'Знак Сопротивления вызывает доверие немедленно. Вас угощают едой и рассказывают о сети связных от юга до севера. Ценная информация.',
+        text: 'Железная Пластина вызывает доверие немедленно. Вас угощают едой и рассказывают о сети связных от юга до севера. Ценная информация.',
         choices: [
           {
             label: 'Принять информацию',
@@ -498,10 +498,10 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
             addReputation: -5,
           },
           {
-            label: 'Предложить план — показать Комиссию Восса как знак авторитета',
+            label: 'Предложить план — показать Битый Диск Данных как знак авторитета',
             action: 'GOTO_NODE',
             nextNode: 'led_defense',
-            reqItem: 'VOSS_COMMISSION',
+            reqItem: 'data_disc',
             addReputation: 10,
           },
         ],
@@ -530,7 +530,7 @@ export const OUTPOST_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       led_defense: {
         id: 'led_defense',
-        text: 'Комиссия Восса даёт вам временные полномочия. Вы перестраиваете оборону. Пустота отступает с меньшими потерями для гарнизона. Легенда поста.',
+        text: 'Битый Диск Данных даёт вам временные полномочия. Вы перестраиваете оборону. Пустота отступает с меньшими потерями для гарнизона. Легенда поста.',
         choices: [
           {
             label: 'Принять благодарность гарнизона',

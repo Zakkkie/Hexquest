@@ -20,16 +20,16 @@ export const ROAD_ENCOUNTERS: Record<string, OverworldEvent> = {
             penalty: { credits: 20 },
           },
           {
-            label: 'Показать Паломнический Жетон',
+            label: 'Показать серебряное кольцо',
             action: 'GOTO_NODE',
             nextNode: 'token_shown',
-            reqItem: 'PILGRIM_TOKEN',
+            reqItem: 'silver_ring',
           },
           {
-            label: 'Предъявить Печать Изгоя и пройти силой',
+            label: 'Предъявить древнюю реликвию и пройти силой',
             action: 'ROLL_DICE',
             probability: 0.45,
-            reqItem: 'EXILE_MARK',
+            reqItem: 'ancient_relic',
             successNode: 'exile_intimidated',
             failNode: 'exile_failed',
             penalty: { hp: 15 },
@@ -48,7 +48,7 @@ export const ROAD_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       token_shown: {
         id: 'token_shown',
-        text: 'Старший стражник щурится на жетон, потом тихо переговаривается с напарником. «Паломники освобождены от пошлины по указу третьего квартала.» Он нехотя делает знак пропустить.',
+        text: 'Старший стражник щурится на кольцо, потом тихо переговаривается с напарником. «Паломники с такими знаками освобождены от пошлины по указу третьего квартала.» Он нехотя делает знак пропустить.',
         choices: [
           {
             label: 'Пройти с достоинством',
@@ -59,7 +59,7 @@ export const ROAD_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       exile_intimidated: {
         id: 'exile_intimidated',
-        text: 'Печать Изгоя производит неожиданный эффект — стражники бледнеют и расступаются. Видимо, кое-кто знает, что стоит за этим клеймом.',
+        text: 'Древняя реликвия производит неожиданный эффект — стражники бледнеют и расступаются. Видимо, кое-кто знает, что стоит за этим предметом.',
         choices: [{ label: 'Пройти молча', action: 'CLOSE' }],
       },
       exile_failed: {
@@ -146,10 +146,10 @@ export const ROAD_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'Патруль из четырёх солдат Синдиката перекрывает дорогу. Сержант смотрит на вас цепко. «Документы. Имя. Откуда и куда.»',
         choices: [
           {
-            label: 'Предъявить Запечатанное Письмо',
+            label: 'Предъявить диск данных',
             action: 'GOTO_NODE',
             nextNode: 'letter_shown',
-            reqItem: 'SEALED_LETTER',
+            reqItem: 'data_disc',
           },
           {
             label: 'Назвать вымышленное имя',
@@ -175,7 +175,7 @@ export const ROAD_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       letter_shown: {
         id: 'letter_shown',
-        text: 'Сержант внимательно изучает печать письма. Его брови ползут вверх. Он возвращает письмо с нарочитой небрежностью и командует патрулю разойтись. «Проходите, господин.»',
+        text: 'Сержант внимательно изучает данные на диске. Его брови ползут вверх. Он возвращает диск с нарочитой небрежностью и командует патрулю разойтись. «Проходите, господин.»',
         choices: [{ label: 'Пройти', action: 'CLOSE', reward: { energy: 1 } }],
       },
       bluff_success: {
@@ -240,11 +240,11 @@ export const ROAD_ENCOUNTERS: Record<string, OverworldEvent> = {
             nextNode: 'talk',
           },
           {
-            label: 'Оставить монаху Паломнический Жетон',
+            label: 'Оставить монаху серебряное кольцо',
             action: 'GOTO_NODE',
             nextNode: 'token_given',
-            reqItem: 'PILGRIM_TOKEN',
-            penalty: { items: ['PILGRIM_TOKEN'] },
+            reqItem: 'silver_ring',
+            penalty: { items: ['silver_ring'] },
             addReputation: 10,
           },
           {
@@ -271,7 +271,7 @@ export const ROAD_ENCOUNTERS: Record<string, OverworldEvent> = {
       },
       token_given: {
         id: 'token_given',
-        text: 'Монах бережно берёт жетон и кладёт на алтарь. Долгое молчание. «Ты уже на пути. Я укажу тебе на одну тропу, которую не видно с дороги.» Он шёпотом называет обходной маршрут.',
+        text: 'Монах бережно берёт кольцо и кладёт на алтарь. Долгое молчание. «Ты уже на пути. Я укажу тебе на одну тропу, которую не видно с дороги.» Он шёпотом называет обходной маршрут.',
         choices: [
           {
             label: 'Запомнить слова монаха',

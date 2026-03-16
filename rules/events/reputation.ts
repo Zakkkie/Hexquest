@@ -216,7 +216,7 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
           {
             label: 'Поблагодарить и идти дальше',
             action: 'CLOSE',
-            reward: { hp: 25, energy: 5, items: ['SUPPLIES'] },
+            reward: { hp: 25, energy: 5, items: ['food_bread'] },
           },
         ],
       },
@@ -276,7 +276,7 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
             reqCredits: 15,
             reqRepMin: 40,
             penalty: { credits: 15 },
-            reward: { items: ['SUPPLIES'], energy: 2 },
+            reward: { items: ['food_bread'], energy: 2 },
           },
           {
             label: 'Купить Паломнический Жетон (−30 кредитов)',
@@ -284,7 +284,7 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
             reqCredits: 30,
             reqRepMin: 40,
             penalty: { credits: 30 },
-            reward: { items: ['PILGRIM_TOKEN'] },
+            reward: { items: ['ancient_relic'] },
           },
           {
             label: 'Уйти',
@@ -306,10 +306,10 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
         text: 'Торговец с открытым лицом подходит первым: «Я слышал о вас. Честный человек заслуживает честной сделки.» Он предлагает обмен без скрытых условий.',
         choices: [
           {
-            label: 'Обменять Запечатанное Письмо на провизию и деньги',
+            label: 'Обменять Диск данных на провизию и деньги',
             action: 'GOTO_NODE',
             nextNode: 'traded',
-            reqItem: 'SEALED_LETTER',
+            reqItem: 'data_disc',
             reqRepMin: 40,
           },
           {
@@ -331,8 +331,8 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
           {
             label: 'Принять сделку',
             action: 'CLOSE',
-            penalty: { items: ['SEALED_LETTER'] },
-            reward: { credits: 50, items: ['SUPPLIES'] },
+            penalty: { items: ['data_disc'] },
+            reward: { credits: 50, items: ['food_bread'] },
           },
         ],
       },
@@ -369,15 +369,15 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
             reqCredits: 25,
             reqRepMax: -40,
             penalty: { credits: 25 },
-            reward: { items: ['EXILE_MARK'] },
+            reward: { items: ['ancient_relic'] },
           },
           {
-            label: 'Купить Образец Пустоты (−40 кредитов)',
+            label: 'Купить Осколок Пустоты (−40 кредитов)',
             action: 'CLOSE',
             reqCredits: 40,
             reqRepMax: -40,
             penalty: { credits: 40 },
-            reward: { items: ['VOID_SAMPLE'] },
+            reward: { items: ['void_shard'] },
           },
           {
             label: 'Уйти',
@@ -399,12 +399,12 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
         text: 'Подпольный рынок. Без вывески, без стражи — или вся стража здесь куплена. Торговец смотрит на вашу репутацию Изгоя и улыбается. «Ты свой. Смотри что есть.»',
         choices: [
           {
-            label: 'Купить Руническую Табличку (−35 кредитов)',
+            label: 'Купить Диск данных (−35 кредитов)',
             action: 'CLOSE',
             reqCredits: 35,
             reqRepMax: -40,
             penalty: { credits: 35 },
-            reward: { items: ['RUNIC_TABLET'] },
+            reward: { items: ['data_disc'] },
           },
           {
             label: 'Купить Схему (−45 кредитов)',
@@ -412,7 +412,7 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
             reqCredits: 45,
             reqRepMax: -40,
             penalty: { credits: 45 },
-            reward: { items: ['BLUEPRINT'] },
+            reward: { items: ['data_disc'] },
           },
           {
             label: 'Уйти',
@@ -683,7 +683,7 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
           {
             label: 'Принять изменение',
             action: 'CLOSE',
-            reward: { hp: 30, energy: 8, items: ['VOID_SAMPLE'] },
+            reward: { hp: 30, energy: 8, items: ['void_shard'] },
             setFlag: 'dark_shrine_touched',
           },
         ],
@@ -749,14 +749,14 @@ export const REPUTATION_EVENTS: Record<string, OverworldEvent> = {
             action: 'CLOSE',
             reqCredits: 25,
             penalty: { credits: 25 },
-            reward: { items: ['SUPPLIES'] },
+            reward: { items: ['food_bread'] },
           },
           {
             label: 'Купить Паломнический Жетон (−40 кредитов)',
             action: 'CLOSE',
             reqCredits: 40,
             penalty: { credits: 40 },
-            reward: { items: ['PILGRIM_TOKEN'] },
+            reward: { items: ['ancient_relic'] },
           },
           {
             label: 'Уйти',

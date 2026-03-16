@@ -571,6 +571,21 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         maxEnergyBonus: 50
     },
     {
+        idPrefix: 'heartstone_map',
+        rarity: 'LEGENDARY',
+        name: { EN: 'Heartstone Map', RU: 'Карта Сердечного Камня' },
+        description: { EN: 'A pulsating map showing the way to the Heartstone.', RU: 'Пульсирующая карта, указывающая путь к Сердечному Камню.' },
+        visualType: 'CHIP',
+        visualColor: '#fbbf24',
+        iconUrl: 'I_Map.png',
+        effectType: 'ADD_MOVES',
+        effectValue: 0,
+        effectLabel: { EN: 'Quest Item', RU: 'Квестовый предмет' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 0,
+        negativeEffectLabel: { EN: '', RU: '' }
+    },
+    {
         idPrefix: 'energy_cell_large',
         rarity: 'UNCOMMON',
         name: { EN: 'Large Energy Cell', RU: 'Большая Энергоячейка' },
