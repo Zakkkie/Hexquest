@@ -535,6 +535,9 @@ const renderList = useMemo(() => {
                         progress: hex.progress,
                         durability: hex.durability,
                         artifactType: hex.artifact?.type,
+                        biome: hex.biome,
+                        poiType: hex.poiType,
+                        isPassable: hex.isPassable,
                         renderMode: FULL_RENDER_MODE,
                         opacity
                     }

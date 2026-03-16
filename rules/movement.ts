@@ -50,6 +50,11 @@ export const calculateMovementCost = (
              return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "VOID" };
         }
 
+        // 1.5 Passable Check
+        if (nextHex && nextHex.isPassable === false) {
+             return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "BLOCKED" };
+        }
+
         const currentLevel = currentHex ? currentHex.maxLevel : 0;
         const nextLevel = nextHex ? nextHex.maxLevel : 0;
 

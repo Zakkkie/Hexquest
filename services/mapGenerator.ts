@@ -1,27 +1,160 @@
 
-import { Hex, HexCoord } from '../types';
+import { Hex, HexCoord, TerrainType } from '../types';
 import { LevelConfig } from '../campaign/types';
 import { getHexKey, getNeighbors } from './hexUtils';
 import { GAME_CONFIG } from '../rules/config';
+
+const CITY_Q = 10;
+const CITY_R = -5;
+const CITY_W = 10;
+const CITY_H = 14;
+
+const isInsideCity = (q: number, r: number) => {
+    const dq = q - CITY_Q;
+    const dr = r - CITY_R;
+    return Math.abs(dq) <= CITY_W / 2 && Math.abs(dr) <= CITY_H / 2;
+};
+
+const isCityWall = (q: number, r: number) => {
+    const dq = q - CITY_Q;
+    const dr = r - CITY_R;
+    const halfW = Math.floor(CITY_W / 2);
+    const halfH = Math.floor(CITY_H / 2);
+    
+    const onEdge = Math.abs(dq) === halfW || Math.abs(dr) === halfH;
+    const isGate = (dq === 0 && Math.abs(dr) === halfH) || (dr === 0 && Math.abs(dq) === halfW);
+    
+    return onEdge && !isGate;
+};
+
+const getCityPoi = (q: number, r: number) => {
+    const dq = q - CITY_Q;
+    const dr = r - CITY_R;
+    
+    if (dq === 0 && dr === 0) return 'city_hub';
+    
+    // NW: Travelers
+    if (dq === -3 && dr === -4) return 'tavern_travelers';
+    if (dq === -3 && dr === -2) return 'bulletin_board';
+    if (dq === -1 && dr === -4) return 'guard_post';
+    
+    // NE: Craftsmen
+    if (dq === 3 && dr === -4) return 'forge';
+    if (dq === 3 && dr === -2) return 'alchemist';
+    if (dq === 1 && dr === -4) return 'watchtower';
+    
+    // SW: Market
+    if (dq === -3 && dr === 4) return 'market';
+    if (dq === -3 && dr === 2) return 'warehouse';
+    if (dq === -1 && dr === 4) return 'healer';
+    
+    // SE: Spirit
+    if (dq === 3 && dr === 4) return 'temple';
+    if (dq === 3 && dr === 2) return 'archive';
+    if (dq === 1 && dr === 4) return 'tavern_spirit';
+    
+    return null;
+};
+
+const isCityStreet = (q: number, r: number) => {
+    const dq = q - CITY_Q;
+    const dr = r - CITY_R;
+    return dq % 3 === 0 || dr % 3 === 0;
+};
+
+const getPseudoNoise = (q: number, r: number) => {
+    const val = Math.sin(q * 12.9898 + r * 78.233) * 43758.5453;
+    return Math.abs(val - Math.floor(val));
+};
 
 // Pure function to generate a specific hex based on config rules
 export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfig, mapType?: 'FLAT' | 'CHAOTIC'): Hex => {
     const key = getHexKey(q, r);
     const dist = Math.max(Math.abs(q), Math.abs(r), Math.abs(-q-r));
-    
-    // Default Defaults
-    const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? 24; 
+    const noise = getPseudoNoise(q, r);
+
+    let level = 0;
+    let structureType: 'BARRIER' | 'VOID' | 'MONUMENT' | 'MINE' | undefined = undefined;
+    let biome: TerrainType = 'PLAINS';
+    let poiType: string | undefined = undefined;
+    let isPassable = true;
+    let forceReveal = false;
+
+    // --- CITY LOGIC ---
+    if (isInsideCity(q, r)) {
+        biome = 'CITY';
+        if (isCityWall(q, r)) {
+            level = 4;
+            structureType = 'BARRIER';
+            isPassable = false;
+        } else {
+            const poi = getCityPoi(q, r);
+            if (poi) {
+                poiType = poi;
+                level = 1;
+            } else if (isCityStreet(q, r)) {
+                biome = 'ROAD';
+                level = 0;
+            } else {
+                // Building
+                level = 2;
+                isPassable = false;
+            }
+        }
+    } else {
+        // --- ZONE LOGIC ---
+        if (dist <= 5) {
+            biome = 'PLAINS';
+            level = 0;
+        } else if (dist <= 15) {
+            // Zone 1: Rural Periphery
+            biome = noise > 0.5 ? 'FOREST' : 'SWAMP';
+            level = biome === 'FOREST' ? 1 : -1;
+        } else if (dist <= 30) {
+            // Zone 2: Wilderness
+            if (noise > 0.7) {
+                biome = 'MOUNTAINS';
+                level = 3;
+            } else if (noise > 0.4) {
+                biome = 'FOREST'; // Deep Forest
+                level = 2;
+            } else if (noise > 0.2) {
+                biome = 'PLAINS'; // Wasteland
+                level = 0;
+            } else {
+                biome = 'WATER'; // Canyon
+                level = -2;
+            }
+        } else {
+            // Zone 3: Desolation
+            if (noise > 0.8) {
+                biome = 'RUINS';
+                level = 1;
+            } else if (noise > 0.4) {
+                biome = 'PLAINS'; // Wasteland
+                level = 0;
+            } else {
+                biome = 'WATER'; // Canyon
+                level = -3;
+            }
+        }
+
+        // Rifts
+        if (dist >= 2 && dist <= 11 && noise < 0.03) {
+            poiType = 'RIFT_S1_2';
+            structureType = 'MINE';
+        } else if (dist >= 12 && dist <= 25 && noise < 0.03) {
+            poiType = 'RIFT_S3_4';
+            structureType = 'MINE';
+        }
+    }
+
+    // Default Defaults for Walls (Map Boundary)
+    const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? 40; 
     const wallStartLevel = levelConfig?.mapConfig.wallStartLevel ?? 9;
     const wallType = levelConfig?.mapConfig.wallType ?? 'classic';
     const shouldGenerateWalls = levelConfig?.mapConfig.generateWalls ?? true; 
 
-    let level = 0;
-    let structureType: 'BARRIER' | 'VOID' | 'MONUMENT' | undefined = undefined;
-    
-    // Arena Mode Check (Pit Rings usually imply full visibility arena)
-    let forceReveal = false;
-
-    // Wall Logic
     if (shouldGenerateWalls && dist >= wallStartRadius) {
         if (wallType === 'void_shatter') {
             if (dist === wallStartRadius) {
@@ -32,36 +165,24 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
                 structureType = undefined;
             }
         } else if (wallType === 'pit_ring') {
-            // Level 1.6 & 2.X logic: Surround with Deep Pits (-8)
-            // These serve as the map boundary
             level = -8;
             structureType = undefined;
-            forceReveal = true; // Arenas are always visible
+            forceReveal = true;
         } else {
-            // Classic Wall
             level = Math.min(99, wallStartLevel + (dist - wallStartRadius));
             structureType = 'BARRIER';
-        }
-    } else {
-        // --- RANDOM TERRAIN GENERATION (SKIRMISH) ---
-        if (mapType === 'CHAOTIC' && (q !== 0 || r !== 0)) {
-            // Random level between -1 and 2
-            const rand = Math.random();
-            if (rand < 0.15) level = 2; // High ground
-            else if (rand < 0.3) level = 1; // Unstable
-            else if (rand < 0.45) level = -1; // Pit
-            else level = 0; // Flat
+            isPassable = false;
         }
     }
 
     // Default center always safe
     if (q === 0 && r === 0) {
         level = 0;
+        biome = 'PLAINS';
+        isPassable = true;
     }
 
     let durability: number | undefined = undefined;
-    
-    // Level 1 sectors are unstable
     if (level === 1) {
         durability = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
     }
@@ -73,16 +194,15 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
         currentLevel: level,
         maxLevel: level,
         progress: 0,
-        revealed: forceReveal, // Apply force reveal for arenas
+        revealed: forceReveal,
         structureType,
-        durability
+        durability,
+        biome,
+        poiType,
+        isPassable
     };
 };
 
-/**
- * Checks if a monument has enough low-ground neighbors to build a staircase up to it.
- * Condition: At least 3 neighbors must be <= Monument Level.
- */
 export const validateMonumentAccessibility = (
   monument: HexCoord,
   grid: Record<string, Hex>
@@ -92,7 +212,7 @@ export const validateMonumentAccessibility = (
   
   if (!monumentHex) return false;
   
-  const monumentHeight = monumentHex.maxLevel; // Check Max Level
+  const monumentHeight = monumentHex.maxLevel;
   const neighbors = getNeighbors(monument.q, monument.r);
   
   let accessibleNeighbors = 0;
@@ -100,8 +220,7 @@ export const validateMonumentAccessibility = (
     const key = getHexKey(neighbor.q, neighbor.r);
     const hex = grid[key];
     
-    // Neighbor must exist, not be void, and be accessible (lower or equal)
-    if (hex && hex.structureType !== 'VOID' && hex.maxLevel <= monumentHeight) {
+    if (hex && hex.structureType !== 'VOID' && hex.isPassable !== false && hex.maxLevel <= monumentHeight) {
       accessibleNeighbors++;
     }
   }
@@ -109,10 +228,6 @@ export const validateMonumentAccessibility = (
   return accessibleNeighbors >= 3; 
 };
 
-/**
- * Modifies the grid to ensure the monument is reachable.
- * If validation fails, it forces 4 neighbors to be (MonumentLevel - 1) or lower.
- */
 export const ensureMonumentAccessibility = (
   monument: HexCoord,
   grid: Record<string, Hex>
@@ -121,12 +236,9 @@ export const ensureMonumentAccessibility = (
     return grid;
   }
   
-  console.warn(`[MapGen] Fixing Monument Accessibility at ${monument.q},${monument.r}`);
-
   const neighbors = getNeighbors(monument.q, monument.r);
   const updatedGrid = { ...grid };
   
-  // Force 4 neighbors to be accessible
   const neighborsToFix = neighbors.slice(0, 4);
   const monumentHex = grid[getHexKey(monument.q, monument.r)];
   const targetMaxLevel = monumentHex ? Math.max(0, monumentHex.maxLevel - 1) : 0;
@@ -136,13 +248,12 @@ export const ensureMonumentAccessibility = (
     const hex = updatedGrid[key];
     
     if (hex && hex.structureType !== 'VOID') {
-       // Lower the level if it's higher than target
-       if (hex.maxLevel > targetMaxLevel) {
+       if (hex.maxLevel > targetMaxLevel || hex.isPassable === false) {
            updatedGrid[key] = {
              ...hex,
              currentLevel: targetMaxLevel,
              maxLevel: targetMaxLevel,
-             // Add durability if we lowered it to L1
+             isPassable: true,
              durability: targetMaxLevel === 1 ? GAME_CONFIG.L1_HEX_MAX_DURABILITY : undefined
            };
        }
@@ -155,35 +266,21 @@ export const ensureMonumentAccessibility = (
 export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTIC' = 'FLAT'): Record<string, Hex> => {
   let initialGrid: Record<string, Hex> = {};
   
-  if (levelConfig && levelConfig.mapConfig.customLayout) {
-      // --- CUSTOM FIXED LAYOUT (Campaign Puzzles) ---
-      
-      // 1. First, generate the base grid (background/walls)
-      // If generateWalls is true, we fill the area up to wallStartRadius + padding
-      if (levelConfig.mapConfig.generateWalls) {
-          const radius = (levelConfig.mapConfig.wallStartRadius || levelConfig.mapConfig.size) + 1;
-          for (let q = -radius; q <= radius; q++) {
-              const r1 = Math.max(-radius, -q - radius);
-              const r2 = Math.min(radius, -q + radius);
-              for (let r = r1; r <= r2; r++) {
-                  const hex = generateSingleHex(q, r, levelConfig, mapType);
-                  // For 'pit_ring' maps (Arenas), start fully revealed
-                  if (levelConfig.mapConfig.wallType === 'pit_ring') {
-                      hex.revealed = true;
-                  } else {
-                      hex.revealed = true; // Default to revealed for skirmish/campaign base
-                  }
-                  initialGrid[hex.id] = hex;
-              }
-          }
-      }
+  const radius = levelConfig?.mapConfig.size ?? 45;
 
-      // 2. Overlay Custom Hexes
+  for (let q = -radius; q <= radius; q++) {
+      const r1 = Math.max(-radius, -q - radius);
+      const r2 = Math.min(radius, -q + radius);
+      for (let r = r1; r <= r2; r++) {
+          const hex = generateSingleHex(q, r, levelConfig, mapType);
+          initialGrid[hex.id] = hex;
+      }
+  }
+
+  if (levelConfig && levelConfig.mapConfig.customLayout) {
       levelConfig.mapConfig.customLayout.forEach(hexDef => {
           if (hexDef.q === undefined || hexDef.r === undefined) return;
           const key = getHexKey(hexDef.q, hexDef.r);
-          
-          // Merge with existing or create new
           const existing = initialGrid[key] || { 
               id: key, q: hexDef.q, r: hexDef.r, 
               currentLevel: 0, maxLevel: 0, progress: 0, revealed: true 
@@ -192,104 +289,13 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
           initialGrid[key] = {
               ...existing,
               ...hexDef,
-              // Ensure critical props exist
               currentLevel: hexDef.currentLevel ?? existing.currentLevel,
               maxLevel: hexDef.maxLevel ?? existing.maxLevel,
-              revealed: true // Custom layout always revealed
+              revealed: true
           };
       });
-
-  } else if (levelConfig && levelConfig.id === '1.2') {
-      // --- LEVEL 1.2: FIXED ALGORITHM ---
-      // (Kept as is for compatibility)
-      const walkableCoords = new Map<string, { q: number, r: number, isSafe: boolean, type?: string }>();
-      let current = { q: 0, r: 0 };
-      walkableCoords.set(getHexKey(0,0), { q:0, r:0, isSafe: true });
-      const pathSteps: {q: number, r: number}[] = [current];
-      const targetLength = 14; 
-      const moves = [{ dq: 0, dr: -1 }, { dq: 1, dr: -1 }, { dq: -1, dr: 0 }, { dq: 1, dr: 0 }];
-
-      for (let i = 0; i < targetLength; i++) {
-          const validCandidates = moves
-              .map(m => ({ q: current.q + m.dq, r: current.r + m.dr }))
-              .filter(pos => !walkableCoords.has(getHexKey(pos.q, pos.r)));
-          if (validCandidates.length === 0) break; 
-          const next = validCandidates[Math.floor(Math.random() * validCandidates.length)];
-          walkableCoords.set(getHexKey(next.q, next.r), { q: next.q, r: next.r, isSafe: true });
-          pathSteps.push(next);
-          current = next;
-      }
-      pathSteps.forEach(p => {
-          getNeighbors(p.q, p.r).forEach(n => {
-              const k = getHexKey(n.q, n.r);
-              if (!walkableCoords.has(k) && Math.random() > 0.3) {
-                  walkableCoords.set(k, { q: n.q, r: n.r, isSafe: false });
-              }
-          });
-      });
-      const endPos = pathSteps[pathSteps.length - 1];
-      walkableCoords.set(getHexKey(endPos.q, endPos.r), { q: endPos.q, r: endPos.r, isSafe: true, type: 'APEX' });
-      getNeighbors(endPos.q, endPos.r).forEach(n => {
-          const k = getHexKey(n.q, n.r);
-          if (!walkableCoords.has(k)) { 
-               walkableCoords.set(k, { q: n.q, r: n.r, isSafe: true, type: 'BASE' });
-          }
-      });
-
-      walkableCoords.forEach((data, key) => {
-          let level = 1;
-          let durability = data.isSafe ? 3 : 1;
-          let structureType: 'CAPITAL' | undefined = undefined;
-          if (data.type === 'BASE') { level = 2; durability = 3; }
-          if (data.type === 'APEX') { level = 2; durability = 5; structureType = 'CAPITAL'; } 
-          initialGrid[key] = {
-              id: key, q: data.q, r: data.r,
-              currentLevel: level, maxLevel: level,
-              progress: 0, revealed: true,
-              ownerId: (data.q === 0 && data.r === 0) ? 'player-1' : undefined,
-              durability,
-              structureType
-          };
-      });
-      // Void border (Now Pits)
-      walkableCoords.forEach((data) => {
-          getNeighbors(data.q, data.r).forEach(n => {
-              const nKey = getHexKey(n.q, n.r);
-              // Use -8 for boundary pits instead of VOID
-              if (!walkableCoords.has(nKey)) initialGrid[nKey] = { 
-                  id: nKey, q: n.q, r: n.r, 
-                  currentLevel: -8, maxLevel: -8, 
-                  progress: 0, revealed: true, structureType: undefined 
-              };
-          });
-      });
-
-  } else {
-      // --- STANDARD DYNAMIC GENERATION (Skirmish / Default) ---
-      // Apply the 'CHAOTIC' logic here if requested via mapType
-      const startRadius = 2;
-
-      for (let q = -startRadius; q <= startRadius; q++) {
-          const r1 = Math.max(-startRadius, -q - startRadius);
-          const r2 = Math.min(startRadius, -q + startRadius);
-          for (let r = r1; r <= r2; r++) {
-              const hex = generateSingleHex(q, r, levelConfig, mapType);
-              hex.revealed = true; // Start revealed
-              initialGrid[hex.id] = hex;
-          }
-      }
   }
 
-  // Ensure center exists
-  if (!initialGrid[getHexKey(0,0)]) {
-      initialGrid[getHexKey(0,0)] = { 
-          id: getHexKey(0,0), q:0, r:0, 
-          currentLevel: 0, maxLevel: 0, progress: 0, revealed: true 
-      };
-  }
-
-  // --- FINAL PASS: ACCESSIBILITY CHECK ---
-  // Ensure any generated monuments are reachable
   const monuments = Object.values(initialGrid).filter(h => h.structureType === 'MONUMENT');
   for (const m of monuments) {
       initialGrid = ensureMonumentAccessibility({ q: m.q, r: m.r }, initialGrid);

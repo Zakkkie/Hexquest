@@ -70,6 +70,8 @@ export class ActionProcessor {
               result = this.handleRestoreHex(state, actor, action); break;
           case 'ACTIVATE_MONUMENT':
               result = this.handleActivateMonument(state, actor, action); break;
+          case 'VISIT_POI':
+              result = this.handleVisitPoi(state, actor, action); break;
           case 'WAIT':
               result = { ok: true }; break;
           default:
@@ -373,6 +375,63 @@ export class ActionProcessor {
 
       // Victory!
       state.gameStatus = 'VICTORY';
+
+      return { ok: true };
+  }
+
+  private handleVisitPoi(state: SessionState, actor: Entity, action: any): ValidationResult {
+      const currentHex = state.grid[getHexKey(actor.q, actor.r)];
+      if (!currentHex || !currentHex.poiType) {
+          return { ok: false, reason: 'No Point of Interest here' };
+      }
+
+      const poiType = currentHex.poiType;
+      
+      // Handle different POI types
+      if (poiType.startsWith('RIFT')) {
+          // Rifts lead to dungeons (Overworld events or special campaign triggers)
+          if (state.outgoingEvents) {
+              state.outgoingEvents.push(GameEventFactory.create(
+                  'MONUMENT_REACHED', 
+                  `Entering Rift: ${poiType}`, 
+                  actor.id,
+                  { poiType }
+              ));
+          }
+          // For now, just grant some moves and credits as a "discovery" reward
+          actor.moves += 5;
+          actor.coins += 50;
+      } else if (poiType.startsWith('city_')) {
+          // City buildings
+          switch (poiType) {
+              case 'city_hub':
+                  actor.moves = Math.max(actor.moves, 10);
+                  actor.coins += 20;
+                  break;
+              case 'tavern_travelers':
+                  actor.moves += 15;
+                  break;
+              case 'forge':
+                  actor.storage = Math.min(actor.maxStorage, actor.storage + 2);
+                  break;
+              case 'market':
+                  actor.coins += 100;
+                  break;
+              case 'city_square':
+                  actor.moves += 5;
+                  actor.coins += 10;
+                  break;
+          }
+          
+          if (state.outgoingEvents) {
+              state.outgoingEvents.push(GameEventFactory.create(
+                  'SECTOR_ACQUIRED', 
+                  `Visited ${poiType.replace('city_', '').replace('_', ' ')}`, 
+                  actor.id,
+                  { poiType }
+              ));
+          }
+      }
 
       return { ok: true };
   }

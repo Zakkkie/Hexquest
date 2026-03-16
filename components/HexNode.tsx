@@ -44,6 +44,9 @@ export interface HexNodeProps {
   progress: number;
   durability?: number;
   artifactType?: string;
+  biome?: string;
+  poiType?: string;
+  isPassable?: boolean;
   q: number;
   r: number;
   onHexClick: (q: number, r: number) => void; 
@@ -78,6 +81,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
       theme, isSelected, isPending, pendingCost, 
       isTutorialTarget, isTargetArrow, tutorialColor, isMissingSupport, 
       isGrowing, isRankLocked, progress, durability, artifactType,
+      biome, poiType, isPassable,
       q, r, id,
       onHexClick, onHover,
       opacity = 1
@@ -85,16 +89,37 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Textures are now always loaded since LOD is removed
   const topTexture = useMemo(() => {
-      return textureService.getTexture(maxLevel, q, r);
-  }, [maxLevel, q, r]);
+      return textureService.getTexture(maxLevel, q, r, biome);
+  }, [maxLevel, q, r, biome]);
 
   const sideTexture = useMemo(() => {
-      return textureService.getSideTexture(maxLevel);
-  }, [maxLevel]);
+      return textureService.getSideTexture(maxLevel, biome);
+  }, [maxLevel, biome]);
 
   const isRealVoid = structureType === 'VOID';
   const isMonument = structureType === 'MONUMENT';
   const isNegative = level < 0;
+
+  const getPoiIcon = (type: string) => {
+      switch(type) {
+          case 'city_hub': return '🏛️';
+          case 'tavern_travelers': return '🍺';
+          case 'bulletin_board': return '📋';
+          case 'guard_post': return '🛡️';
+          case 'forge': return '⚒️';
+          case 'alchemist': return '🧪';
+          case 'watchtower': return '🔭';
+          case 'market': return '⚖️';
+          case 'warehouse': return '📦';
+          case 'healer': return '🩹';
+          case 'temple': return '⛪';
+          case 'archive': return '📜';
+          case 'tavern_spirit': return '🍷';
+          case 'RIFT_S1_2': return '🌀';
+          case 'RIFT_S3_4': return '🌋';
+          default: return '📍';
+      }
+  };
 
   // Wall Geometry & Visibility
   const wallData = useMemo(() => {
@@ -405,6 +430,41 @@ const HexNodeComponent = (props: HexNodeProps) => {
                 {isSelected && (
                     <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} listening={false} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                 )}
+
+                {!isPassable && !isRealVoid && (
+                    <Group listening={false} perfectDrawEnabled={false}>
+                        <Path 
+                            data={BASE_PATH_D} 
+                            fill="rgba(239, 68, 68, 0.1)" 
+                            stroke="#ef4444" 
+                            strokeWidth={1} 
+                            dash={[4, 4]}
+                            perfectDrawEnabled={false} 
+                        />
+                        <Text 
+                            text="✖" 
+                            fontSize={14} 
+                            fill="#ef4444" 
+                            offsetX={5} 
+                            offsetY={7} 
+                            opacity={0.6}
+                            perfectDrawEnabled={false} 
+                        />
+                    </Group>
+                )}
+                
+                {poiType && (
+                    <Group listening={false} perfectDrawEnabled={false}>
+                        <Circle radius={10} fill="rgba(0,0,0,0.4)" stroke="rgba(255,255,255,0.2)" strokeWidth={1} perfectDrawEnabled={false} />
+                        <Text 
+                            text={getPoiIcon(poiType)} 
+                            fontSize={12} 
+                            offsetX={6} 
+                            offsetY={6} 
+                            perfectDrawEnabled={false} 
+                        />
+                    </Group>
+                )}
                 
                 {isTutorialTarget && (
                     <Path 
@@ -492,6 +552,9 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.progress !== next.progress) return false;
     if (prev.durability !== next.durability) return false;
     if (prev.opacity !== next.opacity) return false;
+    if (prev.biome !== next.biome) return false;
+    if (prev.poiType !== next.poiType) return false;
+    if (prev.isPassable !== next.isPassable) return false;
     
     for (let i = 0; i < 6; i++) {
         if (prev.neighborLevels[i] !== next.neighborLevels[i]) return false;
