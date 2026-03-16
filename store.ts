@@ -111,6 +111,7 @@ interface GameStore extends GameState {
   returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => void;
   triggerEvent: (eventId: string) => void;
   resolveEventChoice: (choice: import('./types.ts').OverworldEventChoice) => void;
+  closeEventSummary: () => void;
   equipItem: (itemId: string, slot: 'head' | 'body' | 'tool' | 'artifact', bagIndex: number) => void;
   unequipItem: (slot: 'head' | 'body' | 'tool' | 'artifact') => void;
 }
@@ -154,7 +155,8 @@ export const useGameStore = create<GameStore>()(
           actionProgress: 0,
           activeAction: null,
           visitedHexes: {},
-          isOverworldMoving: false
+          isOverworldMoving: false,
+          lastChoiceResult: null,
       },
       
       // --- UI SETTERS ---
@@ -1257,6 +1259,16 @@ export const useGameStore = create<GameStore>()(
           });
       },
 
+      closeEventSummary: () => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              newOverworld.activeEventId = null;
+              newOverworld.activeEventNodeId = null;
+              newOverworld.lastChoiceResult = null;
+              return { overworld: newOverworld };
+          });
+      },
+
       resolveEventChoice: (choice: import('./types.ts').OverworldEventChoice) => {
           set(state => {
               const newOverworld = { ...state.overworld };
@@ -1341,8 +1353,15 @@ export const useGameStore = create<GameStore>()(
               switch (choice.action) {
                   case 'CLOSE':
                       newOverworld.flags[`${eventId}_completed`] = true;
-                      newOverworld.activeEventId = null;
-                      newOverworld.activeEventNodeId = null;
+                      if (choice.reward || choice.penalty) {
+                          newOverworld.lastChoiceResult = {
+                              reward: choice.reward,
+                              penalty: choice.penalty
+                          };
+                      } else {
+                          newOverworld.activeEventId = null;
+                          newOverworld.activeEventNodeId = null;
+                      }
                       break;
                   case 'GOTO_NODE':
                       if (choice.nextNode) {

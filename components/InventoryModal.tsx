@@ -3,6 +3,7 @@ import { useGameStore } from '../store.ts';
 import { X, Shield, Wrench, Zap, Backpack, Package, Footprints, Gem, Circle } from 'lucide-react';
 import { getItemDef } from '../rules/items.ts';
 import { ItemIcon, getRarityBorder } from './hud/HudShared.tsx';
+import { GAME_CONFIG } from '../rules/config.ts';
 
 interface InventoryModalProps {
   isOpen: boolean;
@@ -56,7 +57,25 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
     let isEquippable = false;
     let equipSlot = '';
 
-    if (itemId === 'SUPPLIES') {
+    // Try to get from registry first
+    itemDef = getItemDef(itemId);
+    
+    if (itemDef) {
+      name = itemDef.name[language];
+      desc = itemDef.description[language];
+      color = itemDef.visualColor;
+      
+      if (itemDef.equipSlot) {
+        isEquippable = true;
+        equipSlot = itemDef.equipSlot;
+      } else {
+        // Fallback for older items
+        if (itemId.includes('scanner')) { isEquippable = true; equipSlot = 'head'; }
+        else if (itemId.includes('backpack') || itemId.includes('prism')) { isEquippable = true; equipSlot = 'body'; }
+        else if (itemId.includes('drill')) { isEquippable = true; equipSlot = 'tool'; }
+        else if (itemId.includes('core') || itemId.includes('overclocker')) { isEquippable = true; equipSlot = 'artifact'; }
+      }
+    } else if (itemId === 'SUPPLIES') {
       name = language === 'RU' ? 'Припасы' : 'Supplies';
       desc = language === 'RU' ? 'Восстанавливает энергию и здоровье.' : 'Restores energy and HP.';
       color = '#34d399';
@@ -104,24 +123,6 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
       name = language === 'RU' ? 'Метка Изгоев' : 'Exile Mark';
       desc = language === 'RU' ? 'Браслет дезертиров Синдиката. Открывает новые разговоры.' : 'A bracelet of Syndicate deserters. Opens new conversations.';
       color = '#f87171';
-    } else {
-      itemDef = getItemDef(itemId);
-      if (itemDef) {
-        name = itemDef.name[language];
-        desc = itemDef.description[language];
-        color = itemDef.visualColor;
-        
-        if (itemDef.equipSlot) {
-          isEquippable = true;
-          equipSlot = itemDef.equipSlot;
-        } else {
-          // Fallback for older items
-          if (itemId.includes('scanner')) { isEquippable = true; equipSlot = 'head'; }
-          else if (itemId.includes('backpack') || itemId.includes('prism')) { isEquippable = true; equipSlot = 'body'; }
-          else if (itemId.includes('drill')) { isEquippable = true; equipSlot = 'tool'; }
-          else if (itemId.includes('core') || itemId.includes('overclocker')) { isEquippable = true; equipSlot = 'artifact'; }
-        }
-      }
     }
 
     return (
@@ -193,7 +194,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
                 <Package className="w-3 h-3 md:w-4 md:h-4" />
                 <span>{language === 'RU' ? 'Рюкзак' : 'Bag'}</span>
               </div>
-              <span className="bg-slate-800 px-2 md:px-3 py-0.5 md:py-1 rounded-full text-slate-300 text-[10px] md:text-xs">{bag.length} / 20</span>
+              <span className="bg-slate-800 px-2 md:px-3 py-0.5 md:py-1 rounded-full text-slate-300 text-[10px] md:text-xs">{bag.length} / {GAME_CONFIG.MAX_INVENTORY_SIZE}</span>
             </h3>
             <div className="flex flex-col gap-2 md:gap-3 overflow-y-auto pr-1 md:pr-2 custom-scrollbar" style={{ maxHeight: '400px' }}>
               {bag.length === 0 ? (

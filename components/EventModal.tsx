@@ -2,11 +2,12 @@ import React from 'react';
 import { useGameStore } from '../store.ts';
 import { EVENT_REGISTRY } from '../rules/events.ts';
 import { runtimeEventCache } from '../services/EventComposer.ts';
-import { Sparkles, AlertTriangle, ArrowRight } from 'lucide-react';
+import { getItemDef } from '../rules/items.ts';
+import { Sparkles, AlertTriangle, ArrowRight, Package } from 'lucide-react';
 
 const EventModal: React.FC = () => {
-  const { overworld, resolveEventChoice } = useGameStore();
-  const { activeEventId, activeEventNodeId, player, flags } = overworld;
+  const { overworld, resolveEventChoice, closeEventSummary, language } = useGameStore();
+  const { activeEventId, activeEventNodeId, player, flags, lastChoiceResult } = overworld;
 
   if (!activeEventId || !activeEventNodeId) return null;
 
@@ -15,6 +16,95 @@ const EventModal: React.FC = () => {
 
   const node = event.nodes[activeEventNodeId];
   if (!node) return null;
+
+  // Outcome Summary View
+  if (lastChoiceResult) {
+    const isRussian = language === 'RU';
+
+    const renderOutcomeItem = (key: string, val: any, isPenalty: boolean) => {
+      if (!val) return null;
+
+      let label = key.toUpperCase();
+      let valueDisplay = Array.isArray(val) ? val.length : val;
+      let icon = null;
+
+      if (key === 'items' && Array.isArray(val)) {
+        // Aggregate items
+        const counts: Record<string, number> = {};
+        val.forEach(id => {
+          counts[id] = (counts[id] || 0) + 1;
+        });
+
+        return Object.entries(counts).map(([itemId, count]) => {
+          const itemDef = getItemDef(itemId);
+          const itemName = itemDef ? itemDef.name[language] : itemId;
+          return (
+            <div key={itemId} className={`flex items-center justify-between p-3 rounded-xl border ${isPenalty ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                <span className="text-sm font-medium">{itemName}</span>
+              </div>
+              <span className="text-lg font-bold">{isPenalty ? '-' : '+'}{count}</span>
+            </div>
+          );
+        });
+      }
+
+      // Standard stats
+      if (key === 'credits') label = isRussian ? 'КРЕДИТЫ' : 'CREDITS';
+      if (key === 'hp') label = isRussian ? 'ЗДОРОВЬЕ' : 'HP';
+      if (key === 'energy') label = isRussian ? 'ЭНЕРГИЯ' : 'ENERGY';
+      if (key === 'reputation') label = isRussian ? 'РЕПУТАЦИЯ' : 'REPUTATION';
+
+      return (
+        <div key={key} className={`flex items-center justify-between p-3 rounded-xl border ${isPenalty ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+          <span className="text-sm font-medium uppercase tracking-wider">{label}</span>
+          <span className="text-lg font-bold">{isPenalty ? '-' : '+'}{valueDisplay}</span>
+        </div>
+      );
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+        <div className="bg-slate-900 border border-indigo-500/30 rounded-3xl shadow-[0_0_40px_rgba(99,102,241,0.15)] max-w-md w-full p-8 flex flex-col gap-6 animate-in zoom-in-95 duration-300 relative overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-32 bg-indigo-500/10 blur-[60px] pointer-events-none" />
+          
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="p-4 bg-indigo-500/20 rounded-full border border-indigo-500/30 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+              <Sparkles className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-100">
+              {isRussian ? 'Итоги события' : 'Event Outcome'}
+            </h2>
+            <p className="text-slate-400">
+              {isRussian ? 'Ваши действия привели к следующим результатам:' : 'Your actions led to the following results:'}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {/* Rewards */}
+            {lastChoiceResult.reward && Object.entries(lastChoiceResult.reward).map(([key, val]) => renderOutcomeItem(key, val, false))}
+            
+            {/* Penalties */}
+            {lastChoiceResult.penalty && Object.entries(lastChoiceResult.penalty).map(([key, val]) => renderOutcomeItem(key, val, true))}
+
+            {(!lastChoiceResult.reward && !lastChoiceResult.penalty) && (
+              <div className="text-center p-4 text-slate-500 italic">
+                {isRussian ? 'Ничего не изменилось' : 'Nothing changed'}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={closeEventSummary}
+            className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/20"
+          >
+            {isRussian ? 'Завершить' : 'Finish'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-300">
@@ -83,7 +173,7 @@ const EventModal: React.FC = () => {
                       {choice.reqItem && (
                         <span className={`flex items-center gap-1 text-[9px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md font-medium shrink-0 ${hasReqItem ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                           {!hasReqItem && <AlertTriangle className="w-2.5 h-2.5" />}
-                          {choice.reqItem}
+                          {getItemDef(choice.reqItem)?.name[language] || choice.reqItem}
                         </span>
                       )}
                       {choice.reqCredits && (

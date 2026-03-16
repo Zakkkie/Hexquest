@@ -344,6 +344,11 @@ export interface OverworldState {
   activeAction?: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null;
   visitedHexes?: Record<string, boolean>;
   isOverworldMoving?: boolean;
+  lastChoiceResult: {
+    reward?: { credits?: number; hp?: number; energy?: number; items?: string[] };
+    penalty?: { credits?: number; hp?: number; energy?: number; items?: string[] };
+    message?: string;
+  } | null;
 }
 
 export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'OVERWORLD' | 'INTRO' | 'CAMPAIGN_LOADING';
