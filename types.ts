@@ -356,7 +356,7 @@ export interface OverworldState {
   } | null;
 }
 
-export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'OVERWORLD' | 'INTRO' | 'CAMPAIGN_LOADING';
+export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'OVERWORLD' | 'INTRO' | 'CAMPAIGN_LOADING' | 'INTERIOR';
 export type DeviceType = 'MOBILE' | 'TABLET' | 'DESKTOP';
 
 export interface UserProfile {
