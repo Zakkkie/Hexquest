@@ -111,6 +111,8 @@ export interface Item {
   maxHpBonus?: number;
   maxEnergyBonus?: number;
 
+  equipSlot?: 'head' | 'body' | 'feet' | 'necklace' | 'ring' | 'tool' | 'artifact';
+
   negativeEffectType?: NegativeEffectType;
   negativeEffectValue?: number;
   negativeEffectLabel?: string;

@@ -1350,6 +1350,7 @@ export const getRandomItem = (rarity: ItemRarity, language: Language): Item => {
         effectDuration: def.effectDuration,
         maxHpBonus: def.maxHpBonus,
         maxEnergyBonus: def.maxEnergyBonus,
+        equipSlot: def.equipSlot,
         negativeEffectType: def.negativeEffectType,
         negativeEffectValue: def.negativeEffectValue,
         negativeEffectLabel: def.negativeEffectLabel[language],

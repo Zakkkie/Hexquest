@@ -255,6 +255,8 @@ interface Dictionary {
         ITEM_EQUIPPED: string;
         BAG_FULL: string;
         ITEM_UNEQUIPPED: string;
+        WRONG_SLOT: string;
+        CANNOT_EQUIP: string;
         ENTITY_NOT_FOUND: string;
         ACTOR_LOCKED: string;
         ACTOR_MOVING: string;
@@ -625,6 +627,8 @@ export const TEXT: Record<Language, Dictionary> = {
             ITEM_EQUIPPED: "Item equipped",
             BAG_FULL: "Bag is full!",
             ITEM_UNEQUIPPED: "Item unequipped",
+            WRONG_SLOT: "Wrong equipment slot!",
+            CANNOT_EQUIP: "This item cannot be equipped.",
             ENTITY_NOT_FOUND: "Entity not found",
             ACTOR_LOCKED: "Actor is locked",
             ACTOR_MOVING: "Actor is moving",
@@ -993,6 +997,8 @@ export const TEXT: Record<Language, Dictionary> = {
             ITEM_EQUIPPED: "Предмет экипирован",
             BAG_FULL: "Сумка полна!",
             ITEM_UNEQUIPPED: "Предмет снят",
+            WRONG_SLOT: "Неверный слот экипировки!",
+            CANNOT_EQUIP: "Этот предмет нельзя экипировать.",
             ENTITY_NOT_FOUND: "Сущность не найдена",
             ACTOR_LOCKED: "Действие заблокировано",
             ACTOR_MOVING: "Сущность в движении",

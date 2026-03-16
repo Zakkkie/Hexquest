@@ -1398,6 +1398,17 @@ export const useGameStore = create<GameStore>()(
               player.bag = [...(player.bag ?? [])];
               const eq = { ...player.equipment };
               
+              // Validate slot
+              const newDef = getItemDef(itemId);
+              if (!newDef || !newDef.equipSlot) {
+                  get().showToast(TEXT[get().language].TOAST.CANNOT_EQUIP, 'error');
+                  return state;
+              }
+              if (newDef.equipSlot !== slot) {
+                  get().showToast(TEXT[get().language].TOAST.WRONG_SLOT, 'error');
+                  return state;
+              }
+
               // If there's already an item in the slot, put it back in the bag
               const currentItem = eq[slot];
               
@@ -1418,7 +1429,6 @@ export const useGameStore = create<GameStore>()(
               }
               
               // Apply new item effects
-              const newDef = getItemDef(itemId);
               if (newDef?.maxHpBonus) {
                   player.maxHp += newDef.maxHpBonus;
                   player.hp += newDef.maxHpBonus;
