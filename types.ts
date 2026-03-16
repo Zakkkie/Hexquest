@@ -248,7 +248,11 @@ export interface ToastMessage {
   timestamp: number;
 }
 
-export type TerrainType = 'PLAINS' | 'FOREST' | 'SWAMP' | 'WATER' | 'MOUNTAINS' | 'ROAD' | 'CITY' | 'RUINS' | 'OUTPOST' | 'MERCHANT_CAMP';
+export type TerrainType = 
+  | 'PLAINS' | 'FOREST' | 'SWAMP' | 'WATER' | 'MOUNTAINS' | 'ROAD' 
+  | 'CITY' | 'RUINS' | 'OUTPOST' | 'MERCHANT_CAMP'
+  | 'SETTLEMENT' | 'MONUMENT_AREA' | 'WASTELAND' | 'CANYON' | 'RIFT_ZONE' 
+  | 'WALL' | 'BUILDING';
 
 export interface OverworldHex {
   q: number;
@@ -262,6 +266,8 @@ export interface OverworldHex {
   poiId?: string;
   eventTriggered?: boolean;
   lootedLevels?: number[];
+  interiorId?: string;
+  isIndestructible?: boolean;
 }
 
 export interface OverworldPlayer {
@@ -332,6 +338,33 @@ export interface OverworldEvent {
   startNodeId: string;
 }
 
+export interface NPC {
+  id: string;
+  name: string;
+  avatar?: string;
+  q: number;
+  r: number;
+  eventId: string; // Links to an OverworldEvent
+}
+
+export interface InteriorHex {
+  q: number;
+  r: number;
+  terrainType: 'FLOOR' | 'WALL' | 'DOOR' | 'FURNITURE';
+  furnitureType?: 'TABLE' | 'CHAIR' | 'BED' | 'SHELF' | 'CRATE';
+  moveCost: number;
+  npcId?: string;
+  isExit?: boolean;
+}
+
+export interface InteriorLevel {
+  id: string;
+  name: string;
+  parentHexKey: string;
+  grid: Record<string, InteriorHex>;
+  npcs: NPC[];
+}
+
 export interface OverworldState {
   grid: Record<string, OverworldHex>;
   player: OverworldPlayer;
@@ -340,6 +373,8 @@ export interface OverworldState {
   flags: Record<string, boolean>;
   activeEventId: string | null;
   activeEventNodeId: string | null;
+  activeInteriorId: string | null;
+  interiors: Record<string, InteriorLevel>;
   actionProgress?: number;
   activeAction?: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null;
   visitedHexes?: Record<string, boolean>;

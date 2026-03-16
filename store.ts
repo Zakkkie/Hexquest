@@ -108,6 +108,10 @@ interface GameStore extends GameState {
   setOverworldActionProgress: (progress: number) => void;
   setOverworldActiveAction: (action: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null) => void;
   enterRift: (riftId: string) => void;
+  enterBuilding: (hexKey: string) => void;
+  exitBuilding: () => void;
+  moveInInterior: (q: number, r: number) => void;
+  talkToNPC: (npcId: string) => void;
   returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => void;
   triggerEvent: (eventId: string) => void;
   resolveEventChoice: (choice: import('./types.ts').OverworldEventChoice) => void;
@@ -152,11 +156,13 @@ export const useGameStore = create<GameStore>()(
           flags: {},
           activeEventId: null,
           activeEventNodeId: null,
+          activeInteriorId: null,
+          interiors: {},
+          lastChoiceResult: null,
           actionProgress: 0,
           activeAction: null,
           visitedHexes: {},
           isOverworldMoving: false,
-          lastChoiceResult: null,
       },
       
       // --- UI SETTERS ---
@@ -617,7 +623,7 @@ export const useGameStore = create<GameStore>()(
                       hex = {
                           ...baseHex,
                           ...special,
-                          height: special.terrainType ? getHexHeight(special.terrainType) : baseHex.height
+                          height: special.terrainType ? getHexHeight(special.terrainType, step.q, step.r, currentOverworld.seed) : baseHex.height
                       };
                   }
 
@@ -670,7 +676,7 @@ export const useGameStore = create<GameStore>()(
                                   grid[nk] = {
                                       ...baseN,
                                       ...specialN,
-                                      height: specialN.terrainType ? getHexHeight(specialN.terrainType) : baseN.height
+                                      height: specialN.terrainType ? getHexHeight(specialN.terrainType, nq, nr, newOverworld.seed) : baseN.height
                                   };
                               }
                               
@@ -1153,6 +1159,12 @@ export const useGameStore = create<GameStore>()(
               state.triggerEvent(eventId);
           } else if (hex.terrainType === 'MERCHANT_CAMP') {
               state.triggerEvent('merchant_camp_visit');
+          } else if (hex.terrainType === 'BUILDING') {
+              if (hex.interiorId) {
+                  state.enterBuilding(key);
+              } else {
+                  state.showToast(TEXT[state.language].TOAST.NOTHING_INTERACT, 'info');
+              }
           } else if (hex.terrainType === 'ROAD') {
               const f = state.overworld.flags || {};
               const eventId = !f['wounded_courier_completed'] ? 'wounded_courier' : 'road_pilgrims';
@@ -1176,6 +1188,110 @@ export const useGameStore = create<GameStore>()(
           }
 
           get().startCampaignLevel(riftId);
+      },
+
+      enterBuilding: async (hexKey: string) => {
+          const state = get();
+          const hex = state.overworld.grid[hexKey];
+          if (!hex || !hex.interiorId) return;
+
+          audioService.play('UI_CLICK');
+          
+          // Check if interior already exists in state
+          if (state.overworld.interiors[hex.interiorId]) {
+              set(state => ({
+                  overworld: {
+                      ...state.overworld,
+                      activeInteriorId: hex.interiorId!
+                  }
+              }));
+              return;
+          }
+
+          // Generate new interior
+          try {
+              const { generateInterior } = await import('./services/InteriorGenerator.ts');
+              const { level, events } = generateInterior(hex.interiorId, hexKey, state.overworld.seed + hex.q + hex.r);
+              
+              set(state => {
+                  const newOverworld = { ...state.overworld };
+                  newOverworld.interiors = { ...newOverworld.interiors, [level.id]: level };
+                  newOverworld.activeInteriorId = level.id;
+                  
+                  // Register events
+                  events.forEach(e => {
+                      runtimeEventCache[e.id] = e;
+                  });
+
+                  return { overworld: newOverworld };
+              });
+          } catch (err) {
+              console.error('Failed to generate interior:', err);
+              get().showToast(TEXT[get().language].TOAST.GENERIC_ERROR, 'error');
+          }
+      },
+
+      exitBuilding: () => {
+          audioService.play('UI_CLICK');
+          set(state => ({
+              overworld: {
+                  ...state.overworld,
+                  activeInteriorId: null
+              }
+          }));
+      },
+
+      moveInInterior: (q: number, r: number) => {
+          const state = get();
+          const interiorId = state.overworld.activeInteriorId;
+          if (!interiorId) return;
+          
+          const interior = state.overworld.interiors[interiorId];
+          if (!interior) return;
+
+          const key = getHexKey(q, r);
+          const hex = interior.grid[key];
+          if (!hex || hex.moveCost >= 999) {
+              audioService.play('ERROR');
+              return;
+          }
+
+          // Check for NPC
+          if (hex.npcId) {
+              get().talkToNPC(hex.npcId);
+              return;
+          }
+
+          // Check for Door (Exit)
+          if (hex.terrainType === 'DOOR') {
+              get().exitBuilding();
+              return;
+          }
+
+          audioService.play('MOVE');
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              const player = { ...newOverworld.player };
+              player.q = q;
+              player.r = r;
+              newOverworld.player = player;
+              return { overworld: newOverworld };
+          });
+      },
+
+      talkToNPC: (npcId: string) => {
+          const state = get();
+          const interiorId = state.overworld.activeInteriorId;
+          if (!interiorId) return;
+          
+          const interior = state.overworld.interiors[interiorId];
+          if (!interior) return;
+
+          const npc = interior.npcs.find(n => n.id === npcId);
+          if (!npc) return;
+
+          audioService.play('UI_CLICK');
+          get().triggerEvent(npc.eventId);
       },
 
       returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => {

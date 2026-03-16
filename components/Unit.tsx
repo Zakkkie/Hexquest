@@ -69,7 +69,8 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
       startLevel: hexLevel,
       targetQ: q,
       targetR: r,
-      targetLevel: hexLevel
+      targetLevel: hexLevel,
+      facingLeft: false
   });
 
   // --- SYNC POSITIONING (ANTI-JITTER) ---
@@ -125,7 +126,8 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
               startLevel: hexLevel,
               targetQ: q,
               targetR: r,
-              targetLevel: hexLevel
+              targetLevel: hexLevel,
+              facingLeft: false
           };
           isFirstRender.current = false;
       }
@@ -135,17 +137,38 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
       const hasLevelChanged = hexLevel !== animState.current.targetLevel;
       
       let shouldStartAnim = false;
+      const DURATION = GAME_CONFIG.MOVEMENT_ANIMATION_DURATION * 1000;
 
       if (hasPosChanged) {
-          // New Move Instruction
-          animState.current.startQ = animState.current.targetQ;
-          animState.current.startR = animState.current.targetR;
-          animState.current.startLevel = animState.current.targetLevel;
+          // If we were already moving, start the new animation from where we are NOW
+          // to prevent "teleporting" to the previous target.
+          if (animState.current.isMoving) {
+              const now = Date.now();
+              const elapsed = now - animState.current.startTime;
+              const progress = Math.min(1, elapsed / DURATION);
+              // Use the same easing as in the animation loop
+              const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+              
+              animState.current.startQ = lerp(animState.current.startQ, animState.current.targetQ, ease);
+              animState.current.startR = lerp(animState.current.startR, animState.current.targetR, ease);
+              animState.current.startLevel = lerp(animState.current.startLevel, animState.current.targetLevel, ease);
+          } else {
+              animState.current.startQ = animState.current.targetQ;
+              animState.current.startR = animState.current.targetR;
+              animState.current.startLevel = animState.current.targetLevel;
+          }
           
           animState.current.targetQ = q;
           animState.current.targetR = r;
           animState.current.targetLevel = hexLevel;
           
+          // Determine facing direction based on screen X
+          const startPix = hexToPixel(animState.current.startQ, animState.current.startR, latestRotation.current);
+          const targetPix = hexToPixel(q, r, latestRotation.current);
+          if (Math.abs(targetPix.x - startPix.x) > 1) {
+              animState.current.facingLeft = targetPix.x < startPix.x;
+          }
+
           animState.current.startTime = Date.now();
           animState.current.isMoving = true;
           shouldStartAnim = true;
@@ -161,8 +184,6 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
           }
           animState.current.targetLevel = hexLevel;
       }
-
-      const DURATION = GAME_CONFIG.MOVEMENT_ANIMATION_DURATION * 1000;
 
       const anim = new Konva.Animation((frame) => {
           if (!groupNode || !visualNode) return;
@@ -186,6 +207,7 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
           // 1. Position Interpolation
           const startPix = hexToPixel(state.startQ, state.startR, currentRot);
           
+          // Easing for horizontal movement: Quadratic ease-in-out
           const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
           
           const curX = lerp(startPix.x, targetPix.x, ease);
@@ -200,21 +222,53 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
           // Jump Arc
           const isLateralMove = state.startQ !== state.targetQ || state.startR !== state.targetR;
           let jumpY = 0;
+          let scaleX = state.facingLeft ? -1 : 1;
+          let scaleY = 1;
+
           if (isLateralMove) {
-              const jumpPeak = 60;
-              const arc = 4 * progress * (1 - progress); 
+              const jumpPeak = 80; // Increased for "clearer" jump
+              // Use a slightly different curve for the arc to make it feel more "snappy"
+              // Standard parabola is 4 * p * (1-p). 
+              // We can use a power function to make it stay in air longer or pop faster.
+              const arc = Math.sin(progress * Math.PI); 
               jumpY = -arc * jumpPeak;
+
+              // Squash and Stretch
+              if (progress < 0.15) {
+                  // Takeoff squash
+                  const p = progress / 0.15;
+                  const squash = 0.2 * Math.sin(p * Math.PI);
+                  scaleY = 1 - squash;
+                  scaleX = (state.facingLeft ? -1 : 1) * (1 + squash * 0.5);
+              } else if (progress < 0.85) {
+                  // Mid-air stretch
+                  const p = (progress - 0.15) / 0.7;
+                  const stretch = 0.15 * Math.sin(p * Math.PI);
+                  scaleY = 1 + stretch;
+                  scaleX = (state.facingLeft ? -1 : 1) * (1 - stretch * 0.4);
+              } else {
+                  // Landing squash
+                  const p = (progress - 0.85) / 0.15;
+                  const squash = 0.25 * Math.sin(p * Math.PI);
+                  scaleY = 1 - squash;
+                  scaleX = (state.facingLeft ? -1 : 1) * (1 + squash * 0.6);
+              }
+          } else {
+              // Elevator movement - no flip logic needed but keep current facing
+              scaleX = state.facingLeft ? -1 : 1;
           }
           
           visualNode.y(curGroundZ + jumpY);
+          visualNode.scale({ x: scaleX, y: scaleY });
 
           // 3. Shadow Logic
           if (shadowNode && isLateralMove) {
               shadowNode.y(-jumpY); 
-              const shadowScale = 1 - (4 * progress * (1 - progress) * 0.4);
+              const arc = Math.sin(progress * Math.PI);
+              const shadowScale = (1 - (arc * 0.5)) / Math.abs(scaleX);
               shadowNode.scaleX(shadowScale);
               shadowNode.scaleY(shadowScale);
-              shadowNode.opacity(0.4 - (4 * progress * (1 - progress) * 0.2));
+              shadowNode.opacity(0.4 - (arc * 0.25));
           }
 
           // End Check
@@ -225,6 +279,7 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
               // Snap to final exact position
               groupNode.position({ x: targetPix.x, y: targetPix.y });
               visualNode.y(targetZ);
+              visualNode.scale({ x: state.facingLeft ? -1 : 1, y: 1 });
               if (shadowNode) {
                   shadowNode.y(0);
                   shadowNode.scale({x:1, y:1});

@@ -14,6 +14,7 @@ import InventoryModal from './InventoryModal.tsx';
 import OverworldHexNode from './OverworldHexNode.tsx';
 import OverworldMinimap from './OverworldMinimap.tsx';
 import Background from './Background.tsx';
+import InteriorView from './InteriorView.tsx';
 import GameDialogs from './hud/GameDialogs.tsx';
 import { Item, EntityType } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
@@ -459,6 +460,7 @@ const OverworldView: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-slate-950 flex flex-col" ref={containerRef}>
+      {overworld.activeInteriorId && <InteriorView />}
       <div className="absolute inset-0 pointer-events-none opacity-50">
         <Background variant="GAME" />
       </div>

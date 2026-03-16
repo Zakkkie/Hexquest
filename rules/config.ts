@@ -21,7 +21,7 @@ export const GAME_CONFIG = {
   // Tuned for smoother transitions (0.6s animation provides distinct travel time)
   // Logic interval slightly larger to ensure animation finishes before next logic tick
   MOVEMENT_ANIMATION_DURATION: 0.6, // Seconds (Visual Tween)
-  MOVEMENT_LOGIC_INTERVAL_MS: 650,  // Milliseconds (Logic Throttle)
+  MOVEMENT_LOGIC_INTERVAL_MS: 600,  // Milliseconds (Logic Throttle) - Synced with animation duration
   
   // Performance Limits
   MAX_FLOATING_TEXTS: 50, // Limit simultaneous floating numbers
