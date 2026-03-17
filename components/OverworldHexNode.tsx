@@ -12,6 +12,7 @@ interface OverworldHexNodeProps {
   x: number;
   y: number;
   isLocked?: boolean;
+  isPassable?: boolean;
   neighborLevels: number[];
   onClick: (q: number, r: number) => void;
   highlight?: 'REACHABLE' | 'UNREACHABLE' | 'NONE';
@@ -24,13 +25,15 @@ const seededRandom = (q: number, r: number, seed: number) => {
   return x - Math.floor(x);
 };
 
-const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked, neighborLevels, onClick, highlight = 'NONE' }) => {
+const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked, isPassable = true, neighborLevels, onClick, highlight = 'NONE' }) => {
   const groupRef = useRef<Konva.Group>(null);
   const baseRef = useRef<Konva.Group>(null);
   const animRef = useRef<Konva.Animation | null>(null);
   const waterLayerRef = useRef<Konva.Group>(null);
   const riftRef = useRef<Konva.Group>(null);
   const poiRef = useRef<Konva.Group>(null);
+
+  const [isHovered, setIsHovered] = React.useState(false);
 
   const size = GAME_CONFIG.HEX_SIZE;
   
@@ -329,6 +332,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
       onMouseEnter={(e) => {
         const container = e.target.getStage()?.container();
         if (container) container.style.cursor = 'pointer';
+        setIsHovered(true);
         if (groupRef.current) {
           groupRef.current.to({ scaleX: 1.05, scaleY: 1.05, duration: 0.1 });
         }
@@ -336,6 +340,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
       onMouseLeave={(e) => {
         const container = e.target.getStage()?.container();
         if (container) container.style.cursor = 'grab';
+        setIsHovered(false);
         if (groupRef.current) {
           groupRef.current.to({ scaleX: 1, scaleY: 1, duration: 0.1 });
         }
@@ -356,10 +361,34 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
             fillPatternOffset={{ x: 32, y: 32 }}
             fillPatternRepeat="repeat"
             fill={topTexture ? undefined : getBiomeColor(hex.terrainType, level)}
-            stroke={theme.stroke} 
-            strokeWidth={2} 
+            stroke={isHovered ? '#94a3b8' : theme.stroke} 
+            strokeWidth={isHovered ? 2 : 2} 
             perfectDrawEnabled={true}
           />
+
+          {/* Impassable Indicator */}
+          {!isPassable && hex.isRevealed && (
+            <Group opacity={0.6}>
+              <Line 
+                points={[-10, -10, 10, 10]} 
+                stroke="#ef4444" 
+                strokeWidth={3} 
+                lineCap="round"
+              />
+              <Line 
+                points={[10, -10, -10, 10]} 
+                stroke="#ef4444" 
+                strokeWidth={3} 
+                lineCap="round"
+              />
+              <Path 
+                data={topPathData}
+                stroke="#ef4444"
+                strokeWidth={2}
+                opacity={0.4}
+              />
+            </Group>
+          )}
 
           {/* Rim Highlight */}
           <Path 

@@ -14,7 +14,6 @@ import InventoryModal from './InventoryModal.tsx';
 import OverworldHexNode from './OverworldHexNode.tsx';
 import OverworldMinimap from './OverworldMinimap.tsx';
 import Background from './Background.tsx';
-import InteriorView from './InteriorView.tsx';
 import GameDialogs from './hud/GameDialogs.tsx';
 import { Item, EntityType } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
@@ -242,12 +241,18 @@ const OverworldView: React.FC = () => {
       const { x, y: baseY } = hexToPixel(overworld.player.q, overworld.player.r, 0);
       const targetLvl = targetHex ? (targetHex.height ?? getHexHeight(targetHex.terrainType)) : 0;
       const y = baseY + getHeightOffset(targetLvl);
-      setViewState({
-        ...viewState,
-        x: containerRef.current.clientWidth / 2 - x * viewState.scale,
-        y: (containerRef.current.clientHeight / 2) - getCenterOffset() - y * viewState.scale,
-      });
+      
+      // Smooth transition to center
+      const targetX = containerRef.current.clientWidth / 2 - x * viewState.scale;
+      const targetY = (containerRef.current.clientHeight / 2) - getCenterOffset() - y * viewState.scale;
+      
+      setViewState(prev => ({
+        ...prev,
+        x: targetX,
+        y: targetY,
+      }));
       setCameraFollow(true);
+      playUiSound('CLICK');
     }
   };
 
@@ -460,7 +465,6 @@ const OverworldView: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-slate-950 flex flex-col" ref={containerRef}>
-      {overworld.activeInteriorId && <InteriorView />}
       <div className="absolute inset-0 pointer-events-none opacity-50">
         <Background variant="GAME" />
       </div>
@@ -538,6 +542,14 @@ const OverworldView: React.FC = () => {
 
           {/* Right side buttons */}
           <div className="flex flex-col gap-2 pointer-events-auto items-end relative" ref={systemMenuRef}>
+            <button 
+              onClick={centerCamera}
+              className={`p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all flex items-center gap-2 bg-slate-800/50 hover:bg-slate-700/80 border-slate-700/50 text-slate-400 hover:text-white border ${cameraFollow ? 'border-blue-500/50 text-blue-400' : ''}`}
+              title="Center on Player"
+            >
+              <Target className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+
             <button 
               onClick={() => setIsSystemMenuOpen(!isSystemMenuOpen)}
               className={`p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all flex items-center gap-2 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-800/50 hover:bg-slate-700/80 border-slate-700/50 text-slate-400 hover:text-white border'}`}
@@ -797,6 +809,7 @@ const OverworldView: React.FC = () => {
                   x={x}
                   y={y}
                   isLocked={isLocked}
+                  isPassable={hex.isPassable}
                   neighborLevels={neighborLevels}
                   highlight={showPaths ? (reachableHexes.has(getHexKey(hex.q, hex.r)) ? 'REACHABLE' : 'UNREACHABLE') : 'NONE'}
                   onClick={stableHandleHexClick}

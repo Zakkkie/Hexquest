@@ -158,7 +158,6 @@ export const useGameStore = create<GameStore>()(
           visitedHexes: {},
           isOverworldMoving: false,
           lastChoiceResult: null,
-          activeInteriorId: null,
       },
       
       // --- UI SETTERS ---
@@ -692,9 +691,13 @@ export const useGameStore = create<GameStore>()(
                                   // Generate neighbors too if they don't exist
                                   const baseN = generateHexData(nq, nr, newOverworld.seed);
                                   const specialN = getSpecialFeature(nq, nr, newOverworld.seed, 20);
+                                  const terrainType = specialN.terrainType || baseN.terrainType;
+                                  const moveCost = specialN.terrainType ? (getHexHeight(specialN.terrainType) >= 999 ? 999 : 1) : baseN.moveCost;
+                                  
                                   grid[nk] = {
                                       ...baseN,
                                       ...specialN,
+                                      isPassable: moveCost < 999,
                                       height: specialN.terrainType ? getHexHeight(specialN.terrainType) : baseN.height
                                   };
                               }

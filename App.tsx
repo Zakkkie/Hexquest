@@ -8,7 +8,6 @@ import CampaignMap from './components/CampaignMap.tsx';
 import OverworldView from './components/OverworldView.tsx';
 import IntroSequence from './components/IntroSequence.tsx';
 import CampaignLoading from './components/CampaignLoading.tsx';
-import InteriorView from './components/InteriorView.tsx';
 import Background from './components/Background.tsx';
 import { DeviceType } from './types.ts';
 
@@ -83,7 +82,6 @@ const App: React.FC = () => {
         {uiState === 'OVERWORLD' && <OverworldView />}
         {uiState === 'INTRO' && <IntroSequence />}
         {uiState === 'CAMPAIGN_LOADING' && <CampaignLoading />}
-        {uiState === 'INTERIOR' && <InteriorView />}
       </div>
 
     </div>
