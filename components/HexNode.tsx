@@ -89,12 +89,12 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Textures are now always loaded since LOD is removed
   const topTexture = useMemo(() => {
-      return textureService.getTexture(maxLevel, q, r, biome);
-  }, [maxLevel, q, r, biome]);
+      return textureService.getTexture(maxLevel, q, r, undefined);
+  }, [maxLevel, q, r]);
 
   const sideTexture = useMemo(() => {
-      return textureService.getSideTexture(maxLevel, biome);
-  }, [maxLevel, biome]);
+      return textureService.getSideTexture(maxLevel, undefined);
+  }, [maxLevel]);
 
   const isRealVoid = structureType === 'VOID';
   const isMonument = structureType === 'MONUMENT';

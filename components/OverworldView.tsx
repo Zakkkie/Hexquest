@@ -543,14 +543,6 @@ const OverworldView: React.FC = () => {
           {/* Right side buttons */}
           <div className="flex flex-col gap-2 pointer-events-auto items-end relative" ref={systemMenuRef}>
             <button 
-              onClick={centerCamera}
-              className={`p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all flex items-center gap-2 bg-slate-800/50 hover:bg-slate-700/80 border-slate-700/50 text-slate-400 hover:text-white border ${cameraFollow ? 'border-blue-500/50 text-blue-400' : ''}`}
-              title="Center on Player"
-            >
-              <Target className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
-
-            <button 
               onClick={() => setIsSystemMenuOpen(!isSystemMenuOpen)}
               className={`p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all flex items-center gap-2 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-800/50 hover:bg-slate-700/80 border-slate-700/50 text-slate-400 hover:text-white border'}`}
               title="Menu"

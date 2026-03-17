@@ -368,25 +368,47 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
 
           {/* Impassable Indicator */}
           {!isPassable && hex.isRevealed && (
-            <Group opacity={0.6}>
-              <Line 
-                points={[-10, -10, 10, 10]} 
-                stroke="#ef4444" 
-                strokeWidth={3} 
-                lineCap="round"
-              />
-              <Line 
-                points={[10, -10, -10, 10]} 
-                stroke="#ef4444" 
-                strokeWidth={3} 
-                lineCap="round"
-              />
-              <Path 
-                data={topPathData}
-                stroke="#ef4444"
-                strokeWidth={2}
-                opacity={0.4}
-              />
+            <Group opacity={0.8}>
+              {hex.terrainType === 'WATER' ? (
+                <Group y={-2}>
+                  <Path 
+                    data="M -12 0 Q -6 -6 0 0 Q 6 6 12 0" 
+                    stroke="#38bdf8" 
+                    strokeWidth={2.5} 
+                    lineCap="round"
+                    shadowBlur={5}
+                    shadowColor="#38bdf8"
+                  />
+                  <Path 
+                    data="M -12 6 Q -6 0 0 6 Q 6 12 12 6" 
+                    stroke="#0ea5e9" 
+                    strokeWidth={2} 
+                    lineCap="round"
+                    opacity={0.6}
+                  />
+                </Group>
+              ) : (
+                <Group>
+                  <Line 
+                    points={[-10, -10, 10, 10]} 
+                    stroke="#ef4444" 
+                    strokeWidth={3} 
+                    lineCap="round"
+                  />
+                  <Line 
+                    points={[10, -10, -10, 10]} 
+                    stroke="#ef4444" 
+                    strokeWidth={3} 
+                    lineCap="round"
+                  />
+                  <Path 
+                    data={topPathData}
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    opacity={0.4}
+                  />
+                </Group>
+              )}
             </Group>
           )}
 
