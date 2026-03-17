@@ -81,7 +81,7 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     let forceReveal = false;
 
     // --- CITY LOGIC ---
-    if (isInsideCity(q, r)) {
+    if (levelConfig && isInsideCity(q, r)) {
         biome = 'CITY';
         if (isCityWall(q, r)) {
             level = 4;
@@ -139,13 +139,15 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
             }
         }
 
-        // Rifts
-        if (dist >= 2 && dist <= 11 && noise < 0.03) {
-            poiType = 'RIFT_S1_2';
-            structureType = 'MINE';
-        } else if (dist >= 12 && dist <= 25 && noise < 0.03) {
-            poiType = 'RIFT_S3_4';
-            structureType = 'MINE';
+        // Rifts - Only in Campaign
+        if (levelConfig) {
+            if (dist >= 2 && dist <= 11 && noise < 0.03) {
+                poiType = 'RIFT_S1_2';
+                structureType = 'MINE';
+            } else if (dist >= 12 && dist <= 25 && noise < 0.03) {
+                poiType = 'RIFT_S3_4';
+                structureType = 'MINE';
+            }
         }
     }
 
@@ -266,7 +268,8 @@ export const ensureMonumentAccessibility = (
 export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTIC' = 'FLAT'): Record<string, Hex> => {
   let initialGrid: Record<string, Hex> = {};
   
-  const radius = levelConfig?.mapConfig.size ?? 45;
+  // For Battle (Skirmish), start with a very small radius (3) and load lazily
+  const radius = levelConfig?.mapConfig.size ?? 3;
 
   for (let q = -radius; q <= radius; q++) {
       const r1 = Math.max(-radius, -q - radius);

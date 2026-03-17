@@ -6,14 +6,21 @@ import { Hexagon, Target, ArrowRight } from 'lucide-react';
 const IntroSequence: React.FC = () => {
   const { setUIState, introNextState } = useGameStore();
   const [step, setStep] = useState(0);
+  const [showSafetySkip, setShowSafetySkip] = useState(false);
 
   useEffect(() => {
+    // Safety timer to show skip button if something hangs
+    const safetyTimer = setTimeout(() => setShowSafetySkip(true), 2000);
+
     const timers = [
-      setTimeout(() => setStep(1), 3000),
-      setTimeout(() => setStep(2), 7000),
-      setTimeout(() => setStep(3), 11000),
+      setTimeout(() => setStep(1), 3500),
+      setTimeout(() => setStep(2), 7500),
+      setTimeout(() => setStep(3), 11500),
     ];
-    return () => timers.forEach(clearTimeout);
+    return () => {
+      clearTimeout(safetyTimer);
+      timers.forEach(clearTimeout);
+    };
   }, []);
 
   const skipIntro = () => {
@@ -108,10 +115,10 @@ const IntroSequence: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {step < 3 && (
+      {(step < 3 || showSafetySkip) && (
         <button
           onClick={skipIntro}
-          className="absolute bottom-8 right-8 text-slate-500 hover:text-white font-mono text-sm tracking-widest uppercase transition-colors"
+          className="absolute bottom-8 right-8 text-slate-500 hover:text-white font-mono text-sm tracking-widest uppercase transition-colors z-[110]"
         >
           Skip Intro
         </button>

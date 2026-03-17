@@ -301,6 +301,10 @@ export class MovementSystem implements System {
                 
                 if (!hex) {
                     // Generate new hex
+                    const maxRadius = state.activeLevelConfig?.mapConfig.size ?? 45;
+                    const dToCenter = cubeDistance(n, { q: 0, r: 0 });
+                    if (dToCenter > maxRadius) continue;
+
                     const newHex = generateSingleHex(n.q, n.r, state.activeLevelConfig, state.winCondition?.mapType);
                     
                     // --- CHAOTIC RELATIVE TERRAIN LOGIC ---

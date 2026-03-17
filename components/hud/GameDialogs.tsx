@@ -85,9 +85,16 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         if (activeLevelConfig) {
             const currentIdx = CAMPAIGN_LEVELS.findIndex(l => l.id === activeLevelConfig.id);
             const nextLevel = CAMPAIGN_LEVELS[currentIdx + 1];
-            if (nextLevel) startCampaignLevel(nextLevel.id);
-            else abandonSession(); 
+            if (nextLevel) {
+                startCampaignLevel(nextLevel.id);
+            } else {
+                // End of campaign
+                console.log('[GameDialogs] End of campaign reached, returning to menu');
+                abandonSession(); 
+            }
         } else {
+            // Skirmish mode - handleNextLevel shouldn't be called, but if it is, go to menu
+            console.warn('[GameDialogs] handleNextLevel called in Skirmish mode');
             abandonSession();
         }
     };
@@ -106,6 +113,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             returnToOverworld('DEFEAT');
             return;
         }
+        
+        console.warn('[GameDialogs] handleRetry fallback - abandoning session');
         abandonSession();
     };
 
@@ -404,7 +413,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 </div>
                             ) : (
                                 <>
-                                    {gameStatus === 'VICTORY' && <button onClick={handleNextLevel} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-900/30 transition-all active:scale-95 flex items-center justify-center gap-2">{t.BTN_NEXT} <ArrowRight className="w-5 h-5" /></button>}
+                                    {gameStatus === 'VICTORY' && activeLevelConfig && <button onClick={handleNextLevel} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-900/30 transition-all active:scale-95 flex items-center justify-center gap-2">{t.BTN_NEXT} <ArrowRight className="w-5 h-5" /></button>}
                                     <button onClick={handleRetry} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"><RotateCcw className="w-4 h-4" /> {t.BTN_RETRY}</button>
                                     <button onClick={handleMenu} className="w-full py-4 bg-transparent hover:bg-slate-800/50 text-slate-500 hover:text-white font-bold rounded-xl uppercase tracking-widest transition-colors text-xs">{t.BTN_MENU}</button>
                                 </>

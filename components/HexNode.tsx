@@ -441,15 +441,25 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             dash={[4, 4]}
                             perfectDrawEnabled={false} 
                         />
-                        <Text 
-                            text="✖" 
-                            fontSize={14} 
-                            fill="#ef4444" 
-                            offsetX={5} 
-                            offsetY={7} 
-                            opacity={0.6}
-                            perfectDrawEnabled={false} 
-                        />
+                        {biome === 'WATER' ? (
+                            <Path 
+                                data="M-8,0 Q-4,-4 0,0 T8,0" 
+                                stroke="#38bdf8" 
+                                strokeWidth={2} 
+                                opacity={0.8}
+                                perfectDrawEnabled={false}
+                            />
+                        ) : (
+                            <Text 
+                                text="✖" 
+                                fontSize={14} 
+                                fill="#ef4444" 
+                                offsetX={5} 
+                                offsetY={7} 
+                                opacity={0.6}
+                                perfectDrawEnabled={false} 
+                            />
+                        )}
                     </Group>
                 )}
                 

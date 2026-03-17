@@ -162,7 +162,9 @@ export const useGameStore = create<GameStore>()(
       
       // --- UI SETTERS ---
       setLanguage: (lang) => set({ language: lang }),
-      setUIState: (uiState) => set({ uiState }),
+      setUIState: (uiState) => {
+        set({ uiState });
+      },
       setDeviceType: (deviceType) => set({ deviceType }),
       showToast: (message, type) => set({ toast: { message, type, timestamp: Date.now() } }),
       hideToast: () => set({ toast: null }),
