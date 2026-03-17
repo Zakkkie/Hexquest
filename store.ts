@@ -158,6 +158,7 @@ export const useGameStore = create<GameStore>()(
           visitedHexes: {},
           isOverworldMoving: false,
           lastChoiceResult: null,
+          activeInteriorId: null,
       },
       
       // --- UI SETTERS ---

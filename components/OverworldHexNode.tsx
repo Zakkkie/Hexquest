@@ -142,8 +142,13 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
       case 'RUINS':         return '#818cf8'; 
       case 'OUTPOST':       return '#fca5a5'; 
       case 'MERCHANT_CAMP': return '#fde047'; 
-      case 'WALL':          return '#475569'; 
-      case 'BUILDING':      return '#94a3b8'; 
+      case 'WALL':          return '#475569';
+      case 'BUILDING':      return '#64748b';
+      case 'SETTLEMENT':    return '#fbbf24';
+      case 'MONUMENT_AREA': return '#8b5cf6';
+      case 'RIFT_ZONE':     return '#ef4444';
+      case 'WASTELAND':     return '#78350f';
+      case 'CANYON':        return '#0c4a6e';
       default:              return '#e2e8f0'; 
     }
   };
@@ -165,8 +170,13 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
       case 'RUINS':         return '#4f46e5'; 
       case 'OUTPOST':       return '#dc2626'; 
       case 'MERCHANT_CAMP': return '#ca8a04'; 
-      case 'WALL':          return '#1e293b'; 
-      case 'BUILDING':      return '#475569'; 
+      case 'WALL':          return '#1e293b';
+      case 'BUILDING':      return '#334155';
+      case 'SETTLEMENT':    return '#b45309';
+      case 'MONUMENT_AREA': return '#5b21b6';
+      case 'RIFT_ZONE':     return '#991b1b';
+      case 'WASTELAND':     return '#451a03';
+      case 'CANYON':        return '#082f49';
       default:              return '#94a3b8'; 
     }
   };
@@ -246,72 +256,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
   };
 
   const terrainDetails = useMemo(() => {
-    const details = [];
-    if (!hex.isRevealed) return [];
-
-    if (hex.terrainType === 'BUILDING') {
-      details.push(
-        <Group key="building-detail" y={-10}>
-          {/* Roof */}
-          <Path 
-            data="M -15 0 L 0 -15 L 15 0 Z" 
-            fill="#92400e" 
-            stroke="#451a03" 
-            strokeWidth={1} 
-          />
-          {/* House body */}
-          <Rect 
-            x={-12} 
-            y={0} 
-            width={24} 
-            height={15} 
-            fill="#d1d5db" 
-            stroke="#4b5563" 
-            strokeWidth={1} 
-          />
-          {/* Door */}
-          <Rect 
-            x={-3} 
-            y={7} 
-            width={6} 
-            height={8} 
-            fill="#451a03" 
-          />
-        </Group>
-      );
-    }
-
-    if (hex.terrainType === 'WALL') {
-      details.push(
-        <Group key="wall-detail">
-          <Rect 
-            x={-size * 0.8} 
-            y={-size * 0.4} 
-            width={size * 1.6} 
-            height={size * 0.8} 
-            fill="#1e293b" 
-            stroke="#475569" 
-            strokeWidth={2}
-            cornerRadius={2}
-          />
-          {/* Battlements */}
-          {[-10, 0, 10].map(bx => (
-            <Rect 
-              key={`battlement-${bx}`}
-              x={bx - 3} 
-              y={-size * 0.6} 
-              width={6} 
-              height={4} 
-              fill="#1e293b" 
-              stroke="#475569" 
-              strokeWidth={1}
-            />
-          ))}
-        </Group>
-      );
-    }
-
-    return details;
+    return [];
   }, [hex.terrainType, hex.isRevealed, hex.q, hex.r, size]);
 
   if (!hex.isRevealed) {

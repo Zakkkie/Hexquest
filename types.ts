@@ -253,7 +253,7 @@ export interface ToastMessage {
   timestamp: number;
 }
 
-export type TerrainType = 'PLAINS' | 'FOREST' | 'SWAMP' | 'WATER' | 'MOUNTAINS' | 'ROAD' | 'CITY' | 'RUINS' | 'OUTPOST' | 'MERCHANT_CAMP';
+export type TerrainType = 'PLAINS' | 'FOREST' | 'SWAMP' | 'WATER' | 'MOUNTAINS' | 'ROAD' | 'CITY' | 'RUINS' | 'OUTPOST' | 'MERCHANT_CAMP' | 'WALL' | 'BUILDING' | 'SETTLEMENT' | 'MONUMENT_AREA' | 'RIFT_ZONE' | 'WASTELAND' | 'CANYON';
 
 export interface OverworldHex {
   q: number;
@@ -267,6 +267,7 @@ export interface OverworldHex {
   poiId?: string;
   eventTriggered?: boolean;
   lootedLevels?: number[];
+  isIndestructible?: boolean;
 }
 
 export interface OverworldPlayer {
@@ -354,6 +355,7 @@ export interface OverworldState {
     penalty?: { credits?: number; hp?: number; energy?: number; items?: string[] };
     message?: string;
   } | null;
+  activeInteriorId?: string | null;
 }
 
 export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'OVERWORLD' | 'INTRO' | 'CAMPAIGN_LOADING' | 'INTERIOR';
@@ -392,6 +394,33 @@ export interface WinCondition {
   isTutorial?: boolean;
   initialStorage?: number; 
   mapType?: 'FLAT' | 'CHAOTIC'; 
+}
+
+export interface InteriorHex {
+  q: number;
+  r: number;
+  type: string;
+  isPassable: boolean;
+  object?: string;
+  entityId?: string;
+}
+
+export interface NPC {
+  id: string;
+  name: string;
+  q: number;
+  r: number;
+  dialogue?: string[];
+  type?: string;
+}
+
+export interface InteriorLevel {
+  id: string;
+  grid: Record<string, InteriorHex>;
+  npcs: NPC[];
+  width: number;
+  height: number;
+  poiId?: string;
 }
 
 export interface LeaderboardEntry {
