@@ -195,6 +195,7 @@ export const createInitialSessionData = (
     sessionStartTime: Date.now(),
     winCondition,
     activeLevelConfig: levelConfig,
+    activePoi: null,
     secretMonumentCoord,
     monumentRequirements,
     difficulty,

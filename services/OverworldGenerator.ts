@@ -1,5 +1,6 @@
 import { OverworldHex, TerrainType } from '../types.ts';
 import { getHexKey, getNeighbors, findOverworldPath, cubeDistance } from './hexUtils.ts';
+import { getCityFeature } from './CityGenerator.ts';
 
 // Simple 2D Perlin/Simplex noise implementation
 class SimplexNoise {
@@ -88,14 +89,14 @@ export const getHexHeight = (type: TerrainType) => {
     case 'FOREST': return 1;
     case 'SWAMP': return -1;
     case 'WATER': return -2;
-    case 'CITY': return 2;
+    case 'CITY': return 1;
     case 'RUINS': return 1;
     case 'OUTPOST': return 1;
     case 'PLAINS': return 0;
     case 'ROAD': return 0;
     case 'MERCHANT_CAMP': return 1;
-    case 'WALL': return 4;
-    case 'BUILDING': return 2;
+    case 'WALL': return 6;
+    case 'BUILDING': return 1;
     case 'SETTLEMENT': return 1;
     case 'MONUMENT_AREA': return 3;
     case 'RIFT_ZONE': return -1;
@@ -160,9 +161,23 @@ export function generateHexData(q: number, r: number, seed: number): OverworldHe
 }
 
 // Pre-calculate POI and Rift positions based on seed
-export function getSpecialFeature(q: number, r: number, seed: number, radius: number): { poiId?: string, riftId?: string, terrainType?: TerrainType } {
+export function getSpecialFeature(q: number, r: number, seed: number, radius: number, isWorldMap: boolean = true): { poiId?: string, isPoiCenter?: boolean, riftId?: string, terrainType?: TerrainType, moveCost?: number, isPassable?: boolean, height?: number, isIndestructible?: boolean } {
   const dist = cubeDistance({ q: 0, r: 0 }, { q, r });
-  if (dist === 0) return { terrainType: 'CITY' };
+  
+  if (!isWorldMap) {
+      // --- CITY VIEW MODE (Radius 3) ---
+      const cityFeature = getCityFeature(q, r);
+      if (cityFeature) return cityFeature;
+      
+      // Default ground inside city (fallback)
+      return { terrainType: 'PLAINS', moveCost: 1, isPassable: true, height: 0, isIndestructible: true };
+  }
+
+  // --- WORLD MAP MODE ---
+  if (dist === 0) {
+      return { terrainType: 'CITY', poiId: 'city_hub', isPoiCenter: true, moveCost: 1, height: 1, isIndestructible: true };
+  }
+
   if (dist > radius) return {};
 
   // Deterministic random for this hex
@@ -193,8 +208,7 @@ export function getSpecialFeature(q: number, r: number, seed: number, radius: nu
   let terrainType: TerrainType | undefined = undefined;
 
   // Increased probability for rifts
-  riftId = checkRift(series1, 2, 6, 0.03) || 
-           checkRift(series2, 7, 11, 0.025) || 
+  riftId = checkRift(series2, 7, 11, 0.025) || 
            checkRift(series3, 12, 16, 0.02) || 
            checkRift(series4, 17, radius, 0.015);
 
@@ -214,30 +228,34 @@ export function getSpecialFeature(q: number, r: number, seed: number, radius: nu
       if (hSeed > 0.99) return { poiId: 'ancient_ruins', terrainType: 'RUINS' };
       if (hSeed > 0.98) return { poiId: 'outpost_checkpoint', terrainType: 'OUTPOST' };
       if (hSeed > 0.97) return { poiId: 'wandering_merchant', terrainType: 'MERCHANT_CAMP' };
-      if (hSeed > 0.96) return { poiId: 'city_hub', terrainType: 'CITY' };
+      if (hSeed > 0.96) return { poiId: 'city_hub', terrainType: 'CITY', isPoiCenter: true };
       return { poiId: 'hidden_cache', terrainType: 'MOUNTAINS' };
   }
 
   return {};
 }
 
-export function generateOverworld(radius: number = 30, seed: number = Math.random()): Record<string, OverworldHex> {
+export function generateOverworld(radius: number = 30, seed: number = Math.random(), isWorldMap: boolean = true): Record<string, OverworldHex> {
   const grid: Record<string, OverworldHex> = {};
   
-  // For initial generation, we only generate the starting area
-  const startRadius = 2;
-  for (let q = -startRadius; q <= startRadius; q++) {
-    for (let r = Math.max(-startRadius, -q - startRadius); r <= Math.min(startRadius, -q + startRadius); r++) {
+  const genRadius = isWorldMap ? radius : 4;
+
+  for (let q = -genRadius; q <= genRadius; q++) {
+    for (let r = Math.max(-genRadius, -q - genRadius); r <= Math.min(genRadius, -q + genRadius); r++) {
       const key = getHexKey(q, r);
       const hex = generateHexData(q, r, seed);
-      const special = getSpecialFeature(q, r, seed, radius);
+      const special = getSpecialFeature(q, r, seed, radius, isWorldMap);
+      
+      const dist = cubeDistance({ q: 0, r: 0 }, { q, r });
       
       grid[key] = {
         ...hex,
         ...special,
-        isRevealed: true,
-        isPassable: special.terrainType ? (getHexHeight(special.terrainType) < 999) : hex.isPassable,
-        height: special.terrainType ? getHexHeight(special.terrainType) : hex.height
+        isPoiCenter: special.isPoiCenter,
+        isRevealed: isWorldMap ? (dist <= 6) : true, 
+        isPassable: special.isPassable !== undefined ? special.isPassable : (special.terrainType ? (getHexHeight(special.terrainType) < 999) : hex.isPassable),
+        height: special.height !== undefined ? special.height : (special.terrainType ? getHexHeight(special.terrainType) : hex.height),
+        moveCost: special.moveCost !== undefined ? special.moveCost : hex.moveCost
       };
     }
   }

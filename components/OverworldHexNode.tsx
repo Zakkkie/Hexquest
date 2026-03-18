@@ -14,6 +14,7 @@ interface OverworldHexNodeProps {
   isLocked?: boolean;
   isPassable?: boolean;
   neighborLevels: number[];
+  neighborPoiIds?: (string | null)[];
   onClick: (q: number, r: number) => void;
   highlight?: 'REACHABLE' | 'UNREACHABLE' | 'NONE';
 }
@@ -25,7 +26,7 @@ const seededRandom = (q: number, r: number, seed: number) => {
   return x - Math.floor(x);
 };
 
-const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked, isPassable = true, neighborLevels, onClick, highlight = 'NONE' }) => {
+const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked, isPassable = true, neighborLevels, neighborPoiIds = [], onClick, highlight = 'NONE' }) => {
   const groupRef = useRef<Konva.Group>(null);
   const baseRef = useRef<Konva.Group>(null);
   const animRef = useRef<Konva.Animation | null>(null);
@@ -44,7 +45,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
 
   const level = hex.height ?? getHexHeight(hex.terrainType);
   const offsetY = getHeightOffset(level);
-  const MAX_WALL_DEPTH = 8;
+  const MAX_WALL_DEPTH = 32;
   const points = useMemo(() => {
     const pts = [];
     for (let i = 0; i < 6; i++) {
@@ -128,15 +129,26 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
   const sideTexture = useMemo(() => textureService.getSideTexture(level, hex.terrainType), [level, hex.terrainType]);
   const theme = useMemo(() => getTheme(level), [level]);
 
-  const getBiomeColor = (type: TerrainType, lvl: number) => {
+  const getBiomeColor = (type: TerrainType, lvl: number, poiId?: string) => {
+    if (type === 'BUILDING' && poiId) {
+      switch(poiId) {
+        case 'city_capitol': return '#fbbf24'; // Amber-400
+        case 'city_bar': return '#f87171'; // Red-400
+        case 'city_bank': return '#34d399'; // Emerald-400
+        case 'city_shop': return '#60a5fa'; // Blue-400
+        case 'city_workshop': return '#a78bfa'; // Violet-400
+        case 'city_checkpoint': return '#a1a1aa'; // Zinc-400
+        case 'city_hub': return '#818cf8'; // Indigo-400
+      }
+    }
     const defaultHeight = getHexHeight(type);
     if (lvl !== defaultHeight) {
       const theme = getTheme(lvl);
       return theme.main;
     }
     switch(type) {
-      case 'PLAINS':        return '#a3e635'; 
-      case 'FOREST':        return '#4ade80'; 
+      case 'PLAINS':        return '#94a3b8'; 
+      case 'FOREST':        return '#64748b'; 
       case 'SWAMP':         return '#a855f7'; 
       case 'WATER':         return '#38bdf8'; 
       case 'MOUNTAINS':     return '#cbd5e1'; 
@@ -156,15 +168,25 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
     }
   };
 
-  const getBiomeSideColor = (type: TerrainType, lvl: number) => {
+  const getBiomeSideColor = (type: TerrainType, lvl: number, poiId?: string) => {
+    if (type === 'BUILDING' && poiId) {
+      switch(poiId) {
+        case 'city_capitol': return '#d97706'; // Amber-600
+        case 'city_bar': return '#dc2626'; // Red-600
+        case 'city_bank': return '#059669'; // Emerald-600
+        case 'city_shop': return '#2563eb'; // Blue-600
+        case 'city_workshop': return '#7c3aed'; // Violet-600
+        case 'city_checkpoint': return '#52525b'; // Zinc-600
+      }
+    }
     const defaultHeight = getHexHeight(type);
     if (lvl !== defaultHeight) {
       const theme = getTheme(lvl);
       return theme.dark;
     }
     switch(type) {
-      case 'PLAINS':        return '#65a30d'; 
-      case 'FOREST':        return '#16a34a'; 
+      case 'PLAINS':        return '#475569'; 
+      case 'FOREST':        return '#334155'; 
       case 'SWAMP':         return '#7e22ce'; 
       case 'WATER':         return '#0284c7'; 
       case 'MOUNTAINS':     return '#64748b'; 
@@ -185,7 +207,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
   };
 
   const walls = useMemo(() => {
-    const sideColor = getBiomeSideColor(hex.terrainType, level);
+    const sideColor = getBiomeSideColor(hex.terrainType, level, hex.poiId);
     const indices = [0, 1, 2]; 
     const wallSegments = [];
     
@@ -194,6 +216,12 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
       let nY = 0;
       if (nLevel === -99) nY = offsetY + MAX_WALL_DEPTH;
       else nY = getHeightOffset(nLevel);
+
+      // Special case for WALL: ensure side walls go down to at least level 0
+      if (hex.terrainType === 'WALL') {
+        const level0Y = getHeightOffset(0);
+        nY = Math.max(nY, level0Y);
+      }
 
       if (offsetY < nY) {
         const safeNY = Math.min(nY, offsetY + MAX_WALL_DEPTH);
@@ -360,14 +388,73 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
             fillPatternScale={{ x: size / 32, y: size / 32 }}
             fillPatternOffset={{ x: 32, y: 32 }}
             fillPatternRepeat="repeat"
-            fill={topTexture ? undefined : getBiomeColor(hex.terrainType, level)}
+            fill={topTexture ? undefined : getBiomeColor(hex.terrainType, level, hex.poiId)}
             stroke={isHovered ? '#94a3b8' : theme.stroke} 
             strokeWidth={isHovered ? 2 : 2} 
             perfectDrawEnabled={true}
           />
 
+          {/* Remove internal borders for building clusters */}
+          {hex.poiId && hex.terrainType === 'CITY' && neighborPoiIds && (
+            <Group>
+              {[0, 1, 2, 3, 4, 5].map(i => {
+                if (neighborPoiIds[i] === hex.poiId) {
+                  const p1 = points[i];
+                  const p2 = points[(i + 1) % 6];
+                  return (
+                    <Line
+                      key={`border-remove-${i}`}
+                      points={[p1.x, p1.y, p2.x, p2.y]}
+                      stroke={getBiomeColor(hex.terrainType, level, hex.poiId)}
+                      strokeWidth={3} // Slightly thicker to fully cover the border
+                      lineCap="square"
+                    />
+                  );
+                }
+                return null;
+              })}
+            </Group>
+          )}
+
+          {/* Roof for Buildings */}
+          {hex.terrainType === 'BUILDING' && (
+            <Group>
+              {/* Left Roof */}
+              <Line
+                points={[
+                  points[5].x, points[5].y, // Top
+                  points[2].x, points[2].y, // Bottom
+                  points[3].x, points[3].y, // Bottom Left
+                  points[4].x, points[4].y  // Top Left
+                ]}
+                fill="rgba(255, 255, 255, 0.15)"
+                closed
+                listening={false}
+              />
+              {/* Right Roof */}
+              <Line
+                points={[
+                  points[5].x, points[5].y, // Top
+                  points[0].x, points[0].y, // Top Right
+                  points[1].x, points[1].y, // Bottom Right
+                  points[2].x, points[2].y  // Bottom
+                ]}
+                fill="rgba(0, 0, 0, 0.2)"
+                closed
+                listening={false}
+              />
+              {/* Roof Ridge (Center Line) */}
+              <Line
+                points={[points[5].x, points[5].y, points[2].x, points[2].y]}
+                stroke="rgba(0,0,0,0.4)"
+                strokeWidth={2}
+                listening={false}
+              />
+            </Group>
+          )}
+
           {/* Impassable Indicator */}
-          {!isPassable && hex.isRevealed && (
+          {!isPassable && hex.isRevealed && hex.terrainType !== 'CITY' && hex.terrainType !== 'BUILDING' && hex.terrainType !== 'WALL' && (
             <Group opacity={0.8}>
               {hex.terrainType === 'WATER' ? (
                 <Group y={-2}>
@@ -492,37 +579,120 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
           )}
 
           {/* POI Marker Sprite */}
-          {hex.poiId && (
+          {hex.poiId && (hex.isPoiCenter || hex.terrainType !== 'CITY') && (
             <Group ref={poiRef}>
               {/* Base shadow for POI */}
               <Circle radius={6} fill="rgba(0,0,0,0.3)" scaleY={0.5} y={15} />
               
-              {/* Stylized POI Marker */}
-              <Group scale={{ x: 0.8, y: 0.8 }}>
-                <Path 
-                  data="M 0 0 L -10 -20 L 0 -30 L 10 -20 Z" 
-                  fill="#facc15" 
-                  stroke="#854d0e" 
-                  strokeWidth={2} 
-                  shadowBlur={10}
-                  shadowColor="#facc15"
-                />
-                <Circle y={-20} radius={4} fill="#854d0e" />
-                <Path 
-                  data="M -5 -15 L 5 -15" 
-                  stroke="#854d0e" 
-                  strokeWidth={1.5} 
-                />
-                {/* Inner glow */}
-                <Path 
-                  data="M 0 -5 L -4 -15 L 0 -22 L 4 -15 Z" 
-                  fill="#fef08a" 
-                  opacity={0.6}
-                />
-              </Group>
+              {/* Stylized POI Marker / Building Icon */}
+              {hex.terrainType === 'BUILDING' ? (
+                <Group scale={{ x: 0.8, y: 0.8 }} y={-10}>
+                  {hex.poiId === 'city_capitol' && (
+                    <Group>
+                      <Path data="M -10 0 L 0 -15 L 10 0 Z" fill="#fbbf24" stroke="#b45309" strokeWidth={1.5} />
+                      <Rect x={-8} y={0} width={16} height={10} fill="#fcd34d" stroke="#b45309" strokeWidth={1.5} />
+                      <Rect x={-2} y={2} width={4} height={8} fill="#b45309" />
+                    </Group>
+                  )}
+                  {hex.poiId === 'city_bar' && (
+                    <Group>
+                      <Rect x={-8} y={-10} width={16} height={20} fill="#f87171" stroke="#991b1b" strokeWidth={1.5} />
+                      <Path data="M -10 -10 L 0 -15 L 10 -10 Z" fill="#fca5a5" stroke="#991b1b" strokeWidth={1.5} />
+                      <Rect x={-4} y={0} width={8} height={10} fill="#991b1b" />
+                      <Circle x={0} y={-5} radius={3} fill="#fef08a" />
+                    </Group>
+                  )}
+                  {hex.poiId === 'city_bank' && (
+                    <Group>
+                      <Rect x={-12} y={-5} width={24} height={15} fill="#34d399" stroke="#065f46" strokeWidth={1.5} />
+                      <Path data="M -14 -5 L 0 -12 L 14 -5 Z" fill="#6ee7b7" stroke="#065f46" strokeWidth={1.5} />
+                      <Rect x={-8} y={-5} width={4} height={15} fill="#059669" />
+                      <Rect x={4} y={-5} width={4} height={15} fill="#059669" />
+                    </Group>
+                  )}
+                  {hex.poiId === 'city_shop' && (
+                    <Group>
+                      <Rect x={-10} y={-8} width={20} height={18} fill="#60a5fa" stroke="#1e3a8a" strokeWidth={1.5} />
+                      <Path data="M -12 -8 L -10 -12 L 10 -12 L 12 -8 Z" fill="#93c5fd" stroke="#1e3a8a" strokeWidth={1.5} />
+                      <Rect x={-10} y={-8} width={20} height={4} fill="#bfdbfe" />
+                      <Rect x={-4} y={2} width={8} height={8} fill="#1e3a8a" />
+                    </Group>
+                  )}
+                  {hex.poiId === 'city_workshop' && (
+                    <Group>
+                      <Path data="M -12 10 L -12 -5 L -6 -12 L 6 -12 L 12 -5 L 12 10 Z" fill="#a78bfa" stroke="#4c1d95" strokeWidth={1.5} />
+                      <Rect x={-4} y={-8} width={8} height={6} fill="#ddd6fe" stroke="#4c1d95" strokeWidth={1} />
+                      <Rect x={-6} y={2} width={12} height={8} fill="#4c1d95" />
+                    </Group>
+                  )}
+                  {hex.poiId === 'city_hub' && (
+                    <Group>
+                      <Circle x={0} y={-5} radius={12} fill="#818cf8" stroke="#312e81" strokeWidth={1.5} />
+                      <Rect x={-8} y={2} width={16} height={8} fill="#a5b4fc" stroke="#312e81" strokeWidth={1.5} />
+                      <Circle x={0} y={-5} radius={4} fill="#e0e7ff" />
+                      <Path data="M 0 -17 L 0 -22" stroke="#312e81" strokeWidth={2} />
+                      <Circle x={0} y={-23} radius={1.5} fill="#ef4444" />
+                    </Group>
+                  )}
+                  {hex.poiId === 'city_checkpoint' && (
+                    <Group>
+                      <Rect x={-6} y={-15} width={12} height={25} fill="#a1a1aa" stroke="#3f3f46" strokeWidth={1.5} />
+                      <Path data="M -8 -15 L 0 -20 L 8 -15 Z" fill="#d4d4d8" stroke="#3f3f46" strokeWidth={1.5} />
+                      <Rect x={-2} y={-5} width={4} height={15} fill="#3f3f46" />
+                      <Rect x={-15} y={5} width={30} height={4} fill="#ef4444" stroke="#7f1d1d" strokeWidth={1} />
+                    </Group>
+                  )}
+                </Group>
+              ) : hex.isPoiCenter ? (
+                <Group scale={{ x: 0.8, y: 0.8 }}>
+                  <Path 
+                    data="M 0 0 L -10 -20 L 0 -30 L 10 -20 Z" 
+                    fill="#3b82f6" 
+                    stroke="#1e3a8a" 
+                    strokeWidth={2} 
+                    shadowBlur={10}
+                    shadowColor="#3b82f6"
+                  />
+                  <Circle y={-20} radius={4} fill="#1e3a8a" />
+                  <Path 
+                    data="M -5 -15 L 5 -15" 
+                    stroke="#1e3a8a" 
+                    strokeWidth={1.5} 
+                  />
+                  {/* Inner glow */}
+                  <Path 
+                    data="M 0 -5 L -4 -15 L 0 -22 L 4 -15 Z" 
+                    fill="#93c5fd" 
+                    opacity={0.6}
+                  />
+                </Group>
+              ) : (
+                <Group scale={{ x: 0.8, y: 0.8 }}>
+                  <Path 
+                    data="M 0 0 L -10 -20 L 0 -30 L 10 -20 Z" 
+                    fill="#facc15" 
+                    stroke="#854d0e" 
+                    strokeWidth={2} 
+                    shadowBlur={10}
+                    shadowColor="#facc15"
+                  />
+                  <Circle y={-20} radius={4} fill="#854d0e" />
+                  <Path 
+                    data="M -5 -15 L 5 -15" 
+                    stroke="#854d0e" 
+                    strokeWidth={1.5} 
+                  />
+                  {/* Inner glow */}
+                  <Path 
+                    data="M 0 -5 L -4 -15 L 0 -22 L 4 -15 Z" 
+                    fill="#fef08a" 
+                    opacity={0.6}
+                  />
+                </Group>
+              )}
               
               {/* Sparkles */}
-              <Circle y={-35} radius={2} fill="#ffffff" shadowBlur={8} shadowColor="#facc15" />
+              <Circle y={-35} radius={2} fill="#ffffff" shadowBlur={8} shadowColor={hex.isPoiCenter ? "#3b82f6" : "#facc15"} />
             </Group>
           )}
         </Group>

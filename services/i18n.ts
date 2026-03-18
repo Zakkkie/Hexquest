@@ -207,6 +207,14 @@ interface Dictionary {
         MINI_LB_TITLE: string;
         MINI_LB_EMPTY: string;
     };
+    POI: {
+        BAR: string;
+        BANK: string;
+        SHOP: string;
+        WORKSHOP: string;
+        CAPITOL: string;
+        HUB: string;
+    };
     TOAST: {
         RECHARGE_FAILED: string;
         TOO_FAR_VOID: string;
@@ -231,11 +239,15 @@ interface Dictionary {
         TRAP_HIT: string;
         RIFT_DEFEAT: string;
         RIFT_VICTORY: string;
+        SIMULATION_VICTORY?: string;
+        SIMULATION_DEFEAT?: string;
         FOUND_CREDITS: string;
         FOUND_SUPPLIES: string;
         FOUND_SCRAP: string;
         NOTHING_HERE: string;
         WORLD_INIT_FAILED: string;
+        CITY_EXIT_SUCCESS: string;
+        CITY_EXIT_DENIED: string;
         CANNOT_DIG: string;
         GRADIENT_LOCK: string;
         UNSTABLE_DIG: string;
@@ -579,6 +591,14 @@ export const TEXT: Record<Language, Dictionary> = {
             MINI_LB_TITLE: "Local Sector Rankings",
             MINI_LB_EMPTY: "No active signals."
         },
+        POI: {
+            BAR: "Bar",
+            BANK: "Bank",
+            SHOP: "Shop",
+            WORKSHOP: "Workshop",
+            CAPITOL: "Capitol",
+            HUB: "Hub",
+        },
         TOAST: {
             RECHARGE_FAILED: "Recharge Failed",
             TOO_FAR_VOID: "Too far to stabilize",
@@ -600,10 +620,14 @@ export const TEXT: Record<Language, Dictionary> = {
             LOG_DOWNLOADED: "Log Saved",
             STORAGE_FULL: "Storage Full!",
             DEATH_OVERWORLD: "You died in the overworld... Respawned in the city. Lost half credits.",
+            CITY_EXIT_SUCCESS: "The path is open. Welcome to the wasteland.",
+            CITY_EXIT_DENIED: "The checkpoint is closed. You need 6 tutorial marks to leave the city.",
             STARVED_OVERWORLD: "You starved to death... Respawned in the city. Lost half credits.",
             TRAP_HIT: "Triggered a trap! -{0} HP",
             RIFT_DEFEAT: "Defeated in the Rift! -{0} HP",
             RIFT_VICTORY: "Rift cleared! +{0} Credits",
+            SIMULATION_VICTORY: "Simulation complete! +{0} Credits",
+            SIMULATION_DEFEAT: "Simulation failed. Try again.",
             FOUND_CREDITS: "Found {0} Credits!",
             FOUND_SUPPLIES: "Found Supplies!",
             FOUND_SCRAP: "Found Scrap Material!",
@@ -949,6 +973,14 @@ export const TEXT: Record<Language, Dictionary> = {
             MINI_LB_TITLE: "Локальный Рейтинг",
             MINI_LB_EMPTY: "Нет сигналов."
         },
+        POI: {
+            BAR: "Бар",
+            BANK: "Банк",
+            SHOP: "Магазин",
+            WORKSHOP: "Мастерская",
+            CAPITOL: "Капитолий",
+            HUB: "Хаб",
+        },
         TOAST: {
             RECHARGE_FAILED: "Сбой Перезарядки",
             TOO_FAR_VOID: "Слишком далеко",
@@ -970,10 +1002,14 @@ export const TEXT: Record<Language, Dictionary> = {
             LOG_DOWNLOADED: "Лог Скачан",
             STORAGE_FULL: "Склад Полон!",
             DEATH_OVERWORLD: "Вы погибли в пустошах... Возрождение в городе. Потеряна половина кредитов.",
+            CITY_EXIT_SUCCESS: "Путь открыт. Добро пожаловать в пустоши.",
+            CITY_EXIT_DENIED: "Блокпост закрыт. Вам нужно 6 меток обучения, чтобы покинуть город.",
             STARVED_OVERWORLD: "Вы умерли от голода... Возрождение в городе. Потеряна половина кредитов.",
             TRAP_HIT: "Попали в ловушку! -{0} ОЗ",
             RIFT_DEFEAT: "Поражение в Разломе! -{0} ОЗ",
             RIFT_VICTORY: "Разлом зачищен! +{0} Кред.",
+            SIMULATION_VICTORY: "Симуляция пройдена! +{0} Кред.",
+            SIMULATION_DEFEAT: "Симуляция провалена. Попробуйте еще раз.",
             FOUND_CREDITS: "Найдено {0} Кред.!",
             FOUND_SUPPLIES: "Найдены припасы!",
             FOUND_SCRAP: "Найден металлолом!",

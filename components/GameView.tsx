@@ -7,6 +7,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import Background from './Background.tsx';
 import GameHUD from './GameHUD.tsx';
 import MapRenderer from './MapRenderer.tsx';
+import { InteriorView } from './InteriorView.tsx';
 import Fireworks from './Fireworks.tsx';
 import { audioService } from '../services/audioService.ts';
 import { XCircle, CheckCircle, Info } from 'lucide-react';
@@ -73,6 +74,7 @@ const GameView: React.FC = () => {
   const deviceType = useGameStore(state => state.deviceType);
   const lastVisualEvent = useGameStore(state => state.lastVisualEvent);
   const gameStatus = useGameStore(state => state.session?.gameStatus);
+  const uiState = useGameStore(state => state.uiState);
   
   const movePlayer = useGameStore(state => state.movePlayer);
   const hideToast = useGameStore(state => state.hideToast);
@@ -558,6 +560,8 @@ const GameView: React.FC = () => {
         onRotateCamera={rotateCamera} 
         onCenterPlayer={centerOnPlayer} 
       />
+
+      {uiState === 'INTERIOR' && <InteriorView />}
 
     </div>
   );

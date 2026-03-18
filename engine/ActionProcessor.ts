@@ -403,29 +403,9 @@ export class ActionProcessor {
           actor.coins += 50;
       } else if (poiType.startsWith('city_')) {
           // City buildings
-          switch (poiType) {
-              case 'city_hub':
-                  actor.moves = Math.max(actor.moves, 10);
-                  actor.coins += 20;
-                  break;
-              case 'tavern_travelers':
-                  actor.moves += 15;
-                  break;
-              case 'forge':
-                  actor.storage = Math.min(actor.maxStorage, actor.storage + 2);
-                  break;
-              case 'market':
-                  actor.coins += 100;
-                  break;
-              case 'city_square':
-                  actor.moves += 5;
-                  actor.coins += 10;
-                  break;
-          }
-          
           if (state.outgoingEvents) {
               state.outgoingEvents.push(GameEventFactory.create(
-                  'SECTOR_ACQUIRED', 
+                  'MONUMENT_REACHED', 
                   `Visited ${poiType.replace('city_', '').replace('_', ' ')}`, 
                   actor.id,
                   { poiType }

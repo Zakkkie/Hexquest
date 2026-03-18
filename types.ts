@@ -40,6 +40,7 @@ export interface Hex extends HexView {
   biome?: TerrainType;
   poiType?: string;
   isPassable?: boolean;
+  isIndestructible?: boolean;
 }
 
 export enum EntityType {
@@ -265,6 +266,7 @@ export interface OverworldHex {
   entityId?: string;
   riftId?: string;
   poiId?: string;
+  isPoiCenter?: boolean;
   eventTriggered?: boolean;
   lootedLevels?: number[];
   isIndestructible?: boolean;
@@ -351,6 +353,10 @@ export interface OverworldState {
   activeAction?: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null;
   visitedHexes?: Record<string, boolean>;
   isOverworldMoving?: boolean;
+  hasCompletedStartQuiz?: boolean;
+  tutorialMarks?: number;
+  isWorldMap?: boolean;
+  cityName?: string;
   lastChoiceResult: {
     reward?: { credits?: number; hp?: number; energy?: number; items?: string[] };
     penalty?: { credits?: number; hp?: number; energy?: number; items?: string[] };
@@ -358,7 +364,7 @@ export interface OverworldState {
   } | null;
 }
 
-export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'OVERWORLD' | 'INTRO' | 'CAMPAIGN_LOADING';
+export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'OVERWORLD' | 'INTRO' | 'CAMPAIGN_LOADING' | 'INTERIOR';
 export type DeviceType = 'MOBILE' | 'TABLET' | 'DESKTOP';
 
 export interface UserProfile {
@@ -548,6 +554,7 @@ export interface SessionState {
   language: Language; 
   
   entropy: EntropyState;
+  activePoi: string | null;
   outgoingEvents: GameEvent[];
 }
 
@@ -573,6 +580,7 @@ export interface GameState {
   };
 
   lastVisualEvent?: { type: string; time: number };
+  activePoi: string | null;
   overworld: OverworldState;
 }
 

@@ -13,29 +13,29 @@ export class TextureService {
     return TextureService.instance;
   }
 
-  public getTexture(level: number, q: number = 0, r: number = 0, terrainType?: string): HTMLCanvasElement {
+  public getTexture(level: number, q: number = 0, r: number = 0, terrainType?: string, poiId?: string): HTMLCanvasElement {
     const clampedLevel = Math.max(-10, Math.min(10, level));
     const variationCount = 4; 
     const variationIndex = Math.abs((q * 73856093 ^ r * 19349663) % variationCount);
     
     // Unique Key for Shared Cache
-    const key = `HEX_TOP_${clampedLevel}_${variationIndex}_${terrainType || 'NONE'}`;
+    const key = `HEX_TOP_${clampedLevel}_${variationIndex}_${terrainType || 'NONE'}_${poiId || 'NONE'}`;
 
     return textureCache.getOrCreate(key, () => 
-        this.generateTexture(clampedLevel, 'TOP', variationIndex, terrainType)
+        this.generateTexture(clampedLevel, 'TOP', variationIndex, terrainType, poiId)
     );
   }
 
-  public getSideTexture(level: number, terrainType?: string): HTMLCanvasElement {
+  public getSideTexture(level: number, terrainType?: string, poiId?: string): HTMLCanvasElement {
     const clampedLevel = Math.max(-10, Math.min(10, level));
-    const key = `HEX_SIDE_${clampedLevel}_${terrainType || 'NONE'}`;
+    const key = `HEX_SIDE_${clampedLevel}_${terrainType || 'NONE'}_${poiId || 'NONE'}`;
     
     return textureCache.getOrCreate(key, () => 
-        this.generateTexture(clampedLevel, 'SIDE', 0, terrainType)
+        this.generateTexture(clampedLevel, 'SIDE', 0, terrainType, poiId)
     );
   }
 
-  private generateTexture(level: number, type: 'TOP' | 'SIDE', seed: number, terrainType?: string): HTMLCanvasElement {
+  private generateTexture(level: number, type: 'TOP' | 'SIDE', seed: number, terrainType?: string, poiId?: string): HTMLCanvasElement {
     const size = 64; 
     const canvas = document.createElement('canvas');
     canvas.width = size;
@@ -44,17 +44,17 @@ export class TextureService {
     const ctx = canvas.getContext('2d')!;
 
     if (type === 'SIDE') {
-        this.drawSide(ctx, size, level, terrainType);
+        this.drawSide(ctx, size, level, terrainType, poiId);
         return canvas;
     }
 
     // --- TOP TEXTURE ---
     if (level > 0) {
-        this.drawPositive(ctx, size, level, seed, terrainType);
+        this.drawPositive(ctx, size, level, seed, terrainType, poiId);
     } else if (level < 0) {
-        this.drawNegative(ctx, size, level, seed, terrainType);
+        this.drawNegative(ctx, size, level, seed, terrainType, poiId);
     } else {
-        this.drawNeutral(ctx, size, terrainType);
+        this.drawNeutral(ctx, size, terrainType, poiId);
     }
     
     // Add procedural noise to simulate texture file grain
@@ -90,13 +90,13 @@ export class TextureService {
   }
 
   // === POSITIVE STYLE: Tech Panels ===
-  private drawPositive(ctx: CanvasRenderingContext2D, size: number, level: number, seed: number, terrainType?: string) {
+  private drawPositive(ctx: CanvasRenderingContext2D, size: number, level: number, seed: number, terrainType?: string, poiId?: string) {
       let baseColor = '#0f172a'; 
       let accentColor = '#38bdf8';
       let secColor = '#0284c7';
 
-      if (terrainType) {
-          const colors = this.getTerrainColors(terrainType);
+      if (terrainType || poiId) {
+          const colors = this.getTerrainColors(terrainType || 'CITY', poiId);
           baseColor = colors.base;
           accentColor = colors.accent;
           secColor = colors.sec;
@@ -196,12 +196,12 @@ export class TextureService {
   }
 
   // === NEGATIVE STYLE: Excavation Pits ===
-  private drawNegative(ctx: CanvasRenderingContext2D, size: number, level: number, seed: number, terrainType?: string) {
+  private drawNegative(ctx: CanvasRenderingContext2D, size: number, level: number, seed: number, terrainType?: string, poiId?: string) {
       let base = '#1c1917';
       let stroke = '#44403c';
       
-      if (terrainType) {
-          const colors = this.getTerrainColors(terrainType);
+      if (terrainType || poiId) {
+          const colors = this.getTerrainColors(terrainType || 'CITY', poiId);
           base = colors.base;
           stroke = colors.sec;
       } else {
@@ -259,12 +259,12 @@ export class TextureService {
   }
 
   // === NEUTRAL STYLE (L0) ===
-  private drawNeutral(ctx: CanvasRenderingContext2D, size: number, terrainType?: string) {
+  private drawNeutral(ctx: CanvasRenderingContext2D, size: number, terrainType?: string, poiId?: string) {
       let baseColor = '#1e293b';
       let strokeColor = '#334155';
 
-      if (terrainType) {
-          const colors = this.getTerrainColors(terrainType);
+      if (terrainType || poiId) {
+          const colors = this.getTerrainColors(terrainType || 'CITY', poiId);
           baseColor = colors.base;
           strokeColor = colors.sec;
       }
@@ -282,21 +282,23 @@ export class TextureService {
 
       ctx.strokeStyle = strokeColor;
       ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(cx-4, cy); ctx.lineTo(cx+4, cy);
-      ctx.moveTo(cx, cy-4); ctx.lineTo(cx, cy+4);
-      ctx.stroke();
+      if (terrainType !== 'CITY' && terrainType !== 'BUILDING' && terrainType !== 'WALL') {
+          ctx.beginPath();
+          ctx.moveTo(cx-4, cy); ctx.lineTo(cx+4, cy);
+          ctx.moveTo(cx, cy-4); ctx.lineTo(cx, cy+4);
+          ctx.stroke();
+      }
   }
 
   // === SIDE TEXTURES: Strata ===
-  private drawSide(ctx: CanvasRenderingContext2D, size: number, level: number, terrainType?: string) {
+  private drawSide(ctx: CanvasRenderingContext2D, size: number, level: number, terrainType?: string, poiId?: string) {
       const grad = ctx.createLinearGradient(0, 0, 0, size);
       
       let topColor = '#475569';
       let bottomColor = '#0f172a';
 
-      if (terrainType) {
-          const colors = this.getTerrainColors(terrainType);
+      if (terrainType || poiId) {
+          const colors = this.getTerrainColors(terrainType || 'CITY', poiId);
           topColor = colors.sec;
           bottomColor = colors.base;
       } else {
@@ -339,10 +341,21 @@ export class TextureService {
       ctx.fillRect(size-2, 0, 2, size);
   }
 
-  private getTerrainColors(type: string): { base: string, accent: string, sec: string } {
+  private getTerrainColors(type: string, poiId?: string): { base: string, accent: string, sec: string } {
+      if (poiId) {
+          switch(poiId) {
+              case 'city_capitol':  return { base: '#1e3a8a', accent: '#60a5fa', sec: '#2563eb' }; // Blue
+              case 'city_bar':      return { base: '#7c2d12', accent: '#fb923c', sec: '#c2410c' }; // Orange/Brown
+              case 'city_bank':     return { base: '#064e3b', accent: '#34d399', sec: '#059669' }; // Green
+              case 'city_shop':     return { base: '#4c1d95', accent: '#a78bfa', sec: '#7c3aed' }; // Purple
+              case 'city_workshop': return { base: '#713f12', accent: '#facc15', sec: '#ca8a04' }; // Yellow/Brown
+              case 'city_checkpoint': return { base: '#3f3f46', accent: '#a1a1aa', sec: '#52525b' }; // Gray
+          }
+      }
+
       switch(type) {
-          case 'PLAINS':        return { base: '#166534', accent: '#a3e635', sec: '#3f6212' }; 
-          case 'FOREST':        return { base: '#064e3b', accent: '#4ade80', sec: '#065f46' }; 
+          case 'PLAINS':        return { base: '#334155', accent: '#94a3b8', sec: '#475569' }; 
+          case 'FOREST':        return { base: '#1e293b', accent: '#64748b', sec: '#334155' }; 
           case 'SWAMP':         return { base: '#4c1d95', accent: '#a855f7', sec: '#581c87' }; 
           case 'WATER':         return { base: '#0c4a6e', accent: '#38bdf8', sec: '#075985' }; 
           case 'MOUNTAINS':     return { base: '#44403c', accent: '#cbd5e1', sec: '#57534e' }; 

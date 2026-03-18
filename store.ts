@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction, Item, ActivateMonumentAction, GameEventType, OverworldState } from './types.ts';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG, ENTROPY_CONFIG } from './rules/config.ts';
 import { getHexKey, getNeighbors, findPath, cubeDistance } from './services/hexUtils.ts';
+import { CITY_NAME } from './services/CityGenerator.ts';
 import { GameEngine } from './engine/GameEngine.ts';
 import { audioService } from './services/audioService.ts';
 import { CAMPAIGN_LEVELS } from './campaign/levels.ts';
@@ -95,26 +96,33 @@ interface GameStore extends GameState {
   removeItemFromMonument: (slotIndex: number) => void;
   activateMonument: () => void;
   visitPoi: () => void;
+  closeInterior: () => void;
   
   checkTutorialCamera: (deltaX: number) => void;
 
   // Overworld
-  initOverworld: () => void;
+  initOverworld: (skipIntro?: boolean) => void;
   moveOverworldPlayer: (path: HexCoord[]) => Promise<void>;
   exploreOverworld: () => void;
   digOverworld: () => void;
   buildOverworld: () => void;
   restOverworld: () => void;
-  interactOverworld: () => void;
+  interactOverworld: (targetQ?: number, targetR?: number) => void;
+  completeStartQuiz: (rewards: { credits?: number, reputation?: number, items?: string[] }) => void;
+  addTutorialMark: () => void;
   setOverworldActionProgress: (progress: number) => void;
   setOverworldActiveAction: (action: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null) => void;
+  transitionToWorldMap: () => Promise<void>;
   enterRift: (riftId: string) => void;
   returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => void;
   triggerEvent: (eventId: string) => void;
   resolveEventChoice: (choice: import('./types.ts').OverworldEventChoice) => void;
   closeEventSummary: () => void;
   equipItem: (itemId: string, slot: 'head' | 'body' | 'tool' | 'artifact', bagIndex: number) => void;
-  unequipItem: (slot: 'head' | 'body' | 'tool' | 'artifact') => void;
+  unequipItem: (slot: 'head' | 'body' | 'tool' | 'artifact' | 'feet' | 'necklace' | 'ring') => void;
+  buyItem: (itemId: string, cost: number) => void;
+  sellItem: (bagIndex: number, price: number) => void;
+  restAtBar: () => void;
 }
 
 let engine: GameEngine | null = null;
@@ -134,6 +142,7 @@ export const useGameStore = create<GameStore>()(
       pendingConfirmation: null,
       leaderboard: [], 
       campaignProgress: 0, 
+      activePoi: null,
       hasActiveSession: false,
       isMusicMuted: false,
       isSfxMuted: false,
@@ -157,6 +166,7 @@ export const useGameStore = create<GameStore>()(
           activeAction: null,
           visitedHexes: {},
           isOverworldMoving: false,
+          isWorldMap: false,
           lastChoiceResult: null,
       },
       
@@ -500,6 +510,17 @@ export const useGameStore = create<GameStore>()(
           audioService.play('UI_CLICK'); 
           set({ monumentDialogState: { isOpen: false, slots: [null, null, null] } }); 
       },
+      closeInterior: () => {
+          audioService.play('UI_CLICK');
+          set(state => {
+              if (state.session) {
+                  const newSession = { ...state.session };
+                  newSession.activePoi = null;
+                  return { session: newSession, uiState: 'GAME', activePoi: null };
+              }
+              return { uiState: 'OVERWORLD', activePoi: null };
+          });
+      },
 
       placeItemInMonument: (item, slotIndex) => {
           const state = get();
@@ -591,18 +612,22 @@ export const useGameStore = create<GameStore>()(
       checkTutorialCamera: () => {}, 
 
       // --- OVERWORLD ---
-      initOverworld: async () => {
-          set({ uiState: 'INTRO', introNextState: 'OVERWORLD' });
+      initOverworld: async (skipIntro = false) => {
+          const isFirstTime = !get().overworld.isGenerated;
+          if (isFirstTime && !skipIntro) {
+              set({ uiState: 'INTRO', introNextState: 'INTERIOR' });
+          }
           try {
               const { generateOverworld } = await import('./services/OverworldGenerator.ts');
               const seed = Math.random();
-              const grid = generateOverworld(20, seed); // Radius 20
+              const grid = generateOverworld(20, seed, false); // Start in City View
               set(state => ({
                   overworld: {
                       ...state.overworld,
                       grid,
                       isGenerated: true,
                       seed,
+                      isWorldMap: false,
                       player: {
                           q: 0, r: 0, hp: 100, maxHp: 100, energy: 50, maxEnergy: 50, credits: 0,
                           equipment: {}, bag: [], reputation: 0, stepCount: 0
@@ -611,8 +636,13 @@ export const useGameStore = create<GameStore>()(
                       activeEventId: null,
                       activeEventNodeId: null,
                       visitedHexes: { [getHexKey(0, 0)]: true },
-                      isOverworldMoving: false
-                  }
+                      isOverworldMoving: false,
+                      hasCompletedStartQuiz: false,
+                      tutorialMarks: 0,
+                      cityName: CITY_NAME
+                  },
+                  activePoi: 'city_capitol',
+                  uiState: (isFirstTime && !skipIntro) ? state.uiState : 'INTERIOR'
               }));
           } catch (err) {
               console.error('Failed to init overworld:', err);
@@ -640,10 +670,15 @@ export const useGameStore = create<GameStore>()(
                   if (!hex) {
                       const baseHex = generateHexData(step.q, step.r, currentOverworld.seed);
                       const special = getSpecialFeature(step.q, step.r, currentOverworld.seed, 20);
+                      const terrainType = special.terrainType || baseHex.terrainType;
+                      const moveCost = special.moveCost ?? baseHex.moveCost;
                       hex = {
                           ...baseHex,
                           ...special,
-                          height: special.terrainType ? getHexHeight(special.terrainType) : baseHex.height
+                          terrainType,
+                          moveCost,
+                          isPassable: moveCost < 999,
+                          height: special.height ?? (special.terrainType ? getHexHeight(special.terrainType) : baseHex.height)
                       };
                   }
 
@@ -658,9 +693,32 @@ export const useGameStore = create<GameStore>()(
                   }
 
                   let shouldBreak = false;
+                  let justLeftCity = false;
+                  
+                  const currentDist = cubeDistance({ q: 0, r: 0 }, { q: player.q, r: player.r });
+                  const nextDist = cubeDistance({ q: 0, r: 0 }, { q: step.q, r: step.r });
+                  
+                  if (currentDist <= 4 && nextDist > 4) {
+                      const marks = currentOverworld.tutorialMarks || 0;
+                      if (marks < 6) {
+                          get().showToast(state.language === 'RU' 
+                              ? `Для выхода нужно 6 меток обучения. У вас: ${marks}` 
+                              : `You need 6 tutorial marks to exit. You have: ${marks}`, 'error');
+                          break;
+                      } else if (!currentOverworld.flags.hasLeftCity) {
+                          justLeftCity = true;
+                          get().showToast(state.language === 'RU'
+                              ? `Путь открыт. Добро пожаловать в пустоши.`
+                              : `The path is clear. Welcome to the wastelands.`, 'success');
+                      }
+                  }
+
                   set(state => {
                       const newOverworld = { ...state.overworld };
                       if (!newOverworld.flags) newOverworld.flags = {};
+                      if (justLeftCity) {
+                          newOverworld.flags = { ...newOverworld.flags, hasLeftCity: true };
+                      }
                       newOverworld.visitedHexes = { ...(newOverworld.visitedHexes || {}) };
                       
                       const player = { ...newOverworld.player };
@@ -694,13 +752,15 @@ export const useGameStore = create<GameStore>()(
                                   const baseN = generateHexData(nq, nr, newOverworld.seed);
                                   const specialN = getSpecialFeature(nq, nr, newOverworld.seed, 20);
                                   const terrainType = specialN.terrainType || baseN.terrainType;
-                                  const moveCost = specialN.terrainType ? (getHexHeight(specialN.terrainType) >= 999 ? 999 : 1) : baseN.moveCost;
+                                  const moveCost = specialN.moveCost ?? baseN.moveCost;
                                   
                                   grid[nk] = {
                                       ...baseN,
                                       ...specialN,
+                                      terrainType,
+                                      moveCost,
                                       isPassable: moveCost < 999,
-                                      height: specialN.terrainType ? getHexHeight(specialN.terrainType) : baseN.height
+                                      height: specialN.height ?? (specialN.terrainType ? getHexHeight(specialN.terrainType) : baseN.height)
                                   };
                               }
                               
@@ -716,9 +776,9 @@ export const useGameStore = create<GameStore>()(
                       newOverworld.visitedHexes[key] = true;
 
                       if (!alreadyVisited) {
-                          // Random event chance on step, or guaranteed event on POI/CITY
-                          if (hex.poiId || hex.terrainType === 'CITY') {
-                              // High chance to trigger a specific event for POIs or Cities
+                          // Random event chance on step, or guaranteed event on POI
+                          if (hex.poiId) {
+                              // High chance to trigger a specific event for POIs
                               if (Math.random() < 0.5) {
                                   const flags = newOverworld.flags || {};
                                   const eventId = pickOverworldEvent(hex.terrainType, flags, player.reputation ?? 0, player.stepCount ?? 0);
@@ -727,14 +787,18 @@ export const useGameStore = create<GameStore>()(
                                       shouldBreak = true;
                                   }
                               }
-                          } else if (!hex.riftId) {
-                              const chance = hex.terrainType === 'ROAD' ? 0.15 : 0.08;
-                              if (Math.random() < chance) {
-                                  const flags = newOverworld.flags || {};
-                                  const eventId = pickOverworldEvent(hex.terrainType, flags, player.reputation ?? 0, player.stepCount ?? 0);
-                                  if (eventId) {
-                                      setTimeout(() => get().triggerEvent(eventId), 10);
-                                      shouldBreak = true;
+                          } else if (!hex.riftId && hex.terrainType !== 'CITY') {
+                              // No random events inside the city walls
+                              const distToCenter = cubeDistance({ q: 0, r: 0 }, { q: hex.q, r: hex.r });
+                              if (distToCenter > 6) {
+                                  const chance = hex.terrainType === 'ROAD' ? 0.15 : 0.08;
+                                  if (Math.random() < chance) {
+                                      const flags = newOverworld.flags || {};
+                                      const eventId = pickOverworldEvent(hex.terrainType, flags, player.reputation ?? 0, player.stepCount ?? 0);
+                                      if (eventId) {
+                                          setTimeout(() => get().triggerEvent(eventId), 10);
+                                          shouldBreak = true;
+                                      }
                                   }
                               }
                           }
@@ -742,6 +806,18 @@ export const useGameStore = create<GameStore>()(
 
                       return { overworld: newOverworld };
                   });
+                  
+                  // Check for city exit
+                  if (!currentOverworld.isWorldMap && hex.poiId === 'city_checkpoint') {
+                      const marks = currentOverworld.tutorialMarks || 0;
+                      if (marks >= 6) {
+                          await get().transitionToWorldMap();
+                          shouldBreak = true;
+                      } else {
+                          get().showToast(TEXT[state.language].TOAST.CITY_EXIT_DENIED, 'error');
+                          shouldBreak = true;
+                      }
+                  }
                   
                   if (shouldBreak) break;
                   
@@ -846,6 +922,52 @@ export const useGameStore = create<GameStore>()(
           }, interval);
       },
 
+      completeStartQuiz: (rewards) => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              newOverworld.hasCompletedStartQuiz = true;
+              
+              if (rewards.credits) newOverworld.player.credits += rewards.credits;
+              if (rewards.reputation) newOverworld.player.reputation += rewards.reputation;
+              if (rewards.items) {
+                  newOverworld.player.bag = [...newOverworld.player.bag, ...rewards.items];
+              }
+              
+              return { overworld: newOverworld };
+          });
+      },
+
+      addTutorialMark: () => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              newOverworld.tutorialMarks = (newOverworld.tutorialMarks || 0) + 1;
+              return { overworld: newOverworld };
+          });
+      },
+
+      transitionToWorldMap: async () => {
+          const state = get();
+          const { generateOverworld } = await import('./services/OverworldGenerator.ts');
+          const seed = state.overworld.seed;
+          const grid = generateOverworld(20, seed, true);
+          
+          set(state => ({
+              overworld: {
+                  ...state.overworld,
+                  grid,
+                  isWorldMap: true,
+                  player: {
+                      ...state.overworld.player,
+                      q: 0,
+                      r: 0
+                  },
+                  visitedHexes: { [getHexKey(0, 0)]: true }
+              }
+          }));
+          
+          get().showToast(TEXT[get().language].TOAST.CITY_EXIT_SUCCESS, 'success');
+      },
+
       setOverworldActionProgress: (progress: number) => {
           set(state => ({
               overworld: { ...state.overworld, actionProgress: progress }
@@ -875,7 +997,7 @@ export const useGameStore = create<GameStore>()(
               return;
           }
 
-          if (hex.terrainType === 'CITY' || hex.riftId) {
+          if (hex.terrainType === 'CITY' || hex.riftId || hex.isIndestructible) {
               get().showToast(TEXT[get().language].TOAST.CANNOT_DIG, 'error');
               return;
           }
@@ -971,7 +1093,7 @@ export const useGameStore = create<GameStore>()(
               return;
           }
 
-          if (hex.terrainType === 'CITY' || hex.riftId) {
+          if (hex.terrainType === 'CITY' || hex.riftId || hex.isIndestructible) {
               get().showToast(TEXT[get().language].TOAST.CANNOT_BUILD, 'error');
               return;
           }
@@ -1132,14 +1254,53 @@ export const useGameStore = create<GameStore>()(
           }, interval);
       },
 
-      interactOverworld: () => {
+      interactOverworld: (targetQ?: number, targetR?: number) => {
           const state = get();
           const player = state.overworld.player;
-          const key = getHexKey(player.q, player.r);
-          const hex = state.overworld.grid[key];
+          let q = targetQ !== undefined ? targetQ : player.q;
+          let r = targetR !== undefined ? targetR : player.r;
+          let key = getHexKey(q, r);
+          let hex = state.overworld.grid[key];
           const flags = state.overworld.flags || {};
 
+          // If no target specified and current hex has no interactable, check neighbors
+          if (targetQ === undefined && targetR === undefined && (!hex || (!hex.poiId && !hex.riftId))) {
+              const neighbors = getNeighbors(player.q, player.r);
+              for (const n of neighbors) {
+                  const nKey = getHexKey(n.q, n.r);
+                  const nHex = state.overworld.grid[nKey];
+                  if (nHex && (nHex.poiId || nHex.riftId)) {
+                      q = n.q;
+                      r = n.r;
+                      key = nKey;
+                      hex = nHex;
+                      break;
+                  }
+              }
+          }
+
+          if (!hex || (!hex.poiId && !hex.riftId)) {
+              state.showToast(TEXT[state.language].TOAST.NOTHING_INTERACT, 'info');
+              return;
+          }
+
           if (hex.poiId) {
+
+              if (hex.poiId === 'city_checkpoint') {
+                  const marks = state.overworld.tutorialMarks || 0;
+                  if (marks >= 6) {
+                      get().transitionToWorldMap();
+                  } else {
+                      state.showToast(TEXT[state.language].TOAST.CITY_EXIT_DENIED, 'error');
+                      audioService.play('ERROR');
+                  }
+                  return;
+              }
+
+              if (hex.poiId.startsWith('city_')) {
+                  set({ activePoi: hex.poiId, uiState: 'INTERIOR' });
+                  return;
+              }
               const eventDef = EVENT_REGISTRY[hex.poiId];
               const isCompleted = flags[`${hex.poiId}_completed`];
               
@@ -1165,8 +1326,6 @@ export const useGameStore = create<GameStore>()(
               } else {
                   state.enterRift(hex.riftId);
               }
-          } else if (hex.terrainType === 'CITY') {
-              state.triggerEvent('city_hub');
           } else if (hex.terrainType === 'OUTPOST') {
               state.triggerEvent('outpost_checkpoint');
           } else if (hex.terrainType === 'RUINS') {
@@ -1215,46 +1374,69 @@ export const useGameStore = create<GameStore>()(
               const key = getHexKey(player.q, player.r);
               const hex = newOverworld.grid[key];
 
-              if (result === 'VICTORY') {
-                  // Reward
-                  player.credits += 50;
-                  get().showToast(TEXT[get().language].TOAST.RIFT_VICTORY.replace('{0}', '50'), 'success');
-                  
-                  // Close the rift
-                  if (hex && hex.riftId) {
-                      newOverworld.grid = {
-                          ...newOverworld.grid,
-                          [key]: { ...hex, riftId: undefined, isRevealed: true }
-                      };
-                  }
-
-                  // Check for Campaign Victory
-                  const remainingRifts = Object.values(newOverworld.grid).filter(h => h.riftId).length;
-                  if (remainingRifts === 0) {
-                      setTimeout(() => {
-                          set({ uiState: 'INTRO', introNextState: 'MENU' });
-                          get().showToast(TEXT[get().language].TOAST.CAMPAIGN_COMPLETE, 'success');
-                      }, 2000);
-                  }
-              } else {
-                  // Penalty
-                  player.hp -= 30;
-                  get().showToast(TEXT[get().language].TOAST.RIFT_DEFEAT.replace('{0}', '30'), 'error');
-                  if (player.hp <= 0) {
-                      player.hp = player.maxHp;
-                      player.energy = player.maxEnergy;
-                      player.credits = Math.floor(player.credits * 0.5); // Lose half credits
+                  if (result === 'VICTORY') {
+                      // Reward
+                      player.credits += 50;
                       
-                      // Find city to respawn
-                      const cityHex = Object.values(newOverworld.grid).find(h => h.terrainType === 'CITY');
-                      if (cityHex) {
-                          player.q = cityHex.q;
-                          player.r = cityHex.r;
+                      const isSimulation = state.session?.activeLevelConfig?.id?.startsWith('1.');
+                      if (isSimulation) {
+                          const levelId = state.session!.activeLevelConfig!.id;
+                          get().showToast(TEXT[get().language].TOAST.SIMULATION_VICTORY?.replace('{0}', '50') || `Simulation complete! +50 credits`, 'success');
+                          
+                          // Award Tutorial Mark if it was a Season 1 level and not already completed
+                          if (!newOverworld.flags) newOverworld.flags = {};
+                          if (!newOverworld.flags[`level_${levelId}_completed`]) {
+                              newOverworld.tutorialMarks = (newOverworld.tutorialMarks || 0) + 1;
+                              newOverworld.flags[`level_${levelId}_completed`] = true;
+                          }
                       } else {
-                          player.q = 0;
-                          player.r = 0;
+                          get().showToast(TEXT[get().language].TOAST.RIFT_VICTORY.replace('{0}', '50'), 'success');
                       }
-                      get().showToast(TEXT[get().language].TOAST.DEATH_OVERWORLD, 'error');
+
+                      // Close the rift
+                      if (hex && hex.riftId) {
+                          newOverworld.grid = {
+                              ...newOverworld.grid,
+                              [key]: { ...hex, riftId: undefined, isRevealed: true }
+                          };
+                      }
+
+                      // Check for Campaign Victory
+                      const remainingRifts = Object.values(newOverworld.grid).filter(h => h.riftId).length;
+                      const totalRiftsGenerated = Object.values(newOverworld.grid).filter(h => h.riftId || (newOverworld.flags && newOverworld.flags[`${h.riftId}_completed`])).length;
+                      
+                      // Only trigger victory if we've generated at least some rifts and cleared them all
+                      if (remainingRifts === 0 && totalRiftsGenerated > 5) {
+                          setTimeout(() => {
+                              set({ uiState: 'INTRO', introNextState: 'MENU' });
+                              get().showToast(TEXT[get().language].TOAST.CAMPAIGN_COMPLETE, 'success');
+                          }, 2000);
+                      }
+                  } else {
+                  // Penalty
+                  const isSimulation = state.session?.activeLevelConfig?.id?.startsWith('1.');
+                  
+                  if (isSimulation) {
+                      get().showToast(TEXT[get().language].TOAST.SIMULATION_DEFEAT || `Simulation failed. Try again.`, 'error');
+                  } else {
+                      player.hp -= 30;
+                      get().showToast(TEXT[get().language].TOAST.RIFT_DEFEAT.replace('{0}', '30'), 'error');
+                      if (player.hp <= 0) {
+                          player.hp = player.maxHp;
+                          player.energy = player.maxEnergy;
+                          player.credits = Math.floor(player.credits * 0.5); // Lose half credits
+                          
+                          // Find city to respawn
+                          const cityHex = Object.values(newOverworld.grid).find(h => h.terrainType === 'CITY');
+                          if (cityHex) {
+                              player.q = cityHex.q;
+                              player.r = cityHex.r;
+                          } else {
+                              player.q = 0;
+                              player.r = 0;
+                          }
+                          get().showToast(TEXT[get().language].TOAST.DEATH_OVERWORLD, 'error');
+                      }
                   }
               }
 
@@ -1535,6 +1717,75 @@ export const useGameStore = create<GameStore>()(
           });
       },
 
+      buyItem: (itemId: string, cost: number) => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              const player = { ...newOverworld.player };
+              
+              if (player.credits < cost) {
+                  get().showToast(TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', cost.toString()), 'error');
+                  return state;
+              }
+              if ((player.bag?.length || 0) >= 20) {
+                  get().showToast(TEXT[get().language].TOAST.BAG_FULL || 'Bag Full', 'error');
+                  return state;
+              }
+              
+              player.credits -= cost;
+              player.bag = [...(player.bag || []), itemId];
+              newOverworld.player = player;
+              
+              audioService.play('COIN');
+              return { overworld: newOverworld };
+          });
+      },
+
+      sellItem: (bagIndex: number, price: number) => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              const player = { ...newOverworld.player };
+              
+              if (!player.bag || !player.bag[bagIndex]) {
+                  return state;
+              }
+              
+              player.bag = [...player.bag];
+              player.bag.splice(bagIndex, 1);
+              player.credits += price;
+              newOverworld.player = player;
+              
+              audioService.play('COIN');
+              return { overworld: newOverworld };
+          });
+      },
+
+      restAtBar: () => {
+          set(state => {
+              const newOverworld = { ...state.overworld };
+              const player = { ...newOverworld.player };
+              
+              if (player.credits < 50) {
+                  get().showToast(TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', '50'), 'error');
+                  return state;
+              }
+              
+              if (player.energy >= player.maxEnergy && player.hp >= player.maxHp) {
+                  get().showToast(TEXT[get().language].TOAST.GENERIC_ERROR || 'Already fully rested', 'info');
+                  return state;
+              }
+              
+              player.credits -= 50;
+              player.energy = player.maxEnergy;
+              player.hp = player.maxHp;
+              newOverworld.player = player;
+              
+              audioService.play('SUCCESS');
+              get().showToast(get().language === 'RU' ? 'Силы восстановлены' : 'Rested successfully', 'success');
+              
+              return { overworld: newOverworld };
+          });
+      },
+
       // --- GAME LOOP ---
       tick: async () => {
           if (!engine || !engine.state || isProcessingTick) return;
@@ -1554,7 +1805,11 @@ export const useGameStore = create<GameStore>()(
               result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
 
               if (result.events.some(e => e.type === 'MONUMENT_REACHED')) {
-                  get().openMonumentDialog();
+                  if (result.state.activePoi) {
+                      set({ uiState: 'INTERIOR' });
+                  } else {
+                      get().openMonumentDialog();
+                  }
               }
 
               if (result.events.length > 0) {

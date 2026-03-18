@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Stage, Layer, Group, Line, Text, Circle, Rect, Path, Ellipse } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
-import { hexToPixel, getHexKey, cubeDistance, findOverworldPath, getReachableOverworldHexes } from '../services/hexUtils.ts';
+import { hexToPixel, getHexKey, cubeDistance, findOverworldPath, getReachableOverworldHexes, getNeighbors } from '../services/hexUtils.ts';
 import { getHexHeight } from '../services/OverworldGenerator.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { ArrowLeft, Zap, Heart, Coins, Backpack, Tent, Search, Hand, Target, RefreshCw, Settings, X, LogOut, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, RotateCcw, Pickaxe, Hammer, XCircle, CheckCircle, Info } from 'lucide-react';
@@ -148,6 +148,22 @@ const OverworldView: React.FC = () => {
       initOverworld();
     }
   }, [overworld.isGenerated, initOverworld]);
+
+  // Check if player can interact
+  const canInteract = useCallback(() => {
+    if (overworld.activeAction) return false;
+    const currentHex = grid[getHexKey(player.q, player.r)];
+    if (!currentHex) return false;
+    if (currentHex.riftId || currentHex.poiId || currentHex.terrainType === 'CITY') return true;
+    
+    // Check neighbors for POIs
+    const neighbors = getNeighbors(player.q, player.r);
+    for (const n of neighbors) {
+      const nHex = grid[getHexKey(n.q, n.r)];
+      if (nHex && (nHex.poiId || nHex.riftId)) return true;
+    }
+    return false;
+  }, [overworld.activeAction, grid, player.q, player.r]);
 
   useEffect(() => {
     if (overworld.isGenerated && playerNodeRef.current) {
@@ -300,7 +316,7 @@ const OverworldView: React.FC = () => {
     };
 
     const newScale = e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
-    const clampedScale = Math.max(0.5, Math.min(newScale, 4));
+    const clampedScale = Math.max(0.6, Math.min(newScale, 3)); // Restricted zoom out
 
     setViewState({
       scale: clampedScale,
@@ -314,6 +330,7 @@ const OverworldView: React.FC = () => {
   const lastCenter = useRef<{ x: number, y: number } | null>(null);
 
   const handleTouchMove = (e: any) => {
+    e.evt.preventDefault(); // Prevent default browser zoom/scroll
     const stage = e.target.getStage();
     const touch1 = e.evt.touches[0];
     const touch2 = e.evt.touches[1];
@@ -351,7 +368,7 @@ const OverworldView: React.FC = () => {
 
       const scaleBy = dist / lastDist.current;
       const newScale = stage.scaleX() * scaleBy;
-      const clampedScale = Math.max(0.5, Math.min(newScale, 4));
+      const clampedScale = Math.max(0.6, Math.min(newScale, 3)); // Restricted zoom out
 
       setViewState({
         scale: clampedScale,
@@ -384,10 +401,76 @@ const OverworldView: React.FC = () => {
 
   const [showInventory, setShowInventory] = useState(false);
 
-  const handleHexClick = (q: number, r: number) => {
+  const handleHexClick = async (q: number, r: number) => {
     if (overworld.isOverworldMoving) return;
+    
+    const clickedHex = grid[getHexKey(q, r)];
+    
     if (q === player.q && r === player.r) {
+      interactOverworld(q, r);
       return;
+    }
+    
+    if (clickedHex?.poiId && clickedHex.poiId.startsWith('city_')) {
+      const dist = cubeDistance({ q: player.q, r: player.r }, { q, r });
+      if (dist <= 1) {
+        interactOverworld(q, r);
+        return;
+      } else {
+        // Find an adjacent passable hex to the entire building cluster
+        // that is closest to the player
+        const clusterHexes = Object.values(grid).filter(h => h.poiId === clickedHex.poiId);
+        const allNeighbors = new Set<string>();
+        for (const ch of clusterHexes) {
+            const neighbors = getNeighbors(ch.q, ch.r);
+            for (const n of neighbors) {
+                allNeighbors.add(getHexKey(n.q, n.r));
+            }
+        }
+        
+        let bestNeighbor = null;
+        let minCost = Infinity;
+        let bestPath = null;
+        
+        for (const nKey of allNeighbors) {
+          const nHex = grid[nKey];
+          if (nHex && nHex.moveCost < 999 && nHex.poiId !== clickedHex.poiId) {
+            const n = { q: nHex.q, r: nHex.r };
+            const pathResult = findOverworldPath({ q: player.q, r: player.r }, n, grid);
+            if (pathResult.path) {
+              let cost = 0;
+              for (const step of pathResult.path) {
+                const stepHex = grid[getHexKey(step.q, step.r)];
+                cost += stepHex ? stepHex.moveCost : 1;
+              }
+              if (cost < minCost) {
+                minCost = cost;
+                bestNeighbor = n;
+                bestPath = pathResult.path;
+              }
+            }
+          }
+        }
+        
+        if (bestPath) {
+          if (minCost > player.energy) {
+            showToast(TEXT[language].TOAST.NEED_ENERGY.replace('{0}', minCost.toString()), 'error');
+            return;
+          }
+          
+          if (bestPath.length > 0) {
+            await moveOverworldPlayer(bestPath);
+            interactOverworld(q, r);
+          } else {
+            // Already there
+            interactOverworld(q, r);
+          }
+          return;
+        } else {
+          showToast(TEXT[language].TOAST.PATH_BLOCKED, 'error');
+          return;
+        }
+      }
     }
     
     const start = { q: player.q, r: player.r };
@@ -511,6 +594,18 @@ const OverworldView: React.FC = () => {
                 <div className="flex flex-col justify-center">
                   <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">CREDITS</span>
                   <span className="text-xs md:text-xl font-black text-white leading-none">{player.credits}</span>
+                </div>
+              </div>
+
+              <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0" />
+
+              <div className="relative flex items-center gap-1.5 md:gap-2 group shrink-0">
+                <div className="w-7 h-7 md:w-10 md:h-10 rounded-md md:rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/30 group-hover:bg-purple-500/20 transition-colors">
+                  <Trophy className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
+                </div>
+                <div className="flex flex-col justify-center">
+                  <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">MARKS</span>
+                  <span className="text-xs md:text-xl font-black text-white leading-none">{overworld.tutorialMarks || 0}/6</span>
                 </div>
               </div>
 
@@ -723,7 +818,7 @@ const OverworldView: React.FC = () => {
                 interactOverworld();
                 centerCamera();
               }}
-              disabled={!!overworld.activeAction || (!grid[getHexKey(player.q, player.r)]?.riftId && grid[getHexKey(player.q, player.r)]?.terrainType !== 'CITY' && !grid[getHexKey(player.q, player.r)]?.poiId)}
+              disabled={!canInteract()}
               title="INTERACT (Object / City)"
             >
               <div className="flex flex-col items-center justify-center pt-1">
@@ -787,11 +882,13 @@ const OverworldView: React.FC = () => {
                 { q: 0, r: -1 }, { q: 1, r: -1 }, { q: 1, r: 0 }
               ];
               const neighborLevels = new Array(6);
+              const neighborPoiIds = new Array(6);
               for(let i=0; i<6; i++) {
                   const d = NEIGHBOR_OFFSETS[i];
                   const nKey = getHexKey(hex.q + d.q, hex.r + d.r);
                   const nHex = grid[nKey];
                   neighborLevels[i] = nHex ? (nHex.height ?? getHexHeight(nHex.terrainType)) : -99;
+                  neighborPoiIds[i] = nHex ? nHex.poiId : null;
               }
 
               return (
@@ -803,6 +900,7 @@ const OverworldView: React.FC = () => {
                   isLocked={isLocked}
                   isPassable={hex.isPassable}
                   neighborLevels={neighborLevels}
+                  neighborPoiIds={neighborPoiIds}
                   highlight={showPaths ? (reachableHexes.has(getHexKey(hex.q, hex.r)) ? 'REACHABLE' : 'UNREACHABLE') : 'NONE'}
                   onClick={stableHandleHexClick}
                 />
@@ -866,7 +964,7 @@ const OverworldView: React.FC = () => {
             </p>
             <div className="flex gap-3">
               <button onClick={() => { setShowResetConfirm(false); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition-colors">{language === 'RU' ? 'Отмена' : 'Cancel'}</button>
-              <button onClick={() => { setShowResetConfirm(false); initOverworld(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-amber-900/20">{language === 'RU' ? 'Подтвердить' : 'Confirm'}</button>
+              <button onClick={() => { setShowResetConfirm(false); initOverworld(true); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-amber-900/20">{language === 'RU' ? 'Подтвердить' : 'Confirm'}</button>
             </div>
           </div>
         </div>

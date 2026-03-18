@@ -5,30 +5,19 @@ import { isStranded } from './utils';
 export const series1Levels: LevelConfig[] = [
   {
     id: '1.1',
-    title: 'Sim 1.1: Expansion Protocol',
-    description: 'Mission: Capture 3 NEW sectors.\n\nThe unit requires a foothold. Capture 3 adjacent Neutral Sectors (Lvl 0) to establish a perimeter.\n\nMethod: Move to a neutral hex and use UPGRADE (Amber Button) to build Level 1 (Cost: 1 Mat).\n\nWARNING: Materials are limited. Use them to expand.',
+    title: 'Sim 1.1: City Protocol',
+    description: 'Welcome to the City. This is your base of operations.\n\nExplore the city and visit key locations: Capitol, Bar, Bank, Shop, and Workshop.\n\nTo leave the city, find one of the two exits in the walls.\n\nObjective: Visit the Capitol to receive your first assignment.',
     mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring', 
-      customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-      ]
+      size: 8, type: 'fixed', generateWalls: true, wallStartRadius: 7, wallType: 'pit_ring', 
     },
-    startState: { credits: 500, moves: 5, rank: 1, materials: 5, initialEntropy: 15 },
+    startState: { credits: 100, moves: 20, rank: 1, materials: 0, initialEntropy: 100 },
     aiMode: 'none', 
     hooks: {
       checkWinCondition: (state) => {
-        const ownedCount = Object.values(state.grid).filter(h => h.ownerId === state.player.id && h.maxLevel >= 1).length;
-        return ownedCount >= 4;
+        // Win if visited Capitol
+        return state.activePoi === 'CAPITOL';
       },
       checkLossCondition: (state) => {
-        const ownedCount = Object.values(state.grid).filter(h => h.ownerId === state.player.id && h.maxLevel >= 1).length;
-        if (state.player.storage <= 0 && ownedCount < 4) return true;
         return isStranded(state);
       }
     }

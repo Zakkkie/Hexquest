@@ -4,54 +4,38 @@ import { LevelConfig } from '../campaign/types';
 import { getHexKey, getNeighbors } from './hexUtils';
 import { GAME_CONFIG } from '../rules/config';
 
-const CITY_Q = 10;
-const CITY_R = -5;
-const CITY_W = 10;
-const CITY_H = 14;
+const CITY_Q = 0;
+const CITY_R = 0;
+const CITY_RADIUS = 6;
 
 const isInsideCity = (q: number, r: number) => {
     const dq = q - CITY_Q;
     const dr = r - CITY_R;
-    return Math.abs(dq) <= CITY_W / 2 && Math.abs(dr) <= CITY_H / 2;
+    return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(-dq-dr)) <= CITY_RADIUS;
 };
 
 const isCityWall = (q: number, r: number) => {
     const dq = q - CITY_Q;
     const dr = r - CITY_R;
-    const halfW = Math.floor(CITY_W / 2);
-    const halfH = Math.floor(CITY_H / 2);
+    const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(-dq-dr));
     
-    const onEdge = Math.abs(dq) === halfW || Math.abs(dr) === halfH;
-    const isGate = (dq === 0 && Math.abs(dr) === halfH) || (dr === 0 && Math.abs(dq) === halfW);
+    if (dist !== CITY_RADIUS) return false;
     
-    return onEdge && !isGate;
+    // 2 exits: at (CITY_RADIUS, 0) and (-CITY_RADIUS, 0)
+    const isExit = (dq === CITY_RADIUS && dr === 0) || (dq === -CITY_RADIUS && dr === 0);
+    
+    return !isExit;
 };
 
 const getCityPoi = (q: number, r: number) => {
     const dq = q - CITY_Q;
     const dr = r - CITY_R;
     
-    if (dq === 0 && dr === 0) return 'city_hub';
-    
-    // NW: Travelers
-    if (dq === -3 && dr === -4) return 'tavern_travelers';
-    if (dq === -3 && dr === -2) return 'bulletin_board';
-    if (dq === -1 && dr === -4) return 'guard_post';
-    
-    // NE: Craftsmen
-    if (dq === 3 && dr === -4) return 'forge';
-    if (dq === 3 && dr === -2) return 'alchemist';
-    if (dq === 1 && dr === -4) return 'watchtower';
-    
-    // SW: Market
-    if (dq === -3 && dr === 4) return 'market';
-    if (dq === -3 && dr === 2) return 'warehouse';
-    if (dq === -1 && dr === 4) return 'healer';
-    
-    // SE: Spirit
-    if (dq === 3 && dr === 4) return 'temple';
-    if (dq === 3 && dr === 2) return 'archive';
-    if (dq === 1 && dr === 4) return 'tavern_spirit';
+    if (dq === 0 && dr === 0) return 'city_capitol';
+    if (dq === 2 && dr === -1) return 'city_bar';
+    if (dq === -2 && dr === 1) return 'city_bank';
+    if (dq === 1 && dr === 2) return 'city_shop';
+    if (dq === -1 && dr === -2) return 'city_workshop';
     
     return null;
 };
@@ -59,7 +43,8 @@ const getCityPoi = (q: number, r: number) => {
 const isCityStreet = (q: number, r: number) => {
     const dq = q - CITY_Q;
     const dr = r - CITY_R;
-    return dq % 3 === 0 || dr % 3 === 0;
+    // Radial streets or something simple for hex city
+    return dq === 0 || dr === 0 || (dq + dr) === 0;
 };
 
 const getPseudoNoise = (q: number, r: number) => {

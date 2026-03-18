@@ -202,13 +202,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* EXIT CONFIRMATION */}
             {activeModal === 'EXIT' && (
                 <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-red-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
-                        <div className="w-12 h-12 rounded-full bg-red-900/20 flex items-center justify-center mx-auto mb-4 border border-red-500/30"><LogOut className="w-6 h-6 text-red-500" /></div>
-                        <h3 className="text-lg font-black text-white uppercase mb-2">{t.ABORT_TITLE}</h3>
-                        <p className="text-xs text-slate-400 mb-6">{t.ABORT_DESC}</p>
-                        <div className="flex gap-3">
-                            <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition-colors">{t.BTN_CANCEL}</button>
-                            <button onClick={() => { handleMenu(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-red-900/20">{t.BTN_CONFIRM}</button>
+                    <div className="bg-slate-900 border border-red-900/50 p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-[320px] md:max-w-sm w-full text-center relative overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-red-600"></div>
+                        <div className="w-14 h-14 rounded-2xl bg-red-900/20 flex items-center justify-center mx-auto mb-4 border border-red-500/30 shadow-lg shadow-red-900/20"><LogOut className="w-7 h-7 text-red-500" /></div>
+                        <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight">{t.ABORT_TITLE}</h3>
+                        <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2">{t.ABORT_DESC}</p>
+                        <div className="flex flex-col gap-3">
+                            <button onClick={() => { handleMenu(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black uppercase text-xs transition-all active:scale-95 shadow-lg shadow-red-900/40">{t.BTN_CONFIRM}</button>
+                            <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold uppercase text-[10px] transition-colors">{t.BTN_CANCEL}</button>
                         </div>
                     </div>
                 </div>
@@ -217,22 +218,21 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* RESTART CONFIRMATION */}
             {activeModal === 'RESTART' && (
                 <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-amber-900/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
-                        <div className="w-12 h-12 rounded-full bg-amber-900/20 flex items-center justify-center mx-auto mb-4 border border-amber-500/30"><RotateCcw className="w-6 h-6 text-amber-500" /></div>
-                        <h3 className="text-lg font-black text-white uppercase mb-2">{t.BTN_RETRY}?</h3>
-                        <p className="text-xs text-slate-400 mb-6">{language === 'RU' ? 'Начать уровень заново? Текущий прогресс будет потерян.' : 'Restart the level? Current progress will be lost.'}</p>
+                    <div className="bg-slate-900 border border-amber-900/50 p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-[320px] md:max-w-sm w-full text-center relative overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-amber-600"></div>
+                        <div className="w-14 h-14 rounded-2xl bg-amber-900/20 flex items-center justify-center mx-auto mb-4 border border-amber-500/30 shadow-lg shadow-amber-900/20"><RotateCcw className="w-7 h-7 text-amber-500" /></div>
+                        <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight">{t.BTN_RETRY}?</h3>
+                        <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2">{language === 'RU' ? 'Начать уровень заново? Текущий прогресс будет потерян.' : 'Restart the level? Current progress will be lost.'}</p>
                         <div className="flex flex-col gap-3">
-                            <div className="flex gap-3">
-                                <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition-colors">{t.BTN_CANCEL}</button>
-                                <button onClick={() => { handleRetry(); closeModal(); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-amber-900/20">{t.BTN_CONFIRM}</button>
-                            </div>
+                            <button onClick={() => { handleRetry(); closeModal(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black uppercase text-xs transition-all active:scale-95 shadow-lg shadow-amber-900/40">{t.BTN_CONFIRM}</button>
                             <button 
                                 onClick={() => { handleNewGame(); closeModal(); }} 
-                                className="w-full py-3 rounded-xl bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/30 hover:border-red-500/50 font-bold uppercase text-xs transition-all flex items-center justify-center gap-2"
+                                className="w-full py-3 rounded-xl bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/30 hover:border-red-500/50 font-bold uppercase text-[10px] transition-all flex items-center justify-center gap-2"
                             >
                                 <RefreshCw className="w-4 h-4" />
                                 {language === 'RU' ? 'Новая Игра (Сброс)' : 'New Game (Reset)'}
                             </button>
+                            <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-2 rounded-xl bg-transparent text-slate-500 hover:text-slate-300 font-bold uppercase text-[10px] transition-colors">{t.BTN_CANCEL}</button>
                         </div>
                     </div>
                 </div>
@@ -241,7 +241,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* MISSION BRIEFING / DETAILS */}
             {(activeModal === 'MISSION' || gameStatus === 'BRIEFING') && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 md:p-6 pointer-events-auto animate-in fade-in duration-300">
-                    <div className="bg-slate-950 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-4 md:gap-6 p-4 md:p-6 animate-in zoom-in-95">
+                    <div className="bg-slate-950 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl max-w-lg w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto relative flex flex-col gap-4 md:gap-6 p-4 md:p-6 animate-in zoom-in-95">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
                         <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 md:h-6"/></button>
                         <div className="flex flex-col items-center text-center mt-2">
@@ -263,23 +263,27 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* RANKINGS */}
             {activeModal === 'RANKINGS' && (
                 <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-[340px] md:max-w-md max-h-[80vh] flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
                         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
                             <div className="flex items-center gap-3"><Trophy className="w-5 h-5 text-amber-500" /><h3 className="text-sm font-black uppercase tracking-widest text-white">{t.MINI_LB_TITLE}</h3></div>
-                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-2">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-3">
                             {liveRankings.length === 0 ? <div className="p-8 text-center text-slate-500 text-xs font-mono">{t.MINI_LB_EMPTY}</div> : 
-                                <div className="flex flex-col gap-1">{liveRankings.map((entry, idx) => (
-                                    <div key={entry.id} className={`grid grid-cols-12 gap-2 items-center p-2 rounded-lg border ${entry.isPlayer ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
-                                        <div className="col-span-1 flex justify-center"><div className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-black ${idx === 0 ? 'bg-amber-500 text-black' : 'bg-slate-700 text-slate-400'}`}>{idx + 1}</div></div>
-                                        <div className="col-span-5 flex items-center gap-2 overflow-hidden"><div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }}></div><span className={`text-xs font-bold truncate ${entry.isPlayer ? 'text-indigo-300' : 'text-slate-300'}`}>{entry.nickname}</span></div>
-                                        <div className="col-span-2 text-right"><span className="text-xs font-mono text-emerald-400 font-bold">L{entry.level}</span></div>
-                                        <div className="col-span-2 text-right"><span className="text-xs font-mono text-amber-400 font-bold">{entry.coins}</span></div>
-                                        <div className="col-span-2 text-right"><span className="text-xs font-mono text-blue-400 font-bold">{entry.moves}</span></div>
+                                <div className="flex flex-col gap-2">{liveRankings.map((entry, idx) => (
+                                    <div key={entry.id} className={`grid grid-cols-12 gap-2 items-center p-2.5 rounded-xl border ${entry.isPlayer ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
+                                        <div className="col-span-1 flex justify-center"><div className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-black ${idx === 0 ? 'bg-amber-500 text-black' : 'bg-slate-700 text-slate-400'}`}>{idx + 1}</div></div>
+                                        <div className="col-span-5 flex items-center gap-2 overflow-hidden"><div className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_8px_currentColor]" style={{ backgroundColor: entry.color, color: entry.color }}></div><span className={`text-xs font-bold truncate ${entry.isPlayer ? 'text-indigo-300' : 'text-slate-300'}`}>{entry.nickname}</span></div>
+                                        <div className="col-span-2 text-right"><span className="text-[10px] font-mono text-emerald-400 font-bold">L{entry.level}</span></div>
+                                        <div className="col-span-2 text-right"><span className="text-[10px] font-mono text-amber-400 font-bold">{entry.coins}</span></div>
+                                        <div className="col-span-2 text-right"><span className="text-[10px] font-mono text-blue-400 font-bold">{entry.moves}</span></div>
                                     </div>
                                 ))}</div>
                             }
+                        </div>
+                        <div className="p-3 bg-slate-950/50 border-t border-slate-800">
+                            <button onClick={closeModal} className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase text-[10px] transition-colors">{t.BTN_READY}</button>
                         </div>
                     </div>
                 </div>
@@ -288,25 +292,40 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* LOG */}
             {activeModal === 'LOG' && (
                 <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md md:max-w-2xl h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-[340px] md:max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
                         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
-                            <div className="flex items-center gap-3"><FileText className="w-5 h-5 text-indigo-500" /><h3 className="text-sm font-black uppercase tracking-widest text-white">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</h3></div>
-                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-indigo-500/20 rounded-lg border border-indigo-500/30">
+                                    <FileText className="w-4 h-4 text-indigo-400" />
+                                </div>
+                                <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</h3>
+                            </div>
+                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-2">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-1.5 bg-slate-950/30">
                             {messageLog && messageLog.length > 0 ? (
-                                messageLog.map((log) => (
-                                    <div key={log.id} className="flex flex-col gap-1 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-mono text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                                            <span className={`text-[10px] font-bold uppercase ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : log.type === 'SUCCESS' ? 'text-emerald-400' : 'text-slate-400'}`}>{log.type}</span>
+                                [...messageLog].reverse().map((log) => (
+                                    <div key={log.id} className="flex gap-3 p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/50 hover:bg-slate-800/40 transition-colors">
+                                        <div className={`mt-0.5 shrink-0 w-1.5 h-1.5 rounded-full ${log.type === 'INFO' ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : log.type === 'ERROR' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : log.type === 'WARN' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : log.type === 'SUCCESS' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-500'}`} />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-0.5">
+                                                <span className={`text-[8px] font-black uppercase tracking-tighter ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : log.type === 'SUCCESS' ? 'text-emerald-400' : 'text-slate-400'}`}>{log.type}</span>
+                                                <span className="text-[8px] font-mono text-slate-600">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
+                                            <p className="text-[10px] md:text-[11px] text-slate-300 font-mono leading-snug">{log.text}</p>
                                         </div>
-                                        <p className="text-xs text-slate-300 font-mono">{log.text}</p>
                                     </div>
                                 ))
                             ) : (
-                                <div className="p-8 text-center text-slate-500 text-xs font-mono">{language === 'RU' ? 'Журнал пуст' : 'Log is empty'}</div>
+                                <div className="flex flex-col items-center justify-center h-full opacity-20 gap-3">
+                                    <FileText className="w-12 h-12 text-slate-500" />
+                                    <div className="text-center text-slate-500 text-[10px] font-black uppercase tracking-widest">{language === 'RU' ? 'Журнал пуст' : 'Log is empty'}</div>
+                                </div>
                             )}
+                        </div>
+                        <div className="p-3 bg-slate-950/50 border-t border-slate-800">
+                            <button onClick={closeModal} className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase text-[10px] transition-colors">{t.BTN_READY}</button>
                         </div>
                     </div>
                 </div>
@@ -315,25 +334,34 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* CODEX */}
             {activeModal === 'CODEX' && (
                 <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md md:max-w-2xl h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-[340px] md:max-w-3xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
                         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
-                            <div className="flex items-center gap-3"><BookOpen className="w-5 h-5 text-purple-500" /><h3 className="text-sm font-black uppercase tracking-widest text-white">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</h3></div>
-                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-purple-500/20 rounded-lg border border-purple-500/30">
+                                    <BookOpen className="w-4 h-4 text-purple-400" />
+                                </div>
+                                <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</h3>
+                            </div>
+                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-6">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-6 bg-slate-950/30">
                             {(['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'] as const).map(rarity => {
                                 const items = ITEM_REGISTRY.filter(i => i.rarity === rarity);
                                 if (items.length === 0) return null;
                                 return (
                                     <div key={rarity}>
-                                        <h4 className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b pb-1 ${rarity === 'COMMON' ? 'text-slate-400 border-slate-700' : rarity === 'UNCOMMON' ? 'text-emerald-400 border-emerald-900' : rarity === 'RARE' ? 'text-purple-400 border-purple-900' : 'text-amber-400 border-amber-900'}`}>{rarity}</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <h4 className={`text-[10px] font-black uppercase tracking-[0.2em] ${rarity === 'COMMON' ? 'text-slate-400' : rarity === 'UNCOMMON' ? 'text-emerald-400' : rarity === 'RARE' ? 'text-purple-400' : 'text-amber-400'}`}>{rarity}</h4>
+                                            <div className={`flex-1 h-px ${rarity === 'COMMON' ? 'bg-slate-800' : rarity === 'UNCOMMON' ? 'bg-emerald-900/50' : rarity === 'RARE' ? 'bg-purple-900/50' : 'bg-amber-900/50'}`} />
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             {items.map(def => (
-                                                <div key={def.idPrefix} className="flex gap-3 p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:bg-slate-900 transition-colors">
-                                                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-950 flex items-center justify-center border border-slate-800 shrink-0 ${getRarityBorder(def.rarity)}`}><ItemIcon def={def} size="w-8 h-8 md:w-10 md:h-10" /></div>
+                                                <div key={def.idPrefix} className="flex gap-3 p-2.5 bg-slate-900/40 border border-slate-800/50 rounded-xl hover:bg-slate-800/40 transition-colors group">
+                                                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-950 flex items-center justify-center border border-slate-800 shrink-0 shadow-inner group-hover:scale-105 transition-transform ${getRarityBorder(def.rarity)}`}><ItemIcon def={def} size="w-7 h-7 md:w-9 md:h-9" /></div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between mb-0.5"><span className="text-xs font-bold text-white truncate">{def.name[language]}</span></div>
-                                                        <p className="text-[9px] text-slate-500 italic mb-2 line-clamp-2 leading-tight">"{def.description[language]}"</p>
+                                                        <div className="flex items-center justify-between mb-0.5"><span className="text-[11px] font-bold text-white truncate group-hover:text-indigo-300 transition-colors">{def.name[language]}</span></div>
+                                                        <p className="text-[9px] text-slate-500 italic leading-tight line-clamp-2">"{def.description[language]}"</p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -342,6 +370,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 );
                             })}
                         </div>
+                        <div className="p-3 bg-slate-950/50 border-t border-slate-800">
+                            <button onClick={closeModal} className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase text-[10px] transition-colors">{t.BTN_READY}</button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -349,35 +380,50 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* HELP */}
             {helpTopic && helpData && (
                 <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeHelp}>
-                    <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-sm w-full" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-lg font-black text-white uppercase mb-2 text-center">{helpData.title}</h3>
-                        <p className="text-xs text-slate-400 mb-4 text-center leading-relaxed">{helpData.desc}</p>
-                        {(helpData as any).extra ? <div className="flex flex-col gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 mb-4">{(helpData as any).extra.map((line: string, i: number) => <p key={i} className="text-[10px] text-slate-300 font-mono leading-tight border-l-2 border-indigo-500 pl-2 py-1">{line}</p>)}</div> : <div className="bg-slate-800 p-2 rounded text-xs font-mono text-emerald-400 text-center mb-4">{helpData.hint}</div>}
-                        <div className="flex justify-center mt-2"><button onClick={closeHelp} className="text-xs font-bold text-slate-500 hover:text-white uppercase tracking-wider py-2 px-4 rounded hover:bg-slate-800 transition-colors">Close</button></div>
+                    <div className="bg-slate-900 border border-slate-700 p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-[320px] md:max-w-sm w-full max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
+                        <h3 className="text-xl font-black text-white uppercase mb-2 text-center tracking-tight">{helpData.title}</h3>
+                        <p className="text-xs text-slate-400 mb-5 text-center leading-relaxed px-2">{helpData.desc}</p>
+                        {(helpData as any).extra ? (
+                            <div className="flex flex-col gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 mb-5">
+                                {(helpData as any).extra.map((line: string, i: number) => (
+                                    <p key={i} className="text-[10px] text-slate-300 font-mono leading-tight border-l-2 border-indigo-500 pl-2 py-1">{line}</p>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-slate-800 p-3 rounded-xl text-[10px] font-mono text-emerald-400 text-center mb-5 border border-emerald-900/30">
+                                {helpData.hint}
+                            </div>
+                        )}
+                        <button onClick={closeHelp} className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase text-[10px] transition-colors">{t.BTN_READY}</button>
                     </div>
                 </div>
             )}
 
             {/* ITEM INSPECTION */}
             {inspectedItem && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 md:p-6 pointer-events-auto animate-in fade-in duration-200" onClick={closeInspect}>
-                    <div className="bg-slate-950 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl max-w-sm w-full relative overflow-hidden flex flex-col gap-4 md:gap-6 p-4 md:p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-                        <button onClick={closeInspect} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 md:h-6"/></button>
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 pointer-events-auto animate-in fade-in duration-200" onClick={closeInspect}>
+                    <div className="bg-slate-950 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl max-w-[340px] md:max-w-sm w-full max-h-[90vh] overflow-y-auto relative flex flex-col gap-4 p-5 md:p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
+                        <button onClick={closeInspect} className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5"/></button>
                         {(() => {
                             const data = resolveItemText(inspectedItem, language);
                             return (
                                 <>
                                     <div className="flex flex-col items-center">
-                                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-xl md:rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-3 md:mb-4 shadow-inner"><ItemIcon item={inspectedItem} size="w-16 h-16 md:w-24 md:h-24" /></div>
-                                        <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tight text-center">{data.name}</h3>
-                                        <span className={`text-[10px] md:text-xs font-bold uppercase mt-1 px-2 py-0.5 rounded-full bg-slate-900 border ${getRarityBorder(inspectedItem.rarity)} text-slate-300`}>{inspectedItem.rarity}</span>
+                                        <div className={`w-24 h-24 rounded-2xl bg-slate-900 border flex items-center justify-center mb-3 shadow-inner ${getRarityBorder(inspectedItem.rarity)}`}><ItemIcon item={inspectedItem} size="w-16 h-16" /></div>
+                                        <h3 className="text-lg font-black text-white uppercase tracking-tight text-center leading-tight">{data.name}</h3>
+                                        <span className={`text-[10px] font-bold uppercase mt-1.5 px-2 py-0.5 rounded-full bg-slate-900 border ${getRarityBorder(inspectedItem.rarity)} text-slate-300`}>{inspectedItem.rarity}</span>
                                     </div>
-                                    <p className="text-xs md:text-sm text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800 py-3 md:py-4">"{data.description}"</p>
-                                    <div className="flex flex-col gap-2 md:gap-3">
-                                        <div className="flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-xl bg-emerald-950/30 border border-emerald-900/50"><CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-emerald-500 shrink-0 mt-0.5" /><div><span className="text-[9px] md:text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">Success</span><span className="text-[10px] md:text-xs text-emerald-100 font-mono">{data.effectDesc}</span></div></div>
-                                        {inspectedItem.negativeEffectType && <div className="flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-xl bg-red-950/30 border border-red-900/50"><AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-500 shrink-0 mt-0.5" /><div><span className="text-[9px] md:text-[10px] font-bold text-red-400 uppercase tracking-widest block mb-0.5">Failure</span><span className="text-[10px] md:text-xs text-red-100 font-mono">{data.negDesc}</span></div></div>}
+                                    <p className="text-xs text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800/50 py-4">"{data.description}"</p>
+                                    <div className="flex flex-col gap-2.5">
+                                        <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/30"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><div><span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">Success</span><span className="text-[11px] text-emerald-100 font-mono leading-tight">{data.effectDesc}</span></div></div>
+                                        {inspectedItem.negativeEffectType && <div className="flex items-start gap-3 p-3 rounded-xl bg-red-950/20 border border-red-900/30"><AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" /><div><span className="text-[9px] font-bold text-red-400 uppercase tracking-widest block mb-0.5">Failure</span><span className="text-[11px] text-red-100 font-mono leading-tight">{data.negDesc}</span></div></div>}
                                     </div>
-                                    <div className="flex gap-2 md:gap-3 mt-1 md:mt-2"><button onClick={() => { destroyItem(inspectedItem.id); closeInspect(); }} className="flex-1 py-2.5 md:py-3 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-800 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs transition-colors flex items-center justify-center gap-1.5 md:gap-2 group"><Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4 group-hover:scale-110 transition-transform" /> Discard</button><button onClick={closeInspect} className="flex-1 py-2.5 md:py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-wider text-[10px] md:text-xs transition-colors">Close</button></div>
+                                    <div className="flex flex-col gap-2 mt-2">
+                                        <button onClick={closeInspect} className="w-full py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-wider text-xs transition-colors">Close</button>
+                                        <button onClick={() => { destroyItem(inspectedItem.id); closeInspect(); }} className="w-full py-2.5 bg-transparent hover:bg-red-900/20 text-slate-500 hover:text-red-400 rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center gap-2 group"><Trash2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" /> Discard Item</button>
+                                    </div>
                                 </>
                             );
                         })()}
@@ -425,16 +471,16 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* MONUMENT DIALOG */}
             {monumentDialogState.isOpen && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300 pointer-events-auto">
-                    <div className="bg-slate-950 border border-amber-900/50 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl max-w-2xl w-full relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95">
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 md:p-4 animate-in fade-in duration-300 pointer-events-auto">
+                    <div className="bg-slate-950 border border-amber-900/50 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
                         <button onClick={closeMonumentDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
-                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4">
+                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0">
                             <div className="p-2 md:p-3 bg-amber-950/50 rounded-xl border border-amber-900/50 shadow-inner"><Crown className="w-6 h-6 md:w-8 md:h-8 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" /></div>
                             <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.MONUMENT_TITLE}</h3><p className="text-[10px] md:text-xs text-amber-600 uppercase tracking-widest font-mono mt-1">{t.MONUMENT_SUB}</p></div>
                         </div>
-                        <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-auto md:h-[300px]">
-                            <div className="flex-1 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden min-h-[150px] md:min-h-0">
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-6 flex-1 overflow-y-auto md:overflow-hidden min-h-0">
+                            <div className="flex-1 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden min-h-[150px] md:min-h-0 shrink-0">
                                 <div className="p-2 border-b border-slate-800 bg-slate-900"><span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.MONUMENT_KEYS}</span></div>
                                 <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
                                     {availableInventory.length === 0 ? <div className="text-center text-slate-600 text-xs italic py-10">{t.MONUMENT_EMPTY_INV}</div> : availableInventory.map(item => (
@@ -520,18 +566,19 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* VOID DIALOG */}
             {voidDialogTarget && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300 pointer-events-auto" onClick={closeVoidDialog}>
-                    <div className="bg-slate-950 border border-red-900/50 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl max-w-lg w-full relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 md:p-4 animate-in fade-in duration-300 pointer-events-auto" onClick={closeVoidDialog}>
+                    <div className="bg-slate-950 border border-red-900/50 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl max-w-lg w-full max-h-[95vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                         <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
                         <button onClick={closeVoidDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
-                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4">
+                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0">
                             <div className="p-2 md:p-3 bg-red-950/50 rounded-xl border border-red-900/50 shadow-inner animate-pulse"><AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" /></div>
                             <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.VOID_TITLE}</h3><p className="text-[10px] md:text-xs text-red-400 uppercase tracking-widest font-mono mt-1">{t.VOID_SUB}</p></div>
                         </div>
-                        <p className="text-xs md:text-sm text-slate-400 leading-relaxed text-center px-2 md:px-4">{t.VOID_DESC}<br/><span className="text-xs text-red-400 font-bold mt-2 block">{t.VOID_WARN}</span></p>
-                        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden max-h-[250px] md:max-h-[300px]">
-                            <div className="p-2 border-b border-slate-800 bg-slate-900"><span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.VOID_SELECT}</span></div>
-                            <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
+                        <div className="flex-1 overflow-y-auto flex flex-col gap-4 md:gap-6 min-h-0">
+                            <p className="text-xs md:text-sm text-slate-400 leading-relaxed text-center px-2 md:px-4 shrink-0">{t.VOID_DESC}<br/><span className="text-xs text-red-400 font-bold mt-2 block">{t.VOID_WARN}</span></p>
+                            <div className="bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden flex-1 min-h-[200px]">
+                                <div className="p-2 border-b border-slate-800 bg-slate-900 shrink-0"><span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.VOID_SELECT}</span></div>
+                                <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
                                 {player?.inventory.length === 0 ? <div className="text-center text-slate-600 text-xs italic py-10">{t.VOID_EMPTY}</div> : player?.inventory.map(item => (
                                     <div key={item.id} onClick={() => restoreVoidHex(item.id)} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-slate-800 hover:bg-slate-700 border cursor-pointer group transition-all ${getRarityBorder(item.rarity)}`}>
                                         <div className="w-8 h-8 md:w-10 md:h-10 rounded bg-slate-950 flex items-center justify-center border border-slate-800 overflow-hidden shrink-0"><ItemIcon item={item} size="w-8 h-8 md:w-10 md:h-10" /></div>
@@ -539,6 +586,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         <div className="px-2 py-1 md:px-3 md:py-1 bg-red-900/20 border border-red-900/50 rounded text-[9px] text-red-400 font-bold uppercase whitespace-nowrap group-hover:bg-red-900/40 transition-colors">{t.VOID_BTN_SACRIFICE}</div>
                                     </div>
                                 ))}
+                                </div>
                             </div>
                         </div>
                     </div>

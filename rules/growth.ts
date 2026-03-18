@@ -18,8 +18,8 @@ export function checkDigCondition(
 ): GrowthCheckResult {
   
   // IMPERATIVE: Monument Hexes are indestructible
-  if (hex.structureType === 'MONUMENT') {
-      return { canGrow: false, reason: "INDESTRUCTIBLE MONUMENT" };
+  if (hex.structureType === 'MONUMENT' || hex.isIndestructible) {
+      return { canGrow: false, reason: "INDESTRUCTIBLE AREA" };
   }
 
   // Use nullish coalescing to ensure 0 is treated as a valid number, not falsy
@@ -96,7 +96,7 @@ export function checkGrowthCondition(
 ): GrowthCheckResult {
   if (!hex) return { canGrow: false, reason: 'Invalid Hex' };
 
-  if (hex.structureType === 'MONUMENT') {
+  if (hex.structureType === 'MONUMENT' || hex.isIndestructible) {
       return { canGrow: false, reason: "ANCIENT STRUCTURE (IMMUTABLE)" };
   }
 
