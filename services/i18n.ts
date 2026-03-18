@@ -1,6 +1,6 @@
 import { Language } from '../types';
 
-interface Dictionary {
+export interface Dictionary {
     MENU: {
         TITLE: string;
         SUBTITLE: string;
@@ -382,7 +382,12 @@ interface Dictionary {
         HEADER_RANK: string;
         EMPTY: string;
         LB_TERRAIN_DATA: string;
-    }
+    };
+    OVERWORLD: {
+        EXPLORE: string;
+        DIG: string;
+        BUILD: string;
+    };
 }
 
 export const TEXT: Record<Language, Dictionary> = {
@@ -766,6 +771,11 @@ export const TEXT: Record<Language, Dictionary> = {
             HEADER_RANK: "Rank",
             EMPTY: "Empty.",
             LB_TERRAIN_DATA: "Rank Spectrum (Terrain Data)"
+        },
+        OVERWORLD: {
+            EXPLORE: "EXPLORE",
+            DIG: "DIG",
+            BUILD: "BUILD"
         }
     },
     RU: {
@@ -1148,6 +1158,11 @@ export const TEXT: Record<Language, Dictionary> = {
             HEADER_RANK: "Ранг",
             EMPTY: "Пусто.",
             LB_TERRAIN_DATA: "Спектр Рангов (Ландшафт)"
+        },
+        OVERWORLD: {
+            EXPLORE: "ИССЛЕДОВАТЬ",
+            DIG: "КОПАТЬ",
+            BUILD: "СТРОИТЬ"
         }
     }
 };

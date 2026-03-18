@@ -23,7 +23,7 @@ export const series1Levels: LevelConfig[] = [
     }
   },
   {
-    id: '1.2',
+    id: '2',
     title: 'Sim 1.2: Solid Ground',
     description: 'Objective: Reach the Capital.\n\nSCANNER: A safe path (Durability 3) detected. Follow it through the void.\n\nDANGER: Environment UNSTABLE (Durability 1). Stepping off the path causes immediate collapse and Rank loss.\n\nFAILURE: Rank drops to 1.',
     mapConfig: { size: 8, type: 'fixed', generateWalls: false },

@@ -698,7 +698,7 @@ export const useGameStore = create<GameStore>()(
                   const currentDist = cubeDistance({ q: 0, r: 0 }, { q: player.q, r: player.r });
                   const nextDist = cubeDistance({ q: 0, r: 0 }, { q: step.q, r: step.r });
                   
-                  if (currentDist <= 4 && nextDist > 4) {
+                  if (currentDist <= 2 && nextDist > 2) {
                       const marks = currentOverworld.tutorialMarks || 0;
                       if (marks < 6) {
                           get().showToast(state.language === 'RU' 
@@ -821,8 +821,8 @@ export const useGameStore = create<GameStore>()(
                   
                   if (shouldBreak) break;
                   
-                  // Wait for animation
-                  await new Promise(resolve => setTimeout(resolve, 400));
+                  // Wait for animation (slightly longer than 400ms to ensure completion)
+                  await new Promise(resolve => setTimeout(resolve, 500));
               }
           } finally {
               set(state => ({ overworld: { ...state.overworld, isOverworldMoving: false } }));
@@ -834,6 +834,14 @@ export const useGameStore = create<GameStore>()(
           if (state.overworld.activeAction) return;
 
           const player = state.overworld.player;
+          const key = getHexKey(player.q, player.r);
+          const hex = state.overworld.grid[key];
+
+          if (hex?.terrainType === 'CITY') {
+              get().showToast(state.language === 'RU' ? 'В городе нельзя проводить исследования' : 'Cannot explore inside the city', 'error');
+              return;
+          }
+
           if (player.hp < 10) {
               get().showToast(TEXT[get().language].TOAST.NEED_HP.replace('{0}', '10'), 'error');
               return;
@@ -1311,14 +1319,14 @@ export const useGameStore = create<GameStore>()(
               }
           } else if (hex.riftId) {
               // Check if rift is unlocked
-              const series = hex.riftId.split('.')[0];
+              const riftIdNum = parseInt(hex.riftId);
               const progress = state.campaignProgress;
               
-              // Series 1: 0-5, Series 2: 6-10, Series 3: 11-18, Series 4: 19-26
+              // Series 1: 1-6, Series 2: 7-11, Series 3: 12-19, Series 4: 20-26
               let isLocked = false;
-              if (series === '2' && progress < 6) isLocked = true;
-              if (series === '3' && progress < 11) isLocked = true;
-              if (series === '4' && progress < 19) isLocked = true;
+              if (riftIdNum >= 7 && riftIdNum <= 11 && progress < 6) isLocked = true;
+              if (riftIdNum >= 12 && riftIdNum <= 19 && progress < 11) isLocked = true;
+              if (riftIdNum >= 20 && progress < 19) isLocked = true;
 
               if (isLocked) {
                   state.showToast(TEXT[state.language].TOAST.RIFT_LOCKED, 'info');
@@ -1374,22 +1382,24 @@ export const useGameStore = create<GameStore>()(
               const key = getHexKey(player.q, player.r);
               const hex = newOverworld.grid[key];
 
-                  if (result === 'VICTORY') {
-                      // Reward
-                      player.credits += 50;
-                      
-                      const isSimulation = state.session?.activeLevelConfig?.id?.startsWith('1.');
-                      if (isSimulation) {
-                          const levelId = state.session!.activeLevelConfig!.id;
-                          get().showToast(TEXT[get().language].TOAST.SIMULATION_VICTORY?.replace('{0}', '50') || `Simulation complete! +50 credits`, 'success');
+                      if (result === 'VICTORY') {
+                          // Reward
+                          player.credits += 50;
                           
-                          // Award Tutorial Mark if it was a Season 1 level and not already completed
-                          if (!newOverworld.flags) newOverworld.flags = {};
-                          if (!newOverworld.flags[`level_${levelId}_completed`]) {
-                              newOverworld.tutorialMarks = (newOverworld.tutorialMarks || 0) + 1;
-                              newOverworld.flags[`level_${levelId}_completed`] = true;
-                          }
-                      } else {
+                          const levelId = state.session?.activeLevelConfig?.id || '';
+                          const levelIdNum = parseInt(levelId);
+                          const isSimulation = levelIdNum >= 1 && levelIdNum <= 6;
+                          
+                          if (isSimulation) {
+                              get().showToast(TEXT[get().language].TOAST.SIMULATION_VICTORY?.replace('{0}', '50') || `Simulation complete! +50 credits`, 'success');
+                              
+                              // Award Tutorial Mark if it was a Season 1 level and not already completed
+                              if (!newOverworld.flags) newOverworld.flags = {};
+                              if (!newOverworld.flags[`level_${levelId}_completed`]) {
+                                  newOverworld.tutorialMarks = (newOverworld.tutorialMarks || 0) + 1;
+                                  newOverworld.flags[`level_${levelId}_completed`] = true;
+                              }
+                          } else {
                           get().showToast(TEXT[get().language].TOAST.RIFT_VICTORY.replace('{0}', '50'), 'success');
                       }
 

@@ -16,7 +16,7 @@ import OverworldMinimap from './OverworldMinimap.tsx';
 import Background from './Background.tsx';
 import GameDialogs from './hud/GameDialogs.tsx';
 import { Item, EntityType } from '../types.ts';
-import { TEXT } from '../services/i18n.ts';
+import { TEXT, Dictionary } from '../services/i18n.ts';
 import { unitRenderer } from '../services/unitRenderer.ts';
 import { Image as KonvaImage } from 'react-konva';
 
@@ -55,6 +55,7 @@ const OverworldView: React.FC = () => {
   const [cameraFollow, setCameraFollow] = useState(true);
   const [showPaths, setShowPaths] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<Konva.Stage>(null);
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
   const systemMenuRef = useRef<HTMLDivElement>(null);
 
@@ -65,7 +66,7 @@ const OverworldView: React.FC = () => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const campaignProgress = useGameStore(state => state.campaignProgress);
-  const t = TEXT[language].HUD;
+  const t = TEXT[language] as Dictionary;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -86,6 +87,7 @@ const OverworldView: React.FC = () => {
   }, []);
 
   const { grid, player } = overworld;
+  const currentHex = grid[getHexKey(player.q, player.r)];
   const user = useGameStore(state => state.user);
 
   const finalColor = user?.avatarColor || '#3b82f6';
@@ -196,9 +198,9 @@ const OverworldView: React.FC = () => {
           playerFigureRef.current.scaleX(playerFacingRef.current);
         }
 
-        const duration = 400; // ms
+        const duration = 350; // Slightly faster for snappier feel
         const startTime = Date.now();
-        const jumpHeight = 15;
+        const jumpHeight = 12; // Lower jump for more stable feel
 
         // Start jump animation
         const layer = playerNodeRef.current.getLayer();
@@ -219,22 +221,31 @@ const OverworldView: React.FC = () => {
             playerNodeRef.current.x(curX);
             playerNodeRef.current.y(curY - jump);
 
-            // Synchronized camera follow
-            if (cameraFollow && containerRef.current) {
+            // Synchronized camera follow (follow ground position for stability)
+            if (cameraFollow && containerRef.current && stageRef.current) {
               const targetX = containerRef.current.clientWidth / 2 - curX * viewState.scale;
-              const targetY = (containerRef.current.clientHeight / 2) - getCenterOffset() - (curY - jump) * viewState.scale;
+              const targetY = (containerRef.current.clientHeight / 2) - getCenterOffset() - curY * viewState.scale;
               
-              setViewState(prev => ({
-                ...prev,
-                x: targetX,
-                y: targetY
-              }));
+              stageRef.current.x(targetX);
+              stageRef.current.y(targetY);
             }
 
             if (progress >= 1) {
               if (playerWalkRef.current) playerWalkRef.current.stop();
               playerWalkRef.current = null;
+              
+              // Sync visual state at the end of each step
               setVisualPlayerPos({ q: player.q, r: player.r });
+              setVisualPlayerHeight(getHeightOffset(endLvl));
+              
+              // Sync React state at the end of movement
+              if (cameraFollow && stageRef.current) {
+                setViewState(prev => ({
+                  ...prev,
+                  x: stageRef.current!.x(),
+                  y: stageRef.current!.y()
+                }));
+              }
             }
           }, layer);
           playerWalkRef.current.start();
@@ -522,7 +533,7 @@ const OverworldView: React.FC = () => {
     const hexes = [];
     // Calculate radius based on screen size and scale
     const screenRadius = Math.max(windowSize.width, windowSize.height) / (viewState.scale * GAME_CONFIG.HEX_SIZE * 1.5);
-    const CHUNK_RADIUS = Math.min(30, Math.max(10, Math.ceil(screenRadius)));
+    const CHUNK_RADIUS = Math.min(35, Math.max(12, Math.ceil(screenRadius))); // Increased radius for smoother movement
     
     // We need to cull based on the camera center, not just the player!
     // But if we just use the camera center, we need to convert pixel to hex.
@@ -662,7 +673,7 @@ const OverworldView: React.FC = () => {
                 </button>
                 <button onClick={() => { setActiveModal('RANKINGS'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border bg-slate-800/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white`}>
                     <Trophy className="w-4 h-4 text-amber-500" />
-                    <span className="text-xs font-bold uppercase">{t.LEADERBOARD_TITLE}</span>
+                    <span className="text-xs font-bold uppercase">{t.HUD.LEADERBOARD_TITLE}</span>
                 </button>
                 <button onClick={() => { setActiveModal('LOG'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 hover:text-indigo-200 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left">
                     <FileText className="w-4 h-4" />
@@ -679,7 +690,7 @@ const OverworldView: React.FC = () => {
                   className="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-900/10 hover:bg-amber-900/30 text-amber-400 hover:text-amber-200 border border-amber-900/30 hover:border-amber-500/50 transition-colors w-full text-left"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase tracking-wider">{t.BTN_RETRY}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">{t.HUD.BTN_RETRY}</span>
                 </button>
                 
                 <button 
@@ -691,7 +702,7 @@ const OverworldView: React.FC = () => {
                   className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-900/10 hover:bg-red-900/30 text-red-400 hover:text-red-200 border border-red-900/30 hover:border-red-500/50 transition-colors w-full text-left"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase tracking-wider">{t.BTN_MENU}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">{t.HUD.BTN_MENU}</span>
                 </button>
               </div>
             )}
@@ -751,12 +762,12 @@ const OverworldView: React.FC = () => {
                 centerCamera();
               }}
               progress={overworld.activeAction === 'EXPLORE' ? overworld.actionProgress : 0}
-              disabled={!!overworld.activeAction}
-              title="EXPLORE (-3 Energy)"
+              disabled={!!overworld.activeAction || !overworld.isWorldMap}
+              title={`${t.OVERWORLD.EXPLORE} (-3 Energy)`}
             >
               <div className="flex flex-col items-center justify-center pt-1">
                 <Search className="w-3.5 h-3.5 md:w-6 md:h-6" />
-                <span className="text-[6px] md:text-[9px] font-bold text-emerald-400 mt-0.5">EXPLORE</span>
+                <span className="text-[6px] md:text-[9px] font-bold text-emerald-400 mt-0.5">{t.OVERWORLD.EXPLORE}</span>
               </div>
             </HexButton>
 
@@ -768,12 +779,12 @@ const OverworldView: React.FC = () => {
                 centerCamera();
               }}
               progress={overworld.activeAction === 'DIG' ? overworld.actionProgress : 0}
-              disabled={!!overworld.activeAction}
-              title="DIG (-2 Energy)"
+              disabled={!!overworld.activeAction || !overworld.isWorldMap}
+              title={`${t.OVERWORLD.DIG} (-2 Energy)`}
             >
               <div className="flex flex-col items-center justify-center pt-1">
                 <Pickaxe className="w-3.5 h-3.5 md:w-6 md:h-6" />
-                <span className="text-[6px] md:text-[9px] font-bold text-red-400 mt-0.5">DIG</span>
+                <span className="text-[6px] md:text-[9px] font-bold text-red-400 mt-0.5">{t.OVERWORLD.DIG}</span>
               </div>
             </HexButton>
 
@@ -785,12 +796,12 @@ const OverworldView: React.FC = () => {
                 centerCamera();
               }}
               progress={overworld.activeAction === 'BUILD' ? overworld.actionProgress : 0}
-              disabled={!!overworld.activeAction}
-              title="BUILD (-2 Energy)"
+              disabled={!!overworld.activeAction || !overworld.isWorldMap}
+              title={`${t.OVERWORLD.BUILD} (-2 Energy)`}
             >
               <div className="flex flex-col items-center justify-center pt-1">
                 <Hammer className="w-3.5 h-3.5 md:w-6 md:h-6" />
-                <span className="text-[6px] md:text-[9px] font-bold text-amber-400 mt-0.5">BUILD</span>
+                <span className="text-[6px] md:text-[9px] font-bold text-amber-400 mt-0.5">{t.OVERWORLD.BUILD}</span>
               </div>
             </HexButton>
 
@@ -852,6 +863,7 @@ const OverworldView: React.FC = () => {
       {/* Canvas */}
       <div className="flex-1 cursor-grab active:cursor-grabbing overflow-hidden">
         <Stage
+          ref={stageRef}
           width={windowSize.width}
           height={windowSize.height}
           onWheel={handleWheel}
@@ -958,7 +970,7 @@ const OverworldView: React.FC = () => {
             <div className="w-12 h-12 rounded-full bg-amber-900/20 flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
               <RotateCcw className="w-6 h-6 text-amber-500" />
             </div>
-            <h3 className="text-lg font-black text-white uppercase mb-2">{t.BTN_RETRY}?</h3>
+            <h3 className="text-lg font-black text-white uppercase mb-2">{t.HUD.BTN_RETRY}?</h3>
             <p className="text-xs text-slate-400 mb-6">
               {language === 'RU' ? 'Начать новое приключение? Текущий прогресс будет потерян.' : 'Start a new adventure? Current progress will be lost.'}
             </p>

@@ -74,19 +74,19 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
         y: -size - 40,
         width: size * 2 + 40,
         height: size * 2 + 80,
-        pixelRatio: 2
+        pixelRatio: 1
       });
     }
 
     // Cache the animated parts so we only animate bitmaps, not vectors
     if (waterLayerRef.current) {
       waterLayerRef.current.cache({
-        x: -15, y: -5, width: 30, height: 20, pixelRatio: 2
+        x: -15, y: -5, width: 30, height: 20, pixelRatio: 1
       });
     }
     if (riftRef.current) {
       riftRef.current.cache({
-        x: -20, y: -20, width: 40, height: 40, pixelRatio: 2
+        x: -20, y: -20, width: 40, height: 40, pixelRatio: 1
       });
     }
 

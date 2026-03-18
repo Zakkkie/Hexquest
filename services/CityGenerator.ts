@@ -24,12 +24,12 @@ export const CITY_LAYOUT: Record<string, { poiId: string, height: number }> = {
 export function getCityFeature(q: number, r: number): Partial<CityHexData> | null {
     const dist = Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r));
     
-    if (dist > 4) return { moveCost: 999, isPassable: false };
+    if (dist > 3) return { moveCost: 999, isPassable: false };
 
-    // Walls at Radius 3 and 4
-    if (dist === 3 || dist === 4) {
+    // Walls at Radius 3
+    if (dist === 3) {
         // Exits at specific points (only 2 checkpoints now)
-        if ((q === 3 && r === 0) || (q === -3 && r === 0) || (q === 4 && r === 0) || (q === -4 && r === 0)) {
+        if ((q === 3 && r === 0) || (q === -3 && r === 0)) {
             return { 
                 terrainType: 'ROAD', 
                 poiId: 'city_checkpoint', 

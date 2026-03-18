@@ -188,10 +188,10 @@ export function getSpecialFeature(q: number, r: number, seed: number, radius: nu
   // For lazy generation, we can use a grid-based approach or a hash-to-range approach.
   // Let's use a simple probability that scales with distance.
   
-  const series1 = ['1.1', '1.2', '1.3', '1.4', '1.5', '1.6'];
-  const series2 = ['2.1', '2.2', '2.3', '2.4', '2.5'];
-  const series3 = ['3.1', '3.2', '3.3', '3.4', '3.5', '3.6', '3.7', '3.8'];
-  const series4 = ['4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7', '4.8'];
+  const series1 = ['1', '2', '3', '4', '5', '6'];
+  const series2 = ['7', '8', '9', '10', '11'];
+  const series3 = ['12', '13', '14', '15', '16', '17', '18', '19'];
+  const series4 = ['20', '21', '22', '23', '24', '25', '26'];
 
   const checkRift = (ids: string[], minDist: number, maxDist: number, prob: number) => {
     if (dist >= minDist && dist <= maxDist) {
@@ -238,7 +238,7 @@ export function getSpecialFeature(q: number, r: number, seed: number, radius: nu
 export function generateOverworld(radius: number = 30, seed: number = Math.random(), isWorldMap: boolean = true): Record<string, OverworldHex> {
   const grid: Record<string, OverworldHex> = {};
   
-  const genRadius = isWorldMap ? radius : 4;
+  const genRadius = isWorldMap ? radius : 3;
 
   for (let q = -genRadius; q <= genRadius; q++) {
     for (let r = Math.max(-genRadius, -q - genRadius); r <= Math.min(genRadius, -q + genRadius); r++) {
