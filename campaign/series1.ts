@@ -5,25 +5,71 @@ import { isStranded } from './utils';
 export const series1Levels: LevelConfig[] = [
   {
     id: '1.1',
-    title: 'Sim 1.1: City Protocol',
-    description: 'Welcome to the City. This is your base of operations.\n\nExplore the city and visit key locations: Capitol, Bar, Bank, Shop, and Workshop.\n\nTo leave the city, find one of the two exits in the walls.\n\nObjective: Visit the Capitol to receive your first assignment.',
+    title: 'Sim 1.1: Протокол Инициации',
+    description: 'Цель: Улучшите 3 отмеченных гекса вокруг вас. Не тратьте материалы на другие гексы. Если вы потратите материал не на цель, вы проиграете.',
+    goalText: 'Улучшите 3 отмеченных гекса',
     mapConfig: {
-      size: 8, type: 'fixed', generateWalls: true, wallStartRadius: 7, wallType: 'pit_ring', 
+      size: 3, type: 'fixed', generateWalls: false,
+      customLayout: [
+        // Центр (Игрок)
+        { q: 0, r: 0, maxLevel: 0, currentLevel: 0, revealed: true, ownerId: 'player-1' },
+        // Радиус 1 (7 гексов уровня 0)
+        { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+        // Радиус 2 (Окружение уровня -8)
+        { q: 2, r: 0, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: 2, r: -1, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: 2, r: -2, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: 1, r: -2, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: 0, r: -2, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: -1, r: -1, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: -2, r: 0, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: -2, r: 1, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: -2, r: 2, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: -1, r: 2, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: 0, r: 2, maxLevel: -8, currentLevel: -8, revealed: true },
+        { q: 1, r: 1, maxLevel: -8, currentLevel: -8, revealed: true },
+      ]
     },
-    startState: { credits: 100, moves: 20, rank: 1, materials: 0, initialEntropy: 100 },
-    aiMode: 'none', 
+    objectiveHexes: [
+      { q: 1, r: 0, targetLevel: 1, label: '↑', color: 'amber' },
+      { q: -1, r: 1, targetLevel: 1, label: '↑', color: 'amber' },
+      { q: 0, r: -1, targetLevel: 1, label: '↑', color: 'amber' },
+    ],
+    startState: { credits: 100, moves: 50, rank: 1, materials: 3, initialEntropy: 100 },
+    aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => {
-        // Win if visited Capitol
-        return state.activePoi === 'CAPITOL';
+        const targets = [getHexKey(1, 0), getHexKey(-1, 1), getHexKey(0, -1)];
+        return targets.every(key => (state.grid[key]?.maxLevel ?? 0) >= 1);
       },
       checkLossCondition: (state) => {
+        const targets = [getHexKey(1, 0), getHexKey(-1, 1), getHexKey(0, -1)];
+        const upgradedTargets = targets.filter(key => (state.grid[key]?.maxLevel ?? 0) >= 1).length;
+        const remainingTargets = 3 - upgradedTargets;
+        
+        if ((state.player.storage ?? 0) < remainingTargets) return true;
+        
         return isStranded(state);
+      },
+      onBeforeAction: (state, action) => {
+        if (action.type === 'UPGRADE') {
+          const key = getHexKey(action.coord.q, action.coord.r);
+          const targets = [getHexKey(1, 0), getHexKey(-1, 1), getHexKey(0, -1)];
+          if (!targets.includes(key)) {
+            return { ok: true }; 
+          }
+        }
+        return { ok: true };
       }
     }
   },
   {
-    id: '2',
+    id: '1.2',
     title: 'Sim 1.2: Solid Ground',
     description: 'Objective: Reach the Capital.\n\nSCANNER: A safe path (Durability 3) detected. Follow it through the void.\n\nDANGER: Environment UNSTABLE (Durability 1). Stepping off the path causes immediate collapse and Rank loss.\n\nFAILURE: Rank drops to 1.',
     mapConfig: { size: 8, type: 'fixed', generateWalls: false },

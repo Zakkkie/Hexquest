@@ -45,19 +45,27 @@ const getTutorialData = (grid: Record<string, Hex>, player: Entity, levelId?: st
     return data;
 };
 
-const getHexTutorialStatus = (hex: Hex, player: Entity, grid: Record<string, Hex>, tutorialData: any) => {
-    if (!tutorialData) return { isTutorial: false, isArrow: false, tutColor: 'emerald' };
+const getHexTutorialStatus = (hex: Hex, player: Entity, grid: Record<string, Hex>, tutorialData: any, activeLevelConfig?: any) => {
+    if (!tutorialData && !activeLevelConfig?.objectiveHexes) return { isTutorial: false, isArrow: false, tutColor: 'emerald' };
     
-    const { levelId } = tutorialData;
+    const levelId = tutorialData?.levelId || activeLevelConfig?.id;
     const isOccupiedByPlayer = hex.q === player.q && hex.r === player.r;
     let isTutorial = false;
     let isArrow = false;
     let tutColor: any = 'emerald';
 
-    if (levelId === '1.1') {
-        if (hex.maxLevel === 0 && !hex.ownerId && !isOccupiedByPlayer) {
-            isTutorial = true; isArrow = true; tutColor = 'amber';
+    // Check objectiveHexes for arrows
+    if (activeLevelConfig?.objectiveHexes) {
+        const obj = activeLevelConfig.objectiveHexes.find((o: any) => o.q === hex.q && o.r === hex.r);
+        if (obj && hex.maxLevel < obj.targetLevel) {
+            return { isTutorial: true, isArrow: true, tutColor: obj.color || 'amber' };
         }
+    }
+
+    if (!tutorialData) return { isTutorial, isArrow, tutColor };
+
+    if (levelId === '1.1') {
+        // Fallback or specific logic for 1.1 if needed, but objectiveHexes should cover it now
     } else if (levelId === '1.2' || levelId === '3.1') {
         if (hex.structureType === 'CAPITAL') {
             isTutorial = true; isArrow = true; tutColor = 'emerald';
@@ -498,7 +506,7 @@ const renderList = useMemo(() => {
 
                 const isPending = hex.id === pendingKey;
                 const isOccupiedByPlayer = hex.q === player.q && hex.r === player.r;
-                const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, player, grid, tutorialData);
+                const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, player, grid, tutorialData, activeLevelConfig);
 
                 let neighborLevels = new Array(6);
                 for(let i=0; i<6; i++) {
