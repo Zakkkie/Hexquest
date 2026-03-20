@@ -189,7 +189,7 @@ export const createInitialSessionData = (
     timestamp: Date.now()
   };
 
-  return {
+  const session: SessionState = {
     stateVersion: 0,
     sessionId: Math.random().toString(36).substring(2, 15),
     sessionStartTime: Date.now(),
@@ -235,4 +235,17 @@ export const createInitialSessionData = (
     },
     outgoingEvents: []
   };
+
+  // Dynamic objective for Level 1.2
+  if (levelConfig?.id === '1.2' && session.activeLevelConfig) {
+    const finishHex = Object.values(initialGrid).find(h => h.structureType === 'CAPITAL');
+    if (finishHex) {
+      session.activeLevelConfig = {
+        ...levelConfig,
+        objectiveHexes: [{ q: finishHex.q, r: finishHex.r, targetLevel: 99, label: '↑', color: 'emerald' }]
+      };
+    }
+  }
+
+  return session;
 };

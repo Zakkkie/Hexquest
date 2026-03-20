@@ -95,6 +95,20 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         maxEnergyBonus: 5
     },
     {
+        idPrefix: 'tutorial_mark',
+        rarity: 'RARE',
+        name: { EN: 'Syndicate Mark', RU: 'Метка Синдиката' },
+        description: { EN: 'A proof of completing a simulation level.', RU: 'Доказательство прохождения уровня симуляции.' },
+        visualType: 'CHIP',
+        visualColor: '#f59e0b',
+        effectType: 'ADD_MOVES',
+        effectValue: 0,
+        effectLabel: { EN: 'Proof of Rank', RU: 'Доказательство Ранга' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 0,
+        negativeEffectLabel: { EN: '', RU: '' },
+    },
+    {
         idPrefix: 'speed_boots',
         rarity: 'UNCOMMON',
         name: { EN: 'Speed Boots', RU: 'Сапоги Скорости' },

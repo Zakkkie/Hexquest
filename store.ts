@@ -100,6 +100,9 @@ interface GameStore extends GameState {
   
   checkTutorialCamera: (deltaX: number) => void;
 
+  hasHydrated: boolean;
+  setHasHydrated: (val: boolean) => void;
+  
   // Overworld
   initOverworld: (skipIntro?: boolean) => void;
   moveOverworldPlayer: (path: HexCoord[]) => Promise<void>;
@@ -144,6 +147,7 @@ export const useGameStore = create<GameStore>()(
       campaignProgress: 0, 
       activePoi: null,
       hasActiveSession: false,
+      hasHydrated: false,
       isMusicMuted: false,
       isSfxMuted: false,
       session: null,
@@ -178,6 +182,8 @@ export const useGameStore = create<GameStore>()(
       setDeviceType: (deviceType) => set({ deviceType }),
       showToast: (message, type) => set({ toast: { message, type, timestamp: Date.now() } }),
       hideToast: () => set({ toast: null }),
+
+      setHasHydrated: (val) => set({ hasHydrated: val }),
 
       // --- AUDIO ---
       toggleMusic: () => {
@@ -281,7 +287,27 @@ export const useGameStore = create<GameStore>()(
 
       resetProgress: () => {
           get().abandonSession();
-          set({ campaignProgress: 0, overworld: undefined });
+          set({ 
+              campaignProgress: 0, 
+              overworld: {
+                  grid: {},
+                  player: {
+                      q: 0, r: 0, hp: 100, maxHp: 100, energy: 50, maxEnergy: 50, credits: 0,
+                      equipment: {}, bag: [], reputation: 0, stepCount: 0
+                  },
+                  isGenerated: false,
+                  seed: 0,
+                  flags: {},
+                  activeEventId: null,
+                  activeEventNodeId: null,
+                  actionProgress: 0,
+                  activeAction: null,
+                  visitedHexes: {},
+                  isOverworldMoving: false,
+                  isWorldMap: false,
+                  lastChoiceResult: null,
+              }
+          });
       },
 
       downloadSessionLog: () => {
@@ -613,12 +639,16 @@ export const useGameStore = create<GameStore>()(
 
       // --- OVERWORLD ---
       initOverworld: async (skipIntro = false) => {
+          if (!get().hasHydrated) return; // Wait for hydration
           const isFirstTime = !get().overworld.isGenerated;
           if (isFirstTime && !skipIntro) {
               set({ uiState: 'INTRO', introNextState: 'INTERIOR' });
           }
           try {
               const { generateOverworld } = await import('./services/OverworldGenerator.ts');
+              // Check again after import to prevent race conditions
+              if (get().overworld.isGenerated && !skipIntro) return; 
+              
               const seed = Math.random();
               const grid = generateOverworld(20, seed, false); // Start in City View
               set(state => ({
@@ -807,16 +837,22 @@ export const useGameStore = create<GameStore>()(
                       return { overworld: newOverworld };
                   });
                   
-                  // Check for city exit
-                  if (!currentOverworld.isWorldMap && hex.poiId === 'city_checkpoint') {
+                  // Check for city entry/exit
+                  if (currentOverworld.isWorldMap && hex.terrainType === 'CITY') {
+                      setTimeout(() => get().triggerEvent('city_entry_dialog'), 10);
+                      shouldBreak = true;
+                  } else if (!currentOverworld.isWorldMap && hex.poiId === 'city_checkpoint' && !currentOverworld.flags?.['has_city_pass']) {
                       const marks = currentOverworld.tutorialMarks || 0;
                       if (marks >= 6) {
-                          await get().transitionToWorldMap();
-                          shouldBreak = true;
-                      } else {
-                          get().showToast(TEXT[state.language].TOAST.CITY_EXIT_DENIED, 'error');
-                          shouldBreak = true;
+                          set(state => {
+                              const newOverworld = { ...state.overworld };
+                              if (!newOverworld.flags) newOverworld.flags = {};
+                              newOverworld.flags['has_6_marks'] = true;
+                              return { overworld: newOverworld };
+                          });
                       }
+                      setTimeout(() => get().triggerEvent('city_exit_checkpoint'), 10);
+                      shouldBreak = true;
                   }
                   
                   if (shouldBreak) break;
@@ -1395,10 +1431,11 @@ export const useGameStore = create<GameStore>()(
                               
                               // Award Tutorial Mark if it was a Season 1 level and not already completed
                               if (!newOverworld.flags) newOverworld.flags = {};
-                              if (!newOverworld.flags[`level_${levelId}_completed`]) {
-                                  newOverworld.tutorialMarks = (newOverworld.tutorialMarks || 0) + 1;
-                                  newOverworld.flags[`level_${levelId}_completed`] = true;
-                              }
+                               if (!newOverworld.flags[`level_${levelId}_completed`]) {
+                                   newOverworld.tutorialMarks = (newOverworld.tutorialMarks || 0) + 1;
+                                   newOverworld.flags[`level_${levelId}_completed`] = true;
+                                   player.bag.push('tutorial_mark');
+                               }
                           } else {
                           get().showToast(TEXT[get().language].TOAST.RIFT_VICTORY.replace('{0}', '50'), 'success');
                       }
@@ -1523,6 +1560,7 @@ export const useGameStore = create<GameStore>()(
                   if (choice.reward.hp) player.hp = Math.min(player.maxHp, player.hp + choice.reward.hp);
                   if (choice.reward.energy) player.energy = Math.min(player.maxEnergy, player.energy + choice.reward.energy);
                   if (choice.reward.items) player.bag.push(...choice.reward.items);
+                  if (choice.reward.tutorialMarks) newOverworld.tutorialMarks = (newOverworld.tutorialMarks || 0) + choice.reward.tutorialMarks;
               }
 
               // Apply penalties
@@ -1530,6 +1568,7 @@ export const useGameStore = create<GameStore>()(
                   if (choice.penalty.credits) player.credits = Math.max(0, player.credits - choice.penalty.credits);
                   if (choice.penalty.hp) player.hp = Math.max(0, player.hp - choice.penalty.hp);
                   if (choice.penalty.energy) player.energy = Math.max(0, player.energy - choice.penalty.energy);
+                  if (choice.penalty.tutorialMarks) newOverworld.tutorialMarks = Math.max(0, (newOverworld.tutorialMarks || 0) - choice.penalty.tutorialMarks);
                   if (choice.penalty.items) {
                       choice.penalty.items.forEach(item => {
                           const idx = player.bag.indexOf(item);
@@ -1630,6 +1669,29 @@ export const useGameStore = create<GameStore>()(
 
               return { overworld: newOverworld };
           });
+
+          // After set, check for special flags that trigger transitions
+          const state = get();
+          if (state.overworld.flags['entered_city']) {
+              set({ uiState: 'INTERIOR' });
+              set(state => {
+                  const newOverworld = { ...state.overworld };
+                  delete newOverworld.flags['entered_city'];
+                  newOverworld.activeEventId = null;
+                  newOverworld.activeEventNodeId = null;
+                  return { overworld: newOverworld };
+              });
+          }
+          if (state.overworld.flags['city_exit_granted']) {
+              get().transitionToWorldMap();
+              set(state => {
+                  const newOverworld = { ...state.overworld };
+                  delete newOverworld.flags['city_exit_granted'];
+                  newOverworld.activeEventId = null;
+                  newOverworld.activeEventNodeId = null;
+                  return { overworld: newOverworld };
+              });
+          }
       },
 
       equipItem: (itemId: string, slot: 'head' | 'body' | 'tool' | 'artifact' | 'feet' | 'necklace' | 'ring', bagIndex: number) => {
@@ -1975,6 +2037,15 @@ export const useGameStore = create<GameStore>()(
     {
       name: 'hexquest-storage-v4',
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: (state) => {
+        return (rehydratedState, error) => {
+          if (error) {
+            console.error('Hydration error:', error);
+          } else if (rehydratedState) {
+            rehydratedState.setHasHydrated(true);
+          }
+        };
+      },
       partialize: (state) => ({ 
           user: state.user, 
           leaderboard: state.leaderboard,

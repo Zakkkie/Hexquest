@@ -307,9 +307,9 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
   }, [q, r, hexLevel, finalColor, onMoveComplete]); 
 
   return (
-    <Group opacity={opacity}>
-      <Group ref={groupRef} listening={false}>
-        <Group ref={visualGroupRef}>
+    <Group opacity={opacity} perfectDrawEnabled={false} listening={false}>
+      <Group ref={groupRef} listening={false} perfectDrawEnabled={false}>
+        <Group ref={visualGroupRef} perfectDrawEnabled={false}>
             {/* Shadow */}
             <Ellipse 
                 ref={shadowRef} 

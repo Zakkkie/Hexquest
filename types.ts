@@ -323,8 +323,8 @@ export interface OverworldEventChoice {
   reqRepMax?: number;
   /** Only show after player.stepCount >= this value */
   reqStepMin?: number;
-  reward?: { credits?: number; hp?: number; energy?: number; items?: string[] };
-  penalty?: { credits?: number; hp?: number; energy?: number; items?: string[] };
+  reward?: { credits?: number; hp?: number; energy?: number; items?: string[]; tutorialMarks?: number };
+  penalty?: { credits?: number; hp?: number; energy?: number; items?: string[]; tutorialMarks?: number };
 }
 
 export interface OverworldEventNode {

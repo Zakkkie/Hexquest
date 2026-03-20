@@ -138,7 +138,7 @@ BASE_PATH_D += " Z";
 const SelectionGlow = React.memo(({ x, y, offsetY, rotation }: any) => (
     <Group x={x} y={y} scaleY={0.8} perfectDrawEnabled={false} listening={false}>
         <Group rotation={rotation} y={offsetY} perfectDrawEnabled={false}>
-            <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
+            <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} perfectDrawEnabled={false} shadowForStrokeEnabled={false} listening={false} />
         </Group>
     </Group>
 ));
@@ -469,12 +469,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
         return getTutorialData(grid, player, activeLevelConfig?.id);
     }, [grid, player, activeLevelConfig?.id]);
 
-    const NEIGHBOR_OFFSETS = [
-    { q: 0, r: 1 }, { q: -1, r: 1 }, { q: -1, r: 0 }, 
-    { q: 0, r: -1 }, { q: 1, r: -1 }, { q: 1, r: 0 }
-];
-
-const renderList = useMemo(() => {
+    const renderList = useMemo(() => {
         if (!grid || !player) return { items: [] };
 
         const items: any[] = [];
@@ -487,7 +482,7 @@ const renderList = useMemo(() => {
             for (const hex of hexes) {
                 const distToPlayer = cubeDistance({ q: player.q, r: player.r }, { q: hex.q, r: hex.r });
                 // Still keep some culling for extreme distances to prevent browser crash, but no visual LOD
-                if (distToPlayer > 25) continue;
+                if (distToPlayer > 20) continue;
 
                 const rawX = HEX_SIZE * (SQRT3 * hex.q + SQRT3_2 * hex.r);
                 const rawY = HEX_SIZE * (ONE_POINT_FIVE * hex.r);
@@ -495,8 +490,8 @@ const renderList = useMemo(() => {
                 const py = (rawX * sin + rawY * cos) * 0.8;
 
                 let opacity = 1.0;
-                if (distToPlayer > 20) {
-                    opacity = Math.max(0, 1.0 - (distToPlayer - 20) / 5);
+                if (distToPlayer > 16) {
+                    opacity = Math.max(0, 1.0 - (distToPlayer - 16) / 4);
                 }
                 if (opacity <= 0) continue;
 
@@ -508,13 +503,7 @@ const renderList = useMemo(() => {
                 const isOccupiedByPlayer = hex.q === player.q && hex.r === player.r;
                 const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, player, grid, tutorialData, activeLevelConfig);
 
-                let neighborLevels = new Array(6);
-                for(let i=0; i<6; i++) {
-                    const d = NEIGHBOR_OFFSETS[i];
-                    const nKey = `${hex.q + d.q},${hex.r + d.r}`;
-                    const nHex = grid[nKey];
-                    neighborLevels[i] = (nHex && (nHex.structureType as string) !== 'VOID') ? (nHex.currentLevel ?? 0) : VOID_LEVEL_FLAG;
-                }
+                const neighborLevels = hex.neighborLevels || [VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG];
 
                 items.push({
                     type: 'HEX',

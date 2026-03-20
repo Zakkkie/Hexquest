@@ -303,6 +303,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
         onClick={handleClick} onTap={handleClick}
         onMouseEnter={handleHover} onMouseLeave={handleHoverEnd}
         perfectDrawEnabled={false}
+        listening={true}
+        transformsEnabled="position"
         opacity={opacity}
     >
         {/* 1. WALLS */}
@@ -448,16 +450,16 @@ const HexNodeComponent = (props: HexNodeProps) => {
                                 strokeWidth={2} 
                                 opacity={0.8}
                                 perfectDrawEnabled={false}
+                                listening={false}
                             />
                         ) : (
-                            <Text 
-                                text="✖" 
-                                fontSize={14} 
-                                fill="#ef4444" 
-                                offsetX={5} 
-                                offsetY={7} 
+                            <Circle 
+                                radius={6}
+                                stroke="#ef4444"
+                                strokeWidth={2}
                                 opacity={0.6}
-                                perfectDrawEnabled={false} 
+                                perfectDrawEnabled={false}
+                                listening={false}
                             />
                         )}
                     </Group>

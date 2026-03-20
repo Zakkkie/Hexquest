@@ -2,6 +2,21 @@ import { LevelConfig } from '../types';
 import { getHexKey, getNeighbors } from '../services/hexUtils';
 import { isStranded } from './utils';
 
+const generateSymmetricLayout = (radius: number) => {
+  const layout = [];
+  for (let q = -radius; q <= radius; q++) {
+    for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
+      const d = Math.round((Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2);
+      const level = d % 3;
+      const hex: any = { q, r, currentLevel: level, maxLevel: level, revealed: true };
+      if (q === 1 && r === 0) hex.ownerId = 'player-1';
+      if (q === -1 && r === 0) hex.ownerId = 'bot-1';
+      layout.push(hex);
+    }
+  }
+  return layout;
+};
+
 export const series1Levels: LevelConfig[] = [
   {
     id: '1.1',
@@ -9,7 +24,7 @@ export const series1Levels: LevelConfig[] = [
     description: 'Цель: Улучшите 3 отмеченных гекса вокруг вас. Не тратьте материалы на другие гексы. Если вы потратите материал не на цель, вы проиграете.',
     goalText: 'Улучшите 3 отмеченных гекса',
     mapConfig: {
-      size: 3, type: 'fixed', generateWalls: false,
+      size: 1, type: 'fixed', generateWalls: false,
       customLayout: [
         // Центр (Игрок)
         { q: 0, r: 0, maxLevel: 0, currentLevel: 0, revealed: true, ownerId: 'player-1' },
@@ -20,19 +35,6 @@ export const series1Levels: LevelConfig[] = [
         { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
         { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
         { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-        // Радиус 2 (Окружение уровня -8)
-        { q: 2, r: 0, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: 2, r: -1, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: 2, r: -2, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: 1, r: -2, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: 0, r: -2, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: -1, r: -1, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: -2, r: 0, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: -2, r: 1, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: -2, r: 2, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: -1, r: 2, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: 0, r: 2, maxLevel: -8, currentLevel: -8, revealed: true },
-        { q: 1, r: 1, maxLevel: -8, currentLevel: -8, revealed: true },
       ]
     },
     objectiveHexes: [
@@ -153,8 +155,8 @@ export const series1Levels: LevelConfig[] = [
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           { q: 2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
+          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           { q: -2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: 0, r: 2, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: 0, r: -2, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
@@ -177,23 +179,15 @@ export const series1Levels: LevelConfig[] = [
   },
   {
     id: '1.6',
-    title: 'Sim 1.6: Vertical Limit',
-    description: 'Protocol: Altitude Test.\n\nObjective: Reach Level 4.\n\nConstraint: Space is extremely limited. A rival is competing for the same peak. Manage your footprint carefully.',
+    title: 'Sim 1.6: Вертикальный Предел',
+    description: 'Цель: Достигните 4-го уровня быстрее бота.\n\nПоле радиусом 5 гексов с симметричным рельефом (уровни 0-2). Игрок и бот начинают на равных условиях на 1-м уровне.',
+    goalText: 'Достигните 4-го уровня быстрее бота',
     mapConfig: {
-      size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
-      customLayout: [
-          { q: 0, r: 2,  maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 0, r: 1,  maxLevel: 1, currentLevel: 1, revealed: true },   // Bridge (player → center)
-          { q: 0, r: 0,  maxLevel: 2, currentLevel: 2, revealed: true },   // Central L2 (starting point for L3)
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },   // Bridge (center → bot)
-          { q: 0, r: -2, maxLevel: 1, currentLevel: 1, ownerId: 'bot-1',   revealed: true },
-          // L2 support neighbors to enable L3 progression (pre-built)
-          { q: 1, r: 0,  maxLevel: 2, currentLevel: 2, revealed: true },   // L2 support (east)
-          { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },   // L2 support (west)
-      ]
+      size: 5, type: 'fixed', generateWalls: false,
+      customLayout: generateSymmetricLayout(5)
     },
-    startState: { credits: 30, moves: 5, rank: 1, materials: 8, initialEntropy: 30 },
-    botSpawnPoints: [{ q: 0, r: -2 }],
+    startState: { credits: 100, moves: 20, rank: 1, materials: 5, initialEntropy: 100 },
+    botSpawnPoints: [{ q: -1, r: 0 }],
     botObjective: 'COMPETE_RANK',
     aiMode: 'basic',
     hooks: {

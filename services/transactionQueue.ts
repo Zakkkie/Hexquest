@@ -38,11 +38,6 @@ export class TransactionQueue {
 
         const result = processor(tx.actorId, tx.action);
         results.push(result);
-        
-        // Micro-yield to main thread to allow UI updates or events to interleave if batch is large
-        if (i % 5 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 0));
-        }
       }
     } finally {
       this.processing = false;

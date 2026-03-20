@@ -54,7 +54,7 @@ export class TextureService {
     } else if (level < 0) {
         this.drawNegative(ctx, size, level, seed, terrainType, poiId);
     } else {
-        this.drawNeutral(ctx, size, terrainType, poiId);
+        this.drawNeutral(ctx, size, seed, terrainType, poiId);
     }
     
     // Add procedural noise to simulate texture file grain
@@ -158,26 +158,51 @@ export class TextureService {
 
       // 4. Central Rank Symbol
       ctx.fillStyle = accentColor;
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 2;
       
       if (level === 1) {
-          ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2); ctx.fill();
+          // Circle
+          ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2); ctx.fill();
       } else if (level === 2) {
-          ctx.fillRect(cx-5, cy-5, 10, 10);
+          // Square
+          ctx.fillRect(cx-6, cy-6, 12, 12);
       } else if (level === 3) {
+          // Triangle
           ctx.beginPath();
-          ctx.moveTo(cx, cy-6); ctx.lineTo(cx+6, cy+5); ctx.lineTo(cx-6, cy+5);
+          ctx.moveTo(cx, cy-8); ctx.lineTo(cx+8, cy+6); ctx.lineTo(cx-8, cy+6);
           ctx.fill();
-      } else if (level <= 6) {
-          ctx.strokeStyle = accentColor;
-          ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI*2); ctx.stroke();
-          if (level >= 5) { ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill(); } 
-          if (level === 6) { ctx.beginPath(); ctx.moveTo(cx-10, cy); ctx.lineTo(cx+10, cy); ctx.moveTo(cx, cy-10); ctx.lineTo(cx, cy+10); ctx.stroke(); } 
+      } else if (level === 4) {
+          // Diamond
+          ctx.beginPath();
+          ctx.moveTo(cx, cy-9); ctx.lineTo(cx+9, cy); ctx.lineTo(cx, cy+9); ctx.lineTo(cx-9, cy);
+          ctx.fill();
+      } else if (level === 5) {
+          // Pentagon
+          ctx.beginPath();
+          for(let i=0; i<5; i++) {
+              const a = (i * 72 - 90) * Math.PI / 180;
+              const px = cx + 9 * Math.cos(a);
+              const py = cy + 9 * Math.sin(a);
+              if(i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.fill();
+      } else if (level === 6) {
+          // Hexagon (Small)
+          this.drawHexagon(ctx, cx, cy, 9);
+          ctx.fill();
+      } else if (level === 7) {
+          // Double Ring
+          ctx.beginPath(); ctx.arc(cx, cy, 9, 0, Math.PI*2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2); ctx.fill();
       } else {
-          ctx.font = 'bold 24px monospace';
+          // High Levels: Special Glyphs
+          ctx.font = 'bold 26px monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(level >= 9 ? '★' : '◆', cx, cy + 2);
+          const glyphs = ['◆', '★', '◈', 'Ω', '☼'];
+          const glyph = glyphs[Math.min(glyphs.length - 1, level - 8)];
+          ctx.fillText(glyph, cx, cy + 2);
       }
       
       // 5. Tech Decor (Circuitry)
@@ -259,7 +284,7 @@ export class TextureService {
   }
 
   // === NEUTRAL STYLE (L0) ===
-  private drawNeutral(ctx: CanvasRenderingContext2D, size: number, terrainType?: string, poiId?: string) {
+  private drawNeutral(ctx: CanvasRenderingContext2D, size: number, seed: number, terrainType?: string, poiId?: string) {
       let baseColor = '#1e293b';
       let strokeColor = '#334155';
 
@@ -280,14 +305,23 @@ export class TextureService {
       this.drawHexagon(ctx, cx, cy, 28);
       ctx.stroke();
 
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 1;
-      if (terrainType !== 'CITY' && terrainType !== 'BUILDING' && terrainType !== 'WALL') {
-          ctx.beginPath();
-          ctx.moveTo(cx-4, cy); ctx.lineTo(cx+4, cy);
-          ctx.moveTo(cx, cy-4); ctx.lineTo(cx, cy+4);
-          ctx.stroke();
+      // Add variety based on seed (shapes instead of crosses)
+      ctx.fillStyle = strokeColor;
+      ctx.globalAlpha = 0.4;
+      const shapeType = seed % 4;
+      if (shapeType === 0) {
+          ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2); ctx.fill();
+      } else if (shapeType === 1) {
+          ctx.fillRect(cx-4, cy-4, 8, 8);
+      } else if (shapeType === 2) {
+          ctx.beginPath(); 
+          ctx.moveTo(cx, cy-6); ctx.lineTo(cx+6, cy+4); ctx.lineTo(cx-6, cy+4); 
+          ctx.fill();
+      } else {
+          this.drawHexagon(ctx, cx, cy, 6); 
+          ctx.fill();
       }
+      ctx.globalAlpha = 1.0;
   }
 
   // === SIDE TEXTURES: Strata ===

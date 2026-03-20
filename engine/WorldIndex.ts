@@ -29,23 +29,41 @@ export class WorldIndex {
    * systems from reading stale entity data (coins, moves, state) via the index.
    */
   public syncState(state: { grid: Record<string, Hex>; player: Entity; bots: Entity[] }) {
-      this.grid = state.grid;
-      
-      // Update Entity Map with NEW object references
-      this.entities.clear();
-      const allEntities = [state.player, ...state.bots];
-      for (const e of allEntities) {
-          this.entities.set(e.id, e);
+      if (!state) return;
+      try {
+          this.grid = state.grid;
+          
+          // Update Entity Map with NEW object references
+          this.entities.clear();
+          const allEntities = [state.player, ...state.bots];
+          for (const e of allEntities) {
+              if (e && e.id) {
+                  this.entities.set(e.id, e);
+              }
+          }
+          
+          // Re-sync occupied hexes to ensure spatial consistency after state transition
+          this.occupiedHexes.clear();
+          for (const ent of this.entities.values()) {
+              this.occupiedHexes.set(getHexKey(ent.q, ent.r), ent.id);
+          }
+      } catch (error) {
+          console.warn('WorldIndex: syncState failed (likely revoked proxy)', error);
       }
-      
-      // Note: We do NOT need to rebuild occupiedHexes here if this is called 
-      // at the start of a tick/action, because positions (q,r) haven't changed 
-      // relative to the index's knowledge yet. MovementSystem handles spatial updates.
-      // However, we MUST rebuild if the grid structure changed drastically (rare).
   }
 
   public syncGrid(grid: Record<string, Hex>) {
-      this.grid = grid;
+      if (!grid) return;
+      try {
+          this.grid = grid;
+          // Also ensure occupied hexes are still correct relative to current entities
+          this.occupiedHexes.clear();
+          for (const ent of this.entities.values()) {
+              this.occupiedHexes.set(getHexKey(ent.q, ent.r), ent.id);
+          }
+      } catch (error) {
+          console.warn('WorldIndex: syncGrid failed (likely revoked proxy)', error);
+      }
   }
 
   private initEntities(entities: Entity[]) {
@@ -105,32 +123,52 @@ export class WorldIndex {
   }
 
   public updateEntityPosition(entityId: string, oldQ: number, oldR: number, newQ: number, newR: number) {
-      const oldKey = getHexKey(oldQ, oldR);
-      const newKey = getHexKey(newQ, newR);
+      try {
+          const oldKey = getHexKey(oldQ, oldR);
+          const newKey = getHexKey(newQ, newR);
 
-      // Validate sync
-      if (this.occupiedHexes.get(oldKey) === entityId) {
-          this.occupiedHexes.delete(oldKey);
-      }
-      this.occupiedHexes.set(newKey, entityId);
-      
-      // Update the reference object itself to be safe, though MovementSystem usually does this too.
-      const ent = this.entities.get(entityId);
-      if (ent) {
-          ent.q = newQ;
-          ent.r = newR;
+          // Validate sync
+          if (this.occupiedHexes.get(oldKey) === entityId) {
+              this.occupiedHexes.delete(oldKey);
+          }
+          this.occupiedHexes.set(newKey, entityId);
+          
+          // Update the reference object itself to be safe
+          const ent = this.entities.get(entityId);
+          if (ent) {
+              ent.q = newQ;
+              ent.r = newR;
+          }
+      } catch (error) {
+          console.warn('WorldIndex: updateEntityPosition failed', error);
       }
   }
 
   // --- Queries ---
 
   public isOccupied(q: number, r: number): boolean {
-    return this.occupiedHexes.has(getHexKey(q, r));
+    try {
+        return this.occupiedHexes.has(getHexKey(q, r));
+    } catch {
+        return false;
+    }
   }
   
   public getEntityAt(q: number, r: number): Entity | undefined {
-      const id = this.occupiedHexes.get(getHexKey(q, r));
-      return id ? this.entities.get(id) : undefined;
+      try {
+          const id = this.occupiedHexes.get(getHexKey(q, r));
+          const ent = id ? this.entities.get(id) : undefined;
+          
+          // Verify proxy is still valid
+          if (ent) {
+              // Accessing id will throw if revoked
+              const _ = ent.id;
+          }
+          return ent;
+      } catch (error) {
+          console.warn('WorldIndex: getEntityAt detected revoked proxy', error);
+          return undefined;
+      }
   }
 
   public getOccupiedHexesList(): HexCoord[] {

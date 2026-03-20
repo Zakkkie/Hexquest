@@ -142,26 +142,6 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     const wallType = levelConfig?.mapConfig.wallType ?? 'classic';
     const shouldGenerateWalls = levelConfig?.mapConfig.generateWalls ?? true; 
 
-    if (shouldGenerateWalls && dist >= wallStartRadius) {
-        if (wallType === 'void_shatter') {
-            if (dist === wallStartRadius) {
-                structureType = 'VOID';
-                level = 0;
-            } else {
-                level = 0;
-                structureType = undefined;
-            }
-        } else if (wallType === 'pit_ring') {
-            level = -8;
-            structureType = undefined;
-            forceReveal = true;
-        } else {
-            level = Math.min(99, wallStartLevel + (dist - wallStartRadius));
-            structureType = 'BARRIER';
-            isPassable = false;
-        }
-    }
-
     // Default center always safe
     if (q === 0 && r === 0) {
         level = 0;
@@ -250,21 +230,66 @@ export const ensureMonumentAccessibility = (
   return updatedGrid;
 };
 
+export const generateLevel12Map = (levelConfig: LevelConfig): Record<string, Hex> => {
+    const grid: Record<string, Hex> = {};
+    const path: HexCoord[] = [
+        { q: 0, r: 0 }, { q: 1, r: -1 }, { q: 2, r: -2 }, { q: 3, r: -3 },
+        { q: 3, r: -2 }, { q: 3, r: -1 }, { q: 4, r: -1 }, { q: 5, r: -1 },
+        { q: 5, r: 0 }, { q: 5, r: 1 }, { q: 4, r: 2 }, { q: 3, r: 3 },
+        { q: 2, r: 3 }, { q: 1, r: 3 }, { q: 0, r: 3 }, { q: -1, r: 3 },
+        { q: -2, r: 3 }, { q: -3, r: 3 }, { q: -3, r: 2 }, { q: -3, r: 1 },
+        { q: -4, r: 1 }, { q: -5, r: 1 }, { q: -5, r: 0 }
+    ];
+    const pathKeys = new Set(path.map(p => getHexKey(p.q, p.r)));
+
+    // Core hexes: path + 1-ring neighbors (unstable environment)
+    const coreKeys = new Set<string>();
+    for (const p of path) {
+        coreKeys.add(getHexKey(p.q, p.r));
+        for (const n of getNeighbors(p.q, p.r)) {
+            coreKeys.add(getHexKey(n.q, n.r));
+        }
+    }
+
+    for (const key of coreKeys) {
+        const [q, r] = key.split(',').map(Number);
+        const isPath = pathKeys.has(key);
+        const isFinish = q === -5 && r === 0;
+        grid[key] = {
+            id: key, q, r,
+            currentLevel: 1, maxLevel: 1, progress: 0, revealed: true,
+            durability: isPath ? 3 : 1,
+            biome: isFinish ? 'CITY' : (isPath ? 'ROAD' : 'PLAINS'),
+            structureType: isFinish ? 'CAPITAL' : undefined,
+            isPassable: true,
+            ownerId: (q === 0 && r === 0) ? 'player-1' : undefined
+        };
+    }
+
+    return grid;
+};
+
 export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTIC' = 'FLAT'): Record<string, Hex> => {
   let initialGrid: Record<string, Hex> = {};
-  
-  // For Battle (Skirmish), start with a very small radius (3) and load lazily
-  const radius = levelConfig?.mapConfig.size ?? 3;
+  const baseRadius = levelConfig?.mapConfig.size ?? 3;
+  const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? baseRadius;
+  const shouldGenerateWalls = levelConfig?.mapConfig.generateWalls ?? true;
 
-  for (let q = -radius; q <= radius; q++) {
-      const r1 = Math.max(-radius, -q - radius);
-      const r2 = Math.min(radius, -q + radius);
-      for (let r = r1; r <= r2; r++) {
-          const hex = generateSingleHex(q, r, levelConfig, mapType);
-          initialGrid[hex.id] = hex;
+  // 1. Generate core area
+  if (levelConfig?.id === '1.2') {
+    initialGrid = generateLevel12Map(levelConfig);
+  } else if (levelConfig?.mapConfig.type !== 'fixed') {
+      for (let q = -wallStartRadius; q <= wallStartRadius; q++) {
+          const r1 = Math.max(-wallStartRadius, -q - wallStartRadius);
+          const r2 = Math.min(wallStartRadius, -q + wallStartRadius);
+          for (let r = r1; r <= r2; r++) {
+              const hex = generateSingleHex(q, r, levelConfig, mapType);
+              initialGrid[hex.id] = hex;
+          }
       }
   }
 
+  // 2. Overlay custom layout
   if (levelConfig && levelConfig.mapConfig.customLayout) {
       levelConfig.mapConfig.customLayout.forEach(hexDef => {
           if (hexDef.q === undefined || hexDef.r === undefined) return;
@@ -283,6 +308,68 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
           };
       });
   }
+
+  // 3. Add the 3-ring border around EVERYTHING currently in the grid
+  const coreKeys = Object.keys(initialGrid);
+  const visited = new Map<string, number>();
+  const queue: { q: number, r: number, d: number }[] = [];
+
+  // Optimization: Start BFS only from boundary hexes of the core area
+  for (const key of coreKeys) {
+      const h = initialGrid[key];
+      visited.set(key, 0);
+      
+      const neighbors = getNeighbors(h.q, h.r);
+      const isBoundary = neighbors.some(n => !initialGrid[getHexKey(n.q, n.r)]);
+      if (isBoundary) {
+          queue.push({ q: h.q, r: h.r, d: 0 });
+      }
+  }
+
+  let head = 0;
+  while (head < queue.length) {
+      const { q, r, d } = queue[head++];
+      if (d >= 3) continue;
+
+      for (const n of getNeighbors(q, r)) {
+          const nKey = getHexKey(n.q, n.r);
+          if (!visited.has(nKey)) {
+              visited.set(nKey, d + 1);
+              queue.push({ ...n, d: d + 1 });
+              
+              let level = -8;
+              if (d + 1 === 1) level = -10;
+              else if (d + 1 === 2) level = -9;
+
+              initialGrid[nKey] = {
+                  id: nKey, q: n.q, r: n.r,
+                  currentLevel: level, maxLevel: level, progress: 0, revealed: true,
+                  biome: 'WATER',
+                  isPassable: true
+              };
+          }
+      }
+  }
+
+  // 4. Pre-calculate neighbor levels and boundary status for rendering optimization
+  const VOID_LEVEL_FLAG = -99;
+  Object.values(initialGrid).forEach(hex => {
+      const neighborLevels = new Array(6);
+      const neighbors = getNeighbors(hex.q, hex.r);
+      let isBoundary = false;
+      for (let i = 0; i < 6; i++) {
+          const nKey = getHexKey(neighbors[i].q, neighbors[i].r);
+          const nHex = initialGrid[nKey];
+          if (!nHex || nHex.structureType === 'VOID') {
+              neighborLevels[i] = VOID_LEVEL_FLAG;
+              isBoundary = true;
+          } else {
+              neighborLevels[i] = nHex.currentLevel ?? 0;
+          }
+      }
+      hex.neighborLevels = neighborLevels;
+      hex.isBoundary = isBoundary;
+  });
 
   const monuments = Object.values(initialGrid).filter(h => h.structureType === 'MONUMENT');
   for (const m of monuments) {

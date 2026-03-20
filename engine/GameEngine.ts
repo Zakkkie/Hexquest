@@ -101,71 +101,79 @@ export class GameEngine {
     // Create an immer draft for the entire state to enable structural sharing without GC pressure
     const nextState = createDraft(this._state);
     
-    this._index.syncGrid(nextState.grid); 
+    try {
+        this._index.syncGrid(nextState.grid); 
 
-    const tickEvents: GameEvent[] = [...nextState.outgoingEvents];
-    nextState.outgoingEvents = []; 
+        const tickEvents: GameEvent[] = [...nextState.outgoingEvents];
+        nextState.outgoingEvents = []; 
 
-    // 1. Cleanup old effects every tick
-    const now = Date.now();
-    nextState.effects = nextState.effects.filter(e => now - e.startTime < e.lifetime);
-    if (nextState.effects.length > 30) {
-        nextState.effects.splice(0, nextState.effects.length - 30);
-    }
+        // 1. Cleanup old effects every tick
+        const now = Date.now();
+        nextState.effects = nextState.effects.filter(e => now - e.startTime < e.lifetime);
+        if (nextState.effects.length > 30) {
+            nextState.effects.splice(0, nextState.effects.length - 30);
+        }
 
-    // 2. Update Systems (AI will populate TransactionQueue)
-    for (const system of this._systems) {
-        system.update(nextState, this._index, tickEvents);
-    }
+        // 2. Update Systems (AI will populate TransactionQueue)
+        for (const system of this._systems) {
+            system.update(nextState, this._index, tickEvents);
+        }
 
-    // 3. Process Transaction Queue (Async)
-    if (!this._transactionQueue.isEmpty()) {
-        this._index.syncState(nextState);
-        
-        await this._transactionQueue.processQueue((actorId, action) => {
-            const result = this._actionProcessor!.applyAction(nextState, this._index!, actorId, action);
+        // 3. Process Transaction Queue (Async)
+        if (!this._transactionQueue.isEmpty()) {
+            this._index.syncState(nextState);
             
-            if (result.ok) {
-                if (action.type === 'MOVE') {
-                    const actor = actorId === nextState.player.id ? nextState.player : nextState.bots.find(b => b.id === actorId);
-                    if (actor) {
-                        this._index!.syncState(nextState);
+            await this._transactionQueue.processQueue((actorId, action) => {
+                const result = this._actionProcessor!.applyAction(nextState, this._index!, actorId, action);
+                
+                if (result.ok) {
+                    if (action.type === 'MOVE') {
+                        const actor = actorId === nextState.player.id ? nextState.player : nextState.bots.find(b => b.id === actorId);
+                        if (actor) {
+                            this._index!.syncState(nextState);
+                        }
                     }
+                } else {
+                    tickEvents.push({
+                        type: 'ERROR',
+                        message: `Action Failed: ${result.reason}`,
+                        entityId: actorId,
+                        timestamp: Date.now()
+                    });
                 }
-            } else {
-                tickEvents.push({
-                    type: 'ERROR',
-                    message: `Action Failed: ${result.reason}`,
-                    entityId: actorId,
-                    timestamp: Date.now()
-                });
-            }
-            return result;
-        });
+                return result;
+            });
+        }
+
+        // 4. Campaign Hook: onAfterAction
+        if (nextState.activeLevelConfig?.hooks?.onAfterAction) {
+            nextState.activeLevelConfig.hooks.onAfterAction(nextState);
+        }
+
+        this.enforceSafetyLimits(nextState);
+
+        nextState.currentTurn++; 
+        nextState.stateVersion++;
+        
+        // Finalize the state draft
+        const finalState = finishDraft(nextState) as SessionState;
+        this._state = finalState;
+
+        return {
+            state: this._state,
+            events: tickEvents
+        };
+    } catch (error) {
+        console.error('GameEngine: processTick failed', error);
+        throw error;
+    } finally {
+        // CRITICAL: Sync index with final immutable state (or revert to old state if failed)
+        // This ensures no draft proxies leak out of the tick.
+        if (this._state && this._index) {
+            this._index.syncState(this._state);
+            this._index.syncGrid(this._state.grid);
+        }
     }
-
-    // 4. Campaign Hook: onAfterAction
-    if (nextState.activeLevelConfig?.hooks?.onAfterAction) {
-        nextState.activeLevelConfig.hooks.onAfterAction(nextState);
-    }
-
-    this.enforceSafetyLimits(nextState);
-
-    nextState.currentTurn++; 
-    nextState.stateVersion++;
-    
-    // Finalize the state draft
-    const finalState = finishDraft(nextState) as SessionState;
-    this._state = finalState;
-    
-    // Sync index with final immutable state
-    this._index.syncState(this._state);
-    this._index.syncGrid(this._state.grid);
-
-    return {
-        state: this._state,
-        events: tickEvents
-    };
   }
 
   private enforceSafetyLimits(state: SessionState) {

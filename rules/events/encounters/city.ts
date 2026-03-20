@@ -529,4 +529,85 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
     },
   },
 
+  city_entry_dialog: {
+    id: 'city_entry_dialog',
+    isUnique: false,
+    startNodeId: 'start',
+    nodes: {
+      start: {
+        id: 'start',
+        image: 'https://picsum.photos/seed/city_entry/800/350',
+        text: 'Вы подошли к воротам города. Стражники лениво осматривают прибывающих. «Проходи, не задерживайся,» — ворчит один из них. Желаете войти?',
+        choices: [
+          {
+            label: 'Зайти в город',
+            action: 'CLOSE',
+            setFlag: 'entered_city',
+          },
+          {
+            label: 'Остаться снаружи',
+            action: 'CLOSE',
+          },
+        ],
+      },
+    },
+  },
+
+  city_exit_checkpoint: {
+    id: 'city_exit_checkpoint',
+    isUnique: false,
+    startNodeId: 'start',
+    nodes: {
+      start: {
+        id: 'start',
+        image: 'https://picsum.photos/seed/city_checkpoint/800/350',
+        text: 'Блокпост на выезде из города. Офицер Синдиката преграждает путь. «Для выхода в пустоши требуется пропуск. Либо предъявите 6 меток обучения от наставника, либо оплатите пошлину в 300 монет.»',
+        choices: [
+          {
+            label: 'Предъявить 6 меток обучения',
+            action: 'GOTO_NODE',
+            reqFlag: 'has_6_marks',
+            nextNode: 'exit_success_marks',
+          },
+          {
+            label: 'Купить пропуск (300 монет)',
+            action: 'GOTO_NODE',
+            nextNode: 'exit_success_coins',
+            reqCredits: 300,
+          },
+          {
+            label: 'Вернуться в город',
+            action: 'CLOSE',
+          },
+        ],
+      },
+      exit_success_marks: {
+        id: 'exit_success_marks',
+        text: 'Офицер проверяет ваши метки. «Всё верно. Проходите. И не возвращайтесь без дела.» Вы получаете пропуск и выходите за ворота.',
+        choices: [
+          {
+            label: 'Выйти в пустоши',
+            action: 'CLOSE',
+            setFlag: ['city_exit_granted', 'has_city_pass'],
+            penalty: { tutorialMarks: 6 },
+            reward: { items: ['CITY_PASS'] }
+          }
+        ]
+      },
+      exit_success_coins: {
+        id: 'exit_success_coins',
+        text: 'Вы отсчитываете 300 монет. Офицер довольно усмехается, пряча кошель. «Счастливого пути, путник. Постарайся не сдохнуть там сразу.»',
+        choices: [
+          {
+            label: 'Выйти в пустоши',
+            action: 'CLOSE',
+            setFlag: ['city_exit_granted', 'has_city_pass'],
+            penalty: { credits: 300 },
+            reward: { items: ['CITY_PASS'] }
+          }
+        ]
+      }
+    },
+  },
+
 };

@@ -1814,30 +1814,16 @@ export const EVENT_REGISTRY: Record<string, OverworldEvent> = {
         text: 'Дорогу преграждает блокпост Синдиката. Вооружённые охранники смотрят холодно. «Пропуск или пошлина. Третьего не дано.»',
         choices: [
           {
-            label: 'Предъявить Запечатанное Письмо',
-            reqItem: 'SEALED_LETTER',
+            label: 'Отдать Метку Синдиката',
+            reqItem: 'tutorial_mark',
             action: 'GOTO_NODE',
-            nextNode: 'give_letter',
+            nextNode: 'give_tutorial_mark',
           },
           {
-            label: 'Показать жетон Братства',
+            label: 'Заплатить пошлину (300 Кредитов)',
             action: 'GOTO_NODE',
-            nextNode: 'brotherhood_pass',
-            reqItem: 'PILGRIM_TOKEN',
-          },
-          {
-            label: 'Показать метку Изгоев (рискованно)',
-            action: 'ROLL_DICE',
-            probability: 0.3,
-            successNode: 'exile_pass_success',
-            failNode: 'exile_pass_fail',
-            reqItem: 'EXILE_MARK',
-          },
-          {
-            label: 'Заплатить пошлину (50 Кредитов)',
-            action: 'GOTO_NODE',
-            nextNode: 'pay_toll',
-            reqCredits: 50,
+            nextNode: 'pay_toll_300',
+            reqCredits: 300,
           },
           {
             label: 'Прокрасться в обход (Шанс 40%)',
@@ -1849,6 +1835,28 @@ export const EVENT_REGISTRY: Record<string, OverworldEvent> = {
           {
             label: 'Уйти другим путём',
             action: 'CLOSE',
+          },
+        ],
+      },
+      give_tutorial_mark: {
+        id: 'give_tutorial_mark',
+        text: 'Охранник внимательно осматривает метку. «Настоящая. Проходи. И не попадайся нам больше.» Вас пропускают.',
+        choices: [
+          {
+            label: 'Пройти',
+            action: 'CLOSE',
+            penalty: { items: ['tutorial_mark'] },
+          },
+        ],
+      },
+      pay_toll_300: {
+        id: 'pay_toll_300',
+        text: 'Охранник небрежно берёт кредиты и отходит в сторону. «Дорогой нынче выход, а?»',
+        choices: [
+          {
+            label: 'Пройти',
+            action: 'CLOSE',
+            penalty: { credits: 300 },
           },
         ],
       },

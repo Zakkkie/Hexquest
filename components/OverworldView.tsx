@@ -23,6 +23,7 @@ import { Image as KonvaImage } from 'react-konva';
 const OverworldView: React.FC = () => {
   const overworld = useGameStore(state => state.overworld);
   const setUIState = useGameStore(state => state.setUIState);
+  const hasHydrated = useGameStore(state => state.hasHydrated);
   const initOverworld = useGameStore(state => state.initOverworld);
   const moveOverworldPlayer = useGameStore(state => state.moveOverworldPlayer);
   const restOverworld = useGameStore(state => state.restOverworld);
@@ -146,10 +147,10 @@ const OverworldView: React.FC = () => {
   }, [overworld.isGenerated]);
 
   useEffect(() => {
-    if (!overworld.isGenerated) {
+    if (hasHydrated && !overworld.isGenerated) {
       initOverworld();
     }
-  }, [overworld.isGenerated, initOverworld]);
+  }, [hasHydrated, overworld.isGenerated, initOverworld]);
 
   // Check if player can interact
   const canInteract = useCallback(() => {
