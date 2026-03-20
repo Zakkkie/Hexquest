@@ -116,6 +116,7 @@ interface GameStore extends GameState {
   setOverworldActionProgress: (progress: number) => void;
   setOverworldActiveAction: (action: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null) => void;
   transitionToWorldMap: () => Promise<void>;
+  transitionToCity: () => Promise<void>;
   enterRift: (riftId: string) => void;
   returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => void;
   triggerEvent: (eventId: string) => void;
@@ -699,7 +700,7 @@ export const useGameStore = create<GameStore>()(
                   // Lazy generation: if hex doesn't exist, generate it to check moveCost
                   if (!hex) {
                       const baseHex = generateHexData(step.q, step.r, currentOverworld.seed);
-                      const special = getSpecialFeature(step.q, step.r, currentOverworld.seed, 20);
+                      const special = getSpecialFeature(step.q, step.r, currentOverworld.seed, 30, currentOverworld.isWorldMap);
                       const terrainType = special.terrainType || baseHex.terrainType;
                       const moveCost = special.moveCost ?? baseHex.moveCost;
                       hex = {
@@ -728,14 +729,15 @@ export const useGameStore = create<GameStore>()(
                   const currentDist = cubeDistance({ q: 0, r: 0 }, { q: player.q, r: player.r });
                   const nextDist = cubeDistance({ q: 0, r: 0 }, { q: step.q, r: step.r });
                   
-                  if (currentDist <= 2 && nextDist > 2) {
-                      const marks = currentOverworld.tutorialMarks || 0;
-                      if (marks < 6) {
+                  if (currentDist <= 2 && nextDist > 2 && !currentOverworld.isWorldMap) {
+                      const marksCount = player.bag.filter(i => i === 'tutorial_mark').length;
+                      const hasPass = player.bag.includes('city_pass');
+                      if (marksCount < 6 && !hasPass && !currentOverworld.flags?.city_exit_granted) {
                           get().showToast(state.language === 'RU' 
-                              ? `Для выхода нужно 6 меток обучения. У вас: ${marks}` 
-                              : `You need 6 tutorial marks to exit. You have: ${marks}`, 'error');
+                              ? `Для выхода требуется пропуск или 6 меток обучения.` 
+                              : `You need a pass or 6 tutorial marks to exit.`, 'error');
                           break;
-                      } else if (!currentOverworld.flags.hasLeftCity) {
+                      } else if (!currentOverworld.flags?.hasLeftCity) {
                           justLeftCity = true;
                           get().showToast(state.language === 'RU'
                               ? `Путь открыт. Добро пожаловать в пустоши.`
@@ -769,18 +771,20 @@ export const useGameStore = create<GameStore>()(
                       player.r = step.r;
                       player.stepCount = (player.stepCount ?? 0) + 1;
                       
-                      // Reveal fog of war (radius 1)
-                      const revealRadius = 1;
-                      for (let dq = -revealRadius; dq <= revealRadius; dq++) {
-                          for (let dr = Math.max(-revealRadius, -dq - revealRadius); dr <= Math.min(revealRadius, -dq + revealRadius); dr++) {
+                      // Reveal fog of war (radius 2) and generate buffer (radius 4)
+                      const revealRadius = 2;
+                      const genRadius = 4; 
+                      for (let dq = -genRadius; dq <= genRadius; dq++) {
+                          for (let dr = Math.max(-genRadius, -dq - genRadius); dr <= Math.min(genRadius, -dq + genRadius); dr++) {
                               const nq = step.q + dq;
                               const nr = step.r + dr;
+
                               const nk = getHexKey(nq, nr);
                               
                               if (!grid[nk]) {
                                   // Generate neighbors too if they don't exist
                                   const baseN = generateHexData(nq, nr, newOverworld.seed);
-                                  const specialN = getSpecialFeature(nq, nr, newOverworld.seed, 20);
+                                  const specialN = getSpecialFeature(nq, nr, newOverworld.seed, 30, newOverworld.isWorldMap);
                                   const terrainType = specialN.terrainType || baseN.terrainType;
                                   const moveCost = specialN.moveCost ?? baseN.moveCost;
                                   
@@ -794,7 +798,10 @@ export const useGameStore = create<GameStore>()(
                                   };
                               }
                               
-                              grid[nk] = { ...grid[nk], isRevealed: true };
+                              const dToPlayer = cubeDistance({ q: step.q, r: step.r }, { q: nq, r: nr });
+                              if (dToPlayer <= revealRadius && !grid[nk].isRevealed) {
+                                  grid[nk] = { ...grid[nk], isRevealed: true };
+                              }
                           }
                       }
                       
@@ -841,16 +848,7 @@ export const useGameStore = create<GameStore>()(
                   if (currentOverworld.isWorldMap && hex.terrainType === 'CITY') {
                       setTimeout(() => get().triggerEvent('city_entry_dialog'), 10);
                       shouldBreak = true;
-                  } else if (!currentOverworld.isWorldMap && hex.poiId === 'city_checkpoint' && !currentOverworld.flags?.['has_city_pass']) {
-                      const marks = currentOverworld.tutorialMarks || 0;
-                      if (marks >= 6) {
-                          set(state => {
-                              const newOverworld = { ...state.overworld };
-                              if (!newOverworld.flags) newOverworld.flags = {};
-                              newOverworld.flags['has_6_marks'] = true;
-                              return { overworld: newOverworld };
-                          });
-                      }
+                  } else if (!currentOverworld.isWorldMap && hex.poiId === 'city_checkpoint' && !currentOverworld.flags?.['city_exit_granted']) {
                       setTimeout(() => get().triggerEvent('city_exit_checkpoint'), 10);
                       shouldBreak = true;
                   }
@@ -985,6 +983,9 @@ export const useGameStore = create<GameStore>()(
           set(state => {
               const newOverworld = { ...state.overworld };
               newOverworld.tutorialMarks = (newOverworld.tutorialMarks || 0) + 1;
+              const player = { ...newOverworld.player };
+              player.bag = [...(player.bag ?? []), 'tutorial_mark'];
+              newOverworld.player = player;
               return { overworld: newOverworld };
           });
       },
@@ -993,7 +994,8 @@ export const useGameStore = create<GameStore>()(
           const state = get();
           const { generateOverworld } = await import('./services/OverworldGenerator.ts');
           const seed = state.overworld.seed;
-          const grid = generateOverworld(20, seed, true);
+          const worldPos = state.overworld.worldMapPos || { q: 0, r: 0 };
+          const grid = generateOverworld(30, seed, true, 6, worldPos); // World map radius 30, but only generates initial radius 6 around worldPos
           
           set(state => ({
               overworld: {
@@ -1002,14 +1004,39 @@ export const useGameStore = create<GameStore>()(
                   isWorldMap: true,
                   player: {
                       ...state.overworld.player,
-                      q: 0,
-                      r: 0
+                      q: worldPos.q,
+                      r: worldPos.r
                   },
-                  visitedHexes: { [getHexKey(0, 0)]: true }
+                  visitedHexes: { [getHexKey(worldPos.q, worldPos.r)]: true }
               }
           }));
           
           get().showToast(TEXT[get().language].TOAST.CITY_EXIT_SUCCESS, 'success');
+      },
+
+      transitionToCity: async () => {
+          const state = get();
+          const { generateOverworld } = await import('./services/OverworldGenerator.ts');
+          const seed = state.overworld.seed;
+          const grid = generateOverworld(20, seed, false); // City map radius 20, generates all at once
+          
+          const currentPos = { q: state.overworld.player.q, r: state.overworld.player.r };
+          
+          set(state => ({
+              overworld: {
+                  ...state.overworld,
+                  grid,
+                  isWorldMap: false,
+                  worldMapPos: currentPos,
+                  player: {
+                      ...state.overworld.player,
+                      q: 0,
+                      r: 0
+                  },
+                  visitedHexes: { [getHexKey(0, 0)]: true }
+              },
+              uiState: 'OVERWORLD'
+          }));
       },
 
       setOverworldActionProgress: (progress: number) => {
@@ -1331,18 +1358,16 @@ export const useGameStore = create<GameStore>()(
           if (hex.poiId) {
 
               if (hex.poiId === 'city_checkpoint') {
-                  const marks = state.overworld.tutorialMarks || 0;
-                  if (marks >= 6) {
-                      get().transitionToWorldMap();
-                  } else {
-                      state.showToast(TEXT[state.language].TOAST.CITY_EXIT_DENIED, 'error');
-                      audioService.play('ERROR');
-                  }
+                  get().triggerEvent('city_exit_checkpoint');
                   return;
               }
 
               if (hex.poiId.startsWith('city_')) {
-                  set({ activePoi: hex.poiId, uiState: 'INTERIOR' });
+                  if (state.overworld.isWorldMap) {
+                      get().triggerEvent('city_entry_dialog');
+                  } else {
+                      set({ activePoi: hex.poiId, uiState: 'INTERIOR' });
+                  }
                   return;
               }
               const eventDef = EVENT_REGISTRY[hex.poiId];
@@ -1432,7 +1457,6 @@ export const useGameStore = create<GameStore>()(
                               // Award Tutorial Mark if it was a Season 1 level and not already completed
                               if (!newOverworld.flags) newOverworld.flags = {};
                                if (!newOverworld.flags[`level_${levelId}_completed`]) {
-                                   newOverworld.tutorialMarks = (newOverworld.tutorialMarks || 0) + 1;
                                    newOverworld.flags[`level_${levelId}_completed`] = true;
                                    player.bag.push('tutorial_mark');
                                }
@@ -1547,6 +1571,17 @@ export const useGameStore = create<GameStore>()(
                   get().showToast(TEXT[get().language].TOAST.WRONG_ITEM, 'error');
                   return state;
               }
+              if (choice.reqItems) {
+                  const missingItems = choice.reqItems.filter(item => {
+                      const countInBag = player.bag.filter(i => i === item).length;
+                      const countInReq = choice.reqItems!.filter(i => i === item).length;
+                      return countInBag < countInReq;
+                  });
+                  if (missingItems.length > 0) {
+                      get().showToast(TEXT[get().language].TOAST.WRONG_ITEM, 'error');
+                      return state;
+                  }
+              }
               if (choice.reqFlag && !newOverworld.flags[choice.reqFlag]) return state;
               if (choice.reqFlagAbsent && newOverworld.flags[choice.reqFlagAbsent]) return state;
               const rep = player.reputation ?? 0;
@@ -1607,6 +1642,13 @@ export const useGameStore = create<GameStore>()(
               if (choice.setFlag) {
                   const flags = Array.isArray(choice.setFlag) ? choice.setFlag : [choice.setFlag];
                   flags.forEach(f => { newOverworld.flags[f] = true; });
+                  
+                  if (flags.includes('entered_city')) {
+                      setTimeout(() => get().transitionToCity(), 10);
+                  }
+                  if (flags.includes('city_exit_granted')) {
+                      setTimeout(() => get().transitionToWorldMap(), 10);
+                  }
               }
               if (choice.clearFlag) delete newOverworld.flags[choice.clearFlag];
 

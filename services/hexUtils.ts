@@ -397,7 +397,7 @@ export const findOverworldPath = (
       const nKey = getHexKey(neighbor.q, neighbor.r);
       const neighborHex = grid[nKey];
       
-      if (!neighborHex) {
+      if (!neighborHex || !neighborHex.isRevealed) {
         blockedByVoid = true;
         continue;
       }
@@ -462,7 +462,7 @@ export const getReachableOverworldHexes = (
       const nKey = getHexKey(neighbor.q, neighbor.r);
       const neighborHex = grid[nKey];
       
-      if (!neighborHex || neighborHex.moveCost >= 999) continue;
+      if (!neighborHex || neighborHex.moveCost >= 999 || !neighborHex.isRevealed) continue;
 
       const neighborHeight = neighborHex.height ?? getHexHeight(neighborHex.terrainType);
       if (Math.abs(currentHeight - neighborHeight) > 1) continue; // Staircase rule

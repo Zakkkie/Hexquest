@@ -1,4 +1,4 @@
-import { OverworldHex, TerrainType } from '../types.ts';
+import { OverworldHex, TerrainType, HexCoord } from '../types.ts';
 import { getHexKey, getNeighbors, findOverworldPath, cubeDistance } from './hexUtils.ts';
 import { getCityFeature } from './CityGenerator.ts';
 
@@ -178,8 +178,6 @@ export function getSpecialFeature(q: number, r: number, seed: number, radius: nu
       return { terrainType: 'CITY', poiId: 'city_hub', isPoiCenter: true, moveCost: 1, height: 1, isIndestructible: true };
   }
 
-  if (dist > radius) return {};
-
   // Deterministic random for this hex
   const hSeed = Math.abs(Math.sin(q * 12.9898 + r * 78.233 + seed) * 43758.5453) % 1;
 
@@ -210,7 +208,7 @@ export function getSpecialFeature(q: number, r: number, seed: number, radius: nu
   // Increased probability for rifts
   riftId = checkRift(series2, 7, 11, 0.025) || 
            checkRift(series3, 12, 16, 0.02) || 
-           checkRift(series4, 17, radius, 0.015);
+           checkRift(series4, 17, Infinity, 0.015);
 
   if (riftId) {
     // Rifts often corrupt the land into ruins or outposts
@@ -235,24 +233,26 @@ export function getSpecialFeature(q: number, r: number, seed: number, radius: nu
   return {};
 }
 
-export function generateOverworld(radius: number = 30, seed: number = Math.random(), isWorldMap: boolean = true): Record<string, OverworldHex> {
+export function generateOverworld(radius: number = 30, seed: number = Math.random(), isWorldMap: boolean = true, genRadius?: number, center: HexCoord = { q: 0, r: 0 }): Record<string, OverworldHex> {
   const grid: Record<string, OverworldHex> = {};
   
-  const genRadius = isWorldMap ? radius : 3;
+  const actualGenRadius = genRadius !== undefined ? genRadius : (isWorldMap ? 6 : radius);
 
-  for (let q = -genRadius; q <= genRadius; q++) {
-    for (let r = Math.max(-genRadius, -q - genRadius); r <= Math.min(genRadius, -q + genRadius); r++) {
-      const key = getHexKey(q, r);
-      const hex = generateHexData(q, r, seed);
-      const special = getSpecialFeature(q, r, seed, radius, isWorldMap);
+  for (let q = -actualGenRadius; q <= actualGenRadius; q++) {
+    for (let r = Math.max(-actualGenRadius, -q - actualGenRadius); r <= Math.min(actualGenRadius, -q + actualGenRadius); r++) {
+      const hq = q + center.q;
+      const hr = r + center.r;
+      const key = getHexKey(hq, hr);
+      const hex = generateHexData(hq, hr, seed);
+      const special = getSpecialFeature(hq, hr, seed, radius, isWorldMap);
       
-      const dist = cubeDistance({ q: 0, r: 0 }, { q, r });
+      const distToCenter = cubeDistance(center, { q: hq, r: hr });
       
       grid[key] = {
         ...hex,
         ...special,
         isPoiCenter: special.isPoiCenter,
-        isRevealed: isWorldMap ? (dist <= 6) : true, 
+        isRevealed: isWorldMap ? (distToCenter <= 2) : true, 
         isPassable: special.isPassable !== undefined ? special.isPassable : (special.terrainType ? (getHexHeight(special.terrainType) < 999) : hex.isPassable),
         height: special.height !== undefined ? special.height : (special.terrainType ? getHexHeight(special.terrainType) : hex.height),
         moveCost: special.moveCost !== undefined ? special.moveCost : hex.moveCost

@@ -564,9 +564,15 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
         text: 'Блокпост на выезде из города. Офицер Синдиката преграждает путь. «Для выхода в пустоши требуется пропуск. Либо предъявите 6 меток обучения от наставника, либо оплатите пошлину в 300 монет.»',
         choices: [
           {
+            label: 'Предъявить городской пропуск',
+            action: 'GOTO_NODE',
+            reqItem: 'city_pass',
+            nextNode: 'exit_success_pass',
+          },
+          {
             label: 'Предъявить 6 меток обучения',
             action: 'GOTO_NODE',
-            reqFlag: 'has_6_marks',
+            reqItems: ['tutorial_mark', 'tutorial_mark', 'tutorial_mark', 'tutorial_mark', 'tutorial_mark', 'tutorial_mark'],
             nextNode: 'exit_success_marks',
           },
           {
@@ -581,6 +587,17 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
           },
         ],
       },
+      exit_success_pass: {
+        id: 'exit_success_pass',
+        text: 'Офицер бегло осматривает ваш пропуск. «Всё в порядке. Проходи.» Вы выходите за ворота.',
+        choices: [
+          {
+            label: 'Выйти в пустоши',
+            action: 'CLOSE',
+            setFlag: 'city_exit_granted',
+          }
+        ]
+      },
       exit_success_marks: {
         id: 'exit_success_marks',
         text: 'Офицер проверяет ваши метки. «Всё верно. Проходите. И не возвращайтесь без дела.» Вы получаете пропуск и выходите за ворота.',
@@ -589,8 +606,8 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
             label: 'Выйти в пустоши',
             action: 'CLOSE',
             setFlag: ['city_exit_granted', 'has_city_pass'],
-            penalty: { tutorialMarks: 6 },
-            reward: { items: ['CITY_PASS'] }
+            penalty: { items: ['tutorial_mark', 'tutorial_mark', 'tutorial_mark', 'tutorial_mark', 'tutorial_mark', 'tutorial_mark'] },
+            reward: { items: ['city_pass'] }
           }
         ]
       },
@@ -603,7 +620,7 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
             action: 'CLOSE',
             setFlag: ['city_exit_granted', 'has_city_pass'],
             penalty: { credits: 300 },
-            reward: { items: ['CITY_PASS'] }
+            reward: { items: ['city_pass'] }
           }
         ]
       }

@@ -418,6 +418,10 @@ const OverworldView: React.FC = () => {
     
     const clickedHex = grid[getHexKey(q, r)];
     
+    if (!clickedHex?.isRevealed) {
+      return;
+    }
+    
     if (q === player.q && r === player.r) {
       interactOverworld(q, r);
       return;
@@ -608,20 +612,6 @@ const OverworldView: React.FC = () => {
                   <span className="text-xs md:text-xl font-black text-white leading-none">{player.credits}</span>
                 </div>
               </div>
-
-              <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0" />
-
-              <div className="relative flex items-center gap-1.5 md:gap-2 group shrink-0">
-                <div className="w-7 h-7 md:w-10 md:h-10 rounded-md md:rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/30 group-hover:bg-purple-500/20 transition-colors">
-                  <Trophy className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
-                </div>
-                <div className="flex flex-col justify-center">
-                  <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">MARKS</span>
-                  <span className="text-xs md:text-xl font-black text-white leading-none">{overworld.tutorialMarks || 0}/6</span>
-                </div>
-              </div>
-
-              <div className="w-px h-5 md:h-8 bg-slate-800 shrink-0" />
 
               {/* Reputation badge */}
               {(() => {
@@ -914,7 +904,7 @@ const OverworldView: React.FC = () => {
                   isPassable={hex.isPassable}
                   neighborLevels={neighborLevels}
                   neighborPoiIds={neighborPoiIds}
-                  highlight={showPaths ? (reachableHexes.has(getHexKey(hex.q, hex.r)) ? 'REACHABLE' : 'UNREACHABLE') : 'NONE'}
+                  highlight={showPaths && hex.isRevealed ? (reachableHexes.has(getHexKey(hex.q, hex.r)) ? 'REACHABLE' : 'UNREACHABLE') : 'NONE'}
                   onClick={stableHandleHexClick}
                 />
               );

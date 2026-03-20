@@ -305,6 +305,7 @@ export interface OverworldEventChoice {
   failNode?: string;
   nextNode?: string;
   reqItem?: string;
+  reqItems?: string[];
   reqCredits?: number;
   probability?: number;
   /** Set flag(s) when this choice is taken */
@@ -357,6 +358,7 @@ export interface OverworldState {
   tutorialMarks?: number;
   isWorldMap?: boolean;
   cityName?: string;
+  worldMapPos?: { q: number; r: number };
   lastChoiceResult: {
     reward?: { credits?: number; hp?: number; energy?: number; items?: string[] };
     penalty?: { credits?: number; hp?: number; energy?: number; items?: string[] };
