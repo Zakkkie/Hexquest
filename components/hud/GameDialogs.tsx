@@ -31,7 +31,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const difficulty = useGameStore(state => state.session?.difficulty);
     const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
     const messageLog = useGameStore(state => state.session?.messageLog);
-
+    
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
     const user = useGameStore(state => state.user);

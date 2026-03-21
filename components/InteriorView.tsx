@@ -12,7 +12,7 @@ import {
   MessageSquare,
   ArrowRight,
   ArrowLeft,
-  Package,
+  Package
 } from 'lucide-react';
 import { TEXT } from '../services/i18n';
 import { OverworldStartQuiz } from './OverworldStartQuiz';

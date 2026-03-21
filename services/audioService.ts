@@ -307,7 +307,7 @@ class AudioService {
       
       // Kick: Euclidean-ish distribution
       this.patterns.kick = new Array(16).fill(false);
-      // kickHits = this.context.bpm > 110 ? 4 : 3; // More kicks if faster (reserved)
+      // const kickHits = this.context.bpm > 110 ? 4 : 3; // More kicks if faster
       for(let i=0; i<16; i+=4) this.patterns.kick[i] = true; // 4/4 base
       if (Math.random() > 0.5) this.patterns.kick[14] = true; // Syncopation
 

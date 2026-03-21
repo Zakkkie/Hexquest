@@ -22,7 +22,7 @@ export class EffectPool {
         // Given React/Zustand state immutability, true pooling is hard.
         // We will focus on LIMITING first, and reusing ID generation or objects where possible.
         
-        void externalEffects; // sync hint
+        void externalEffects;
     }
 
     /**

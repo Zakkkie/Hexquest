@@ -94,9 +94,7 @@ interface GameStore extends GameState {
   activateMonument: () => void;
   visitPoi: () => void;
   closeInterior: () => void;
-  exitBuilding: () => void;
-  resolveBuildingChoice: (choice: import('./types.ts').BuildingDialogueChoice) => void;
-
+  
   checkTutorialCamera: (deltaX: number) => void;
 
   hasHydrated: boolean;
@@ -117,7 +115,7 @@ interface GameStore extends GameState {
   transitionToWorldMap: () => Promise<void>;
   transitionToCity: () => Promise<void>;
   enterRift: (riftId: string) => void;
-  returnToOverworld: (result: 'VICTORY' | 'DEFEAT' | 'NEUTRAL') => void;
+  returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => void;
   triggerEvent: (eventId: string) => void;
   resolveEventChoice: (choice: import('./types.ts').OverworldEventChoice) => void;
   closeEventSummary: () => void;
@@ -547,27 +545,6 @@ export const useGameStore = create<GameStore>()(
                   return { session: newSession, uiState: 'GAME', activePoi: null };
               }
               return { uiState: 'OVERWORLD', activePoi: null };
-          });
-      },
-
-      exitBuilding: () => {
-          audioService.play('UI_CLICK');
-          get().returnToOverworld('NEUTRAL');
-      },
-
-      resolveBuildingChoice: (choice) => {
-          const { penalty, reward, service } = choice;
-          if (!penalty && !reward && !service) return;
-          set(state => {
-              const overworld = { ...state.overworld };
-              const player = { ...overworld.player };
-              if (penalty?.credits)  player.credits = Math.max(0, player.credits - penalty.credits);
-              if (reward?.credits)   player.credits += reward.credits;
-              if (reward?.energy)    player.energy = Math.min(player.maxEnergy, player.energy + reward.energy);
-              if (service?.type === 'REST_FULL')    player.hp = player.maxHp;
-              if (service?.type === 'REST_PARTIAL') player.hp = Math.min(player.maxHp, player.hp + (service.hpAmount ?? 30));
-              overworld.player = player;
-              return { overworld };
           });
       },
 
@@ -1466,11 +1443,7 @@ export const useGameStore = create<GameStore>()(
           get().startCampaignLevel(riftId);
       },
 
-      returnToOverworld: (result: 'VICTORY' | 'DEFEAT' | 'NEUTRAL') => {
-          if (result === 'NEUTRAL') {
-              set({ session: null, uiState: 'OVERWORLD' });
-              return;
-          }
+      returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => {
           set(state => {
               const newOverworld = { ...state.overworld };
               const player = { ...newOverworld.player };

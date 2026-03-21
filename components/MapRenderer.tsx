@@ -134,7 +134,6 @@ let BASE_PATH_D = `M ${BASE_POINTS[0].x} ${BASE_POINTS[0].y}`;
 for (let i = 1; i < 6; i++) BASE_PATH_D += ` L ${BASE_POINTS[i].x} ${BASE_POINTS[i].y}`;
 BASE_PATH_D += " Z";
 
-
 // THEME CONFIGURATION
 export const THEME_PALETTE: Record<string, HexNodeTheme> = {
     '0': { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' }, 
@@ -315,7 +314,7 @@ interface MapRendererProps {
     hoveredHexId: string | null;
 }
 
-const MapRenderer: React.FC<MapRendererProps> = ({ viewState: _viewState, dimensions: _dimensions, rotation, onHexClick, onHover, hoveredHexId }) => {
+const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId }) => {
     const grid = useGameStore(state => state.session?.grid) as Record<string, Hex> | undefined;
     const player = useGameStore(state => state.session?.player) as Entity | undefined;
     const bots = useGameStore(state => state.session?.bots) as Entity[] | undefined;

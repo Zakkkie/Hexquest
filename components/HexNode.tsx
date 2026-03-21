@@ -233,7 +233,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
              {/* 1. VOID WALLS (Real 3D Geometry) */}
              {wallData && neighborLevels.map((_nLevel, i) => {
                  if (!wallData[i].visible) return null;
-
+                 
                  const { t1, t2 } = wallData[i];
                  const VOID_DEPTH = 12; // Thickness of the void slab
                  

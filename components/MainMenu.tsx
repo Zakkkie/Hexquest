@@ -160,6 +160,7 @@ const MainMenu: React.FC = () => {
   const isMusicMuted = useGameStore(state => state.isMusicMuted);
   const isSfxMuted = useGameStore(state => state.isSfxMuted);
   const language = useGameStore(state => state.language);
+  
   const startNewGame = useGameStore(state => state.startNewGame);
   const setUIState = useGameStore(state => state.setUIState);
   const setLanguage = useGameStore(state => state.setLanguage);
@@ -198,6 +199,7 @@ const MainMenu: React.FC = () => {
   const [mapType, setMapType] = useState<'FLAT' | 'CHAOTIC'>('FLAT'); // New state
 
   const t = TEXT[language].MENU;
+
   // UPDATED MISSION TIERS FOR SUMMIT OBJECTIVE
   const MISSION_TIERS = {
     1: { level: 5, coins: 0, label: language === 'RU' ? 'ПИК УР.5' : 'SUMMIT L5', time: '~10m', color: 'text-blue-400', difficulty: 'EASY' as Difficulty, icon: Mountain, desc: 'Recon' },
