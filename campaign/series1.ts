@@ -58,7 +58,7 @@ export const series1Levels: LevelConfig[] = [
         
         return isStranded(state);
       },
-      onBeforeAction: (state, action) => {
+      onBeforeAction: (_state, action) => {
         if (action.type === 'UPGRADE') {
           const key = getHexKey(action.coord.q, action.coord.r);
           const targets = [getHexKey(1, 0), getHexKey(-1, 1), getHexKey(0, -1)];

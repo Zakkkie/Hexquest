@@ -26,8 +26,6 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const toggleMusic = useGameStore(state => state.toggleMusic);
     const toggleSfx = useGameStore(state => state.toggleSfx);
     const playUiSound = useGameStore(state => state.playUiSound);
-    const downloadSessionLog = useGameStore(state => state.downloadSessionLog);
-
     const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
     const systemMenuRef = useRef<HTMLDivElement>(null);
     const [timeLeft, setTimeLeft] = useState(75);
@@ -88,7 +86,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                 <Crown className="w-3.5 h-3.5 md:w-5 md:h-5 text-white" />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.RANK}</span>
+                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5 break-words whitespace-pre-wrap">{t.RANK}</span>
                                 <span className="text-sm md:text-xl font-black text-white leading-none">{player.playerLevel}</span>
                             </div>
                         </div>
@@ -98,7 +96,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                 <Box className="w-3.5 h-3.5 md:w-5 md:h-5 text-emerald-400" />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MATERIAL}</span>
+                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5 break-words whitespace-pre-wrap">{t.MATERIAL}</span>
                                 <StorageBlocks current={player.storage} max={player.maxStorage} />
                             </div>
                         </div>
@@ -108,7 +106,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                 <Wallet className="w-3.5 h-3.5 md:w-5 md:h-5 text-amber-400" />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.CREDITS}</span>
+                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5 break-words whitespace-pre-wrap">{t.CREDITS}</span>
                                 <span className="text-sm md:text-xl font-black text-white leading-none">{player.coins}</span>
                             </div>
                         </div>
@@ -118,7 +116,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                 <Footprints className={`w-3.5 h-3.5 md:w-5 md:h-5 ${isMoving ? 'text-white' : 'text-blue-400'}`} />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">{t.MOVES}</span>
+                                <span className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5 break-words whitespace-pre-wrap">{t.MOVES}</span>
                                 <span className="text-sm md:text-xl font-black text-white leading-none">{player.moves}</span>
                             </div>
                         </div>
@@ -128,7 +126,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                 <EntropyGauge className="w-5 h-5 md:w-8 md:h-8" />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <span className={`text-[8px] md:text-[9px] font-bold uppercase tracking-wider leading-none mb-0.5 ${
+                                <span className={`text-[8px] md:text-[9px] font-bold uppercase tracking-wider leading-none mb-0.5 break-words whitespace-pre-wrap ${
                                     entropy && entropy.current / entropy.max < 0.3 ? 'text-red-400' :
                                     entropy && entropy.current / entropy.max < 0.6 ? 'text-amber-400' :
                                     'text-slate-400'
@@ -156,28 +154,28 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                 </div>
                                 <button onClick={() => { setLanguage(language === 'EN' ? 'RU' : 'EN'); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
                                     <Globe className="w-4 h-4 text-sky-400" />
-                                    <span className="text-xs font-bold uppercase">{language === 'EN' ? 'English' : 'Русский'}</span>
+                                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{language === 'EN' ? 'English' : 'Русский'}</span>
                                 </button>
                                 <button onClick={() => { onOpenModal('CODEX'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
                                     <BookOpen className="w-4 h-4 text-purple-400" />
-                                    <span className="text-xs font-bold uppercase">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</span>
+                                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</span>
                                 </button>
                                 <button onClick={() => { onOpenModal('RANKINGS'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border bg-slate-800/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white`}>
                                     <Trophy className="w-4 h-4 text-amber-500" />
-                                    <span className="text-xs font-bold uppercase">{t.LEADERBOARD_TITLE}</span>
+                                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{t.LEADERBOARD_TITLE}</span>
                                 </button>
                                 <button onClick={() => { onOpenModal('LOG'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 hover:text-indigo-200 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left">
                                     <FileText className="w-4 h-4" />
-                                    <span className="text-xs font-bold uppercase">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
+                                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
                                 </button>
                                 <div className="h-px bg-slate-700/50 my-1"></div>
                                 <button onClick={() => { onOpenModal('RESTART'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-900/10 hover:bg-amber-900/30 text-amber-400 hover:text-amber-200 border border-amber-900/30 hover:border-amber-500/50 transition-colors w-full text-left">
                                     <RotateCcw className="w-4 h-4" />
-                                    <span className="text-xs font-bold uppercase">{t.BTN_RETRY}</span>
+                                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{t.BTN_RETRY}</span>
                                 </button>
                                 <button onClick={() => { onOpenModal('EXIT'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-900/10 hover:bg-red-900/30 text-red-400 hover:text-red-200 border border-red-900/30 hover:border-red-500/50 transition-colors w-full text-left">
                                     <LogOut className="w-4 h-4" />
-                                    <span className="text-xs font-bold uppercase">{t.BTN_MENU}</span>
+                                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{t.BTN_MENU}</span>
                                 </button>
                             </div>
                         )}

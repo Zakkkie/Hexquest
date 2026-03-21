@@ -6,7 +6,7 @@ import { GameEventFactory } from '../events';
 import { getHexKey } from '../../services/hexUtils';
 
 export class VictorySystem implements System {
-  update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
+  update(state: SessionState, _index: WorldIndex, events: GameEvent[]): void {
     if (state.gameStatus === 'VICTORY' || state.gameStatus === 'DEFEAT') {
         return;
     }

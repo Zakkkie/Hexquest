@@ -144,10 +144,10 @@ const Leaderboard: React.FC = () => {
 
                  {/* Name & Date */}
                  <div className="flex flex-col min-w-0">
-                    <span className={`text-xs md:text-base font-bold truncate ${isSelf ? 'text-indigo-400' : 'text-white'}`}>
+                    <span className={`text-xs md:text-base font-bold break-words whitespace-pre-wrap ${isSelf ? 'text-indigo-400' : 'text-white'}`}>
                         {entry.nickname}
                     </span>
-                    <span className="text-[8px] text-slate-600 font-mono mt-0.5 hidden md:block">
+                    <span className="text-[8px] text-slate-600 font-mono mt-0.5 hidden md:block break-words whitespace-pre-wrap">
                         {new Date(entry.timestamp).toLocaleDateString()}
                     </span>
                  </div>

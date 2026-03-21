@@ -304,6 +304,7 @@ export interface OverworldEventChoice {
   riftId?: string;
   successNode?: string;
   failNode?: string;
+  cannotAffordNode?: string;
   nextNode?: string;
   reqItem?: string;
   reqItems?: string[];
@@ -360,6 +361,7 @@ export interface OverworldState {
   isWorldMap?: boolean;
   cityName?: string;
   worldMapPos?: { q: number; r: number };
+  gameStatus: 'PLAYING' | 'VICTORY' | 'DEFEAT';
   lastChoiceResult: {
     reward?: { credits?: number; hp?: number; energy?: number; items?: string[] };
     penalty?: { credits?: number; hp?: number; energy?: number; items?: string[] };
@@ -511,6 +513,13 @@ export interface LevelConfig {
   /** Короткий текст цели миссии (≤35 символов), отображается в нижнем тулбаре */
   goalText?: string;
 
+  /** City mode: player moves freely without spending move points */
+  freeMovement?: boolean;
+  /** Marks this level as a city interior — enables city HUD */
+  isCityLevel?: boolean;
+  /** Building type for mini-levels inside city (links to BuildingPanel) */
+  buildingType?: string;
+
   objectiveHexes?: ObjectiveHex[];
   blueprints?: Blueprint[];
   monumentRecipe?: MonumentRecipe;
@@ -585,6 +594,35 @@ export interface GameState {
   lastVisualEvent?: { type: string; time: number };
   activePoi: string | null;
   overworld: OverworldState;
+}
+
+// --- BUILDING DIALOGUE TYPES ---
+
+export interface BuildingDialogueChoice {
+  label: { EN: string; RU: string };
+  action: 'GOTO_NODE' | 'CLOSE';
+  nextNode?: string;
+  reqCredits?: number;
+  reqItem?: string;
+  reqFlag?: string;
+  reqFlagAbsent?: string;
+  reqRepMin?: number;
+  penalty?: { credits?: number; hp?: number; energy?: number };
+  reward?: { energy?: number; credits?: number; hp?: number; items?: string[] };
+  service?: { type: string; hpAmount?: number; radius?: number; slots?: number };
+}
+
+export interface BuildingDialogueNode {
+  id: string;
+  npcName?: { EN: string; RU: string };
+  text: { EN: string; RU: string };
+  choices: BuildingDialogueChoice[];
+}
+
+export interface BuildingDialogue {
+  id: string;
+  startNodeId: string;
+  nodes: Record<string, BuildingDialogueNode>;
 }
 
 // --- ACTION TYPES ---

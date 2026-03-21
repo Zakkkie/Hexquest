@@ -53,7 +53,7 @@ const getPseudoNoise = (q: number, r: number) => {
 };
 
 // Pure function to generate a specific hex based on config rules
-export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfig, mapType?: 'FLAT' | 'CHAOTIC'): Hex => {
+export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfig, _mapType?: 'FLAT' | 'CHAOTIC'): Hex => {
     const key = getHexKey(q, r);
     const dist = Math.max(Math.abs(q), Math.abs(r), Math.abs(-q-r));
     const noise = getPseudoNoise(q, r);
@@ -137,10 +137,7 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     }
 
     // Default Defaults for Walls (Map Boundary)
-    const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? 40; 
-    const wallStartLevel = levelConfig?.mapConfig.wallStartLevel ?? 9;
-    const wallType = levelConfig?.mapConfig.wallType ?? 'classic';
-    const shouldGenerateWalls = levelConfig?.mapConfig.generateWalls ?? true; 
+ 
 
     // Default center always safe
     if (q === 0 && r === 0) {
@@ -230,7 +227,7 @@ export const ensureMonumentAccessibility = (
   return updatedGrid;
 };
 
-export const generateLevel12Map = (levelConfig: LevelConfig): Record<string, Hex> => {
+export const generateLevel12Map = (_levelConfig: LevelConfig): Record<string, Hex> => {
     const grid: Record<string, Hex> = {};
     const path: HexCoord[] = [
         { q: 0, r: 0 }, { q: 1, r: -1 }, { q: 2, r: -2 }, { q: 3, r: -3 },
@@ -273,7 +270,6 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
   let initialGrid: Record<string, Hex> = {};
   const baseRadius = levelConfig?.mapConfig.size ?? 3;
   const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? baseRadius;
-  const shouldGenerateWalls = levelConfig?.mapConfig.generateWalls ?? true;
 
   // 1. Generate core area
   if (levelConfig?.id === '1.2') {

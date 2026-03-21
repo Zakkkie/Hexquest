@@ -1,6 +1,6 @@
 
 import { Hex, Entity, HexCoord } from '../types';
-import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils';
+import { getHexKey, getNeighbors } from '../services/hexUtils';
 
 /**
  * WorldIndex optimizes queries that otherwise require iterating over the entire grid.
@@ -162,7 +162,7 @@ export class WorldIndex {
           // Verify proxy is still valid
           if (ent) {
               // Accessing id will throw if revoked
-              const _ = ent.id;
+              void ent.id;
           }
           return ent;
       } catch (error) {

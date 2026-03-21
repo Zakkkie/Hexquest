@@ -14,7 +14,7 @@ export class AiSystem implements System {
     this.transactionQueue = transactionQueue;
   }
 
-  update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
+  update(state: SessionState, index: WorldIndex, _events: GameEvent[]): void {
     const now = Date.now();
     
     // CRITICAL: Sync full state (Grid + Entities) here.

@@ -1,13 +1,13 @@
 
 import { System } from './System';
-import { GameEvent, SessionState, Hex, EntityType } from '../../types';
+import { GameEvent, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
 import { GameEventFactory } from '../events';
 import { ENTROPY_CONFIG } from '../../rules/config';
 import { getHexKey } from '../../services/hexUtils';
 
 export class EntropySystem implements System {
-  update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
+  update(state: SessionState, _index: WorldIndex, events: GameEvent[]): void {
     if (state.gameStatus !== 'PLAYING') return;
 
     // Check for Entropy Shift
@@ -30,7 +30,6 @@ export class EntropySystem implements System {
       events.push(GameEventFactory.create('ENTROPY_SHIFT', "Reality distortion in progress", undefined));
 
       // 2. Modifying Grid
-      const updates: Record<string, Hex> = {};
       const gridKeys = Object.keys(state.grid);
       const playerHexKey = getHexKey(state.player.q, state.player.r);
       let playerHitByShift = false;

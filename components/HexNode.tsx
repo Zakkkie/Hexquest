@@ -56,7 +56,7 @@ export interface HexNodeProps {
 }
 
 // Precompute the base (unsquashed) hexagon path centered at 0,0
-const BASE_POINTS = [];
+const BASE_POINTS: { x: number; y: number }[] = [];
 for (let i = 0; i < 6; i++) {
     const angle = (60 * i + 30) * DEG_TO_RAD;
     BASE_POINTS.push({ x: Math.cos(angle) * HEX_SIZE, y: Math.sin(angle) * HEX_SIZE });
@@ -231,9 +231,9 @@ const HexNodeComponent = (props: HexNodeProps) => {
             opacity={opacity}
         >
              {/* 1. VOID WALLS (Real 3D Geometry) */}
-             {wallData && neighborLevels.map((nLevel, i) => {
+             {wallData && neighborLevels.map((_nLevel, i) => {
                  if (!wallData[i].visible) return null;
-                 
+
                  const { t1, t2 } = wallData[i];
                  const VOID_DEPTH = 12; // Thickness of the void slab
                  
@@ -359,10 +359,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                 );
             }
             return null;
-        })}
-
-        {/* 2. TOP FACE */}
-        <Group y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
+        })}<Group y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
             <Group rotation={rotation} perfectDrawEnabled={false}>
                 {isMonument && (
                     <Path 
@@ -463,9 +460,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             />
                         )}
                     </Group>
-                )}
-                
-                {poiType && (
+                )}{poiType && (
                     <Group listening={false} perfectDrawEnabled={false}>
                         <Circle radius={10} fill="rgba(0,0,0,0.4)" stroke="rgba(255,255,255,0.2)" strokeWidth={1} perfectDrawEnabled={false} />
                         <Text 
@@ -476,9 +471,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             perfectDrawEnabled={false} 
                         />
                     </Group>
-                )}
-                
-                {isTutorialTarget && (
+                )}{isTutorialTarget && (
                     <Path 
                         data={BASE_PATH_D} 
                         stroke={tutorialColor === 'amber' ? '#fbbf24' : (tutorialColor === 'cyan' ? '#06b6d4' : (tutorialColor === 'red' ? '#ef4444' : '#22d3ee'))} 
@@ -487,21 +480,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         perfectDrawEnabled={false}
                         shadowForStrokeEnabled={false}
                     />
-                )}
-
-                {isMissingSupport && (
+                )}{isMissingSupport && (
                     <Group listening={false} perfectDrawEnabled={false}>
                         <Path data={BASE_PATH_D} stroke="#ef4444" strokeWidth={2} dash={[5, 5]} fill="rgba(239, 68, 68, 0.15)" perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                         <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="#ef4444" opacity={0.8} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                     </Group>
                 )}
             </Group>
-        </Group>
-
-        {/* 3. FLOATING OVERLAYS (No Perspective Squash/Rotation applied to container, logic handled by billboard) */}
-        
-        {/* BOUNCING 3D TUTORIAL ARROW */}
-        {isTargetArrow && (
+        </Group>{/* 3. FLOATING OVERLAYS (No Perspective Squash/Rotation applied to container, logic handled by billboard) */}{isTargetArrow && (
             <Group ref={arrowRef} y={offsetY - 40} listening={false} perfectDrawEnabled={false}>
                 {/* Shadow/Depth Layer */}
                 <Path 
@@ -518,9 +504,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     perfectDrawEnabled={false}
                 />
             </Group>
-        )}
-
-        {/* ARTIFACTS / COST / PROGRESS */}
+        )}{/* ARTIFACTS / COST / PROGRESS */}
         <>
             {artifactType && !isRealVoid && (
                 <Group y={offsetY - 12} listening={false} perfectDrawEnabled={false}>

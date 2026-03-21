@@ -26,7 +26,6 @@ const EventModal: React.FC = () => {
 
       let label = key.toUpperCase();
       let valueDisplay = Array.isArray(val) ? val.length : val;
-      let icon = null;
 
       if (key === 'items' && Array.isArray(val)) {
         // Aggregate items
@@ -42,7 +41,7 @@ const EventModal: React.FC = () => {
             <div key={itemId} className={`flex items-center justify-between p-3 rounded-xl border ${isPenalty ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4" />
-                <span className="text-sm font-medium">{itemName}</span>
+                <span className="text-sm font-medium break-words whitespace-pre-wrap">{itemName}</span>
               </div>
               <span className="text-lg font-bold">{isPenalty ? '-' : '+'}{count}</span>
             </div>
@@ -58,7 +57,7 @@ const EventModal: React.FC = () => {
 
       return (
         <div key={key} className={`flex items-center justify-between p-3 rounded-xl border ${isPenalty ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
-          <span className="text-sm font-medium uppercase tracking-wider">{label}</span>
+          <span className="text-sm font-medium uppercase tracking-wider break-words whitespace-pre-wrap">{label}</span>
           <span className="text-lg font-bold">{isPenalty ? '-' : '+'}{valueDisplay}</span>
         </div>
       );
@@ -74,10 +73,10 @@ const EventModal: React.FC = () => {
             <div className="p-3 md:p-4 bg-indigo-500/20 rounded-2xl border border-indigo-500/30 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3)]">
               <Sparkles className="w-7 h-7 md:w-8 md:h-8" />
             </div>
-            <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight">
+            <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight break-words whitespace-pre-wrap">
               {isRussian ? 'Итоги события' : 'Event Outcome'}
             </h2>
-            <p className="text-[11px] md:text-sm text-slate-400 leading-relaxed">
+            <p className="text-[11px] md:text-sm text-slate-400 leading-relaxed break-words whitespace-pre-wrap">
               {isRussian ? 'Ваши действия привели к следующим результатам:' : 'Your actions led to the following results:'}
             </p>
           </div>
@@ -134,7 +133,7 @@ const EventModal: React.FC = () => {
               <div className="p-2.5 md:p-3.5 bg-indigo-500/20 rounded-xl border border-indigo-500/30 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)] shrink-0 mt-0.5">
                 <Sparkles className="w-5 h-5 md:w-7 md:h-7" />
               </div>
-              <p className="text-[13px] md:text-xl text-slate-100 leading-relaxed font-medium tracking-tight">
+              <p className="text-[13px] md:text-xl text-slate-100 leading-relaxed font-medium tracking-tight break-words whitespace-pre-wrap">
                 {node.text}
               </p>
             </div>
@@ -153,32 +152,67 @@ const EventModal: React.FC = () => {
                 if (!meetsFlag || !meetsFlagAbsent || !meetsRepMin || !meetsRepMax || !meetsStep) return null;
 
                 const hasReqItem = !choice.reqItem || player.bag.includes(choice.reqItem);
+                
+                // Check if player has all required items (handling duplicates)
+                let hasReqItems = true;
+                if (choice.reqItems && choice.reqItems.length > 0) {
+                  const bagCounts = player.bag.reduce((acc, item) => {
+                    acc[item] = (acc[item] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>);
+                  
+                  const reqCounts = choice.reqItems.reduce((acc, item) => {
+                    acc[item] = (acc[item] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>);
+                  
+                  for (const [item, count] of Object.entries(reqCounts)) {
+                    if ((bagCounts[item] || 0) < count) {
+                      hasReqItems = false;
+                      break;
+                    }
+                  }
+                }
+
                 const hasReqCredits = !choice.reqCredits || player.credits >= choice.reqCredits;
-                const canAfford = hasReqItem && hasReqCredits;
+                const canAfford = hasReqItem && hasReqItems && hasReqCredits;
+                const isDisabled = !canAfford && !choice.cannotAffordNode;
 
                 return (
                   <button
                     key={idx}
-                    onClick={() => resolveEventChoice(choice)}
-                    disabled={!canAfford}
+                    onClick={() => {
+                      if (isDisabled) {
+                        // If they can't afford it and there's no cannotAffordNode, don't do anything (button is disabled anyway, but just in case)
+                        return;
+                      }
+                      resolveEventChoice(choice);
+                    }}
+                    disabled={isDisabled}
                     className="group flex flex-col md:flex-row md:items-center justify-between p-3.5 md:p-5 gap-3 md:gap-6 rounded-xl md:rounded-2xl bg-slate-800/60 border border-slate-700/50 hover:bg-indigo-900/40 hover:border-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-left shadow-sm hover:shadow-[0_0_20px_rgba(99,102,241,0.2)] active:scale-[0.98]"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-7 h-7 md:w-9 md:h-9 rounded-full bg-slate-700/50 flex items-center justify-center group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition-colors shrink-0">
                         <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
                       </div>
-                      <span className="text-sm md:text-lg text-slate-200 font-bold group-hover:text-white transition-colors leading-tight">{choice.label}</span>
+                      <span className="text-sm md:text-lg text-slate-200 font-bold group-hover:text-white transition-colors leading-tight break-words whitespace-pre-wrap">{choice.label}</span>
                     </div>
                     
                     <div className="flex flex-wrap gap-2 pl-11 md:pl-0">
                       {choice.reqItem && (
-                        <span className={`flex items-center gap-1.5 text-[10px] md:text-xs px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg font-black uppercase tracking-wider shrink-0 ${hasReqItem ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                        <span className={`flex items-center gap-1.5 text-[10px] md:text-xs px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg font-black uppercase tracking-wider shrink-0 break-words whitespace-pre-wrap ${hasReqItem ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                           {!hasReqItem && <AlertTriangle className="w-3 h-3" />}
                           {getItemDef(choice.reqItem)?.name[language] || choice.reqItem}
                         </span>
                       )}
+                      {choice.reqItems && choice.reqItems.length > 0 && (
+                        <span className={`flex items-center gap-1.5 text-[10px] md:text-xs px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg font-black uppercase tracking-wider shrink-0 break-words whitespace-pre-wrap ${hasReqItems ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                          {!hasReqItems && <AlertTriangle className="w-3 h-3" />}
+                          {choice.reqItems.length}x {getItemDef(choice.reqItems[0])?.name[language] || choice.reqItems[0]}
+                        </span>
+                      )}
                       {choice.reqCredits && (
-                        <span className={`flex items-center gap-1.5 text-[10px] md:text-xs px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg font-black uppercase tracking-wider shrink-0 ${hasReqCredits ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                        <span className={`flex items-center gap-1.5 text-[10px] md:text-xs px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg font-black uppercase tracking-wider shrink-0 break-words whitespace-pre-wrap ${hasReqCredits ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                           {!hasReqCredits && <AlertTriangle className="w-3 h-3" />}
                           {choice.reqCredits} Cr
                         </span>

@@ -1,5 +1,6 @@
 import { LevelConfig } from '../types';
 import { getHexKey } from '../services/hexUtils';
+import { isStranded } from './utils';
 
 /**
  * ============================================================================
@@ -23,11 +24,6 @@ import { getHexKey } from '../services/hexUtils';
  *  │ Rank: L2→rank1, L3→rank2, L4→rank3, L5→rank4                │
  *  └──────────────────────────────────────────────────────────────┘
  */
-
-const isStranded = (state: any): boolean => {
-  const p = state.player;
-  return p.moves <= 0 && p.coins < 5 && !p.recoveredCurrentHex;
-};
 
 export const series2Levels: LevelConfig[] = [
 

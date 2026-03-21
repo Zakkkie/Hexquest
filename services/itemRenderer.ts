@@ -17,7 +17,7 @@ class ItemRenderer {
     return ItemRenderer.instance;
   }
 
-  public getItemImage(visualType: string, color: string, rarity: ItemRarity, iconUrl?: string, itemId?: string): HTMLCanvasElement | HTMLImageElement {
+  public getItemImage(visualType: string, color: string, rarity: ItemRarity, _iconUrl?: string, itemId?: string): HTMLCanvasElement | HTMLImageElement {
     const key = `ITEM_${visualType}_${color}_${rarity}_${itemId || 'none'}_v4`; 
     
     return textureCache.getOrCreate(key, () => {

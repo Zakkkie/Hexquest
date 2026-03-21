@@ -26,7 +26,7 @@ function seededRandom(seed: number): number {
 /** Pick a template appropriate for current context */
 export function pickTemplate(
   terrain: TerrainType,
-  flags: Record<string, boolean>,
+  _flags: Record<string, boolean>,
   reputation: number,
   stepCount: number,
 ): EventTemplate | null {

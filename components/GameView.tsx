@@ -3,7 +3,7 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
-import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
+import { hexToPixel } from '../services/hexUtils.ts';
 import Background from './Background.tsx';
 import GameHUD from './GameHUD.tsx';
 import MapRenderer from './MapRenderer.tsx';
@@ -159,7 +159,7 @@ const GameView: React.FC = () => {
       if (lastVisualEvent?.type === 'ENTROPY_SHIFT') {
           let duration = 600;
           let start = Date.now();
-          const shakeAnim = new Konva.Animation((frame) => {
+          const shakeAnim = new Konva.Animation((_frame) => {
               const now = Date.now();
               const elapsed = now - start;
               if (elapsed > duration) {

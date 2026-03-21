@@ -1,6 +1,6 @@
 
 import { Hex, Entity, HexCoord } from '../types';
-import { getLevelConfig, GAME_CONFIG } from './config';
+import { GAME_CONFIG } from './config';
 import { getHexKey } from '../services/hexUtils';
 
 export type GrowthCheckResult = {
@@ -11,9 +11,9 @@ export type GrowthCheckResult = {
 
 // --- DIGGING LOGIC (DOWN) ---
 export function checkDigCondition(
-  hex: Hex, 
-  entity: Entity, 
-  neighbors: HexCoord[], 
+  hex: Hex,
+  _entity: Entity,
+  neighbors: HexCoord[],
   grid: Record<string, Hex>
 ): GrowthCheckResult {
   
@@ -91,8 +91,8 @@ export function checkGrowthCondition(
   entity: Entity,
   neighbors: HexCoord[],
   grid: Record<string, Hex>,
-  occupiedHexes: HexCoord[] = [],
-  requiredQueueSize: number = 3
+  _occupiedHexes: HexCoord[] = [],
+  _requiredQueueSize: number = 3
 ): GrowthCheckResult {
   if (!hex) return { canGrow: false, reason: 'Invalid Hex' };
 

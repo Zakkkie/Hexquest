@@ -51,7 +51,6 @@ const RUINS = 'RUINS' as TerrainType;
 const OUTPOST = 'OUTPOST' as TerrainType;
 const MERCHANT_CAMP = 'MERCHANT_CAMP' as TerrainType;
 
-const ALL_TERRAIN: TerrainType[] = [PLAINS, FOREST, SWAMP, WATER, MOUNTAINS, ROAD, CITY, RUINS, OUTPOST, MERCHANT_CAMP];
 
 export const EVENT_TEMPLATES: EventTemplate[] = [
 

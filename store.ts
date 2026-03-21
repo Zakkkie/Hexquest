@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { GameState, Entity, Hex, EntityType, UIState, WinCondition, LeaderboardEntry, EntityState, MoveAction, RechargeAction, SessionState, LogEntry, FloatingText, Language, DeviceType, Difficulty, HexCoord, DestroyItemAction, RestoreHexAction, Item, ActivateMonumentAction, GameEventType, OverworldState } from './types.ts';
-import { GAME_CONFIG, DIFFICULTY_SETTINGS, SAFETY_CONFIG, ENTROPY_CONFIG } from './rules/config.ts';
+import { GameState, UIState, WinCondition, LeaderboardEntry, EntityState, SessionState, FloatingText, DeviceType, HexCoord, Item, GameEventType } from './types.ts';
 import { getHexKey, getNeighbors, findPath, cubeDistance } from './services/hexUtils.ts';
 import { CITY_NAME } from './services/CityGenerator.ts';
 import { GameEngine } from './engine/GameEngine.ts';
@@ -9,13 +8,12 @@ import { audioService } from './services/audioService.ts';
 import { CAMPAIGN_LEVELS } from './campaign/levels.ts';
 import { LevelConfig } from './types';
 import { calculateMovementCost } from './rules/movement.ts';
-import { generateMap } from './services/mapGenerator.ts';
 import { TEXT } from './services/i18n.ts';
-import { generateMonumentRecipe, getItemDef } from './rules/items.ts';
+import { getItemDef } from './rules/items.ts';
 import { effectPool } from './services/effectPool.ts';
 import { historyService } from './services/historyService.ts';
 import { EVENT_REGISTRY } from './rules/events.ts';
-import { runtimeEventCache, getGeneratedEvent } from './services/EventComposer.ts';
+import { runtimeEventCache } from './services/EventComposer.ts';
 import { pickOverworldEvent } from './services/eventPicker.ts';
 import { getHexHeight } from './services/OverworldGenerator.ts';
 
@@ -24,7 +22,6 @@ import { getHexHeight } from './services/OverworldGenerator.ts';
 import { createInitialSessionData } from './services/sessionFactory.ts';
 
 const MOCK_USER_DB: Record<string, { password: string; avatarColor: string; headIndex: number; bodyIndex: number }> = {};
-const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e']; 
 
 // Sound Mapping for Events
 const EVENT_SOUND_MAP: Partial<Record<GameEventType, string>> = {
@@ -97,7 +94,9 @@ interface GameStore extends GameState {
   activateMonument: () => void;
   visitPoi: () => void;
   closeInterior: () => void;
-  
+  exitBuilding: () => void;
+  resolveBuildingChoice: (choice: import('./types.ts').BuildingDialogueChoice) => void;
+
   checkTutorialCamera: (deltaX: number) => void;
 
   hasHydrated: boolean;
@@ -118,7 +117,7 @@ interface GameStore extends GameState {
   transitionToWorldMap: () => Promise<void>;
   transitionToCity: () => Promise<void>;
   enterRift: (riftId: string) => void;
-  returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => void;
+  returnToOverworld: (result: 'VICTORY' | 'DEFEAT' | 'NEUTRAL') => void;
   triggerEvent: (eventId: string) => void;
   resolveEventChoice: (choice: import('./types.ts').OverworldEventChoice) => void;
   closeEventSummary: () => void;
@@ -172,6 +171,7 @@ export const useGameStore = create<GameStore>()(
           visitedHexes: {},
           isOverworldMoving: false,
           isWorldMap: false,
+          gameStatus: 'PLAYING',
           lastChoiceResult: null,
       },
       
@@ -259,7 +259,7 @@ export const useGameStore = create<GameStore>()(
 
           const stateUser = get().user;
           const overworldState = get().overworld;
-          const initialSessionState = createInitialSessionData(effectiveWin, levelConfig, get().language, stateUser, overworldState);
+          const initialSessionState = createInitialSessionData(effectiveWin ?? null, levelConfig, get().language, stateUser, overworldState);
           engine = new GameEngine(initialSessionState); 
           set({ session: engine.state, hasActiveSession: true, uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME' });
       },
@@ -306,6 +306,7 @@ export const useGameStore = create<GameStore>()(
                   visitedHexes: {},
                   isOverworldMoving: false,
                   isWorldMap: false,
+                  gameStatus: 'PLAYING',
                   lastChoiceResult: null,
               }
           });
@@ -549,6 +550,27 @@ export const useGameStore = create<GameStore>()(
           });
       },
 
+      exitBuilding: () => {
+          audioService.play('UI_CLICK');
+          get().returnToOverworld('NEUTRAL');
+      },
+
+      resolveBuildingChoice: (choice) => {
+          const { penalty, reward, service } = choice;
+          if (!penalty && !reward && !service) return;
+          set(state => {
+              const overworld = { ...state.overworld };
+              const player = { ...overworld.player };
+              if (penalty?.credits)  player.credits = Math.max(0, player.credits - penalty.credits);
+              if (reward?.credits)   player.credits += reward.credits;
+              if (reward?.energy)    player.energy = Math.min(player.maxEnergy, player.energy + reward.energy);
+              if (service?.type === 'REST_FULL')    player.hp = player.maxHp;
+              if (service?.type === 'REST_PARTIAL') player.hp = Math.min(player.maxHp, player.hp + (service.hpAmount ?? 30));
+              overworld.player = player;
+              return { overworld };
+          });
+      },
+
       placeItemInMonument: (item, slotIndex) => {
           const state = get();
           const requirements = state.session?.monumentRequirements;
@@ -643,7 +665,7 @@ export const useGameStore = create<GameStore>()(
           if (!get().hasHydrated) return; // Wait for hydration
           const isFirstTime = !get().overworld.isGenerated;
           if (isFirstTime && !skipIntro) {
-              set({ uiState: 'INTRO', introNextState: 'INTERIOR' });
+              set({ uiState: 'INTRO', introNextState: 'OVERWORLD' });
           }
           try {
               const { generateOverworld } = await import('./services/OverworldGenerator.ts');
@@ -668,13 +690,18 @@ export const useGameStore = create<GameStore>()(
                       activeEventNodeId: null,
                       visitedHexes: { [getHexKey(0, 0)]: true },
                       isOverworldMoving: false,
+                      gameStatus: 'PLAYING',
                       hasCompletedStartQuiz: false,
                       tutorialMarks: 0,
                       cityName: CITY_NAME
                   },
-                  activePoi: 'city_capitol',
-                  uiState: (isFirstTime && !skipIntro) ? state.uiState : 'INTERIOR'
+                  activePoi: null,
+                  uiState: (isFirstTime && !skipIntro) ? state.uiState : 'OVERWORLD'
               }));
+              
+              if (!isFirstTime || skipIntro) {
+                  setTimeout(() => get().triggerEvent('city_intro_task'), 100);
+              }
           } catch (err) {
               console.error('Failed to init overworld:', err);
               get().showToast(TEXT[get().language].TOAST.WORLD_INIT_FAILED, 'error');
@@ -1439,7 +1466,11 @@ export const useGameStore = create<GameStore>()(
           get().startCampaignLevel(riftId);
       },
 
-      returnToOverworld: (result: 'VICTORY' | 'DEFEAT') => {
+      returnToOverworld: (result: 'VICTORY' | 'DEFEAT' | 'NEUTRAL') => {
+          if (result === 'NEUTRAL') {
+              set({ session: null, uiState: 'OVERWORLD' });
+              return;
+          }
           set(state => {
               const newOverworld = { ...state.overworld };
               const player = { ...newOverworld.player };
@@ -1566,25 +1597,43 @@ export const useGameStore = create<GameStore>()(
               if (!eventId) return state;
 
               // Validate prerequisites before processing
+              let canAfford = true;
+              let failReason = '';
+
               if (choice.reqCredits && player.credits < choice.reqCredits) {
-                  get().showToast(TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', choice.reqCredits.toString()), 'error');
-                  return state;
+                  canAfford = false;
+                  failReason = 'credits';
               }
-              if (choice.reqItem && !player.bag.includes(choice.reqItem)) {
-                  get().showToast(TEXT[get().language].TOAST.WRONG_ITEM, 'error');
-                  return state;
+              if (canAfford && choice.reqItem && !player.bag.includes(choice.reqItem)) {
+                  canAfford = false;
+                  failReason = 'item';
               }
-              if (choice.reqItems) {
+              if (canAfford && choice.reqItems) {
                   const missingItems = choice.reqItems.filter(item => {
                       const countInBag = player.bag.filter(i => i === item).length;
                       const countInReq = choice.reqItems!.filter(i => i === item).length;
                       return countInBag < countInReq;
                   });
                   if (missingItems.length > 0) {
-                      get().showToast(TEXT[get().language].TOAST.WRONG_ITEM, 'error');
+                      canAfford = false;
+                      failReason = 'items';
+                  }
+              }
+
+              if (!canAfford) {
+                  if (choice.cannotAffordNode) {
+                      newOverworld.activeEventNodeId = choice.cannotAffordNode;
+                      return { overworld: newOverworld };
+                  } else {
+                      if (failReason === 'credits') {
+                          get().showToast(TEXT[get().language].TOAST.NEED_CREDITS.replace('{0}', choice.reqCredits!.toString()), 'error');
+                      } else {
+                          get().showToast(TEXT[get().language].TOAST.WRONG_ITEM, 'error');
+                      }
                       return state;
                   }
               }
+
               if (choice.reqFlag && !newOverworld.flags[choice.reqFlag]) return state;
               if (choice.reqFlagAbsent && newOverworld.flags[choice.reqFlagAbsent]) return state;
               const rep = player.reputation ?? 0;
@@ -1650,13 +1699,6 @@ export const useGameStore = create<GameStore>()(
               if (choice.setFlag) {
                   const flags = Array.isArray(choice.setFlag) ? choice.setFlag : [choice.setFlag];
                   flags.forEach(f => { newOverworld.flags[f] = true; });
-                  
-                  if (flags.includes('entered_city')) {
-                      setTimeout(() => get().transitionToCity(), 10);
-                  }
-                  if (flags.includes('city_exit_granted')) {
-                      setTimeout(() => get().transitionToWorldMap(), 10);
-                  }
               }
               if (choice.clearFlag) delete newOverworld.flags[choice.clearFlag];
 
@@ -1726,7 +1768,7 @@ export const useGameStore = create<GameStore>()(
           // After set, check for special flags that trigger transitions
           const state = get();
           if (state.overworld.flags['entered_city']) {
-              set({ uiState: 'INTERIOR' });
+              get().transitionToCity();
               set(state => {
                   const newOverworld = { ...state.overworld };
                   delete newOverworld.flags['entered_city'];
@@ -2095,7 +2137,7 @@ export const useGameStore = create<GameStore>()(
     {
       name: 'hexquest-storage-v4',
       storage: createJSONStorage(() => localStorage),
-      onRehydrateStorage: (state) => {
+      onRehydrateStorage: (_state) => {
         return (rehydratedState, error) => {
           if (error) {
             console.error('Hydration error:', error);

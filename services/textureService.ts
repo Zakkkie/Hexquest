@@ -90,7 +90,7 @@ export class TextureService {
   }
 
   // === POSITIVE STYLE: Tech Panels ===
-  private drawPositive(ctx: CanvasRenderingContext2D, size: number, level: number, seed: number, terrainType?: string, poiId?: string) {
+  private drawPositive(ctx: CanvasRenderingContext2D, size: number, level: number, _seed: number, terrainType?: string, poiId?: string) {
       let baseColor = '#0f172a'; 
       let accentColor = '#38bdf8';
       let secColor = '#0284c7';
@@ -221,7 +221,7 @@ export class TextureService {
   }
 
   // === NEGATIVE STYLE: Excavation Pits ===
-  private drawNegative(ctx: CanvasRenderingContext2D, size: number, level: number, seed: number, terrainType?: string, poiId?: string) {
+  private drawNegative(ctx: CanvasRenderingContext2D, size: number, level: number, _seed: number, terrainType?: string, poiId?: string) {
       let base = '#1c1917';
       let stroke = '#44403c';
       

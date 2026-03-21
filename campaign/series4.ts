@@ -1,16 +1,12 @@
 import { LevelConfig } from '../types';
 import { getHexKey } from '../services/hexUtils';
+import { isStranded } from './utils';
 
 /**
  * SERIES 4: ADVANCED PUZZLES (8 levels)
  * Full economic model — see Series 2 header for reference.
  * All starts: minimal resources, player earns through gameplay.
  */
-
-const isStranded = (s: any): boolean => {
-  const p = s.player;
-  return p.moves <= 0 && p.coins < 5 && !p.recoveredCurrentHex;
-};
 
 // Helper: count player-owned hexes at given level
 const countOwned = (state: any, minLevel: number): number =>

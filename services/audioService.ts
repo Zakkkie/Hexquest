@@ -307,7 +307,7 @@ class AudioService {
       
       // Kick: Euclidean-ish distribution
       this.patterns.kick = new Array(16).fill(false);
-      const kickHits = this.context.bpm > 110 ? 4 : 3; // More kicks if faster
+      // kickHits = this.context.bpm > 110 ? 4 : 3; // More kicks if faster (reserved)
       for(let i=0; i<16; i+=4) this.patterns.kick[i] = true; // 4/4 base
       if (Math.random() > 0.5) this.patterns.kick[14] = true; // Syncopation
 
@@ -541,7 +541,7 @@ class AudioService {
       const release = 1.5;
       const dur = (60 / this.context.bpm) * 4; // 1 bar
 
-      chordDegrees.forEach((deg, i) => {
+      chordDegrees.forEach((deg, _i) => {
           const freq = this.getFreq(deg, 2); // Mid range
           
           const osc1 = this.ctx!.createOscillator();

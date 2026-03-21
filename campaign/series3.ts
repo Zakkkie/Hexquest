@@ -1,5 +1,5 @@
 import { LevelConfig } from '../types';
-import { getHexKey } from '../services/hexUtils';
+import { isStranded } from './utils';
 
 /**
  * ============================================================================
@@ -19,11 +19,6 @@ import { getHexKey } from '../services/hexUtils';
  *  ─ Pre-built staircases: each L step costs that many moves.
  *  ─ Path L1→L2→L3→L4→L5 costs 1+2+3+4+5 = 15 moves total.
  */
-
-const isStranded = (state: any): boolean => {
-  const p = state.player;
-  return p.moves <= 0 && p.coins < 5 && !p.recoveredCurrentHex;
-};
 
 export const series3Levels: LevelConfig[] = [
 

@@ -3,8 +3,6 @@ import { FloatingText } from '../types';
 import { GAME_CONFIG } from '../rules/config';
 
 export class EffectPool {
-    private pool: FloatingText[] = [];
-    private active: FloatingText[] = [];
     private maxEffects: number;
 
     constructor(maxEffects: number = GAME_CONFIG.MAX_FLOATING_TEXTS) {
@@ -24,7 +22,7 @@ export class EffectPool {
         // Given React/Zustand state immutability, true pooling is hard.
         // We will focus on LIMITING first, and reusing ID generation or objects where possible.
         
-        this.active = externalEffects;
+        void externalEffects; // sync hint
     }
 
     /**

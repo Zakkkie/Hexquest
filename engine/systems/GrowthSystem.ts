@@ -1,12 +1,12 @@
 
 import { System } from './System';
-import { GameState, GameEvent, EntityState, Entity, EntityType, SessionState } from '../../types';
+import { GameEvent, EntityState, Entity, EntityType, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
-import { getHexKey, getNeighbors, getStatusModifiers } from '../../services/hexUtils';
+import { getHexKey, getStatusModifiers } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';
 import { checkGrowthCondition, checkDigCondition, checkRecoveryCooldown, applyRecovery, getRecoveryReward } from '../../rules/growth';
-import { getLevelConfig, GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../../rules/config';
-import { rollForLoot, LOOT_COLORS } from '../../rules/loot';
+import { getLevelConfig, GAME_CONFIG, ENTROPY_CONFIG } from '../../rules/config';
+import { rollForLoot } from '../../rules/loot';
 
 export class GrowthSystem implements System {
   update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {

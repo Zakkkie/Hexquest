@@ -129,7 +129,7 @@ const HexButton: React.FC<HexButtonProps> = ({
         )}
       </svg>
       
-      <div className={`absolute inset-0 flex flex-col items-center justify-center text-white pointer-events-none z-20 ${active ? 'text-white' : 'text-slate-200'}`}>
+      <div className={`absolute inset-0 flex flex-col items-center justify-center text-white pointer-events-none z-20 break-words whitespace-pre-wrap ${active ? 'text-white' : 'text-slate-200'}`}>
         {children}
       </div>
     </div>

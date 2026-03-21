@@ -1,5 +1,5 @@
 
-import { GameAction, GameEvent, ValidationResult, SessionState, EntityState, LeaderboardEntry, Hex } from '../types';
+import { GameAction, GameEvent, ValidationResult, SessionState, EntityState, Hex } from '../types';
 import { WorldIndex } from './WorldIndex';
 import { System } from './systems/System';
 import { MovementSystem } from './systems/MovementSystem';
@@ -10,7 +10,6 @@ import { EntropySystem } from './systems/EntropySystem';
 import { ActionProcessor } from './ActionProcessor';
 import { TransactionQueue } from '../services/transactionQueue';
 import { SAFETY_CONFIG } from '../rules/config';
-import { GameEventFactory } from './events';
 import { createDraft, finishDraft, setAutoFreeze } from 'immer';
 
 setAutoFreeze(false);

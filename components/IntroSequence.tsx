@@ -25,6 +25,9 @@ const IntroSequence: React.FC = () => {
 
   const skipIntro = () => {
     setUIState(introNextState);
+    if (introNextState === 'OVERWORLD') {
+      setTimeout(() => useGameStore.getState().triggerEvent('city_intro_task'), 100);
+    }
   };
 
   return (
@@ -52,7 +55,7 @@ const IntroSequence: React.FC = () => {
                 <Target className="w-12 h-12 text-white drop-shadow-[0_0_15px_#fff]" />
               </div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">
+            <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 break-words whitespace-pre-wrap">
               HEXQUEST
             </h1>
           </motion.div>
@@ -67,10 +70,10 @@ const IntroSequence: React.FC = () => {
             transition={{ duration: 1 }}
             className="text-center max-w-2xl px-6"
           >
-            <h2 className="text-2xl md:text-3xl font-bold text-indigo-300 mb-4 tracking-widest uppercase">
+            <h2 className="text-2xl md:text-3xl font-bold text-indigo-300 mb-4 tracking-widest uppercase break-words whitespace-pre-wrap">
               The Entropy Cascade
             </h2>
-            <p className="text-lg md:text-xl text-slate-300 leading-relaxed font-light">
+            <p className="text-lg md:text-xl text-slate-300 leading-relaxed font-light break-words whitespace-pre-wrap">
               The world was shattered by the Entropy Cascade. Reality itself is unstable, shifting and collapsing.
               Only the ancient Monuments hold the power to stabilize the grid.
             </p>
@@ -86,10 +89,10 @@ const IntroSequence: React.FC = () => {
             transition={{ duration: 1 }}
             className="text-center max-w-2xl px-6"
           >
-            <h2 className="text-2xl md:text-3xl font-bold text-emerald-400 mb-4 tracking-widest uppercase">
+            <h2 className="text-2xl md:text-3xl font-bold text-emerald-400 mb-4 tracking-widest uppercase break-words whitespace-pre-wrap">
               Your Mission
             </h2>
-            <p className="text-lg md:text-xl text-slate-300 leading-relaxed font-light">
+            <p className="text-lg md:text-xl text-slate-300 leading-relaxed font-light break-words whitespace-pre-wrap">
               Command your unit. Gather resources, build structures, and reach the Summit before the rival AI or the collapsing reality consumes you.
             </p>
           </motion.div>
@@ -102,7 +105,7 @@ const IntroSequence: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="flex flex-col items-center"
           >
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-8 tracking-widest uppercase drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+            <h2 className="text-3xl md:text-5xl font-black text-white mb-8 tracking-widest uppercase drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] break-words whitespace-pre-wrap">
               Initialization Complete
             </h2>
             <button

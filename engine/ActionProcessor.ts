@@ -1,5 +1,5 @@
 
-import { GameAction, EntityState, ValidationResult, SessionState, Entity, MoveAction, ActiveStatus, Item, Hex } from '../types';
+import { GameAction, EntityState, ValidationResult, SessionState, Entity, MoveAction, Item } from '../types';
 import { WorldIndex } from './WorldIndex';
 import { getHexKey, cubeDistance } from '../services/hexUtils';
 import { ENTROPY_CONFIG } from '../rules/config';
@@ -13,7 +13,7 @@ import { GameEventFactory } from './events';
 export class ActionProcessor {
   constructor() {}
   
-  public validateAction(state: SessionState, index: WorldIndex, actorId: string, action: GameAction): ValidationResult {
+  public validateAction(state: SessionState, _index: WorldIndex, actorId: string, action: GameAction): ValidationResult {
     const actor = state.player.id === actorId ? state.player : state.bots.find(b => b.id === actorId);
     if (!actor) return { ok: false, reason: 'Entity not found' };
 
@@ -83,7 +83,7 @@ export class ActionProcessor {
       return result;
   }
 
-  private handleMove(state: SessionState, index: WorldIndex, actor: Entity, action: MoveAction): ValidationResult {
+  private handleMove(state: SessionState, _index: WorldIndex, actor: Entity, action: MoveAction): ValidationResult {
       // Validate Path
       const cost = calculateMovementCost(actor, action.path, state.grid);
       if (!cost.canAfford) {
@@ -130,7 +130,7 @@ export class ActionProcessor {
       return { ok: true };
   }
 
-  private handleUpgrade(state: SessionState, index: WorldIndex, actor: Entity, action: any): ValidationResult {
+  private handleUpgrade(_state: SessionState, _index: WorldIndex, actor: Entity, action: any): ValidationResult {
       if (actor.q !== action.coord.q || actor.r !== action.coord.r) {
           return { ok: false, reason: 'Must be on target to upgrade' };
       }
@@ -139,7 +139,7 @@ export class ActionProcessor {
       return { ok: true };
   }
 
-  private handleDig(state: SessionState, index: WorldIndex, actor: Entity, action: any): ValidationResult {
+  private handleDig(_state: SessionState, _index: WorldIndex, actor: Entity, action: any): ValidationResult {
       if (actor.q !== action.coord.q || actor.r !== action.coord.r) {
           return { ok: false, reason: 'Must be on target to dig' };
       }
@@ -147,7 +147,7 @@ export class ActionProcessor {
       return { ok: true };
   }
 
-  private handleRecharge(state: SessionState, actor: Entity): ValidationResult {
+  private handleRecharge(_state: SessionState, actor: Entity): ValidationResult {
       const EXCHANGE_RATE = 5;
       if (actor.coins >= EXCHANGE_RATE) {
           actor.coins -= EXCHANGE_RATE;
@@ -157,7 +157,7 @@ export class ActionProcessor {
       return { ok: false, reason: 'Insufficient funds for recharge' };
   }
 
-  private handleDestroyItem(state: SessionState, actor: Entity, action: any): ValidationResult {
+  private handleDestroyItem(_state: SessionState, actor: Entity, action: any): ValidationResult {
       const idx = actor.inventory.findIndex(i => i.id === action.itemId);
       if (idx === -1) return { ok: false, reason: 'Item not found' };
       
@@ -381,7 +381,7 @@ export class ActionProcessor {
       return { ok: true };
   }
 
-  private handleVisitPoi(state: SessionState, actor: Entity, action: any): ValidationResult {
+  private handleVisitPoi(state: SessionState, actor: Entity, _action: any): ValidationResult {
       const currentHex = state.grid[getHexKey(actor.q, actor.r)];
       if (!currentHex || !currentHex.poiType) {
           return { ok: false, reason: 'No Point of Interest here' };

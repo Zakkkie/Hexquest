@@ -1,11 +1,13 @@
 import React, { useRef, useEffect, useMemo } from 'react';
-import { Group, Line, Circle, Path, RegularPolygon, Rect } from 'react-konva';
+import { Group, Line, Circle, Path, RegularPolygon, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { OverworldHex, TerrainType } from '../types.ts';
 import { textureService } from '../services/textureService.ts';
 import { getHexHeight } from '../services/OverworldGenerator.ts';
 import { getTheme } from './MapRenderer.tsx';
+import { useGameStore } from '../store.ts';
+import { TEXT } from '../services/i18n.ts';
 
 interface OverworldHexNodeProps {
   hex: OverworldHex;
@@ -21,11 +23,6 @@ interface OverworldHexNodeProps {
 
 export const TERRAIN_LEVELS: Record<string, number> = {}; // Keep for compatibility if needed elsewhere, but it's empty
 
-const seededRandom = (q: number, r: number, seed: number) => {
-  const x = Math.sin(q * 12.9898 + r * 78.233 + seed) * 43758.5453;
-  return x - Math.floor(x);
-};
-
 const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked, isPassable = true, neighborLevels, neighborPoiIds = [], onClick, highlight = 'NONE' }) => {
   const groupRef = useRef<Konva.Group>(null);
   const baseRef = useRef<Konva.Group>(null);
@@ -35,6 +32,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
   const poiRef = useRef<Konva.Group>(null);
 
   const [isHovered, setIsHovered] = React.useState(false);
+  const language = useGameStore(state => state.language);
 
   const size = GAME_CONFIG.HEX_SIZE;
   
@@ -54,10 +52,6 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
     }
     return pts;
   }, [size]);
-
-  const pointsArray = useMemo(() => {
-    return points.flatMap(p => [p.x, p.y]);
-  }, [points]);
 
   const topPathData = useMemo(() => {
     return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y} L ${points[2].x} ${points[2].y} L ${points[3].x} ${points[3].y} L ${points[4].x} ${points[4].y} L ${points[5].x} ${points[5].y} Z`;
@@ -266,24 +260,6 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
     );
   }, [points, offsetY, hex.terrainType, sideTexture, neighborLevels, level]);
 
-  const getTerrainTint = (type: string, hasRift?: boolean) => {
-    if (hasRift) {
-      return 'rgba(147, 51, 234, 0.4)'; 
-    }
-    switch (type) {
-      case 'WATER': return 'rgba(56, 189, 248, 0.3)'; 
-      case 'FOREST': return 'rgba(74, 222, 128, 0.2)'; 
-      case 'MOUNTAINS': return 'rgba(156, 163, 175, 0.3)'; 
-      case 'SWAMP': return 'rgba(163, 230, 53, 0.2)'; 
-      case 'ROAD': return 'rgba(250, 204, 21, 0.15)'; 
-      case 'CITY': return 'rgba(248, 113, 113, 0.2)'; 
-      case 'OUTPOST': return 'rgba(251, 146, 60, 0.2)'; 
-      case 'RUINS': return 'rgba(192, 132, 252, 0.2)'; 
-      case 'MERCHANT_CAMP': return 'rgba(250, 204, 21, 0.2)'; 
-      default: return 'transparent';
-    }
-  };
-
   const terrainDetails = useMemo(() => {
     return [];
   }, [hex.terrainType, hex.q, hex.r, size]);
@@ -314,10 +290,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
     >
       <Group ref={baseRef}>
         {/* Walls */}
-        {walls}
-
-        {/* Top Face Group */}
-        <Group y={offsetY} scaleY={0.8}>
+        {walls}{/* Top Face Group */}<Group y={offsetY} scaleY={0.8}>
           {/* Base Hex */}
           <Path 
             data={topPathData}
@@ -522,61 +495,172 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
               <Circle radius={6} fill="rgba(0,0,0,0.3)" scaleY={0.5} y={15} />
               
               {/* Stylized POI Marker / Building Icon */}
-              {hex.terrainType === 'BUILDING' ? (
+              {hex.terrainType === 'BUILDING' || hex.poiId === 'city_checkpoint' ? (
                 <Group scale={{ x: 0.8, y: 0.8 }} y={-10}>
                   {hex.poiId === 'city_capitol' && (
                     <Group>
-                      <Path data="M -10 0 L 0 -15 L 10 0 Z" fill="#fbbf24" stroke="#b45309" strokeWidth={1.5} />
-                      <Rect x={-8} y={0} width={16} height={10} fill="#fcd34d" stroke="#b45309" strokeWidth={1.5} />
-                      <Rect x={-2} y={2} width={4} height={8} fill="#b45309" />
+                      {/* Base steps */}
+                      <Rect x={-16} y={6} width={32} height={2} fill="#78350f" />
+                      <Rect x={-14} y={4} width={28} height={2} fill="#92400e" />
+                      <Rect x={-12} y={2} width={24} height={2} fill="#b45309" />
+                      {/* Columns with shadow */}
+                      {[-10, -4, 2, 8].map(x => (
+                        <Group key={x} x={x} y={-6}>
+                          <Rect width={4} height={8} fill="#fde68a" />
+                          <Rect x={3} width={1} height={8} fill="#d97706" />{/* shadow */}
+                        </Group>
+                      ))}
+                      {/* Roof Base */}
+                      <Rect x={-14} y={-8} width={28} height={2} fill="#b45309" />
+                      <Path data="M -12 -8 L 12 -8 L 8 -12 L -8 -12 Z" fill="#92400e" />
+                      {/* Dome */}
+                      <Path data="M -8 -12 C -8 -22, 8 -22, 8 -12 Z" fill="#fbbf24" stroke="#d97706" strokeWidth={1} />
+                      {/* Dome highlight */}
+                      <Path data="M -4 -12 C -4 -18, 0 -18, 0 -12 Z" fill="#fef3c7" opacity={0.5} />
+                      {/* Spire */}
+                      <Rect x={-0.5} y={-26} width={1} height={6} fill="#f59e0b" />
+                      <Circle x={0} y={-26} radius={1.5} fill="#fcd34d" />
+                      {isHovered && <Text text={TEXT[language].POI.CAPITOL} x={-40} y={-40} width={80} align="center" fontSize={11} fontStyle="bold" fill="#ffffff" shadowColor="black" shadowBlur={4} shadowOffsetX={1} shadowOffsetY={1} />}
                     </Group>
                   )}
                   {hex.poiId === 'city_bar' && (
                     <Group>
-                      <Rect x={-8} y={-10} width={16} height={20} fill="#f87171" stroke="#991b1b" strokeWidth={1.5} />
-                      <Path data="M -10 -10 L 0 -15 L 10 -10 Z" fill="#fca5a5" stroke="#991b1b" strokeWidth={1.5} />
-                      <Rect x={-4} y={0} width={8} height={10} fill="#991b1b" />
-                      <Circle x={0} y={-5} radius={3} fill="#fef08a" />
+                      {/* Main body */}
+                      <Rect x={-12} y={-4} width={24} height={12} fill="#7f1d1d" />
+                      {/* Wood planks texture */}
+                      <Line points={[-12, 0, 12, 0]} stroke="#450a0a" strokeWidth={0.5} />
+                      <Line points={[-12, 4, 12, 4]} stroke="#450a0a" strokeWidth={0.5} />
+                      {/* Roof */}
+                      <Path data="M -14 -4 L 0 -12 L 14 -4 Z" fill="#b91c1c" stroke="#7f1d1d" strokeWidth={1} />
+                      <Path data="M -14 -4 L 0 -12 L 0 -4 Z" fill="#ef4444" opacity={0.2} />{/* highlight */}
+                      {/* Door */}
+                      <Path data="M -3 8 L -3 2 A 3 3 0 0 1 3 2 L 3 8 Z" fill="#450a0a" />
+                      <Circle x={1} y={5} radius={0.5} fill="#fbbf24" />{/* knob */}
+                      {/* Windows */}
+                      <Rect x={-9} y={0} width={4} height={4} fill="#fef08a" stroke="#450a0a" strokeWidth={1} />
+                      <Line points={[-7, 0, -7, 4]} stroke="#450a0a" strokeWidth={0.5} />
+                      <Line points={[-9, 2, -5, 2]} stroke="#450a0a" strokeWidth={0.5} />
+                      <Rect x={5} y={0} width={4} height={4} fill="#fef08a" stroke="#450a0a" strokeWidth={1} />
+                      <Line points={[7, 0, 7, 4]} stroke="#450a0a" strokeWidth={0.5} />
+                      <Line points={[5, 2, 9, 2]} stroke="#450a0a" strokeWidth={0.5} />
+                      {/* Signboard */}
+                      <Rect x={8} y={-8} width={6} height={8} fill="#d97706" stroke="#78350f" strokeWidth={1} />
+                      <Circle x={11} y={-4} radius={1.5} fill="#fef3c7" />{/* mug icon */}
+                      {/* Chimney */}
+                      <Rect x={-8} y={-16} width={3} height={8} fill="#7f1d1d" />
+                      <Circle x={-6.5} y={-18} radius={2} fill="#a8a29e" opacity={0.6} />
+                      <Circle x={-5} y={-21} radius={3} fill="#a8a29e" opacity={0.4} />
+                      {isHovered && <Text text={TEXT[language].POI.BAR} x={-40} y={-35} width={80} align="center" fontSize={11} fontStyle="bold" fill="#ffffff" shadowColor="black" shadowBlur={4} shadowOffsetX={1} shadowOffsetY={1} />}
                     </Group>
                   )}
                   {hex.poiId === 'city_bank' && (
                     <Group>
-                      <Rect x={-12} y={-5} width={24} height={15} fill="#34d399" stroke="#065f46" strokeWidth={1.5} />
-                      <Path data="M -14 -5 L 0 -12 L 14 -5 Z" fill="#6ee7b7" stroke="#065f46" strokeWidth={1.5} />
-                      <Rect x={-8} y={-5} width={4} height={15} fill="#059669" />
-                      <Rect x={4} y={-5} width={4} height={15} fill="#059669" />
+                      {/* Base steps */}
+                      <Rect x={-14} y={6} width={28} height={2} fill="#064e3b" />
+                      <Rect x={-12} y={4} width={24} height={2} fill="#065f46" />
+                      {/* Body */}
+                      <Rect x={-10} y={-6} width={20} height={10} fill="#10b981" />
+                      {/* Pillars */}
+                      <Rect x={-10} y={-6} width={3} height={10} fill="#6ee7b7" />
+                      <Rect x={-4} y={-6} width={3} height={10} fill="#6ee7b7" />
+                      <Rect x={1} y={-6} width={3} height={10} fill="#6ee7b7" />
+                      <Rect x={7} y={-6} width={3} height={10} fill="#6ee7b7" />
+                      {/* Vault Door (visible in the middle) */}
+                      <Circle x={0} y={-1} radius={3} fill="#047857" stroke="#064e3b" strokeWidth={0.5} />
+                      <Circle x={0} y={-1} radius={1.5} fill="#34d399" />
+                      {/* Roof Base */}
+                      <Rect x={-12} y={-8} width={24} height={2} fill="#065f46" />
+                      {/* Roof */}
+                      <Path data="M -12 -8 L 0 -14 L 12 -8 Z" fill="#34d399" stroke="#064e3b" strokeWidth={1} />
+                      {/* Coin Sign */}
+                      <Circle x={0} y={-14} radius={2.5} fill="#fbbf24" stroke="#d97706" strokeWidth={0.5} />
+                      <Text text="$" x={-1.5} y={-16.5} fontSize={5} fill="#78350f" fontStyle="bold" />
+                      {isHovered && <Text text={TEXT[language].POI.BANK} x={-40} y={-30} width={80} align="center" fontSize={11} fontStyle="bold" fill="#ffffff" shadowColor="black" shadowBlur={4} shadowOffsetX={1} shadowOffsetY={1} />}
                     </Group>
                   )}
                   {hex.poiId === 'city_shop' && (
                     <Group>
-                      <Rect x={-10} y={-8} width={20} height={18} fill="#60a5fa" stroke="#1e3a8a" strokeWidth={1.5} />
-                      <Path data="M -12 -8 L -10 -12 L 10 -12 L 12 -8 Z" fill="#93c5fd" stroke="#1e3a8a" strokeWidth={1.5} />
-                      <Rect x={-10} y={-8} width={20} height={4} fill="#bfdbfe" />
-                      <Rect x={-4} y={2} width={8} height={8} fill="#1e3a8a" />
+                      {/* Body */}
+                      <Rect x={-12} y={-2} width={24} height={10} fill="#2563eb" />
+                      {/* Roof */}
+                      <Path data="M -14 -2 L -10 -10 L 10 -10 L 14 -2 Z" fill="#60a5fa" stroke="#1e3a8a" strokeWidth={1} />
+                      {/* Awning (Stripes) */}
+                      <Path data="M -14 -2 L 14 -2 L 12 2 L -12 2 Z" fill="#bfdbfe" />
+                      <Path data="M -10 -2 L -8 2 M -4 -2 L -2 2 M 2 -2 L 4 2 M 8 -2 L 10 2" stroke="#1e3a8a" strokeWidth={2} />
+                      {/* Door */}
+                      <Rect x={-3} y={4} width={6} height={4} fill="#1e3a8a" />
+                      {/* Windows */}
+                      <Rect x={-10} y={3} width={5} height={4} fill="#dbeafe" stroke="#1e3a8a" strokeWidth={0.5} />
+                      <Rect x={5} y={3} width={5} height={4} fill="#dbeafe" stroke="#1e3a8a" strokeWidth={0.5} />
+                      {/* Sign */}
+                      <Rect x={-6} y={-8} width={12} height={4} fill="#fef08a" stroke="#ca8a04" strokeWidth={0.5} />
+                      <Text text="SHOP" x={-5} y={-7} fontSize={3} fill="#854d0e" fontStyle="bold" />
+                      {isHovered && <Text text={TEXT[language].POI.SHOP} x={-40} y={-25} width={80} align="center" fontSize={11} fontStyle="bold" fill="#ffffff" shadowColor="black" shadowBlur={4} shadowOffsetX={1} shadowOffsetY={1} />}
                     </Group>
                   )}
                   {hex.poiId === 'city_workshop' && (
                     <Group>
-                      <Path data="M -12 10 L -12 -5 L -6 -12 L 6 -12 L 12 -5 L 12 10 Z" fill="#a78bfa" stroke="#4c1d95" strokeWidth={1.5} />
-                      <Rect x={-4} y={-8} width={8} height={6} fill="#ddd6fe" stroke="#4c1d95" strokeWidth={1} />
-                      <Rect x={-6} y={2} width={12} height={8} fill="#4c1d95" />
+                      {/* Main Body */}
+                      <Rect x={-12} y={-2} width={16} height={10} fill="#6d28d9" />
+                      {/* Side Shed */}
+                      <Rect x={4} y={2} width={8} height={6} fill="#8b5cf6" />
+                      {/* Roofs */}
+                      <Path data="M -14 -2 L -4 -10 L 6 -2 Z" fill="#a78bfa" stroke="#4c1d95" strokeWidth={1} />
+                      <Path data="M 4 2 L 8 -2 L 14 2 Z" fill="#c4b5fd" stroke="#4c1d95" strokeWidth={1} />
+                      {/* Chimney */}
+                      <Rect x={-8} y={-14} width={3} height={8} fill="#4c1d95" />
+                      {/* Smoke */}
+                      <Circle x={-6.5} y={-16} radius={1.5} fill="#ede9fe" opacity={0.8} />
+                      <Circle x={-5} y={-19} radius={2.5} fill="#ede9fe" opacity={0.6} />
+                      <Circle x={-3} y={-23} radius={3.5} fill="#ede9fe" opacity={0.4} />
+                      {/* Door */}
+                      <Rect x={-4} y={4} width={5} height={4} fill="#4c1d95" />
+                      {/* Gear/Window */}
+                      <Circle x={-4} y={0} radius={2.5} fill="#fcd34d" stroke="#b45309" strokeWidth={0.5} />
+                      <Path data="M -4 -3 L -4 3 M -7 0 L -1 0 M -6 -2 L -2 2 M -6 2 L -2 -2" stroke="#b45309" strokeWidth={0.5} />
+                      {isHovered && <Text text={TEXT[language].POI.WORKSHOP} x={-40} y={-35} width={80} align="center" fontSize={11} fontStyle="bold" fill="#ffffff" shadowColor="black" shadowBlur={4} shadowOffsetX={1} shadowOffsetY={1} />}
                     </Group>
                   )}
                   {hex.poiId === 'city_hub' && (
                     <Group>
-                      <Circle x={0} y={-5} radius={12} fill="#818cf8" stroke="#312e81" strokeWidth={1.5} />
-                      <Rect x={-8} y={2} width={16} height={8} fill="#a5b4fc" stroke="#312e81" strokeWidth={1.5} />
-                      <Circle x={0} y={-5} radius={4} fill="#e0e7ff" />
-                      <Path data="M 0 -17 L 0 -22" stroke="#312e81" strokeWidth={2} />
-                      <Circle x={0} y={-23} radius={1.5} fill="#ef4444" />
+                      {/* Base */}
+                      <Path data="M -14 8 L 14 8 L 10 2 L -10 2 Z" fill="#4338ca" />
+                      {/* Dome */}
+                      <Path data="M -10 2 C -10 -12, 10 -12, 10 2 Z" fill="#818cf8" stroke="#312e81" strokeWidth={1} />
+                      <Path data="M -6 2 C -6 -8, 6 -8, 6 2 Z" fill="#a5b4fc" opacity={0.5} />
+                      {/* Core */}
+                      <Circle x={0} y={-2} radius={3} fill="#e0e7ff" shadowColor="#e0e7ff" shadowBlur={4} />
+                      {/* Antenna */}
+                      <Path data="M 0 -10 L 0 -20" stroke="#312e81" strokeWidth={1.5} />
+                      <Path data="M -3 -16 L 3 -16 M -2 -18 L 2 -18" stroke="#312e81" strokeWidth={1} />
+                      {/* Beacon */}
+                      <Circle x={0} y={-21} radius={1.5} fill="#ef4444" shadowColor="#ef4444" shadowBlur={4} />
+                      {/* Side nodes */}
+                      <Circle x={-8} y={2} radius={1.5} fill="#34d399" />
+                      <Circle x={8} y={2} radius={1.5} fill="#34d399" />{isHovered && <Text text={TEXT[language].POI.HUB} x={-40} y={-35} width={80} align="center" fontSize={11} fontStyle="bold" fill="#ffffff" shadowColor="black" shadowBlur={4} shadowOffsetX={1} shadowOffsetY={1} />}
                     </Group>
                   )}
                   {hex.poiId === 'city_checkpoint' && (
                     <Group>
-                      <Rect x={-6} y={-15} width={12} height={25} fill="#a1a1aa" stroke="#3f3f46" strokeWidth={1.5} />
-                      <Path data="M -8 -15 L 0 -20 L 8 -15 Z" fill="#d4d4d8" stroke="#3f3f46" strokeWidth={1.5} />
-                      <Rect x={-2} y={-5} width={4} height={15} fill="#3f3f46" />
-                      <Rect x={-15} y={5} width={30} height={4} fill="#ef4444" stroke="#7f1d1d" strokeWidth={1} />
+                      {/* Road Base */}
+                      <Rect x={-16} y={6} width={32} height={4} fill="#27272a" />
+                      <Line points={[-12, 8, -6, 8]} stroke="#fde047" strokeWidth={0.5} />
+                      <Line points={[6, 8, 12, 8]} stroke="#fde047" strokeWidth={0.5} />
+                      {/* Booth */}
+                      <Rect x={-12} y={-6} width={8} height={12} fill="#71717a" stroke="#27272a" strokeWidth={1} />
+                      {/* Booth Window */}
+                      <Rect x={-10} y={-3} width={4} height={4} fill="#bae6fd" />
+                      {/* Booth Roof */}
+                      <Path data="M -14 -6 L -4 -6 L -6 -10 L -12 -10 Z" fill="#52525b" stroke="#27272a" strokeWidth={1} />
+                      {/* Barrier Gate */}
+                      <Rect x={-4} y={0} width={16} height={2} fill="#ef4444" />
+                      <Line points={[-2, 0, 0, 2]} stroke="#ffffff" strokeWidth={1} />
+                      <Line points={[2, 0, 4, 2]} stroke="#ffffff" strokeWidth={1} />
+                      <Line points={[6, 0, 8, 2]} stroke="#ffffff" strokeWidth={1} />
+                      <Line points={[10, 0, 12, 2]} stroke="#ffffff" strokeWidth={1} />
+                      {/* Stop Sign */}
+                      <Circle x={-1} y={-4} radius={2.5} fill="#ef4444" stroke="#7f1d1d" strokeWidth={0.5} />
+                      <Text text="!" x={-2} y={-6.5} fontSize={5} fill="#ffffff" fontStyle="bold" />{isHovered && <Text text={TEXT[language].POI.CHECKPOINT} x={-40} y={-25} width={80} align="center" fontSize={11} fontStyle="bold" fill="#ffffff" shadowColor="black" shadowBlur={4} shadowOffsetX={1} shadowOffsetY={1} />}
                     </Group>
                   )}
                 </Group>
@@ -626,10 +710,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
                     opacity={0.6}
                   />
                 </Group>
-              )}
-              
-              {/* Sparkles */}
-              <Circle y={-35} radius={2} fill="#ffffff" shadowBlur={8} shadowColor={hex.isPoiCenter ? "#3b82f6" : "#facc15"} />
+              )}<Circle y={-35} radius={2} fill="#ffffff" shadowBlur={8} shadowColor={hex.isPoiCenter ? "#3b82f6" : "#facc15"} />
             </Group>
           )}
         </Group>

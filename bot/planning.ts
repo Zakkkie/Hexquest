@@ -1,4 +1,4 @@
-import { Hex, Entity, HexCoord, Difficulty } from '../types';
+import { Hex, Entity } from '../types';
 import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
@@ -123,7 +123,7 @@ export const findDestroyerTarget = (
     grid: Record<string, Hex>,
     index: WorldIndex,
     player: Entity,
-    scanRadius: number
+    _scanRadius: number
 ): ScoredTarget | null => {
     
     if (bot.memory?.patrolPath && bot.memory.patrolPath.length > 0) {
@@ -290,7 +290,7 @@ export const findHiveTarget = (
 export const findBestDigTargets = (
     bot: Entity,
     grid: Record<string, Hex>,
-    allBots: Entity[],
+    _allBots: Entity[],
     limit: number = 5,
     restrictedArea?: Set<string>
 ): { hex: Hex; score: number }[] => {

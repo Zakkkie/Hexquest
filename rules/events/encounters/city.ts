@@ -2,6 +2,26 @@ import { OverworldEvent } from '../../../types.ts';
 
 export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
 
+  city_intro_task: {
+    id: 'city_intro_task',
+    isUnique: true,
+    startNodeId: 'start',
+    nodes: {
+      start: {
+        id: 'start',
+        image: 'https://picsum.photos/seed/city_intro/800/350',
+        text: 'Добро пожаловать в город. Чтобы выйти за его пределы и начать исследование пустошей, вам необходимо получить пропуск. Посетите различные строения в городе и соберите 6 меток обучения.',
+        choices: [
+          {
+            label: 'Понятно, приступлю к сбору',
+            action: 'CLOSE',
+            setFlag: 'city_intro_seen',
+          }
+        ]
+      }
+    }
+  },
+
   city_market_riot: {
     id: 'city_market_riot',
     isUnique: false,
@@ -568,24 +588,60 @@ export const CITY_ENCOUNTERS: Record<string, OverworldEvent> = {
             action: 'GOTO_NODE',
             reqItem: 'city_pass',
             nextNode: 'exit_success_pass',
+            cannotAffordNode: 'exit_fail_pass'
           },
           {
             label: 'Предъявить 6 меток обучения',
             action: 'GOTO_NODE',
             reqItems: ['tutorial_mark', 'tutorial_mark', 'tutorial_mark', 'tutorial_mark', 'tutorial_mark', 'tutorial_mark'],
             nextNode: 'exit_success_marks',
+            cannotAffordNode: 'exit_fail_marks'
           },
           {
             label: 'Купить пропуск (300 монет)',
             action: 'GOTO_NODE',
             nextNode: 'exit_success_coins',
             reqCredits: 300,
+            cannotAffordNode: 'exit_fail_coins'
           },
           {
             label: 'Вернуться в город',
             action: 'CLOSE',
           },
         ],
+      },
+      exit_fail_pass: {
+        id: 'exit_fail_pass',
+        text: 'Вы хлопаете по карманам, но пропуска нет. Офицер хмурится: «Нет пропуска - нет выхода. Возвращайся, когда найдешь его.»',
+        choices: [
+          {
+            label: 'Понятно',
+            action: 'GOTO_NODE',
+            nextNode: 'start'
+          }
+        ]
+      },
+      exit_fail_marks: {
+        id: 'exit_fail_marks',
+        text: 'Вы показываете свои метки, но их недостаточно. Офицер качает головой: «Здесь не хватает. Нужно ровно 6 меток обучения. Иди ищи остальные.»',
+        choices: [
+          {
+            label: 'Понятно',
+            action: 'GOTO_NODE',
+            nextNode: 'start'
+          }
+        ]
+      },
+      exit_fail_coins: {
+        id: 'exit_fail_coins',
+        text: 'Вы пытаетесь наскрести 300 монет, но у вас не хватает. Офицер усмехается: «Нищебродов не выпускаем. Иди заработай.»',
+        choices: [
+          {
+            label: 'Понятно',
+            action: 'GOTO_NODE',
+            nextNode: 'start'
+          }
+        ]
       },
       exit_success_pass: {
         id: 'exit_success_pass',

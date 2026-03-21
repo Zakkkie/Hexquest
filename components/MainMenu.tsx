@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
-import { Trophy, LogOut, Ghost, Play, ArrowRight, Zap, Shield, UserCircle, X, LogIn, Lock, Target, Gem, Crown, Bot, Skull, Activity, Signal, Volume2, VolumeX, BookOpen, Globe, Music, Sliders, ChevronLeft, ChevronRight, Swords, Info, Cpu, Layers, HardDrive, Clock, BarChart, Database, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, Palette, User, Smile, Mountain, AlertTriangle, Crosshair, Flame, Shuffle } from 'lucide-react';
+import { Trophy, LogOut, Ghost, ArrowRight, Shield, X, LogIn, Lock, Target, Gem, Crown, Bot, Activity, Volume2, VolumeX, BookOpen, Globe, Music, ChevronLeft, ChevronRight, Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, Mountain, Crosshair, Flame, Shuffle } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -144,8 +144,8 @@ const MenuButton: React.FC<{
         {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-6 h-6 md:w-5 md:h-5' })}
       </div>
       <div className="flex flex-col items-start relative z-10 text-left">
-        <span className={`text-base md:text-sm font-black uppercase tracking-widest ${variant === 'battle' ? 'text-white' : ''}`}>{label}</span>
-        {subLabel && <span className={`text-[11px] md:text-[10px] font-mono group-hover:text-slate-200 ${variant === 'battle' ? 'text-red-100' : 'text-slate-500'}`}>{subLabel}</span>}
+        <span className={`text-base md:text-sm font-black uppercase tracking-widest break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-white' : ''}`}>{label}</span>
+        {subLabel && <span className={`text-[11px] md:text-[10px] font-mono group-hover:text-slate-200 break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-red-100' : 'text-slate-500'}`}>{subLabel}</span>}
       </div>
       
       {/* Shimmer Effect */}
@@ -160,8 +160,6 @@ const MainMenu: React.FC = () => {
   const isMusicMuted = useGameStore(state => state.isMusicMuted);
   const isSfxMuted = useGameStore(state => state.isSfxMuted);
   const language = useGameStore(state => state.language);
-  const deviceType = useGameStore(state => state.deviceType);
-  
   const startNewGame = useGameStore(state => state.startNewGame);
   const setUIState = useGameStore(state => state.setUIState);
   const setLanguage = useGameStore(state => state.setLanguage);
@@ -200,8 +198,6 @@ const MainMenu: React.FC = () => {
   const [mapType, setMapType] = useState<'FLAT' | 'CHAOTIC'>('FLAT'); // New state
 
   const t = TEXT[language].MENU;
-  const isMobile = deviceType === 'MOBILE';
-
   // UPDATED MISSION TIERS FOR SUMMIT OBJECTIVE
   const MISSION_TIERS = {
     1: { level: 5, coins: 0, label: language === 'RU' ? 'ПИК УР.5' : 'SUMMIT L5', time: '~10m', color: 'text-blue-400', difficulty: 'EASY' as Difficulty, icon: Mountain, desc: 'Recon' },
@@ -360,8 +356,6 @@ const MainMenu: React.FC = () => {
     );
   };
 
-  const currentTierData = MISSION_TIERS[selectedTier as 1|2|3];
-  
   const getDifficultyColor = (d: Difficulty) => {
       if (d === 'EASY') return 'text-emerald-400 border-emerald-500/50 bg-emerald-900/20';
       if (d === 'MEDIUM') return 'text-amber-400 border-amber-500/50 bg-amber-900/20';
@@ -432,7 +426,7 @@ const MainMenu: React.FC = () => {
                   </button>
                 ) : (
                   <div className="flex items-center gap-3 bg-slate-900/90 p-1.5 pl-4 rounded-full border border-slate-700 shadow-2xl">
-                    <div className="flex flex-col items-end"><span className="text-xs font-bold text-white leading-tight max-w-[100px] truncate">{user.nickname}</span><span className="text-[10px] text-slate-400 uppercase tracking-widest">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span></div>
+                    <div className="flex flex-col items-end"><span className="text-xs font-bold text-white leading-tight max-w-[100px] truncate break-words whitespace-pre-wrap">{user.nickname}</span><span className="text-[10px] text-slate-400 uppercase tracking-widest break-words whitespace-pre-wrap">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span></div>
                     {renderAvatar(user.avatarColor, user.headIndex, user.bodyIndex, 'sm')}
                     <button onClick={handleLogout} className="p-2 hover:bg-red-500/20 rounded-full text-slate-400 hover:text-red-400 transition-colors"><LogOut className="w-4 h-4" /></button>
                   </div>
@@ -455,12 +449,12 @@ const MainMenu: React.FC = () => {
                       <Target className="w-5 h-5 md:w-8 md:h-8 text-white drop-shadow-[0_0_10px_#fff]" />
                   </div>
               </div>
-              <h1 className="relative text-4xl md:text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] z-10">
+              <h1 className="relative text-4xl md:text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] z-10 break-words whitespace-pre-wrap">
                   {t.TITLE}
               </h1>
               <div className="flex items-center gap-2 md:gap-3 mt-1 md:mt-2 opacity-80">
                   <div className="h-px w-8 md:w-12 bg-indigo-500/50"></div>
-                  <p className="text-[8px] md:text-xs text-indigo-300 font-mono tracking-[0.3em] md:tracking-[0.4em] uppercase whitespace-nowrap">{t.SUBTITLE}</p>
+                  <p className="text-[8px] md:text-xs text-indigo-300 font-mono tracking-[0.3em] md:tracking-[0.4em] uppercase whitespace-nowrap break-words whitespace-pre-wrap">{t.SUBTITLE}</p>
                   <div className="h-px w-8 md:w-12 bg-indigo-500/50"></div>
               </div>
           </div>
@@ -480,8 +474,8 @@ const MainMenu: React.FC = () => {
           <div className="bg-slate-900 border border-slate-700/80 rounded-[2rem] shadow-2xl w-full max-w-sm relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
             {/* ... Existing Auth Modal Content (kept as is) ... */}
             <div className="grid grid-cols-2 border-b border-slate-700/50">
-                <button onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
-                <button onClick={() => { setAuthMode('REGISTER'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_REGISTER}</button>
+                <button onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
+                <button onClick={() => { setAuthMode('REGISTER'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_REGISTER}</button>
             </div>
             <div className="p-4 md:p-8 flex flex-col gap-4 md:gap-5 overflow-y-auto no-scrollbar max-h-[80vh]">
               <div className="flex items-center gap-2 md:gap-3 mb-1">
@@ -489,34 +483,34 @@ const MainMenu: React.FC = () => {
                       {authMode === 'GUEST' ? <Ghost className="w-5 h-5 md:w-6 md:h-6 text-slate-300" /> : (authMode === 'LOGIN' ? <LogIn className="w-5 h-5 md:w-6 md:h-6" /> : <UserPlus className="w-5 h-5 md:w-6 md:h-6" />)}
                   </div>
                   <div>
-                      <h2 className="text-lg md:text-xl font-bold text-white leading-none">{authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
-                      <p className="text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider">{authMode === 'GUEST' ? t.MODAL_GUEST_SUBTITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_SUBTITLE : t.MODAL_REGISTER_SUBTITLE)}</p>
+                      <h2 className="text-lg md:text-xl font-bold text-white leading-none break-words whitespace-pre-wrap">{authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
+                      <p className="text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider break-words whitespace-pre-wrap">{authMode === 'GUEST' ? t.MODAL_GUEST_SUBTITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_SUBTITLE : t.MODAL_REGISTER_SUBTITLE)}</p>
                   </div>
               </div>
-              {errorMessage && <div className="p-2.5 md:p-3 bg-red-950/40 border border-red-900/50 rounded-xl flex items-center gap-2 text-red-400 text-[10px] md:text-xs font-bold animate-in slide-in-from-top-2"><Shield className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> {errorMessage}</div>}
+              {errorMessage && <div className="p-2.5 md:p-3 bg-red-950/40 border border-red-900/50 rounded-xl flex items-center gap-2 text-red-400 text-[10px] md:text-xs font-bold animate-in slide-in-from-top-2 break-words whitespace-pre-wrap"><Shield className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> {errorMessage}</div>}
               <div className="space-y-3 md:space-y-4">
                   {(authMode === 'REGISTER' || authMode === 'GUEST') && (
                       <div className="bg-slate-950/50 rounded-2xl border border-slate-800 p-3 md:p-4 flex flex-col items-center gap-3 md:gap-4">
-                          <span className="text-[8px] md:text-[9px] font-bold uppercase text-slate-500 tracking-widest w-full text-center">{t.UNIT_CONFIG}</span>
+                          <span className="text-[8px] md:text-[9px] font-bold uppercase text-slate-500 tracking-widest w-full text-center break-words whitespace-pre-wrap">{t.UNIT_CONFIG}</span>
                           <div className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-slate-900 rounded-full border-2 border-slate-800 shadow-inner">
                               <CharacterPreview head={selectedHead} body={selectedBody} color={selectedColor} />
                           </div>
                           <div className="flex gap-1.5 md:gap-2 w-full justify-between items-center">
                               <div className="flex flex-col items-center gap-1">
-                                  <span className="text-[7px] md:text-[8px] uppercase text-slate-500">{t.UNIT_HEAD}</span>
+                                  <span className="text-[7px] md:text-[8px] uppercase text-slate-500 break-words whitespace-pre-wrap">{t.UNIT_HEAD}</span>
                                   <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
                                       <button onClick={() => cycleOption(setSelectedHead, selectedHead, -1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
                                       <button onClick={() => cycleOption(setSelectedHead, selectedHead, 1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
                                   </div>
                               </div>
                               <div className="flex flex-col items-center gap-1">
-                                  <span className="text-[7px] md:text-[8px] uppercase text-slate-500">{t.UNIT_HULL}</span>
+                                  <span className="text-[7px] md:text-[8px] uppercase text-slate-500 break-words whitespace-pre-wrap">{t.UNIT_HULL}</span>
                                   <div className="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
                                       {AVATAR_COLORS.slice(0, 4).map(c => <button key={c} onClick={() => setSelectedColor(c)} style={{backgroundColor: c}} className={`w-3.5 h-3.5 md:w-4 md:h-4 rounded-full ${selectedColor === c ? 'ring-1 ring-white' : 'opacity-50'}`} />)}
                                   </div>
                               </div>
                               <div className="flex flex-col items-center gap-1">
-                                  <span className="text-[7px] md:text-[8px] uppercase text-slate-500">{t.UNIT_CHASSIS}</span>
+                                  <span className="text-[7px] md:text-[8px] uppercase text-slate-500 break-words whitespace-pre-wrap">{t.UNIT_CHASSIS}</span>
                                   <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
                                       <button onClick={() => cycleOption(setSelectedBody, selectedBody, -1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
                                       <button onClick={() => cycleOption(setSelectedBody, selectedBody, 1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
@@ -526,24 +520,24 @@ const MainMenu: React.FC = () => {
                       </div>
                   )}
                   <div>
-                      <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 md:mb-1.5 block flex items-center gap-1.5"><User className="w-3 h-3" /> {t.INPUT_NAME}</label>
+                      <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 md:mb-1.5 block flex items-center gap-1.5 break-words whitespace-pre-wrap"><User className="w-3 h-3" /> {t.INPUT_NAME}</label>
                       <input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder={t.INPUT_NAME_PH} className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-xs md:text-sm" maxLength={16} />
                   </div>
                   {authMode !== 'GUEST' && (
                       <div>
-                          <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 md:mb-1.5 block flex items-center gap-1.5"><Lock className="w-3 h-3" /> {t.INPUT_PASS}</label>
+                          <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 md:mb-1.5 block flex items-center gap-1.5 break-words whitespace-pre-wrap"><Lock className="w-3 h-3" /> {t.INPUT_PASS}</label>
                           <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder={t.INPUT_PASS_PH} className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-xs md:text-sm" />
                       </div>
                   )}
-                  <button onClick={handleAuthSubmit} className={`w-full py-3.5 md:py-4 mt-1 md:mt-2 font-bold rounded-xl uppercase tracking-[0.15em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${authMode === 'GUEST' ? 'bg-slate-700 hover:bg-slate-600 text-white' : (authMode === 'LOGIN' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/30' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30')}`}>
+                  <button onClick={handleAuthSubmit} className={`w-full py-3.5 md:py-4 mt-1 md:mt-2 font-bold rounded-xl uppercase tracking-[0.15em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 break-words whitespace-pre-wrap ${authMode === 'GUEST' ? 'bg-slate-700 hover:bg-slate-600 text-white' : (authMode === 'LOGIN' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/30' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30')}`}>
                       {authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)} <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   </button>
               </div>
               <div className="border-t border-slate-800 pt-4 flex justify-center">
                   {authMode === 'GUEST' ? (
-                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors">{t.BTN_BACK_LOGIN}</button>
+                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors break-words whitespace-pre-wrap">{t.BTN_BACK_LOGIN}</button>
                   ) : (
-                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-2"><Ghost className="w-3 h-3" /> {t.BYPASS_SECURITY}</button>
+                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-2 break-words whitespace-pre-wrap"><Ghost className="w-3 h-3" /> {t.BYPASS_SECURITY}</button>
                   )}
               </div>
             </div>
@@ -565,10 +559,10 @@ const MainMenu: React.FC = () => {
                         <Swords className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
                     </div>
                     <div>
-                        <h2 className="text-base md:text-lg font-black text-white uppercase tracking-tighter leading-none">{t.CONFIG_TITLE}</h2>
+                        <h2 className="text-base md:text-lg font-black text-white uppercase tracking-tighter leading-none break-words whitespace-pre-wrap">{t.CONFIG_TITLE}</h2>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <p className="text-[8px] md:text-[9px] text-emerald-400 uppercase tracking-widest font-mono">{t.TERMINAL_ACTIVE}</p>
+                            <p className="text-[8px] md:text-[9px] text-emerald-400 uppercase tracking-widest font-mono break-words whitespace-pre-wrap">{t.TERMINAL_ACTIVE}</p>
                         </div>
                     </div>
                 </div>
@@ -585,7 +579,7 @@ const MainMenu: React.FC = () => {
                  
                  {/* 1. MISSION SELECTION (Compact Grid) */}
                  <div>
-                    <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1.5 md:mb-3">
+                    <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1.5 md:mb-3 break-words whitespace-pre-wrap">
                         <Target className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.COL_GOAL_TITLE}
                     </h3>
                     <div className="grid grid-cols-3 gap-1.5 md:gap-3">
@@ -605,7 +599,7 @@ const MainMenu: React.FC = () => {
                                   `}
                                 >
                                    <Icon className={`w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 ${isSelected ? 'text-indigo-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
-                                   <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-wider text-center leading-tight ${isSelected ? 'text-white' : 'text-slate-400'}`}>{tier.label}</span>
+                                   <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-wider text-center leading-tight break-words whitespace-pre-wrap ${isSelected ? 'text-white' : 'text-slate-400'}`}>{tier.label}</span>
                                    <span className="text-[7px] md:text-[9px] font-mono text-slate-500 mt-0.5 md:mt-1">{tier.time}</span>
                                 </button>
                               );
@@ -622,7 +616,7 @@ const MainMenu: React.FC = () => {
                      <div className="flex flex-col gap-3 md:gap-4">
                         {/* DIFFICULTY */}
                         <div>
-                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1.5 md:mb-3">
+                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1.5 md:mb-3 break-words whitespace-pre-wrap">
                                 <Shield className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.LBL_DIFFICULTY}
                             </h3>
                             <div className="flex bg-slate-900 p-0.5 md:p-1 rounded-xl border border-slate-800 mb-1.5 md:mb-3">
@@ -638,7 +632,7 @@ const MainMenu: React.FC = () => {
                                         <button 
                                             key={d} 
                                             onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
-                                            className={`flex-1 py-1 md:py-2 rounded-lg text-[7px] md:text-[10px] font-black uppercase tracking-wider transition-all ${colorClass}`}
+                                            className={`flex-1 py-1 md:py-2 rounded-lg text-[7px] md:text-[10px] font-black uppercase tracking-wider transition-all break-words whitespace-pre-wrap ${colorClass}`}
                                         >
                                             {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
                                         </button>
@@ -649,27 +643,27 @@ const MainMenu: React.FC = () => {
                             <div className={`p-2 md:p-3 rounded-xl border flex items-start gap-2 ${getDifficultyColor(difficulty)}`}>
                                 <Activity className="w-2.5 h-2.5 md:w-4 md:h-4 shrink-0 mt-0.5 animate-pulse" />
                                 <div>
-                                    <span className="block text-[7px] md:text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5">{t.RULES_ENGAGEMENT}</span>
-                                    <span className="text-[8px] md:text-[10px] font-bold leading-tight block">{getDifficultyDesc(difficulty)}</span>
+                                    <span className="block text-[7px] md:text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5 break-words whitespace-pre-wrap">{t.RULES_ENGAGEMENT}</span>
+                                    <span className="text-[8px] md:text-[10px] font-bold leading-tight block break-words whitespace-pre-wrap">{getDifficultyDesc(difficulty)}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* MAP TYPE SELECTOR */}
                         <div>
-                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2">
+                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
                                 <MapIcon className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Ландшафт' : 'Terrain'}
                             </h3>
                             <div className="flex bg-slate-900 p-0.5 md:p-1 rounded-xl border border-slate-800">
                                 <button 
                                     onClick={() => { setMapType('FLAT'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 ${mapType === 'FLAT' ? 'bg-slate-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 break-words whitespace-pre-wrap ${mapType === 'FLAT' ? 'bg-slate-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
                                 >
                                     <Layers className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Плоский' : 'Flat'}
                                 </button>
                                 <button 
                                     onClick={() => { setMapType('CHAOTIC'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 break-words whitespace-pre-wrap ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-500 hover:text-slate-300'}`}
                                 >
                                     <Activity className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Хаос' : 'Chaos'}
                                 </button>
@@ -681,7 +675,7 @@ const MainMenu: React.FC = () => {
                      <div className="flex flex-col gap-3 md:gap-4">
                         {/* BOTS */}
                         <div>
-                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2">
+                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
                                 <Bot className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.LBL_RIVALS}
                             </h3>
                             <div className="grid grid-cols-6 gap-1 md:gap-1.5">
@@ -701,7 +695,7 @@ const MainMenu: React.FC = () => {
                                 ))}
                             </div>
                             <div className="flex justify-between mt-0.5 md:mt-1 px-1">
-                                <span className="text-[7px] md:text-[9px] text-slate-600 font-mono uppercase tracking-wider">
+                                <span className="text-[7px] md:text-[9px] text-slate-600 font-mono uppercase tracking-wider break-words whitespace-pre-wrap">
                                     {getBotLabel(botCount)}
                                 </span>
                                 {botCount >= 4 && <span className="text-[7px] md:text-[9px] text-red-500 font-bold font-mono uppercase flex items-center gap-1"><Flame className="w-2 md:w-3 md:h-3" /> {t.HIGH_CPU}</span>}
@@ -710,7 +704,7 @@ const MainMenu: React.FC = () => {
 
                         {/* STORAGE SELECTOR (NEW) */}
                         <div>
-                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2">
+                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
                                 <Box className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.CARGO_CAP}
                             </h3>
                             <div className="flex gap-1 md:gap-2">
@@ -743,15 +737,15 @@ const MainMenu: React.FC = () => {
              {/* FOOTER ACTION */}
              <div className="p-3 md:p-6 border-t border-slate-800 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between gap-3 md:gap-4 shrink-0">
                  <div className="flex flex-col">
-                     <span className="text-[7px] md:text-[9px] text-slate-500 font-bold uppercase tracking-widest">{t.EST_REWARD}</span>
-                     <span className="text-xs md:text-base font-mono font-black text-amber-400 flex items-center gap-1 md:gap-2">
+                     <span className="text-[7px] md:text-[9px] text-slate-500 font-bold uppercase tracking-widest break-words whitespace-pre-wrap">{t.EST_REWARD}</span>
+                     <span className="text-xs md:text-base font-mono font-black text-amber-400 flex items-center gap-1 md:gap-2 break-words whitespace-pre-wrap">
                         <Gem className="w-3 md:w-4 md:h-4" />
                         {selectedTier === 3 ? t.REWARD_HIGH : (selectedTier === 2 ? t.REWARD_MED : t.REWARD_STD)}
                      </span>
                  </div>
                  <button 
                     onClick={confirmMissionStart}
-                    className="flex-1 max-w-xs py-2 md:py-3.5 bg-white hover:bg-indigo-50 text-slate-950 font-black rounded-xl uppercase tracking-[0.2em] md:tracking-[0.25em] shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-3 group text-[9px] md:text-sm"
+                    className="flex-1 max-w-xs py-2 md:py-3.5 bg-white hover:bg-indigo-50 text-slate-950 font-black rounded-xl uppercase tracking-[0.2em] md:tracking-[0.25em] shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-3 group text-[9px] md:text-sm break-words whitespace-pre-wrap"
                  >
                     <Crosshair className="w-3.5 h-3.5 md:w-5 md:h-5 text-indigo-600 group-hover:rotate-90 transition-transform duration-500" />
                     <span>{t.BTN_START}</span>

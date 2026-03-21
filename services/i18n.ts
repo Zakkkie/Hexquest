@@ -214,6 +214,7 @@ export interface Dictionary {
         WORKSHOP: string;
         CAPITOL: string;
         HUB: string;
+        CHECKPOINT: string;
     };
     TOAST: {
         RECHARGE_FAILED: string;
@@ -603,6 +604,7 @@ export const TEXT: Record<Language, Dictionary> = {
             WORKSHOP: "Workshop",
             CAPITOL: "Capitol",
             HUB: "Hub",
+            CHECKPOINT: "Checkpoint",
         },
         TOAST: {
             RECHARGE_FAILED: "Recharge Failed",
@@ -990,6 +992,7 @@ export const TEXT: Record<Language, Dictionary> = {
             WORKSHOP: "Мастерская",
             CAPITOL: "Капитолий",
             HUB: "Хаб",
+            CHECKPOINT: "Блокпост",
         },
         TOAST: {
             RECHARGE_FAILED: "Сбой Перезарядки",

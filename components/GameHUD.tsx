@@ -12,7 +12,7 @@ interface GameHUDProps {
   onCenterPlayer: () => void;
 }
 
-const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId, onRotateCamera, onCenterPlayer }) => {
+const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId: _hoveredHexId, onRotateCamera: _onRotateCamera, onCenterPlayer }) => {
   const gameStatus = useGameStore(state => state.session?.gameStatus);
   const player = useGameStore(state => state.session?.player);
   

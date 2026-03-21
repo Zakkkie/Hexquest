@@ -13,7 +13,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Package,
-  Trophy
 } from 'lucide-react';
 import { TEXT } from '../services/i18n';
 import { OverworldStartQuiz } from './OverworldStartQuiz';
@@ -232,8 +231,8 @@ export const InteriorView: React.FC = () => {
               {data.icon}
             </div>
             <div>
-              <h2 className="text-xl md:text-3xl font-bold tracking-tight text-white">{data.title}</h2>
-              <p className="text-white/50 text-xs md:text-sm italic">{data.description}</p>
+              <h2 className="text-xl md:text-3xl font-bold tracking-tight text-white break-words whitespace-pre-wrap">{data.title}</h2>
+              <p className="text-white/50 text-xs md:text-sm italic break-words whitespace-pre-wrap">{data.description}</p>
             </div>
           </div>
           <button 
@@ -257,7 +256,7 @@ export const InteriorView: React.FC = () => {
               </div>
             </div>
             <div className="text-left md:text-center flex-1">
-              <p className="text-white/70 italic text-sm md:text-lg leading-relaxed">
+              <p className="text-white/70 italic text-sm md:text-lg leading-relaxed break-words whitespace-pre-wrap">
                 "{viewState === 'TALK' ? data.dialogue[dialogueStep] : data.dialogue[0]}"
               </p>
             </div>
@@ -276,8 +275,8 @@ export const InteriorView: React.FC = () => {
                       <MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-blue-400" />
                     </div>
                     <div>
-                      <h3 className="text-base md:text-xl font-bold text-white">{language === 'RU' ? 'Поговорить' : 'Talk'}</h3>
-                      <p className="text-white/40 text-xs md:text-sm">{language === 'RU' ? 'Узнать последние новости' : 'Ask about latest news'}</p>
+                      <h3 className="text-base md:text-xl font-bold text-white break-words whitespace-pre-wrap">{language === 'RU' ? 'Поговорить' : 'Talk'}</h3>
+                      <p className="text-white/40 text-xs md:text-sm break-words whitespace-pre-wrap">{language === 'RU' ? 'Узнать последние новости' : 'Ask about latest news'}</p>
                     </div>
                   </div>
                   <ArrowRight className="w-5 h-5 md:w-6 md:h-6 text-white/20 group-hover:text-white/50 transition-colors" />
@@ -292,8 +291,8 @@ export const InteriorView: React.FC = () => {
                       <Coins className="w-5 h-5 md:w-6 md:h-6 text-yellow-400" />
                     </div>
                     <div>
-                      <h3 className="text-base md:text-xl font-bold text-white">{language === 'RU' ? 'Торговать' : 'Trade'}</h3>
-                      <p className="text-white/40 text-xs md:text-sm">{language === 'RU' ? 'Обменять ресурсы' : 'Exchange resources'}</p>
+                      <h3 className="text-base md:text-xl font-bold text-white break-words whitespace-pre-wrap">{language === 'RU' ? 'Торговать' : 'Trade'}</h3>
+                      <p className="text-white/40 text-xs md:text-sm break-words whitespace-pre-wrap">{language === 'RU' ? 'Обменять ресурсы' : 'Exchange resources'}</p>
                     </div>
                   </div>
                   <ArrowRight className="w-5 h-5 md:w-6 md:h-6 text-white/20 group-hover:text-white/50 transition-colors" />
@@ -309,8 +308,8 @@ export const InteriorView: React.FC = () => {
                         <Beer className="w-5 h-5 md:w-6 md:h-6 text-orange-400" />
                       </div>
                       <div>
-                        <h3 className="text-base md:text-xl font-bold text-white">{language === 'RU' ? 'Отдохнуть' : 'Rest'}</h3>
-                        <p className="text-white/40 text-xs md:text-sm">{language === 'RU' ? 'Восстановить силы (50 кр.)' : 'Recover energy (50 cr.)'}</p>
+                        <h3 className="text-base md:text-xl font-bold text-white break-words whitespace-pre-wrap">{language === 'RU' ? 'Отдохнуть' : 'Rest'}</h3>
+                        <p className="text-white/40 text-xs md:text-sm break-words whitespace-pre-wrap">{language === 'RU' ? 'Восстановить силы (50 кр.)' : 'Recover energy (50 cr.)'}</p>
                       </div>
                     </div>
                     <ArrowRight className="w-5 h-5 md:w-6 md:h-6 text-white/20 group-hover:text-white/50 transition-colors" />
@@ -322,7 +321,7 @@ export const InteriorView: React.FC = () => {
             {viewState === 'TALK' && (
               <div className="flex flex-col h-full justify-between">
                 <div className="bg-white/5 border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 mb-4">
-                  <p className="text-white/90 text-sm md:text-lg leading-relaxed">
+                  <p className="text-white/90 text-sm md:text-lg leading-relaxed break-words whitespace-pre-wrap">
                     "{data.dialogue[dialogueStep]}"
                   </p>
                 </div>
@@ -347,7 +346,7 @@ export const InteriorView: React.FC = () => {
                             : 'bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-500/40'
                         }`}
                       >
-                        <span className={`text-sm md:text-base font-medium ${isCompleted ? 'text-emerald-100' : 'text-blue-100'}`}>
+                        <span className={`text-sm md:text-base font-medium break-words whitespace-pre-wrap ${isCompleted ? 'text-emerald-100' : 'text-blue-100'}`}>
                           {level.title} {isCompleted && (language === 'RU' ? '(Пройдено)' : '(Completed)')}
                         </span>
                         <ArrowRight className={`w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform ${isCompleted ? 'text-emerald-400' : 'text-blue-400'}`} />
@@ -405,8 +404,8 @@ export const InteriorView: React.FC = () => {
                                 <Package className="w-4 h-4 md:w-5 md:h-5 text-white/50" />
                               </div>
                               <div className="min-w-0">
-                                <div className="text-sm md:text-base text-white font-medium truncate">{def.name[language]}</div>
-                                <div className="text-white/40 text-[10px] md:text-xs truncate">{def.description[language]}</div>
+                                <div className="text-sm md:text-base text-white font-medium break-words whitespace-pre-wrap">{def.name[language]}</div>
+                                <div className="text-white/40 text-[10px] md:text-xs break-words whitespace-pre-wrap">{def.description[language]}</div>
                               </div>
                             </div>
                             <button 
@@ -438,8 +437,8 @@ export const InteriorView: React.FC = () => {
                                 <Package className="w-4 h-4 md:w-5 md:h-5 text-white/50" />
                               </div>
                               <div className="min-w-0">
-                                <div className="text-sm md:text-base text-white font-medium truncate">{def.name[language]}</div>
-                                <div className="text-white/40 text-[10px] md:text-xs truncate">{def.description[language]}</div>
+                                <div className="text-sm md:text-base text-white font-medium break-words whitespace-pre-wrap">{def.name[language]}</div>
+                                <div className="text-white/40 text-[10px] md:text-xs break-words whitespace-pre-wrap">{def.description[language]}</div>
                               </div>
                             </div>
                             <button 

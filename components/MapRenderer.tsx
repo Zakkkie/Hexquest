@@ -1,14 +1,13 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { Layer, Group, Line, Circle, Text, Path } from 'react-konva';
+import { Layer, Group, Line, Circle, Text } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
-import { getHexKey, getNeighbors, pixelToHex, cubeDistance } from '../services/hexUtils.ts';
+import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils.ts';
 import { HexNode, HexNodeTheme } from './HexNode.tsx';
 import Unit from './Unit.tsx';
 import { EntityType, EntityState, FloatingText, Hex, Entity } from '../types.ts';
-import { checkGrowthCondition } from '../rules/growth.ts';
-import { EXCHANGE_RATE_COINS_PER_MOVE, HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
+import { EXCHANGE_RATE_COINS_PER_MOVE, HEX_SIZE } from '../rules/config.ts';
 import { safifyCoord } from '../utils/safeCoordinates.ts';
 
 const VOID_LEVEL_FLAG = -99;
@@ -45,7 +44,7 @@ const getTutorialData = (grid: Record<string, Hex>, player: Entity, levelId?: st
     return data;
 };
 
-const getHexTutorialStatus = (hex: Hex, player: Entity, grid: Record<string, Hex>, tutorialData: any, activeLevelConfig?: any) => {
+const getHexTutorialStatus = (hex: Hex, player: Entity, _grid: Record<string, Hex>, tutorialData: any, activeLevelConfig?: any) => {
     if (!tutorialData && !activeLevelConfig?.objectiveHexes) return { isTutorial: false, isArrow: false, tutColor: 'emerald' };
     
     const levelId = tutorialData?.levelId || activeLevelConfig?.id;
@@ -135,13 +134,6 @@ let BASE_PATH_D = `M ${BASE_POINTS[0].x} ${BASE_POINTS[0].y}`;
 for (let i = 1; i < 6; i++) BASE_PATH_D += ` L ${BASE_POINTS[i].x} ${BASE_POINTS[i].y}`;
 BASE_PATH_D += " Z";
 
-const SelectionGlow = React.memo(({ x, y, offsetY, rotation }: any) => (
-    <Group x={x} y={y} scaleY={0.8} perfectDrawEnabled={false} listening={false}>
-        <Group rotation={rotation} y={offsetY} perfectDrawEnabled={false}>
-            <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} perfectDrawEnabled={false} shadowForStrokeEnabled={false} listening={false} />
-        </Group>
-    </Group>
-));
 
 // THEME CONFIGURATION
 export const THEME_PALETTE: Record<string, HexNodeTheme> = {
@@ -307,8 +299,6 @@ const FloatingEffect: React.FC<{ effect: FloatingText; rotation: number; stackIn
     );
 });
 
-
-// Constant render mode since LOD is removed
 const FULL_RENDER_MODE = { 
     detailLevel: 'full', 
     showTexture: true, 
@@ -325,14 +315,13 @@ interface MapRendererProps {
     hoveredHexId: string | null;
 }
 
-const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotation, onHexClick, onHover, hoveredHexId }) => {
+const MapRenderer: React.FC<MapRendererProps> = ({ viewState: _viewState, dimensions: _dimensions, rotation, onHexClick, onHover, hoveredHexId }) => {
     const grid = useGameStore(state => state.session?.grid) as Record<string, Hex> | undefined;
     const player = useGameStore(state => state.session?.player) as Entity | undefined;
     const bots = useGameStore(state => state.session?.bots) as Entity[] | undefined;
     const effects = useGameStore(state => state.session?.effects);
     const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
     const pendingConfirmation = useGameStore(state => state.pendingConfirmation);
-    const winCondition = useGameStore(state => state.session?.winCondition);
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
     const playerQ = useGameStore(state => state.session?.player.q);
     const playerR = useGameStore(state => state.session?.player.r);
@@ -608,10 +597,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState, dimensions, rotati
                 {connections.map((conn, i) => (
                     <Line key={`conn-${i}`} {...conn} strokeWidth={2} listening={false} perfectDrawEnabled={false} />
                 ))}
-            </Layer>
-
-
-            <Layer listening={false}>
+            </Layer><Layer listening={false}>
                 {particles.map(p => <DustCloud key={p.id} {...p} onComplete={removeParticle} />)}
                 {stackedEffects.map(eff => <FloatingEffect key={eff.id} effect={eff} rotation={rotation} stackIndex={eff.stackIndex} />)}
             </Layer>

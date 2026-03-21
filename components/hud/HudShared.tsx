@@ -159,8 +159,8 @@ export const StatusIcon: React.FC<{ status: ActiveStatus }> = ({ status }) => {
                 </svg>
             )}
             <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-48 bg-slate-900/95 border border-slate-700 p-3 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 flex flex-col gap-1">
-                <div className="text-xs font-bold text-white uppercase tracking-wider border-b border-slate-700 pb-1 mb-1">{status.label}</div>
-                <div className="text-[10px] text-slate-400 leading-tight mb-2">{status.description || status.label}</div>
+                <div className="text-xs font-bold text-white uppercase tracking-wider border-b border-slate-700 pb-1 mb-1 break-words whitespace-pre-wrap">{status.label}</div>
+                <div className="text-[10px] text-slate-400 leading-tight mb-2 break-words whitespace-pre-wrap">{status.description || status.label}</div>
                 <div className={`text-[10px] font-mono font-bold text-right ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
                     {isPermanent ? 'ACTIVE' : `${Math.ceil(remaining / 1000)}s LEFT`}
                 </div>

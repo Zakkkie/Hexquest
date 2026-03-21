@@ -1,6 +1,6 @@
 
 import { System } from './System';
-import { GameState, GameEvent, EntityState, Entity, SessionState, Hex, EntityType } from '../../types';
+import { GameEvent, EntityState, Entity, SessionState, Hex, EntityType } from '../../types';
 import { WorldIndex } from '../WorldIndex';
 import { getHexKey, getNeighbors, cubeDistance, getStatusModifiers } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';

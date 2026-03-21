@@ -2,9 +2,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '../store.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
-import { ArrowLeft, Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Globe, Radar, Layers } from 'lucide-react';
+import { Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers } from 'lucide-react';
 import HexButton from './HexButton.tsx';
-import { audioService } from '../services/audioService.ts';
 import { TEXT } from '../services/i18n.ts';
 
 // --- DECORATIVE BACKGROUND COMPONENT ---
@@ -76,7 +75,6 @@ const CampaignBackground: React.FC = () => {
 };
 
 const CampaignMap: React.FC = () => {
-  const setUIState = useGameStore(state => state.setUIState);
   const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
   const playUiSound = useGameStore(state => state.playUiSound);
   const campaignProgress = useGameStore(state => state.campaignProgress);
@@ -176,10 +174,10 @@ const CampaignMap: React.FC = () => {
         {/* Header */}
         <div className="p-4 md:p-6 border-b border-slate-700/50 flex items-center justify-between bg-slate-900/60 shrink-0 z-20 shadow-md backdrop-blur-md">
           <div className="flex flex-col">
-            <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-wider flex items-center gap-2 break-words whitespace-pre-wrap">
               <MapPin className="w-5 h-5 text-indigo-400" /> {t.HEADER_TITLE}
             </h2>
-            <p className="text-indigo-400/60 text-[10px] md:text-xs font-mono tracking-[0.2em] uppercase pl-1">{t.HEADER_SUBTITLE}</p>
+            <p className="text-indigo-400/60 text-[10px] md:text-xs font-mono tracking-[0.2em] uppercase pl-1 break-words whitespace-pre-wrap">{t.HEADER_SUBTITLE}</p>
           </div>
         </div>
 
@@ -263,7 +261,7 @@ const CampaignMap: React.FC = () => {
                                 >
                                     <div className="flex items-center gap-4 px-6 py-2 bg-slate-900/80 backdrop-blur-md border border-indigo-500/30 rounded-full shadow-2xl shadow-indigo-500/10">
                                         <Layers className="w-4 h-4 text-indigo-400" />
-                                        <span className="text-sm font-black uppercase tracking-[0.3em] text-indigo-200">
+                                        <span className="text-sm font-black uppercase tracking-[0.3em] text-indigo-200 break-words whitespace-pre-wrap">
                                             Series {pos.seriesId}
                                         </span>
                                         <div className="h-px w-12 bg-indigo-500/50" />
@@ -314,7 +312,7 @@ const CampaignMap: React.FC = () => {
 
                                         {/* Level Badge */}
                                         <div className={`
-                                            absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border shadow-lg z-20 whitespace-nowrap
+                                            absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border shadow-lg z-20 whitespace-nowrap break-words whitespace-pre-wrap
                                             ${isCurrent ? 'bg-amber-500 text-slate-900 border-amber-400 animate-bounce' : 'bg-slate-800 text-slate-400 border-slate-600'}
                                         `}>
                                             {isCurrent ? t.BADGE_CURRENT : (isCompleted ? t.BADGE_DONE : t.BADGE_LOCKED)}
@@ -331,20 +329,20 @@ const CampaignMap: React.FC = () => {
                                                 ? 'left-full ml-8 text-left items-start' 
                                                 : 'right-full mr-8 text-right items-end')}
                                     `}>
-                                        <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 ${isUnlocked ? 'text-indigo-400' : 'text-slate-600'}`}>
+                                        <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 break-words whitespace-pre-wrap ${isUnlocked ? 'text-indigo-400' : 'text-slate-600'}`}>
                                             {t.MISSION_PREFIX} {pos.level.id}
                                         </span>
-                                        <h3 className={`text-sm md:text-lg font-black uppercase leading-tight mb-2 ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>
+                                        <h3 className={`text-sm md:text-lg font-black uppercase leading-tight mb-2 break-words whitespace-pre-wrap ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>
                                             {displayTitle.replace(/Simulation\s[\d.]+:\s|Сим\s[\d.]+:\s/, '')}
                                         </h3>
                                         
                                         {isUnlocked ? (
                                             <div className={`flex flex-col gap-1 ${isMobile ? 'items-start' : (textOnRight ? 'items-start' : 'items-end')}`}>
-                                                <p className="text-[10px] text-slate-400 font-mono line-clamp-2 leading-relaxed">
+                                                <p className="text-[10px] text-slate-400 font-mono line-clamp-2 leading-relaxed break-words whitespace-pre-wrap">
                                                     {displayDesc.split('\n')[0]}
                                                 </p>
                                                 {pos.level.aiMode !== 'none' && (
-                                                    <div className="flex items-center gap-1 text-[9px] text-red-400 mt-1 font-bold">
+                                                    <div className="flex items-center gap-1 text-[9px] text-red-400 mt-1 font-bold break-words whitespace-pre-wrap">
                                                         <ShieldAlert className="w-3 h-3" /> {t.HOSTILES}
                                                     </div>
                                                 )}
@@ -354,7 +352,7 @@ const CampaignMap: React.FC = () => {
                                                 <div className="h-1 flex-1 bg-slate-800 rounded overflow-hidden">
                                                     <div className="h-full bg-slate-700 w-1/2 animate-pulse"></div>
                                                 </div>
-                                                <span className="text-[9px] font-mono">{t.ENCRYPTED}</span>
+                                                <span className="text-[9px] font-mono break-words whitespace-pre-wrap">{t.ENCRYPTED}</span>
                                             </div>
                                         )}
                                     </div>

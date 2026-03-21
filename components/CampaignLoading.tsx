@@ -92,10 +92,10 @@ const CampaignLoading: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h2 className="text-indigo-400 font-mono text-xs tracking-[0.3em] mb-3 uppercase opacity-70">
+              <h2 className="text-indigo-400 font-mono text-xs tracking-[0.3em] mb-3 uppercase opacity-70 break-words whitespace-pre-wrap">
                 {language === 'RU' ? 'УСТАНОВКА СОЕДИНЕНИЯ' : 'ESTABLISHING LINK'} // {levelConfig.id}
               </h2>
-              <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+              <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] break-words whitespace-pre-wrap">
                 {displayTitle}
               </h1>
             </motion.div>
@@ -114,7 +114,7 @@ const CampaignLoading: React.FC = () => {
                   />
                 </div>
 
-                <div className="flex justify-between w-full text-[10px] font-mono text-slate-500 tracking-widest uppercase">
+                <div className="flex justify-between w-full text-[10px] font-mono text-slate-500 tracking-widest uppercase break-words whitespace-pre-wrap">
                   <span className="animate-pulse">{loadingText || (language === 'RU' ? 'ИНИЦИАЛИЗАЦИЯ...' : 'INITIALIZING...')}</span>
                   <span className="text-indigo-400 font-bold">{Math.floor(progress)}%</span>
                 </div>
@@ -129,7 +129,7 @@ const CampaignLoading: React.FC = () => {
                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-[0.3em] shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all flex items-center justify-center gap-3 group"
               >
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                <span>{language === 'RU' ? 'ВОЙТИ В СЕКТОР' : 'ENTER SECTOR'}</span>
+                <span className="break-words whitespace-pre-wrap">{language === 'RU' ? 'ВОЙТИ В СЕКТОР' : 'ENTER SECTOR'}</span>
               </motion.button>
             )}
         </div>

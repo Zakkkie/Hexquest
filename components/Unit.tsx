@@ -185,7 +185,7 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
           animState.current.targetLevel = hexLevel;
       }
 
-      const anim = new Konva.Animation((frame) => {
+      const anim = new Konva.Animation((_frame) => {
           if (!groupNode || !visualNode) return;
 
           // Optimization: If logic says we stopped, stop the loop to save CPU and prevent conflict

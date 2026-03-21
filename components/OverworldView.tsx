@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Stage, Layer, Group, Line, Text, Circle, Rect, Path, Ellipse } from 'react-konva';
+import { Stage, Layer, Group, Circle, Ellipse } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { hexToPixel, getHexKey, cubeDistance, findOverworldPath, getReachableOverworldHexes, getNeighbors } from '../services/hexUtils.ts';
 import { getHexHeight } from '../services/OverworldGenerator.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
-import { ArrowLeft, Zap, Heart, Coins, Backpack, Tent, Search, Hand, Target, RefreshCw, Settings, X, LogOut, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, RotateCcw, Pickaxe, Hammer, XCircle, CheckCircle, Info } from 'lucide-react';
+import { Zap, Heart, Coins, Backpack, Tent, Search, Hand, Target, Settings, X, LogOut, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, RotateCcw, Pickaxe, Hammer, XCircle, CheckCircle, Info } from 'lucide-react';
 import HexButton from './HexButton.tsx';
-import { ITEM_REGISTRY } from '../rules/items.ts';
+import { getItemDef } from '../rules/items.ts';
 import { ItemIcon, getRarityBorder } from './hud/HudShared.tsx';
 import EventModal from './EventModal.tsx';
 import InventoryModal from './InventoryModal.tsx';
@@ -31,7 +31,6 @@ const OverworldView: React.FC = () => {
   const digOverworld = useGameStore(state => state.digOverworld);
   const buildOverworld = useGameStore(state => state.buildOverworld);
   const interactOverworld = useGameStore(state => state.interactOverworld);
-  const enterRift = useGameStore(state => state.enterRift);
   const toggleMusic = useGameStore(state => state.toggleMusic);
   const toggleSfx = useGameStore(state => state.toggleSfx);
   const isMusicMuted = useGameStore(state => state.isMusicMuted);
@@ -70,6 +69,17 @@ const OverworldView: React.FC = () => {
   const t = TEXT[language] as Dictionary;
 
   useEffect(() => {
+    if (overworld.gameStatus && overworld.gameStatus !== 'PLAYING' && victoryStage === 'HIDDEN') {
+      setVictoryStage('SALUTE');
+      const timer = setTimeout(() => {
+        setVictoryStage('MODAL');
+        setActiveModal('VICTORY');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [overworld.gameStatus, victoryStage]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (systemMenuRef.current && !systemMenuRef.current.contains(event.target as Node)) {
         setIsSystemMenuOpen(false);
@@ -88,7 +98,6 @@ const OverworldView: React.FC = () => {
   }, []);
 
   const { grid, player } = overworld;
-  const currentHex = grid[getHexKey(player.q, player.r)];
   const user = useGameStore(state => state.user);
 
   const finalColor = user?.avatarColor || '#3b82f6';
@@ -111,7 +120,6 @@ const OverworldView: React.FC = () => {
     return getHeightOffset(lvl);
   });
   const playerTweenRef = useRef<Konva.Tween | null>(null);
-  const cameraTweenRef = useRef<Konva.Tween | null>(null);
   const playerNodeRef = useRef<any>(null);
   const playerGlowRef = useRef<any>(null);
   const playerPulseRef = useRef<Konva.Animation | null>(null);
@@ -262,7 +270,6 @@ const OverworldView: React.FC = () => {
       return deviceType === 'MOBILE' ? 120 : 100;
   };
 
-  // Center camera on player initially
   const centerCamera = () => {
     if (overworld.isGenerated && containerRef.current) {
       const targetHex = grid[getHexKey(overworld.player.q, overworld.player.r)];
@@ -283,6 +290,13 @@ const OverworldView: React.FC = () => {
       playUiSound('CLICK');
     }
   };
+
+  // Center camera on player initially and when map type changes
+  useEffect(() => {
+    if (overworld.isGenerated) {
+      centerCamera();
+    }
+  }, [overworld.isWorldMap, overworld.isGenerated]);
 
   const togglePaths = () => {
     const next = !showPaths;
@@ -440,7 +454,6 @@ const OverworldView: React.FC = () => {
             }
         }
         
-        let bestNeighbor = null;
         let minCost = Infinity;
         let bestPath = null;
         
@@ -457,7 +470,6 @@ const OverworldView: React.FC = () => {
               }
               if (cost < minCost) {
                 minCost = cost;
-                bestNeighbor = n;
                 bestPath = pathResult.path;
               }
             }
@@ -578,7 +590,7 @@ const OverworldView: React.FC = () => {
                   <Heart className="w-4 h-4 md:w-5 md:h-5 text-rose-400" />
                 </div>
                 <div className="flex flex-col justify-center">
-                  <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">VITALITY</span>
+                  <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5 break-words whitespace-pre-wrap">VITALITY</span>
                   <span className="text-xs md:text-xl font-black text-white leading-none">{player.hp} / {player.maxHp}</span>
                 </div>
               </div>
@@ -591,7 +603,7 @@ const OverworldView: React.FC = () => {
                   <Zap className="w-4 h-4 md:w-5 md:h-5 text-blue-400" />
                 </div>
                 <div className="flex flex-col justify-center">
-                  <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">ENERGY</span>
+                  <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5 break-words whitespace-pre-wrap">ENERGY</span>
                   <span className="text-xs md:text-xl font-black text-white leading-none">{player.energy} / {player.maxEnergy}</span>
                 </div>
               </div>
@@ -604,7 +616,7 @@ const OverworldView: React.FC = () => {
                   <Coins className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                 </div>
                 <div className="flex flex-col justify-center">
-                  <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">CREDITS</span>
+                  <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5 break-words whitespace-pre-wrap">CREDITS</span>
                   <span className="text-xs md:text-xl font-black text-white leading-none">{player.credits}</span>
                 </div>
               </div>
@@ -618,8 +630,8 @@ const OverworldView: React.FC = () => {
                 return (
                   <div className="flex flex-col gap-0.5 min-w-[60px] md:min-w-[100px] shrink-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider">REP</span>
-                      <span className={`text-[7px] md:text-[9px] font-bold ${repColor} truncate`}>{repLabel}</span>
+                      <span className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-wider break-words whitespace-pre-wrap">REP</span>
+                      <span className={`text-[7px] md:text-[9px] font-bold ${repColor} break-words whitespace-pre-wrap`}>{repLabel}</span>
                     </div>
                     <div className="w-full h-1 bg-slate-700 rounded-full overflow-hidden">
                       <div
@@ -651,20 +663,20 @@ const OverworldView: React.FC = () => {
                 </div>
                 <button onClick={() => { setLanguage(language === 'EN' ? 'RU' : 'EN'); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
                     <Globe className="w-4 h-4 text-sky-400" />
-                    <span className="text-xs font-bold uppercase">{language === 'EN' ? 'English' : 'Русский'}</span>
+                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{language === 'EN' ? 'English' : 'Русский'}</span>
                 </button>
                 
                 <button onClick={() => { setActiveModal('CODEX'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
                     <BookOpen className="w-4 h-4 text-purple-400" />
-                    <span className="text-xs font-bold uppercase">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</span>
+                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</span>
                 </button>
                 <button onClick={() => { setActiveModal('RANKINGS'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border bg-slate-800/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white`}>
                     <Trophy className="w-4 h-4 text-amber-500" />
-                    <span className="text-xs font-bold uppercase">{t.HUD.LEADERBOARD_TITLE}</span>
+                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{t.HUD.LEADERBOARD_TITLE}</span>
                 </button>
                 <button onClick={() => { setActiveModal('LOG'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 hover:text-indigo-200 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left">
                     <FileText className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
+                    <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
                 </button>
 
                 <div className="h-px bg-slate-700/50 my-1"></div>
@@ -677,7 +689,7 @@ const OverworldView: React.FC = () => {
                   className="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-900/10 hover:bg-amber-900/30 text-amber-400 hover:text-amber-200 border border-amber-900/30 hover:border-amber-500/50 transition-colors w-full text-left"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase tracking-wider">{t.HUD.BTN_RETRY}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider break-words whitespace-pre-wrap">{t.HUD.BTN_RETRY}</span>
                 </button>
                 
                 <button 
@@ -689,7 +701,7 @@ const OverworldView: React.FC = () => {
                   className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-900/10 hover:bg-red-900/30 text-red-400 hover:text-red-200 border border-red-900/30 hover:border-red-500/50 transition-colors w-full text-left"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase tracking-wider">{t.HUD.BTN_MENU}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider break-words whitespace-pre-wrap">{t.HUD.BTN_MENU}</span>
                 </button>
               </div>
             )}
@@ -707,7 +719,7 @@ const OverworldView: React.FC = () => {
               className="flex items-center justify-center w-8 h-8 md:w-full md:justify-between md:px-3 md:py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all shrink-0 touch-manipulation" 
               onClick={() => setShowInventory(true)}
             >
-              <div className="hidden md:block truncate text-[10px] font-bold text-slate-400 group-hover:text-white font-mono tracking-widest uppercase">
+              <div className="hidden md:block text-[10px] font-bold text-slate-400 group-hover:text-white font-mono tracking-widest uppercase break-words whitespace-pre-wrap">
                 {language === 'RU' ? 'ИНВЕНТАРЬ' : 'INVENTORY'}
               </div>
               <Backpack className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-slate-400 group-hover:text-indigo-400 transition-colors" />
@@ -716,7 +728,7 @@ const OverworldView: React.FC = () => {
             <div className="flex items-center gap-1 md:gap-1.5 justify-start overflow-x-auto no-scrollbar mask-linear-fade-right pr-2">
               {[0, 1, 2, 3, 4].map(index => {
                 const itemId = player.bag[index];
-                const item = itemId ? ITEM_REGISTRY[itemId] : undefined;
+                const item = itemId ? getItemDef(itemId) : undefined;
                 const slotSize = "w-7 h-7 md:w-10 md:h-10"; 
                 return (
                   <div 
@@ -729,7 +741,7 @@ const OverworldView: React.FC = () => {
                         : 'bg-slate-950/50 border-slate-800/50 border-dashed'}
                     `}
                   >
-                    {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1 h-1 rounded-full bg-slate-800/50" />}
+                    {item ? <ItemIcon def={item} size={slotSize} /> : <div className="w-1 h-1 rounded-full bg-slate-800/50" />}
                   </div>
                 );
               })}
@@ -754,7 +766,7 @@ const OverworldView: React.FC = () => {
             >
               <div className="flex flex-col items-center justify-center pt-1">
                 <Search className="w-3.5 h-3.5 md:w-6 md:h-6" />
-                <span className="text-[6px] md:text-[9px] font-bold text-emerald-400 mt-0.5">{t.OVERWORLD.EXPLORE}</span>
+                <span className="text-[6px] md:text-[9px] font-bold text-emerald-400 mt-0.5 break-words whitespace-pre-wrap">{t.OVERWORLD.EXPLORE}</span>
               </div>
             </HexButton>
 
@@ -771,7 +783,7 @@ const OverworldView: React.FC = () => {
             >
               <div className="flex flex-col items-center justify-center pt-1">
                 <Pickaxe className="w-3.5 h-3.5 md:w-6 md:h-6" />
-                <span className="text-[6px] md:text-[9px] font-bold text-red-400 mt-0.5">{t.OVERWORLD.DIG}</span>
+                <span className="text-[6px] md:text-[9px] font-bold text-red-400 mt-0.5 break-words whitespace-pre-wrap">{t.OVERWORLD.DIG}</span>
               </div>
             </HexButton>
 
@@ -788,7 +800,7 @@ const OverworldView: React.FC = () => {
             >
               <div className="flex flex-col items-center justify-center pt-1">
                 <Hammer className="w-3.5 h-3.5 md:w-6 md:h-6" />
-                <span className="text-[6px] md:text-[9px] font-bold text-amber-400 mt-0.5">{t.OVERWORLD.BUILD}</span>
+                <span className="text-[6px] md:text-[9px] font-bold text-amber-400 mt-0.5 break-words whitespace-pre-wrap">{t.OVERWORLD.BUILD}</span>
               </div>
             </HexButton>
 
@@ -805,7 +817,7 @@ const OverworldView: React.FC = () => {
             >
               <div className="flex flex-col items-center justify-center pt-1">
                 <Tent className="w-3.5 h-3.5 md:w-6 md:h-6" />
-                <span className="text-[6px] md:text-[9px] font-bold text-blue-400 mt-0.5">REST</span>
+                <span className="text-[6px] md:text-[9px] font-bold text-blue-400 mt-0.5 break-words whitespace-pre-wrap">REST</span>
               </div>
             </HexButton>
 
@@ -821,7 +833,7 @@ const OverworldView: React.FC = () => {
             >
               <div className="flex flex-col items-center justify-center pt-1">
                 <Hand className="w-3.5 h-3.5 md:w-6 md:h-6" />
-                <span className="text-[6px] md:text-[9px] font-bold text-amber-400 mt-0.5">INTERACT</span>
+                <span className="text-[6px] md:text-[9px] font-bold text-amber-400 mt-0.5 break-words whitespace-pre-wrap">INTERACT</span>
               </div>
             </HexButton>
           </div>
@@ -842,7 +854,7 @@ const OverworldView: React.FC = () => {
             {toast.type === 'error' && <XCircle className="w-5 h-5 md:w-8 md:h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] shrink-0" />}
             {toast.type === 'success' && <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-emerald-500 shrink-0" />}
             {toast.type === 'info' && <Info className="w-5 h-5 md:w-6 md:h-6 text-blue-400 shrink-0" />}
-            <span className="text-xs md:text-lg font-black uppercase tracking-wider md:tracking-widest leading-tight drop-shadow-md text-center md:text-left break-words">{toast.message}</span>
+            <span className="text-xs md:text-lg font-black uppercase tracking-wider md:tracking-widest leading-tight drop-shadow-md text-center md:text-left break-words whitespace-pre-wrap">{toast.message}</span>
           </div>
         </div>
       )}
@@ -892,7 +904,7 @@ const OverworldView: React.FC = () => {
 
               return (
                 <OverworldHexNode 
-                  key={hex.id || getHexKey(hex.q, hex.r)}
+                  key={getHexKey(hex.q, hex.r)}
                   hex={hex}
                   x={x}
                   y={y}
@@ -904,10 +916,7 @@ const OverworldView: React.FC = () => {
                   onClick={stableHandleHexClick}
                 />
               );
-            })}
-            
-            {/* Player Hero */}
-            <Group
+            })}{/* Player Hero */}<Group
               ref={playerNodeRef}
               x={hexToPixel(visualPlayerPos.q, visualPlayerPos.r, 0).x}
               y={hexToPixel(visualPlayerPos.q, visualPlayerPos.r, 0).y + visualPlayerHeight}
@@ -957,17 +966,20 @@ const OverworldView: React.FC = () => {
             <div className="w-12 h-12 rounded-full bg-amber-900/20 flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
               <RotateCcw className="w-6 h-6 text-amber-500" />
             </div>
-            <h3 className="text-lg font-black text-white uppercase mb-2">{t.HUD.BTN_RETRY}?</h3>
-            <p className="text-xs text-slate-400 mb-6">
+            <h3 className="text-lg font-black text-white uppercase mb-2 break-words whitespace-pre-wrap">{t.HUD.BTN_RETRY}?</h3>
+            <p className="text-xs text-slate-400 mb-6 break-words whitespace-pre-wrap">
               {language === 'RU' ? 'Начать новое приключение? Текущий прогресс будет потерян.' : 'Start a new adventure? Current progress will be lost.'}
             </p>
             <div className="flex gap-3">
-              <button onClick={() => { setShowResetConfirm(false); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition-colors">{language === 'RU' ? 'Отмена' : 'Cancel'}</button>
-              <button onClick={() => { setShowResetConfirm(false); initOverworld(true); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-amber-900/20">{language === 'RU' ? 'Подтвердить' : 'Confirm'}</button>
+              <button onClick={() => { setShowResetConfirm(false); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition-colors break-words whitespace-pre-wrap">{language === 'RU' ? 'Отмена' : 'Cancel'}</button>
+              <button onClick={() => { setShowResetConfirm(false); initOverworld(true); playUiSound('CLICK'); }} className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-xs transition-colors shadow-lg shadow-amber-900/20 break-words whitespace-pre-wrap">{language === 'RU' ? 'Подтвердить' : 'Confirm'}</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Minimap */}
+      <OverworldMinimap />
 
       {/* Event Modal Overlay */}
       <EventModal />

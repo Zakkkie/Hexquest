@@ -4,9 +4,9 @@ import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
 import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
-import { LogOut, X, Trophy, XCircle, ArrowRight, RotateCcw, Target, ChevronsUp, Wallet, Footprints, ShieldAlert, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw } from 'lucide-react';
+import { LogOut, X, Trophy, XCircle, ArrowRight, RotateCcw, Target, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw } from 'lucide-react';
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
-import { Item, ItemRarity } from '../../types';
+import { Item } from '../../types';
 
 interface GameDialogsProps {
     activeModal: string | null;
@@ -22,20 +22,19 @@ interface GameDialogsProps {
 const GameDialogs: React.FC<GameDialogsProps> = ({ 
     activeModal, closeModal, helpTopic, closeHelp, inspectedItem, closeInspect, victoryStage, setVictoryStage
 }) => {
-    const gameStatus = useGameStore(state => state.session?.gameStatus);
+    const sessionStatus = useGameStore(state => state.session?.gameStatus);
+    const overworldStatus = useGameStore(state => state.overworld.gameStatus);
+    const gameStatus = sessionStatus || overworldStatus;
     const player = useGameStore(state => state.session?.player);
-    const grid = useGameStore(state => state.session?.grid);
     const bots = useGameStore(state => state.session?.bots);
     const winCondition = useGameStore(state => state.session?.winCondition);
     const difficulty = useGameStore(state => state.session?.difficulty);
     const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
     const messageLog = useGameStore(state => state.session?.messageLog);
-    const botActivityLog = useGameStore(state => state.session?.botActivityLog);
-    
+
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
     const user = useGameStore(state => state.user);
-    const leaderboard = useGameStore(state => state.leaderboard);
     
     // Actions
     const abandonSession = useGameStore(state => state.abandonSession);
@@ -183,8 +182,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         const levelKey = activeLevelConfig.id.replace('.', '_');
         const titleKey = `LEVEL_${levelKey}_TITLE` as any;
         const descKey = `LEVEL_${levelKey}_DESC` as any;
-        briefingTitle = TEXT[language].CAMPAIGN[titleKey] || activeLevelConfig.title;
-        briefingDesc = TEXT[language].CAMPAIGN[descKey] || activeLevelConfig.description;
+        briefingTitle = (TEXT[language].CAMPAIGN as Record<string, string>)[titleKey] || activeLevelConfig.title;
+        briefingDesc = (TEXT[language].CAMPAIGN as Record<string, string>)[descKey] || activeLevelConfig.description;
     } else if (winCondition?.winType === 'SUMMIT') {
         briefingDesc = `SCENARIO: KING OF THE HILL\n\nA dormant Monument has been detected...`;
     }
@@ -205,8 +204,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                     <div className="bg-slate-900 border border-red-900/50 p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-[320px] md:max-w-sm w-full text-center relative overflow-hidden" onClick={e => e.stopPropagation()}>
                         <div className="absolute top-0 left-0 w-full h-1 bg-red-600"></div>
                         <div className="w-14 h-14 rounded-2xl bg-red-900/20 flex items-center justify-center mx-auto mb-4 border border-red-500/30 shadow-lg shadow-red-900/20"><LogOut className="w-7 h-7 text-red-500" /></div>
-                        <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight">{t.ABORT_TITLE}</h3>
-                        <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2">{t.ABORT_DESC}</p>
+                        <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight break-words whitespace-pre-wrap">{t.ABORT_TITLE}</h3>
+                        <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2 break-words whitespace-pre-wrap">{t.ABORT_DESC}</p>
                         <div className="flex flex-col gap-3">
                             <button onClick={() => { handleMenu(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black uppercase text-xs transition-all active:scale-95 shadow-lg shadow-red-900/40">{t.BTN_CONFIRM}</button>
                             <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold uppercase text-[10px] transition-colors">{t.BTN_CANCEL}</button>
@@ -221,8 +220,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                     <div className="bg-slate-900 border border-amber-900/50 p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-[320px] md:max-w-sm w-full text-center relative overflow-hidden" onClick={e => e.stopPropagation()}>
                         <div className="absolute top-0 left-0 w-full h-1 bg-amber-600"></div>
                         <div className="w-14 h-14 rounded-2xl bg-amber-900/20 flex items-center justify-center mx-auto mb-4 border border-amber-500/30 shadow-lg shadow-amber-900/20"><RotateCcw className="w-7 h-7 text-amber-500" /></div>
-                        <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight">{t.BTN_RETRY}?</h3>
-                        <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2">{language === 'RU' ? 'Начать уровень заново? Текущий прогресс будет потерян.' : 'Restart the level? Current progress will be lost.'}</p>
+                        <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight break-words whitespace-pre-wrap">{t.BTN_RETRY}?</h3>
+                        <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2 break-words whitespace-pre-wrap">{language === 'RU' ? 'Начать уровень заново? Текущий прогресс будет потерян.' : 'Restart the level? Current progress will be lost.'}</p>
                         <div className="flex flex-col gap-3">
                             <button onClick={() => { handleRetry(); closeModal(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black uppercase text-xs transition-all active:scale-95 shadow-lg shadow-amber-900/40">{t.BTN_CONFIRM}</button>
                             <button 
@@ -246,14 +245,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 md:h-6"/></button>
                         <div className="flex flex-col items-center text-center mt-2">
                             <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-900 rounded-xl md:rounded-2xl flex items-center justify-center mb-3 md:mb-4 border border-slate-800 shadow-inner"><Target className="w-6 h-6 md:w-8 md:h-8 text-indigo-400" /></div>
-                            <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter">{briefingTitle}</h2>
+                            <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter break-words whitespace-pre-wrap">{briefingTitle}</h2>
                             <div className="flex items-center gap-2 mt-2">
                                 <span className={`px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold uppercase ${difficulty === 'HARD' ? 'bg-red-900/30 text-red-400' : 'bg-amber-900/30 text-amber-400'}`}>{difficulty || 'NORMAL'}</span>
                                 {bots && bots.length > 0 && <span className="px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold uppercase bg-red-900/20 text-red-400 border border-red-900/30 flex items-center gap-1"><Swords className="w-3 h-3"/> {t.BRIEFING_RIVAL}</span>}
                             </div>
                         </div>
                         <div className="bg-slate-900/50 rounded-xl p-3 md:p-4 border border-slate-800/50 max-h-[45vh] md:max-h-[40vh] overflow-y-auto no-scrollbar">
-                            <p className="text-xs md:text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-mono">{briefingDesc}</p>
+                            <p className="text-xs md:text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-mono break-words">{briefingDesc}</p>
                         </div>
                         <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="w-full py-3 md:py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl transition-all active:scale-95 text-sm md:text-base">{gameStatus === 'BRIEFING' ? t.BRIEFING_BTN_START : t.BTN_READY}</button>
                     </div>
@@ -299,7 +298,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 <div className="p-1.5 bg-indigo-500/20 rounded-lg border border-indigo-500/30">
                                     <FileText className="w-4 h-4 text-indigo-400" />
                                 </div>
-                                <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</h3>
+                                <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white break-words whitespace-pre-wrap">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</h3>
                             </div>
                             <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
                         </div>
@@ -313,7 +312,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                 <span className={`text-[8px] font-black uppercase tracking-tighter ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : log.type === 'SUCCESS' ? 'text-emerald-400' : 'text-slate-400'}`}>{log.type}</span>
                                                 <span className="text-[8px] font-mono text-slate-600">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
-                                            <p className="text-[10px] md:text-[11px] text-slate-300 font-mono leading-snug">{log.text}</p>
+                                            <p className="text-[10px] md:text-[11px] text-slate-300 font-mono leading-snug break-words whitespace-pre-wrap">{log.text}</p>
                                         </div>
                                     </div>
                                 ))
@@ -341,7 +340,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 <div className="p-1.5 bg-purple-500/20 rounded-lg border border-purple-500/30">
                                     <BookOpen className="w-4 h-4 text-purple-400" />
                                 </div>
-                                <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</h3>
+                                <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white break-words whitespace-pre-wrap">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</h3>
                             </div>
                             <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
                         </div>
@@ -360,8 +359,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                 <div key={def.idPrefix} className="flex gap-3 p-2.5 bg-slate-900/40 border border-slate-800/50 rounded-xl hover:bg-slate-800/40 transition-colors group">
                                                     <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-950 flex items-center justify-center border border-slate-800 shrink-0 shadow-inner group-hover:scale-105 transition-transform ${getRarityBorder(def.rarity)}`}><ItemIcon def={def} size="w-7 h-7 md:w-9 md:h-9" /></div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between mb-0.5"><span className="text-[11px] font-bold text-white truncate group-hover:text-indigo-300 transition-colors">{def.name[language]}</span></div>
-                                                        <p className="text-[9px] text-slate-500 italic leading-tight line-clamp-2">"{def.description[language]}"</p>
+                                                        <div className="flex items-center justify-between mb-0.5"><span className="text-[11px] font-bold text-white truncate group-hover:text-indigo-300 transition-colors break-words whitespace-pre-wrap">{def.name[language]}</span></div>
+                                                        <p className="text-[9px] text-slate-500 italic leading-tight line-clamp-2 break-words whitespace-pre-wrap">"{def.description[language]}"</p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -382,12 +381,12 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                 <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeHelp}>
                     <div className="bg-slate-900 border border-slate-700 p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-[320px] md:max-w-sm w-full max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
                         <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
-                        <h3 className="text-xl font-black text-white uppercase mb-2 text-center tracking-tight">{helpData.title}</h3>
-                        <p className="text-xs text-slate-400 mb-5 text-center leading-relaxed px-2">{helpData.desc}</p>
+                        <h3 className="text-xl font-black text-white uppercase mb-2 text-center tracking-tight break-words whitespace-pre-wrap">{helpData.title}</h3>
+                        <p className="text-xs text-slate-400 mb-5 text-center leading-relaxed px-2 break-words whitespace-pre-wrap">{helpData.desc}</p>
                         {(helpData as any).extra ? (
                             <div className="flex flex-col gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 mb-5">
                                 {(helpData as any).extra.map((line: string, i: number) => (
-                                    <p key={i} className="text-[10px] text-slate-300 font-mono leading-tight border-l-2 border-indigo-500 pl-2 py-1">{line}</p>
+                                    <p key={i} className="text-[10px] text-slate-300 font-mono leading-tight border-l-2 border-indigo-500 pl-2 py-1 break-words whitespace-pre-wrap">{line}</p>
                                 ))}
                             </div>
                         ) : (
@@ -412,13 +411,13 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 <>
                                     <div className="flex flex-col items-center">
                                         <div className={`w-24 h-24 rounded-2xl bg-slate-900 border flex items-center justify-center mb-3 shadow-inner ${getRarityBorder(inspectedItem.rarity)}`}><ItemIcon item={inspectedItem} size="w-16 h-16" /></div>
-                                        <h3 className="text-lg font-black text-white uppercase tracking-tight text-center leading-tight">{data.name}</h3>
+                                        <h3 className="text-lg font-black text-white uppercase tracking-tight text-center leading-tight break-words whitespace-pre-wrap">{data.name}</h3>
                                         <span className={`text-[10px] font-bold uppercase mt-1.5 px-2 py-0.5 rounded-full bg-slate-900 border ${getRarityBorder(inspectedItem.rarity)} text-slate-300`}>{inspectedItem.rarity}</span>
                                     </div>
-                                    <p className="text-xs text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800/50 py-4">"{data.description}"</p>
+                                    <p className="text-xs text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800/50 py-4 break-words whitespace-pre-wrap">"{data.description}"</p>
                                     <div className="flex flex-col gap-2.5">
-                                        <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/30"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><div><span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">Success</span><span className="text-[11px] text-emerald-100 font-mono leading-tight">{data.effectDesc}</span></div></div>
-                                        {inspectedItem.negativeEffectType && <div className="flex items-start gap-3 p-3 rounded-xl bg-red-950/20 border border-red-900/30"><AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" /><div><span className="text-[9px] font-bold text-red-400 uppercase tracking-widest block mb-0.5">Failure</span><span className="text-[11px] text-red-100 font-mono leading-tight">{data.negDesc}</span></div></div>}
+                                        <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/30"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><div><span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5 break-words whitespace-pre-wrap">Success</span><span className="text-[11px] text-emerald-100 font-mono leading-tight break-words whitespace-pre-wrap">{data.effectDesc}</span></div></div>
+                                        {inspectedItem.negativeEffectType && <div className="flex items-start gap-3 p-3 rounded-xl bg-red-950/20 border border-red-900/30"><AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" /><div><span className="text-[9px] font-bold text-red-400 uppercase tracking-widest block mb-0.5 break-words whitespace-pre-wrap">Failure</span><span className="text-[11px] text-red-100 font-mono leading-tight break-words whitespace-pre-wrap">{data.negDesc}</span></div></div>}
                                     </div>
                                     <div className="flex flex-col gap-2 mt-2">
                                         <button onClick={closeInspect} className="w-full py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-wider text-xs transition-colors">Close</button>
@@ -477,7 +476,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         <button onClick={closeMonumentDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
                         <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0">
                             <div className="p-2 md:p-3 bg-amber-950/50 rounded-xl border border-amber-900/50 shadow-inner"><Crown className="w-6 h-6 md:w-8 md:h-8 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" /></div>
-                            <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.MONUMENT_TITLE}</h3><p className="text-[10px] md:text-xs text-amber-600 uppercase tracking-widest font-mono mt-1">{t.MONUMENT_SUB}</p></div>
+                            <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none break-words whitespace-pre-wrap">{t.MONUMENT_TITLE}</h3><p className="text-[10px] md:text-xs text-amber-600 uppercase tracking-widest font-mono mt-1 break-words whitespace-pre-wrap">{t.MONUMENT_SUB}</p></div>
                         </div>
                         <div className="flex flex-col md:flex-row gap-4 md:gap-6 flex-1 overflow-y-auto md:overflow-hidden min-h-0">
                             <div className="flex-1 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden min-h-[150px] md:min-h-0 shrink-0">
@@ -572,10 +571,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         <button onClick={closeVoidDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
                         <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0">
                             <div className="p-2 md:p-3 bg-red-950/50 rounded-xl border border-red-900/50 shadow-inner animate-pulse"><AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" /></div>
-                            <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none">{t.VOID_TITLE}</h3><p className="text-[10px] md:text-xs text-red-400 uppercase tracking-widest font-mono mt-1">{t.VOID_SUB}</p></div>
+                            <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none break-words whitespace-pre-wrap">{t.VOID_TITLE}</h3><p className="text-[10px] md:text-xs text-red-400 uppercase tracking-widest font-mono mt-1 break-words whitespace-pre-wrap">{t.VOID_SUB}</p></div>
                         </div>
                         <div className="flex-1 overflow-y-auto flex flex-col gap-4 md:gap-6 min-h-0">
-                            <p className="text-xs md:text-sm text-slate-400 leading-relaxed text-center px-2 md:px-4 shrink-0">{t.VOID_DESC}<br/><span className="text-xs text-red-400 font-bold mt-2 block">{t.VOID_WARN}</span></p>
+                            <p className="text-xs md:text-sm text-slate-400 leading-relaxed text-center px-2 md:px-4 shrink-0 break-words whitespace-pre-wrap">{t.VOID_DESC}<br/><span className="text-xs text-red-400 font-bold mt-2 block break-words whitespace-pre-wrap">{t.VOID_WARN}</span></p>
                             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden flex-1 min-h-[200px]">
                                 <div className="p-2 border-b border-slate-800 bg-slate-900 shrink-0"><span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">{t.VOID_SELECT}</span></div>
                                 <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">

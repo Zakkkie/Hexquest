@@ -2,9 +2,9 @@
 import React, { useMemo } from 'react';
 import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
-import { Info, Pickaxe, ChevronsUp, RefreshCw, Hourglass, Mountain, ArrowRight, MapPin } from 'lucide-react';
+import { Info, Pickaxe, ChevronsUp, RefreshCw, Hourglass, Mountain, MapPin } from 'lucide-react';
 import HexButton from '../HexButton';
-import { getHexKey, getNeighbors, getSecondsToGrow, cubeDistance } from '../../services/hexUtils';
+import { getHexKey, getNeighbors, getSecondsToGrow } from '../../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
 import { Item, Hex } from '../../types';
 import { ItemIcon, StatusIcon, getRarityBorder } from './HudShared';
@@ -33,8 +33,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
     const deviceType = useGameStore(state => state.deviceType);
     
     const t = TEXT[language].HUD;
-    const isMobile = deviceType === 'MOBILE';
-    const mainButtonSize = "lg"; 
+    const mainButtonSize = "lg";
 
     // --- COMPUTED STATE ---
     
@@ -165,8 +164,8 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
         if (campaignMetrics) {
             const isDone = campaignMetrics.current >= campaignMetrics.target;
             return (
-                <div className="flex items-center gap-2 text-[10px] md:text-[10px] font-bold font-mono whitespace-nowrap">
-                    <span className="text-slate-400 uppercase">{campaignMetrics.label}:</span>
+                <div className="flex items-center gap-2 text-[10px] md:text-[10px] font-bold font-mono whitespace-pre-wrap break-words">
+                    <span className="text-slate-400 uppercase break-words whitespace-pre-wrap">{campaignMetrics.label}:</span>
                     <span className={isDone ? "text-emerald-400" : "text-white"}>
                         {campaignMetrics.current}/{campaignMetrics.target}
                     </span>
@@ -176,29 +175,29 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
         // 2. Static goal text for complex / narrative missions
         if (activeLevelConfig?.goalText) {
             return (
-                <div className="flex items-center gap-2 text-[10px] font-bold font-mono overflow-hidden">
-                    <span className="text-slate-400 shrink-0">GOAL:</span>
-                    <span className="text-amber-300 truncate min-w-0">{activeLevelConfig.goalText}</span>
+                <div className="flex items-center gap-2 text-[10px] font-bold font-mono overflow-hidden whitespace-pre-wrap break-words">
+                    <span className="text-slate-400 shrink-0 break-words whitespace-pre-wrap">GOAL:</span>
+                    <span className="text-amber-300 truncate min-w-0 break-words whitespace-pre-wrap">{activeLevelConfig.goalText}</span>
                 </div>
             );
         }
         // 3. Skirmish: SUMMIT win type
         if (winCondition?.winType === 'SUMMIT') {
             return (
-                <div className="flex items-center gap-2 text-[10px] md:text-[10px] font-bold font-mono whitespace-nowrap">
-                    <span className="text-slate-400">SUMMIT:</span>
-                    <span className="text-amber-400">LEVEL {winCondition?.targetLevel}</span>
+                <div className="flex items-center gap-2 text-[10px] md:text-[10px] font-bold font-mono whitespace-pre-wrap break-words">
+                    <span className="text-slate-400 break-words whitespace-pre-wrap">SUMMIT:</span>
+                    <span className="text-amber-400 break-words whitespace-pre-wrap">LEVEL {winCondition?.targetLevel}</span>
                     <Mountain className="w-3 h-3 text-amber-500" />
                 </div>
             );
         }
         // 4. Skirmish: standard level/coins goal
         return (
-            <div className="flex items-center gap-2 text-[10px] font-bold font-mono whitespace-nowrap">
-                <span className="text-slate-400">GOAL:</span>
-                <span className="text-white">L{winCondition?.targetLevel}</span>
+            <div className="flex items-center gap-2 text-[10px] font-bold font-mono whitespace-pre-wrap break-words">
+                <span className="text-slate-400 break-words whitespace-pre-wrap">GOAL:</span>
+                <span className="text-white break-words whitespace-pre-wrap">L{winCondition?.targetLevel}</span>
                 <span className="text-slate-600">·</span>
-                <span className="text-amber-400">{winCondition?.targetCoins}cr</span>
+                <span className="text-amber-400 break-words whitespace-pre-wrap">{winCondition?.targetCoins}cr</span>
             </div>
         );
     };

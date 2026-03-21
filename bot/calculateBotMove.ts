@@ -193,7 +193,7 @@ const findStaircaseTarget = (bot: Entity, grid: Record<string, Hex>, monument: H
 // CONCENTRIC EXPLORE PLAN
 // ─────────────────────────────────────────────────────────────────────────────
 
-const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], mem: BotMemory): Plan => {
+const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, _navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], mem: BotMemory): Plan => {
     const anchor: HexCoord = { q: 0, r: 0 };
     let currentRing = 0; 
     let ringCandidates: Hex[] = [];
@@ -245,7 +245,7 @@ const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, navObstacles: 
 // MINING & STOCKPILING
 // ─────────────────────────────────────────────────────────────────────────────
 
-const buildMinePlan = (bot: Entity, grid: Record<string, Hex>, navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], monument: Hex | null, mem: BotMemory): Plan => {
+const buildMinePlan = (bot: Entity, grid: Record<string, Hex>, _navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], monument: Hex | null, mem: BotMemory): Plan => {
     const restriction = monument ? buildMonumentRestriction(monument, grid, mem.isCampaign) : undefined;
     const digTargets  = findBestDigTargets(bot, grid, allBots, 10, restriction);
 
@@ -351,8 +351,6 @@ const buildCompetePlan = (
     return { steps: [], createdAt: stateVersion, label: 'Compete:Idle' };
 };
 
-// Множество уровней без монумента, где бот должен конкурировать
-const COMPETE_LEVEL_IDS = new Set(['1.6', '3.7']);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CAMPAIGN PLAN BUILDER
@@ -731,11 +729,11 @@ export const calculateBotMove = (
     bot: Entity,
     grid: Record<string, Hex>,
     player: Entity,
-    winCondition: WinCondition | null,
+    _winCondition: WinCondition | null,
     obstacles: HexCoord[],
     index: WorldIndex,
     stateVersion: number,
-    difficulty: Difficulty,
+    _difficulty: Difficulty,
     reservedHexKeys?: Set<string>,
     allBots?: Entity[],
     activeLevelConfig?: any // Changed from string to any to match AiSystem

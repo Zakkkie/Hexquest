@@ -31,8 +31,8 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[8px] text-slate-500 font-black uppercase tracking-widest truncate leading-none mb-1">{slotName}</div>
-          <div className="text-[11px] text-white font-bold truncate leading-tight">
+          <div className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-none mb-1 break-words whitespace-pre-wrap">{slotName}</div>
+          <div className="text-[11px] text-white font-bold leading-tight break-words whitespace-pre-wrap">
             {itemDef ? itemDef.name[language] : <span className="text-slate-700 italic font-medium">Empty</span>}
           </div>
         </div>
@@ -63,11 +63,11 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
             <ItemIcon def={itemDef} size="w-6 h-6" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] text-white font-bold truncate leading-tight">{itemDef.name[language]}</div>
-            <div className="text-[9px] text-slate-500 font-black uppercase tracking-tighter mt-0.5">{itemDef.rarity}</div>
+            <div className="text-[11px] text-white font-bold leading-tight break-words whitespace-pre-wrap">{itemDef.name[language]}</div>
+            <div className="text-[9px] text-slate-500 font-black uppercase tracking-tighter mt-0.5 break-words whitespace-pre-wrap">{itemDef.rarity}</div>
           </div>
         </div>
-        <div className="text-[9px] text-slate-500 line-clamp-2 leading-tight h-6 italic">"{itemDef.description[language]}"</div>
+        <div className="text-[9px] text-slate-500 line-clamp-2 leading-tight h-6 italic break-words whitespace-pre-wrap">"{itemDef.description[language]}"</div>
         {isEquippable && (
           <button 
             onClick={() => equipItem(itemId, equipSlot as any, index)}

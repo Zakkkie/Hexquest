@@ -1,5 +1,5 @@
 import { OverworldHex, TerrainType, HexCoord } from '../types.ts';
-import { getHexKey, getNeighbors, findOverworldPath, cubeDistance } from './hexUtils.ts';
+import { getHexKey, cubeDistance } from './hexUtils.ts';
 import { getCityFeature } from './CityGenerator.ts';
 
 // Simple 2D Perlin/Simplex noise implementation
@@ -161,7 +161,7 @@ export function generateHexData(q: number, r: number, seed: number): OverworldHe
 }
 
 // Pre-calculate POI and Rift positions based on seed
-export function getSpecialFeature(q: number, r: number, seed: number, radius: number, isWorldMap: boolean = true): { poiId?: string, isPoiCenter?: boolean, riftId?: string, terrainType?: TerrainType, moveCost?: number, isPassable?: boolean, height?: number, isIndestructible?: boolean } {
+export function getSpecialFeature(q: number, r: number, seed: number, _radius: number, isWorldMap: boolean = true): { poiId?: string, isPoiCenter?: boolean, riftId?: string, terrainType?: TerrainType, moveCost?: number, isPassable?: boolean, height?: number, isIndestructible?: boolean } {
   const dist = cubeDistance({ q: 0, r: 0 }, { q, r });
   
   if (!isWorldMap) {
@@ -186,7 +186,6 @@ export function getSpecialFeature(q: number, r: number, seed: number, radius: nu
   // For lazy generation, we can use a grid-based approach or a hash-to-range approach.
   // Let's use a simple probability that scales with distance.
   
-  const series1 = ['1', '2', '3', '4', '5', '6'];
   const series2 = ['7', '8', '9', '10', '11'];
   const series3 = ['12', '13', '14', '15', '16', '17', '18', '19'];
   const series4 = ['20', '21', '22', '23', '24', '25', '26'];
