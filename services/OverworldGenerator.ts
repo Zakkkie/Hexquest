@@ -243,10 +243,14 @@ export function generateOverworld(radius: number = 30, seed: number = Math.rando
       const hq = q + center.q;
       const hr = r + center.r;
       const key = getHexKey(hq, hr);
+      const distToOrigin = cubeDistance({ q: 0, r: 0 }, { q: hq, r: hr });
+      
+      if (!isWorldMap && distToOrigin > 3) {
+          continue;
+      }
+      
       const hex = generateHexData(hq, hr, seed);
       const special = getSpecialFeature(hq, hr, seed, radius, isWorldMap);
-      
-      const distToCenter = cubeDistance(center, { q: hq, r: hr });
       
       grid[key] = {
         ...hex,

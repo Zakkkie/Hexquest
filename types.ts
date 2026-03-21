@@ -11,6 +11,7 @@ export interface HexView {
   // ДОБАВЛЕНО: MINI_MONUMENT
   structureType?: 'NONE' | 'BARRIER' | 'CAPITAL' | 'VOID' | 'MONUMENT' | 'MINE' | 'MINI_MONUMENT';
   ownerId?: string; 
+  neighborLevels?: number[];
 }
 
 // Full State Hex

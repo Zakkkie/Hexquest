@@ -651,7 +651,7 @@ export const useGameStore = create<GameStore>()(
               if (get().overworld.isGenerated && !skipIntro) return; 
               
               const seed = Math.random();
-              const grid = generateOverworld(20, seed, false); // Start in City View
+              const grid = generateOverworld(3, seed, false); // Start in City View
               set(state => ({
                   overworld: {
                       ...state.overworld,
@@ -699,6 +699,9 @@ export const useGameStore = create<GameStore>()(
 
                   // Lazy generation: if hex doesn't exist, generate it to check moveCost
                   if (!hex) {
+                      if (!currentOverworld.isWorldMap && cubeDistance({q: 0, r: 0}, {q: step.q, r: step.r}) > 3) {
+                          break;
+                      }
                       const baseHex = generateHexData(step.q, step.r, currentOverworld.seed);
                       const special = getSpecialFeature(step.q, step.r, currentOverworld.seed, 30, currentOverworld.isWorldMap);
                       const terrainType = special.terrainType || baseHex.terrainType;
@@ -771,31 +774,33 @@ export const useGameStore = create<GameStore>()(
                       player.r = step.r;
                       player.stepCount = (player.stepCount ?? 0) + 1;
                       
-                      // Generate buffer (radius 12) for seamless procedural exploration
-                      const genRadius = 12; 
-                      for (let dq = -genRadius; dq <= genRadius; dq++) {
-                          for (let dr = Math.max(-genRadius, -dq - genRadius); dr <= Math.min(genRadius, -dq + genRadius); dr++) {
-                              const nq = step.q + dq;
-                              const nr = step.r + dr;
+                      // Generate buffer for seamless procedural exploration
+                      if (currentOverworld.isWorldMap) {
+                          const genRadius = 2; 
+                          for (let dq = -genRadius; dq <= genRadius; dq++) {
+                              for (let dr = Math.max(-genRadius, -dq - genRadius); dr <= Math.min(genRadius, -dq + genRadius); dr++) {
+                                  const nq = step.q + dq;
+                                  const nr = step.r + dr;
 
-                              const nk = getHexKey(nq, nr);
-                              
-                              if (!grid[nk]) {
-                                  // Generate neighbors too if they don't exist
-                                  const baseN = generateHexData(nq, nr, newOverworld.seed);
-                                  const specialN = getSpecialFeature(nq, nr, newOverworld.seed, 30, newOverworld.isWorldMap);
-                                  const terrainType = specialN.terrainType || baseN.terrainType;
-                                  const moveCost = specialN.moveCost ?? baseN.moveCost;
+                                  const nk = getHexKey(nq, nr);
                                   
-                                  grid[nk] = {
-                                      ...baseN,
-                                      ...specialN,
-                                      terrainType,
-                                      moveCost,
-                                      isRevealed: true,
-                                      isPassable: moveCost < 999,
-                                      height: specialN.height ?? (specialN.terrainType ? getHexHeight(specialN.terrainType) : baseN.height)
-                                  };
+                                  if (!grid[nk]) {
+                                      // Generate neighbors too if they don't exist
+                                      const baseN = generateHexData(nq, nr, newOverworld.seed);
+                                      const specialN = getSpecialFeature(nq, nr, newOverworld.seed, 30, newOverworld.isWorldMap);
+                                      const terrainType = specialN.terrainType || baseN.terrainType;
+                                      const moveCost = specialN.moveCost ?? baseN.moveCost;
+                                      
+                                      grid[nk] = {
+                                          ...baseN,
+                                          ...specialN,
+                                          terrainType,
+                                          moveCost,
+                                          isRevealed: true,
+                                          isPassable: moveCost < 999,
+                                          height: specialN.height ?? (specialN.terrainType ? getHexHeight(specialN.terrainType) : baseN.height)
+                                      };
+                                  }
                               }
                           }
                       }
@@ -990,7 +995,7 @@ export const useGameStore = create<GameStore>()(
           const { generateOverworld } = await import('./services/OverworldGenerator.ts');
           const seed = state.overworld.seed;
           const worldPos = state.overworld.worldMapPos || { q: 0, r: 0 };
-          const grid = generateOverworld(30, seed, true, 15, worldPos); // World map radius 30, but only generates initial radius 15 around worldPos
+          const grid = generateOverworld(30, seed, true, 2, worldPos); // World map radius 30, but only generates initial radius 2 around worldPos
           
           set(state => ({
               overworld: {
@@ -1013,7 +1018,7 @@ export const useGameStore = create<GameStore>()(
           const state = get();
           const { generateOverworld } = await import('./services/OverworldGenerator.ts');
           const seed = state.overworld.seed;
-          const grid = generateOverworld(20, seed, false); // City map radius 20, generates all at once
+          const grid = generateOverworld(3, seed, false); // City map radius 3, generates all at once
           
           const currentPos = { q: state.overworld.player.q, r: state.overworld.player.r };
           
