@@ -1,5 +1,5 @@
 import { WinCondition, SessionState, Difficulty, Item, Entity, EntityType, EntityState, HexCoord, LogEntry, Language, UserProfile, OverworldState, Hex } from '../types.ts';
-import { LevelConfig } from '../campaign/types.ts';
+import { LevelConfig } from '../types';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../rules/config.ts';
 import { getHexKey, getNeighbors } from './hexUtils.ts';
 import { generateMap } from './mapGenerator.ts';

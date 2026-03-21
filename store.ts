@@ -7,7 +7,7 @@ import { CITY_NAME } from './services/CityGenerator.ts';
 import { GameEngine } from './engine/GameEngine.ts';
 import { audioService } from './services/audioService.ts';
 import { CAMPAIGN_LEVELS } from './campaign/levels.ts';
-import { LevelConfig } from './campaign/types.ts';
+import { LevelConfig } from './types';
 import { calculateMovementCost } from './rules/movement.ts';
 import { generateMap } from './services/mapGenerator.ts';
 import { TEXT } from './services/i18n.ts';
@@ -771,9 +771,8 @@ export const useGameStore = create<GameStore>()(
                       player.r = step.r;
                       player.stepCount = (player.stepCount ?? 0) + 1;
                       
-                      // Reveal fog of war (radius 2) and generate buffer (radius 4)
-                      const revealRadius = 2;
-                      const genRadius = 4; 
+                      // Generate buffer (radius 12) for seamless procedural exploration
+                      const genRadius = 12; 
                       for (let dq = -genRadius; dq <= genRadius; dq++) {
                           for (let dr = Math.max(-genRadius, -dq - genRadius); dr <= Math.min(genRadius, -dq + genRadius); dr++) {
                               const nq = step.q + dq;
@@ -793,14 +792,10 @@ export const useGameStore = create<GameStore>()(
                                       ...specialN,
                                       terrainType,
                                       moveCost,
+                                      isRevealed: true,
                                       isPassable: moveCost < 999,
                                       height: specialN.height ?? (specialN.terrainType ? getHexHeight(specialN.terrainType) : baseN.height)
                                   };
-                              }
-                              
-                              const dToPlayer = cubeDistance({ q: step.q, r: step.r }, { q: nq, r: nr });
-                              if (dToPlayer <= revealRadius && !grid[nk].isRevealed) {
-                                  grid[nk] = { ...grid[nk], isRevealed: true };
                               }
                           }
                       }
@@ -995,7 +990,7 @@ export const useGameStore = create<GameStore>()(
           const { generateOverworld } = await import('./services/OverworldGenerator.ts');
           const seed = state.overworld.seed;
           const worldPos = state.overworld.worldMapPos || { q: 0, r: 0 };
-          const grid = generateOverworld(30, seed, true, 6, worldPos); // World map radius 30, but only generates initial radius 6 around worldPos
+          const grid = generateOverworld(30, seed, true, 15, worldPos); // World map radius 30, but only generates initial radius 15 around worldPos
           
           set(state => ({
               overworld: {
@@ -1284,7 +1279,10 @@ export const useGameStore = create<GameStore>()(
                       } else {
                           const supplyIndex = player.bag.indexOf('SUPPLIES');
                           if (supplyIndex !== -1) {
-                              player.bag.splice(supplyIndex, 1);
+                              player.bag = [
+                                  ...player.bag.slice(0, supplyIndex),
+                                  ...player.bag.slice(supplyIndex + 1)
+                              ];
                               player.energy = player.maxEnergy;
                               player.hp = Math.min(player.maxHp, player.hp + 20);
                               toastMsg = TEXT[get().language].TOAST.REST_SUPPLIES;
@@ -1607,7 +1605,12 @@ export const useGameStore = create<GameStore>()(
                   if (choice.penalty.items) {
                       choice.penalty.items.forEach(item => {
                           const idx = player.bag.indexOf(item);
-                          if (idx > -1) player.bag.splice(idx, 1);
+                          if (idx > -1) {
+                              player.bag = [
+                                  ...player.bag.slice(0, idx),
+                                  ...player.bag.slice(idx + 1)
+                              ];
+                          }
                       });
                   }
                   
@@ -1697,7 +1700,10 @@ export const useGameStore = create<GameStore>()(
                       if (choice.reqItem) {
                           const itemIndex = player.bag.indexOf(choice.reqItem);
                           if (itemIndex !== -1) {
-                              player.bag.splice(itemIndex, 1);
+                              player.bag = [
+                                  ...player.bag.slice(0, itemIndex),
+                                  ...player.bag.slice(itemIndex + 1)
+                              ];
                               newOverworld.activeEventNodeId = choice.nextNode || null;
                               if (!newOverworld.activeEventNodeId) {
                                   newOverworld.activeEventId = null;
@@ -1758,7 +1764,10 @@ export const useGameStore = create<GameStore>()(
               const currentItem = eq[slot];
               
               // Remove the new item from the bag
-              player.bag.splice(bagIndex, 1);
+              player.bag = [
+                  ...player.bag.slice(0, bagIndex),
+                  ...player.bag.slice(bagIndex + 1)
+              ];
               
               if (currentItem) {
                   player.bag.push(currentItem);
@@ -1863,8 +1872,10 @@ export const useGameStore = create<GameStore>()(
                   return state;
               }
               
-              player.bag = [...player.bag];
-              player.bag.splice(bagIndex, 1);
+              player.bag = [
+                  ...player.bag.slice(0, bagIndex),
+                  ...player.bag.slice(bagIndex + 1)
+              ];
               player.credits += price;
               newOverworld.player = player;
               

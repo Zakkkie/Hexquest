@@ -26,7 +26,6 @@ const OverworldMinimap: React.FC = () => {
     // Draw all hexes
     for (const key in overworld.grid) {
       const hex = overworld.grid[key];
-      if (!hex.isRevealed) continue;
 
       const { x, y } = hexToPixel(hex.q, hex.r, 0);
       

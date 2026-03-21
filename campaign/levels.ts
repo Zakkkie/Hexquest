@@ -1,4 +1,4 @@
-import { LevelConfig } from '../campaign/types';
+import { LevelConfig } from '../types';
 import { series1Levels } from '../campaign/series1';
 import { series2Levels } from '../campaign/series2';
 import { series3Levels } from '../campaign/series3';

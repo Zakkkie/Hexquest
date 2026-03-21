@@ -154,7 +154,7 @@ export function generateHexData(q: number, r: number, seed: number): OverworldHe
     terrainType,
     moveCost,
     isPassable: moveCost < 999,
-    isRevealed: false,
+    isRevealed: true,
     isIndestructible: false,
     height: getHexHeight(terrainType)
   };
@@ -252,7 +252,7 @@ export function generateOverworld(radius: number = 30, seed: number = Math.rando
         ...hex,
         ...special,
         isPoiCenter: special.isPoiCenter,
-        isRevealed: isWorldMap ? (distToCenter <= 2) : true, 
+        isRevealed: true, 
         isPassable: special.isPassable !== undefined ? special.isPassable : (special.terrainType ? (getHexHeight(special.terrainType) < 999) : hex.isPassable),
         height: special.height !== undefined ? special.height : (special.terrainType ? getHexHeight(special.terrainType) : hex.height),
         moveCost: special.moveCost !== undefined ? special.moveCost : hex.moveCost

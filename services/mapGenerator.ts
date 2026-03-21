@@ -1,6 +1,6 @@
 
 import { Hex, HexCoord, TerrainType } from '../types';
-import { LevelConfig } from '../campaign/types';
+import { LevelConfig } from '../types';
 import { getHexKey, getNeighbors } from './hexUtils';
 import { GAME_CONFIG } from '../rules/config';
 
@@ -314,16 +314,10 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
   const visited = new Map<string, number>();
   const queue: { q: number, r: number, d: number }[] = [];
 
-  // Optimization: Start BFS only from boundary hexes of the core area
   for (const key of coreKeys) {
       const h = initialGrid[key];
       visited.set(key, 0);
-      
-      const neighbors = getNeighbors(h.q, h.r);
-      const isBoundary = neighbors.some(n => !initialGrid[getHexKey(n.q, n.r)]);
-      if (isBoundary) {
-          queue.push({ q: h.q, r: h.r, d: 0 });
-      }
+      queue.push({ q: h.q, r: h.r, d: 0 });
   }
 
   let head = 0;
@@ -350,26 +344,6 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
           }
       }
   }
-
-  // 4. Pre-calculate neighbor levels and boundary status for rendering optimization
-  const VOID_LEVEL_FLAG = -99;
-  Object.values(initialGrid).forEach(hex => {
-      const neighborLevels = new Array(6);
-      const neighbors = getNeighbors(hex.q, hex.r);
-      let isBoundary = false;
-      for (let i = 0; i < 6; i++) {
-          const nKey = getHexKey(neighbors[i].q, neighbors[i].r);
-          const nHex = initialGrid[nKey];
-          if (!nHex || nHex.structureType === 'VOID') {
-              neighborLevels[i] = VOID_LEVEL_FLAG;
-              isBoundary = true;
-          } else {
-              neighborLevels[i] = nHex.currentLevel ?? 0;
-          }
-      }
-      hex.neighborLevels = neighborLevels;
-      hex.isBoundary = isBoundary;
-  });
 
   const monuments = Object.values(initialGrid).filter(h => h.structureType === 'MONUMENT');
   for (const m of monuments) {

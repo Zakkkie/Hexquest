@@ -90,32 +90,30 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
       });
     }
 
-    if (hex.isRevealed) {
-      if (hex.terrainType === 'WATER' && waterLayerRef.current) {
-        animRef.current = new Konva.Animation((frame) => {
-          if (!frame || !waterLayerRef.current) return;
-          const time = frame.time / 1000;
-          waterLayerRef.current.y(Math.sin(time * 2) * 2);
-          waterLayerRef.current.opacity(0.6 + Math.sin(time * 3) * 0.2);
-        }, waterLayerRef.current.getLayer());
-        animRef.current.start();
-      } else if (hex.riftId && riftRef.current) {
-        animRef.current = new Konva.Animation((frame) => {
-          if (!frame || !riftRef.current) return;
-          const time = frame.time / 1000;
-          riftRef.current.rotation(time * 45);
-          const scale = 1 + Math.sin(time * 4) * 0.1;
-          riftRef.current.scale({ x: scale, y: scale });
-        }, riftRef.current.getLayer());
-        animRef.current.start();
-      } else if (hex.poiId && poiRef.current) {
-        animRef.current = new Konva.Animation((frame) => {
-          if (!frame || !poiRef.current) return;
-          const time = frame.time / 1000;
-          poiRef.current.y(-20 + Math.sin(time * 3) * 4);
-        }, poiRef.current.getLayer());
-        animRef.current.start();
-      }
+    if (hex.terrainType === 'WATER' && waterLayerRef.current) {
+      animRef.current = new Konva.Animation((frame) => {
+        if (!frame || !waterLayerRef.current) return;
+        const time = frame.time / 1000;
+        waterLayerRef.current.y(Math.sin(time * 2) * 2);
+        waterLayerRef.current.opacity(0.6 + Math.sin(time * 3) * 0.2);
+      }, waterLayerRef.current.getLayer());
+      animRef.current.start();
+    } else if (hex.riftId && riftRef.current) {
+      animRef.current = new Konva.Animation((frame) => {
+        if (!frame || !riftRef.current) return;
+        const time = frame.time / 1000;
+        riftRef.current.rotation(time * 45);
+        const scale = 1 + Math.sin(time * 4) * 0.1;
+        riftRef.current.scale({ x: scale, y: scale });
+      }, riftRef.current.getLayer());
+      animRef.current.start();
+    } else if (hex.poiId && poiRef.current) {
+      animRef.current = new Konva.Animation((frame) => {
+        if (!frame || !poiRef.current) return;
+        const time = frame.time / 1000;
+        poiRef.current.y(-20 + Math.sin(time * 3) * 4);
+      }, poiRef.current.getLayer());
+      animRef.current.start();
     }
 
     return () => {
@@ -123,7 +121,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
         animRef.current.stop();
       }
     };
-  }, [hex.terrainType, hex.isRevealed, hex.riftId, size, level, neighborLevels]);
+  }, [hex.terrainType, hex.riftId, size, level, neighborLevels]);
 
   const topTexture = useMemo(() => textureService.getTexture(level, hex.q, hex.r, hex.terrainType), [level, hex.q, hex.r, hex.terrainType]);
   const sideTexture = useMemo(() => textureService.getSideTexture(level, hex.terrainType), [level, hex.terrainType]);
@@ -288,68 +286,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
 
   const terrainDetails = useMemo(() => {
     return [];
-  }, [hex.terrainType, hex.isRevealed, hex.q, hex.r, size]);
-
-  if (!hex.isRevealed) {
-    return (
-      <Group 
-        x={x} 
-        y={y} 
-        ref={baseRef}
-        onClick={() => onClick(hex.q, hex.r)}
-        onTap={() => onClick(hex.q, hex.r)}
-        onMouseEnter={(e) => {
-          const container = e.target.getStage()?.container();
-          if (container) container.style.cursor = 'pointer';
-        }}
-        onMouseLeave={(e) => {
-          const container = e.target.getStage()?.container();
-          if (container) container.style.cursor = 'grab';
-        }}
-      >
-        <Group scaleY={0.8}>
-          {/* Base Shadow */}
-          <Path 
-            data={topPathData} 
-            fill="#020617" 
-            stroke="#0f172a" 
-            strokeWidth={1} 
-            perfectDrawEnabled={false}
-          />
-          
-          {/* Cloud Cluster */}
-          <Group opacity={0.6} scaleY={0.5}>
-            <Circle x={-12} y={-8} radius={18} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={18} fillRadialGradientColorStops={[0, '#1e293b', 1, 'transparent']} />
-            <Circle x={12} y={-4} radius={20} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={20} fillRadialGradientColorStops={[0, '#334155', 1, 'transparent']} />
-            <Group y={10}>
-              <Circle x={0} y={0} radius={22} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={22} fillRadialGradientColorStops={[0, '#1e293b', 1, 'transparent']} />
-            </Group>
-            <Circle x={-8} y={6} radius={16} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={16} fillRadialGradientColorStops={[0, '#334155', 1, 'transparent']} />
-          </Group>
-
-          {/* Subtle Border */}
-          <Path 
-            data={topPathData} 
-            stroke="rgba(255,255,255,0.05)" 
-            strokeWidth={2} 
-            perfectDrawEnabled={false}
-          />
-
-          {/* Path Highlight Overlay for Fog */}
-          {highlight === 'UNREACHABLE' && (
-            <Path 
-              data={topPathData}
-              fill="rgba(239, 68, 68, 0.15)" 
-              stroke="rgba(239, 68, 68, 0.4)"
-              strokeWidth={2}
-              listening={false}
-              perfectDrawEnabled={false}
-            />
-          )}
-        </Group>
-      </Group>
-    );
-  }
+  }, [hex.terrainType, hex.q, hex.r, size]);
 
   return (
     <Group 
@@ -454,7 +391,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
           )}
 
           {/* Impassable Indicator */}
-          {!isPassable && hex.isRevealed && hex.terrainType !== 'CITY' && hex.terrainType !== 'BUILDING' && hex.terrainType !== 'WALL' && (
+          {!isPassable && hex.terrainType !== 'CITY' && hex.terrainType !== 'BUILDING' && hex.terrainType !== 'WALL' && (
             <Group opacity={0.8}>
               {hex.terrainType === 'WATER' ? (
                 <Group y={-2}>
@@ -706,7 +643,6 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
 function arePropsEqual(prev: any, next: any) {
     if (prev.hex.id !== next.hex.id) return false;
     if (prev.hex.height !== next.hex.height) return false;
-    if (prev.hex.isRevealed !== next.hex.isRevealed) return false;
     if (prev.x !== next.x || prev.y !== next.y) return false;
     if (prev.isLocked !== next.isLocked) return false;
     if (prev.highlight !== next.highlight) return false;

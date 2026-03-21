@@ -418,10 +418,6 @@ const OverworldView: React.FC = () => {
     
     const clickedHex = grid[getHexKey(q, r)];
     
-    if (!clickedHex?.isRevealed) {
-      return;
-    }
-    
     if (q === player.q && r === player.r) {
       interactOverworld(q, r);
       return;
@@ -904,7 +900,7 @@ const OverworldView: React.FC = () => {
                   isPassable={hex.isPassable}
                   neighborLevels={neighborLevels}
                   neighborPoiIds={neighborPoiIds}
-                  highlight={showPaths && hex.isRevealed ? (reachableHexes.has(getHexKey(hex.q, hex.r)) ? 'REACHABLE' : 'UNREACHABLE') : 'NONE'}
+                  highlight={showPaths ? (reachableHexes.has(getHexKey(hex.q, hex.r)) ? 'REACHABLE' : 'UNREACHABLE') : 'NONE'}
                   onClick={stableHandleHexClick}
                 />
               );

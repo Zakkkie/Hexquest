@@ -70,18 +70,14 @@ export class ActionProcessor {
               result = this.handleRestoreHex(state, actor, action); break;
           case 'ACTIVATE_MONUMENT':
               result = this.handleActivateMonument(state, actor, action); break;
+          case 'ACTIVATE_MINI_MONUMENT':
+              result = this.handleActivateMiniMonument(state, actor, action as any); break;
           case 'VISIT_POI':
               result = this.handleVisitPoi(state, actor, action); break;
           case 'WAIT':
               result = { ok: true }; break;
           default:
               return { ok: false, reason: 'Unknown Action' };
-      }
-
-      // Fire onAfterAction for real player actions (not bots, not WAIT)
-      if (result.ok && actorId === state.player?.id && action.type !== 'WAIT'
-          && state.activeLevelConfig?.hooks?.onAfterAction) {
-          state.activeLevelConfig.hooks.onAfterAction(state);
       }
 
       return result;
@@ -165,7 +161,10 @@ export class ActionProcessor {
       const idx = actor.inventory.findIndex(i => i.id === action.itemId);
       if (idx === -1) return { ok: false, reason: 'Item not found' };
       
-      actor.inventory.splice(idx, 1);
+      actor.inventory = [
+          ...actor.inventory.slice(0, idx),
+          ...actor.inventory.slice(idx + 1)
+      ];
       
       // Removed scrap value logic as requested - items have no coin value on disposal
       
@@ -266,7 +265,10 @@ export class ActionProcessor {
       const idx = actor.inventory.findIndex(i => i.id === action.itemId);
       if (idx === -1) return { ok: false, reason: 'Item missing' };
       const item = actor.inventory[idx];
-      actor.inventory.splice(idx, 1);
+      actor.inventory = [
+          ...actor.inventory.slice(0, idx),
+          ...actor.inventory.slice(idx + 1)
+      ];
 
       // Updated Probability Logic
       let chance = 0.25; // Common (Default)
@@ -411,6 +413,23 @@ export class ActionProcessor {
                   { poiType }
               ));
           }
+      }
+
+      return { ok: true };
+  }
+
+  private handleActivateMiniMonument(state: SessionState, actor: Entity, action: any): ValidationResult {
+      if (!state.grid[action.miniMonumentHexKey]) {
+          return { ok: false, reason: 'Mini monument hex not found' };
+      }
+      
+      if (state.outgoingEvents) {
+          state.outgoingEvents.push(GameEventFactory.create(
+              'MONUMENT_REACHED',
+              'Mini Monument Activated!',
+              actor.id,
+              { hexKey: action.miniMonumentHexKey }
+          ));
       }
 
       return { ok: true };
