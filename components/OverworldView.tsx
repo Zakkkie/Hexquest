@@ -7,7 +7,7 @@ import { getHexHeight } from '../services/OverworldGenerator.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { Zap, Heart, Coins, Backpack, Tent, Search, Hand, Target, Settings, X, LogOut, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, RotateCcw, Pickaxe, Hammer, XCircle, CheckCircle, Info } from 'lucide-react';
 import HexButton from './HexButton.tsx';
-import { ITEM_REGISTRY } from '../rules/items.ts';
+import { getItemDef } from '../rules/items.ts';
 import { ItemIcon, getRarityBorder } from './hud/HudShared.tsx';
 import EventModal from './EventModal.tsx';
 import InventoryModal from './InventoryModal.tsx';
@@ -728,7 +728,7 @@ const OverworldView: React.FC = () => {
             <div className="flex items-center gap-1 md:gap-1.5 justify-start overflow-x-auto no-scrollbar mask-linear-fade-right pr-2">
               {[0, 1, 2, 3, 4].map(index => {
                 const itemId = player.bag[index];
-                const item = itemId ? (ITEM_REGISTRY as Record<string, any>)[itemId] : undefined;
+                const item = itemId ? getItemDef(itemId) : undefined;
                 const slotSize = "w-7 h-7 md:w-10 md:h-10"; 
                 return (
                   <div 
@@ -741,7 +741,7 @@ const OverworldView: React.FC = () => {
                         : 'bg-slate-950/50 border-slate-800/50 border-dashed'}
                     `}
                   >
-                    {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1 h-1 rounded-full bg-slate-800/50" />}
+                    {item ? <ItemIcon def={item} size={slotSize} /> : <div className="w-1 h-1 rounded-full bg-slate-800/50" />}
                   </div>
                 );
               })}

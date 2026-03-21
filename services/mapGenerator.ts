@@ -136,6 +136,9 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
         }
     }
 
+    // Default Defaults for Walls (Map Boundary)
+ 
+
     // Default center always safe
     if (q === 0 && r === 0) {
         level = 0;
@@ -267,6 +270,7 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
   let initialGrid: Record<string, Hex> = {};
   const baseRadius = levelConfig?.mapConfig.size ?? 3;
   const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? baseRadius;
+
   // 1. Generate core area
   if (levelConfig?.id === '1.2') {
     initialGrid = generateLevel12Map(levelConfig);

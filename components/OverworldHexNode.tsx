@@ -23,7 +23,6 @@ interface OverworldHexNodeProps {
 
 export const TERRAIN_LEVELS: Record<string, number> = {}; // Keep for compatibility if needed elsewhere, but it's empty
 
-
 const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked, isPassable = true, neighborLevels, neighborPoiIds = [], onClick, highlight = 'NONE' }) => {
   const groupRef = useRef<Konva.Group>(null);
   const baseRef = useRef<Konva.Group>(null);

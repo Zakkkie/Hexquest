@@ -26,7 +26,6 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const toggleMusic = useGameStore(state => state.toggleMusic);
     const toggleSfx = useGameStore(state => state.toggleSfx);
     const playUiSound = useGameStore(state => state.playUiSound);
-
     const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
     const systemMenuRef = useRef<HTMLDivElement>(null);
     const [timeLeft, setTimeLeft] = useState(75);

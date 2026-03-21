@@ -351,8 +351,6 @@ const buildCompetePlan = (
     return { steps: [], createdAt: stateVersion, label: 'Compete:Idle' };
 };
 
-// Множество уровней без монумента, где бот должен конкурировать
-// const COMPETE_LEVEL_IDS = new Set(['1.6', '3.7']); // unused
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CAMPAIGN PLAN BUILDER
