@@ -232,7 +232,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       // --- GAME SESSION ---
-      startNewGame: (winCondition, levelConfig) => {
+      startNewGame: async (winCondition, levelConfig) => {
           audioService.play('UI_CLICK');
           get().abandonSession();
           
@@ -259,14 +259,18 @@ export const useGameStore = create<GameStore>()(
 
           const stateUser = get().user;
           const overworldState = get().overworld;
-          const initialSessionState = createInitialSessionData(effectiveWin ?? null, levelConfig, get().language, stateUser, overworldState);
+          
+          // Show loading state immediately while map generates in worker
+          set({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME' });
+          
+          const initialSessionState = await createInitialSessionData(effectiveWin ?? null, levelConfig, get().language, stateUser, overworldState);
           engine = new GameEngine(initialSessionState); 
-          set({ session: engine.state, hasActiveSession: true, uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME' });
+          set({ session: engine.state, hasActiveSession: true });
       },
 
-      startCampaignLevel: (levelId) => {
+      startCampaignLevel: async (levelId) => {
          const cfg = CAMPAIGN_LEVELS.find(l => l.id === levelId);
-         if (cfg) get().startNewGame(undefined, cfg);
+         if (cfg) await get().startNewGame(undefined, cfg);
       },
 
       startMission: () => {

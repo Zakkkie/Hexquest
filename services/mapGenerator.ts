@@ -195,25 +195,23 @@ export const validateMonumentAccessibility = (
 export const ensureMonumentAccessibility = (
   monument: HexCoord,
   grid: Record<string, Hex>
-): Record<string, Hex> => {
+): void => {
   if (validateMonumentAccessibility(monument, grid)) {
-    return grid;
+    return;
   }
   
   const neighbors = getNeighbors(monument.q, monument.r);
-  const updatedGrid = { ...grid };
-  
   const neighborsToFix = neighbors.slice(0, 4);
   const monumentHex = grid[getHexKey(monument.q, monument.r)];
   const targetMaxLevel = monumentHex ? Math.max(0, monumentHex.maxLevel - 1) : 0;
 
   for (const neighbor of neighborsToFix) {
     const key = getHexKey(neighbor.q, neighbor.r);
-    const hex = updatedGrid[key];
+    const hex = grid[key];
     
     if (hex && hex.structureType !== 'VOID') {
        if (hex.maxLevel > targetMaxLevel || hex.isPassable === false) {
-           updatedGrid[key] = {
+           grid[key] = {
              ...hex,
              currentLevel: targetMaxLevel,
              maxLevel: targetMaxLevel,
@@ -223,8 +221,6 @@ export const ensureMonumentAccessibility = (
        }
     }
   }
-  
-  return updatedGrid;
 };
 
 export const generateLevel12Map = (_levelConfig: LevelConfig): Record<string, Hex> => {
@@ -306,27 +302,42 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
   }
 
   // 3. Add the 3-ring border around EVERYTHING currently in the grid
-  const coreKeys = Object.keys(initialGrid);
-  const visited = new Map<string, number>();
+  const initialKeys = Object.keys(initialGrid);
   const queue: { q: number, r: number, d: number }[] = [];
+  const monuments: HexCoord[] = [];
+  const visited = new Set<string>(initialKeys);
 
-  for (const key of coreKeys) {
+  // Only push perimeter hexes to the queue to speed up BFS
+  for (const key of initialKeys) {
       const h = initialGrid[key];
-      visited.set(key, 0);
-      queue.push({ q: h.q, r: h.r, d: 0 });
+      if (h.structureType === 'MONUMENT') {
+          monuments.push({ q: h.q, r: h.r });
+      }
+      
+      const neighbors = getNeighbors(h.q, h.r);
+      let isPerimeter = false;
+      for (const n of neighbors) {
+          if (!visited.has(getHexKey(n.q, n.r))) {
+              isPerimeter = true;
+              break;
+          }
+      }
+      if (isPerimeter) {
+          queue.push({ q: h.q, r: h.r, d: 0 });
+      }
   }
 
+  // Use a more efficient BFS for border
   let head = 0;
   while (head < queue.length) {
       const { q, r, d } = queue[head++];
       if (d >= 3) continue;
 
-      for (const n of getNeighbors(q, r)) {
+      const neighbors = getNeighbors(q, r);
+      for (const n of neighbors) {
           const nKey = getHexKey(n.q, n.r);
           if (!visited.has(nKey)) {
-              visited.set(nKey, d + 1);
-              queue.push({ ...n, d: d + 1 });
-              
+              visited.add(nKey);
               let level = -8;
               if (d + 1 === 1) level = -10;
               else if (d + 1 === 2) level = -9;
@@ -337,13 +348,14 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
                   biome: 'WATER',
                   isPassable: true
               };
+              queue.push({ ...n, d: d + 1 });
           }
       }
   }
 
-  const monuments = Object.values(initialGrid).filter(h => h.structureType === 'MONUMENT');
+  // Optimize monument accessibility check
   for (const m of monuments) {
-      initialGrid = ensureMonumentAccessibility({ q: m.q, r: m.r }, initialGrid);
+      ensureMonumentAccessibility(m, initialGrid);
   }
 
   return initialGrid;

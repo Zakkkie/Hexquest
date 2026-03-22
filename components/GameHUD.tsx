@@ -7,12 +7,10 @@ import GameDialogs from './hud/GameDialogs.tsx';
 import { Item } from '../types.ts';
 
 interface GameHUDProps {
-  hoveredHexId: string | null;
-  onRotateCamera: (direction: 'left' | 'right') => void;
   onCenterPlayer: () => void;
 }
 
-const GameHUD: React.FC<GameHUDProps> = ({ hoveredHexId: _hoveredHexId, onRotateCamera: _onRotateCamera, onCenterPlayer }) => {
+const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
   const gameStatus = useGameStore(state => state.session?.gameStatus);
   const player = useGameStore(state => state.session?.player);
   

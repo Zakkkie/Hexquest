@@ -23,6 +23,83 @@ interface OverworldHexNodeProps {
 
 export const TERRAIN_LEVELS: Record<string, number> = {}; // Keep for compatibility if needed elsewhere, but it's empty
 
+export const getBiomeColor = (type: TerrainType, lvl: number, poiId?: string) => {
+  if (type === 'BUILDING' && poiId) {
+    switch(poiId) {
+      case 'city_capitol': return '#fbbf24'; // Amber-400
+      case 'city_bar': return '#f87171'; // Red-400
+      case 'city_bank': return '#34d399'; // Emerald-400
+      case 'city_shop': return '#60a5fa'; // Blue-400
+      case 'city_workshop': return '#a78bfa'; // Violet-400
+      case 'city_checkpoint': return '#a1a1aa'; // Zinc-400
+      case 'city_hub': return '#818cf8'; // Indigo-400
+    }
+  }
+  const defaultHeight = getHexHeight(type);
+  if (lvl !== defaultHeight) {
+    const theme = getTheme(lvl);
+    return theme.main;
+  }
+  switch(type) {
+    case 'PLAINS':        return '#94a3b8'; 
+    case 'FOREST':        return '#64748b'; 
+    case 'SWAMP':         return '#a855f7'; 
+    case 'WATER':         return '#38bdf8'; 
+    case 'MOUNTAINS':     return '#cbd5e1'; 
+    case 'ROAD':          return '#e7e5e4'; 
+    case 'CITY':          return '#fcd34d'; 
+    case 'RUINS':         return '#818cf8'; 
+    case 'OUTPOST':       return '#fca5a5'; 
+    case 'MERCHANT_CAMP': return '#fde047'; 
+    case 'WALL':          return '#475569';
+    case 'BUILDING':      return '#64748b';
+    case 'SETTLEMENT':    return '#fbbf24';
+    case 'MONUMENT_AREA': return '#8b5cf6';
+    case 'RIFT_ZONE':     return '#ef4444';
+    case 'WASTELAND':     return '#78350f';
+    case 'CANYON':        return '#0c4a6e';
+    default:              return '#e2e8f0'; 
+  }
+};
+
+export const getBiomeSideColor = (type: TerrainType, lvl: number, poiId?: string) => {
+  if (type === 'BUILDING' && poiId) {
+    switch(poiId) {
+      case 'city_capitol': return '#d97706'; // Amber-600
+      case 'city_bar': return '#dc2626'; // Red-600
+      case 'city_bank': return '#059669'; // Emerald-600
+      case 'city_shop': return '#2563eb'; // Blue-600
+      case 'city_workshop': return '#7c3aed'; // Violet-600
+      case 'city_checkpoint': return '#52525b'; // Zinc-600
+    }
+  }
+  const defaultHeight = getHexHeight(type);
+  if (lvl !== defaultHeight) {
+    const theme = getTheme(lvl);
+    return theme.dark;
+  }
+  switch(type) {
+    case 'PLAINS':        return '#475569'; 
+    case 'FOREST':        return '#334155'; 
+    case 'SWAMP':         return '#7e22ce'; 
+    case 'WATER':         return '#0284c7'; 
+    case 'MOUNTAINS':     return '#64748b'; 
+    case 'ROAD':          return '#a8a29e'; 
+    case 'CITY':          return '#d97706'; 
+    case 'RUINS':         return '#4f46e5'; 
+    case 'OUTPOST':       return '#dc2626'; 
+    case 'MERCHANT_CAMP': return '#ca8a04'; 
+    case 'WALL':          return '#1e293b';
+    case 'BUILDING':      return '#334155';
+    case 'SETTLEMENT':    return '#b45309';
+    case 'MONUMENT_AREA': return '#5b21b6';
+    case 'RIFT_ZONE':     return '#991b1b';
+    case 'WASTELAND':     return '#451a03';
+    case 'CANYON':        return '#082f49';
+    default:              return '#94a3b8'; 
+  }
+};
+
 const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked, isPassable = true, neighborLevels, neighborPoiIds = [], onClick, highlight = 'NONE' }) => {
   const groupRef = useRef<Konva.Group>(null);
   const baseRef = useRef<Konva.Group>(null);
@@ -44,6 +121,10 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
   const level = hex.height ?? getHexHeight(hex.terrainType);
   const offsetY = getHeightOffset(level);
   const MAX_WALL_DEPTH = 32;
+
+  const bi = useMemo(() => getBiomeColor(hex.terrainType, level, hex.poiId), [hex.terrainType, level, hex.poiId]);
+  const sideColor = useMemo(() => getBiomeSideColor(hex.terrainType, level, hex.poiId), [hex.terrainType, level, hex.poiId]);
+
   const points = useMemo(() => {
     const pts = [];
     for (let i = 0; i < 6; i++) {
@@ -121,85 +202,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
   const sideTexture = useMemo(() => textureService.getSideTexture(level, hex.terrainType), [level, hex.terrainType]);
   const theme = useMemo(() => getTheme(level), [level]);
 
-  const getBiomeColor = (type: TerrainType, lvl: number, poiId?: string) => {
-    if (type === 'BUILDING' && poiId) {
-      switch(poiId) {
-        case 'city_capitol': return '#fbbf24'; // Amber-400
-        case 'city_bar': return '#f87171'; // Red-400
-        case 'city_bank': return '#34d399'; // Emerald-400
-        case 'city_shop': return '#60a5fa'; // Blue-400
-        case 'city_workshop': return '#a78bfa'; // Violet-400
-        case 'city_checkpoint': return '#a1a1aa'; // Zinc-400
-        case 'city_hub': return '#818cf8'; // Indigo-400
-      }
-    }
-    const defaultHeight = getHexHeight(type);
-    if (lvl !== defaultHeight) {
-      const theme = getTheme(lvl);
-      return theme.main;
-    }
-    switch(type) {
-      case 'PLAINS':        return '#94a3b8'; 
-      case 'FOREST':        return '#64748b'; 
-      case 'SWAMP':         return '#a855f7'; 
-      case 'WATER':         return '#38bdf8'; 
-      case 'MOUNTAINS':     return '#cbd5e1'; 
-      case 'ROAD':          return '#e7e5e4'; 
-      case 'CITY':          return '#fcd34d'; 
-      case 'RUINS':         return '#818cf8'; 
-      case 'OUTPOST':       return '#fca5a5'; 
-      case 'MERCHANT_CAMP': return '#fde047'; 
-      case 'WALL':          return '#475569';
-      case 'BUILDING':      return '#64748b';
-      case 'SETTLEMENT':    return '#fbbf24';
-      case 'MONUMENT_AREA': return '#8b5cf6';
-      case 'RIFT_ZONE':     return '#ef4444';
-      case 'WASTELAND':     return '#78350f';
-      case 'CANYON':        return '#0c4a6e';
-      default:              return '#e2e8f0'; 
-    }
-  };
-
-  const getBiomeSideColor = (type: TerrainType, lvl: number, poiId?: string) => {
-    if (type === 'BUILDING' && poiId) {
-      switch(poiId) {
-        case 'city_capitol': return '#d97706'; // Amber-600
-        case 'city_bar': return '#dc2626'; // Red-600
-        case 'city_bank': return '#059669'; // Emerald-600
-        case 'city_shop': return '#2563eb'; // Blue-600
-        case 'city_workshop': return '#7c3aed'; // Violet-600
-        case 'city_checkpoint': return '#52525b'; // Zinc-600
-      }
-    }
-    const defaultHeight = getHexHeight(type);
-    if (lvl !== defaultHeight) {
-      const theme = getTheme(lvl);
-      return theme.dark;
-    }
-    switch(type) {
-      case 'PLAINS':        return '#475569'; 
-      case 'FOREST':        return '#334155'; 
-      case 'SWAMP':         return '#7e22ce'; 
-      case 'WATER':         return '#0284c7'; 
-      case 'MOUNTAINS':     return '#64748b'; 
-      case 'ROAD':          return '#a8a29e'; 
-      case 'CITY':          return '#d97706'; 
-      case 'RUINS':         return '#4f46e5'; 
-      case 'OUTPOST':       return '#dc2626'; 
-      case 'MERCHANT_CAMP': return '#ca8a04'; 
-      case 'WALL':          return '#1e293b';
-      case 'BUILDING':      return '#334155';
-      case 'SETTLEMENT':    return '#b45309';
-      case 'MONUMENT_AREA': return '#5b21b6';
-      case 'RIFT_ZONE':     return '#991b1b';
-      case 'WASTELAND':     return '#451a03';
-      case 'CANYON':        return '#082f49';
-      default:              return '#94a3b8'; 
-    }
-  };
-
   const walls = useMemo(() => {
-    const sideColor = getBiomeSideColor(hex.terrainType, level, hex.poiId);
     const indices = [0, 1, 2]; 
     const wallSegments = [];
     
@@ -298,7 +301,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
             fillPatternScale={{ x: size / 32, y: size / 32 }}
             fillPatternOffset={{ x: 32, y: 32 }}
             fillPatternRepeat="repeat"
-            fill={topTexture ? undefined : getBiomeColor(hex.terrainType, level, hex.poiId)}
+            fill={topTexture ? undefined : bi}
             stroke={isHovered ? '#94a3b8' : theme.stroke} 
             strokeWidth={isHovered ? 2 : 2} 
             perfectDrawEnabled={true}
@@ -315,7 +318,7 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
                     <Line
                       key={`border-remove-${i}`}
                       points={[p1.x, p1.y, p2.x, p2.y]}
-                      stroke={getBiomeColor(hex.terrainType, level, hex.poiId)}
+                      stroke={bi}
                       strokeWidth={3} // Slightly thicker to fully cover the border
                       lineCap="square"
                     />

@@ -145,8 +145,8 @@ export class GameEngine {
         }
 
         // 4. Campaign Hook: onAfterAction
-        if (nextState.activeLevelConfig?.hooks?.onAfterAction) {
-            nextState.activeLevelConfig.hooks.onAfterAction(nextState);
+        if (nextState.activeLevelConfig?.hooks?.onAfterAction && this._index) {
+            nextState.activeLevelConfig.hooks.onAfterAction(nextState, this._index);
         }
 
         this.enforceSafetyLimits(nextState);

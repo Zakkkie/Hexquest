@@ -3,14 +3,16 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Layer, Group, Line, Circle, Text } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
-import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils.ts';
+import { getHexKey, getNeighbors } from '../services/hexUtils.ts';
 import { HexNode, HexNodeTheme } from './HexNode.tsx';
 import Unit from './Unit.tsx';
 import { EntityType, EntityState, FloatingText, Hex, Entity } from '../types.ts';
 import { EXCHANGE_RATE_COINS_PER_MOVE, HEX_SIZE } from '../rules/config.ts';
 import { safifyCoord } from '../utils/safeCoordinates.ts';
 
-const VOID_LEVEL_FLAG = -99;
+// Web Worker Import (Vite syntax)
+// @ts-ignore
+import VisualWorker from '../services/visualWorker.ts?worker';
 
 // CHUNK CONFIGURATION
 const CHUNK_SIZE = 8; // 8x8 hexes per chunk
@@ -176,12 +178,6 @@ export const getTheme = (level: number): HexNodeTheme => {
     return THEME_PALETTE['0'];
 };
 
-const getHeightOffset = (level: number) => {
-    if (level <= VOID_LEVEL_FLAG) return 0;
-    if (level >= 0) return -(10 + level * 10);
-    return (Math.abs(level) - 1) * 10;
-};
-
 interface VisualParticle { id: string; x: number; y: number; color: string; }
 
 const DustCloud: React.FC<VisualParticle & { onComplete: (id: string) => void }> = React.memo(({ id, x, y, color, onComplete }) => {
@@ -307,15 +303,13 @@ const FULL_RENDER_MODE = {
 };
 
 interface MapRendererProps {
-    viewState: { x: number, y: number, scale: number, rotation: number };
-    dimensions: { width: number, height: number };
     rotation: number;
     onHexClick: (q: number, r: number) => void;
     onHover: (id: string | null) => void;
     hoveredHexId: string | null;
 }
 
-const MapRenderer: React.FC<MapRendererProps> = ({ viewState: _viewState, dimensions: _dimensions, rotation, onHexClick, onHover, hoveredHexId }) => {
+const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId }) => {
     const grid = useGameStore(state => state.session?.grid) as Record<string, Hex> | undefined;
     const player = useGameStore(state => state.session?.player) as Entity | undefined;
     const bots = useGameStore(state => state.session?.bots) as Entity[] | undefined;
@@ -331,6 +325,90 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState: _viewState, dimens
 
     const [particles, setParticles] = useState<VisualParticle[]>([]);
     
+    // Web Worker for calculating neighbor levels and render list
+    const [workerData, setWorkerData] = useState<{
+        renderItems: any[];
+    }>({ renderItems: [] });
+    const workerRef = useRef<Worker | null>(null);
+
+    useEffect(() => {
+        // Initialize worker
+        const worker = new VisualWorker();
+        workerRef.current = worker;
+        
+        worker.onmessage = (e: MessageEvent) => {
+            const { renderItems } = e.data;
+            if (renderItems) {
+                setWorkerData({
+                    renderItems
+                });
+            }
+        };
+
+        return () => {
+            worker.terminate();
+        };
+    }, []);
+
+    // Update worker when grid or view changes
+    const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
+    const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
+
+    const chunks = useMemo(() => {
+        if (!grid) return {};
+        const newChunks: Record<string, Hex[]> = {};
+        Object.values(grid).forEach(hex => {
+            const key = getChunkKey(hex.q, hex.r);
+            if (!newChunks[key]) newChunks[key] = [];
+            newChunks[key].push(hex);
+        });
+        return newChunks;
+    }, [grid]);
+
+    const visibleChunks = useMemo(() => {
+        if (!grid) return [];
+        // Simple culling: only chunks near the player (since we have radial fog anyway)
+        const playerChunkKey = getChunkKey(playerQ || 0, playerR || 0);
+        const [pcq, pcr] = playerChunkKey.split(',').map(Number);
+        
+        const visible: string[] = [];
+        const CHUNK_RADIUS = 2; // Render chunks within this radius of player chunk
+        
+        for (let cq = pcq - CHUNK_RADIUS; cq <= pcq + CHUNK_RADIUS; cq++) {
+            for (let cr = pcr - CHUNK_RADIUS; cr <= pcr + CHUNK_RADIUS; cr++) {
+                const key = `${cq},${cr}`;
+                if (chunks[key]) visible.push(key);
+            }
+        }
+        return visible;
+    }, [chunks, playerQ, playerR]);
+
+    // 1. Update worker with Grid/Chunks (Expensive, only on grid change)
+    useEffect(() => {
+        if (grid && workerRef.current) {
+            workerRef.current.postMessage({ 
+                type: 'SET_GRID',
+                grid, 
+                chunks
+            });
+        }
+    }, [grid, chunks]);
+
+    // 2. Update worker with View (Frequent: rotation, player movement, bots, selection)
+    useEffect(() => {
+        if (grid && player && workerRef.current) {
+            workerRef.current.postMessage({ 
+                type: 'UPDATE_VIEW',
+                rotation, 
+                player, 
+                bots,
+                visibleChunks,
+                pendingKey,
+                selectedHexId
+            });
+        }
+    }, [rotation, player, bots, visibleChunks, pendingKey, selectedHexId]);
+
     // Explicitly memoize onHexClick to ensure stability for renderList
     const memoizedOnHexClick = useCallback((q: number, r: number) => {
         onHexClick(q, r);
@@ -416,159 +494,51 @@ const MapRenderer: React.FC<MapRendererProps> = ({ viewState: _viewState, dimens
         return conns;
     }, [grid, player, isPlayerGrowing, projectionCache]);
 
-    const chunks = useMemo(() => {
-        if (!grid) return {};
-        const newChunks: Record<string, Hex[]> = {};
-        Object.values(grid).forEach(hex => {
-            const key = getChunkKey(hex.q, hex.r);
-            if (!newChunks[key]) newChunks[key] = [];
-            newChunks[key].push(hex);
-        });
-        return newChunks;
-    }, [grid]);
-
-    const visibleChunks = useMemo(() => {
-        if (!grid) return [];
-        // Simple culling: only chunks near the player (since we have radial fog anyway)
-        const playerChunkKey = getChunkKey(playerQ || 0, playerR || 0);
-        const [pcq, pcr] = playerChunkKey.split(',').map(Number);
-        
-        const visible: string[] = [];
-        const CHUNK_RADIUS = 2; // Render chunks within this radius of player chunk
-        
-        for (let cq = pcq - CHUNK_RADIUS; cq <= pcq + CHUNK_RADIUS; cq++) {
-            for (let cr = pcr - CHUNK_RADIUS; cr <= pcr + CHUNK_RADIUS; cr++) {
-                const key = `${cq},${cr}`;
-                if (chunks[key]) visible.push(key);
-            }
-        }
-        return visible;
-    }, [chunks, playerQ, playerR]);
-
-    const { cos, sin } = projectionCache;
-    const SQRT3 = Math.sqrt(3);
-    const SQRT3_2 = SQRT3 / 2;
-    const ONE_POINT_FIVE = 1.5;
-
-    const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
-    const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
-
     const tutorialData = useMemo(() => {
         if (!grid || !player) return null;
         return getTutorialData(grid, player, activeLevelConfig?.id);
     }, [grid, player, activeLevelConfig?.id]);
 
     const renderList = useMemo(() => {
-        if (!grid || !player) return { items: [] };
+        if (!grid || !player || !workerData.renderItems.length) return { items: [] };
 
-        const items: any[] = [];
-        
-        // 1. Collect Hexes from visible chunks
-        for (const chunkKey of visibleChunks) {
-            const hexes = chunks[chunkKey];
-            if (!hexes) continue;
+        const items = workerData.renderItems.map(item => {
+            if (item.type === 'HEX') {
+                const hex = grid[item.id];
+                if (!hex) return null;
 
-            for (const hex of hexes) {
-                const distToPlayer = cubeDistance({ q: player.q, r: player.r }, { q: hex.q, r: hex.r });
-                // Still keep some culling for extreme distances to prevent browser crash, but no visual LOD
-                if (distToPlayer > 20) continue;
-
-                const rawX = HEX_SIZE * (SQRT3 * hex.q + SQRT3_2 * hex.r);
-                const rawY = HEX_SIZE * (ONE_POINT_FIVE * hex.r);
-                const px = rawX * cos - rawY * sin;
-                const py = (rawX * sin + rawY * cos) * 0.8;
-
-                let opacity = 1.0;
-                if (distToPlayer > 16) {
-                    opacity = Math.max(0, 1.0 - (distToPlayer - 16) / 4);
-                }
-                if (opacity <= 0) continue;
-
-                const isVoid = (hex.structureType as string) === 'VOID';
-                const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : hex.maxLevel);
-                const theme = THEME_PALETTE[isVoid ? 0 : hex.maxLevel] || THEME_PALETTE['0'];
-
-                const isPending = hex.id === pendingKey;
-                const isOccupiedByPlayer = hex.q === player.q && hex.r === player.r;
                 const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, player, grid, tutorialData, activeLevelConfig);
+                const theme = getTheme(hex.maxLevel);
 
-                const neighborLevels = hex.neighborLevels || [VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG];
-
-                items.push({
-                    type: 'HEX',
-                    depth: py,
+                return {
+                    ...item,
                     props: {
-                        x: px, y: py,
-                        rotation: rotation,
-                        q: hex.q, r: hex.r,
-                        id: hex.id,
-                        offsetY,
-                        level: hex.currentLevel ?? 0,
-                        maxLevel: hex.maxLevel,
-                        structureType: hex.structureType as string,
-                        neighborLevels,
+                        ...item.props,
+                        rotation,
                         theme,
-                        isSelected: selectedHexId === hex.id,
-                        isPending,
-                        pendingCost: isPending && pendingConfirmation ? pendingConfirmation.data.costCoins : null,
+                        pendingCost: item.props.isPending && pendingConfirmation ? pendingConfirmation.data.costCoins : null,
                         isTutorialTarget: isTutorial,
                         isTargetArrow: isArrow,
                         tutorialColor: tutColor,
-                        isMissingSupport: false,
-                        isOccupied: isOccupiedByPlayer || bots?.some((b: any) => b.q===hex.q && b.r===hex.r),
-                        isGrowing: hex.progress > 0 && !isVoid,
-                        isRankLocked: hex.maxLevel > player.playerLevel,
-                        progress: hex.progress,
-                        durability: hex.durability,
-                        artifactType: hex.artifact?.type,
-                        biome: hex.biome,
-                        poiType: hex.poiType,
-                        isPassable: hex.isPassable,
                         renderMode: FULL_RENDER_MODE,
-                        opacity
                     }
-                });
+                };
+            } else {
+                // UNIT
+                return {
+                    ...item,
+                    props: {
+                        ...item.props,
+                        type: item.props.isPlayer ? EntityType.PLAYER : EntityType.BOT,
+                        rotation,
+                        onMoveComplete: spawnDust
+                    }
+                };
             }
-        }
-
-        // 2. Collect Units
-        const allEntities = [{ ...player, isPlayer: true }, ...(bots || []).map(b => ({ ...b, isPlayer: false }))];
-        for (const u of allEntities) {
-            const rawX = HEX_SIZE * (SQRT3 * u.q + SQRT3_2 * u.r);
-            const rawY = HEX_SIZE * (ONE_POINT_FIVE * u.r);
-            const upx = rawX * cos - rawY * sin;
-            const upy = (rawX * sin + rawY * cos) * 0.8;
-
-            const uHex = grid[getHexKey(u.q, u.r)];
-            const hLevel = uHex ? uHex.maxLevel : 0;
-            const isMoving = u.state === EntityState.MOVING;
-            const depthBias = isMoving ? 50 : 1; 
-
-            items.push({
-                type: 'UNIT',
-                depth: upy + depthBias,
-                props: {
-                    id: u.id,
-                    q: u.q, r: u.r,
-                    x: upx, y: upy,
-                    type: u.isPlayer ? EntityType.PLAYER : EntityType.BOT,
-                    color: u.avatarColor,
-                    rotation: rotation,
-                    hexLevel: hLevel,
-                    totalCoinsEarned: u.totalCoinsEarned,
-                    upgradePointCount: u.recentUpgrades?.length || 0,
-                    headIndex: u.headIndex,
-                    bodyIndex: u.bodyIndex,
-                    onMoveComplete: spawnDust 
-                }
-            });
-        }
-
-        // 3. Sort by depth
-        items.sort((a, b) => a.depth - b.depth);
+        }).filter(Boolean);
 
         return { items };
-    }, [grid, player, bots, visibleChunks, chunks, cos, sin, rotation, pendingKey, pendingConfirmation, tutorialData, selectedHexId, spawnDust]);
+    }, [grid, player, rotation, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems]);
 
     return (
         <>

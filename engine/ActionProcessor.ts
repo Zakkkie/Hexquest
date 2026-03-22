@@ -63,17 +63,17 @@ export class ActionProcessor {
           case 'DIG':
               result = this.handleDig(state, index, actor, action); break;
           case 'RECHARGE_MOVE':
-              result = this.handleRecharge(state, actor); break;
+              result = this.handleRecharge(state, index, actor); break;
           case 'DESTROY_ITEM':
-              result = this.handleDestroyItem(state, actor, action); break;
+              result = this.handleDestroyItem(state, index, actor, action); break;
           case 'RESTORE_HEX':
-              result = this.handleRestoreHex(state, actor, action); break;
+              result = this.handleRestoreHex(state, index, actor, action); break;
           case 'ACTIVATE_MONUMENT':
-              result = this.handleActivateMonument(state, actor, action); break;
+              result = this.handleActivateMonument(state, index, actor, action); break;
           case 'ACTIVATE_MINI_MONUMENT':
-              result = this.handleActivateMiniMonument(state, actor, action as any); break;
+              result = this.handleActivateMiniMonument(state, index, actor, action as any); break;
           case 'VISIT_POI':
-              result = this.handleVisitPoi(state, actor, action); break;
+              result = this.handleVisitPoi(state, index, actor, action); break;
           case 'WAIT':
               result = { ok: true }; break;
           default:
@@ -147,7 +147,7 @@ export class ActionProcessor {
       return { ok: true };
   }
 
-  private handleRecharge(_state: SessionState, actor: Entity): ValidationResult {
+  private handleRecharge(_state: SessionState, _index: WorldIndex, actor: Entity): ValidationResult {
       const EXCHANGE_RATE = 5;
       if (actor.coins >= EXCHANGE_RATE) {
           actor.coins -= EXCHANGE_RATE;
@@ -157,7 +157,7 @@ export class ActionProcessor {
       return { ok: false, reason: 'Insufficient funds for recharge' };
   }
 
-  private handleDestroyItem(_state: SessionState, actor: Entity, action: any): ValidationResult {
+  private handleDestroyItem(_state: SessionState, _index: WorldIndex, actor: Entity, action: any): ValidationResult {
       const idx = actor.inventory.findIndex(i => i.id === action.itemId);
       if (idx === -1) return { ok: false, reason: 'Item not found' };
       
@@ -183,7 +183,7 @@ export class ActionProcessor {
       });
   }
 
-  private applyEffect(state: SessionState, actor: Entity, type: string, val: number | undefined, desc: string, duration?: number) {
+  private applyEffect(state: SessionState, index: WorldIndex, actor: Entity, type: string, val: number | undefined, desc: string, duration?: number) {
       switch(type) {
           // --- INSTANT EFFECTS ---
           case 'ADD_MOVES': actor.moves += (val || 0); break;
@@ -195,9 +195,7 @@ export class ActionProcessor {
           case 'LEVEL_UP': actor.playerLevel += (val || 0); break;
           case 'REVEAL_MAP': 
                 // Reveal fog around player radius 2
-                Object.values(state.grid).forEach(h => {
-                    if (cubeDistance(actor, h) <= 2) h.revealed = true;
-                });
+                index.getHexesInRange(actor, 2).forEach(h => h.revealed = true);
                 break;
           case 'GOD_MODE': 
                 // Apex Core: +10 Ranks, +100 Entropy, +100 Moves (No Coins)
@@ -251,7 +249,7 @@ export class ActionProcessor {
       }
   }
 
-  private handleRestoreHex(state: SessionState, actor: Entity, action: any): ValidationResult {
+  private handleRestoreHex(state: SessionState, index: WorldIndex, actor: Entity, action: any): ValidationResult {
       const hexKey = getHexKey(action.coord.q, action.coord.r);
       const hex = state.grid[hexKey];
       
@@ -290,7 +288,7 @@ export class ActionProcessor {
           state.entropy.current = Math.min(state.entropy.max, state.entropy.current + ENTROPY_CONFIG.GAIN_RESTORE_SUCCESS);
           
           // APPLY POSITIVE
-          this.applyEffect(state, actor, item.effectType, item.effectValue, item.effectDescription, item.effectDuration);
+          this.applyEffect(state, index, actor, item.effectType, item.effectValue, item.effectDescription, item.effectDuration);
           
           let feedbackColor = "#34d399";
           if (item.effectType.includes('CREDITS')) feedbackColor = "#fbbf24";
@@ -312,7 +310,7 @@ export class ActionProcessor {
           
           // APPLY NEGATIVE
           if (item.negativeEffectType) {
-              this.applyEffect(state, actor, item.negativeEffectType, item.negativeEffectValue, item.negativeEffectLabel || "Bad Luck", item.negativeEffectDuration);
+              this.applyEffect(state, index, actor, item.negativeEffectType, item.negativeEffectValue, item.negativeEffectLabel || "Bad Luck", item.negativeEffectDuration);
           }
 
           if (state.outgoingEvents) {
@@ -328,7 +326,7 @@ export class ActionProcessor {
       }
   }
 
-  private handleActivateMonument(state: SessionState, actor: Entity, action: any): ValidationResult {
+  private handleActivateMonument(state: SessionState, _index: WorldIndex, actor: Entity, action: any): ValidationResult {
       // Actor must be standing on a Monument hex to activate it
       const currentHex = state.grid[getHexKey(actor.q, actor.r)];
       if (!currentHex || currentHex.structureType !== 'MONUMENT') {
@@ -381,7 +379,7 @@ export class ActionProcessor {
       return { ok: true };
   }
 
-  private handleVisitPoi(state: SessionState, actor: Entity, _action: any): ValidationResult {
+  private handleVisitPoi(state: SessionState, _index: WorldIndex, actor: Entity, _action: any): ValidationResult {
       const currentHex = state.grid[getHexKey(actor.q, actor.r)];
       if (!currentHex || !currentHex.poiType) {
           return { ok: false, reason: 'No Point of Interest here' };
@@ -418,7 +416,7 @@ export class ActionProcessor {
       return { ok: true };
   }
 
-  private handleActivateMiniMonument(state: SessionState, actor: Entity, action: any): ValidationResult {
+  private handleActivateMiniMonument(state: SessionState, _index: WorldIndex, actor: Entity, action: any): ValidationResult {
       if (!state.grid[action.miniMonumentHexKey]) {
           return { ok: false, reason: 'Mini monument hex not found' };
       }

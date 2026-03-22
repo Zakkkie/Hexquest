@@ -189,6 +189,18 @@ export class WorldIndex {
     return valid;
   }
 
+  public getHexesByOwner(ownerId: string): Hex[] {
+      const hexIds = this.hexesByOwner.get(ownerId);
+      if (!hexIds) return [];
+      
+      const results: Hex[] = [];
+      for (const id of hexIds) {
+          const hex = this.grid[id];
+          if (hex) results.push(hex);
+      }
+      return results;
+  }
+
   /**
    * Optimized Range Query using BFS
    * Replaces iterating over the entire grid for AI operations.

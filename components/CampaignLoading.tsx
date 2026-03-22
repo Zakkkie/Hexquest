@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../store.ts';
+import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { motion } from 'motion/react';
 import { Hexagon, Terminal, ArrowRight } from 'lucide-react';
 import { TEXT } from '../services/i18n.ts';
@@ -53,7 +54,7 @@ const CampaignLoading: React.FC = () => {
     setUIState('GAME');
   };
 
-  const levelConfig = session?.activeLevelConfig;
+  const levelConfig = session?.activeLevelConfig || CAMPAIGN_LEVELS.find(l => l.id === useGameStore.getState().loadingLevelId);
   
   let displayTitle = '';
   if (levelConfig) {

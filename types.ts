@@ -430,11 +430,13 @@ export interface FloatingText {
   icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE' | 'GEM' | 'SKULL' | 'FOOTPRINTS';
 }
 
+import type { WorldIndex } from './engine/WorldIndex';
+
 export interface ScenarioHooks {
-  checkWinCondition?: (state: SessionState) => boolean;
-  checkLossCondition?: (state: SessionState) => boolean;
+  checkWinCondition?: (state: SessionState, index: WorldIndex) => boolean;
+  checkLossCondition?: (state: SessionState, index: WorldIndex) => boolean;
   onBeforeAction?: (state: SessionState, action: GameAction) => ValidationResult | null;
-  onAfterAction?: (state: SessionState) => void;
+  onAfterAction?: (state: SessionState, index: WorldIndex) => void;
 }
 
 // --- НОВЫЕ МЕХАНИКИ КАМПАНИИ (ЧЕРТЕЖИ И РЕЦЕПТЫ) ---

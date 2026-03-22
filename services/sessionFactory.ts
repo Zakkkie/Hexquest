@@ -4,18 +4,41 @@ import { GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../rules/confi
 import { getHexKey, getNeighbors } from './hexUtils.ts';
 import { generateMap } from './mapGenerator.ts';
 import { generateMonumentRecipe, getItemDef } from '../rules/items.ts';
+// @ts-ignore
+import MapWorker from './map.worker?worker';
 
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e'];
 
-export const createInitialSessionData = (
+export const generateMapAsync = async (levelConfig: LevelConfig | undefined, mapType: string): Promise<Record<string, any>> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const worker = new MapWorker();
+      worker.onmessage = (e: MessageEvent) => {
+        resolve(e.data.grid);
+        worker.terminate();
+      };
+      worker.onerror = (e: ErrorEvent) => {
+        reject(e);
+        worker.terminate();
+      };
+      worker.postMessage({ levelConfig, mapType });
+    } catch (err) {
+      // Fallback to synchronous if worker fails to initialize
+      console.warn('WebWorker failed to initialize, falling back to sync map generation', err);
+      resolve(generateMap(levelConfig, mapType as any));
+    }
+  });
+};
+
+export const createInitialSessionDataAsync = async (
     winCondition: WinCondition | null,
     levelConfig: LevelConfig | undefined,
     language: Language,
     stateUser: UserProfile | null,
     overworldState: OverworldState
-): SessionState => {
+): Promise<SessionState> => {
   const mapType = winCondition?.mapType || 'FLAT';
-  const initialGrid = generateMap(levelConfig, mapType);
+  const initialGrid = await generateMapAsync(levelConfig, mapType);
 
   // Difficulty & Config Setup
   const difficulty: Difficulty = winCondition?.difficulty || 'MEDIUM';
@@ -249,3 +272,5 @@ export const createInitialSessionData = (
 
   return session;
 };
+
+export const createInitialSessionData = createInitialSessionDataAsync;

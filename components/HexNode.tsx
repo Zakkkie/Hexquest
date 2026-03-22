@@ -308,8 +308,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
         opacity={opacity}
     >
         {/* 1. WALLS */}
-        {wallData && neighborLevels.map((nLevel, i) => {
+        {wallData && neighborLevels.map((_, i) => {
             if (!wallData[i].visible) return null;
+
+            // Map wall index to neighbor index
+            // Wall indices: 0:BR, 1:BL, 2:L, 3:TL, 4:TR, 5:R
+            // Neighbor directions: 0:R, 1:TR, 2:TL, 3:L, 4:BL, 5:BR
+            // So mapping is: 0->5, 1->4, 2->3, 3->2, 4->1, 5->0
+            const nLevel = neighborLevels[5 - i];
 
             let nY = 0;
             if (nLevel === -99) nY = offsetY + MAX_WALL_DEPTH; 

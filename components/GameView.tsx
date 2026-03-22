@@ -115,11 +115,9 @@ const GameView: React.FC = () => {
 
   const currentCameraRef = useRef<CameraState>(initialCamera);
   const targetCameraRef = useRef<CameraState>(initialCamera);
-  const cullingCameraRef = useRef<CameraState>(initialCamera);
   
   // Render State (Synced from Ref via Animation Loop)
   const [renderCamera, setRenderCamera] = useState<CameraState>(initialCamera);
-  const [cullingViewState, setCullingViewState] = useState<CameraState>(initialCamera);
   
   // Interaction State
   const isRotating = useRef(false);
@@ -253,43 +251,11 @@ const GameView: React.FC = () => {
           // This ensures render is synced with AnimationFrame
           setRenderCamera(nextState);
 
-          // Update culling state if moved significantly
-          const dx = nextState.x - cullingCameraRef.current.x;
-          const dy = nextState.y - cullingCameraRef.current.y;
-          const ds = nextState.scale - cullingCameraRef.current.scale;
-          const dr = nextState.rotation - cullingCameraRef.current.rotation;
-          if (Math.abs(dx) > 100 || Math.abs(dy) > 100 || Math.abs(ds) > 0.1 || Math.abs(dr) > 2) {
-              cullingCameraRef.current = nextState;
-              setCullingViewState(nextState);
-          }
-
       }, stageRef.current?.getLayer());
 
       anim.start();
       return () => { anim.stop(); };
   }, []); 
-
-  const rotateCamera = useCallback((direction: 'left' | 'right') => {
-      const current = targetCameraRef.current;
-      const step = 60;
-      const currentSnapped = Math.round(current.rotation / step) * step;
-      const nextTarget = direction === 'left' ? currentSnapped - step : currentSnapped + step;
-      
-      const pivot = { x: dimensions.width / 2, y: dimensions.height / 2 };
-      const adjustedView = calculateRotationAdjustedView(
-          { x: current.x, y: current.y, scale: current.scale },
-          pivot,
-          current.rotation,
-          nextTarget
-      );
-
-      targetCameraRef.current = {
-          ...current,
-          x: adjustedView.x,
-          y: adjustedView.y,
-          rotation: nextTarget
-      };
-  }, [dimensions]); 
 
   const centerOnPlayer = useCallback(() => {
       const rot = currentCameraRef.current.rotation;
@@ -527,8 +493,6 @@ const GameView: React.FC = () => {
           scaleY={renderCamera.scale}
         >
           <MapRenderer 
-            viewState={cullingViewState}
-            dimensions={dimensions}
             rotation={renderCamera.rotation}
             onHexClick={handleHexClick}
             onHover={setHoveredHexId}
@@ -556,8 +520,6 @@ const GameView: React.FC = () => {
       )}
 
       <GameHUD 
-        hoveredHexId={hoveredHexId} 
-        onRotateCamera={rotateCamera} 
         onCenterPlayer={centerOnPlayer} 
       />
 

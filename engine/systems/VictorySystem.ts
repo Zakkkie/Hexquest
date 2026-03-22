@@ -15,7 +15,7 @@ export class VictorySystem implements System {
     if (state.activeLevelConfig && state.activeLevelConfig.hooks) {
         // 1. Victory Check
         if (state.activeLevelConfig.hooks.checkWinCondition) {
-            const isCampaignWin = state.activeLevelConfig.hooks.checkWinCondition(state);
+            const isCampaignWin = state.activeLevelConfig.hooks.checkWinCondition(state, _index);
             if (isCampaignWin) {
                  state.gameStatus = 'VICTORY';
                  const msg = 'Campaign Objective Achieved';
@@ -34,7 +34,7 @@ export class VictorySystem implements System {
 
         // 2. Loss Check
         if (state.activeLevelConfig.hooks.checkLossCondition) {
-            const isCampaignLoss = state.activeLevelConfig.hooks.checkLossCondition(state);
+            const isCampaignLoss = state.activeLevelConfig.hooks.checkLossCondition(state, _index);
             if (isCampaignLoss) {
                  state.gameStatus = 'DEFEAT';
                  const msg = 'Critical Mission Failure';

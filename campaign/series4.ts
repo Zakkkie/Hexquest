@@ -9,8 +9,12 @@ import { isStranded } from './utils';
  */
 
 // Helper: count player-owned hexes at given level
-const countOwned = (state: any, minLevel: number): number =>
-  Object.values(state.grid).filter((h: any) => h.ownerId === 'player-1' && h.maxLevel >= minLevel).length;
+const countOwned = (state: any, index: any, minLevel: number): number => {
+  if (index && typeof index.getHexesByOwner === 'function') {
+    return index.getHexesByOwner('player-1').filter((h: any) => h.maxLevel >= minLevel).length;
+  }
+  return Object.values(state.grid).filter((h: any) => h.ownerId === 'player-1' && h.maxLevel >= minLevel).length;
+};
 
 export const series4Levels: LevelConfig[] = [
 
@@ -39,7 +43,7 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 1, materials: 0 },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: (state) => countOwned(state, 2) >= 3,
+      checkWinCondition: (state, index) => countOwned(state, index, 2) >= 3,
       checkLossCondition: (state) => isStranded(state)
     }
   },
@@ -117,7 +121,7 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: (state) => countOwned(state, 3) >= 2,
+      checkWinCondition: (state, index) => countOwned(state, index, 3) >= 2,
       checkLossCondition: (state) => isStranded(state)
     }
   },
@@ -197,9 +201,9 @@ export const series4Levels: LevelConfig[] = [
     botSpawnPoints: [{ q: 0, r: -3 }],
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     hooks: {
-      checkWinCondition: (state) => {
+      checkWinCondition: (state, index) => {
         let goals = 0;
-        if (countOwned(state, 2) >= 6) goals++;
+        if (countOwned(state, index, 2) >= 6) goals++;
         if ((state.player.coins ?? 0) >= 200) goals++;
         if (state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT') goals++;
         return goals >= 2;
@@ -247,14 +251,15 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
     hooks: {
-      onAfterAction: (state) => {
+      onAfterAction: (state, index) => {
         // CASCADE: Any hex that just reached L3 triggers adjacent L2→L3
         let cascaded = true;
         while (cascaded) {
           cascaded = false;
-          const hexes = Object.values(state.grid) as any[];
+          // Optimize: only check player-owned hexes
+          const hexes = index.getHexesByOwner('player-1');
           for (const hex of hexes) {
-            if (hex.maxLevel === 3 && hex.ownerId === 'player-1') {
+            if (hex.maxLevel === 3) {
               const neighbors = [
                 { q: hex.q + 1, r: hex.r }, { q: hex.q - 1, r: hex.r },
                 { q: hex.q, r: hex.r + 1 }, { q: hex.q, r: hex.r - 1 },
@@ -276,7 +281,7 @@ export const series4Levels: LevelConfig[] = [
         }
         return state;
       },
-      checkWinCondition: (state) => countOwned(state, 3) >= 8,
+      checkWinCondition: (state, index) => countOwned(state, index, 3) >= 8,
       checkLossCondition: (state) => isStranded(state)
     }
   },
@@ -312,7 +317,7 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 3, materials: 0 },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: (state) => countOwned(state, 3) >= 4 && countOwned(state, 4) >= 2,
+      checkWinCondition: (state, index) => countOwned(state, index, 3) >= 4 && countOwned(state, index, 4) >= 2,
       checkLossCondition: (state) => isStranded(state)
     }
   },
@@ -359,9 +364,9 @@ export const series4Levels: LevelConfig[] = [
         state.entropy.current = Math.min(100, (state.entropy.current ?? 40) + 2);
         return state;
       },
-      checkWinCondition: (state) => {
+      checkWinCondition: (state, index) => {
         const onMon = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
-        const l3 = countOwned(state, 3);
+        const l3 = countOwned(state, index, 3);
         const coins = state.player.coins ?? 0;
         const items = state.player.inventory?.length ?? 0;
         const cool = (state.entropy.current ?? 0) < 60;
