@@ -158,7 +158,7 @@ export const createInitialSessionDataAsync = async (
   }
 
   const bots: Entity[] = [];
-  const defaultSpawnPoints = [{ q: 0, r: -2 }, { q: 2, r: -2 }, { q: 2, r: 0 }, { q: 0, r: 2 }, { q: -2, r: 2 }, { q: -2, r: 0 }];
+  const defaultSpawnPoints = [{ q: 0, r: -3 }, { q: 3, r: -3 }, { q: 3, r: 0 }, { q: 0, r: 3 }, { q: -3, r: 3 }, { q: -3, r: 0 }];
   
   const levelSpawns = levelConfig?.botSpawnPoints || null;
 

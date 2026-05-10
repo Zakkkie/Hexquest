@@ -279,7 +279,7 @@ const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, index: WorldIn
     
     for (const id of reachable) {
         const h = grid[id];
-        const isRevealedForBot = h?.botRevealed && h.botRevealed[bot.id];
+        const isRevealedForBot = h?.botRevealed && (h.botRevealed[bot.id] || h.botRevealed['SHARED_BOTS']);
         if (!h || h.structureType === 'VOID' || isRevealedForBot) continue;
         if ((mem.blacklistedTargets || []).includes(h.id)) continue;
         
@@ -907,7 +907,7 @@ export const calculateBotMove = (
 
     const navObs   = buildNavObstacles(bot, obstacles, reservedHexKeys);
     const claimed  = buildClaimedSet(bot, allBots ?? []);
-    const monument = index.getHexesByStructureType('MONUMENT').find(h => h.botRevealed && h.botRevealed[bot.id]) ?? null;
+    const monument = index.getHexesByStructureType('MONUMENT').find(h => h.botRevealed && (h.botRevealed[bot.id] || h.botRevealed['SHARED_BOTS'])) ?? null;
     const bots     = allBots ?? [];
     
     const reachable = getReachableHexes(bot, grid, navObs, 50);

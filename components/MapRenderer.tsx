@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { Layer, Group, Line, Circle, Text } from 'react-konva';
+import { Layer, Group, Line, Circle, Text, Shape } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { getHexKey, getNeighbors } from '../services/hexUtils.ts';
@@ -309,6 +309,58 @@ interface MapRendererProps {
     hoveredHexId: string | null;
 }
 
+// Helper for drawing FOW grid efficiently
+const FowGrid = React.memo(({ rotation, playerQ, playerR, size }: { rotation: number; playerQ: number; playerR: number; size: number }) => {
+    const projection = useMemo(() => {
+        const angleRad = rotation * (Math.PI / 180);
+        return { cos: Math.cos(angleRad), sin: Math.sin(angleRad) };
+    }, [rotation]);
+
+    const cubeDistance = (a: { q: number; r: number }, b: { q: number; r: number }) => {
+        return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
+    };
+
+    return (
+        <Group listening={false}>
+            <Shape
+                sceneFunc={(ctx, shape) => {
+                    const radius = 15; // 15 cells radius around player
+                    const SQRT3 = Math.sqrt(3);
+                    const SQRT3_2 = SQRT3 / 2;
+                    const ONE_POINT_FIVE = 1.5;
+
+                    ctx.beginPath();
+                    for (let q = playerQ - radius; q <= playerQ + radius; q++) {
+                        for (let r = playerR - radius; r <= playerR + radius; r++) {
+                            if (cubeDistance({ q, r }, { q: playerQ, r: playerR }) > radius) continue;
+
+                            const rawX = size * (SQRT3 * q + SQRT3_2 * r);
+                            const rawY = size * (ONE_POINT_FIVE * r);
+                            const x = rawX * projection.cos - rawY * projection.sin;
+                            const y = (rawX * projection.sin + rawY * projection.cos) * 0.8;
+
+                            // Draw hex outline
+                            for (let i = 0; i < 6; i++) {
+                                const angle = (60 * i + 30) * (Math.PI / 180);
+                                const px = x + Math.cos(angle) * size;
+                                const py = y + Math.sin(angle) * size;
+                                if (i === 0) ctx.moveTo(px, py);
+                                else ctx.lineTo(px, py);
+                            }
+                            ctx.closePath();
+                        }
+                    }
+                    ctx.fillStrokeShape(shape);
+                }}
+                stroke="#1e293b"
+                strokeWidth={1}
+                opacity={0.3}
+                listening={false}
+            />
+        </Group>
+    );
+});
+
 const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId }) => {
     const grid = useGameStore(state => state.session?.grid) as Record<string, Hex> | undefined;
     const player = useGameStore(state => state.session?.player) as Entity | undefined;
@@ -541,6 +593,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     return (
         <>
             <Layer>
+                <FowGrid rotation={rotation} playerQ={playerQ || 0} playerR={playerR || 0} size={HEX_SIZE} />
                 {renderList.items.map(item => {
                     if (item.type === 'HEX') {
                         return (
