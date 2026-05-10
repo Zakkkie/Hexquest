@@ -47,6 +47,9 @@ const getTutorialData = (grid: Record<string, Hex>, player: Entity, levelId?: st
 };
 
 const getHexTutorialStatus = (hex: Hex, player: Entity, _grid: Record<string, Hex>, tutorialData: any, activeLevelConfig?: any) => {
+    // If hex is not revealed, don't show tutorial markers/arrows to avoid spoiling monument location
+    if (!hex.revealed) return { isTutorial: false, isArrow: false, tutColor: 'emerald' };
+
     if (!tutorialData && !activeLevelConfig?.objectiveHexes) return { isTutorial: false, isArrow: false, tutColor: 'emerald' };
     
     const levelId = tutorialData?.levelId || activeLevelConfig?.id;
@@ -311,6 +314,8 @@ interface MapRendererProps {
 
 // Helper for drawing FOW grid efficiently
 const FowGrid = React.memo(({ rotation, playerQ, playerR, size }: { rotation: number; playerQ: number; playerR: number; size: number }) => {
+    const grid = useGameStore(state => state.session?.grid);
+    
     const projection = useMemo(() => {
         const angleRad = rotation * (Math.PI / 180);
         return { cos: Math.cos(angleRad), sin: Math.sin(angleRad) };
@@ -332,14 +337,21 @@ const FowGrid = React.memo(({ rotation, playerQ, playerR, size }: { rotation: nu
                     ctx.beginPath();
                     for (let q = playerQ - radius; q <= playerQ + radius; q++) {
                         for (let r = playerR - radius; r <= playerR + radius; r++) {
-                            if (cubeDistance({ q, r }, { q: playerQ, r: playerR }) > radius) continue;
+                            const dist = cubeDistance({ q, r }, { q: playerQ, r: playerR });
+                            if (dist > radius) continue;
+
+                            const key = getHexKey(q, r);
+                            const hex = grid?.[key];
+                            
+                            // Only draw the "fog" fill if hex is NOT revealed
+                            if (hex && hex.revealed) continue;
 
                             const rawX = size * (SQRT3 * q + SQRT3_2 * r);
                             const rawY = size * (ONE_POINT_FIVE * r);
                             const x = rawX * projection.cos - rawY * projection.sin;
                             const y = (rawX * projection.sin + rawY * projection.cos) * 0.8;
 
-                            // Draw hex outline
+                            // Draw hex outline/fill
                             for (let i = 0; i < 6; i++) {
                                 const angle = (60 * i + 30) * (Math.PI / 180);
                                 const px = x + Math.cos(angle) * size;
@@ -352,9 +364,10 @@ const FowGrid = React.memo(({ rotation, playerQ, playerR, size }: { rotation: nu
                     }
                     ctx.fillStrokeShape(shape);
                 }}
+                fill="#020617" // Very dark blue/black for fog
                 stroke="#1e293b"
                 strokeWidth={1}
-                opacity={0.3}
+                opacity={0.8} // Mostly opaque to hide details
                 listening={false}
             />
         </Group>
@@ -560,7 +573,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                 if (!hex) return null;
 
                 const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, player, grid, tutorialData, activeLevelConfig);
-                const theme = getTheme(hex.maxLevel);
+                const theme = getTheme(item.props.isRevealed ? hex.maxLevel : 0);
 
                 return {
                     ...item,

@@ -38,6 +38,8 @@ const calculateNeighborLevels = (grid: any) => {
         const levels = neighbors.map(n => {
             const nKey = getHexKey(n.q, n.r);
             const nHex = grid[nKey];
+            // If neighbor is not revealed, treat it as level 0 to hide what's in the fog
+            if (nHex && !nHex.revealed) return 0;
             return nHex ? (nHex.currentLevel ?? 0) : VOID_LEVEL_FLAG;
         });
         map[key] = levels;
@@ -115,7 +117,8 @@ self.onmessage = (e) => {
                 const neighborLevels = cachedNeighborLevelsMap[hex.id] || [VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG];
 
                 // Fog of War opacity 
-                const finalOpacity = hex.revealed ? opacity : opacity * 0.25;
+                const isRevealed = !!hex.revealed;
+                const finalOpacity = isRevealed ? opacity : opacity * 0.25;
 
                 items.push({
                     type: 'HEX',
@@ -125,24 +128,24 @@ self.onmessage = (e) => {
                         x: rawX, y: rawY, // Pass raw coordinates!
                         q: hex.q, r: hex.r,
                         id: hex.id,
-                        offsetY,
-                        level: hex.currentLevel ?? 0,
-                        maxLevel: hex.maxLevel,
-                        structureType: hex.structureType as string,
-                        neighborLevels,
+                        offsetY: isRevealed ? offsetY : 0,
+                        level: isRevealed ? (hex.currentLevel ?? 0) : 0,
+                        maxLevel: isRevealed ? hex.maxLevel : 0,
+                        structureType: isRevealed ? (hex.structureType as string) : 'NONE',
+                        neighborLevels: isRevealed ? neighborLevels : neighborLevels.map(() => 0),
                         isSelected: cachedSelectedHexId === hex.id,
                         isPending,
                         // hide specific state if not revealed
-                        isOccupied: hex.revealed && (isOccupiedByPlayer || (cachedBots && cachedBots.some((b: any) => b.q===hex.q && b.r===hex.r))),
-                        isGrowing: hex.revealed && hex.progress > 0 && !isVoid,
-                        isRankLocked: hex.maxLevel > cachedPlayer.playerLevel,
-                        progress: hex.revealed ? hex.progress : 0,
-                        durability: hex.revealed ? hex.durability : undefined,
-                        artifactType: hex.revealed ? hex.artifact?.type : undefined,
-                        biome: hex.biome,
-                        poiType: hex.poiType,
+                        isOccupied: isRevealed && (isOccupiedByPlayer || (cachedBots && cachedBots.some((b: any) => b.q===hex.q && b.r===hex.r))),
+                        isGrowing: isRevealed && hex.progress > 0 && !isVoid,
+                        isRankLocked: isRevealed && hex.maxLevel > cachedPlayer.playerLevel,
+                        progress: isRevealed ? hex.progress : 0,
+                        durability: isRevealed ? hex.durability : undefined,
+                        artifactType: isRevealed ? hex.artifact?.type : undefined,
+                        biome: isRevealed ? hex.biome : undefined,
+                        poiType: isRevealed ? hex.poiType : undefined,
                         isPassable: hex.isPassable,
-                        isRevealed: hex.revealed,
+                        isRevealed: isRevealed,
                         opacity: finalOpacity
                     }
                 });
