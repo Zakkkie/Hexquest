@@ -6,7 +6,10 @@ import { Hexagon, Terminal, ArrowRight } from 'lucide-react';
 import { TEXT } from '../services/i18n.ts';
 
 const CampaignLoading: React.FC = () => {
-  const { setUIState, session, language, loadingLevelId } = useGameStore();
+  const setUIState = useGameStore(state => state.setUIState);
+  const session = useGameStore(state => state.session);
+  const language = useGameStore(state => state.language);
+  const loadingLevelId = useGameStore(state => state.loadingLevelId);
   const [progress, setProgress] = useState(0);
   const [loadingText, setLoadingText] = useState('');
 
