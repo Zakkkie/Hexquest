@@ -14,6 +14,8 @@ import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
 import { XCircle, CheckCircle, Info } from 'lucide-react';
 import { safifyCoord } from '../utils/safeCoordinates.ts';
 
+const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
+
 // HELPER: Linear Interpolation
 const lerp = (start: number, end: number, factor: number) => {
     return start + (end - start) * factor;
@@ -52,7 +54,7 @@ const calculateRotationAdjustedView = (
     const finalX = pivot.x - rotatedX * currentView.scale;
     const finalY = pivot.y - rotatedY * currentView.scale;
     
-    const safePos = safifyCoord(finalX, finalY);
+    const safePos = { x: clamp(finalX, -5000, 5000), y: clamp(finalY, -5000, 5000) };
 
     return {
         x: safePos.x,
@@ -123,6 +125,7 @@ const GameView: React.FC = () => {
   // Interaction State
   const isRotating = useRef(false);
   const isDragging = useRef(false);
+  const mouseDownPosRef = useRef({ x: 0, y: 0 }); // Track start position
   const lastPointerPos = useRef({ x: 0, y: 0 });
   const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 }); 
   
@@ -203,7 +206,32 @@ const GameView: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- PHYSICS CAMERA LOOP ---
+  const centerOnPlayer = useCallback(() => {
+      const rot = currentCameraRef.current.rotation;
+      const { x: px, y: py } = hexToPixel(player.q, player.r, rot);
+      
+      const offset = getCenterOffset();
+      const current = currentCameraRef.current;
+      
+      const visualX = px * current.scale + current.x;
+      const visualY = py * current.scale + current.y + offset;
+      
+      const centerX = dimensions.width / 2;
+      const centerY = dimensions.height / 2;
+      
+      const bufferX = dimensions.width * 0.50;
+      const bufferY = dimensions.height * 0.50;
+      
+      if (Math.abs(visualX - centerX) < bufferX && Math.abs(visualY - centerY) < bufferY) {
+          return;
+      }
+      
+      const tx = (dimensions.width / 2) - (px * targetCameraRef.current.scale);
+      const ty = ((dimensions.height / 2) - offset) - (py * targetCameraRef.current.scale);
+      
+      const safeT = { x: clamp(tx, -5000, 5000), y: clamp(ty, -5000, 5000) };
+      targetCameraRef.current = { ...targetCameraRef.current, x: safeT.x, y: safeT.y };
+  }, [player.q, player.r, dimensions, deviceType]);
   useEffect(() => {
       const anim = new Konva.Animation((frame) => {
           if (!frame) return;
@@ -260,22 +288,31 @@ const GameView: React.FC = () => {
       return () => { anim.stop(); };
   }, []); 
 
-  const centerOnPlayer = useCallback(() => {
-      const rot = currentCameraRef.current.rotation;
-      const { x: px, y: py } = hexToPixel(player.q, player.r, rot);
-      
-      const offset = getCenterOffset();
-      
-      const tx = (dimensions.width / 2) - (px * targetCameraRef.current.scale);
-      const ty = ((dimensions.height / 2) - offset) - (py * targetCameraRef.current.scale);
-      
-      const safeT = safifyCoord(tx, ty);
-      targetCameraRef.current = { ...targetCameraRef.current, x: safeT.x, y: safeT.y };
-  }, [player.q, player.r, dimensions, deviceType]);
 
+  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      // Left Click (0) = Drag, Right Click (2) = Rotate
+      const stage = e.target.getStage();
+      if (e.evt.button === 0) {
+          isDragging.current = true;
+          const pointer = stage?.getPointerPosition();
+          if (pointer) mouseDownPosRef.current = pointer; // Record start
+          
+          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
+      } else if (e.evt.button === 2) { 
+          isRotating.current = true;
+          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
+      }
+  };
+  
   const handleHexClick = useCallback((q: number, r: number) => {
-      // Prevent click if we were just dragging
-      if (isDragging.current) return;
+      const stage = stageRef.current;
+      const pointer = stage?.getPointerPosition();
+      
+      if (pointer) {
+          const dist = Math.hypot(pointer.x - mouseDownPosRef.current.x, pointer.y - mouseDownPosRef.current.y);
+          if (dist > 10) return; // Threshold check
+      }
+      
       movePlayer(q, r);
   }, [movePlayer]);
 
@@ -305,7 +342,7 @@ const GameView: React.FC = () => {
     const newX = pointer.x - mousePointTo.x * newScale;
     const newY = pointer.y - mousePointTo.y * newScale;
     
-    const safePos = safifyCoord(newX, newY);
+    const safePos = { x: clamp(newX, -5000, 5000), y: clamp(newY, -5000, 5000) };
     targetCameraRef.current = { ...targetCameraRef.current, x: safePos.x, y: safePos.y, scale: newScale };
   }, []);
 
@@ -313,17 +350,6 @@ const GameView: React.FC = () => {
      if (e.target === e.target.getStage() && !isDragging.current) {
          cancelPendingAction();
      }
-  };
-
-  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-      // Left Click (0) = Drag, Right Click (2) = Rotate
-      if (e.evt.button === 0) {
-          isDragging.current = true;
-          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
-      } else if (e.evt.button === 2) { 
-          isRotating.current = true;
-          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
-      }
   };
   
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -523,7 +549,7 @@ const GameView: React.FC = () => {
       )}
 
       <GameHUD 
-        onCenterPlayer={centerOnPlayer} 
+        onCenterPlayer={centerOnPlayer}
       />
 
       {uiState === 'INTERIOR' && <InteriorView />}

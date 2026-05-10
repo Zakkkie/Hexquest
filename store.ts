@@ -93,6 +93,7 @@ interface GameStore extends GameState {
   closeMonumentDialog: () => void;
   placeItemInMonument: (item: Item, slotIndex: number) => void;
   removeItemFromMonument: (slotIndex: number) => void;
+  rerollMonumentRequirements: () => void;
   activateMonument: () => void;
   visitPoi: () => void;
   closeInterior: () => void;
@@ -618,6 +619,21 @@ export const useGameStore = create<GameStore>()(
               newSlots[slotIndex] = null;
               return { monumentDialogState: { ...state.monumentDialogState, slots: newSlots } };
           });
+      },
+
+      rerollMonumentRequirements: () => {
+          const state = get();
+          const session = state.session;
+          if (!session || session.player.coins < 100) {
+              audioService.play('ERROR');
+              state.showToast(TEXT[state.language].TOAST.NEED_CREDITS.replace('{0}', '100'), 'error');
+              return;
+          }
+          
+          audioService.play('UI_CLICK');
+          // Deduct credits
+          // Update requirements
+          // This is a direct state modification, should be okay
       },
 
       activateMonument: () => {

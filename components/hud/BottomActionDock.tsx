@@ -30,7 +30,6 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
     const playUiSound = useGameStore(state => state.playUiSound);
     const togglePlayerGrowth = useGameStore(state => state.togglePlayerGrowth);
     const visitPoi = useGameStore(state => state.visitPoi);
-    const deviceType = useGameStore(state => state.deviceType);
     
     const t = TEXT[language].HUD;
     const mainButtonSize = "lg";
@@ -223,9 +222,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onO
     // Helper for Action Clicks
     const handleActionClick = (intent: 'DIG' | 'UPGRADE' | 'RECOVER') => {
         togglePlayerGrowth(intent);
-        if (deviceType === 'DESKTOP') {
-            onCenterPlayer();
-        }
+        onCenterPlayer();
     };
 
     return (

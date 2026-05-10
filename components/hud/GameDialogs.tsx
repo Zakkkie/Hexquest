@@ -513,7 +513,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         const rarityColor: Record<string, string> = { COMMON: 'text-slate-300 border-slate-500', UNCOMMON: 'text-emerald-400 border-emerald-600', RARE: 'text-purple-400 border-purple-600', LEGENDARY: 'text-amber-400 border-amber-600' };
                                         const reqDef = !isUnrevealed && !isWildcard && !isRarityWild && reqId !== 'ONE_OF' ? getItemDef(reqId) : undefined;
                                         return (
-                                            <div key={idx} onDrop={(e) => handleDrop(e, idx)} onDragOver={handleAllowDrop} onClick={() => slotItem && removeItemFromMonument(idx)} className={`w-16 h-20 md:w-24 md:h-32 rounded-xl md:rounded-2xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden ${slotItem ? `bg-slate-900 ${getRarityBorder(slotItem.rarity)}` : isUnrevealed ? 'bg-slate-900/20 border-slate-600 border-dashed hover:border-slate-400' : 'bg-slate-900/30 border-slate-700 border-dashed hover:border-slate-500'}`}>
+                                            <div key={idx} onDrop={(e) => handleDrop(e, idx)} onDragOver={handleAllowDrop} onClick={() => {
+                                                if (slotItem) {
+                                                    removeItemFromMonument(idx);
+                                                } else {
+                                                    const name = reqId === 'ANY' ? 'Any' : (reqId === 'ONE_OF' ? 'Choice' : (getItemDef(reqId)?.name[language] || reqId));
+                                                    useGameStore.getState().showToast(`Required: ${name}`, 'info');
+                                                }
+                                            }} className={`w-16 h-20 md:w-24 md:h-32 rounded-xl md:rounded-2xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden ${slotItem ? `bg-slate-900 ${getRarityBorder(slotItem.rarity)}` : isUnrevealed ? 'bg-slate-900/20 border-slate-600 border-dashed hover:border-slate-400' : 'bg-slate-900/30 border-slate-700 border-dashed hover:border-slate-500'}`}>
                                                 {slotItem ? <ItemIcon item={slotItem} size="w-10 h-10 md:w-16 md:h-16" /> : isUnrevealed ? (
                                                     <div className="flex flex-col items-center gap-1 animate-pulse">
                                                         <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-slate-800/80 border border-slate-500 flex items-center justify-center shadow-[0_0_8px_rgba(148,163,184,0.3)]">
@@ -555,6 +562,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 <div className="w-full px-2 md:px-4">
                                     <button onClick={activateMonument} disabled={!isMonumentReady} className={`w-full py-3 md:py-4 rounded-xl font-black uppercase tracking-[0.2em] shadow-lg transition-all flex items-center justify-center gap-2 text-sm md:text-base ${isMonumentReady ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed grayscale'}`}>
                                         {isMonumentReady ? <><Zap className="w-4 h-4 md:w-5 md:h-5 fill-current" /> {t.MONUMENT_BTN_ACTIVE}</> : t.MONUMENT_BTN_INACTIVE}
+                                    </button>
+                                    <button onClick={() => { useGameStore.getState().rerollMonumentRequirements(); }} className="w-full py-2 rounded-xl bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-300 font-bold uppercase tracking-widest text-[10px] transition-all mt-2">
+                                        Reroll (100 Cr)
                                     </button>
                                 </div>
                             </div>

@@ -38,9 +38,9 @@ const calculateNeighborLevels = (grid: any) => {
         const levels = neighbors.map(n => {
             const nKey = getHexKey(n.q, n.r);
             const nHex = grid[nKey];
-            // If neighbor is not revealed, treat it as level 0 to hide what's in the fog
-            if (nHex && !nHex.revealed) return 0;
-            return nHex ? (nHex.currentLevel ?? 0) : VOID_LEVEL_FLAG;
+            // If neighbor is missing OR not revealed, treat it as level 0 to hide what's in the fog/outside grid
+            if (!nHex || !nHex.revealed) return 0;
+            return nHex.currentLevel ?? 0;
         });
         map[key] = levels;
     }
@@ -128,7 +128,7 @@ self.onmessage = (e) => {
                         x: rawX, y: rawY, // Pass raw coordinates!
                         q: hex.q, r: hex.r,
                         id: hex.id,
-                        offsetY: isRevealed ? offsetY : 0,
+                        offsetY: isRevealed ? offsetY : -10,
                         level: isRevealed ? (hex.currentLevel ?? 0) : 0,
                         maxLevel: isRevealed ? hex.maxLevel : 0,
                         structureType: isRevealed ? (hex.structureType as string) : 'NONE',
