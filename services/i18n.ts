@@ -300,6 +300,8 @@ export interface Dictionary {
         LEVEL_1_5_DESC: string;
         LEVEL_1_6_TITLE: string;
         LEVEL_1_6_DESC: string;
+        LEVEL_1_7_TITLE: string;
+        LEVEL_1_7_DESC: string;
         LEVEL_2_1_TITLE: string;
         LEVEL_2_1_DESC: string;
         LEVEL_2_2_TITLE: string;
@@ -310,6 +312,8 @@ export interface Dictionary {
         LEVEL_2_4_DESC: string;
         LEVEL_2_5_TITLE: string;
         LEVEL_2_5_DESC: string;
+        LEVEL_2_6_TITLE: string;
+        LEVEL_2_6_DESC: string;
         LEVEL_3_1_TITLE: string;
         LEVEL_3_1_DESC: string;
         LEVEL_3_2_TITLE: string;
@@ -690,6 +694,8 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_1_5_DESC: 'Protocol: Emergency Recovery.\n\nObjective: Collect 150 Credits in 75s.\n\nRule: Standard Recovery is single-use. You must MOVE to reset the tool.\n\nMethod: Use RECOVERY (Blue Button) on high sectors. Height yields more Credits.\n\nWARNING: High (Lvl 4+) sectors overheat (Cooldown 15s). Rotate between peaks.',
             LEVEL_1_6_TITLE: 'Sim 1.6: Vertical Limit',
             LEVEL_1_6_DESC: 'Protocol: Altitude Test.\n\nObjective: Reach Level 4.\n\nConstraint: Space is extremely limited. A rival is competing for the same peak. Manage your footprint carefully.',
+            LEVEL_1_7_TITLE: 'Sim 1.7: Energy Crisis',
+            LEVEL_1_7_DESC: 'Objective: Collect 10 materials. Dig deep, but watch your moves. Every step is expensive. Use credit-to-move exchange if you get stuck.',
             LEVEL_2_1_TITLE: 'Sim 2.1: The Monolith',
             LEVEL_2_1_DESC: 'Target: Unknown Spire.\n\nObjective: Reach the Monolith (Center, L3). It requires NO items to activate. Just step on it and press ACTIVATE in the interface.\n\nProblem: Direct path blocked by L4 wall. Find the staircase along the left ridge.\n\nStart: Almost no fuel. Use RECOVERY (Blue) on your start hex, then MOVE away and back to reset it. Repeat to stockpile fuel.',
             LEVEL_2_2_TITLE: 'Sim 2.2: Buried Secrets',
@@ -700,6 +706,8 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_2_4_DESC: 'Threat: Hostile unit approaching.\n\nObjective: Find 2 ITEMS and activate the Monolith BEFORE the Rival.\n\nStart: Nearly empty. DIG sites along your path for fuel and artifacts. The Rival approaches from the north.\n\nDEFEAT: The Bot reaches the Monument first OR you become Stranded.',
             LEVEL_2_5_TITLE: 'Sim 2.5: The Singularity',
             LEVEL_2_5_DESC: 'FINAL TEST: Two hostiles converge.\n\nObjective: Collect 3 ITEMS and activate the Core (L5) first.\n\nStart: Near-empty. DIG deep along your spiral for fuel + artifacts. Two rivals approach from the North and East.\n\nTip: Deeper digs give more Moves AND better loot odds.',
+            LEVEL_2_6_TITLE: 'Sim 2.6: Deep Echo',
+            LEVEL_2_6_DESC: 'Objective: Descend to depth -5. Use reinforcements to avoid collapse. Deep layers are unstable but hold ancient artifacts.',
             LEVEL_3_1_TITLE: 'Sim 3.1: First Inscription',
             LEVEL_3_1_DESC: 'An ancient transmission carved into stone.\n\nObjective: Activate the Monument at the summit.\n\nMechanic: Obelisks (L3 pillars) inscribe the required item silhouette into the Monument interface. Visit one to learn what it needs — or guess.\n\nEntropic Warning: Two stability events will occur. The second ends the mission.',
             LEVEL_3_2_TITLE: 'Sim 3.2: Twin Beacons',
@@ -1078,6 +1086,8 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_1_5_DESC: 'Протокол: Экстренное Восстановление.\n\nЦЕЛЬ: Собрать 150 Кред. за 75с.\n\nПравило: Восстановление доступно 1 раз за визит. Вы должны СДВИНУТЬСЯ, чтобы сбросить инструмент.\n\nМетод: Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на высоких секторах. Высота дает больше Кредитов.\n\nВНИМАНИЕ: Высокие (Ур. 4+) сектора перегреваются (КД 15с). Перемещайтесь между пиками.',
             LEVEL_1_6_TITLE: 'Сим 1.6: Вертикальный Предел',
             LEVEL_1_6_DESC: 'Протокол: Тест Высоты.\n\nЦЕЛЬ: Достичь Уровня 4.\n\nОграничение: Пространство крайне ограничено. Соперник претендует на тот же пик. Тщательно планируйте свои действия.',
+            LEVEL_1_7_TITLE: 'Сим 1.7: Энергетический Кризис',
+            LEVEL_1_7_DESC: 'Цель: Соберите 10 материалов. Копайте глубоко, но следите за ходами. Каждый шаг стоит дорого. Используйте обмен кредитов на ходы, если застрянете.',
             LEVEL_2_1_TITLE: 'Сим 2.1: Монолит',
             LEVEL_2_1_DESC: 'Цель: Неизвестный Шпиль.\n\nЦЕЛЬ: Встать на Монолит (Центр, Ур.3). Для активации НЕ нужны предметы. Просто встаньте на него и нажмите АКТИВИРОВАТЬ в интерфейсе.\n\nПроблема: Прямой путь блокирован стеной Ур.4. Найдите лестницу +1 вдоль левого хребта.\n\nСтарт: Почти без топлива. Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на старте, затем УЙДИТЕ и ВЕРНИТЕСЬ для сброса. Повторяйте для накопления топлива.',
             LEVEL_2_2_TITLE: 'Сим 2.2: Тайны Недр',
@@ -1088,6 +1098,8 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_2_4_DESC: 'УГРОЗА: Враждебный юнит.\n\nЦЕЛЬ: Найти 2 ПРЕДМЕТА и активировать Монолит РАНЬШЕ Соперника.\n\nСтарт: Почти пусто. КОПАЙТЕ участки на пути за топливо и артефакты. Соперник приближается с севера.\n\nПОРАЖЕНИЕ: Бот достигает Монумента первым ИЛИ у вас кончается топливо.',
             LEVEL_2_5_TITLE: 'Сим 2.5: Сингулярность',
             LEVEL_2_5_DESC: 'ФИНАЛЬНЫЙ ТЕСТ: Двое врагов.\n\nЦЕЛЬ: Собрать 3 ПРЕДМЕТА и активировать Ядро (Ур. 5) первым.\n\nСтарт: Почти пусто. КОПАЙТЕ глубоко по спирали за топливо и артефакты. Два соперника приближаются с севера и востока.\n\nПодсказка: Глубокие раскопки дают больше Топлива И лучшие шансы на лут.',
+            LEVEL_2_6_TITLE: 'Сим 2.6: Глубинное Эхо',
+            LEVEL_2_6_DESC: 'Цель: Опуститесь на глубину -5. Используйте укрепления, чтобы избежать обвала. Глубокие слои нестабильны, но хранят древние артефакты.',
             LEVEL_3_1_TITLE: 'Сим 3.1: Первая Надпись',
             LEVEL_3_1_DESC: 'Древняя передача, высеченная в камне.\n\nЦЕЛЬ: Активировать Монумент на вершине.\n\nМеханика: Обелиски (колонны Ур.3) наносят силуэт нужного предмета в интерфейс Монумента. Посетите один, чтобы узнать, что нужно — или гадайте.\n\nВнимание: Произойдет два события стабильности. Второе завершит миссию.',
             LEVEL_3_2_TITLE: 'Сим 3.2: Близнецы-Маяки',

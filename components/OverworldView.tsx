@@ -12,7 +12,7 @@ import { ItemIcon, getRarityBorder } from './hud/HudShared.tsx';
 import EventModal from './EventModal.tsx';
 import InventoryModal from './InventoryModal.tsx';
 import OverworldHexNode from './OverworldHexNode.tsx';
-import OverworldMinimap from './OverworldMinimap.tsx';
+// import OverworldMinimap from './OverworldMinimap.tsx';
 import Background from './Background.tsx';
 import GameDialogs from './hud/GameDialogs.tsx';
 import { Item, EntityType } from '../types.ts';
@@ -979,7 +979,7 @@ const OverworldView: React.FC = () => {
       )}
 
       {/* Minimap */}
-      <OverworldMinimap />
+      {/* <OverworldMinimap /> */}
 
       {/* Event Modal Overlay */}
       <EventModal />

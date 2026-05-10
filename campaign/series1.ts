@@ -72,11 +72,11 @@ export const series1Levels: LevelConfig[] = [
   },
   {
     id: '1.2',
-    title: 'Sim 1.2: Solid Ground',
-    description: 'Objective: Reach the Capital.\n\nSCANNER: A safe path (Durability 3) detected. Follow it through the void.\n\nDANGER: Environment UNSTABLE (Durability 1). Stepping off the path causes immediate collapse and Rank loss.\n\nFAILURE: Rank drops to 1.',
+    title: 'Sim 1.2: Твердая Почва',
+    description: 'Цель: Достигните Столицы.\n\nСКАНЕР: Обнаружен безопасный путь (Прочность 3). Следуйте по нему через пустоту.\n\nОПАСНОСТЬ: Окружающая среда НЕСТАБИЛЬНА (Прочность 1). Сход с пути вызывает немедленное обрушение и потерю Ранга.\n\nПРОВАЛ: Ранг падает до 1.',
     mapConfig: { size: 8, type: 'fixed', generateWalls: false },
     startState: { credits: 0, moves: 20, rank: 5, materials: 0, initialEntropy: 15 },
-    goalText: 'Reach the Capital',
+    goalText: 'Достигните Столицы',
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => !!(state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'CAPITAL'),
@@ -85,8 +85,8 @@ export const series1Levels: LevelConfig[] = [
   },
   {
     id: '1.3',
-    title: 'Sim 1.3: Structural Supports',
-    description: 'Protocol: Vertical Construction.\n\nObjective: Upgrade Center to Lvl 2.\n\nRule: Cannot build higher without foundation. A hex needs at least 2 neighbors of the SAME level to upgrade.',
+    title: 'Sim 1.3: Структурные Опоры',
+    description: 'Протокол: Вертикальное Строительство.\n\nЦель: Улучшите Центр до 2-го уровня.\n\nПравило: Нельзя строить выше без фундамента. Гексу нужно как минимум 2 соседа ТАКОГО ЖЕ уровня для улучшения.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
       customLayout: [
@@ -100,6 +100,7 @@ export const series1Levels: LevelConfig[] = [
       ]
     },
     startState: { credits: 300, moves: 10, rank: 2, materials: 3, initialEntropy: 15 },
+    goalText: 'Улучшите Центр до 2-го уровня',
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => (state.grid[getHexKey(0,0)]?.maxLevel >= 2),
@@ -112,7 +113,7 @@ export const series1Levels: LevelConfig[] = [
                       const h = state.grid[getHexKey(n.q, n.r)];
                       return h && h.maxLevel >= 1 && h.structureType !== 'VOID';
                   });
-                  if (validSupports.length < 2) return { ok: false, reason: "UNSTABLE! Upgrade 2 neighbors to Lvl 1 first." };
+                  if (validSupports.length < 2) return { ok: false, reason: "НЕСТАБИЛЬНО! Сначала улучшите 2 соседей до 1-го уровня." };
               }
           }
           return { ok: true };
@@ -121,8 +122,8 @@ export const series1Levels: LevelConfig[] = [
   },
   {
     id: '1.4',
-    title: 'Sim 1.4: Excavation',
-    description: 'Protocol: Resource Cycle.\n\nObjective: Upgrade Center to Lvl 3.\n\nProblem: You have 0 Materials. Construction is impossible.\n\nSolution: DIG (Red Button). Excavate surrounding mounds (Lvl 2) to harvest +1 Mat.',
+    title: 'Sim 1.4: Раскопки',
+    description: 'Протокол: Цикл Ресурсов.\n\nЦель: Улучшите Центр до 3-го уровня.\n\nПроблема: У вас 0 Материалов. Строительство невозможно.\n\nРешение: КОПАЙТЕ (Красная кнопка). Раскапывайте окружающие насыпи (Ур. 2), чтобы добыть +1 Материал.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
       customLayout: [
@@ -136,13 +137,14 @@ export const series1Levels: LevelConfig[] = [
       ]
     },
     startState: { credits: 1000, moves: 20, rank: 3, materials: 0, initialEntropy: 15 },
+    goalText: 'Улучшите Центр до 3-го уровня',
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => (state.grid[getHexKey(0,0)]?.maxLevel >= 3),
       checkLossCondition: (state) => isStranded(state) && state.grid[getHexKey(0,0)]?.maxLevel < 3,
       onBeforeAction: (state, action) => {
           if (action.type === 'UPGRADE' && state.player.storage === 0 && action.intent !== 'RECOVER') {
-             return { ok: false, reason: "NO MATERIALS! Dig the mounds (Lvl 2)." };
+             return { ok: false, reason: "НЕТ МАТЕРИАЛОВ! Раскапывайте насыпи (Ур. 2)." };
           }
           return { ok: true };
       }
@@ -150,8 +152,8 @@ export const series1Levels: LevelConfig[] = [
   },
   {
     id: '1.5',
-    title: 'Sim 1.5: Oxygen March',
-    description: 'Protocol: Emergency Recovery.\n\nObjective: Collect 150 Credits in 75s.\n\nRule: Standard Recovery is single-use. You must MOVE to reset the tool.\n\nMethod: Use RECOVERY (Blue Button) on high sectors.',
+    title: 'Sim 1.5: Кислородный Марш',
+    description: 'Протокол: Экстренное Восстановление.\n\nЦель: Соберите 150 Кредитов за 75 секунд.\n\nПравило: Стандартное Восстановление одноразовое. Вы должны ПЕРЕМЕСТИТЬСЯ, чтобы сбросить инструмент.\n\nМетод: Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на высоких секторах.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -171,6 +173,7 @@ export const series1Levels: LevelConfig[] = [
       ]
     },
     startState: { credits: 0, moves: 6, rank: 5, materials: 0, initialEntropy: 15 },
+    goalText: 'Соберите 150 Кредитов',
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => state.player.coins >= 150,
@@ -198,6 +201,30 @@ export const series1Levels: LevelConfig[] = [
         if (bot && bot.playerLevel >= 4) return true;
         return isStranded(state);
       }
+    }
+  },
+  {
+    id: '1.7',
+    title: 'Sim 1.7: Энергетический Кризис',
+    description: 'Цель: Соберите 10 материалов. Копайте глубоко, но следите за ходами. Каждый шаг стоит дорого. Используйте обмен кредитов на ходы, если застрянете.',
+    goalText: 'Соберите 10 материалов',
+    mapConfig: {
+      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
+      customLayout: [
+        { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+        { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+      ]
+    },
+    startState: { credits: 50, moves: 10, rank: 1, materials: 0, initialEntropy: 100 },
+    aiMode: 'none',
+    hooks: {
+      checkWinCondition: (state) => (state.player.storage ?? 0) >= 10,
+      checkLossCondition: (state) => isStranded(state) && (state.player.storage ?? 0) < 10
     }
   }
 ];

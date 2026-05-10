@@ -10,6 +10,7 @@ import MapRenderer from './MapRenderer.tsx';
 import { InteriorView } from './InteriorView.tsx';
 import Fireworks from './Fireworks.tsx';
 import { audioService } from '../services/audioService.ts';
+import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
 import { XCircle, CheckCircle, Info } from 'lucide-react';
 import { safifyCoord } from '../utils/safeCoordinates.ts';
 
@@ -246,6 +247,8 @@ const GameView: React.FC = () => {
           
           // Update Authority
           currentCameraRef.current = nextState;
+          
+          wallUpdaterRegistry.updateAll(nextRot);
           
           // Sync React State (Triggers Render)
           // This ensures render is synced with AnimationFrame

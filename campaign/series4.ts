@@ -9,12 +9,8 @@ import { isStranded } from './utils';
  */
 
 // Helper: count player-owned hexes at given level
-const countOwned = (state: any, index: any, minLevel: number): number => {
-  if (index && typeof index.getHexesByOwner === 'function') {
-    return index.getHexesByOwner('player-1').filter((h: any) => h.maxLevel >= minLevel).length;
-  }
-  return Object.values(state.grid).filter((h: any) => h.ownerId === 'player-1' && h.maxLevel >= minLevel).length;
-};
+const countOwned = (state: any, minLevel: number): number =>
+  Object.values(state.grid).filter((h: any) => h.ownerId === 'player-1' && h.maxLevel >= minLevel).length;
 
 export const series4Levels: LevelConfig[] = [
 
@@ -22,8 +18,8 @@ export const series4Levels: LevelConfig[] = [
   // Economy: DIG 9× → 9mat +12mv. Upgrade 9× → 150cr income. ~20 actions.
   {
     id: '4.1',
-    title: 'Sim 4.1: Resonance Protocol',
-    description: 'Objective: Create a "Ring of Resonance" - upgrade 3 DIFFERENT hexes to Level 2 simultaneously.\n\nRule: L2 needs 2 neighbors at L1. Plan your build order.\nStart empty — Dig for materials first.',
+    title: 'Sim 4.1: Протокол Резонанса',
+    description: 'Задача: Создайте "Кольцо Резонанса" - улучшите 3 РАЗНЫХ гекса до 2-го уровня одновременно.\n\nПравило: Для Ур. 2 нужно 2 соседа на Ур. 1. Планируйте порядок строительства.\nНачните с нуля — сначала копайте материалы.',
     mapConfig: {
       size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -43,7 +39,7 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 1, materials: 0 },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: (state, index) => countOwned(state, index, 2) >= 3,
+      checkWinCondition: (state) => countOwned(state, 2) >= 3,
       checkLossCondition: (state) => isStranded(state)
     }
   },
@@ -52,8 +48,8 @@ export const series4Levels: LevelConfig[] = [
   // Economy: Recovery cycles for fuel. DIG 2× for mat. ~17 actions.
   {
     id: '4.2',
-    title: 'Sim 4.2: Mirror Maze',
-    description: 'Objective: Own BOTH (-2,0) and (2,0) at Level 1+.\n\nDirect east path blocked by VOID. Find detours or sacrifice items to restore.',
+    title: 'Sim 4.2: Зеркальный Лабиринт',
+    description: 'Задача: Владейте ОБОИМИ гексами (-2,0) и (2,0) на уровне 1+.\n\nПрямой путь на восток заблокирован ПУСТОТОЙ. Найдите обходные пути или пожертвуйте предметы для восстановления.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -98,8 +94,8 @@ export const series4Levels: LevelConfig[] = [
   // Economy: ~16mat from digging. Upgrade chain: L1→L2→L3. Income: 2×70cr=140cr. ~25 actions.
   {
     id: '4.3',
-    title: 'Sim 4.3: Recursion Engine',
-    description: 'Objective: Build 2 hexes to Level 3.\n\nEach level requires 2 neighbors at same level as support.\nPlan your upgrade chain carefully — build wide before building tall.',
+    title: 'Sim 4.3: Рекурсивный Движок',
+    description: 'Задача: Улучшите 2 гекса до 3-го уровня.\n\nДля каждого уровня требуется 2 соседа того же уровня в качестве поддержки.\nТщательно планируйте цепочку улучшений — стройте вширь, прежде чем строить ввысь.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -121,7 +117,7 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: (state, index) => countOwned(state, index, 3) >= 2,
+      checkWinCondition: (state) => countOwned(state, 3) >= 2,
       checkLossCondition: (state) => isStranded(state)
     }
   },
@@ -133,8 +129,8 @@ export const series4Levels: LevelConfig[] = [
   // But: need rank 3 for L4! Start rank=3.
   {
     id: '4.4',
-    title: 'Sim 4.4: Thermal Equilibrium',
-    description: 'Objective: Build center hex to Level 4.\n\nHazard: Each action adds +3 Entropy. Starting at 70/100.\nAt 100 → sector collapse.\n\nYou have ~10 actions. Every move must count.\nPre-built staircase: focus on upgrading, not pathfinding.',
+    title: 'Sim 4.4: Тепловое Равновесие',
+    description: 'Задача: Улучшите центральный гекс до 4-го уровня.\n\nОпасность: Каждое действие добавляет +3 к Энтропии. Старт с 70/100.\nПри 100 → коллапс сектора.\n\nУ вас есть около 10 действий. Каждый ход должен быть значимым.\nГотовая лестница: сосредоточьтесь на улучшении, а не на поиске пути.',
     mapConfig: {
       size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
       customLayout: [
@@ -170,8 +166,8 @@ export const series4Levels: LevelConfig[] = [
   // Economy: DIG-heavy start. ~20 actions. Bot arrives in ~16.
   {
     id: '4.5',
-    title: 'Sim 4.5: Convergence Point',
-    description: 'Objective: Achieve 2 of 3 goals BEFORE the Rival:\n  A) Own 6+ hexes at L2+\n  B) Accumulate 200 Credits\n  C) Stand on the Monument\n\nThe Rival approaches in ~16 actions. Choose 2 goals and commit.',
+    title: 'Sim 4.5: Точка Конвергенции',
+    description: 'Задача: Достигните 2 из 3 целей РАНЬШЕ Соперника:\n  А) Владейте 6+ гексами на Ур. 2+\n  Б) Накопите 200 Кредитов\n  В) Встаньте на Монумент\n\nСоперник приблизится примерно через 16 действий. Выберите 2 цели и действуйте.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -201,9 +197,9 @@ export const series4Levels: LevelConfig[] = [
     botSpawnPoints: [{ q: 0, r: -3 }],
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     hooks: {
-      checkWinCondition: (state, index) => {
+      checkWinCondition: (state) => {
         let goals = 0;
-        if (countOwned(state, index, 2) >= 6) goals++;
+        if (countOwned(state, 2) >= 6) goals++;
         if ((state.player.coins ?? 0) >= 200) goals++;
         if (state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT') goals++;
         return goals >= 2;
@@ -221,8 +217,8 @@ export const series4Levels: LevelConfig[] = [
   // Economy: Build L2 cluster, then trigger cascade by upgrading one to L3.
   {
     id: '4.6',
-    title: 'Sim 4.6: Cascade Protocol',
-    description: 'Objective: 8+ hexes at Level 3.\n\nSpecial: When a hex reaches L3, all adjacent L2 hexes INSTANTLY upgrade to L3!\n\nStrategy: Build a large L2 cluster, then trigger the chain reaction.\n\nWarning: Cascading costs NO material but each triggered upgrade is an action (entropy drain).',
+    title: 'Sim 4.6: Каскадный Протокол',
+    description: 'Задача: 8+ гексов на 3-м уровне.\n\nОсобенность: Когда гекс достигает Ур. 3, все соседние гексы Ур. 2 МГНОВЕННО улучшаются до Ур. 3!\n\nСтратегия: Создайте большой кластер Ур. 2, затем запустите цепную реакцию.\n\nПредупреждение: Каскад не стоит материалов, но каждое вызванное улучшение — это действие (трата энтропии).',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -251,15 +247,14 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
     hooks: {
-      onAfterAction: (state, index) => {
+      onAfterAction: (state) => {
         // CASCADE: Any hex that just reached L3 triggers adjacent L2→L3
         let cascaded = true;
         while (cascaded) {
           cascaded = false;
-          // Optimize: only check player-owned hexes
-          const hexes = index.getHexesByOwner('player-1');
+          const hexes = Object.values(state.grid) as any[];
           for (const hex of hexes) {
-            if (hex.maxLevel === 3) {
+            if (hex.maxLevel === 3 && hex.ownerId === 'player-1') {
               const neighbors = [
                 { q: hex.q + 1, r: hex.r }, { q: hex.q - 1, r: hex.r },
                 { q: hex.q, r: hex.r + 1 }, { q: hex.q, r: hex.r - 1 },
@@ -281,7 +276,7 @@ export const series4Levels: LevelConfig[] = [
         }
         return state;
       },
-      checkWinCondition: (state, index) => countOwned(state, index, 3) >= 8,
+      checkWinCondition: (state) => countOwned(state, 3) >= 8,
       checkLossCondition: (state) => isStranded(state)
     }
   },
@@ -290,8 +285,8 @@ export const series4Levels: LevelConfig[] = [
   // Economy: ~20mat from digging. Heavy upgrade chain. ~35 actions.
   {
     id: '4.7',
-    title: 'Sim 4.7: Duality Engine',
-    description: 'Objective: Own 4 hexes at L3+ AND 2 hexes at L4+ simultaneously.\n\nChallenge: L4 requires Rank 3 and neighbors at L3.\nYou must build wide (4×L3) AND tall (2×L4) from scratch.\n\nDig deep for materials. Plan your support chains.',
+    title: 'Sim 4.7: Двойной Движок',
+    description: 'Задача: Владейте 4 гексами на Ур. 3+ И 2 гексами на Ур. 4+ одновременно.\n\nВызов: Для Ур. 4 требуется Ранг 3 и соседи на Ур. 3.\nВы должны строить и вширь (4×Ур. 3), и ввысь (2×Ур. 4) с нуля.\n\nКопайте глубоко для получения материалов. Планируйте цепочки поддержки.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -317,7 +312,7 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 3, materials: 0 },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: (state, index) => countOwned(state, index, 3) >= 4 && countOwned(state, index, 4) >= 2,
+      checkWinCondition: (state) => countOwned(state, 3) >= 4 && countOwned(state, 4) >= 2,
       checkLossCondition: (state) => isStranded(state)
     }
   },
@@ -327,8 +322,8 @@ export const series4Levels: LevelConfig[] = [
   // Entropy: +2 per action. Start at 50/100. ~25 actions max.
   {
     id: '4.8',
-    title: 'Sim 4.8: Omega Synthesis',
-    description: 'ULTIMATE TRIAL: All Systems Critical.\n\nAchieve ALL simultaneously:\n  1. Own 3+ hexes at Level 3+\n  2. Accumulate 300+ Credits\n  3. Stand on Monument with 2+ items\n  4. Keep Entropy below 60/100\n\nEntropy: +2 per action. Start: 40/100. ~30 actions max.\n\nThis is the end. Use everything you have learned.',
+    title: 'Sim 4.8: Омега Синтез',
+    description: 'ПОСЛЕДНЕЕ ИСПЫТАНИЕ: Все системы в критическом состоянии.\n\nДостигните ВСЕХ целей одновременно:\n  1. Владейте 3+ гексами на Уровне 3+\n  2. Накопите 300+ Кредитов\n  3. Встаньте на Монумент с 2+ предметами\n  4. Держите Энтропию ниже 60/100\n\nЭнтропия: +2 за действие. Старт: 40/100. Максимум ~30 действий.\n\nЭто конец. Используйте всё, чему вы научились.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -364,9 +359,9 @@ export const series4Levels: LevelConfig[] = [
         state.entropy.current = Math.min(100, (state.entropy.current ?? 40) + 2);
         return state;
       },
-      checkWinCondition: (state, index) => {
+      checkWinCondition: (state) => {
         const onMon = state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'MONUMENT';
-        const l3 = countOwned(state, index, 3);
+        const l3 = countOwned(state, 3);
         const coins = state.player.coins ?? 0;
         const items = state.player.inventory?.length ?? 0;
         const cool = (state.entropy.current ?? 0) < 60;

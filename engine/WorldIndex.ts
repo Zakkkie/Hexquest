@@ -201,6 +201,18 @@ export class WorldIndex {
       return results;
   }
 
+  public getHexesByStructureType(type: string): Hex[] {
+      const hexIds = this.structureLocations.get(type);
+      if (!hexIds) return [];
+      
+      const results: Hex[] = [];
+      for (const id of hexIds) {
+          const hex = this.grid[id];
+          if (hex) results.push(hex);
+      }
+      return results;
+  }
+
   /**
    * Optimized Range Query using BFS
    * Replaces iterating over the entire grid for AI operations.

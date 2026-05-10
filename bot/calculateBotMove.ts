@@ -3,7 +3,7 @@ import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hex
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
 import { calculateMovementCost } from '../rules/movement';
-import { findBestDigTargets, findHiveTarget } from './planning';
+import { findBestDigTargets, findHiveTarget, resolveBuildChain } from './planning';
 import { GAME_CONFIG } from '../rules/config';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,13 +20,12 @@ const HIVE_RADIUS         = 30;
 const PLAN_TTL            = 200;
 const MAX_WAIT_STREAK     = 4;   
 const MONUMENT_ZONE_R     = 4;   
-const MAX_BFS_STEPS       = 120;
-const MAX_PATH_CHECKS     = 4;
+const MAX_BFS_STEPS       = 400;
 const MAX_COLUMN_HEIGHT   = 8;   
 const STUCK_THRESHOLD     = 5;   
 
 const STOCKPILE_TARGET    = 3;   
-const EXPLORE_RADIUS      = 20;
+const EXPLORE_RADIUS      = 50;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -58,13 +57,47 @@ const buildClaimedSet = (bot: Entity, allBots: Entity[]): Set<string> => {
     return claimed;
 };
 
-const buildMonumentRestriction = (monument: Hex, grid: Record<string, Hex>, isCampaign?: boolean): Set<string> => {
+const buildMonumentRestriction = (monument: Hex, index: WorldIndex, isCampaign?: boolean): Set<string> => {
     const restricted = new Set<string>();
     const radius = isCampaign ? 2 : MONUMENT_ZONE_R;
-    for (const hex of Object.values(grid)) {
-        if (dist(monument, hex) <= radius) restricted.add(hex.id); 
+    const candidates = index.getHexesInRange(monument, radius);
+    for (const hex of candidates) {
+        restricted.add(hex.id); 
     }
     return restricted;
+};
+
+const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObstacles: HexCoord[], maxDist: number = 20): Set<string> => {
+    const reachable = new Set<string>();
+    const startKey = hexKey(bot.q, bot.r);
+    const queue: { q: number, r: number, dist: number }[] = [{ q: bot.q, r: bot.r, dist: 0 }];
+    const obsKeys = new Set(navObstacles.map(o => hexKey(o.q, o.r)));
+    
+    reachable.add(startKey);
+    
+    let head = 0;
+    while (head < queue.length) {
+        const current = queue[head++];
+        if (current.dist >= maxDist) continue;
+        
+        const currentHex = grid[hexKey(current.q, current.r)];
+        const currentLevel = currentHex ? currentHex.maxLevel : 0;
+        
+        const neighbors = getNeighbors(current.q, current.r);
+        for (const n of neighbors) {
+            const nKey = hexKey(n.q, n.r);
+            if (reachable.has(nKey) || obsKeys.has(nKey)) continue;
+            
+            const nHex = grid[nKey];
+            if (!nHex || nHex.structureType === 'VOID') continue;
+            if (nHex.maxLevel > bot.playerLevel) continue;
+            if (Math.abs(currentLevel - nHex.maxLevel) > 1) continue;
+            
+            reachable.add(nKey);
+            queue.push({ q: n.q, r: n.r, dist: current.dist + 1 });
+        }
+    }
+    return reachable;
 };
 
 const yieldMove = (bot: Entity, grid: Record<string, Hex>, obstacles: HexCoord[], monument: Hex | null, stateVersion: number, mem: BotMemory, reason: string): AiResult | null => {
@@ -121,11 +154,10 @@ const initMemory = (bot: Entity): BotMemory => ({
 
 interface StaircaseTarget { hex: Hex; levelsNeeded: number; idealLevel: number; }
 
-const findStaircaseTarget = (bot: Entity, grid: Record<string, Hex>, monument: Hex, navObstacles: HexCoord[], claimedSet: Set<string>, blacklisted: string[]): StaircaseTarget | null => {
+const findStaircaseTarget = (bot: Entity, grid: Record<string, Hex>, monument: Hex, navObstacles: HexCoord[], claimedSet: Set<string>, blacklisted: string[], reachableSet: Set<string>): StaircaseTarget | null => {
     const open: Hex[] = [];
     const visited     = new Set<string>();
     const candidates: StaircaseTarget[] = [];
-    let pathChecks    = 0;
 
     for (const c of getNeighbors(monument.q, monument.r)) {
         const h = grid[hexKey(c.q, c.r)];
@@ -151,14 +183,7 @@ const findStaircaseTarget = (bot: Entity, grid: Record<string, Hex>, monument: H
             const growCheck    = checkGrowthCondition(current, bot, nbs, grid, navObstacles);
 
             if (growCheck.canGrow) {
-                let reachable = dist(bot, current) <= 1;
-                if (!reachable && pathChecks < MAX_PATH_CHECKS) {
-                    pathChecks++;
-                    const pathResult = findPath({ q: bot.q, r: bot.r }, { q: current.q, r: current.r }, grid, bot.playerLevel, navObstacles);
-                    const p = pathResult.path;
-                    reachable = !!(p && p.length > 0);
-                }
-                if (reachable || pathChecks >= MAX_PATH_CHECKS) {
+                if (reachableSet.has(current.id)) {
                     candidates.push({ hex: current, levelsNeeded, idealLevel });
                     if (candidates.length >= 5) break; 
                 }
@@ -193,19 +218,86 @@ const findStaircaseTarget = (bot: Entity, grid: Record<string, Hex>, monument: H
 // CONCENTRIC EXPLORE PLAN
 // ─────────────────────────────────────────────────────────────────────────────
 
-const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, _navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], mem: BotMemory): Plan => {
+const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, index: WorldIndex, _navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], mem: BotMemory, reachable: Set<string>): Plan => {
+    // 1. Если мы бедные, сначала копаем/строим (экономика)
+    if (bot.coins < 10) {
+        if (bot.storage === 0) {
+            const digTargets = findBestDigTargets(bot, grid, index, allBots, 5, undefined, reachable);
+            for (const t of digTargets) {
+                if (!reachable.has(t.hex.id)) continue;
+                if (claimedSet.has(t.hex.id) || (mem.blacklistedTargets || []).includes(t.hex.id)) continue;
+                return { steps: [{ type: 'MOVE_TO', targetId: t.hex.id }, { type: 'DIG', targetId: t.hex.id }], createdAt: stateVersion, label: 'Explore:EconomyDig' };
+            }
+        } else {
+            // Try to build
+            const botPos = { q: bot.q, r: bot.r };
+            let bestBuild: Hex | null = null;
+            let bestScore = -9999;
+            for (const id of reachable) {
+                const hex = grid[id];
+                if (!hex || hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
+                if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
+                if (hex.maxLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
+                if (claimedSet.has(hex.id) || (mem.blacklistedTargets || []).includes(hex.id)) continue;
+
+                const check = checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, _navObstacles);
+                if (check.canGrow) {
+                    const d = dist(botPos, hex);
+                    let score = -d * 2;
+                    score += hex.currentLevel * 50;
+                    if (d === 0) score += 20;
+                    if (hex.ownerId === bot.id) score += 10;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestBuild = hex;
+                    }
+                } else if (check.missingSupports && check.missingSupports.length > 0) {
+                    const resolved = resolveBuildChain(hex, bot, grid, index, 0);
+                    if (resolved && reachable.has(resolved.hex.id) && !(mem.blacklistedTargets || []).includes(resolved.hex.id)) {
+                        const d = dist(botPos, resolved.hex);
+                        let score = -d * 2;
+                        score += resolved.hex.currentLevel * 50;
+                        if (d === 0) score += 20;
+                        if (resolved.hex.ownerId === bot.id) score += 10;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestBuild = resolved.hex;
+                        }
+                    }
+                }
+            }
+            if (bestBuild) {
+                return { steps: [{ type: 'MOVE_TO', targetId: bestBuild.id }, { type: 'UPGRADE', targetId: bestBuild.id }], createdAt: stateVersion, label: 'Explore:EconomyBuild' };
+            }
+        }
+    }
+
     const anchor: HexCoord = { q: 0, r: 0 };
+    
+    // Optimized: Use reachable set directly
+    const unrevealedByDist: Record<number, Hex[]> = {};
+    
+    for (const id of reachable) {
+        const h = grid[id];
+        const isRevealedForBot = h?.botRevealed && h.botRevealed[bot.id];
+        if (!h || h.structureType === 'VOID' || isRevealedForBot) continue;
+        if ((mem.blacklistedTargets || []).includes(h.id)) continue;
+        
+        const d = dist(anchor, h);
+        if (d > EXPLORE_RADIUS) continue;
+
+        if (!unrevealedByDist[d]) unrevealedByDist[d] = [];
+        unrevealedByDist[d].push(h);
+    }
+
     let currentRing = 0; 
     let ringCandidates: Hex[] = [];
 
     while (currentRing <= EXPLORE_RADIUS) {
-        ringCandidates = Object.values(grid).filter(h => 
-            h.structureType !== 'VOID' && 
-            !h.revealed && 
-            dist(anchor, h) === currentRing &&
-            !(mem.blacklistedTargets || []).includes(h.id) 
-        );
-        if (ringCandidates.length > 0) break;
+        if (unrevealedByDist[currentRing]) {
+            ringCandidates = unrevealedByDist[currentRing];
+            break;
+        }
         currentRing++;
     }
 
@@ -245,11 +337,12 @@ const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, _navObstacles:
 // MINING & STOCKPILING
 // ─────────────────────────────────────────────────────────────────────────────
 
-const buildMinePlan = (bot: Entity, grid: Record<string, Hex>, _navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], monument: Hex | null, mem: BotMemory): Plan => {
-    const restriction = monument ? buildMonumentRestriction(monument, grid, mem.isCampaign) : undefined;
-    const digTargets  = findBestDigTargets(bot, grid, allBots, 10, restriction);
+const buildMinePlan = (bot: Entity, grid: Record<string, Hex>, index: WorldIndex, _navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], monument: Hex | null, mem: BotMemory, reachable: Set<string>): Plan => {
+    const restriction = monument ? buildMonumentRestriction(monument, index, mem.isCampaign) : undefined;
+    const digTargets  = findBestDigTargets(bot, grid, index, allBots, 10, restriction, reachable);
 
     for (const t of digTargets) {
+        if (!reachable.has(t.hex.id)) continue;
         if (claimedSet.has(t.hex.id) || (mem.blacklistedTargets || []).includes(t.hex.id)) continue;
         if (dist(bot, t.hex) > HIVE_RADIUS) continue;
         return { steps: [{ type: 'MOVE_TO', targetId: t.hex.id }, { type: 'DIG', targetId: t.hex.id }], createdAt: stateVersion, label: 'Mine' };
@@ -257,14 +350,14 @@ const buildMinePlan = (bot: Entity, grid: Record<string, Hex>, _navObstacles: He
     return { steps: [], createdAt: stateVersion, label: 'Mine:NoTarget' };
 };
 
-const buildStockpilePlan = (bot: Entity, grid: Record<string, Hex>, monument: Hex, navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], mem: BotMemory): Plan => {
+const buildStockpilePlan = (bot: Entity, grid: Record<string, Hex>, index: WorldIndex, monument: Hex, navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], mem: BotMemory, reachable: Set<string>): Plan => {
     const effectiveTarget = Math.min(STOCKPILE_TARGET, bot.maxStorage ?? 4);
     if (bot.storage >= effectiveTarget) {
         mem.stockpileWaitTicks = (mem.stockpileWaitTicks ?? 0) + 1;
         return { steps: [], createdAt: stateVersion, label: 'Stockpile:Waiting' };
     }
     mem.stockpileWaitTicks = 0;
-    return buildMinePlan(bot, grid, navObstacles, claimedSet, stateVersion, allBots, monument, mem);
+    return buildMinePlan(bot, grid, index, navObstacles, claimedSet, stateVersion, allBots, monument, mem, reachable);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -279,15 +372,18 @@ const buildStockpilePlan = (bot: Entity, grid: Record<string, Hex>, monument: He
 const buildCompetePlan = (
     bot: Entity,
     grid: Record<string, Hex>,
+    index: WorldIndex,
     navObstacles: HexCoord[],
     claimedSet: Set<string>,
     stateVersion: number,
     mem: BotMemory,
+    reachable: Set<string>
 ): Plan => {
     // Шаг 1: если нет материалов — копать
     if (bot.storage === 0) {
-        const digTargets = findBestDigTargets(bot, grid, [], 5, undefined);
+        const digTargets = findBestDigTargets(bot, grid, index, [], 5, undefined, reachable);
         for (const t of digTargets) {
+            if (!reachable.has(t.hex.id)) continue;
             if ((mem.blacklistedTargets || []).includes(t.hex.id)) continue;
             return { steps: [{ type: 'MOVE_TO', targetId: t.hex.id }, { type: 'DIG', targetId: t.hex.id }], createdAt: stateVersion, label: 'Compete:Dig' };
         }
@@ -299,8 +395,10 @@ const buildCompetePlan = (
     let bestBuild: Hex | null = null;
     let bestScore = -9999;
 
-    for (const hex of Object.values(grid)) {
-        if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
+    // Optimized: Use reachable set directly
+    for (const id of reachable) {
+        const hex = grid[id];
+        if (!hex || hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
         
         // Не можем строить на чужих базах (но можем на нейтральных или своих)
         if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
@@ -328,6 +426,21 @@ const buildCompetePlan = (
                 bestScore = score;
                 bestBuild = hex;
             }
+        } else if (check.missingSupports && check.missingSupports.length > 0) {
+            // Если не можем строить из-за опор, пытаемся найти опору для постройки
+            const resolved = resolveBuildChain(hex, bot, grid, index, 0);
+            if (resolved && reachable.has(resolved.hex.id)) {
+                const d = dist(botPos, resolved.hex);
+                let score = -d * 2;
+                score += resolved.hex.currentLevel * 50;
+                if (d === 0) score += 20;
+                if (resolved.hex.ownerId === bot.id) score += 10;
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestBuild = resolved.hex;
+                }
+            }
         }
     }
 
@@ -341,7 +454,7 @@ const buildCompetePlan = (
 
     // Шаг 3: нет вариантов — копать (если есть место)
     if (bot.storage < (bot.maxStorage ?? 4)) {
-        const digTargets2 = findBestDigTargets(bot, grid, [], 3, undefined);
+        const digTargets2 = findBestDigTargets(bot, grid, index, [], 3, undefined, reachable);
         for (const t of digTargets2) {
             if ((mem.blacklistedTargets || []).includes(t.hex.id)) continue;
             return { steps: [{ type: 'MOVE_TO', targetId: t.hex.id }, { type: 'DIG', targetId: t.hex.id }], createdAt: stateVersion, label: 'Compete:DigFallback' };
@@ -368,13 +481,15 @@ const buildCampaignPlan = (
     player: Entity,
     index: WorldIndex,
     activeLevelId: string,
-    activeLevelConfig?: any
+    activeLevelConfig: any,
+    reachable: Set<string>
 ): Plan => {
     // 1. HUNT_PLAYER (3.5, 3.6)
     if (activeLevelConfig?.botObjective === 'DESTROY_PLAYER' || activeLevelId === '3.5' || activeLevelId === '3.6') {
         mem.botRole = 'DESTROYER';
         const targetInfo = findHiveTarget(bot, grid, index, 'DESTROYER', HIVE_RADIUS, player);
         if (targetInfo) {
+            if (!reachable.has(targetInfo.hex.id)) return { steps: [], createdAt: stateVersion, label: 'HUNT: Unreachable' };
             const steps: PlanStep[] = [{ type: 'MOVE_TO', targetId: targetInfo.hex.id }];
             if (targetInfo.actionType !== 'MOVE_ONLY') steps.push({ type: targetInfo.actionType, targetId: targetInfo.hex.id });
             return { steps, createdAt: stateVersion, label: `HUNT: ${targetInfo.reason}` };
@@ -384,7 +499,7 @@ const buildCampaignPlan = (
 
     // 2. COMPETE_RANK (1.6, 3.7)
     if (activeLevelConfig?.botObjective === 'COMPETE_RANK' || activeLevelId === '1.6' || activeLevelId === '3.7') {
-        return buildCompetePlan(bot, grid, navObstacles, claimedSet, stateVersion, mem);
+        return buildCompetePlan(bot, grid, index, navObstacles, claimedSet, stateVersion, mem, reachable);
     }
 
     // 3. MONUMENT_RACE (2.4, 2.5, 4.5)
@@ -394,19 +509,20 @@ const buildCampaignPlan = (
 
         if (currentItems < requiredItems) {
             if (bot.storage === 0) {
-                const restriction = monument ? buildMonumentRestriction(monument, grid, mem.isCampaign) : undefined;
-                const digTargets = findBestDigTargets(bot, grid, allBots, 10, restriction);
+                const restriction = monument ? buildMonumentRestriction(monument, index, mem.isCampaign) : undefined;
+                const digTargets = findBestDigTargets(bot, grid, index, allBots, 10, restriction, reachable);
                 for (const t of digTargets) {
                     if (claimedSet.has(t.hex.id) || (mem.blacklistedTargets || []).includes(t.hex.id)) continue;
                     return { steps: [{ type: 'MOVE_TO', targetId: t.hex.id }, { type: 'DIG', targetId: t.hex.id }], createdAt: stateVersion, label: 'Race:DigForItems' };
                 }
             } else {
                 // Try to upgrade owned hexes first
-                const ownedHexes = Object.values(grid)
-                    .filter(h => h.ownerId === bot.id && h.structureType !== 'VOID')
+                const ownedHexes = index.getHexesByOwner(bot.id)
+                    .filter(h => h.structureType !== 'VOID')
                     .sort((a, b) => b.maxLevel - a.maxLevel);
                 
                 for (const owned of ownedHexes) {
+                    if (!reachable.has(owned.id)) continue;
                     if ((mem.blacklistedTargets || []).includes(owned.id)) continue;
                     const check = checkGrowthCondition(owned, bot, getNeighbors(owned.q, owned.r), grid, navObstacles);
                     if (check.canGrow) {
@@ -415,6 +531,15 @@ const buildCampaignPlan = (
                             createdAt: stateVersion,
                             label: `Race:UpgradeRank L${owned.maxLevel}`
                         };
+                    } else if (check.missingSupports && check.missingSupports.length > 0) {
+                        const resolved = resolveBuildChain(owned, bot, grid, index, 0);
+                        if (resolved && reachable.has(resolved.hex.id) && !(mem.blacklistedTargets || []).includes(resolved.hex.id)) {
+                            return {
+                                steps: [{ type: 'MOVE_TO', targetId: resolved.hex.id }, { type: 'UPGRADE', targetId: resolved.hex.id }],
+                                createdAt: stateVersion,
+                                label: `Race:ResolveSupport L${resolved.hex.maxLevel}`
+                            };
+                        }
                     }
                 }
                 for (const owned of ownedHexes) {
@@ -422,6 +547,7 @@ const buildCampaignPlan = (
                     for (const nb of nbs) {
                         const nbHex = grid[hexKey(nb.q, nb.r)];
                         if (!nbHex || nbHex.ownerId || nbHex.structureType === 'VOID') continue;
+                        if (!reachable.has(nbHex.id)) continue;
                         if (claimedSet.has(nbHex.id) || (mem.blacklistedTargets || []).includes(nbHex.id)) continue;
                         const nbCheck = checkGrowthCondition(nbHex, bot, getNeighbors(nb.q, nb.r), grid, navObstacles);
                         if (nbCheck.canGrow) {
@@ -430,6 +556,15 @@ const buildCampaignPlan = (
                                 createdAt: stateVersion,
                                 label: 'Race:ExpandRank'
                             };
+                        } else if (nbCheck.missingSupports && nbCheck.missingSupports.length > 0) {
+                            const resolved = resolveBuildChain(nbHex, bot, grid, index, 0);
+                            if (resolved && reachable.has(resolved.hex.id) && !(mem.blacklistedTargets || []).includes(resolved.hex.id)) {
+                                return {
+                                    steps: [{ type: 'MOVE_TO', targetId: resolved.hex.id }, { type: 'UPGRADE', targetId: resolved.hex.id }],
+                                    createdAt: stateVersion,
+                                    label: 'Race:ResolveExpandRank'
+                                };
+                            }
                         }
                     }
                 }
@@ -439,8 +574,10 @@ const buildCampaignPlan = (
                 let bestNeutral: Hex | null = null;
                 let bestScore = -9999;
 
-                for (const hex of Object.values(grid)) {
-                    if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
+                // Optimized: Use reachable set directly
+                for (const id of reachable) {
+                    const hex = grid[id];
+                    if (!hex || hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
                     if (hex.ownerId && hex.ownerId !== bot.id) continue;
                     if (hex.maxLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
                     
@@ -455,6 +592,17 @@ const buildCampaignPlan = (
                             bestScore = score;
                             bestNeutral = hex;
                         }
+                    } else if (check.missingSupports && check.missingSupports.length > 0) {
+                        const resolved = resolveBuildChain(hex, bot, grid, index, 0);
+                        if (resolved && reachable.has(resolved.hex.id) && !(mem.blacklistedTargets || []).includes(resolved.hex.id)) {
+                            const d = dist(botPos, resolved.hex);
+                            let score = -d;
+                            if (resolved.hex.currentLevel === 0) score += 5;
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestNeutral = resolved.hex;
+                            }
+                        }
                     }
                 }
 
@@ -468,8 +616,8 @@ const buildCampaignPlan = (
                 
                 // If we STILL couldn't build, and we have space to dig, dig.
                 if (bot.storage < (bot.maxStorage ?? 4)) {
-                    const restriction = monument ? buildMonumentRestriction(monument, grid, mem.isCampaign) : undefined;
-                    const digTargets = findBestDigTargets(bot, grid, allBots, 10, restriction);
+                    const restriction = monument ? buildMonumentRestriction(monument, index, mem.isCampaign) : undefined;
+                    const digTargets = findBestDigTargets(bot, grid, index, allBots, 10, restriction, reachable);
                     for (const t of digTargets) {
                         if (claimedSet.has(t.hex.id) || (mem.blacklistedTargets || []).includes(t.hex.id)) continue;
                         return { steps: [{ type: 'MOVE_TO', targetId: t.hex.id }, { type: 'DIG', targetId: t.hex.id }], createdAt: stateVersion, label: 'Race:DigForItems' };
@@ -478,7 +626,7 @@ const buildCampaignPlan = (
             }
         } else {
             if (monument) {
-                const target = findStaircaseTarget(bot, grid, monument, navObstacles, claimedSet, mem.blacklistedTargets || []);
+                const target = findStaircaseTarget(bot, grid, monument, navObstacles, claimedSet, mem.blacklistedTargets || [], reachable);
                 if (target) {
                     const { hex, levelsNeeded } = target;
                     const upgrades = Math.min(levelsNeeded, bot.storage, Math.max(0, MAX_COLUMN_HEIGHT - hex.currentLevel));
@@ -492,8 +640,8 @@ const buildCampaignPlan = (
                             label: `Race:Staircase ×${upgrades}`,
                         };
                     } else if (levelsNeeded > 0 && bot.storage === 0) {
-                        const restriction = buildMonumentRestriction(monument, grid, mem.isCampaign);
-                        const digTargets = findBestDigTargets(bot, grid, allBots, 10, restriction);
+                        const restriction = buildMonumentRestriction(monument, index, mem.isCampaign);
+                        const digTargets = findBestDigTargets(bot, grid, index, allBots, 10, restriction, reachable);
                         for (const t of digTargets) {
                             if (claimedSet.has(t.hex.id) || (mem.blacklistedTargets || []).includes(t.hex.id)) continue;
                             return { steps: [{ type: 'MOVE_TO', targetId: t.hex.id }, { type: 'DIG', targetId: t.hex.id }], createdAt: stateVersion, label: 'Race:DigForStairs' };
@@ -521,11 +669,13 @@ const buildPlan = (
     player: Entity,
     index: WorldIndex,
     activeLevelId?: string,
-    activeLevelConfig?: any
+    activeLevelConfig?: any,
+    reachable?: Set<string>
 ): Plan => {
+    const actualReachable = reachable ?? getReachableHexes(bot, grid, navObstacles, 20);
 
     if (activeLevelId) {
-        return buildCampaignPlan(bot, grid, monument, navObstacles, claimedSet, stateVersion, allBots, mem, player, index, activeLevelId, activeLevelConfig);
+        return buildCampaignPlan(bot, grid, monument, navObstacles, claimedSet, stateVersion, allBots, mem, player, index, activeLevelId, activeLevelConfig, actualReachable);
     }
 
     // SKIRMISH MODE
@@ -537,23 +687,25 @@ const buildPlan = (
 
     if (phase === 'EXPLORE') {
         // Fallback for campaign/skirmish: if bot is poor, prioritize economy over aimless wandering
-        if ((bot.moves ?? 0) < 15 && (bot.coins ?? 0) < 50) {
-            const competePlan = buildCompetePlan(bot, grid, navObstacles, claimedSet, stateVersion, mem);
+        // This prevents the "recovery-move" loop where bot spends every single move on ring-walking
+        if ((bot.moves ?? 0) < 10 && (bot.coins ?? 0) < 50) {
+            const competePlan = buildCompetePlan(bot, grid, index, navObstacles, claimedSet, stateVersion, mem, actualReachable);
             if (competePlan.steps.length > 0 && !competePlan.label.includes('Idle')) {
                 return competePlan;
             }
         }
 
         if (bot.storage === 0) {
-            const quickMine = buildMinePlan(bot, grid, navObstacles, claimedSet, stateVersion, allBots, null, mem);
+            const quickMine = buildMinePlan(bot, grid, index, navObstacles, claimedSet, stateVersion, allBots, null, mem, actualReachable);
             if (quickMine.steps.length > 0) return quickMine;
         }
         
-        const explorePlan = buildExplorePlan(bot, grid, navObstacles, claimedSet, stateVersion, allBots, mem);
+        const explorePlan = buildExplorePlan(bot, grid, index, navObstacles, claimedSet, stateVersion, allBots, mem, actualReachable);
         
         if (explorePlan.label === 'Explore:Done') {
             const targetInfo = findHiveTarget(bot, grid, index, mem.botRole as any, HIVE_RADIUS, player);
             if (targetInfo) {
+                if (!actualReachable.has(targetInfo.hex.id)) return { steps: [], createdAt: stateVersion, label: 'HIVE: Unreachable' };
                 const steps: PlanStep[] = [{ type: 'MOVE_TO', targetId: targetInfo.hex.id }];
                 if (targetInfo.actionType !== 'MOVE_ONLY') steps.push({ type: targetInfo.actionType, targetId: targetInfo.hex.id });
                 return { steps, createdAt: stateVersion, label: `HIVE: ${targetInfo.reason}` };
@@ -564,14 +716,14 @@ const buildPlan = (
     }
 
     if (phase === 'STOCKPILE') {
-        return buildStockpilePlan(bot, grid, monument!, navObstacles, claimedSet, stateVersion, allBots, mem);
+        return buildStockpilePlan(bot, grid, index, monument!, navObstacles, claimedSet, stateVersion, allBots, mem, actualReachable);
     }
 
     if (bot.storage < 1) {
         return { steps: [{ type: 'MINE_UNTIL_FULL' }], createdAt: stateVersion, label: 'Assault:Refill' };
     }
 
-    const target = findStaircaseTarget(bot, grid, monument!, navObstacles, claimedSet, mem.blacklistedTargets || []);
+    const target = findStaircaseTarget(bot, grid, monument!, navObstacles, claimedSet, mem.blacklistedTargets || [], actualReachable);
     
     if (target) {
         const { hex, levelsNeeded } = target;
@@ -632,7 +784,7 @@ const moveAndAct = (bot: Entity, target: Hex, actionType: 'UPGRADE' | 'DIG', gri
     return { action: { type: 'WAIT', stateVersion }, debug: `${debugPrefix}:NoPath`, memory: { ...mem, stuckCounter: (mem.stuckCounter ?? 0) + 1 } };
 };
 
-const executeStep = (step: PlanStep, bot: Entity, grid: Record<string, Hex>, navObstacles: HexCoord[], stateVersion: number, mem: BotMemory, monument: Hex | null, claimedSet: Set<string>, allBots: Entity[]): AiResult | 'STEP_DONE' | 'STEP_FAILED' => {
+const executeStep = (step: PlanStep, bot: Entity, grid: Record<string, Hex>, index: WorldIndex, navObstacles: HexCoord[], stateVersion: number, mem: BotMemory, monument: Hex | null, claimedSet: Set<string>, allBots: Entity[], reachable: Set<string>): AiResult | 'STEP_DONE' | 'STEP_FAILED' => {
     if (step.type === 'RECOVER') {
         if (!bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID') return { action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'RECOVER', stateVersion }, debug: 'Recover', memory: mem };
         return 'STEP_DONE';
@@ -640,8 +792,8 @@ const executeStep = (step: PlanStep, bot: Entity, grid: Record<string, Hex>, nav
 
     if (step.type === 'MINE_UNTIL_FULL') {
         if (bot.storage >= (bot.maxStorage ?? 4)) return 'STEP_DONE';
-        const restriction = monument ? buildMonumentRestriction(monument, grid, mem.isCampaign) : undefined;
-        const target = findBestDigTargets(bot, grid, allBots, 10, restriction).find(t => !claimedSet.has(t.hex.id) && !(mem.blacklistedTargets || []).includes(t.hex.id))?.hex;
+        const restriction = monument ? buildMonumentRestriction(monument, index, mem.isCampaign) : undefined;
+        const target = findBestDigTargets(bot, grid, index, allBots, 10, restriction, reachable).find(t => !claimedSet.has(t.hex.id) && !(mem.blacklistedTargets || []).includes(t.hex.id))?.hex;
         if (!target) return 'STEP_FAILED';
         mem.targetHexId = target.id;
         return moveAndAct(bot, target, 'DIG', grid, navObstacles, stateVersion, mem, 'Mine');
@@ -666,8 +818,17 @@ const executeStep = (step: PlanStep, bot: Entity, grid: Record<string, Hex>, nav
         }
 
         if (!calculateMovementCost(bot, [path[0]], grid).canAfford) {
-            if (!bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID') return { action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'RECOVER', stateVersion }, debug: 'FundMove', memory: mem };
+            if (!bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID') {
+                return { action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'RECOVER', stateVersion }, debug: 'FundMove', memory: mem };
+            }
+            // If we can't recover more on this hex but still can't afford move, we are stuck or need to wait
             return 'STEP_FAILED';
+        }
+
+        // Recovery-move loop prevention: if we only have 1 move, and we are in a multi-step plan,
+        // try to recover more if possible before spending the last move.
+        if (bot.moves <= 1 && !bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID') {
+             return { action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'RECOVER', stateVersion }, debug: 'BufferMove', memory: mem };
         }
         return { action: { type: 'MOVE', path: [path[0]], stateVersion }, debug: `MoveTo`, memory: { ...mem, waitStreak: 0 } };
     }
@@ -746,8 +907,10 @@ export const calculateBotMove = (
 
     const navObs   = buildNavObstacles(bot, obstacles, reservedHexKeys);
     const claimed  = buildClaimedSet(bot, allBots ?? []);
-    const monument = Object.values(grid).find(h => h.structureType === 'MONUMENT' && h.revealed) ?? null;
+    const monument = index.getHexesByStructureType('MONUMENT').find(h => h.botRevealed && h.botRevealed[bot.id]) ?? null;
     const bots     = allBots ?? [];
+    
+    const reachable = getReachableHexes(bot, grid, navObs, 50);
 
     const needsSurvival = bot.moves === 0 && bot.coins < GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE && !bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID';
     
@@ -767,13 +930,13 @@ export const calculateBotMove = (
 
     const planStale = (stateVersion - (mem.plan?.createdAt ?? 0)) > PLAN_TTL || (mem.waitStreak ?? 0) >= MAX_WAIT_STREAK;
     if (!mem.plan || mem.plan.steps.length === 0 || planStale) {
-        mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, activeLevelId, activeLevelConfig);
+        mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, activeLevelId, activeLevelConfig, reachable);
         mem.waitStreak = 0;
         mem.stuckCounter = 0;
     }
 
     while (mem.plan && mem.plan.steps.length > 0) {
-        const result = executeStep(mem.plan.steps[0], bot, grid, navObs, stateVersion, mem, monument, claimed, bots);
+        const result = executeStep(mem.plan.steps[0], bot, grid, index, navObs, stateVersion, mem, monument, claimed, bots, reachable);
         
         if (result === 'STEP_DONE') { 
             mem.plan.steps.shift(); 

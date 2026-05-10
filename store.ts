@@ -155,6 +155,8 @@ export const useGameStore = create<GameStore>()(
       voidDialogTarget: null,
       monumentDialogState: { isOpen: false, slots: [null, null, null] },
       lastVisualEvent: undefined,
+      isCampaignLoading: false,
+      loadingLevelId: null,
       overworld: {
           grid: {},
           player: {
@@ -269,8 +271,10 @@ export const useGameStore = create<GameStore>()(
       },
 
       startCampaignLevel: async (levelId) => {
+         set({ isCampaignLoading: true, loadingLevelId: levelId });
          const cfg = CAMPAIGN_LEVELS.find(l => l.id === levelId);
          if (cfg) await get().startNewGame(undefined, cfg);
+         set({ isCampaignLoading: false, loadingLevelId: null });
       },
 
       startMission: () => {

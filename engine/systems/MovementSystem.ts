@@ -17,6 +17,7 @@ export class MovementSystem implements System {
   }
 
   private processEntity(entity: Entity, state: SessionState, index: WorldIndex, events: GameEvent[], fullState: SessionState) {
+    this.updateVision(entity, state, index);
     if (entity.state !== EntityState.IDLE && entity.state !== EntityState.MOVING) {
       return;
     }
@@ -193,6 +194,35 @@ export class MovementSystem implements System {
         gridUpdates[newHexKey] = { ...newHex, durability: newDurability };
     }
 
+    // --- APPLY BATCH UPDATE ---
+    if (Object.keys(gridUpdates).length > 0) {
+        Object.assign(state.grid, gridUpdates);
+    }
+
+    // 4. Update State
+    const hasMoreMoves = entity.movementQueue.length > 0 && !entity.movementQueue[0].upgrade;
+    
+    if (!hasMoreMoves) {
+        entity.state = EntityState.IDLE;
+        entity.recoveredCurrentHex = false;
+        events.push(GameEventFactory.create('MOVE_COMPLETE', undefined, entity.id));
+        
+        // RE-CHECK: If we finished moving, check for Monument again (safety for instant arrival)
+        if (entity.type === EntityType.PLAYER) {
+             const key = getHexKey(entity.q, entity.r);
+             const hex = fullState.grid[key];
+             if (hex && hex.structureType === 'MONUMENT') {
+                 events.push(GameEventFactory.create('MONUMENT_REACHED', undefined, entity.id));
+             }
+        }
+    } else {
+        entity.state = EntityState.MOVING;
+    }
+  }
+
+  private updateVision(entity: Entity, state: SessionState, index: WorldIndex) {
+    const gridUpdates: Record<string, Hex> = {};
+    
     // C. MONUMENT DISCOVERY & FOG REVEAL
     // Only check if secret exists
     if (state.secretMonumentCoord) {
@@ -234,7 +264,11 @@ export class MovementSystem implements System {
                         const baseHex = generateSingleHex(q, r, state.activeLevelConfig);
                         
                         // Force Reveal
-                        baseHex.revealed = true;
+                        if (entity.type === EntityType.PLAYER) {
+                            baseHex.revealed = true;
+                        } else {
+                            baseHex.botRevealed = { [entity.id]: true };
+                        }
 
                         if (dist === 0) {
                             // CENTER: Monument
@@ -279,11 +313,20 @@ export class MovementSystem implements System {
     if (!startHex) {
         // Fallback for initial spot
         startHex = generateSingleHex(entity.q, entity.r, state.activeLevelConfig, state.winCondition?.mapType);
-        startHex.revealed = true;
+        if (entity.type === EntityType.PLAYER) {
+            startHex.revealed = true;
+        } else {
+            startHex.botRevealed = { [entity.id]: true };
+        }
         gridUpdates[startKey] = startHex;
         index.registerHex(startHex);
-    } else if (!startHex.revealed) {
-        gridUpdates[startKey] = { ...startHex, revealed: true };
+    } else {
+        const isPlayer = entity.type === EntityType.PLAYER;
+        if (isPlayer && !startHex.revealed) {
+            gridUpdates[startKey] = { ...startHex, revealed: true };
+        } else if (!isPlayer && (!startHex.botRevealed || !startHex.botRevealed[entity.id])) {
+            gridUpdates[startKey] = { ...startHex, botRevealed: { ...startHex.botRevealed, [entity.id]: true } };
+        }
     }
 
     // BFS Loop
@@ -332,11 +375,23 @@ export class MovementSystem implements System {
                         }
                     }
 
-                    newHex.revealed = true;
+                    if (entity.type === EntityType.PLAYER) {
+                        newHex.revealed = true;
+                    } else {
+                        newHex.botRevealed = { [entity.id]: true };
+                    }
                     gridUpdates[key] = newHex;
                     index.registerHex(newHex); // Incrementally index
-                } else if (!hex.revealed) {
-                    gridUpdates[key] = { ...hex, revealed: true };
+                } else {
+                    const isPlayer = entity.type === EntityType.PLAYER;
+                    const needsPlayerReveal = isPlayer && !hex.revealed;
+                    const needsBotReveal = !isPlayer && (!hex.botRevealed || !hex.botRevealed[entity.id]);
+                    
+                    if (needsPlayerReveal) {
+                        gridUpdates[key] = { ...(gridUpdates[key] || hex), revealed: true };
+                    } else if (needsBotReveal) {
+                        gridUpdates[key] = { ...(gridUpdates[key] || hex), botRevealed: { ...hex.botRevealed, [entity.id]: true } };
+                    }
                 }
                 
                 queue.push({ q: n.q, r: n.r, dist: dist + 1 });
@@ -344,29 +399,8 @@ export class MovementSystem implements System {
         }
     }
 
-    // --- APPLY BATCH UPDATE ---
     if (Object.keys(gridUpdates).length > 0) {
         Object.assign(state.grid, gridUpdates);
-    }
-
-    // 4. Update State
-    const hasMoreMoves = entity.movementQueue.length > 0 && !entity.movementQueue[0].upgrade;
-    
-    if (!hasMoreMoves) {
-        entity.state = EntityState.IDLE;
-        entity.recoveredCurrentHex = false;
-        events.push(GameEventFactory.create('MOVE_COMPLETE', undefined, entity.id));
-        
-        // RE-CHECK: If we finished moving, check for Monument again (safety for instant arrival)
-        if (entity.type === EntityType.PLAYER) {
-             const key = getHexKey(entity.q, entity.r);
-             const hex = fullState.grid[key];
-             if (hex && hex.structureType === 'MONUMENT') {
-                 events.push(GameEventFactory.create('MONUMENT_REACHED', undefined, entity.id));
-             }
-        }
-    } else {
-        entity.state = EntityState.MOVING;
     }
   }
 }

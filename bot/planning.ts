@@ -42,7 +42,7 @@ export const isLoadBearing = (hex: Hex, grid: Record<string, Hex>): boolean => {
     return false;
 };
 
-const resolveBuildChain = (
+export const resolveBuildChain = (
     target: Hex,
     bot: Entity,
     grid: Record<string, Hex>,
@@ -223,7 +223,7 @@ export const findHiveTarget = (
     let maxScore = -9999;
 
     if (role === 'BUILDER') {
-        const monument = Object.values(grid).find(h => h.structureType === 'MONUMENT' && h.revealed);
+        const monument = index.getHexesInRange({q: 0, r: 0}, 100).find(h => h.structureType === 'MONUMENT' && h.botRevealed && h.botRevealed[bot.id]);
         if (monument && monument.currentLevel < 10) {
             const chainResult = resolveBuildChain(monument, bot, grid, index, 0);
             if (chainResult) {
@@ -290,15 +290,28 @@ export const findHiveTarget = (
 export const findBestDigTargets = (
     bot: Entity,
     grid: Record<string, Hex>,
+    index: WorldIndex,
     _allBots: Entity[],
     limit: number = 5,
-    restrictedArea?: Set<string>
+    restrictedArea?: Set<string>,
+    reachable?: Set<string>
 ): { hex: Hex; score: number }[] => {
     
     const candidates: { hex: Hex; score: number }[] = [];
     const botPos = { q: bot.q, r: bot.r };
 
-    for (const hex of Object.values(grid)) {
+    let searchCandidates: Hex[] = [];
+    if (reachable) {
+        for (const id of reachable) {
+            const hex = grid[id];
+            if (hex) searchCandidates.push(hex);
+        }
+    } else {
+        const searchRadius = 20;
+        searchCandidates = index.getHexesInRange(botPos, searchRadius);
+    }
+
+    for (const hex of searchCandidates) {
         if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
         if (restrictedArea && restrictedArea.has(hex.id)) continue;
         

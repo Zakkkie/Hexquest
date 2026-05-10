@@ -264,7 +264,7 @@ export const generateLevel12Map = (_levelConfig: LevelConfig): Record<string, He
 
 export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTIC' = 'FLAT'): Record<string, Hex> => {
   let initialGrid: Record<string, Hex> = {};
-  const baseRadius = levelConfig?.mapConfig.size ?? 3;
+  const baseRadius = levelConfig?.mapConfig.size ?? 50;
   const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? baseRadius;
 
   // 1. Generate core area
@@ -344,7 +344,7 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
 
               initialGrid[nKey] = {
                   id: nKey, q: n.q, r: n.r,
-                  currentLevel: level, maxLevel: level, progress: 0, revealed: true,
+                  currentLevel: level, maxLevel: level, progress: 0, revealed: false,
                   biome: 'WATER',
                   isPassable: true
               };

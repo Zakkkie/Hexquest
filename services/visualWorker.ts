@@ -23,6 +23,13 @@ let cachedGrid: any = null;
 let cachedChunks: any = null;
 let cachedNeighborLevelsMap: Record<string, number[]> = {};
 
+let cachedPlayer: any = null;
+let cachedRotation: number = 0;
+let cachedBots: any = null;
+let cachedVisibleChunks: any = null;
+let cachedPendingKey: string | null = null;
+let cachedSelectedHexId: string | null = null;
+
 const calculateNeighborLevels = (grid: any) => {
     const map: Record<string, number[]> = {};
     for (const key in grid) {
@@ -31,7 +38,7 @@ const calculateNeighborLevels = (grid: any) => {
         const levels = neighbors.map(n => {
             const nKey = getHexKey(n.q, n.r);
             const nHex = grid[nKey];
-            return nHex ? nHex.maxLevel : VOID_LEVEL_FLAG;
+            return nHex ? (nHex.currentLevel ?? 0) : VOID_LEVEL_FLAG;
         });
         map[key] = levels;
     }
@@ -50,20 +57,27 @@ self.onmessage = (e) => {
         cachedGrid = grid;
         cachedChunks = chunks;
         cachedNeighborLevelsMap = calculateNeighborLevels(grid);
-        // Don't post back yet, wait for view update or just send neighbor map
         self.postMessage({ neighborLevelsMap: cachedNeighborLevelsMap });
-        return;
+        // Don't return, fall through to re-render if we have the view cached
+        if (!cachedPlayer) return; 
+    } else {
+        cachedRotation = rotation;
+        cachedPlayer = player;
+        cachedBots = bots;
+        cachedVisibleChunks = visibleChunks;
+        cachedPendingKey = pendingKey;
+        cachedSelectedHexId = selectedHexId;
     }
 
     // Default or 'UPDATE_VIEW'
-    const currentGrid = grid || cachedGrid;
-    const currentChunks = chunks || cachedChunks;
+    const currentGrid = cachedGrid;
+    const currentChunks = cachedChunks;
     
-    if (!currentGrid || !player) return;
+    if (!currentGrid || !cachedPlayer) return;
 
     const items: any[] = [];
 
-    const angleRad = rotation * (Math.PI / 180);
+    const angleRad = cachedRotation * (Math.PI / 180);
     const cos = Math.cos(angleRad);
     const sin = Math.sin(angleRad);
     const SQRT3 = Math.sqrt(3);
@@ -71,19 +85,20 @@ self.onmessage = (e) => {
     const ONE_POINT_FIVE = 1.5;
 
     // 2. Collect Hexes from visible chunks
-    if (visibleChunks && currentChunks) {
-        for (const chunkKey of visibleChunks) {
+    if (cachedVisibleChunks && currentChunks) {
+        for (const chunkKey of cachedVisibleChunks) {
             const hexes = currentChunks[chunkKey];
             if (!hexes) continue;
 
             for (const hex of hexes) {
-                const distToPlayer = cubeDistance({ q: player.q, r: player.r }, { q: hex.q, r: hex.r });
+                const distToPlayer = cubeDistance({ q: cachedPlayer.q, r: cachedPlayer.r }, { q: hex.q, r: hex.r });
                 if (distToPlayer > 20) continue;
 
                 const rawX = HEX_SIZE * (SQRT3 * hex.q + SQRT3_2 * hex.r);
                 const rawY = HEX_SIZE * (ONE_POINT_FIVE * hex.r);
-                const px = rawX * cos - rawY * sin;
-                const py = (rawX * sin + rawY * cos) * 0.8;
+                
+                // Depth for sorting ONLY
+                const depth = (rawX * sin + rawY * cos) * 0.8;
 
                 let opacity = 1.0;
                 if (distToPlayer > 16) {
@@ -92,19 +107,22 @@ self.onmessage = (e) => {
                 if (opacity <= 0) continue;
 
                 const isVoid = (hex.structureType as string) === 'VOID';
-                const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : hex.maxLevel);
+                const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : hex.currentLevel ?? 0);
 
-                const isPending = hex.id === pendingKey;
-                const isOccupiedByPlayer = hex.q === player.q && hex.r === player.r;
+                const isPending = hex.id === cachedPendingKey;
+                const isOccupiedByPlayer = hex.q === cachedPlayer.q && hex.r === cachedPlayer.r;
                 
                 const neighborLevels = cachedNeighborLevelsMap[hex.id] || [VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG];
 
+                // Fog of War opacity 
+                const finalOpacity = hex.revealed ? opacity : opacity * 0.25;
+
                 items.push({
                     type: 'HEX',
-                    depth: py,
+                    depth: depth, // Sort STRICTLY by base depth (grid position) without offsetY!
                     id: hex.id,
                     props: {
-                        x: px, y: py,
+                        x: rawX, y: rawY, // Pass raw coordinates!
                         q: hex.q, r: hex.r,
                         id: hex.id,
                         offsetY,
@@ -112,18 +130,20 @@ self.onmessage = (e) => {
                         maxLevel: hex.maxLevel,
                         structureType: hex.structureType as string,
                         neighborLevels,
-                        isSelected: selectedHexId === hex.id,
+                        isSelected: cachedSelectedHexId === hex.id,
                         isPending,
-                        isOccupied: isOccupiedByPlayer || (bots && bots.some((b: any) => b.q===hex.q && b.r===hex.r)),
-                        isGrowing: hex.progress > 0 && !isVoid,
-                        isRankLocked: hex.maxLevel > player.playerLevel,
-                        progress: hex.progress,
-                        durability: hex.durability,
-                        artifactType: hex.artifact?.type,
+                        // hide specific state if not revealed
+                        isOccupied: hex.revealed && (isOccupiedByPlayer || (cachedBots && cachedBots.some((b: any) => b.q===hex.q && b.r===hex.r))),
+                        isGrowing: hex.revealed && hex.progress > 0 && !isVoid,
+                        isRankLocked: hex.maxLevel > cachedPlayer.playerLevel,
+                        progress: hex.revealed ? hex.progress : 0,
+                        durability: hex.revealed ? hex.durability : undefined,
+                        artifactType: hex.revealed ? hex.artifact?.type : undefined,
                         biome: hex.biome,
                         poiType: hex.poiType,
                         isPassable: hex.isPassable,
-                        opacity
+                        isRevealed: hex.revealed,
+                        opacity: finalOpacity
                     }
                 });
             }
@@ -131,26 +151,33 @@ self.onmessage = (e) => {
     }
 
     // 3. Collect Units
-    const allEntities = [{ ...player, isPlayer: true }, ...(bots || []).map((b: any) => ({ ...b, isPlayer: false }))];
+    const allEntities = [{ ...cachedPlayer, isPlayer: true }, ...(cachedBots || []).map((b: any) => ({ ...b, isPlayer: false }))];
     for (const u of allEntities) {
+        if (!u.isPlayer) {
+            const uHex = currentGrid[getHexKey(u.q, u.r)];
+            if (!uHex || !uHex.revealed) continue;
+        }
+
         const rawX = HEX_SIZE * (SQRT3 * u.q + SQRT3_2 * u.r);
         const rawY = HEX_SIZE * (ONE_POINT_FIVE * u.r);
-        const upx = rawX * cos - rawY * sin;
-        const upy = (rawX * sin + rawY * cos) * 0.8;
+        
+        // Depth for sorting ONLY
+        const baseDepth = (rawX * sin + rawY * cos) * 0.8;
 
         const uHex = currentGrid[getHexKey(u.q, u.r)];
-        const hLevel = uHex ? uHex.maxLevel : 0;
+        const hLevel = uHex ? (uHex.currentLevel ?? 0) : 0;
+        
         const isMoving = u.state === 'MOVING';
         const depthBias = isMoving ? 50 : 1; 
 
         items.push({
             type: 'UNIT',
-            depth: upy + depthBias,
+            depth: baseDepth + depthBias,
             id: u.id,
             props: {
                 id: u.id,
                 q: u.q, r: u.r,
-                x: upx, y: upy,
+                x: rawX, y: rawY, // Pass raw coordinates!
                 isPlayer: u.isPlayer,
                 color: u.avatarColor,
                 hexLevel: hLevel,
@@ -165,5 +192,10 @@ self.onmessage = (e) => {
     // 4. Sort by depth
     items.sort((a, b) => a.depth - b.depth);
 
-    self.postMessage({ neighborLevelsMap: cachedNeighborLevelsMap, renderItems: items });
+    // 5. Check if sorted order changed
+    const newOrderHash = items.map(i => i.id).join(',');
+    if (newOrderHash !== (self as any).lastOrderHash || type !== 'UPDATE_VIEW') {
+        (self as any).lastOrderHash = newOrderHash;
+        self.postMessage({ neighborLevelsMap: cachedNeighborLevelsMap, renderItems: items });
+    }
 };

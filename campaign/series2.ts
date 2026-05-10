@@ -32,8 +32,8 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.1',
-    title: 'Sim 2.1: The Monolith',
-    description: 'Target: Unknown Spire.\n\nObjective: Reach the Monolith (Center, L3). It requires NO items to activate. Just step on it and press ACTIVATE in the interface.\n\nProblem: Direct path blocked by L4 wall. Find the staircase along the left ridge.\n\nStart: Almost no fuel. Use RECOVERY (Blue) on your start hex, then MOVE away and back to reset it. Repeat to stockpile fuel.\n\nLOSS CONDITION: Stranded (No moves, no credits, no recovery options).',
+    title: 'Sim 2.1: Монолит',
+    description: 'Цель: Неизвестный Шпиль.\n\nЗадача: Доберитесь до Монолита (Центр, Ур. 3). Для его активации НЕ требуются предметы. Просто встаньте на него и нажмите АКТИВИРОВАТЬ в интерфейсе.\n\nПроблема: Прямой путь заблокирован стеной Ур. 4. Найдите лестницу вдоль левого хребта.\n\nСтарт: Топлива почти нет. Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на стартовом гексе, затем отойдите и вернитесь, чтобы сбросить его. Повторяйте, чтобы накопить топливо.\n\nУСЛОВИЕ ПРОИГРЫША: Вы застряли (Нет ходов, нет кредитов, нет вариантов восстановления).',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -70,8 +70,8 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.2',
-    title: 'Sim 2.2: Buried Secrets',
-    description: 'Scan: Activation Keys detected underground.\n\nObjective: Collect 3 ANY ITEMS. Step onto the Monolith, insert them into the slots, and press ACTIVATE.\n\nMethod: DIG (Red) below L0. Each new negative depth has a loot chance. Deeper = better odds (20% at -1, 30% at -2, 40% at -3...).\n\nTip: Digging gives +Moves and +Material. You earn fuel by exploring.\n\nLOSS CONDITION: Stranded.',
+    title: 'Sim 2.2: Погребенные Тайны',
+    description: 'Сканирование: Под землей обнаружены ключи активации.\n\nЗадача: Соберите ЛЮБЫЕ 3 ПРЕДМЕТА. Встаньте на Монолит, вставьте их в слоты и нажмите АКТИВИРОВАТЬ.\n\nМетод: КОПАЙТЕ (Красная кнопка) ниже Ур. 0. Каждая новая отрицательная глубина дает шанс на добычу. Чем глубже, тем выше шансы (20% на -1, 30% на -2, 40% на -3...).\n\nСовет: Копание дает +Ходы и +Материал. Вы зарабатываете топливо, исследуя глубины.\n\nУСЛОВИЕ ПРОИГРЫША: Вы застряли.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -107,8 +107,8 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.3',
-    title: 'Sim 2.3: Entropy Rising',
-    description: 'ALERT: Sector highly unstable.\n\nObjective: Reach the Monolith (L4) and ACTIVATE it.\n\nConstraint: You start at Rank 3. The Monolith is L4. You CANNOT step on it yet. You must use your starting Materials to BUILD a supporting L4 hex nearby to gain Rank 4!\n\nMechanic: Every action costs Entropy (Starts at 15). At 0 → catastrophic shift.\n\nLOSS CONDITION: Entropy reaches 0, you fall into VOID, OR become Stranded.',
+    title: 'Sim 2.3: Растущая Энтропия',
+    description: 'ВНИМАНИЕ: Сектор крайне нестабилен.\n\nЗадача: Доберитесь до Монолита (Ур. 4) и АКТИВИРУЙТЕ его.\n\nОграничение: Вы начинаете с Рангом 3. Монолит имеет Ур. 4. Вы ПОКА НЕ МОЖЕТЕ на него наступить. Вы должны использовать стартовые материалы, чтобы ПОСТРОИТЬ поддерживающий гекс Ур. 4 рядом, чтобы получить Ранг 4!\n\nМеханика: Каждое действие стоит Энтропии (Начинается с 15). При 0 → катастрофический сдвиг.\n\nУСЛОВИЕ ПРОИГРЫША: Энтропия достигла 0, вы провалились в ПУСТОТУ или застряли.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -154,8 +154,8 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.4',
-    title: 'Sim 2.4: The Rivalry',
-    description: 'THREAT: Hostile unit approaching.\n\nObjective: Find 2 ITEMS and activate the Monolith BEFORE the Rival.\n\nStart: Nearly empty. DIG sites along your path for fuel and artifacts. The Rival approaches from the north.\n\nDEFEAT: The Bot reaches the Monument first OR you become Stranded.',
+    title: 'Sim 2.4: Соперничество',
+    description: 'УГРОЗА: Приближается враждебная единица.\n\nЗадача: Найдите 2 ПРЕДМЕТА и активируйте Монолит РАНЬШЕ Соперника.\n\nСтарт: Ресурсов почти нет. КОПАЙТЕ участки на своем пути для получения топлива и артефактов. Соперник приближается с севера.\n\nПОРАЖЕНИЕ: Бот достигает Монолита первым ИЛИ вы застряли.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -199,8 +199,8 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.5',
-    title: 'Sim 2.5: The Singularity',
-    description: 'FINAL TEST: Two hostiles converge.\n\nObjective: Collect 3 ITEMS and activate the Core (L5) first.\n\nStart: Near-empty. DIG deep along your spiral for fuel + artifacts. Two rivals approach from the North and East.\n\nTip: Deeper digs give more Moves AND better loot odds.\n\nDEFEAT: Any Bot reaches the Monument first OR you become Stranded.',
+    title: 'Sim 2.5: Сингулярность',
+    description: 'ФИНАЛЬНЫЙ ТЕСТ: Сближаются две враждебные единицы.\n\nЗадача: Соберите 3 ПРЕДМЕТА и активируйте Ядро (Ур. 5) первым.\n\nСтарт: Ресурсов почти нет. КОПАЙТЕ глубоко вдоль своей спирали для получения топлива и артефактов. Два соперника приближаются с севера и востока.\n\nСовет: Глубокие раскопки дают больше Ходов И лучшие шансы на добычу.\n\nПОРАЖЕНИЕ: Любой бот достигает Монолита первым ИЛИ вы застряли.',
     mapConfig: {
       size: 7, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
@@ -241,6 +241,33 @@ export const series2Levels: LevelConfig[] = [
         if (state.bots?.some(b => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT')) return true;
         return isStranded(state);
       }
+    }
+  },
+  {
+    id: '2.6',
+    title: 'Sim 2.6: Глубинное Эхо',
+    description: 'Цель: Опуститесь на глубину -5. Используйте укрепления, чтобы избежать обвала. Глубокие слои нестабильны, но хранят древние артефакты.',
+    goalText: 'Достигните глубины -5',
+    mapConfig: {
+      size: 5, type: 'fixed', generateWalls: false,
+      customLayout: [
+        { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
+        { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+      ]
+    },
+    startState: { credits: 100, moves: 30, rank: 1, materials: 10, initialEntropy: 100 },
+    aiMode: 'none',
+    hooks: {
+      checkWinCondition: (state) => {
+        const playerHex = state.grid[getHexKey(state.player.q, state.player.r)];
+        return playerHex && playerHex.currentLevel <= -5;
+      },
+      checkLossCondition: (state) => isStranded(state)
     }
   }
 ];

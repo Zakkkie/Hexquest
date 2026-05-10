@@ -6,7 +6,7 @@ import { Hexagon, Terminal, ArrowRight } from 'lucide-react';
 import { TEXT } from '../services/i18n.ts';
 
 const CampaignLoading: React.FC = () => {
-  const { setUIState, session, language } = useGameStore();
+  const { setUIState, session, language, loadingLevelId } = useGameStore();
   const [progress, setProgress] = useState(0);
   const [loadingText, setLoadingText] = useState('');
 
@@ -54,7 +54,7 @@ const CampaignLoading: React.FC = () => {
     setUIState('GAME');
   };
 
-  const levelConfig = session?.activeLevelConfig || CAMPAIGN_LEVELS.find(l => l.id === useGameStore.getState().loadingLevelId);
+  const levelConfig = session?.activeLevelConfig || CAMPAIGN_LEVELS.find(l => l.id === loadingLevelId);
   
   let displayTitle = '';
   if (levelConfig) {

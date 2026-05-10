@@ -10,7 +10,7 @@ import MapWorker from './map.worker?worker';
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e'];
 
 export const generateMapAsync = async (levelConfig: LevelConfig | undefined, mapType: string): Promise<Record<string, any>> => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     try {
       const worker = new MapWorker();
       worker.onmessage = (e: MessageEvent) => {
@@ -18,13 +18,22 @@ export const generateMapAsync = async (levelConfig: LevelConfig | undefined, map
         worker.terminate();
       };
       worker.onerror = (e: ErrorEvent) => {
-        reject(e);
+        console.warn('MapWorker runtime error, falling back to sync map generation', e);
+        resolve(generateMap(levelConfig, mapType as any));
         worker.terminate();
       };
-      worker.postMessage({ levelConfig, mapType });
+      
+      // Strip hooks from levelConfig before sending to worker to avoid cloning errors
+      // Hooks contain functions which cannot be cloned for postMessage
+      const safeLevelConfig = levelConfig ? {
+        ...levelConfig,
+        hooks: undefined
+      } : undefined;
+      
+      worker.postMessage({ levelConfig: safeLevelConfig, mapType });
     } catch (err) {
-      // Fallback to synchronous if worker fails to initialize
-      console.warn('WebWorker failed to initialize, falling back to sync map generation', err);
+      // Fallback to synchronous if worker fails to initialize or postMessage fails
+      console.warn('WebWorker failed to initialize or postMessage failed, falling back to sync map generation', err);
       resolve(generateMap(levelConfig, mapType as any));
     }
   });
@@ -126,26 +135,18 @@ export const createInitialSessionDataAsync = async (
   const bots: Entity[] = [];
   const defaultSpawnPoints = [{ q: 0, r: -2 }, { q: 2, r: -2 }, { q: 2, r: 0 }, { q: 0, r: 2 }, { q: -2, r: 2 }, { q: -2, r: 0 }];
   
-  const campaignBotSpawns: Record<string, HexCoord[]> = {
-      '1.6': [{ q: 0, r: -2 }],
-      '2.4': [{ q: 0, r: -3 }],
-      '2.5': [{ q: 3, r: -3 }, { q: -3, r: 0 }],
-      '3.5': [{ q: 3, r: 0 }],
-      '3.6': [{ q: -1, r: 0 }],
-      '4.5': [{ q: 0, r: -3 }],
-  };
-
-  const levelSpawns = levelConfig ? (levelConfig.botSpawnPoints || campaignBotSpawns[levelConfig.id]) : null;
+  const levelSpawns = levelConfig?.botSpawnPoints || null;
 
   for (let i = 0; i < botCount; i++) {
     const sp = levelSpawns && levelSpawns[i] ? levelSpawns[i] : defaultSpawnPoints[i % defaultSpawnPoints.length];
     
     const key = getHexKey(sp.q, sp.r);
+    const botId = `bot-${i+1}`;
     if (!initialGrid[key]) {
-        initialGrid[key] = { id: key, q: sp.q, r: sp.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true };
+        initialGrid[key] = { id: key, q: sp.q, r: sp.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: false, botRevealed: { [botId]: true } };
         getNeighbors(sp.q, sp.r).forEach(n => {
             const nk = getHexKey(n.q, n.r);
-            if (!initialGrid[nk]) initialGrid[nk] = { id: nk, q: n.q, r: n.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: true };
+            if (!initialGrid[nk]) initialGrid[nk] = { id: nk, q: n.q, r: n.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: false, botRevealed: { [botId]: true } };
         });
     }
 
@@ -154,7 +155,7 @@ export const createInitialSessionDataAsync = async (
     const botRoute = levelConfig?.botRoutes && levelConfig.botRoutes[i] ? levelConfig.botRoutes[i] : undefined;
 
     bots.push({
-      id: `bot-${i+1}`, type: EntityType.BOT, state: EntityState.IDLE, q: sp.q, r: sp.r,
+      id: botId, type: EntityType.BOT, state: EntityState.IDLE, q: sp.q, r: sp.r,
       playerLevel: startRank, 
       coins: startCredits,
       moves: botStartMoves,

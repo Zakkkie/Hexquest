@@ -514,7 +514,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                     ...item,
                     props: {
                         ...item.props,
-                        rotation,
                         theme,
                         pendingCost: item.props.isPending && pendingConfirmation ? pendingConfirmation.data.costCoins : null,
                         isTutorialTarget: isTutorial,
@@ -530,7 +529,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                     props: {
                         ...item.props,
                         type: item.props.isPlayer ? EntityType.PLAYER : EntityType.BOT,
-                        rotation,
                         onMoveComplete: spawnDust
                     }
                 };
@@ -538,7 +536,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         }).filter(Boolean);
 
         return { items };
-    }, [grid, player, rotation, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems]);
+    }, [grid, player, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems]);
 
     return (
         <>

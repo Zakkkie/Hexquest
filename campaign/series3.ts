@@ -44,8 +44,8 @@ export const series3Levels: LevelConfig[] = [
   //
   {
     id: '3.1',
-    title: 'First Inscription',
-    description: 'An ancient transmission carved into stone.\n\nObjective: Activate the Monument at the summit.\n\nMechanic: Obelisks (L3 pillars) inscribe the required item silhouette into the Monument interface. Visit one to learn what it needs — or guess.\n\nEntropic Warning: Two stability events will occur. The second ends the mission.',
+    title: 'Первая Надпись',
+    description: 'Древняя передача, высеченная в камне.\n\nЗадача: Активируйте Монумент на вершине.\n\nМеханика: Обелиски (колонны Ур. 3) вписывают силуэт требуемого предмета в интерфейс Монумента. Посетите один, чтобы узнать, что ему нужно — или угадайте.\n\nЭнтропийное Предупреждение: Произойдут два события стабильности. Второе завершит миссию.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -119,8 +119,8 @@ export const series3Levels: LevelConfig[] = [
   //
   {
     id: '3.2',
-    title: 'Twin Beacons',
-    description: 'Two obelisks flank the summit. Each holds half the inscription.\n\nObjective: Activate the 2-slot Monument.\n\nPath: The route splits. Each branch leads through one obelisk. Visit both for full information — but it costs moves.\n\nStrategy: Can you infer the second slot from your inventory alone?',
+    title: 'Близнецы-Маяки',
+    description: 'Два обелиска стоят по бокам от вершины. Каждый хранит половину надписи.\n\nЗадача: Активируйте Монумент с 2 слотами.\n\nПуть: Маршрут разделяется. Каждая ветвь ведет через один обелиск. Посетите оба для получения полной информации — но это стоит ходов.\n\nСтратегия: Сможете ли вы угадать второй слот только по своему инвентарю?',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -203,8 +203,8 @@ export const series3Levels: LevelConfig[] = [
   //
   {
     id: '3.3',
-    title: 'Eclipse Depth',
-    description: 'The inscription demands quality, not identity.\n\nObjective: Activate the Monument with an UNCOMMON item.\n\nThe obelisk on your path reveals the rarity requirement. A common item will not suffice.\n\nVoid walls close both flanks. There is only one way forward.',
+    title: 'Глубина Затмения',
+    description: 'Надпись требует качества, а не личности.\n\nЗадача: Активируйте Монумент НЕОБЫЧНЫМ предметом.\n\nОбелиск на вашем пути раскрывает требование к редкости. Обычный предмет не подойдет.\n\nСтены пустоты закрывают оба фланга. Есть только один путь вперед.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -279,8 +279,8 @@ export const series3Levels: LevelConfig[] = [
   //
   {
     id: '3.4',
-    title: 'Entropic Dispatch',
-    description: 'Stability is collapsing. You have moments.\n\nObjective: Activate the 2-slot Monument before the second event.\n\nHazard: A stability event occurs every 10 actions. Two events = mission failure.\n\nDecision: Two obelisks flank the path. You can only reach one. Choose wisely — or trust your inventory.',
+    title: 'Энтропийная Депеша',
+    description: 'Стабильность рушится. У вас мало времени.\n\nЗадача: Активируйте Монумент с 2 слотами до второго события.\n\nОпасность: Событие стабильности происходит каждые 10 действий. Два события = провал миссии.\n\nРешение: Два обелиска стоят по бокам пути. Вы можете добраться только до одного. Выбирайте мудро — или доверьтесь своему инвентарю.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -359,8 +359,8 @@ export const series3Levels: LevelConfig[] = [
   //
   {
     id: '3.5',
-    title: "Guardian's Keep",
-    description: 'Something watches the inscription.\n\nObjective: Activate the Monument with a RARE item.\n\nThreat: A guardian bot patrols the junction. The obelisk reveals which RARE item is needed — but reaching it is dangerous.\n\nStrategy: Can you recognize the RARE item you carry without visiting the obelisk?',
+    title: "Цитадель Стража",
+    description: 'Что-то следит за надписью.\n\nЗадача: Активируйте Монумент РЕДКИМ предметом.\n\nУгроза: Бот-страж патрулирует перекресток. Обелиск раскрывает, какой именно РЕДКИЙ предмет нужен — но добраться до него опасно.\n\nСтратегия: Сможете ли вы узнать нужный РЕДКИЙ предмет без посещения обелиска?',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -441,8 +441,8 @@ export const series3Levels: LevelConfig[] = [
   //
   {
     id: '3.6',
-    title: 'Three Whispers',
-    description: 'The monument speaks in three voices — all saying the same thing.\n\nObjective: Activate the Monument with one of three possible items.\n\nThree obelisks have carved the same inscription: the slot accepts any of 3 specific UNCOMMON items. Find even one to win.\n\nThe center obelisk is unavoidable. The others reveal only echoes.',
+    title: 'Три Шепота',
+    description: 'Монумент говорит тремя голосами — и все они говорят одно и то же.\n\nЗадача: Активируйте Монумент одним из трех возможных предметов.\n\nТри обелиска высекли одну и ту же надпись: слот принимает любой из 3 конкретных НЕОБЫЧНЫХ предметов. Найдите хотя бы один, чтобы победить.\n\nЦентральный обелиск неизбежен. Остальные открывают лишь отголоски.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -514,8 +514,8 @@ export const series3Levels: LevelConfig[] = [
   //
   {
     id: '3.7',
-    title: 'Ascendancy',
-    description: 'Another agent races for the summit.\n\nObjective: Activate the 2-slot Monument before entropy fails.\n\nCompetition: A rival agent builds toward rank, adding pressure. They won\'t activate the monument — but they consume time.\n\nTwo obelisks hold the inscription. Can you reach both within 29 actions?',
+    title: 'Господство',
+    description: 'Другой агент рвется к вершине.\n\nЗадача: Активируйте Монумент с 2 слотами, пока энтропия не подвела.\n\nКонкуренция: Соперник наращивает ранг, создавая давление. Он не будет активировать монумент — но он поглощает время.\n\nДва обелиска хранят надпись. Сможете ли вы добраться до обоих за 29 действий?',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -605,8 +605,8 @@ export const series3Levels: LevelConfig[] = [
   //
   {
     id: '3.8',
-    title: 'The Archive',
-    description: 'Final entry. Three inscriptions. One monument.\n\nObjective: Activate the 3-slot Monument.\n\nThree obelisks hold three slot revelations. The central one is unavoidable. Side obelisks require detours — but without them, you guess blind.\n\nA hostile agent patrols the upper levels. You have 23 actions.',
+    title: 'Архив',
+    description: 'Последняя запись. Три надписи. Один монумент.\n\nЗадача: Активируйте Монумент с 3 слотами.\n\nТри обелиска хранят три откровения слотов. Центральный неизбежен. Боковые обелиски требуют отклонения от маршрута — но без них вы будете гадать вслепую.\n\nВраждебный агент патрулирует верхние уровни. У вас есть 23 действия.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [

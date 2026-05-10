@@ -4,6 +4,7 @@ import { Group, Path, Circle, Text, Rect, Line, Star } from 'react-konva';
 import Konva from 'konva';
 import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { textureService } from '../services/textureService.ts';
+import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
 
 const DEG_TO_RAD = Math.PI / 180;
 const ARROW_UP_PATH = "M12 4l-8 8h6v8h4v-8h6z";
@@ -25,7 +26,6 @@ export interface HexNodeProps {
   x: number;
   y: number;
   offsetY: number;
-  rotation: number;
   level: number;
   maxLevel: number;
   structureType: string | undefined;
@@ -77,7 +77,7 @@ const CRACK_PATHS = [
 
 const HexNodeComponent = (props: HexNodeProps) => {
   const { 
-      x, y, offsetY, rotation, level, maxLevel, neighborLevels, structureType,
+      x, y, offsetY, level, maxLevel, neighborLevels, structureType,
       theme, isSelected, isPending, pendingCost, 
       isTutorialTarget, isTargetArrow, tutorialColor, isMissingSupport, 
       isGrowing, isRankLocked, progress, durability, artifactType,
@@ -89,12 +89,12 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Textures are now always loaded since LOD is removed
   const topTexture = useMemo(() => {
-      return textureService.getTexture(maxLevel, q, r, undefined);
-  }, [maxLevel, q, r]);
+      return textureService.getTexture(level, q, r, undefined);
+  }, [level, q, r]);
 
   const sideTexture = useMemo(() => {
-      return textureService.getSideTexture(maxLevel, undefined);
-  }, [maxLevel]);
+      return textureService.getSideTexture(level, undefined);
+  }, [level]);
 
   const isRealVoid = structureType === 'VOID';
   const isMonument = structureType === 'MONUMENT';
@@ -121,37 +121,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
       }
   };
 
-  // Wall Geometry & Visibility
-  const wallData = useMemo(() => {
-      const angleOffset = rotation * DEG_TO_RAD;
-      const walls = [];
-      const pts = [];
-
-      // Calculate points first
-      for (let i = 0; i < 6; i++) {
-          const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
-          pts.push({ 
-              x: Math.cos(angle) * HEX_SIZE, 
-              y: Math.sin(angle) * HEX_SIZE * 0.8 + offsetY,
-              visible: Math.sin(angle) > -0.01 
-          });
-      }
-
-      // Generate wall quads
-      for(let i=0; i<6; i++) {
-          const next = (i + 1) % 6;
-          const midAngle = (60 * i + 60) * DEG_TO_RAD + angleOffset; 
-          const isFrontFacing = Math.sin(midAngle) > 0;
-
-          walls.push({
-              t1: pts[i],
-              t2: pts[next],
-              visible: isFrontFacing
-          });
-      }
-      return walls;
-  }, [offsetY, rotation]);
-
   const handleClick = (e: any) => {
       if (e.evt && e.evt.button !== undefined && e.evt.button !== 0) return;
       e.cancelBubble = true;
@@ -172,6 +141,108 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const voidOutlineRef = useRef<Konva.Path>(null);
   const monumentGlowRef = useRef<Konva.Path>(null);
   const arrowRef = useRef<Konva.Group>(null);
+  
+  const groupRef = useRef<Konva.Group>(null);
+  const topFaceGroupRef = useRef<Konva.Group>(null);
+  const wallGroupRefs = useRef<(Konva.Group | null)[]>([]);
+  const wallPathRefs = useRef<(Konva.Path | null)[]>([]);
+  const wallShadeRefs = useRef<(Konva.Path | null)[]>([]);
+  const voidWallGroupRefs = useRef<(Konva.Group | null)[]>([]);
+  const voidWallPathRefs = useRef<(Konva.Path | null)[]>([]);
+
+  useEffect(() => {
+      const updater = (cos: number, sin: number, rot: number) => {
+          if (groupRef.current) {
+              const px = x * cos - y * sin;
+              const py = (x * sin + y * cos) * 0.8;
+              groupRef.current.position({ x: px, y: py });
+          }
+          if (topFaceGroupRef.current) {
+              topFaceGroupRef.current.rotation(rot);
+          }
+          
+          const angleOffset = rot * DEG_TO_RAD;
+          const pts = [];
+          for (let i = 0; i < 6; i++) {
+              const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
+              pts.push({ 
+                  x: Math.cos(angle) * HEX_SIZE, 
+                  y: Math.sin(angle) * HEX_SIZE * 0.8 + offsetY
+              });
+          }
+
+          for(let i=0; i<6; i++) {
+              const next = (i + 1) % 6;
+              const midAngle = (60 * i + 60) * DEG_TO_RAD + angleOffset; 
+              const isFrontFacing = Math.sin(midAngle) > 0;
+              
+              const t1 = pts[i];
+              const t2 = pts[next];
+
+              // Normal Walls
+              const groupNode = wallGroupRefs.current[i];
+              if (groupNode) {
+                  if (isFrontFacing) {
+                      const nLevel = neighborLevels[5 - i];
+                      let nY = 0;
+                      if (nLevel === -99) nY = offsetY + MAX_WALL_DEPTH; 
+                      else if (nLevel >= 0) nY = -(10 + nLevel * 10);
+                      else nY = (Math.abs(nLevel) - 1) * 10;
+
+                      if (offsetY < nY) {
+                          const safeNY = Math.min(nY, offsetY + MAX_WALL_DEPTH);
+                          const heightDiff = safeNY - offsetY;
+                          const b1x = t2.x;
+                          const b1y = t2.y + heightDiff;
+                          const b2x = t1.x;
+                          const b2y = t1.y + heightDiff;
+                          
+                          const data = `M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`;
+                          
+                          groupNode.show();
+                          const pathNode = wallPathRefs.current[i];
+                          if (pathNode) {
+                              pathNode.data(data);
+                              pathNode.fillPatternScale({ x: 1, y: heightDiff / 64 });
+                          }
+                          const shadeNode = wallShadeRefs.current[i];
+                          if (shadeNode) shadeNode.data(data);
+                      } else {
+                          groupNode.hide();
+                      }
+                  } else {
+                      groupNode.hide();
+                  }
+              }
+
+              // Void Walls
+              if (isRealVoid) {
+                  const voidGroupNode = voidWallGroupRefs.current[i];
+                  if (voidGroupNode) {
+                      if (isFrontFacing) {
+                          const VOID_DEPTH = 12;
+                          const b1x = t2.x;
+                          const b1y = t2.y + VOID_DEPTH;
+                          const b2x = t1.x;
+                          const b2y = t1.y + VOID_DEPTH;
+                          const data = `M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`;
+                          
+                          voidGroupNode.show();
+                          const voidPathNode = voidWallPathRefs.current[i];
+                          if (voidPathNode) voidPathNode.data(data);
+                      } else {
+                          voidGroupNode.hide();
+                      }
+                  }
+              }
+          }
+      };
+      
+      // Initialize immediately
+      updater(wallUpdaterRegistry.latestCos, wallUpdaterRegistry.latestSin, wallUpdaterRegistry.latestRot); 
+      wallUpdaterRegistry.add(updater);
+      return () => wallUpdaterRegistry.remove(updater);
+  }, [x, y, offsetY, neighborLevels, isRealVoid]);
 
   useEffect(() => {
       if (isRealVoid && voidOutlineRef.current) {
@@ -222,7 +293,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   if (isRealVoid) {
       return (
         <Group 
-            x={x} y={y} 
+            ref={groupRef}
             perfectDrawEnabled={false}
             onClick={handleClick} 
             onTap={handleClick}
@@ -231,35 +302,26 @@ const HexNodeComponent = (props: HexNodeProps) => {
             opacity={opacity}
         >
              {/* 1. VOID WALLS (Real 3D Geometry) */}
-             {wallData && neighborLevels.map((_nLevel, i) => {
-                 if (!wallData[i].visible) return null;
-
-                 const { t1, t2 } = wallData[i];
-                 const VOID_DEPTH = 12; // Thickness of the void slab
-                 
-                 const b1x = t2.x;
-                 const b1y = t2.y + VOID_DEPTH;
-                 const b2x = t1.x;
-                 const b2y = t1.y + VOID_DEPTH;
-
+             {neighborLevels.map((_nLevel, i) => {
                  return (
-                    <Path 
-                        key={`vw-${i}`}
-                        data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
-                        fill="#020617" 
-                        stroke="#1e293b" 
-                        strokeWidth={1}
-                        perfectDrawEnabled={false} 
-                        listening={false} 
-                        closed={true} 
-                        shadowForStrokeEnabled={false}
-                    />
+                    <Group key={`vw-group-${i}`} ref={el => { voidWallGroupRefs.current[i] = el; }} listening={false} perfectDrawEnabled={false}>
+                        <Path 
+                            ref={el => { voidWallPathRefs.current[i] = el; }}
+                            fill="#020617" 
+                            stroke="#1e293b" 
+                            strokeWidth={1}
+                            perfectDrawEnabled={false} 
+                            listening={false} 
+                            closed={true} 
+                            shadowForStrokeEnabled={false}
+                        />
+                    </Group>
                  );
              })}
 
              {/* 2. VOID TOP FACE */}
              <Group scaleY={0.8} perfectDrawEnabled={false}>
-                 <Group rotation={rotation} perfectDrawEnabled={false}>
+                 <Group ref={topFaceGroupRef} perfectDrawEnabled={false}>
                      {/* Depth Rim */}
                      <Path data={BASE_PATH_D} fill="#020617" stroke="#1e293b" strokeWidth={1} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                      <Circle radius={HEX_SIZE * 0.6} fillRadialGradientStartPoint={{x:0, y:0}} fillRadialGradientStartRadius={0} fillRadialGradientEndPoint={{x:0, y:0}} fillRadialGradientEndRadius={HEX_SIZE} fillRadialGradientColorStops={[0, '#000000', 1, 'transparent']} opacity={0.8} perfectDrawEnabled={false} />
@@ -299,7 +361,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   return (
     <Group 
-        x={x} y={y} 
+        ref={groupRef}
         onClick={handleClick} onTap={handleClick}
         onMouseEnter={handleHover} onMouseLeave={handleHoverEnd}
         perfectDrawEnabled={false}
@@ -308,65 +370,35 @@ const HexNodeComponent = (props: HexNodeProps) => {
         opacity={opacity}
     >
         {/* 1. WALLS */}
-        {wallData && neighborLevels.map((_, i) => {
-            if (!wallData[i].visible) return null;
+        {neighborLevels.map((_, i) => {
+            const shading = i === 1 ? 0 : (i === 0 ? -0.2 : -0.1);
+            const wallColor = isMonument ? '#78350f' : theme.dark;
 
-            // Map wall index to neighbor index
-            // Wall indices: 0:BR, 1:BL, 2:L, 3:TL, 4:TR, 5:R
-            // Neighbor directions: 0:R, 1:TR, 2:TL, 3:L, 4:BL, 5:BR
-            // So mapping is: 0->5, 1->4, 2->3, 3->2, 4->1, 5->0
-            const nLevel = neighborLevels[5 - i];
-
-            let nY = 0;
-            if (nLevel === -99) nY = offsetY + MAX_WALL_DEPTH; 
-            else if (nLevel >= 0) nY = -(10 + nLevel * 10);
-            else nY = (Math.abs(nLevel) - 1) * 10;
-
-            if (offsetY < nY) {
-                const safeNY = Math.min(nY, offsetY + MAX_WALL_DEPTH);
-                const { t1, t2 } = wallData[i];
-                
-                const heightDiff = safeNY - offsetY;
-                const b1x = t2.x;
-                const b1y = t2.y + heightDiff;
-                const b2x = t1.x;
-                const b2y = t1.y + heightDiff;
-
-                // Shading based on wall index (0-5)
-                // 0: bottom-right, 1: bottom, 2: bottom-left, 3: top-left, 4: top, 5: top-right
-                // We only render front-facing walls (0, 1, 2)
-                const shading = i === 1 ? 0 : (i === 0 ? -0.2 : -0.1);
-                const wallColor = isMonument ? '#78350f' : theme.dark;
-
-                return (
-                    <Group key={`w-group-${i}`} listening={false} perfectDrawEnabled={false}>
-                        <Path 
-                            key={`w-${i}`}
-                            data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
-                            fillPatternImage={sideTexture as any}
-                            fillPatternScale={{ x: 1, y: heightDiff / 64 }}
-                            fill={wallColor} 
-                            stroke={isMonument ? '#b45309' : theme.stroke} 
-                            strokeWidth={1.5} 
-                            perfectDrawEnabled={false} 
-                            listening={false} 
-                            closed={true} 
-                            opacity={1} 
-                            shadowForStrokeEnabled={false}
-                        />
-                        {/* Shading Overlay */}
-                        <Path 
-                            data={`M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`}
-                            fill={shading > 0 ? `rgba(255,255,255,${shading})` : `rgba(0,0,0,${Math.abs(shading)})`}
-                            listening={false}
-                            perfectDrawEnabled={false}
-                        />
-                    </Group>
-                );
-            }
-            return null;
+            return (
+                <Group key={`w-group-${i}`} ref={el => { wallGroupRefs.current[i] = el; }} listening={false} perfectDrawEnabled={false}>
+                    <Path 
+                        ref={el => { wallPathRefs.current[i] = el; }}
+                        fillPatternImage={sideTexture as any}
+                        fill={wallColor} 
+                        stroke={isMonument ? '#b45309' : theme.stroke} 
+                        strokeWidth={1.5} 
+                        perfectDrawEnabled={false} 
+                        listening={false} 
+                        closed={true} 
+                        opacity={1} 
+                        shadowForStrokeEnabled={false}
+                    />
+                    {/* Shading Overlay */}
+                    <Path 
+                        ref={el => { wallShadeRefs.current[i] = el; }}
+                        fill={shading > 0 ? `rgba(255,255,255,${shading})` : `rgba(0,0,0,${Math.abs(shading)})`}
+                        listening={false}
+                        perfectDrawEnabled={false}
+                    />
+                </Group>
+            );
         })}<Group y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
-            <Group rotation={rotation} perfectDrawEnabled={false}>
+            <Group ref={topFaceGroupRef} perfectDrawEnabled={false}>
                 {isMonument && (
                     <Path 
                         ref={monumentGlowRef}
@@ -541,7 +573,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
 function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.id !== next.id) return false;
     if (prev.x !== next.x || prev.y !== next.y) return false;
-    if (prev.rotation !== next.rotation) return false;
     if (prev.level !== next.level) return false;
     if (prev.maxLevel !== next.maxLevel) return false;
     if (prev.isSelected !== next.isSelected) return false;

@@ -18,6 +18,7 @@ export interface HexView {
 export interface Hex extends HexView {
   progress: number;
   revealed: boolean;
+  botRevealed?: Record<string, boolean>;
   structureHp?: number;
   durability?: number; // New: Lives for Level 1 hexes
   trap?: { active: boolean, potency?: number } | null;
@@ -596,6 +597,8 @@ export interface GameState {
   lastVisualEvent?: { type: string; time: number };
   activePoi: string | null;
   overworld: OverworldState;
+  isCampaignLoading: boolean;
+  loadingLevelId: string | null;
 }
 
 // --- BUILDING DIALOGUE TYPES ---

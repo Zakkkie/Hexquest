@@ -1,5 +1,5 @@
 
-import React, { useRef, useLayoutEffect, useMemo } from 'react';
+import React, { useRef, useLayoutEffect, useMemo, useEffect } from 'react';
 import { Group, Ellipse, Image as KonvaImage } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
@@ -7,6 +7,7 @@ import { hexToPixel } from '../services/hexUtils.ts';
 import { EntityType } from '../types.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { unitRenderer } from '../services/unitRenderer.ts';
+import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
 
 interface UnitProps {
   id?: string;
@@ -16,7 +17,6 @@ interface UnitProps {
   y?: number;
   type: EntityType;
   color?: string; 
-  rotation: number;
   hexLevel: number;
   totalCoinsEarned: number;
   upgradePointCount: number;
@@ -35,17 +35,14 @@ const getHexVisualHeight = (level: number) => {
 // Helper for lerp
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hexLevel, headIndex = 0, bodyIndex = 0, onMoveComplete, opacity = 1 }) => {
+const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, hexLevel, headIndex = 0, bodyIndex = 0, onMoveComplete, opacity = 1 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const visualGroupRef = useRef<Konva.Group>(null);
   const shadowRef = useRef<Konva.Ellipse>(null);
   const isFirstRender = useRef(true);
   
   // Ref to track rotation inside the animation loop (for active movement)
-  const latestRotation = useRef(rotation);
-  useLayoutEffect(() => {
-      latestRotation.current = rotation;
-  });
+  const latestRotation = useRef(wallUpdaterRegistry.latestRot);
 
   const user = useGameStore(state => state.user);
   
@@ -93,7 +90,7 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
       // Only force position if NOT moving AND NOT waiting for a move start.
       // If moving, the animation loop handles it.
       if (!animState.current.isMoving && !isPendingUpdate) {
-          const { x, y } = hexToPixel(q, r, rotation);
+          const { x, y } = hexToPixel(q, r, latestRotation.current);
           const z = getHexVisualHeight(hexLevel);
           
           groupRef.current.position({ x, y });
@@ -106,7 +103,32 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, rotation, hex
               shadowRef.current.opacity(0.4);
           }
       }
-  }, [q, r, hexLevel, rotation]);
+  }, [q, r, hexLevel]);
+
+  // --- GLOBAL WALL UPDATER ---
+  useEffect(() => {
+      const updater = (cos: number, sin: number, rot: number) => {
+          latestRotation.current = rot;
+          if (!groupRef.current || !visualGroupRef.current) return;
+          
+          const isPendingUpdate = 
+              q !== animState.current.targetQ || 
+              r !== animState.current.targetR || 
+              hexLevel !== animState.current.targetLevel;
+              
+          if (!animState.current.isMoving && !isPendingUpdate) {
+              const HEX_SIZE = GAME_CONFIG.HEX_SIZE || 35;
+              const rawX = HEX_SIZE * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+              const rawY = HEX_SIZE * 1.5 * r;
+              const px = rawX * cos - rawY * sin;
+              const py = (rawX * sin + rawY * cos) * 0.8;
+              
+              groupRef.current.position({ x: px, y: py });
+          }
+      };
+      wallUpdaterRegistry.add(updater);
+      return () => wallUpdaterRegistry.remove(updater);
+  }, [q, r, hexLevel]);
 
   // --- MOVEMENT ANIMATION LOOP ---
   useLayoutEffect(() => {

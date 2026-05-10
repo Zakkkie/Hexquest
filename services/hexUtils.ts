@@ -115,7 +115,7 @@ export const getStatusModifiers = (actor: Entity): {
   digRewardMultiplier: number;
 } => {
   let moveCostMultiplier = 1.0;
-  let fogRadius = 2; // Default: Center + 2 Rings
+  let fogRadius = 1; // Default: Center + 1 Rings
   let digRewardMultiplier = 1.0;
 
   if (!actor || !actor.activeStatuses) return { moveCostMultiplier, fogRadius, digRewardMultiplier };
