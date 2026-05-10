@@ -48,6 +48,8 @@ export type UiSoundType = 'HOVER' | 'CLICK' | 'ERROR' | 'WARNING' | 'SUCCESS';
 
 interface GameStore extends GameState {
   session: SessionState | null;
+  isCampaignLoading: boolean;
+  loadingLevelId: string | null;
   
   // UI & System
   setUIState: (state: UIState) => void;
@@ -2048,6 +2050,10 @@ export const useGameStore = create<GameStore>()(
                          const entity = isPlayer ? result.state.player : result.state.bots.find(b => b.id === event.entityId);
                          const targetQ = event.data?.q !== undefined ? Number(event.data.q) : (entity?.q || 0);
                          const targetR = event.data?.r !== undefined ? Number(event.data.r) : (entity?.r || 0);
+
+                         // VISION FILTER: Only show popups for player or revealed hexes
+                         const targetHex = result.state.grid[getHexKey(targetQ, targetR)];
+                         if (!isPlayer && (!targetHex || !targetHex.revealed)) return;
 
                          let text = '', color = '#fff', icon: FloatingText['icon'] = undefined;
 

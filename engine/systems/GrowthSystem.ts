@@ -166,6 +166,7 @@ export class GrowthSystem implements System {
             const updates = applyRecovery(hex, now);
             
             const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
+            const isVisible = entity.type === EntityType.PLAYER || hex.revealed;
             
             let msg = "";
             if (isHighLevel) {
@@ -176,8 +177,10 @@ export class GrowthSystem implements System {
                 msg = `${prefix} Recovered 1 Move + ${coinReward} Credits`;
             }
             
-            state.messageLog.unshift({ id: `rec-${now}-${entity.id}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: now });
-            events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id, { coins: coinReward, moves: reward.moves }));
+            if (isVisible) {
+                state.messageLog.unshift({ id: `rec-${now}-${entity.id}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: now });
+                events.push(GameEventFactory.create('RECOVERY_USED', msg, entity.id, { coins: coinReward, moves: reward.moves }));
+            }
             
             // Commit Grid Update (Mutate draft)
             Object.assign(state.grid[key], { progress: 0, ...updates });
@@ -327,6 +330,7 @@ export class GrowthSystem implements System {
              }
 
              const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
+             const isVisible = entity.type === EntityType.PLAYER || hex.revealed;
              let msg = `${prefix} Excavated to L${newLevel} (+${actualMatGain} Mat, +${depthReward} Moves)`;
              
              // WARN IF STORAGE WAS FULL
@@ -338,10 +342,11 @@ export class GrowthSystem implements System {
                  }
              }
              
-             state.messageLog.unshift({ id: `dig-ok-${Date.now()}`, text: msg, type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now() });
-             
-             events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id, { material: actualMatGain, moves: depthReward }));
-             
+             if (isVisible) {
+                 state.messageLog.unshift({ id: `dig-ok-${Date.now()}`, text: msg, type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now() });
+                 events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id, { material: actualMatGain, moves: depthReward }));
+             }
+
              if (hasUpgradeCmd) entity.movementQueue.shift();
              entity.state = EntityState.IDLE;
              if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
@@ -398,6 +403,7 @@ export class GrowthSystem implements System {
           let newCooldown = hex.cooldownEndTime;
 
           const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
+          const isVisible = entity.type === EntityType.PLAYER || hex.revealed;
 
           if (targetLevel > hex.maxLevel) {
             newMaxLevel = targetLevel;
@@ -450,13 +456,17 @@ export class GrowthSystem implements System {
                  newOwnerId = entity.id;
                  newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
                  const msg = `${prefix} Sector L1 Built (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
-                 state.messageLog.unshift({ id: `acq-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
-                 events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id, { level: 1 }));
+                 if (isVisible) {
+                    state.messageLog.unshift({ id: `acq-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
+                    events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id, { level: 1 }));
+                 }
             } else {
                  newDurability = undefined;
                  const msg = `${prefix} Upgraded to L${targetLevel} (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
-                 state.messageLog.unshift({ id: `lvl-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
-                 events.push(GameEventFactory.create('LEVEL_UP', msg, entity.id, { level: targetLevel }));
+                 if (isVisible) {
+                    state.messageLog.unshift({ id: `lvl-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
+                    events.push(GameEventFactory.create('LEVEL_UP', msg, entity.id, { level: targetLevel }));
+                 }
             }
 
             // INIT RECOVERY POINTS IF LEVEL >= 4

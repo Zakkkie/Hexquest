@@ -267,7 +267,7 @@ export class MovementSystem implements System {
                         if (entity.type === EntityType.PLAYER) {
                             baseHex.revealed = true;
                         } else {
-                            baseHex.botRevealed = { [entity.id]: true };
+                            baseHex.botRevealed = { 'SHARED_BOTS': true };
                         }
 
                         if (dist === 0) {
@@ -324,8 +324,8 @@ export class MovementSystem implements System {
         const isPlayer = entity.type === EntityType.PLAYER;
         if (isPlayer && !startHex.revealed) {
             gridUpdates[startKey] = { ...startHex, revealed: true };
-        } else if (!isPlayer && (!startHex.botRevealed || !startHex.botRevealed[entity.id])) {
-            gridUpdates[startKey] = { ...startHex, botRevealed: { ...startHex.botRevealed, [entity.id]: true } };
+        } else if (!isPlayer && (!startHex.botRevealed || !startHex.botRevealed['SHARED_BOTS'])) {
+            gridUpdates[startKey] = { ...startHex, botRevealed: { ...startHex.botRevealed, 'SHARED_BOTS': true } };
         }
     }
 
@@ -378,19 +378,19 @@ export class MovementSystem implements System {
                     if (entity.type === EntityType.PLAYER) {
                         newHex.revealed = true;
                     } else {
-                        newHex.botRevealed = { [entity.id]: true };
+                        newHex.botRevealed = { 'SHARED_BOTS': true };
                     }
                     gridUpdates[key] = newHex;
                     index.registerHex(newHex); // Incrementally index
                 } else {
                     const isPlayer = entity.type === EntityType.PLAYER;
                     const needsPlayerReveal = isPlayer && !hex.revealed;
-                    const needsBotReveal = !isPlayer && (!hex.botRevealed || !hex.botRevealed[entity.id]);
+                    const needsBotReveal = !isPlayer && (!hex.botRevealed || !hex.botRevealed['SHARED_BOTS']);
                     
                     if (needsPlayerReveal) {
                         gridUpdates[key] = { ...(gridUpdates[key] || hex), revealed: true };
                     } else if (needsBotReveal) {
-                        gridUpdates[key] = { ...(gridUpdates[key] || hex), botRevealed: { ...hex.botRevealed, [entity.id]: true } };
+                        gridUpdates[key] = { ...(gridUpdates[key] || hex), botRevealed: { ...hex.botRevealed, 'SHARED_BOTS': true } };
                     }
                 }
                 

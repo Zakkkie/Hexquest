@@ -47,7 +47,32 @@ export const createInitialSessionDataAsync = async (
     overworldState: OverworldState
 ): Promise<SessionState> => {
   const mapType = winCondition?.mapType || 'FLAT';
-  const initialGrid = await generateMapAsync(levelConfig, mapType);
+  let initialGrid: Record<string, any> = {};
+
+  if (levelConfig) {
+    initialGrid = await generateMapAsync(levelConfig, mapType);
+  } else {
+    // SKIRMISH OPTIMIZATION: Start with minimal grid to avoid lag
+    // Vision & Chaos rules will be applied below
+    const { generateSingleHex } = await import('./mapGenerator.ts');
+    const startHex = generateSingleHex(0, 0, undefined, mapType as any);
+    startHex.revealed = true;
+    initialGrid[getHexKey(0, 0)] = startHex;
+
+    getNeighbors(0, 0).forEach(n => {
+        const h = generateSingleHex(n.q, n.r, undefined, mapType as any);
+        h.revealed = true;
+        // Chaos Mode: Ensure staircase rule at starting point
+        if (mapType === 'CHAOTIC') {
+            const diff = h.currentLevel - startHex.currentLevel;
+            if (Math.abs(diff) > 1) {
+                h.currentLevel = startHex.currentLevel + (diff > 0 ? 1 : -1);
+                h.maxLevel = h.currentLevel;
+            }
+        }
+        initialGrid[getHexKey(n.q, n.r)] = h;
+    });
+  }
 
   // Difficulty & Config Setup
   const difficulty: Difficulty = winCondition?.difficulty || 'MEDIUM';
@@ -143,11 +168,31 @@ export const createInitialSessionDataAsync = async (
     const key = getHexKey(sp.q, sp.r);
     const botId = `bot-${i+1}`;
     if (!initialGrid[key]) {
-        initialGrid[key] = { id: key, q: sp.q, r: sp.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: false, botRevealed: { [botId]: true } };
+        const { generateSingleHex } = await import('./mapGenerator.ts');
+        const bHex = generateSingleHex(sp.q, sp.r, levelConfig, mapType as any);
+        bHex.botRevealed = { 'SHARED_BOTS': true };
+        initialGrid[key] = bHex;
+
         getNeighbors(sp.q, sp.r).forEach(n => {
             const nk = getHexKey(n.q, n.r);
-            if (!initialGrid[nk]) initialGrid[nk] = { id: nk, q: n.q, r: n.r, currentLevel: 0, maxLevel: 0, progress: 0, revealed: false, botRevealed: { [botId]: true } };
+            if (!initialGrid[nk]) {
+                const nbHex = generateSingleHex(n.q, n.r, levelConfig, mapType as any);
+                nbHex.botRevealed = { 'SHARED_BOTS': true };
+                // Chaos rule for bots too
+                if (mapType === 'CHAOTIC') {
+                    const diff = nbHex.currentLevel - bHex.currentLevel;
+                    if (Math.abs(diff) > 1) {
+                        nbHex.currentLevel = bHex.currentLevel + (diff > 0 ? 1 : -1);
+                        nbHex.maxLevel = nbHex.currentLevel;
+                    }
+                }
+                initialGrid[nk] = nbHex;
+            } else {
+                initialGrid[nk].botRevealed = { ...initialGrid[nk].botRevealed, 'SHARED_BOTS': true };
+            }
         });
+    } else {
+        initialGrid[key].botRevealed = { ...initialGrid[key].botRevealed, 'SHARED_BOTS': true };
     }
 
     const botStartMoves = levelConfig ? Math.max(5, startMoves) : startMoves;
@@ -182,7 +227,7 @@ export const createInitialSessionDataAsync = async (
   let secretMonumentCoord: HexCoord | undefined = undefined;
   if (!levelConfig && winCondition?.winType === 'SUMMIT') {
       const angle = Math.random() * Math.PI * 2;
-      const dist = 4 + Math.floor(Math.random() * 3);
+      const dist = 5 + Math.floor(Math.random() * 5); // 5 to 9 radius
       secretMonumentCoord = { q: Math.round(Math.cos(angle) * dist), r: Math.round(Math.sin(angle) * dist) };
   }
 
