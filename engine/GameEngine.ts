@@ -25,6 +25,7 @@ export class GameEngine {
   private _systems: System[];
   private _actionProcessor: ActionProcessor | null;
   private _transactionQueue: TransactionQueue;
+  private _isTickInProgress: boolean = false;
 
   constructor(initialState: SessionState) {
     this._state = { ...initialState };
@@ -79,6 +80,7 @@ export class GameEngine {
 
   public applyAction(actorId: string, action: GameAction): ValidationResult {
     if (!this._state || !this._index || !this._actionProcessor) return { ok: false, reason: "Engine Destroyed" };
+    if (this._isTickInProgress) return { ok: false, reason: "Simulation Busy" };
     
     const validation = this._actionProcessor.validateAction(this._state, this._index, actorId, action);
     if (!validation.ok) return validation;
@@ -96,7 +98,10 @@ export class GameEngine {
   
   public async processTick(): Promise<TickResult | null> {
     if (!this._state || !this._index) return null;
+    if (this._isTickInProgress) return null;
 
+    this._isTickInProgress = true;
+    
     // Create an immer draft for the entire state to enable structural sharing without GC pressure
     const nextState = createDraft(this._state);
     
@@ -118,11 +123,11 @@ export class GameEngine {
             system.update(nextState, this._index, tickEvents);
         }
 
-        // 3. Process Transaction Queue (Async)
+        // 3. Process Transaction Queue
         if (!this._transactionQueue.isEmpty()) {
             this._index.syncState(nextState);
             
-            await this._transactionQueue.processQueue((actorId, action) => {
+            this._transactionQueue.processQueue((actorId, action) => {
                 const result = this._actionProcessor!.applyAction(nextState, this._index!, actorId, action);
                 
                 if (result.ok) {
@@ -134,6 +139,7 @@ export class GameEngine {
                     }
                 } else {
                     tickEvents.push({
+                        id: Math.random().toString(36).substring(7),
                         type: 'ERROR',
                         message: `Action Failed: ${result.reason}`,
                         entityId: actorId,
@@ -156,6 +162,14 @@ export class GameEngine {
         
         // Finalize the state draft
         const finalState = finishDraft(nextState) as SessionState;
+        
+        // CRITICAL: Sync index with final immutable state BEFORE updating this._state
+        // This prevents listeners from hitting the revoked proxies inside the index
+        // when they react to the state change.
+        if (this._index) {
+            this._index.syncState(finalState);
+        }
+        
         this._state = finalState;
 
         return {
@@ -166,12 +180,7 @@ export class GameEngine {
         console.error('GameEngine: processTick failed', error);
         throw error;
     } finally {
-        // CRITICAL: Sync index with final immutable state (or revert to old state if failed)
-        // This ensures no draft proxies leak out of the tick.
-        if (this._state && this._index) {
-            this._index.syncState(this._state);
-            this._index.syncGrid(this._state.grid);
-        }
+        this._isTickInProgress = false;
     }
   }
 

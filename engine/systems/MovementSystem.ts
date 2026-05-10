@@ -125,7 +125,7 @@ export class MovementSystem implements System {
         if (d <= 0) {
              const collapsedHex: Hex = {
                 ...oldHex,
-                maxLevel: 0,
+                maxLevel: oldHex.maxLevel, // FIXED: Preserve maxLevel for regrowth
                 currentLevel: 0,
                 progress: 0,
                 ownerId: undefined,
@@ -148,7 +148,7 @@ export class MovementSystem implements System {
                 
                 // If we moved to a hex that is now higher than our *previous* position (ascending),
                 // and we just lost a rank, we likely aren't qualified or are stumbling.
-                const isAscending = currentHex && currentHex.maxLevel > oldHex.maxLevel;
+                const isAscending = currentHex && currentHex.currentLevel > oldHex.currentLevel;
                 
                 if (isAscending) {
                     entity.movementQueue = [];

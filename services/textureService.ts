@@ -35,6 +35,60 @@ export class TextureService {
     );
   }
 
+  /**
+   * Pre-generates common textures to avoid stutter during gameplay.
+   * Useful for the loading screen.
+   */
+  public preload(onProgress: (progress: number) => void): Promise<void> {
+    return new Promise((resolve) => {
+      const levels = [-2, -1, 0, 1, 2, 3, 4];
+      const variants = [0, 1, 2, 3];
+      const terrainTypes = ['ROAD', 'CITY', 'FOREST', 'MOUNTAINS'];
+      
+      const tasks: (() => void)[] = [];
+
+      // Top textures for common levels and variants
+      for (const level of levels) {
+        for (const variant of variants) {
+          tasks.push(() => this.getTexture(level, variant, 0));
+        }
+      }
+
+      // Side textures for common levels
+      for (const level of levels) {
+        tasks.push(() => this.getSideTexture(level));
+      }
+
+      // Special terrain textures
+      for (const t of terrainTypes) {
+        tasks.push(() => this.getTexture(0, 0, 0, t));
+        tasks.push(() => this.getSideTexture(0, t));
+      }
+
+      let completed = 0;
+      const total = tasks.length;
+
+      const processBatch = () => {
+        const batchSize = 5;
+        for (let i = 0; i < batchSize && tasks.length > 0; i++) {
+          const task = tasks.shift()!;
+          task();
+          completed++;
+        }
+
+        onProgress(completed / total);
+
+        if (tasks.length > 0) {
+          requestAnimationFrame(processBatch);
+        } else {
+          resolve();
+        }
+      };
+
+      requestAnimationFrame(processBatch);
+    });
+  }
+
   private generateTexture(level: number, type: 'TOP' | 'SIDE', seed: number, terrainType?: string, poiId?: string): HTMLCanvasElement {
     const size = 64; 
     const canvas = document.createElement('canvas');

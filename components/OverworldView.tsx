@@ -842,18 +842,39 @@ const OverworldView: React.FC = () => {
 
       {/* Toast Notification */}
       {toast && (
-        <div className="absolute top-[15%] left-0 w-full flex justify-center z-[60] pointer-events-none px-4">
+        <div className="absolute top-[20%] left-0 w-full flex justify-center z-[60] pointer-events-none px-4">
           <div className={`
-            flex items-center gap-2 md:gap-3 px-4 py-3 md:px-6 md:py-4 rounded-2xl md:rounded-full backdrop-blur-md shadow-2xl border
-            animate-in slide-in-from-top-4 duration-300 max-w-[90vw] md:max-w-max
-            ${toast.type === 'error' ? 'bg-red-950/60 border-red-500/50 text-red-100 animate-pulse' : ''}
-            ${toast.type === 'success' ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-100' : ''}
-            ${toast.type === 'info' ? 'bg-slate-900/80 border-slate-700 text-white' : ''}
+            relative flex items-center gap-3 px-6 py-4 rounded-lg backdrop-blur-xl shadow-2xl border-2
+            animate-in slide-in-from-top-12 duration-500 max-w-[90vw] md:max-w-xl group overflow-hidden
+            ${toast.type === 'error' ? 'bg-red-950/80 border-red-500/60 shadow-red-900/40 text-red-100' : ''}
+            ${toast.type === 'success' ? 'bg-emerald-950/80 border-emerald-500/60 shadow-emerald-900/40 text-emerald-100' : ''}
+            ${toast.type === 'info' ? 'bg-indigo-950/80 border-indigo-500/60 shadow-indigo-900/40 text-indigo-100' : ''}
           `}>
-            {toast.type === 'error' && <XCircle className="w-5 h-5 md:w-8 md:h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] shrink-0" />}
-            {toast.type === 'success' && <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-emerald-500 shrink-0" />}
-            {toast.type === 'info' && <Info className="w-5 h-5 md:w-6 md:h-6 text-blue-400 shrink-0" />}
-            <span className="text-xs md:text-lg font-black uppercase tracking-wider md:tracking-widest leading-tight drop-shadow-md text-center md:text-left break-words whitespace-pre-wrap">{toast.message}</span>
+            {/* Scanline effect */}
+            <div className="absolute inset-0 bg-scanlines opacity-20 pointer-events-none" />
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-white/10 animate-scan-fast" />
+
+            {/* Corner brackets */}
+            <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-current opacity-50" />
+            <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-current opacity-50" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-current opacity-50" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-current opacity-50" />
+
+            <div className="relative flex items-center gap-4">
+              <div className={`p-2 rounded-md ${toast.type === 'error' ? 'bg-red-500/20' : toast.type === 'success' ? 'bg-emerald-500/20' : 'bg-indigo-500/20'}`}>
+                {toast.type === 'error' && <XCircle className="w-6 h-6 text-red-500" />}
+                {toast.type === 'success' && <CheckCircle className="w-6 h-6 text-emerald-500" />}
+                {toast.type === 'info' && <Info className="w-6 h-6 text-indigo-400" />}
+              </div>
+              <div className="flex flex-col">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1 font-mono">
+                  {toast.type === 'error' ? 'SYSTEM_ALERT' : toast.type === 'success' ? 'PROCESS_COMPLETE' : 'DATA_FEED'}
+                </div>
+                <span className="text-sm md:text-base font-bold uppercase tracking-tight leading-tight font-mono break-words">
+                  {toast.message}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       )}

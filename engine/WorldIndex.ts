@@ -30,39 +30,32 @@ export class WorldIndex {
    */
   public syncState(state: { grid: Record<string, Hex>; player: Entity; bots: Entity[] }) {
       if (!state) return;
-      try {
-          this.grid = state.grid;
-          
-          // Update Entity Map with NEW object references
-          this.entities.clear();
-          const allEntities = [state.player, ...state.bots];
-          for (const e of allEntities) {
-              if (e && e.id) {
-                  this.entities.set(e.id, e);
-              }
+      
+      // Update Grid reference
+      this.grid = state.grid;
+      
+      // Update Entity Map with NEW object references
+      this.entities.clear();
+      const allEntities = [state.player, ...state.bots];
+      for (const e of allEntities) {
+          if (e && e.id) {
+              this.entities.set(e.id, e);
           }
-          
-          // Re-sync occupied hexes to ensure spatial consistency after state transition
-          this.occupiedHexes.clear();
-          for (const ent of this.entities.values()) {
-              this.occupiedHexes.set(getHexKey(ent.q, ent.r), ent.id);
-          }
-      } catch (error) {
-          console.warn('WorldIndex: syncState failed (likely revoked proxy)', error);
       }
+      
+      // Full rebuild of indices to ensure all derived maps point to the objects in this state
+      this.build();
   }
 
   public syncGrid(grid: Record<string, Hex>) {
       if (!grid) return;
-      try {
-          this.grid = grid;
-          // Also ensure occupied hexes are still correct relative to current entities
-          this.occupiedHexes.clear();
-          for (const ent of this.entities.values()) {
-              this.occupiedHexes.set(getHexKey(ent.q, ent.r), ent.id);
-          }
-      } catch (error) {
-          console.warn('WorldIndex: syncGrid failed (likely revoked proxy)', error);
+      this.grid = grid;
+      
+      // Re-index hex-based caches
+      this.structureLocations.clear();
+      this.hexesByOwner.clear();
+      for (const id in this.grid) {
+          this.indexHex(this.grid[id]);
       }
   }
 
@@ -182,9 +175,13 @@ export class WorldIndex {
   public getValidNeighbors(q: number, r: number): Hex[] {
     const neighbors = getNeighbors(q, r);
     const valid: Hex[] = [];
-    for (const n of neighbors) {
-      const hex = this.grid[getHexKey(n.q, n.r)];
-      if (hex) valid.push(hex);
+    try {
+      for (const n of neighbors) {
+        const hex = this.grid[getHexKey(n.q, n.r)];
+        if (hex) valid.push(hex);
+      }
+    } catch {
+      // If this.grid is revoked, just return what we have (or empty)
     }
     return valid;
   }
@@ -194,10 +191,12 @@ export class WorldIndex {
       if (!hexIds) return [];
       
       const results: Hex[] = [];
-      for (const id of hexIds) {
-          const hex = this.grid[id];
-          if (hex) results.push(hex);
-      }
+      try {
+        for (const id of hexIds) {
+            const hex = this.grid[id];
+            if (hex) results.push(hex);
+        }
+      } catch {}
       return results;
   }
 
@@ -206,10 +205,12 @@ export class WorldIndex {
       if (!hexIds) return [];
       
       const results: Hex[] = [];
-      for (const id of hexIds) {
-          const hex = this.grid[id];
-          if (hex) results.push(hex);
-      }
+      try {
+        for (const id of hexIds) {
+            const hex = this.grid[id];
+            if (hex) results.push(hex);
+        }
+      } catch {}
       return results;
   }
 
@@ -224,27 +225,29 @@ export class WorldIndex {
       const startKey = getHexKey(center.q, center.r);
       visited.add(startKey);
 
-      // Include center if it exists
-      if (this.grid[startKey]) results.push(this.grid[startKey]);
+      try {
+        // Include center if it exists
+        if (this.grid[startKey]) results.push(this.grid[startKey]);
 
-      let head = 0;
-      while(head < queue.length) {
-          const { q, r, dist } = queue[head++];
-          if (dist >= range) continue;
+        let head = 0;
+        while(head < queue.length) {
+            const { q, r, dist } = queue[head++];
+            if (dist >= range) continue;
 
-          const neighbors = getNeighbors(q, r);
-          for (const n of neighbors) {
-              const key = getHexKey(n.q, n.r);
-              if (!visited.has(key)) {
-                  visited.add(key);
-                  const hex = this.grid[key];
-                  if (hex) {
-                      results.push(hex);
-                      queue.push({ q: n.q, r: n.r, dist: dist + 1 });
-                  }
-              }
-          }
-      }
+            const neighbors = getNeighbors(q, r);
+            for (const n of neighbors) {
+                const key = getHexKey(n.q, n.r);
+                if (!visited.has(key)) {
+                    visited.add(key);
+                    const hex = this.grid[key];
+                    if (hex) {
+                        results.push(hex);
+                        queue.push({ q: n.q, r: n.r, dist: dist + 1 });
+                    }
+                }
+            }
+        }
+      } catch {}
       return results;
   }
 

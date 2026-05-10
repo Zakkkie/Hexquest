@@ -222,6 +222,7 @@ export type GameEventType =
   | 'ENTROPY_SHIFT'; 
 
 export interface GameEvent {
+  id: string;
   type: GameEventType;
   entityId?: string;
   message?: string;

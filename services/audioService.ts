@@ -219,6 +219,18 @@ class AudioService {
 
   // --- PUBLIC CONTROLS ---
 
+  public async preload() {
+    this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+        try {
+            await this.ctx.resume();
+        } catch (e) {
+            console.warn("Audio Context resume failed during preload", e);
+        }
+    }
+    return Promise.resolve();
+  }
+
   public setMusicMuted(muted: boolean) {
       this.isMusicMuted = muted;
       if (this.musicBus && this.ctx) {

@@ -55,8 +55,8 @@ export const calculateMovementCost = (
              return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "BLOCKED" };
         }
 
-        const currentLevel = currentHex ? currentHex.maxLevel : 0;
-        const nextLevel = nextHex ? nextHex.maxLevel : 0;
+        const currentLevel = currentHex ? currentHex.currentLevel : 0;
+        const nextLevel = nextHex ? nextHex.currentLevel : 0;
 
         // 2. Staircase Rule (Global Enforcement)
         // Cannot step up OR down more than 1 level at a time.
@@ -75,7 +75,7 @@ export const calculateMovementCost = (
         // Terrain Cost Logic
         // Positive High Ground (>1): Costs height.
         // Flat (0, 1) or Negative (<0): Costs 1.
-        const stepCost = nextLevel > 1 ? nextLevel : 1;
+        const stepCost = (nextHex?.currentLevel ?? 0) > 1 ? (nextHex?.currentLevel ?? 0) : 1;
         
         totalPoints += stepCost;
         

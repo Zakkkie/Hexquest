@@ -194,6 +194,14 @@ export interface Dictionary {
         MONUMENT_BTN_ACTIVE: string;
         MONUMENT_BTN_INACTIVE: string;
         MONUMENT_EMPTY_INV: string;
+        MONUMENT_REROLL: string;
+        MONUMENT_REROLL_SLOT: string;
+        MONUMENT_HINT_ANY: string;
+        MONUMENT_HINT_RARITY: string;
+        MONUMENT_HINT_ITEM: string;
+        MONUMENT_HINT_ONE_OF: string;
+        MONUMENT_HINT_UNREVEALED: string;
+        MONUMENT_REQUIRED: string;
         MONUMENT_REQ_EASY: string;
         MONUMENT_REQ_MED: string;
         MONUMENT_REQ_HARD: string;
@@ -233,6 +241,7 @@ export interface Dictionary {
         SLOTS_FULL: string;
         ACTIVATION_FAILED: string;
         NO_HISTORY: string;
+        MONUMENT_UPDATED: string;
         LOG_DOWNLOADED: string;
         STORAGE_FULL: string;
         DEATH_OVERWORLD: string;
@@ -588,6 +597,14 @@ export const TEXT: Record<Language, Dictionary> = {
             MONUMENT_BTN_ACTIVE: "ACTIVATE",
             MONUMENT_BTN_INACTIVE: "INSERT KEYS",
             MONUMENT_EMPTY_INV: "No items available.",
+            MONUMENT_REROLL: "Reroll (100 Cr)",
+            MONUMENT_REROLL_SLOT: "Reset Slot (100 Cr)",
+            MONUMENT_HINT_ANY: "Any item",
+            MONUMENT_HINT_RARITY: "{0} item",
+            MONUMENT_HINT_ITEM: "Specific: {0}",
+            MONUMENT_HINT_ONE_OF: "One of multiple",
+            MONUMENT_HINT_UNREVEALED: "Visit Obelisk to reveal",
+            MONUMENT_REQUIRED: "Required: {0}",
             MONUMENT_REQ_EASY: "(Accepts ANY Rarity)",
             MONUMENT_REQ_MED: "(Requires: UNCOMMON+)",
             MONUMENT_REQ_HARD: "(Requires: RARE+)",
@@ -627,6 +644,7 @@ export const TEXT: Record<Language, Dictionary> = {
             WRONG_ITEM: "Wrong item type!",
             SLOTS_FULL: "Fill all slots!",
             ACTIVATION_FAILED: "Activation Failed",
+            MONUMENT_UPDATED: "Requirements updated!",
             NO_HISTORY: "No history.",
             LOG_DOWNLOADED: "Log Saved",
             STORAGE_FULL: "Storage Full!",
@@ -980,6 +998,14 @@ export const TEXT: Record<Language, Dictionary> = {
             MONUMENT_BTN_ACTIVE: "АКТИВИРОВАТЬ",
             MONUMENT_BTN_INACTIVE: "ВСТАВЬТЕ КЛЮЧИ",
             MONUMENT_EMPTY_INV: "Пусто.",
+            MONUMENT_REROLL: "Обновить (100 Кр)",
+            MONUMENT_REROLL_SLOT: "Сброс слота (100 Кр)",
+            MONUMENT_HINT_ANY: "Любой предмет",
+            MONUMENT_HINT_RARITY: "Предмет: {0}",
+            MONUMENT_HINT_ITEM: "Конкретно: {0}",
+            MONUMENT_HINT_ONE_OF: "Один из списка",
+            MONUMENT_HINT_UNREVEALED: "Нужен Обелиск",
+            MONUMENT_REQUIRED: "Требуется: {0}",
             MONUMENT_REQ_EASY: "(Любые)",
             MONUMENT_REQ_MED: "(Необычные+)",
             MONUMENT_REQ_HARD: "(Редкие+)",
@@ -1019,6 +1045,7 @@ export const TEXT: Record<Language, Dictionary> = {
             WRONG_ITEM: "Неверный предмет!",
             SLOTS_FULL: "Заполните все слоты!",
             ACTIVATION_FAILED: "Сбой Активации",
+            MONUMENT_UPDATED: "Требования обновлены!",
             NO_HISTORY: "Нет записи истории.",
             LOG_DOWNLOADED: "Лог Скачан",
             STORAGE_FULL: "Склад Полон!",

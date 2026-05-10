@@ -39,11 +39,11 @@ export function checkDigCondition(
       if (neighborHexes.length > 0) {
           const minNeighborLevel = Math.min(...neighborHexes.map(h => h.currentLevel));
 
-          if (targetLevel <= minNeighborLevel) {
+          if (targetLevel < minNeighborLevel) {
               return {
                   canGrow: false,
-                  reason: `Gradient Lock! Must stay above L${minNeighborLevel}.`,
-                  missingSupports: neighborHexes.filter(h => h.currentLevel <= targetLevel).map(h => ({q: h.q, r: h.r}))
+                  reason: `Steep Drop! Stay within 1 level of L${minNeighborLevel}.`,
+                  missingSupports: neighborHexes.filter(h => h.currentLevel > targetLevel + 1).map(h => ({q: h.q, r: h.r}))
               };
           }
       }

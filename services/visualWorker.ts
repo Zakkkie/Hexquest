@@ -29,6 +29,7 @@ let cachedBots: any = null;
 let cachedVisibleChunks: any = null;
 let cachedPendingKey: string | null = null;
 let cachedSelectedHexId: string | null = null;
+let cachedIsCampaign: boolean = false;
 
 const calculateNeighborLevels = (grid: any) => {
     const map: Record<string, number[]> = {};
@@ -39,7 +40,7 @@ const calculateNeighborLevels = (grid: any) => {
             const nKey = getHexKey(n.q, n.r);
             const nHex = grid[nKey];
             // If neighbor is missing OR not revealed, treat it as level 0 to hide what's in the fog/outside grid
-            if (!nHex || !nHex.revealed) return 0;
+            if (!nHex || (!nHex.revealed && !cachedIsCampaign)) return 0;
             return nHex.currentLevel ?? 0;
         });
         map[key] = levels;
@@ -52,7 +53,7 @@ self.onmessage = (e) => {
         type,
         grid, rotation, player, bots, 
         visibleChunks, chunks, pendingKey, 
-        selectedHexId
+        selectedHexId, isCampaign
     } = e.data;
 
     if (type === 'SET_GRID') {
@@ -69,6 +70,7 @@ self.onmessage = (e) => {
         cachedVisibleChunks = visibleChunks;
         cachedPendingKey = pendingKey;
         cachedSelectedHexId = selectedHexId;
+        cachedIsCampaign = !!isCampaign;
     }
 
     // Default or 'UPDATE_VIEW'
@@ -86,6 +88,10 @@ self.onmessage = (e) => {
     const SQRT3_2 = SQRT3 / 2;
     const ONE_POINT_FIVE = 1.5;
 
+    const renderDist = cachedIsCampaign ? 100 : 20;
+    const fadeDistStart = cachedIsCampaign ? 90 : 16;
+    const fadeWidth = cachedIsCampaign ? 10 : 4;
+
     // 2. Collect Hexes from visible chunks
     if (cachedVisibleChunks && currentChunks) {
         for (const chunkKey of cachedVisibleChunks) {
@@ -94,7 +100,7 @@ self.onmessage = (e) => {
 
             for (const hex of hexes) {
                 const distToPlayer = cubeDistance({ q: cachedPlayer.q, r: cachedPlayer.r }, { q: hex.q, r: hex.r });
-                if (distToPlayer > 20) continue;
+                if (distToPlayer > renderDist) continue;
 
                 const rawX = HEX_SIZE * (SQRT3 * hex.q + SQRT3_2 * hex.r);
                 const rawY = HEX_SIZE * (ONE_POINT_FIVE * hex.r);
@@ -103,8 +109,8 @@ self.onmessage = (e) => {
                 const depth = (rawX * sin + rawY * cos) * 0.8;
 
                 let opacity = 1.0;
-                if (distToPlayer > 16) {
-                    opacity = Math.max(0, 1.0 - (distToPlayer - 16) / 4);
+                if (distToPlayer > fadeDistStart) {
+                    opacity = Math.max(0, 1.0 - (distToPlayer - fadeDistStart) / fadeWidth);
                 }
                 if (opacity <= 0) continue;
 
@@ -117,7 +123,7 @@ self.onmessage = (e) => {
                 const neighborLevels = cachedNeighborLevelsMap[hex.id] || [VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG];
 
                 // Fog of War opacity 
-                const isRevealed = !!hex.revealed;
+                const isRevealed = !!hex.revealed || cachedIsCampaign;
                 const finalOpacity = isRevealed ? opacity : opacity * 0.25;
 
                 items.push({

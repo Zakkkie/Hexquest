@@ -291,7 +291,7 @@ export const findPath = (
 
     const currentCoord = getCoordinatesFromKey(currentKey);
     const currentHex = grid[currentKey];
-    const currentLevel = currentHex ? currentHex.maxLevel : 0;
+    const currentLevel = currentHex ? currentHex.currentLevel : 0;
     
     // Evaluate Neighbors
     const neighbors = getNeighbors(currentCoord.q, currentCoord.r);
@@ -314,7 +314,7 @@ export const findPath = (
       }
       
       // 2. Height/Jump Check: Cannot jump more than 1 level difference
-      const nextLevel = neighborHex ? neighborHex.maxLevel : 0;
+      const nextLevel = neighborHex ? neighborHex.currentLevel : 0;
       if (Math.abs(currentLevel - nextLevel) > 1) {
         blockedByHeight = true;
         continue;
@@ -322,7 +322,7 @@ export const findPath = (
 
       // -- Cost Calculation --
       // Update logic: Positive (>1) costs level. Negative/Flat (<2) costs 1.
-      const level = neighborHex ? neighborHex.maxLevel : 0;
+      const level = neighborHex ? neighborHex.currentLevel : 0;
       const moveCost = level > 1 ? level : 1;
       
       const tentativeG = (gScore.get(currentKey) ?? Infinity) + moveCost;

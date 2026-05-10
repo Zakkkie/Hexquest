@@ -63,11 +63,12 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     let biome: TerrainType = 'PLAINS';
     let poiType: string | undefined = undefined;
     let isPassable = true;
-    let forceReveal = false;
+    let forceReveal = !!levelConfig;
 
     // --- CITY LOGIC ---
     if (levelConfig && isInsideCity(q, r)) {
         biome = 'CITY';
+        forceReveal = true;
         if (isCityWall(q, r)) {
             level = 4;
             structureType = 'BARRIER';
@@ -344,7 +345,7 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
 
               initialGrid[nKey] = {
                   id: nKey, q: n.q, r: n.r,
-                  currentLevel: level, maxLevel: level, progress: 0, revealed: false,
+                  currentLevel: level, maxLevel: level, progress: 0, revealed: !!levelConfig,
                   biome: 'WATER',
                   isPassable: true
               };

@@ -60,20 +60,36 @@ export function composeEvent(template: EventTemplate, ctx: ComposeContext): Over
 
   // Substitute placeholders
   const actorNames: Record<string, string> = {
-    BANDIT: 'разбойник', SOLDIER: 'солдат', MERCHANT: 'торговец',
-    SCHOLAR: 'учёный', SURVIVOR: 'выживший', BEAST: 'существо',
-    SPIRIT: 'дух', MACHINE: 'механизм', PILGRIM: 'паломник',
-    CHILD: 'ребёнок', ELDER: 'старик', KNIGHT: 'рыцарь',
-    SPY: 'лазутчик', HERMIT: 'отшельник', GHOST: 'призрак',
+    BANDIT: 'SND_RAIDER (Разбойник)', 
+    SOLDIER: 'VSS_SENTRY (Солдат)', 
+    MERCHANT: 'TRADE_UNIT (Торговец)',
+    SCHOLAR: 'LOGOS_DEAN (Учёный)', 
+    SURVIVOR: 'ERROR_ENTITY (Выживший)', 
+    BEAST: 'BIO_ANOMALY (Существо)',
+    SPIRIT: 'NEBULA_ECHO (Дух)', 
+    MACHINE: 'CASC_DRONE (Механизм)', 
+    PILGRIM: 'VOID_SEEKER (Паломник)',
+    CHILD: 'LOST_NODE (Ребёнок)', 
+    ELDER: 'ARCHIVE_HOLDER (Старик)', 
+    KNIGHT: 'ORDER_PALADIN (Рыцарь)',
+    SPY: 'SND_OPERATIVE (Лазутчик)', 
+    HERMIT: 'ROOT_ADMIN (Отшельник)', 
+    GHOST: 'DATA_GHOST (Призрак)',
   };
   const terrainNames: Record<string, string> = {
-    PLAINS: 'равнины', FOREST: 'лесу', SWAMP: 'болоте',
-    WATER: 'у воды', MOUNTAINS: 'горах', ROAD: 'дороге',
-    CITY: 'городе', RUINS: 'руинах', OUTPOST: 'аванпосту',
-    MERCHANT_CAMP: 'лагере торговцев',
+    PLAINS: 'PLATEAU_01 (Равнины)', 
+    FOREST: 'BIO_DOME_B (Лесу)', 
+    SWAMP: 'WASTE_CANAL (Болоте)',
+    WATER: 'COOLANT_BASIN (У воды)', 
+    MOUNTAINS: 'CRUST_RIFT (Горах)', 
+    ROAD: 'TRANSIT_LINE (Дороге)',
+    CITY: 'METROPLEX (Городе)', 
+    RUINS: 'VOID_ZONE (Руинах)', 
+    OUTPOST: 'CONTROL_HUB (Аванпосту)',
+    MERCHANT_CAMP: 'FLEA_MARKET (Лагере торговцев)',
   };
-  text = text.replace('{actor}', actorNames[template.actorType] ?? 'незнакомец');
-  text = text.replace('{terrain}', terrainNames[ctx.terrain] ?? ctx.terrain.toLowerCase());
+  text = text.replace('{actor}', actorNames[template.actorType] ?? 'ID_UNKNOWN');
+  text = text.replace('{terrain}', terrainNames[ctx.terrain] ?? ctx.terrain.toUpperCase());
 
   // Scale rewards based on reputation (friendly NPCs give more)
   const repBonus = 1 + Math.max(0, ctx.reputation) / 200;
@@ -106,7 +122,7 @@ export function composeEvent(template: EventTemplate, ctx: ComposeContext): Over
 
   nodes['start'] = {
     id: 'start',
-    image: `https://picsum.photos/seed/${template.actorType}_${template.situation}/800/350`,
+    image: `https://picsum.photos/seed/${template.actorType}_${template.situation}_${ctx.seed % 100}/800/400?grayscale&blur=1`,
     text,
     choices: finalChoices as OverworldEvent['nodes'][string]['choices'],
   };

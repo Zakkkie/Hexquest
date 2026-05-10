@@ -157,8 +157,8 @@ export const series1Levels: LevelConfig[] = [
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
-          { q: 2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          { q: 2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: -2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: 0, r: 2, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: 0, r: -2, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
@@ -166,9 +166,9 @@ export const series1Levels: LevelConfig[] = [
           { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
       ]
     },

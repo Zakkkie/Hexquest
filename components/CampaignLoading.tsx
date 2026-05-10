@@ -1,153 +1,283 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '../store.ts';
-import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
-import { motion } from 'motion/react';
-import { Hexagon, Terminal, ArrowRight } from 'lucide-react';
+import { textureService } from '../services/textureService.ts';
+import { audioService } from '../services/audioService.ts';
+import { 
+    Cpu, 
+    Layers, 
+    Radio, 
+    Box, 
+    Activity, 
+    Zap,
+    ShieldAlert,
+    Wifi
+} from 'lucide-react';
 import { TEXT } from '../services/i18n.ts';
 
 const CampaignLoading: React.FC = () => {
-  const setUIState = useGameStore(state => state.setUIState);
-  const session = useGameStore(state => state.session);
-  const language = useGameStore(state => state.language);
-  const loadingLevelId = useGameStore(state => state.loadingLevelId);
-  const [progress, setProgress] = useState(0);
-  const [loadingText, setLoadingText] = useState('');
-
-  const [isReady, setIsReady] = useState(false);
-  const playUiSound = useGameStore(state => state.playUiSound);
-
-  useEffect(() => {
-    const textsEN = [
-      'ESTABLISHING CONNECTION...',
-      'GENERATING TERRAIN...',
-      'CALIBRATING ENTROPY...',
-      'DEPLOYING UNITS...',
-      'READY'
-    ];
+    const session = useGameStore(state => state.session);
+    const loadingLevelId = useGameStore(state => state.loadingLevelId);
+    const language = useGameStore(state => state.language);
+    const setUIState = useGameStore(state => state.setUIState);
     
-    const textsRU = [
-      'УСТАНОВКА СОЕДИНЕНИЯ...',
-      'ГЕНЕРАЦИЯ ЛАНДШАФТА...',
-      'КАЛИБРОВКА ЭНТРОПИИ...',
-      'РАЗВЕРТЫВАНИЕ ЮНИТОВ...',
-      'ГОТОВО'
-    ];
-    
-    const texts = language === 'RU' ? textsRU : textsEN;
+    const [progress, setProgress] = useState(0);
+    const [phase, setPhase] = useState<'AUTH' | 'TEXTURES' | 'AUDIO' | 'WORLD' | 'DONE'>('AUTH');
+    const [statusMsg, setStatusMsg] = useState('DIVERGING_LINK // INITIALIZING');
+    const [techData, setTechData] = useState<string[]>([]);
+    const loadingStarted = useRef(false);
 
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += Math.random() * 15;
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        clearInterval(interval);
-        setIsReady(true);
-      }
-      setProgress(currentProgress);
-      
-      const textIndex = Math.min(Math.floor((currentProgress / 100) * texts.length), texts.length - 1);
-      setLoadingText(texts[textIndex]);
-    }, 200);
+    // Tech Feed Simulation
+    useEffect(() => {
+        const lines = [
+            'CORE_NET: OK',
+            'SENSORY_BUFFER: 0x482',
+            'NEBULA_V2: READY',
+            'TEXTURE_STACK: QUEUED',
+            'MAP_GENERATOR: WORKER_ACTIVE',
+            'PARALLAX_BIT: 1',
+            'QUANTUM_LOCK: STABLE'
+        ];
+        
+        let i = 0;
+        const interval = setInterval(() => {
+            setTechData(prev => [lines[i % lines.length], ...prev].slice(0, 8));
+            i++;
+        }, 1200);
+        return () => clearInterval(interval);
+    }, []);
 
-    return () => clearInterval(interval);
-  }, [language]);
+    useEffect(() => {
+        // Only run preloading ONCE per mount (important for React 18 StrictMode)
+        if (loadingStarted.current) return;
+        loadingStarted.current = true;
 
-  const handleStart = () => {
-    playUiSound('SUCCESS');
-    setUIState('GAME');
-  };
+        const runPreload = async () => {
+            // PHASE 1: AUTH & SYSTEM (Fast)
+            setPhase('AUTH');
+            setStatusMsg('VERIFYING_IDENTITY // [HEX-ID]');
+            await new Promise(r => setTimeout(r, 600));
 
-  const levelConfig = session?.activeLevelConfig || CAMPAIGN_LEVELS.find(l => l.id === loadingLevelId);
-  
-  let displayTitle = '';
-  if (levelConfig) {
-      const levelKey = levelConfig.id.replace('.', '_');
-      const titleKey = `LEVEL_${levelKey}_TITLE` as keyof typeof TEXT.EN.CAMPAIGN;
-      displayTitle = TEXT[language].CAMPAIGN[titleKey] || levelConfig.title;
-  }
+            // PHASE 2: AUDIO SYNTH
+            setPhase('AUDIO');
+            setStatusMsg('SYNTHESIZING_NEBULA_AUDIO_STACK...');
+            await audioService.preload();
+            await new Promise(r => setTimeout(r, 400));
 
-  return (
-    <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col items-center justify-center p-6 overflow-hidden">
-      {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#020617_100%)]" />
-      <div className="absolute inset-0 overflow-hidden mix-blend-screen opacity-10">
-        <div className="absolute top-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-indigo-900/40 blur-[100px] animate-blob" />
-        <div className="absolute bottom-[-10%] right-[20%] w-[50%] h-[50%] rounded-full bg-blue-900/40 blur-[100px] animate-blob animation-delay-2000" />
-      </div>
-      
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 w-full max-w-md flex flex-col items-center"
-      >
-        <div className="relative mb-12">
-          <div className="absolute inset-0 bg-indigo-500/20 blur-2xl rounded-full animate-pulse" />
-          <Hexagon className="w-32 h-32 text-indigo-500 animate-[spin_10s_linear_infinite] opacity-30" strokeWidth={0.5} />
-          <Hexagon className="w-32 h-32 text-indigo-400 absolute inset-0 animate-pulse" strokeWidth={1.5} />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Terminal className="w-10 h-10 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
-          </div>
-        </div>
+            // PHASE 3: TEXTURES (The long part)
+            setPhase('TEXTURES');
+            setStatusMsg('GENERATING_GEOMETRY_MAPS...');
+            
+            await textureService.preload((p) => {
+                // p is 0 to 1
+                setProgress(p * 100);
+            });
 
-        {levelConfig && (
-          <div className="text-center mb-12">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <h2 className="text-indigo-400 font-mono text-xs tracking-[0.3em] mb-3 uppercase opacity-70 break-words whitespace-pre-wrap">
-                {language === 'RU' ? 'УСТАНОВКА СОЕДИНЕНИЯ' : 'ESTABLISHING LINK'} // {levelConfig.id}
-              </h2>
-              <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] break-words whitespace-pre-wrap">
-                {displayTitle}
-              </h1>
-            </motion.div>
-          </div>
-        )}
+            // PHASE 4: WORLD GENERATION
+            setPhase('WORLD');
+            setStatusMsg('STABILIZING_WORLD_COORDINATES...');
+            
+            // Wait for session to be fully created in the background if it's not ready yet
+            const checkSessionReady = async () => {
+                return new Promise<void>((resolve) => {
+                    const check = () => {
+                        const currentSession = useGameStore.getState().session;
+                        const currentIsLoading = useGameStore.getState().isCampaignLoading;
+                        
+                        if (currentSession && !currentIsLoading) {
+                            resolve();
+                        } else {
+                            setTimeout(check, 100);
+                        }
+                    };
+                    check();
+                });
+            };
 
-        <div className="w-full max-w-xs h-16 flex flex-col items-center justify-center">
-            {!isReady ? (
-              <>
-                <div className="w-full bg-slate-900/50 rounded-full h-1 mb-4 overflow-hidden border border-slate-800/50 relative">
-                  <motion.div 
-                    className="bg-gradient-to-r from-indigo-600 to-blue-400 h-full shadow-[0_0_10px_rgba(99,102,241,0.5)]"
-                    initial={{ width: '0%' }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ ease: "linear", duration: 0.2 }}
-                  />
+            await checkSessionReady();
+            
+            // DONE
+            setPhase('DONE');
+            setProgress(100);
+            setStatusMsg('LINK_STABLE // ENTERING_HEX');
+            
+            await new Promise(r => setTimeout(r, 800));
+            setUIState('GAME');
+        };
+
+        runPreload();
+    }, [setUIState]);
+
+    const getPhaseIcon = () => {
+        switch(phase) {
+            case 'AUTH': return <ShieldAlert className="w-6 h-6 text-indigo-400" />;
+            case 'AUDIO': return <Radio className="w-6 h-6 text-cyan-400" />;
+            case 'TEXTURES': return <Layers className="w-6 h-6 text-amber-400" />;
+            case 'WORLD': return <Box className="w-6 h-6 text-emerald-400" />;
+            default: return <Cpu className="w-6 h-6 text-white" />;
+        }
+    };
+
+    const levelConfig = session?.activeLevelConfig;
+    let displayTitle = '';
+    if (levelConfig) {
+        const levelKey = levelConfig.id.replace('.', '_');
+        const titleKey = `LEVEL_${levelKey}_TITLE` as keyof typeof TEXT.EN.CAMPAIGN;
+        displayTitle = TEXT[language].CAMPAIGN[titleKey] || levelConfig.title;
+    } else if (loadingLevelId) {
+        displayTitle = `SECTOR_${loadingLevelId}`;
+    }
+
+    return (
+        <div className="fixed inset-0 bg-[#020617] flex items-center justify-center font-mono overflow-hidden select-none z-[100]">
+            {/* Background Atmosphere */}
+            <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent shadow-[0_0_20px_rgba(6,182,212,0.1)]" />
+            
+            <div className="relative w-full max-w-xl px-12 z-10">
+                {/* Header Section */}
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-cyan-500/20 blur-lg rounded-full animate-pulse" />
+                            {getPhaseIcon()}
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-black text-slate-400 tracking-[0.3em] uppercase">
+                                System_Init
+                            </h2>
+                            <div className="text-[10px] text-cyan-500/60 font-medium">
+                                PROTOCOL: HEX_QUEST [v2.0]
+                            </div>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-[10px] text-slate-500 uppercase tracking-widest leading-none mb-1">
+                            Sector
+                        </div>
+                        <div className="text-xs font-bold text-slate-300">
+                            {levelConfig?.id || loadingLevelId || 'ALPHA-01'}
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex justify-between w-full text-[10px] font-mono text-slate-500 tracking-widest uppercase break-words whitespace-pre-wrap">
-                  <span className="animate-pulse">{loadingText || (language === 'RU' ? 'ИНИЦИАЛИЗАЦИЯ...' : 'INITIALIZING...')}</span>
-                  <span className="text-indigo-400 font-bold">{Math.floor(progress)}%</span>
+                {/* Level Title */}
+                <div className="mb-12 h-16 flex flex-col justify-center">
+                    <AnimatePresence mode="wait">
+                        {displayTitle && (
+                            <motion.div
+                                key={displayTitle}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                className="space-y-1"
+                            >
+                                <div className="text-[10px] text-cyan-500/40 uppercase tracking-[0.5em]">Target_Node</div>
+                                <div className="text-3xl font-black text-white italic tracking-tighter uppercase">{displayTitle}</div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
-              </>
-            ) : (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleStart}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-[0.3em] shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all flex items-center justify-center gap-3 group"
-              >
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                <span className="break-words whitespace-pre-wrap">{language === 'RU' ? 'ВОЙТИ В СЕКТОР' : 'ENTER SECTOR'}</span>
-              </motion.button>
-            )}
+
+                {/* Progress Visual */}
+                <div className="relative space-y-4 mb-12">
+                    <div className="h-1 w-full bg-slate-900 overflow-hidden relative border border-slate-800/50">
+                        <motion.div 
+                            className="absolute inset-y-0 left-0 bg-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ type: "spring", bounce: 0, duration: 1 }}
+                        />
+                    </div>
+                    
+                    <div className="flex justify-between items-end">
+                        <div className="flex flex-col gap-1">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={statusMsg}
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -5 }}
+                                    className="text-[11px] font-black text-cyan-400 tracking-tighter uppercase"
+                                >
+                                    {statusMsg}
+                                </motion.div>
+                            </AnimatePresence>
+                            <div className="text-[9px] text-slate-500 tracking-widest uppercase">
+                                Module: {phase}_{Math.floor(progress)}%
+                            </div>
+                        </div>
+                        <div className="text-3xl font-black text-slate-700/50 tracking-tighter tabular-nums selection:bg-transparent">
+                            {Math.floor(progress)}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Lower Technical Grid */}
+                <div className="grid grid-cols-2 gap-8 border-t border-slate-900 pt-8">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                            <Activity className="w-3 h-3 text-emerald-500" />
+                            Live_Feed
+                        </div>
+                        <div className="space-y-1 overflow-hidden h-24">
+                            {techData.map((line, idx) => (
+                                <motion.div 
+                                    key={`${line}-${idx}`}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1 - (idx * 0.12), x: 0 }}
+                                    className="text-[9px] text-cyan-500/70 font-mono flex gap-2"
+                                >
+                                    <span className="opacity-30">[{8-idx}]</span>
+                                    <span>{line}</span>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                            <Zap className="w-3 h-3 text-amber-500" />
+                            Hard_State
+                        </div>
+                        <div className="space-y-2">
+                            {[
+                                { lab: 'BUFFER', val: '0x33A' },
+                                { lab: 'PARITY', val: 'NOMINAL' },
+                                { lab: 'V_SYNC', val: 'LOCK' },
+                                { lab: 'CACHE', val: 'WRITING' }
+                            ].map((item, i) => (
+                                <div key={i} className="flex justify-between items-center text-[9px] font-mono">
+                                    <span className="text-slate-600 uppercase tracking-tighter">{item.lab}:</span>
+                                    <span className="text-slate-400 font-bold">{item.val}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer Decor */}
+                <div className="mt-12 flex justify-between items-center text-[8px] text-slate-700 font-black tracking-[0.4em] uppercase opacity-40">
+                    <div className="flex gap-4">
+                        <span className="flex items-center gap-1"><Wifi className="w-2 h-2" /> Signal_Strong</span>
+                        <span>Auth_Token_OK</span>
+                    </div>
+                    <div>Sector_0x11</div>
+                </div>
+            </div>
+
+            {/* Scanning Line Effect */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-10">
+                <div className="w-full h-1 bg-cyan-500 animate-scanline shadow-[0_0_20px_cyan]" />
+            </div>
+            
+            {/* Corner Markers */}
+            <div className="absolute top-8 left-8 w-8 h-8 border-t-2 border-l-2 border-slate-800" />
+            <div className="absolute top-8 right-8 w-8 h-8 border-t-2 border-r-2 border-slate-800" />
+            <div className="absolute bottom-8 left-8 w-8 h-8 border-b-2 border-l-2 border-slate-800" />
+            <div className="absolute bottom-8 right-8 w-8 h-8 border-b-2 border-r-2 border-slate-800" />
         </div>
-
-        {/* Decorative elements */}
-        <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 w-px h-16 bg-gradient-to-t from-transparent via-indigo-500/50 to-transparent" />
-      </motion.div>
-
-      {/* Scanning line effect */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-10">
-        <div className="w-full h-1 bg-indigo-500/50 blur-sm animate-[scan_3s_linear_infinite]" />
-      </div>
-    </div>
-  );
+    );
 };
 
 export default CampaignLoading;

@@ -18,9 +18,9 @@ export class TransactionQueue {
     this.queue.sort((a, b) => b.priority - a.priority);
   }
 
-  async processQueue(
+  processQueue(
     processor: (actorId: string, action: GameAction) => ValidationResult
-  ): Promise<ValidationResult[]> {
+  ): ValidationResult[] {
     if (this.processing) {
       return [{ ok: false, reason: 'Queue busy' }];
     }
@@ -30,7 +30,6 @@ export class TransactionQueue {
 
     try {
       // Process all currently queued items
-      // We take a snapshot of length to avoid infinite loops if processing adds more items immediately (though unlikely here)
       const count = this.queue.length;
       for (let i = 0; i < count; i++) {
         const tx = this.queue.shift();

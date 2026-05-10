@@ -9,7 +9,7 @@ import { CAMPAIGN_LEVELS } from './campaign/levels.ts';
 import { LevelConfig } from './types';
 import { calculateMovementCost } from './rules/movement.ts';
 import { TEXT } from './services/i18n.ts';
-import { getItemDef } from './rules/items.ts';
+import { getItemDef, generateMonumentRecipe } from './rules/items.ts';
 import { effectPool } from './services/effectPool.ts';
 import { historyService } from './services/historyService.ts';
 import { EVENT_REGISTRY } from './rules/events.ts';
@@ -94,6 +94,7 @@ interface GameStore extends GameState {
   placeItemInMonument: (item: Item, slotIndex: number) => void;
   removeItemFromMonument: (slotIndex: number) => void;
   rerollMonumentRequirements: () => void;
+  rerollSingleMonumentRequirement: (slotIndex: number) => void;
   activateMonument: () => void;
   visitPoi: () => void;
   closeInterior: () => void;
@@ -266,11 +267,17 @@ export const useGameStore = create<GameStore>()(
           const overworldState = get().overworld;
           
           // Show loading state immediately while map generates in worker
-          set({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME' });
+          set({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME', isCampaignLoading: true });
           
-          const initialSessionState = await createInitialSessionData(effectiveWin ?? null, levelConfig, get().language, stateUser, overworldState);
-          engine = new GameEngine(initialSessionState); 
-          set({ session: engine.state, hasActiveSession: true });
+          try {
+            const initialSessionState = await createInitialSessionData(effectiveWin ?? null, levelConfig, get().language, stateUser, overworldState);
+            engine = new GameEngine(initialSessionState); 
+            set({ session: engine.state, hasActiveSession: true, isCampaignLoading: false });
+          } catch (err) {
+            console.error("Failed to start session", err);
+            set({ isCampaignLoading: false, uiState: 'MENU' });
+            get().showToast("Failed to initialize sector", "error");
+          }
       },
 
       startCampaignLevel: async (levelId) => {
@@ -624,16 +631,80 @@ export const useGameStore = create<GameStore>()(
       rerollMonumentRequirements: () => {
           const state = get();
           const session = state.session;
-          if (!session || session.player.coins < 100) {
+          if (!session || !session.monumentRequirements) {
+              audioService.play('ERROR');
+              return;
+          }
+
+          if (session.player.coins < 100) {
               audioService.play('ERROR');
               state.showToast(TEXT[state.language].TOAST.NEED_CREDITS.replace('{0}', '100'), 'error');
               return;
           }
           
-          audioService.play('UI_CLICK');
-          // Deduct credits
-          // Update requirements
-          // This is a direct state modification, should be okay
+          audioService.play('SUCCESS');
+          const newRequirements = generateMonumentRecipe(session.difficulty);
+          
+          set(state => {
+              if (!state.session) return {};
+              const player = { ...state.session.player, coins: state.session.player.coins - 100 };
+              return { 
+                  session: { 
+                      ...state.session, 
+                      player,
+                      monumentRequirements: newRequirements,
+                      monumentRevealedSlots: [] // Use empty array instead of undefined
+                  } 
+              };
+          });
+          
+          state.showToast(TEXT[state.language].TOAST.MONUMENT_UPDATED, 'success');
+      },
+
+      rerollSingleMonumentRequirement: (slotIndex: number) => {
+          const state = get();
+          const session = state.session;
+          if (!session || !session.monumentRequirements || slotIndex >= session.monumentRequirements.length) {
+              audioService.play('ERROR');
+              return;
+          }
+
+          if (session.player.coins < 100) {
+              audioService.play('ERROR');
+              state.showToast(TEXT[state.language].TOAST.NEED_CREDITS.replace('{0}', '100'), 'error');
+              return;
+          }
+
+          audioService.play('SUCCESS');
+          
+          // Generate a single requirement
+          // Since generateMonumentRecipe returns a full list, we'll just take one element that isn't the same if possible
+          const recipe = generateMonumentRecipe(session.difficulty);
+          const newReq = recipe[Math.floor(Math.random() * recipe.length)];
+
+          set(state => {
+              if (!state.session || !state.session.monumentRequirements) return {};
+              const player = { ...state.session.player, coins: state.session.player.coins - 100 };
+              const monumentRequirements = [...state.session.monumentRequirements];
+              monumentRequirements[slotIndex] = newReq;
+              
+              // Also ensure revealed slots is set
+              const monumentRevealedSlots = state.session.monumentRevealedSlots ? [...state.session.monumentRevealedSlots] : [];
+              if (monumentRevealedSlots.length > slotIndex) {
+                  monumentRevealedSlots[slotIndex] = true; // Rerolled slot is revealed
+              }
+
+              return { 
+                  session: { 
+                      ...state.session, 
+                      player,
+                      monumentRequirements,
+                      monumentRevealedSlots
+                  } 
+              };
+          });
+
+          state.showToast(TEXT[state.language].TOAST.MONUMENT_UPDATED, 'success');
       },
 
       activateMonument: () => {

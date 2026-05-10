@@ -437,7 +437,8 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         const [pcq, pcr] = playerChunkKey.split(',').map(Number);
         
         const visible: string[] = [];
-        const CHUNK_RADIUS = 2; // Render chunks within this radius of player chunk
+        const isCampaign = !!activeLevelConfig;
+        const CHUNK_RADIUS = isCampaign ? 8 : 2; // Render more chunks in campaign since Fog of War is disabled
         
         for (let cq = pcq - CHUNK_RADIUS; cq <= pcq + CHUNK_RADIUS; cq++) {
             for (let cr = pcr - CHUNK_RADIUS; cr <= pcr + CHUNK_RADIUS; cr++) {
@@ -469,10 +470,11 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                 bots,
                 visibleChunks,
                 pendingKey,
-                selectedHexId
+                selectedHexId,
+                isCampaign: !!activeLevelConfig
             });
         }
-    }, [rotation, player, bots, visibleChunks, pendingKey, selectedHexId]);
+    }, [rotation, player, bots, visibleChunks, pendingKey, selectedHexId, activeLevelConfig]);
 
     // Explicitly memoize onHexClick to ensure stability for renderList
     const memoizedOnHexClick = useCallback((q: number, r: number) => {
@@ -606,7 +608,10 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     return (
         <>
             <Layer>
-                <FowGrid rotation={rotation} playerQ={playerQ || 0} playerR={playerR || 0} size={HEX_SIZE} />
+                {/* Only show Fog of War grid in non-campaign mode (Skirmish) */}
+                {!activeLevelConfig && (
+                    <FowGrid rotation={rotation} playerQ={playerQ || 0} playerR={playerR || 0} size={HEX_SIZE} />
+                )}
                 {renderList.items.map(item => {
                     if (item.type === 'HEX') {
                         return (

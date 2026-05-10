@@ -114,7 +114,7 @@ export class ActionProcessor {
           // Iterate path to detect negative levels and increase tax
           for (const step of action.path) {
               const hex = state.grid[getHexKey(step.q, step.r)];
-              if (hex && hex.maxLevel < 0) {
+              if (hex && hex.currentLevel < 0) {
                   // Double the entropy impact for stepping on negative hexes
                   entropyCost += ENTROPY_CONFIG.COST_ACTION_BASE;
               }

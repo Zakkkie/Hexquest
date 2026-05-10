@@ -4,7 +4,7 @@ import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
 import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
-import { LogOut, X, Trophy, XCircle, ArrowRight, RotateCcw, Target, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw } from 'lucide-react';
+import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Globe, Activity } from 'lucide-react';
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
 import { Item } from '../../types';
 
@@ -239,22 +239,89 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* MISSION BRIEFING / DETAILS */}
             {(activeModal === 'MISSION' || gameStatus === 'BRIEFING') && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 md:p-6 pointer-events-auto animate-in fade-in duration-300">
-                    <div className="bg-slate-950 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl max-w-lg w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto relative flex flex-col gap-4 md:gap-6 p-4 md:p-6 animate-in zoom-in-95">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
-                        <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 md:h-6"/></button>
-                        <div className="flex flex-col items-center text-center mt-2">
-                            <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-900 rounded-xl md:rounded-2xl flex items-center justify-center mb-3 md:mb-4 border border-slate-800 shadow-inner"><Target className="w-6 h-6 md:w-8 md:h-8 text-indigo-400" /></div>
-                            <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter break-words whitespace-pre-wrap">{briefingTitle}</h2>
-                            <div className="flex items-center gap-2 mt-2">
-                                <span className={`px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold uppercase ${difficulty === 'HARD' ? 'bg-red-900/30 text-red-400' : 'bg-amber-900/30 text-amber-400'}`}>{difficulty || 'NORMAL'}</span>
-                                {bots && bots.length > 0 && <span className="px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold uppercase bg-red-900/20 text-red-400 border border-red-900/30 flex items-center gap-1"><Swords className="w-3 h-3"/> {t.BRIEFING_RIVAL}</span>}
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 md:p-6 pointer-events-auto animate-in fade-in duration-300">
+                    <div className="relative bg-slate-950 border-2 border-indigo-500/40 rounded-lg shadow-[0_0_40px_rgba(79,70,229,0.2)] max-w-lg w-full max-h-[95vh] md:max-h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 group">
+                        {/* Scanline effect */}
+                        <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+                        <div className="absolute top-0 left-0 w-full h-1 bg-white/5 animate-scan-slow z-10" />
+
+                        {/* Technical Header */}
+                        <div className="bg-indigo-900/20 border-b border-indigo-500/30 p-3 flex items-center justify-between z-20">
+                            <div className="flex items-center gap-3">
+                                <Terminal className="w-5 h-5 text-indigo-400" />
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400/60 leading-none">MISSION_PROTOCOL_INIT</span>
+                                    <span className="text-xs font-bold text-white uppercase tracking-widest">{activeLevelConfig?.id || 'SKIRMISH_OPS'}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex gap-1">
+                                    {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 bg-indigo-500 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}
+                                </div>
+                                <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5"/></button>
                             </div>
                         </div>
-                        <div className="bg-slate-900/50 rounded-xl p-3 md:p-4 border border-slate-800/50 max-h-[45vh] md:max-h-[40vh] overflow-y-auto no-scrollbar">
-                            <p className="text-xs md:text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-mono break-words">{briefingDesc}</p>
+
+                        <div className="flex-1 overflow-y-auto no-scrollbar relative z-20 p-6 md:p-8 flex flex-col gap-6">
+                            <div className="flex flex-col items-center">
+                                <div className="relative mb-6">
+                                    <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full" />
+                                    <div className="relative w-20 h-20 bg-slate-900 border-2 border-indigo-500/30 rounded-xl flex items-center justify-center shadow-2xl">
+                                        <Target className="w-10 h-10 text-indigo-400" />
+                                    </div>
+                                    <div className="absolute -bottom-2 -right-2 bg-indigo-600 p-1.5 rounded text-white shadow-lg">
+                                        <Activity className="w-3.5 h-3.5" />
+                                    </div>
+                                </div>
+                                <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter text-center leading-none mb-4">{briefingTitle}</h2>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-700 rounded text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <Globe className="w-3 h-3" /> {difficulty || 'NORMAL'}
+                                    </div>
+                                    {bots && bots.length > 0 && (
+                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-red-950/30 border border-red-500/30 rounded text-[10px] font-black text-red-400 uppercase tracking-widest">
+                                            <Swords className="w-3 h-3"/> {t.BRIEFING_RIVAL}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="relative bg-slate-900/80 border border-indigo-500/20 p-4 rounded-lg overflow-hidden group/text">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/40" />
+                                <div className="absolute top-0 right-0 p-1">
+                                    <FileText className="w-3 h-3 text-indigo-500/30" />
+                                </div>
+                                <p className="text-xs md:text-sm text-indigo-100/90 leading-relaxed whitespace-pre-wrap font-mono break-words pl-4">
+                                    {briefingDesc}
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <div className="text-[10px] font-black text-indigo-500/60 uppercase tracking-[0.2em] mb-1">SECONDARY_OBJECTIVES</div>
+                                <div className="grid grid-cols-2 gap-3 text-[10px] font-bold font-mono text-slate-400">
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-900/50 rounded border border-slate-800">
+                                        <Zap className="w-3 h-3 text-blue-400" /> ENERGY_OPTIMIZATION
+                                    </div>
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-900/50 rounded border border-slate-800">
+                                        <Trophy className="w-3 h-3 text-amber-400" /> RANK_ASCENSION
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="w-full py-3 md:py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl transition-all active:scale-95 text-sm md:text-base">{gameStatus === 'BRIEFING' ? t.BRIEFING_BTN_START : t.BTN_READY}</button>
+
+                        {/* Footer / Action */}
+                        <div className="p-6 bg-slate-900/50 border-t border-indigo-500/20 z-20">
+                            <button 
+                                onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} 
+                                className="relative w-full overflow-hidden group/btn"
+                            >
+                                <div className="absolute inset-0 bg-indigo-600 transition-transform duration-300 group-hover/btn:scale-105" />
+                                <div className="relative flex items-center justify-center gap-3 py-4 text-white font-black uppercase tracking-[0.3em] text-sm">
+                                    {gameStatus === 'BRIEFING' ? t.BRIEFING_BTN_START : t.BTN_READY}
+                                    <ArrowRight className="w-5 h-5 transition-transform group-hover/btn:translate-x-1" />
+                                </div>
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -262,27 +329,55 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* RANKINGS */}
             {activeModal === 'RANKINGS' && (
                 <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-[340px] md:max-w-md max-h-[80vh] flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
-                        <div className="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
-                        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
-                            <div className="flex items-center gap-3"><Trophy className="w-5 h-5 text-amber-500" /><h3 className="text-sm font-black uppercase tracking-widest text-white">{t.MINI_LB_TITLE}</h3></div>
+                    <div className="bg-slate-950 border-2 border-amber-500/40 rounded-lg shadow-[0_0_40px_rgba(245,158,11,0.2)] w-full max-w-[340px] md:max-w-md max-h-[80vh] flex flex-col overflow-hidden relative group" onClick={e => e.stopPropagation()}>
+                        {/* Scanline effect */}
+                        <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+                        
+                        <div className="p-4 border-b border-amber-500/30 flex items-center justify-between bg-amber-900/10 z-20">
+                            <div className="flex items-center gap-3">
+                                <Trophy className="w-5 h-5 text-amber-500" />
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/60 leading-none">NETWORK_HIERARCHY</span>
+                                    <span className="text-xs font-bold text-white uppercase tracking-widest">{t.MINI_LB_TITLE}</span>
+                                </div>
+                            </div>
                             <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-3">
-                            {liveRankings.length === 0 ? <div className="p-8 text-center text-slate-500 text-xs font-mono">{t.MINI_LB_EMPTY}</div> : 
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-3 z-20 bg-slate-950/40">
+                            {liveRankings.length === 0 ? <div className="p-8 text-center text-slate-500 text-xs font-mono uppercase tracking-widest opacity-40">NO_DATA_STREAM</div> : 
                                 <div className="flex flex-col gap-2">{liveRankings.map((entry, idx) => (
-                                    <div key={entry.id} className={`grid grid-cols-12 gap-2 items-center p-2.5 rounded-xl border ${entry.isPlayer ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
-                                        <div className="col-span-1 flex justify-center"><div className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-black ${idx === 0 ? 'bg-amber-500 text-black' : 'bg-slate-700 text-slate-400'}`}>{idx + 1}</div></div>
-                                        <div className="col-span-5 flex items-center gap-2 overflow-hidden"><div className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_8px_currentColor]" style={{ backgroundColor: entry.color, color: entry.color }}></div><span className={`text-xs font-bold truncate ${entry.isPlayer ? 'text-indigo-300' : 'text-slate-300'}`}>{entry.nickname}</span></div>
-                                        <div className="col-span-2 text-right"><span className="text-[10px] font-mono text-emerald-400 font-bold">L{entry.level}</span></div>
-                                        <div className="col-span-2 text-right"><span className="text-[10px] font-mono text-amber-400 font-bold">{entry.coins}</span></div>
-                                        <div className="col-span-2 text-right"><span className="text-[10px] font-mono text-blue-400 font-bold">{entry.moves}</span></div>
+                                    <div key={entry.id} className={`grid grid-cols-12 gap-2 items-center p-3 rounded border-l-4 transition-all ${entry.isPlayer ? 'bg-indigo-900/20 border-indigo-500/60 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'bg-slate-900/60 border-slate-700/60 hover:bg-slate-800'}`}>
+                                        <div className="col-span-1 flex justify-center">
+                                            <div className={`text-[10px] font-black font-mono ${idx === 0 ? 'text-amber-400' : 'text-slate-500'}`}>
+                                                {String(idx + 1).padStart(2, '0')}
+                                            </div>
+                                        </div>
+                                        <div className="col-span-5 flex items-center gap-2 overflow-hidden">
+                                            <div className="w-1.5 h-4" style={{ backgroundColor: entry.color }}></div>
+                                            <span className={`text-[11px] font-black uppercase truncate tracking-tight ${entry.isPlayer ? 'text-indigo-300' : 'text-slate-300'}`}>
+                                                {entry.nickname}
+                                            </span>
+                                        </div>
+                                        <div className="col-span-2 text-right">
+                                            <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5">LVL</div>
+                                            <span className="text-[10px] font-mono text-emerald-400 font-bold">{entry.level}</span>
+                                        </div>
+                                        <div className="col-span-2 text-right">
+                                            <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5">CRD</div>
+                                            <span className="text-[10px] font-mono text-amber-400 font-bold">{entry.coins}</span>
+                                        </div>
+                                        <div className="col-span-2 text-right">
+                                            <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5">MOV</div>
+                                            <span className="text-[10px] font-mono text-blue-400 font-bold">{entry.moves}</span>
+                                        </div>
                                     </div>
                                 ))}</div>
                             }
                         </div>
-                        <div className="p-3 bg-slate-950/50 border-t border-slate-800">
-                            <button onClick={closeModal} className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase text-[10px] transition-colors">{t.BTN_READY}</button>
+                        <div className="p-4 bg-slate-900/80 border-t border-amber-500/30 z-20 shadow-inner">
+                            <button onClick={closeModal} className="w-full py-3 bg-amber-600/20 border border-amber-500 hover:bg-amber-600 hover:text-white text-amber-400 font-black uppercase text-xs tracking-[0.3em] transition-all">
+                                {t.BTN_READY}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -291,40 +386,55 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* LOG */}
             {activeModal === 'LOG' && (
                 <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-[340px] md:max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
-                        <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
-                        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                    <div className="bg-slate-950 border-2 border-indigo-500/40 rounded-lg shadow-[0_0_40px_rgba(79,70,229,0.2)] w-full max-w-[340px] md:max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative group" onClick={e => e.stopPropagation()}>
+                        {/* Scanline effect */}
+                        <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+                        
+                        <div className="p-4 border-b border-indigo-500/30 flex items-center justify-between bg-indigo-900/10 z-20">
                             <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-indigo-500/20 rounded-lg border border-indigo-500/30">
+                                <div className="p-1.5 bg-indigo-500/20 rounded border border-indigo-500/30">
                                     <FileText className="w-4 h-4 text-indigo-400" />
                                 </div>
-                                <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white break-words whitespace-pre-wrap">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</h3>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none">DATA_FETCH_COMPLETE</span>
+                                    <span className="text-xs font-bold text-white uppercase tracking-widest">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
+                                </div>
                             </div>
                             <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-1.5 bg-slate-950/30">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2 bg-slate-950/40 z-20">
                             {messageLog && messageLog.length > 0 ? (
                                 [...messageLog].reverse().map((log) => (
-                                    <div key={log.id} className="flex gap-3 p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/50 hover:bg-slate-800/40 transition-colors">
-                                        <div className={`mt-0.5 shrink-0 w-1.5 h-1.5 rounded-full ${log.type === 'INFO' ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : log.type === 'ERROR' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : log.type === 'WARN' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : log.type === 'SUCCESS' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-500'}`} />
+                                    <div key={log.id} className="relative flex gap-3 p-3 bg-slate-900/40 border border-slate-800 hover:bg-slate-800 transition-all group/item overflow-hidden">
+                                        <div className={`absolute top-0 left-0 w-1 h-full ${log.type === 'INFO' ? 'bg-indigo-500' : log.type === 'ERROR' ? 'bg-red-500' : log.type === 'WARN' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-0.5">
-                                                <span className={`text-[8px] font-black uppercase tracking-tighter ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : log.type === 'SUCCESS' ? 'text-emerald-400' : 'text-slate-400'}`}>{log.type}</span>
-                                                <span className="text-[8px] font-mono text-slate-600">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                                    [{log.type}]
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[8px] font-mono text-slate-600">STAMP::</span>
+                                                    <span className="text-[9px] font-mono text-slate-400">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                </div>
                                             </div>
-                                            <p className="text-[10px] md:text-[11px] text-slate-300 font-mono leading-snug break-words whitespace-pre-wrap">{log.text}</p>
+                                            <p className="text-[11px] md:text-xs text-slate-200 font-mono leading-relaxed break-words whitespace-pre-wrap">
+                                                <span className="text-slate-600 mr-2 opacity-50">&gt;</span>
+                                                {log.text}
+                                            </p>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="flex flex-col items-center justify-center h-full opacity-20 gap-3">
-                                    <FileText className="w-12 h-12 text-slate-500" />
-                                    <div className="text-center text-slate-500 text-[10px] font-black uppercase tracking-widest">{language === 'RU' ? 'Журнал пуст' : 'Log is empty'}</div>
+                                <div className="flex flex-col items-center justify-center h-full opacity-10 gap-3">
+                                    <Terminal className="w-16 h-16 text-slate-500" />
+                                    <div className="text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.5em]">BUFFER_EMPTY</div>
                                 </div>
                             )}
                         </div>
-                        <div className="p-3 bg-slate-950/50 border-t border-slate-800">
-                            <button onClick={closeModal} className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase text-[10px] transition-colors">{t.BTN_READY}</button>
+                        <div className="p-4 bg-slate-900/80 border-t border-indigo-500/30 z-20 shadow-inner">
+                            <button onClick={closeModal} className="w-full py-3 bg-indigo-600/20 border border-indigo-500 hover:bg-indigo-600 hover:text-white text-indigo-400 font-black uppercase text-xs tracking-[0.3em] transition-all">
+                                {t.BTN_READY}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -432,37 +542,88 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* VICTORY / DEFEAT */}
             {(gameStatus === 'DEFEAT' || (gameStatus === 'VICTORY' && victoryStage === 'MODAL')) && (
-                <div className="absolute inset-0 z-[200] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-700 pointer-events-auto p-4">
-                    <div className="flex flex-col items-center max-w-md w-full">
-                        <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-[0_0_50px_currentColor] animate-bounce ${gameStatus === 'VICTORY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-500'}`}>{gameStatus === 'VICTORY' ? <Trophy className="w-12 h-12" /> : <XCircle className="w-12 h-12" />}</div>
-                        <h1 className={`text-4xl md:text-5xl font-black uppercase tracking-tighter mb-2 text-transparent bg-clip-text ${gameStatus === 'VICTORY' ? 'bg-gradient-to-b from-emerald-300 to-emerald-600' : 'bg-gradient-to-b from-red-300 to-red-600'}`}>{gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}</h1>
-                        <p className="text-slate-400 font-mono text-sm tracking-widest uppercase mb-8">{gameStatus === 'VICTORY' ? t.MISSION_COMPLETE : t.MISSION_FAILED}</p>
-                        <div className="w-full flex flex-col gap-3">
+                <div className="absolute inset-0 z-[250] flex items-center justify-center bg-black/95 backdrop-blur-2xl animate-in fade-in duration-1000 pointer-events-auto p-4 md:p-8">
+                    {/* Background Grid & Scanlines */}
+                    <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none" />
+                    <div className={`absolute inset-0 bg-gradient-to-b opacity-20 pointer-events-none ${gameStatus === 'VICTORY' ? 'from-emerald-500/20 to-transparent' : 'from-red-500/20 to-transparent'}`} />
+
+                    <div className="flex flex-col items-center max-w-2xl w-full relative z-10">
+                        {/* Terminal Decoration */}
+                        <div className="w-full flex items-center gap-4 mb-12 opacity-40">
+                            <div className="h-px flex-1 bg-current" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }} />
+                            <div className="text-[10px] font-black uppercase tracking-[0.5em] font-mono" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }}>
+                                {gameStatus === 'VICTORY' ? 'SYSTEM_STABILITY_RESTORED' : 'LINK_TERMINATED'}
+                            </div>
+                            <div className="h-px flex-1 bg-current" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }} />
+                        </div>
+
+                        {/* Main Status Display */}
+                        <div className="relative mb-12">
+                            <div className={`absolute inset-0 blur-3xl opacity-30 animate-pulse ${gameStatus === 'VICTORY' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                            <div className={`relative px-12 py-8 border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_50px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_50px_rgba(239,68,68,0.3)]'}`}>
+                                <h1 className={`text-6xl md:text-8xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
+                                    {gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}
+                                </h1>
+                            </div>
+                        </div>
+
+                        {/* Mission Summary Data */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mb-12">
+                            {[
+                                { label: 'STATUS', value: gameStatus === 'VICTORY' ? 'SUCCESS' : 'FAILED', color: gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-400' },
+                                { label: 'CREDITS', value: player?.coins || 0, color: 'text-amber-400' },
+                                { label: 'RANK', value: `LVL_${player?.playerLevel || 0}`, color: 'text-indigo-400' }
+                            ].map((stat, i) => (
+                                <div key={i} className="bg-slate-900/50 border border-white/10 p-4 rounded-lg backdrop-blur-md">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{stat.label}</div>
+                                    <div className={`text-xl font-black font-mono leading-none ${stat.color}`}>{stat.value}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Action Protocol */}
+                        <div className="w-full flex flex-col md:flex-row gap-4">
                             {isOverworldGenerated ? (
-                                <div className="flex flex-col gap-3 w-full">
+                                <>
                                     <button 
                                         onClick={handleMenu} 
-                                        className={`w-full py-4 ${gameStatus === 'VICTORY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-800 hover:bg-slate-700'} text-white font-black rounded-xl uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2`}
+                                        className={`flex-1 py-5 relative overflow-hidden group/btn ${gameStatus === 'VICTORY' ? 'bg-emerald-600/20 border-2 border-emerald-500' : 'bg-slate-900 border-2 border-slate-700'}`}
                                     >
-                                        {gameStatus === 'VICTORY' ? 'RETURN TO OVERWORLD' : 'EXIT TO OVERWORLD'} 
-                                        <ArrowRight className="w-5 h-5" />
+                                        <div className={`absolute inset-0 transform translate-y-full transition-transform duration-300 group-hover/btn:translate-y-0 ${gameStatus === 'VICTORY' ? 'bg-emerald-600' : 'bg-slate-700'}`} />
+                                        <div className="relative flex items-center justify-center gap-3 text-white font-black uppercase tracking-[0.2em] text-sm">
+                                            {gameStatus === 'VICTORY' ? 'RETURN_TO_BASE' : 'RECALL_SIGNAL'} 
+                                            <ArrowRight className="w-5 h-5 transition-transform group-hover/btn:translate-x-1" />
+                                        </div>
                                     </button>
                                     {gameStatus === 'DEFEAT' && (
                                         <button 
                                             onClick={handleRetry} 
-                                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-indigo-900/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            className="flex-1 py-5 bg-indigo-600 border-2 border-indigo-400 relative overflow-hidden group/retry"
                                         >
-                                            <RotateCcw className="w-5 h-5" /> {t.BTN_RETRY}
+                                            <div className="absolute inset-0 bg-indigo-500 transform scale-x-0 origin-left transition-transform duration-300 group-hover/retry:scale-x-100" />
+                                            <div className="relative flex items-center justify-center gap-3 text-white font-black uppercase tracking-[0.2em] text-sm">
+                                                <RotateCcw className="w-5 h-5 transition-transform group-hover/retry:rotate-180" /> {t.BTN_RETRY}
+                                            </div>
                                         </button>
                                     )}
-                                </div>
+                                </>
                             ) : (
                                 <>
-                                    {gameStatus === 'VICTORY' && activeLevelConfig && <button onClick={handleNextLevel} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-900/30 transition-all active:scale-95 flex items-center justify-center gap-2">{t.BTN_NEXT} <ArrowRight className="w-5 h-5" /></button>}
-                                    <button onClick={handleRetry} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"><RotateCcw className="w-4 h-4" /> {t.BTN_RETRY}</button>
-                                    <button onClick={handleMenu} className="w-full py-4 bg-transparent hover:bg-slate-800/50 text-slate-500 hover:text-white font-bold rounded-xl uppercase tracking-widest transition-colors text-xs">{t.BTN_MENU}</button>
+                                    {gameStatus === 'VICTORY' && activeLevelConfig && (
+                                        <button onClick={handleNextLevel} className="flex-1 py-5 bg-emerald-600 border-2 border-emerald-400 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center gap-3 text-sm">
+                                            {t.BTN_NEXT} <ArrowRight className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                    <button onClick={handleRetry} className="flex-1 py-5 bg-slate-900 border-2 border-slate-700 hover:bg-slate-800 text-white font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 text-sm">
+                                        <RotateCcw className="w-5 h-5" /> {t.BTN_RETRY}
+                                    </button>
                                 </>
                             )}
+                        </div>
+
+                        {/* Extra Visual Detail */}
+                        <div className="mt-12 text-[8px] font-mono opacity-20 uppercase tracking-[1em] text-center w-full">
+                            ENCRYPTION_KEY::0x7F2A_C0DE_NEBULA
                         </div>
                     </div>
                 </div>
@@ -512,15 +673,55 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         const isRarityWild = (RARITIES as readonly string[]).includes(reqId);
                                         const rarityColor: Record<string, string> = { COMMON: 'text-slate-300 border-slate-500', UNCOMMON: 'text-emerald-400 border-emerald-600', RARE: 'text-purple-400 border-purple-600', LEGENDARY: 'text-amber-400 border-amber-600' };
                                         const reqDef = !isUnrevealed && !isWildcard && !isRarityWild && reqId !== 'ONE_OF' ? getItemDef(reqId) : undefined;
+                                        
+                                        const resolveReqHint = () => {
+                                            if (isUnrevealed) return t.MONUMENT_HINT_UNREVEALED;
+                                            if (isWildcard) return t.MONUMENT_HINT_ANY;
+                                            if (reqId === 'ONE_OF') return t.MONUMENT_HINT_ONE_OF;
+                                            if (isRarityWild) return t.MONUMENT_HINT_RARITY.replace('{0}', reqId);
+                                            const def = getItemDef(reqId);
+                                            return t.MONUMENT_HINT_ITEM.replace('{0}', def?.name[language] || reqId);
+                                        };
+
+                                        const resolveReqName = () => {
+                                            if (isWildcard) return language === 'RU' ? 'Любой' : 'Any';
+                                            if (reqId === 'ONE_OF') return language === 'RU' ? 'Выбор' : 'Choice';
+                                            if (isRarityWild) return reqId;
+                                            return getItemDef(reqId)?.name[language] || reqId;
+                                        };
+
+                                        const hint = resolveReqHint();
+
                                         return (
-                                            <div key={idx} onDrop={(e) => handleDrop(e, idx)} onDragOver={handleAllowDrop} onClick={() => {
-                                                if (slotItem) {
-                                                    removeItemFromMonument(idx);
-                                                } else {
-                                                    const name = reqId === 'ANY' ? 'Any' : (reqId === 'ONE_OF' ? 'Choice' : (getItemDef(reqId)?.name[language] || reqId));
-                                                    useGameStore.getState().showToast(`Required: ${name}`, 'info');
-                                                }
-                                            }} className={`w-16 h-20 md:w-24 md:h-32 rounded-xl md:rounded-2xl border-2 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden ${slotItem ? `bg-slate-900 ${getRarityBorder(slotItem.rarity)}` : isUnrevealed ? 'bg-slate-900/20 border-slate-600 border-dashed hover:border-slate-400' : 'bg-slate-900/30 border-slate-700 border-dashed hover:border-slate-500'}`}>
+                                            <div 
+                                                key={idx} 
+                                                onDrop={(e) => handleDrop(e, idx)} 
+                                                onDragOver={handleAllowDrop} 
+                                                className={`w-16 h-20 md:w-24 md:h-32 rounded-xl md:rounded-2xl border-2 flex flex-col items-center justify-center transition-all relative overflow-hidden group/slot ${slotItem ? `bg-slate-900 ${getRarityBorder(slotItem.rarity)}` : isUnrevealed ? 'bg-slate-900/20 border-slate-600 border-dashed' : 'bg-slate-900/30 border-slate-700 border-dashed'}`}
+                                                title={hint}
+                                            >
+                                                
+                                                {/* Interaction Layer */}
+                                                <div 
+                                                    className="absolute inset-0 z-10 cursor-pointer" 
+                                                    onClick={() => {
+                                                        if (slotItem) {
+                                                            removeItemFromMonument(idx);
+                                                        } else {
+                                                            useGameStore.getState().showToast(hint, 'info');
+                                                        }
+                                                    }}
+                                                />
+
+                                                {/* Label */}
+                                                {!slotItem && !isUnrevealed && (
+                                                    <div className="absolute bottom-1 inset-x-1 z-0 pointer-events-none">
+                                                        <div className="text-[7px] md:text-[9px] text-center text-slate-500 font-black uppercase truncate px-1 opacity-60">
+                                                            {resolveReqName()}
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {slotItem ? <ItemIcon item={slotItem} size="w-10 h-10 md:w-16 md:h-16" /> : isUnrevealed ? (
                                                     <div className="flex flex-col items-center gap-1 animate-pulse">
                                                         <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-slate-800/80 border border-slate-500 flex items-center justify-center shadow-[0_0_8px_rgba(148,163,184,0.3)]">
@@ -537,7 +738,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                                     return altDef ? <ItemIcon key={ai} def={altDef} size="w-4 h-4 md:w-5 md:h-5" opacity={0.3} grayscale /> : null;
                                                                 })}
                                                             </div>
-                                                            <span className="text-[8px] text-slate-500 uppercase font-mono tracking-wider">1 OF 3</span>
+                                                            <span className="text-[8px] text-slate-500 uppercase font-mono tracking-wider">CHOICE</span>
                                                         </div>
                                                     ) : isRarityWild ? (
                                                         <div className="flex flex-col items-center gap-1">
@@ -555,6 +756,20 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                         </div>
                                                     ) : null)
                                                 )}
+
+                                                {/* Single Slot Reroll Button (Overlay) */}
+                                                {!slotItem && !isUnrevealed && (
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            useGameStore.getState().rerollSingleMonumentRequirement(idx);
+                                                        }}
+                                                        className="absolute top-1 right-1 p-1 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-md border border-indigo-500/30 transition-colors z-20 group-hover/slot:bg-indigo-500/50"
+                                                        title={t.MONUMENT_REROLL_SLOT}
+                                                    >
+                                                        <RefreshCw className="w-3 h-3 text-indigo-300" />
+                                                    </button>
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -564,7 +779,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         {isMonumentReady ? <><Zap className="w-4 h-4 md:w-5 md:h-5 fill-current" /> {t.MONUMENT_BTN_ACTIVE}</> : t.MONUMENT_BTN_INACTIVE}
                                     </button>
                                     <button onClick={() => { useGameStore.getState().rerollMonumentRequirements(); }} className="w-full py-2 rounded-xl bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-300 font-bold uppercase tracking-widest text-[10px] transition-all mt-2">
-                                        Reroll (100 Cr)
+                                        {t.MONUMENT_REROLL}
                                     </button>
                                 </div>
                             </div>

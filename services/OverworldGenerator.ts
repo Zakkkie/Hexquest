@@ -122,7 +122,8 @@ export function generateHexData(q: number, r: number, seed: number): OverworldHe
   let terrainType: TerrainType = 'PLAINS';
   let moveCost = 1;
 
-  if (height < 0.3) {
+  const distToCenter = cubeDistance({ q: 0, r: 0 }, { q, r });
+  if (height < 0.3 && distToCenter > 3) {
     terrainType = 'WATER';
     moveCost = 999;
   } else if (height > 0.7) {
@@ -140,7 +141,6 @@ export function generateHexData(q: number, r: number, seed: number): OverworldHe
 
   // Deterministic "random" for roads
   const roadSeed = Math.abs(Math.sin(q * 12.9898 + r * 78.233 + seed) * 43758.5453);
-  const distToCenter = cubeDistance({ q: 0, r: 0 }, { q, r });
   // Increase road density, especially near the center
   const roadProb = distToCenter < 10 ? 0.4 : 0.25;
   if (terrainType === 'PLAINS' && (roadSeed % 1) < roadProb) {

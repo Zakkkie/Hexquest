@@ -309,7 +309,7 @@ export class GrowthSystem implements System {
              // Update Hex (Mutate draft)
              Object.assign(state.grid[key], { 
                  currentLevel: newLevel, 
-                 maxLevel: newLevel, 
+                 maxLevel: Math.max(hex.maxLevel, newLevel), 
                  progress: 0,
                  structureType: undefined, 
                  durability: newDurability,

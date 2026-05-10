@@ -112,7 +112,10 @@ export const createInitialSessionDataAsync = async (
   
   // Player Position
   let startQ = 0, startR = 0;
-  const playerStartHex = Object.values(initialGrid).find(h => h.ownerId === 'player-1');
+  // Pick the lowest level hex owned by the player to avoid spawning on "peaks" where movement might be blocked by staircase rule
+  const ownedHexes = Object.values(initialGrid).filter(h => h.ownerId === 'player-1');
+  const playerStartHex = ownedHexes.sort((a, b) => (a.currentLevel || 0) - (b.currentLevel || 0))[0];
+  
   if (playerStartHex) {
       startQ = playerStartHex.q;
       startR = playerStartHex.r;
