@@ -1,15 +1,13 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
-import { Crown, Box, Wallet, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, Clock, RotateCcw, Info, Mountain } from 'lucide-react';
+import { Crown, Box, Wallet, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, Clock, RotateCcw } from 'lucide-react';
 import EntropyGauge from '../EntropyGauge';
 import { StorageBlocks } from './HudShared';
-import { getHexKey } from '../../services/hexUtils';
-import { Hex } from '../../types';
 
 interface TopStatsBarProps {
-    onOpenModal: (modal: 'EXIT' | 'RANKINGS' | 'CODEX' | 'LOG' | 'RESTART' | 'MISSION') => void;
+    onOpenModal: (modal: 'EXIT' | 'RANKINGS' | 'CODEX' | 'LOG' | 'RESTART') => void;
     setHelpTopic: (topic: 'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | 'ENTROPY') => void;
 }
 
@@ -21,9 +19,6 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const entropy = useGameStore(state => state.session?.entropy);
     
     const language = useGameStore(state => state.language);
-    const grid = useGameStore(state => state.session?.grid);
-    const winCondition = useGameStore(state => state.session?.winCondition);
-    const currentTurn = useGameStore(state => state.session?.currentTurn);
     const isMusicMuted = useGameStore(state => state.isMusicMuted);
     const isSfxMuted = useGameStore(state => state.isSfxMuted);
     
@@ -39,75 +34,6 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const isMoving = player?.state === 'MOVING';
     const isLevel1_5 = activeLevelConfig?.id === '1.5';
     const isLevel3_2 = activeLevelConfig?.id === '3.2';
-
-    // Campaign Metrics
-    const campaignMetrics = useMemo(() => {
-        if (!grid || !player || !activeLevelConfig) return null;
-        const levelId = activeLevelConfig.id;
-        const ownedByLevel = (minLvl: number) =>
-            Object.values(grid).filter((h: Hex) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
-
-        if (levelId === '1.1') return { current: Math.max(0, ownedByLevel(1) - 1), target: 3, label: TEXT[language].HUD.TUT_1_1_COUNTER };
-        if (levelId === '1.3') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 2, label: 'LEVEL' };
-        if (levelId === '1.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
-        if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
-        if (levelId === '1.6') return { current: player.playerLevel, target: 4, label: 'RANK' };
-        if (levelId === '2.2') return { current: player.inventory?.length ?? 0, target: 2, label: 'ITEMS' };
-        if (levelId === '2.3') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
-        if (levelId === '2.4') return { current: player.inventory?.length ?? 0, target: 2, label: 'ITEMS' };
-        if (levelId === '2.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
-        if (levelId === '3.2') return { current: player.coins, target: 200, label: TEXT[language].HUD.TUT_1_5_COUNTER };
-        if (levelId === '3.3') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
-        if (levelId === '3.4') return { current: player.coins, target: 100, label: TEXT[language].HUD.TUT_1_5_COUNTER };
-        if (levelId === '3.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
-        if (levelId === '4.1') return { current: ownedByLevel(2), target: 3, label: 'L2 HEXES' };
-        if (levelId === '4.3') return { current: ownedByLevel(3), target: 2, label: 'L3 HEXES' };
-        if (levelId === '4.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 4, label: 'LEVEL' };
-        if (levelId === '4.5') return { current: ownedByLevel(2), target: 6, label: 'L2 HEXES' };
-        if (levelId === '4.6') return { current: ownedByLevel(3), target: 8, label: 'L3 HEXES' };
-        if (levelId === '4.7') return { current: ownedByLevel(4), target: 2, label: 'L4 HEXES' };
-
-        return null;
-    }, [grid, player, activeLevelConfig, language, currentTurn]);
-
-    const renderMissionStatus = () => {
-        if (campaignMetrics) {
-            const isDone = campaignMetrics.current >= campaignMetrics.target;
-            return (
-                <div className="flex items-center gap-2">
-                    <span className="text-slate-400 uppercase tracking-tighter">{campaignMetrics.label}:</span>
-                    <span className={isDone ? "text-emerald-400" : "text-white"}>
-                        {campaignMetrics.current}/{campaignMetrics.target}
-                    </span>
-                </div>
-            );
-        }
-        if (activeLevelConfig?.goalText) {
-            return (
-                <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="text-slate-400 shrink-0 tracking-tighter">GOAL:</span>
-                    <span className="text-amber-300 truncate min-w-0">{activeLevelConfig.goalText}</span>
-                </div>
-            );
-        }
-        if (winCondition?.winType === 'SUMMIT') {
-            return (
-                <div className="flex items-center gap-2">
-                    <span className="text-slate-400 tracking-tighter">SUMMIT:</span>
-                    <span className="text-amber-400">L{winCondition?.targetLevel}</span>
-                    <Mountain className="w-3 h-3 text-amber-500" />
-                </div>
-            );
-        }
-        return (
-            <div className="flex items-center gap-2">
-                <span className="text-slate-400 tracking-tighter">GOAL:</span>
-                <span className="text-white">L{winCondition?.targetLevel}</span>
-                <span className="text-slate-600">·</span>
-                <span className="text-amber-400">{winCondition?.targetCoins}cr</span>
-            </div>
-        );
-    };
 
     // Click Outside for System Menu
     useEffect(() => {
@@ -209,21 +135,6 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                      entropy && entropy.current / entropy.max < 0.6 ? 'WARN' :
                                      'STABLE'}
                                 </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* MISSION STATUS ROW */}
-                    <div className="pointer-events-auto flex items-center bg-slate-900/90 backdrop-blur-md rounded-lg border border-slate-700/50 px-2 py-1 gap-3 max-w-full md:w-fit overflow-hidden animate-in slide-in-from-top-2">
-                        <div 
-                            onClick={() => { onOpenModal('MISSION'); playUiSound('CLICK'); }}
-                            className="flex items-center gap-2 cursor-pointer group"
-                        >
-                            <div className="flex-1 text-[10px] md:text-[11px] font-black font-mono overflow-hidden">
-                                {renderMissionStatus()}
-                            </div>
-                            <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:bg-indigo-600 transition-colors shrink-0">
-                                <Info className="w-3 h-3 text-slate-400 group-hover:text-white" />
                             </div>
                         </div>
                     </div>

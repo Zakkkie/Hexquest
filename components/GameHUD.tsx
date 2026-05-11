@@ -51,6 +51,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                 {gameStatus === 'PLAYING' && (
                     <BottomActionDock 
                         onCenterPlayer={onCenterPlayer}
+                        onOpenMission={() => setActiveModal('MISSION')}
                         onInspectItem={(item) => setInspectedItem(item)}
                         onOpenInventory={() => setShowInventory(true)}
                     />

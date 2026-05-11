@@ -1,25 +1,28 @@
 
 import React, { useMemo } from 'react';
 import { useGameStore } from '../../store';
-import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, MapPin, Backpack } from 'lucide-react';
+import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, MapPin, Backpack, Info, Mountain } from 'lucide-react';
 import HexButton from '../HexButton';
 import { getHexKey, getNeighbors, getSecondsToGrow } from '../../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
-import { Item } from '../../types';
+import { Item, Hex } from '../../types';
 import { ItemIcon, StatusIcon, getRarityBorder } from './HudShared';
 import { GAME_CONFIG } from '../../rules/config';
+import { TEXT } from '../../services/i18n';
 
 interface BottomActionDockProps {
     onCenterPlayer: () => void;
     onInspectItem: (item: Item) => void;
     onOpenInventory: () => void;
+    onOpenMission: () => void;
 }
 
-const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onInspectItem, onOpenInventory }) => {
+const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onInspectItem, onOpenInventory, onOpenMission }) => {
     const player = useGameStore(state => state.session?.player);
     const grid = useGameStore(state => state.session?.grid);
     const bots = useGameStore(state => state.session?.bots);
     const winCondition = useGameStore(state => state.session?.winCondition);
+    const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
     const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
     const currentTurn = useGameStore(state => state.session?.currentTurn);
@@ -38,6 +41,75 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const botPositions = useMemo(() => (bots || []).map(b => ({ q: b.q, r: b.r })), [bots]);
     const isMoving = player?.state === 'MOVING';
     const queueSize = winCondition?.queueSize || 3;
+
+    // Campaign Metrics
+    const campaignMetrics = useMemo(() => {
+        if (!grid || !player || !activeLevelConfig) return null;
+        const levelId = activeLevelConfig.id;
+        const ownedByLevel = (minLvl: number) =>
+            Object.values(grid).filter((h: Hex) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
+
+        if (levelId === '1.1') return { current: Math.max(0, ownedByLevel(1) - 1), target: 3, label: TEXT[language].HUD.TUT_1_1_COUNTER };
+        if (levelId === '1.3') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 2, label: 'LEVEL' };
+        if (levelId === '1.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
+        if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
+        if (levelId === '1.6') return { current: player.playerLevel, target: 4, label: 'RANK' };
+        if (levelId === '2.2') return { current: player.inventory?.length ?? 0, target: 2, label: 'ITEMS' };
+        if (levelId === '2.3') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+        if (levelId === '2.4') return { current: player.inventory?.length ?? 0, target: 2, label: 'ITEMS' };
+        if (levelId === '2.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+        if (levelId === '3.2') return { current: player.coins, target: 200, label: TEXT[language].HUD.TUT_1_5_COUNTER };
+        if (levelId === '3.3') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
+        if (levelId === '3.4') return { current: player.coins, target: 100, label: TEXT[language].HUD.TUT_1_5_COUNTER };
+        if (levelId === '3.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+        if (levelId === '4.1') return { current: ownedByLevel(2), target: 3, label: 'L2 HEXES' };
+        if (levelId === '4.3') return { current: ownedByLevel(3), target: 2, label: 'L3 HEXES' };
+        if (levelId === '4.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 4, label: 'LEVEL' };
+        if (levelId === '4.5') return { current: ownedByLevel(2), target: 6, label: 'L2 HEXES' };
+        if (levelId === '4.6') return { current: ownedByLevel(3), target: 8, label: 'L3 HEXES' };
+        if (levelId === '4.7') return { current: ownedByLevel(4), target: 2, label: 'L4 HEXES' };
+
+        return null;
+    }, [grid, player, activeLevelConfig, language, currentTurn]);
+
+    const renderMissionStatus = () => {
+        if (campaignMetrics) {
+            const isDone = campaignMetrics.current >= campaignMetrics.target;
+            return (
+                <div className="flex items-center gap-2">
+                    <span className="text-slate-400 uppercase tracking-tighter">{campaignMetrics.label}:</span>
+                    <span className={isDone ? "text-emerald-400" : "text-white"}>
+                        {campaignMetrics.current}/{campaignMetrics.target}
+                    </span>
+                </div>
+            );
+        }
+        if (activeLevelConfig?.goalText) {
+            return (
+                <div className="flex items-center gap-2 overflow-hidden">
+                    <span className="text-slate-400 shrink-0 tracking-tighter">GOAL:</span>
+                    <span className="text-amber-300 truncate min-w-0">{activeLevelConfig.goalText}</span>
+                </div>
+            );
+        }
+        if (winCondition?.winType === 'SUMMIT') {
+            return (
+                <div className="flex items-center gap-2">
+                    <span className="text-slate-400 tracking-tighter">SUMMIT:</span>
+                    <span className="text-amber-400">L{winCondition?.targetLevel}</span>
+                    <Mountain className="w-3 h-3 text-amber-500" />
+                </div>
+            );
+        }
+        return (
+            <div className="flex items-center gap-2">
+                <span className="text-slate-400 tracking-tighter">GOAL:</span>
+                <span className="text-white">L{winCondition?.targetLevel}</span>
+                <span className="text-slate-600">·</span>
+                <span className="text-amber-400">{winCondition?.targetCoins}cr</span>
+            </div>
+        );
+    };
 
     // Conditions
     const upgradeCondition = useMemo(() => {
@@ -133,22 +205,36 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
             </div>
             
             {/* UNIFIED DOCK CONTAINER */}
-            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl md:rounded-3xl shadow-2xl p-1.5 md:p-3 pointer-events-auto flex items-center justify-between gap-1.5 md:gap-6 w-full md:w-auto max-w-7xl mx-auto overflow-hidden">
-                
-                {/* LEFT: INVENTORY */}
-                <div className="flex flex-col gap-1 md:gap-1.5 shrink min-w-0 flex-1 overflow-hidden">
-                    {/* Inventory Header (Matching Campaign) */}
-                    <div 
-                        className="flex items-center justify-between gap-2 md:gap-3 px-2 md:px-3 py-1 md:py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all shrink-0 touch-manipulation" 
-                        onClick={() => { onOpenInventory(); playUiSound('CLICK'); }}
-                    >
-                        <span className="text-[10px] font-bold text-slate-400 group-hover:text-white font-mono tracking-widest uppercase">
-                            {language === 'RU' ? 'ИНВЕНТАРЬ' : 'INVENTORY'}
-                        </span>
-                        <Backpack className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-400 transition-colors" />
-                    </div>
+            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl md:rounded-3xl shadow-2xl p-1.5 md:p-3 pointer-events-auto flex flex-col gap-1 w-full md:w-auto max-w-7xl mx-auto overflow-hidden">
+                <div className="flex items-center justify-between gap-1.5 md:gap-6">
+                    {/* LEFT: INVENTORY & MISSION */}
+                    <div className="flex flex-col gap-1 md:gap-1.5 shrink min-w-0 flex-1 overflow-hidden">
+                        {/* COMBINED HEADER: INV + GOAL */}
+                        <div className="flex items-center gap-1.5">
+                            {/* Inventory Header */}
+                            <div 
+                                className="flex items-center gap-2 px-2 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all shrink-0 touch-manipulation" 
+                                onClick={() => { onOpenInventory(); playUiSound('CLICK'); }}
+                            >
+                                <Backpack className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-400 transition-colors" />
+                                <span className="text-[10px] font-bold text-slate-500 group-hover:text-white font-mono tracking-widest uppercase hidden md:inline">
+                                    {language === 'RU' ? 'ИНВ' : 'INV'}
+                                </span>
+                            </div>
 
-                    {/* Inventory Slots */}
+                            {/* Mission Goal - Compressed and placed next to Inventory */}
+                            <div 
+                                className="flex-1 flex items-center justify-between gap-2 px-2.5 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800/50 cursor-pointer group hover:bg-slate-800 transition-all overflow-hidden"
+                                onClick={() => { onOpenMission(); playUiSound('CLICK'); }}
+                            >
+                                <div className="truncate text-[10px] md:text-[11px] font-black font-mono">
+                                    {renderMissionStatus()}
+                                </div>
+                                <Info className="w-3 h-3 text-slate-500 group-hover:text-amber-400 transition-colors shrink-0" />
+                            </div>
+                        </div>
+
+                        {/* Inventory Slots */}
                     <div className="flex items-center gap-1 md:gap-1.5 justify-start overflow-x-auto no-scrollbar mask-linear-fade-right pr-2">
                         {inventoryList.map(index => {
                             const item = player.inventory[index];
@@ -211,7 +297,8 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                 </div>
             </div>
         </div>
-    );
+    </div>
+);
 };
 
 export default BottomActionDock;
