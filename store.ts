@@ -163,6 +163,8 @@ export const useGameStore = create<GameStore>()(
       loadingLevelId: null,
       overworld: {
           grid: {},
+          worldGrid: {},
+          cityGrid: {},
           player: {
               q: 0, r: 0, hp: 100, maxHp: 100, energy: 50, maxEnergy: 50, credits: 0,
               equipment: {}, bag: [], reputation: 0, stepCount: 0
@@ -310,6 +312,8 @@ export const useGameStore = create<GameStore>()(
               campaignProgress: 0, 
               overworld: {
                   grid: {},
+                  worldGrid: {},
+                  cityGrid: {},
                   player: {
                       q: 0, r: 0, hp: 100, maxHp: 100, energy: 50, maxEnergy: 50, credits: 0,
                       equipment: {}, bag: [], reputation: 0, stepCount: 0
@@ -775,6 +779,7 @@ export const useGameStore = create<GameStore>()(
                   overworld: {
                       ...state.overworld,
                       grid,
+                      cityGrid: grid,
                       isGenerated: true,
                       seed,
                       isWorldMap: false,
@@ -1119,19 +1124,34 @@ export const useGameStore = create<GameStore>()(
           const { generateOverworld } = await import('./services/OverworldGenerator.ts');
           const seed = state.overworld.seed;
           const worldPos = state.overworld.worldMapPos || { q: 0, r: 0 };
-          const grid = generateOverworld(30, seed, true, 2, worldPos); // World map radius 30, but only generates initial radius 2 around worldPos
+          
+          // Current grid is City grid, backup it
+          const cityGrid = state.overworld.grid;
+          
+          let grid = state.overworld.worldGrid;
+          if (!grid || Object.keys(grid).length === 0) {
+              grid = generateOverworld(30, seed, true, 2, worldPos);
+              // Clean up rifts that are already completed
+              for (const key in grid) {
+                  const h = grid[key];
+                  if (h.riftId && state.overworld.flags[`level_${h.riftId}_completed`]) {
+                      grid[key] = { ...h, riftId: undefined };
+                  }
+              }
+          }
           
           set(state => ({
               overworld: {
                   ...state.overworld,
                   grid,
+                  cityGrid,
                   isWorldMap: true,
                   player: {
                       ...state.overworld.player,
                       q: worldPos.q,
                       r: worldPos.r
-                  },
-                  visitedHexes: { [getHexKey(worldPos.q, worldPos.r)]: true }
+                  }
+                  // Do NOT reset visitedHexes to preserve explored areas
               }
           }));
           
@@ -1142,7 +1162,14 @@ export const useGameStore = create<GameStore>()(
           const state = get();
           const { generateOverworld } = await import('./services/OverworldGenerator.ts');
           const seed = state.overworld.seed;
-          const grid = generateOverworld(3, seed, false); // City map radius 3, generates all at once
+          
+          // Current grid is World grid, backup it
+          const worldGrid = state.overworld.grid;
+          
+          let grid = state.overworld.cityGrid;
+          if (!grid || Object.keys(grid).length === 0) {
+              grid = generateOverworld(3, seed, false); // City map radius 3
+          }
           
           const currentPos = { q: state.overworld.player.q, r: state.overworld.player.r };
           
@@ -1150,14 +1177,15 @@ export const useGameStore = create<GameStore>()(
               overworld: {
                   ...state.overworld,
                   grid,
+                  worldGrid,
                   isWorldMap: false,
                   worldMapPos: currentPos,
                   player: {
                       ...state.overworld.player,
                       q: 0,
                       r: 0
-                  },
-                  visitedHexes: { [getHexKey(0, 0)]: true }
+                  }
+                  // Do NOT reset visitedHexes
               },
               uiState: 'OVERWORLD'
           }));

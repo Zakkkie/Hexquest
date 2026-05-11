@@ -348,6 +348,8 @@ export interface OverworldEvent {
 
 export interface OverworldState {
   grid: Record<string, OverworldHex>;
+  worldGrid?: Record<string, OverworldHex>;
+  cityGrid?: Record<string, OverworldHex>;
   player: OverworldPlayer;
   isGenerated: boolean;
   seed: number;

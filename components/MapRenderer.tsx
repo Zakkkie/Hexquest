@@ -529,25 +529,29 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         const ppy = (rawPX * sin + rawPY * cos) * 0.8;
 
         const pHex = grid[getHexKey(player.q, player.r)];
-        const startH = pHex ? (10 + pHex.maxLevel * 10) : 10;
+        const startH = pHex ? (10 + pHex.currentLevel * 10) : 10;
         const neighbors = getNeighbors(player.q, player.r);
         const conns: any[] = [];
 
         for (const n of neighbors) {
             const nHex = grid[getHexKey(n.q, n.r)];
             const isReallyVoid = (nHex?.structureType as string) === 'VOID';
-            if (isReallyVoid) continue;
+            const isBlocked = nHex?.isPassable === false;
+            
+            if (isReallyVoid || isBlocked) continue;
 
             const rawNX = HEX_SIZE * (SQRT3 * n.q + SQRT3_2 * n.r);
             const rawNY = HEX_SIZE * (ONE_POINT_FIVE * n.r);
             const npx = rawNX * cos - rawNY * sin;
             const npy = (rawNX * sin + rawNY * cos) * 0.8;
 
-            const endH = nHex ? (10 + nHex.maxLevel * 10) : 10;
+            const endH = nHex ? (10 + nHex.currentLevel * 10) : 10;
             
-            if (Math.abs((pHex?.maxLevel||0) - (nHex?.maxLevel||0)) > 1) continue;
+            const currentLevel = pHex ? pHex.currentLevel : 0;
+            const nextLevel = nHex ? nHex.currentLevel : 0;
+            if (Math.abs(currentLevel - nextLevel) > 1) continue;
 
-            const level = nHex ? nHex.maxLevel : 0;
+            const level = nHex ? nHex.currentLevel : 0;
             const cost = level > 1 ? level : 1;
             const canAfford = player.moves >= cost || player.coins >= (cost * EXCHANGE_RATE_COINS_PER_MOVE);
 
@@ -555,7 +559,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                 points: [ppx, ppy - startH, npx, npy - endH],
                 stroke: canAfford ? '#3b82f6' : '#ef4444',
                 dash: [5, 5],
-                opacity: (nHex && nHex.maxLevel > player.playerLevel) ? 0.2 : 0.6
+                opacity: (nHex && nHex.currentLevel > player.playerLevel) ? 0.2 : 0.6
             });
         }
         return conns;

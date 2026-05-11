@@ -354,6 +354,19 @@ const OverworldView: React.FC = () => {
   const lastDist = useRef(0);
   const lastCenter = useRef<{ x: number, y: number } | null>(null);
 
+  const handleTouchStart = (e: any) => {
+    const touch1 = e.evt.touches[0];
+    const touch2 = e.evt.touches[1];
+
+    if (touch1 && touch2) {
+      lastDist.current = Math.sqrt(Math.pow(touch2.clientX - touch1.clientX, 2) + Math.pow(touch2.clientY - touch1.clientY, 2));
+      lastCenter.current = {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2,
+      };
+    }
+  };
+
   const handleTouchMove = (e: any) => {
     e.evt.preventDefault(); // Prevent default browser zoom/scroll
     const stage = e.target.getStage();
@@ -880,12 +893,13 @@ const OverworldView: React.FC = () => {
       )}
 
       {/* Canvas */}
-      <div className="flex-1 cursor-grab active:cursor-grabbing overflow-hidden">
+      <div className="flex-1 cursor-grab active:cursor-grabbing overflow-hidden touch-none">
         <Stage
           ref={stageRef}
           width={windowSize.width}
           height={windowSize.height}
           onWheel={handleWheel}
+          onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           draggable
