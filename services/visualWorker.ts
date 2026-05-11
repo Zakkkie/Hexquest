@@ -39,8 +39,8 @@ const calculateNeighborLevels = (grid: any) => {
         const levels = neighbors.map(n => {
             const nKey = getHexKey(n.q, n.r);
             const nHex = grid[nKey];
-            // If neighbor is missing OR not revealed, treat it as level 0 to hide what's in the fog/outside grid
-            if (!nHex || (!nHex.revealed && !cachedIsCampaign)) return 0;
+            // If neighbor is missing OR not revealed, treat it as VOID to drop the wall and create actual volume at edges
+            if (!nHex || (!nHex.revealed && !cachedIsCampaign)) return VOID_LEVEL_FLAG;
             return nHex.currentLevel ?? 0;
         });
         map[key] = levels;
@@ -124,7 +124,17 @@ self.onmessage = (e) => {
 
                 // Fog of War opacity 
                 const isRevealed = !!hex.revealed || cachedIsCampaign;
-                const finalOpacity = isRevealed ? opacity : opacity * 0.25;
+                
+                let fowOpacity = 1.0;
+                if (!isRevealed) {
+                    if (distToPlayer > 4) continue;
+                    fowOpacity = Math.max(0, 1.0 - ((distToPlayer - 1) * 0.25));
+                    if (fowOpacity > 1) fowOpacity = 1.0;
+                }
+                
+                if (fowOpacity <= 0) continue;
+                
+                const finalOpacity = opacity * fowOpacity;
 
                 items.push({
                     type: 'HEX',
@@ -162,9 +172,18 @@ self.onmessage = (e) => {
     // 3. Collect Units
     const allEntities = [{ ...cachedPlayer, isPlayer: true }, ...(cachedBots || []).map((b: any) => ({ ...b, isPlayer: false }))];
     for (const u of allEntities) {
+        let uOpacity = 1.0;
         if (!u.isPlayer) {
             const uHex = currentGrid[getHexKey(u.q, u.r)];
-            if (!uHex || !uHex.revealed) continue;
+            const distToPlayer = cubeDistance({q: u.q, r: u.r}, cachedPlayer);
+            const isRevealed = uHex && (uHex.revealed || cachedIsCampaign);
+            
+            if (!isRevealed) {
+                if (distToPlayer > 4) continue;
+                uOpacity = Math.max(0, 1.0 - ((distToPlayer - 1) * 0.25));
+                if (uOpacity > 1) uOpacity = 1.0;
+            }
+            if (uOpacity <= 0) continue;
         }
 
         const rawX = HEX_SIZE * (SQRT3 * u.q + SQRT3_2 * u.r);
@@ -193,7 +212,8 @@ self.onmessage = (e) => {
                 totalCoinsEarned: u.totalCoinsEarned,
                 upgradePointCount: u.recentUpgrades?.length || 0,
                 headIndex: u.headIndex,
-                bodyIndex: u.bodyIndex
+                bodyIndex: u.bodyIndex,
+                opacity: uOpacity
             }
         });
     }

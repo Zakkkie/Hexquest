@@ -425,6 +425,24 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     shadowForStrokeEnabled={false}
                 />
 
+                {/* Top/Light Bevel */}
+                <Path 
+                    data={`M ${BASE_POINTS[2].x} ${BASE_POINTS[2].y} L ${BASE_POINTS[3].x} ${BASE_POINTS[3].y} L ${BASE_POINTS[4].x} ${BASE_POINTS[4].y} L ${BASE_POINTS[5].x} ${BASE_POINTS[5].y}`}
+                    stroke="rgba(255,255,255,0.4)"
+                    strokeWidth={2}
+                    listening={false}
+                    perfectDrawEnabled={false}
+                />
+                
+                {/* Bottom/Dark Bevel */}
+                <Path 
+                    data={`M ${BASE_POINTS[5].x} ${BASE_POINTS[5].y} L ${BASE_POINTS[0].x} ${BASE_POINTS[0].y} L ${BASE_POINTS[1].x} ${BASE_POINTS[1].y} L ${BASE_POINTS[2].x} ${BASE_POINTS[2].y}`}
+                    stroke="rgba(0,0,0,0.6)"
+                    strokeWidth={2}
+                    listening={false}
+                    perfectDrawEnabled={false}
+                />
+
                 {/* Rim Highlight */}
                 <Path 
                     data={BASE_PATH_D}

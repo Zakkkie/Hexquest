@@ -183,6 +183,7 @@ export interface Entity {
 
   inventory: Item[];
   maxInventorySize?: number; 
+  equipment?: Record<string, Item>;
 
   activeStatuses: ActiveStatus[];
 
@@ -644,9 +645,11 @@ export type RestoreHexAction = { type: 'RESTORE_HEX'; coord: HexCoord; itemId: s
 export type ActivateMonumentAction = { type: 'ACTIVATE_MONUMENT'; itemIds: string[]; stateVersion?: number };
 export type VisitPoiAction = { type: 'VISIT_POI'; poiType: string; stateVersion?: number };
 export type ActivateMiniMonumentAction = { type: 'ACTIVATE_MINI_MONUMENT'; entityId: string; miniMonumentHexKey: string; stateVersion?: number }; // НОВОЕ ДЕЙСТВИЕ
+export type EquipItemAction = { type: 'EQUIP_ITEM'; itemId: string; stateVersion?: number };
+export type UnequipItemAction = { type: 'UNEQUIP_ITEM'; slot: string; stateVersion?: number };
 
 export type BotAction = MoveAction | UpgradeAction | DigAction | WaitAction | RechargeAction;
-export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction | ActivateMonumentAction | ActivateMiniMonumentAction | VisitPoiAction;
+export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction | ActivateMonumentAction | ActivateMiniMonumentAction | VisitPoiAction | EquipItemAction | UnequipItemAction;
 
 export interface PathResult {
     path: HexCoord[] | null;

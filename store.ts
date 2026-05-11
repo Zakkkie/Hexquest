@@ -127,6 +127,8 @@ interface GameStore extends GameState {
   closeEventSummary: () => void;
   equipItem: (itemId: string, slot: 'head' | 'body' | 'tool' | 'artifact', bagIndex: number) => void;
   unequipItem: (slot: 'head' | 'body' | 'tool' | 'artifact' | 'feet' | 'necklace' | 'ring') => void;
+  equipItemSkirmish: (itemId: string) => void;
+  unequipItemSkirmish: (slot: string) => void;
   buyItem: (itemId: string, cost: number) => void;
   sellItem: (bagIndex: number, price: number) => void;
   restAtBar: () => void;
@@ -387,6 +389,24 @@ export const useGameStore = create<GameStore>()(
           const res = engine.applyAction(engine.state.player.id, { type: 'DESTROY_ITEM', itemId, stateVersion: engine.state.stateVersion });
           if (res.ok) {
               audioService.play('CRACK');
+              set({ session: engine.state });
+          }
+      },
+
+      equipItemSkirmish: (itemId) => {
+          if (!engine || !engine.state) return;
+          const res = engine.applyAction(engine.state.player.id, { type: 'EQUIP_ITEM', itemId, stateVersion: engine.state.stateVersion } as any);
+          if (res.ok) {
+              audioService.play('SUCCESS');
+              set({ session: engine.state });
+          }
+      },
+
+      unequipItemSkirmish: (slot) => {
+          if (!engine || !engine.state) return;
+          const res = engine.applyAction(engine.state.player.id, { type: 'UNEQUIP_ITEM', slot, stateVersion: engine.state.stateVersion } as any);
+          if (res.ok) {
+              audioService.play('UI_HOVER');
               set({ session: engine.state });
           }
       },

@@ -4,6 +4,7 @@ import { useGameStore } from '../store.ts';
 import TopStatsBar from './hud/TopStatsBar.tsx';
 import BottomActionDock from './hud/BottomActionDock.tsx';
 import GameDialogs from './hud/GameDialogs.tsx';
+import InventoryModal from './InventoryModal.tsx';
 import { Item } from '../types.ts';
 
 interface GameHUDProps {
@@ -18,6 +19,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [helpTopic, setHelpTopic] = useState<'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | 'ENTROPY' | null>(null);
   const [inspectedItem, setInspectedItem] = useState<Item | null>(null);
+  const [showInventory, setShowInventory] = useState(false);
   const [victoryStage, setVictoryStage] = useState<'HIDDEN' | 'SALUTE' | 'MODAL'>('HIDDEN');
 
   // Trigger Victory Animation Flow
@@ -49,12 +51,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                 {gameStatus === 'PLAYING' && (
                     <BottomActionDock 
                         onCenterPlayer={onCenterPlayer}
-                        onOpenMission={() => setActiveModal('MISSION')}
                         onInspectItem={(item) => setInspectedItem(item)}
+                        onOpenInventory={() => setShowInventory(true)}
                     />
                 )}
             </>
         )}
+
+        <InventoryModal isOpen={showInventory} onClose={() => setShowInventory(false)} />
 
         <GameDialogs 
             activeModal={activeModal}

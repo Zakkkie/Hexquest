@@ -5,6 +5,7 @@ import { getHexKey, cubeDistance } from '../services/hexUtils';
 import { ENTROPY_CONFIG } from '../rules/config';
 import { calculateMovementCost } from '../rules/movement';
 import { GameEventFactory } from './events';
+import { getItemDef } from '../rules/items';
 
 /**
  * ActionProcessor is now a STATELESS service.
@@ -66,6 +67,10 @@ export class ActionProcessor {
               result = this.handleRecharge(state, index, actor); break;
           case 'DESTROY_ITEM':
               result = this.handleDestroyItem(state, index, actor, action); break;
+          case 'EQUIP_ITEM':
+              result = this.handleEquipItem(state, index, actor, action); break;
+          case 'UNEQUIP_ITEM':
+              result = this.handleUnequipItem(state, index, actor, action); break;
           case 'RESTORE_HEX':
               result = this.handleRestoreHex(state, index, actor, action); break;
           case 'ACTIVATE_MONUMENT':
@@ -166,7 +171,51 @@ export class ActionProcessor {
           ...actor.inventory.slice(idx + 1)
       ];
       
-      // Removed scrap value logic as requested - items have no coin value on disposal
+      return { ok: true };
+  }
+
+  private handleEquipItem(state: SessionState, _index: WorldIndex, actor: Entity, action: any): ValidationResult {
+      const idx = actor.inventory.findIndex(i => i.id === action.itemId);
+      if (idx === -1) return { ok: false, reason: 'Item not found in inventory' };
+      
+      const item = actor.inventory[idx];
+      const itemDef = getItemDef(item.baseId);
+      if (!itemDef) return { ok: false, reason: 'Invalid item' };
+
+      const slot = itemDef.equipSlot || 'artifact';
+      
+      // Destroy item being replaced
+      if (!actor.equipment) actor.equipment = {};
+      const currentEquipped = actor.equipment[slot];
+      if (currentEquipped) {
+          // It disappears (destroyed)
+          // We don't need to reverse effects, as per "Но это одноразово, после снятия или замены предметы исчезают"
+          // We could clear statuses associated with it if we wanted, but not specified.
+      }
+
+      // Remove from inventory
+      actor.inventory = [
+          ...actor.inventory.slice(0, idx),
+          ...actor.inventory.slice(idx + 1)
+      ];
+
+      // Equip the new item
+      actor.equipment[slot] = item;
+
+      // Apply effects
+      this.applyEffect(state, _index, actor, itemDef.effectType, itemDef.effectValue, itemDef.effectLabel['EN'], itemDef.effectDuration);
+      this.applyEffect(state, _index, actor, itemDef.negativeEffectType, itemDef.negativeEffectValue, itemDef.negativeEffectLabel['EN'], itemDef.negativeEffectDuration);
+
+      return { ok: true };
+  }
+
+  private handleUnequipItem(_state: SessionState, _index: WorldIndex, actor: Entity, action: any): ValidationResult {
+      if (!actor.equipment || !actor.equipment[action.slot]) {
+          return { ok: false, reason: 'Nothing equipped in that slot' };
+      }
+      
+      // Item is destroyed, not returned
+      delete actor.equipment[action.slot];
       
       return { ok: true };
   }

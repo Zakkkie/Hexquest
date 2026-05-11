@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { Layer, Group, Line, Circle, Text, Shape } from 'react-konva';
+import { Layer, Group, Line, Circle, Text } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { getHexKey, getNeighbors } from '../services/hexUtils.ts';
@@ -312,67 +312,12 @@ interface MapRendererProps {
     hoveredHexId: string | null;
 }
 
-// Helper for drawing FOW grid efficiently
-const FowGrid = React.memo(({ rotation, playerQ, playerR, size }: { rotation: number; playerQ: number; playerR: number; size: number }) => {
-    const grid = useGameStore(state => state.session?.grid);
-    
-    const projection = useMemo(() => {
-        const angleRad = rotation * (Math.PI / 180);
-        return { cos: Math.cos(angleRad), sin: Math.sin(angleRad) };
-    }, [rotation]);
-
-    const cubeDistance = (a: { q: number; r: number }, b: { q: number; r: number }) => {
-        return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
-    };
-
-    return (
-        <Group listening={false}>
-            <Shape
-                sceneFunc={(ctx, shape) => {
-                    const radius = 15; // 15 cells radius around player
-                    const SQRT3 = Math.sqrt(3);
-                    const SQRT3_2 = SQRT3 / 2;
-                    const ONE_POINT_FIVE = 1.5;
-
-                    ctx.beginPath();
-                    for (let q = playerQ - radius; q <= playerQ + radius; q++) {
-                        for (let r = playerR - radius; r <= playerR + radius; r++) {
-                            const dist = cubeDistance({ q, r }, { q: playerQ, r: playerR });
-                            if (dist > radius) continue;
-
-                            const key = getHexKey(q, r);
-                            const hex = grid?.[key];
-                            
-                            // Only draw the "fog" fill if hex is NOT revealed
-                            if (hex && hex.revealed) continue;
-
-                            const rawX = size * (SQRT3 * q + SQRT3_2 * r);
-                            const rawY = size * (ONE_POINT_FIVE * r);
-                            const x = rawX * projection.cos - rawY * projection.sin;
-                            const y = (rawX * projection.sin + rawY * projection.cos) * 0.8;
-
-                            // Draw hex outline/fill
-                            for (let i = 0; i < 6; i++) {
-                                const angle = (60 * i + 30) * (Math.PI / 180);
-                                const px = x + Math.cos(angle) * size;
-                                const py = y + Math.sin(angle) * size;
-                                if (i === 0) ctx.moveTo(px, py);
-                                else ctx.lineTo(px, py);
-                            }
-                            ctx.closePath();
-                        }
-                    }
-                    ctx.fillStrokeShape(shape);
-                }}
-                fill="#020617" // Very dark blue/black for fog
-                stroke="#1e293b"
-                strokeWidth={1}
-                opacity={0.8} // Mostly opaque to hide details
-                listening={false}
-            />
-        </Group>
-    );
-});
+interface MapRendererProps {
+    rotation: number;
+    onHexClick: (q: number, r: number) => void;
+    onHover: (id: string | null) => void;
+    hoveredHexId: string | null;
+}
 
 const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId }) => {
     const grid = useGameStore(state => state.session?.grid) as Record<string, Hex> | undefined;
@@ -557,7 +502,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
 
             conns.push({
                 points: [ppx, ppy - startH, npx, npy - endH],
-                stroke: canAfford ? '#3b82f6' : '#ef4444',
+                stroke: canAfford ? '#34d399' : '#ef4444',
                 dash: [5, 5],
                 opacity: (nHex && nHex.currentLevel > player.playerLevel) ? 0.2 : 0.6
             });
@@ -612,10 +557,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     return (
         <>
             <Layer>
-                {/* Only show Fog of War grid in non-campaign mode (Skirmish) */}
-                {!activeLevelConfig && (
-                    <FowGrid rotation={rotation} playerQ={playerQ || 0} playerR={playerR || 0} size={HEX_SIZE} />
-                )}
                 {renderList.items.map(item => {
                     if (item.type === 'HEX') {
                         return (

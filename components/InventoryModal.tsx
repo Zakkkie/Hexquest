@@ -11,15 +11,37 @@ interface InventoryModalProps {
 }
 
 const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
-  const { overworld, language, equipItem, unequipItem } = useGameStore();
+  const { overworld, session, language } = useGameStore();
   
   if (!isOpen) return null;
 
-  const { player } = overworld;
-  const { equipment, bag } = player;
+  const isSkirmish = !!session?.grid;
+  
+  const player = isSkirmish ? session.player : overworld.player;
+  const equipment = isSkirmish ? session.player.equipment || {} : overworld.player.equipment;
+  const bag = isSkirmish ? session.player.inventory : overworld.player.bag;
 
-  const renderEquipmentSlot = (slotName: string, icon: React.ReactNode, itemId?: string) => {
-    const itemDef = itemId ? getItemDef(itemId) : null;
+  const handleEquip = (itemId: string, equipSlot: string, index: number) => {
+    if (isSkirmish) {
+      // processPlayerAction is missing, we must add it to store, or just use useGameStore().equipItemSkirmish which we will define
+      useGameStore.getState().equipItemSkirmish(itemId);
+    } else {
+      useGameStore.getState().equipItem(itemId, equipSlot as any, index);
+    }
+  };
+
+  const handleUnequip = (slotName: string) => {
+    if (isSkirmish) {
+      useGameStore.getState().unequipItemSkirmish(slotName);
+    } else {
+      useGameStore.getState().unequipItem(slotName as any);
+    }
+  };
+
+  const renderEquipmentSlot = (slotName: string, icon: React.ReactNode, itemData?: any) => {
+    // In overworld, itemData is string (baseId). In skirmish, itemData is Item object.
+    const baseId = typeof itemData === 'string' ? itemData : itemData?.baseId;
+    const itemDef = baseId ? getItemDef(baseId) : null;
     
     return (
       <div className={`bg-slate-900/40 border-2 rounded-lg p-2.5 flex items-center gap-3 transition-all group relative overflow-hidden ${itemDef ? getRarityBorder(itemDef.rarity) : 'border-slate-800/40'}`}>
@@ -39,9 +61,9 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
         </div>
         {itemDef && (
           <button 
-            onClick={() => unequipItem(slotName as any)}
+            onClick={() => handleUnequip(slotName)}
             className="p-1.5 bg-red-500/10 text-red-500 rounded border border-red-500/20 hover:bg-red-500/20 transition-colors active:scale-90 z-20"
-            title="Unequip"
+            title="Unequip (Destroys Item)"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -50,15 +72,19 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
     );
   };
 
-  const renderBagItem = (itemId: string, index: number) => {
-    const itemDef = getItemDef(itemId);
+  const renderBagItem = (itemData: any, index: number) => {
+    // In overworld, itemData is string (baseId). In skirmish, itemData is Item object.
+    const baseId = typeof itemData === 'string' ? itemData : itemData.baseId;
+    const instanceId = typeof itemData === 'string' ? itemData : itemData.id;
+    const itemDef = getItemDef(baseId);
     if (!itemDef) return null;
 
-    const isEquippable = !!itemDef.equipSlot;
-    const equipSlot = itemDef.equipSlot;
+    // For skirmish, we can allow ANY item to be equipped. So isEquippable is true if isSkirmish, or if it has a specific slot.
+    const isEquippable = isSkirmish ? true : !!itemDef.equipSlot;
+    const equipSlot = itemDef.equipSlot || 'artifact';
 
     return (
-      <div key={`${itemId}-${index}`} className={`bg-slate-900/40 border-2 rounded-lg p-2.5 flex flex-col gap-2.5 transition-all group relative overflow-hidden ${getRarityBorder(itemDef.rarity)}`}>
+      <div key={`${instanceId}-${index}`} className={`bg-slate-900/40 border-2 rounded-lg p-2.5 flex flex-col gap-2.5 transition-all group relative overflow-hidden ${getRarityBorder(itemDef.rarity)}`}>
         <div className="absolute top-0 right-0 p-1 opacity-20"><Activity className="w-3 h-3" /></div>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-md bg-slate-950 flex items-center justify-center overflow-hidden shrink-0 border border-slate-800 shadow-inner group-hover:scale-105 transition-transform">
@@ -75,10 +101,10 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
         </div>
         {isEquippable && (
           <button 
-            onClick={() => equipItem(itemId, equipSlot as any, index)}
+            onClick={() => handleEquip(instanceId, equipSlot, index)}
             className="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded border border-indigo-500/30 text-[10px] font-black uppercase tracking-[0.3em] transition-all active:scale-95"
           >
-            {language === 'RU' ? 'Надеть' : 'Equip'}
+            {language === 'RU' ? 'Одеть (Использовать)' : 'Equip (Use)'}
           </button>
         )}
       </div>
@@ -108,7 +134,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center gap-6">
             <div className="hidden md:flex flex-col items-end">
                 <div className="text-[10px] font-black tracking-widest text-emerald-400/60 leading-none mb-1">CREDITS_AVAILABLE</div>
-                <div className="text-xl font-mono font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">{player.credits}</div>
+                <div className="text-xl font-mono font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">{isSkirmish ? (player as any).coins : (player as any).credits}</div>
             </div>
             <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white transition-colors">
               <X className="w-6 h-6 md:w-8 md:h-8" />
@@ -172,7 +198,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
         <div className="md:hidden p-4 bg-slate-900/50 border-t border-indigo-500/30 z-20 flex justify-between items-center">
             <div className="flex flex-col">
                 <div className="text-[8px] font-black tracking-widest text-emerald-400/60 leading-none mb-1 uppercase">Credits</div>
-                <div className="text-lg font-mono font-black text-emerald-400">{player.credits}</div>
+                <div className="text-lg font-mono font-black text-emerald-400">{isSkirmish ? (player as any).coins : (player as any).credits}</div>
             </div>
             <button
                 onClick={onClose}
