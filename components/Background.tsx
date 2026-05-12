@@ -1,5 +1,6 @@
 
 import React, { useRef, useEffect, memo } from 'react';
+import { useGameStore } from '../store';
 
 interface BackgroundProps {
   variant?: 'MENU' | 'GAME';
@@ -20,13 +21,14 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
 
     let animationFrameId: number;
     let time = 0;
+    let smoothEntropy = 0;
 
     const TARGET_FPS = variant === 'MENU' ? 60 : 30; 
     const FRAME_INTERVAL = 1000 / TARGET_FPS;
     let lastFrameTime = 0;
 
     // Starfield for Game Mode
-    const stars: { x: number; y: number; size: number; alpha: number; speed: number }[] = [];
+    const stars: { x: number; y: number; size: number; alpha: number; speed: number; angleOffset: number }[] = [];
     if (variant === 'GAME') {
         const starCount = 150;
         for(let i=0; i<starCount; i++) {
@@ -35,7 +37,8 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
                 y: Math.random() * window.innerHeight,
                 size: Math.random() * 2,
                 alpha: Math.random() * 0.8 + 0.2,
-                speed: Math.random() * 0.2
+                speed: Math.random() * 0.2,
+                angleOffset: Math.random() * Math.PI * 2
             });
         }
     }
@@ -50,7 +53,6 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
     handleResize();
 
     const drawHex = (x: number, y: number, size: number, color: string, height: number, strokeColor: string) => {
-      // Static rotation 30 degrees for standard pointy top look
       const rotationDeg = 0; 
       
       ctx.beginPath();
@@ -64,7 +66,6 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
       ctx.fillStyle = color;
       ctx.fill();
 
-      // Inner highlight based on height/breathing
       if (height > 0.2) {
         ctx.beginPath();
         const innerSize = size * (1 - height * 0.5); 
@@ -91,27 +92,95 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
 
       lastFrameTime = timestamp - (elapsed % FRAME_INTERVAL);
       time += 0.0001 * elapsed; 
-      
-      // Neutral Dark Background
-      ctx.fillStyle = '#020617'; 
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       if (variant === 'GAME') {
-          // --- GAME MODE: STATIC NEUTRAL STARFIELD ---
-          ctx.fillStyle = '#ffffff';
+          // Fetch entropy without triggering React re-renders for maximum performance
+          const state = useGameStore.getState();
+          const entropy = state.session?.entropy;
+          let targetEntropyRatio = 0;
+          if (entropy && entropy.max > 0) {
+              targetEntropyRatio = Math.min(1, Math.max(0, entropy.current / entropy.max));
+          }
+
+          // Smooth interpolation for visual transitions
+          smoothEntropy += (targetEntropyRatio - smoothEntropy) * 0.05;
+
+          // Background Color Interpolation
+          // Base (0%): rgb(2, 6, 23) -> #020617
+          // Warn (50%): rgb(30, 20, 40) -> Deep purple
+          // Crit (100%): rgb(45, 10, 10) -> Dark crimson
+          let bgR = 2, bgG = 6, bgB = 23;
+          if (smoothEntropy <= 0.5) {
+              const f = smoothEntropy * 2; 
+              bgR = 2 + (30 - 2) * f;
+              bgG = 6 + (20 - 6) * f;
+              bgB = 23 + (40 - 23) * f;
+          } else {
+              const f = (smoothEntropy - 0.5) * 2;
+              bgR = 30 + (45 - 30) * f;
+              bgG = 20 + (10 - 20) * f;
+              bgB = 40 + (10 - 40) * f;
+          }
+          
+          ctx.fillStyle = `rgb(${bgR}, ${bgG}, ${bgB})`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Nebula Effects (2 glowing orbs)
+          if (smoothEntropy > 0) {
+              const w = canvas.width, h = canvas.height;
+              // Nebula 1: Slow orbit
+              const n1x = w * 0.5 + Math.sin(time * 5) * w * 0.25;
+              const n1y = h * 0.5 + Math.cos(time * 3) * h * 0.25;
+              const grad1 = ctx.createRadialGradient(n1x, n1y, 0, n1x, n1y, Math.max(w, h) * 0.6);
+              grad1.addColorStop(0, `rgba(220, 38, 38, ${0.1 * smoothEntropy})`);
+              grad1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              ctx.fillStyle = grad1;
+              ctx.fill();
+              ctx.fillRect(0, 0, w, h);
+
+              // Nebula 2: Opposite orbit
+              const n2x = w * 0.5 + Math.sin(time * 4 + Math.PI) * w * 0.3;
+              const n2y = h * 0.5 + Math.cos(time * 6) * h * 0.3;
+              const grad2 = ctx.createRadialGradient(n2x, n2y, 0, n2x, n2y, Math.max(w, h) * 0.5);
+              grad2.addColorStop(0, `rgba(234, 179, 8, ${0.05 * smoothEntropy})`);
+              grad2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              ctx.fillStyle = grad2;
+              ctx.fillRect(0, 0, w, h);
+          }
+
+          // Starfield
+          // Stars shift color from white -> yellow -> red based on entropy
+          const sR = Math.floor(255 - smoothEntropy * 35);
+          const sG = Math.floor(255 - smoothEntropy * 150);
+          const sB = Math.floor(255 - smoothEntropy * 255);
+          ctx.fillStyle = `rgb(${sR}, ${sG}, ${sB})`;
+
+          const speedMultiplier = 1 + (smoothEntropy * 8); // Speed up as entropy rises
+          const driftX = Math.sin(time * 2) * 0.1 * speedMultiplier; // Slight horizontal sway
+
           stars.forEach(star => {
-              ctx.globalAlpha = star.alpha;
+              ctx.globalAlpha = star.alpha * (0.8 + Math.sin(time * 10 + star.angleOffset) * 0.2); // Twinkle
               ctx.beginPath();
               ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
               ctx.fill();
               
-              // Very slow parallax drift
-              star.y -= star.speed;
-              if (star.y < 0) star.y = canvas.height;
+              star.y -= star.speed * speedMultiplier;
+              star.x += driftX;
+
+              if (star.y < 0) {
+                  star.y = canvas.height;
+                  star.x = Math.random() * canvas.width;
+              }
+              if (star.x < 0) star.x = canvas.width;
+              if (star.x > canvas.width) star.x = 0;
           });
           ctx.globalAlpha = 1.0;
+
       } else {
-          // --- MENU MODE: BREATHING HEXES (No Rotation) ---
+          // --- MENU MODE: BREATHING HEXES ---
+          ctx.fillStyle = '#020617'; 
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
           const numCols = Math.ceil(canvas.width / HEX_WIDTH) + 2;
           const numRows = Math.ceil(canvas.height / (HEX_HEIGHT * 0.75)) + 4;
           const flyOffset = (time * 20) % (HEX_HEIGHT * 1.5);
@@ -133,7 +202,6 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
                if (height > 0.6) color = '#1e3a8a';
                if (height > 0.8) color = '#b45309';
                
-               // Passed 0 rotation to keep them static
                drawHex(cx, cy, HEX_SIZE, color, height, stroke);
             }
           }
