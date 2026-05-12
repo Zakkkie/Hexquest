@@ -118,23 +118,21 @@ self.onmessage = (e) => {
                 else if (distToPlayer === 3) discoveryVisibility = 0.33;
                 else if (distToPlayer === 4) discoveryVisibility = 0.05;
 
-                // B. Memory Lighting (Revealed parts darken 5 -> 12)
-                let memoryLighting = 0;
+                // B. Memory/Revealed Visibility (Fades 5 -> 12)
+                let memoryVisibility = 0;
                 if (isRevealed) {
-                    if (distToPlayer <= 5) memoryLighting = 1.0;
+                    if (distToPlayer <= 5) memoryVisibility = 1.0;
                     else if (distToPlayer <= 12) {
-                        memoryLighting = (12 - distToPlayer) * 0.1428; // (12 - dist) / 7
+                        memoryVisibility = (12 - distToPlayer) * 0.1428; // (12 - dist) / 7
                     }
                 }
 
-                const finalLighting = discoveryVisibility > memoryLighting ? discoveryVisibility : memoryLighting;
+                const finalVisibility = discoveryVisibility > memoryVisibility ? discoveryVisibility : memoryVisibility;
                 
-                let finalOpacity = 1.0;
-                if (!isRevealed) {
-                    finalOpacity = discoveryVisibility;
-                } else if (distToPlayer > 12) {
-                    finalOpacity = 0;
-                }
+                // If not revealed, we strictly follow discovery. 
+                // If revealed, we follow the combined max (which includes fading memory)
+                const finalOpacity = isRevealed ? finalVisibility : discoveryVisibility;
+                const finalLighting = finalVisibility;
 
                 if (finalOpacity <= 0 && finalLighting <= 0) continue;
 

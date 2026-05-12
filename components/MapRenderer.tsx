@@ -312,13 +312,6 @@ interface MapRendererProps {
     hoveredHexId: string | null;
 }
 
-interface MapRendererProps {
-    rotation: number;
-    onHexClick: (q: number, r: number) => void;
-    onHover: (id: string | null) => void;
-    hoveredHexId: string | null;
-}
-
 const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId }) => {
     const grid = useGameStore(state => state.session?.grid) as Record<string, Hex> | undefined;
     const player = useGameStore(state => state.session?.player) as Entity | undefined;
