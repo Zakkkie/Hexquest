@@ -333,7 +333,8 @@ const GameView: React.FC = () => {
       y: (pointer.y - targetCameraRef.current.y) / oldScale,
     };
 
-    const scaleBy = 1.1; 
+    // Use a dynamic scale based on wheel delta for smoother trackpad zooming
+    const scaleBy = 1.0 + Math.min(Math.abs(e.evt.deltaY) * 0.002, 0.2); 
     let newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
     newScale = Math.max(0.8, Math.min(newScale, 2.5));
     
@@ -370,24 +371,23 @@ const GameView: React.FC = () => {
           const deltaX = e.evt.clientX - lastPointerPos.current.x;
           lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
           
-          // Use current visual state for pivot math to prevent disorientation
-          const current = currentCameraRef.current;
+          const target = targetCameraRef.current;
           
           const deltaRot = deltaX * 0.5;
-          const newRot = current.rotation + deltaRot;
+          const newRot = target.rotation + deltaRot;
           
           // Pivot Calculation: Center of the screen
           const pivot = { x: dimensions.width / 2, y: dimensions.height / 2 };
           const adjustedView = calculateRotationAdjustedView(
-              { x: current.x, y: current.y, scale: current.scale }, 
+              { x: target.x, y: target.y, scale: target.scale }, 
               pivot, 
-              current.rotation, 
+              target.rotation, 
               newRot
           );
           
           // Update Target
           targetCameraRef.current = { 
-              ...targetCameraRef.current, 
+              ...target, 
               x: adjustedView.x, 
               y: adjustedView.y,
               rotation: newRot 
@@ -449,26 +449,25 @@ const GameView: React.FC = () => {
           const center = { x: (p1.x + p2.x)/2, y: (p1.y + p2.y)/2 };
           const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
 
-          // Using current visual state for smooth pivot
-          let current = currentCameraRef.current;
-          let newRot = current.rotation;
+          let target = targetCameraRef.current;
+          let newRot = target.rotation;
           
           const dAngle = angle - lastAngle.current;
-          if (Math.abs(dAngle) > 1) { 
-             newRot = current.rotation + dAngle;
+          if (Math.abs(dAngle) > 0.5) { 
+             newRot = target.rotation + dAngle;
              // Calculate temporary view for pivot
-             const pivotRes = calculateRotationAdjustedView({x: current.x, y: current.y, scale: current.scale}, center, current.rotation, newRot);
-             current = { ...current, x: pivotRes.x, y: pivotRes.y }; // Local override for scale math below
+             const pivotRes = calculateRotationAdjustedView({x: target.x, y: target.y, scale: target.scale}, center, target.rotation, newRot);
+             target = { ...target, x: pivotRes.x, y: pivotRes.y }; // Local override for scale math below
              lastAngle.current = angle;
           }
           
           const scaleMult = dist / lastDist.current;
-          let newScale = current.scale * scaleMult;
+          let newScale = target.scale * scaleMult;
           newScale = Math.max(0.8, Math.min(newScale, 2.5));
           if (isNaN(newScale)) newScale = 1.0;
 
-          const worldFocusX = (lastCenter.current.x - current.x) / current.scale;
-          const worldFocusY = (lastCenter.current.y - current.y) / current.scale;
+          const worldFocusX = (lastCenter.current.x - target.x) / target.scale;
+          const worldFocusY = (lastCenter.current.y - target.y) / target.scale;
           const rawX = center.x - (worldFocusX * newScale);
           const rawY = center.y - (worldFocusY * newScale);
           const safePos = safifyCoord(rawX, rawY);
