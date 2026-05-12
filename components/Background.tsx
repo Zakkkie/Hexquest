@@ -105,21 +105,25 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
           // Smooth interpolation for visual transitions
           smoothEntropy += (targetEntropyRatio - smoothEntropy) * 0.05;
 
-          // Background Color Interpolation
-          // Base (0%): rgb(2, 6, 23) -> #020617
-          // Warn (50%): rgb(30, 20, 40) -> Deep purple
-          // Crit (100%): rgb(45, 10, 10) -> Dark crimson
-          let bgR = 2, bgG = 6, bgB = 23;
+          // Background Color Interpolation using a cubic Hermite spline for smoother transitions
+          const smoothstep = (x: number) => x * x * (3 - 2 * x);
+          
+          // Interpolation points: 0.0 (Base), 0.5 (Mid), 1.0 (Crit)
+          const base = { r: 2, g: 6, b: 23 };
+          const mid = { r: 35, g: 15, b: 35 }; // Adjusted mid-point
+          const crit = { r: 60, g: 5, b: 5 };  // Adjusted crit-point
+          
+          let bgR, bgG, bgB;
           if (smoothEntropy <= 0.5) {
-              const f = smoothEntropy * 2; 
-              bgR = 2 + (30 - 2) * f;
-              bgG = 6 + (20 - 6) * f;
-              bgB = 23 + (40 - 23) * f;
+              const f = smoothstep(smoothEntropy * 2);
+              bgR = base.r + (mid.r - base.r) * f;
+              bgG = base.g + (mid.g - base.g) * f;
+              bgB = base.b + (mid.b - base.b) * f;
           } else {
-              const f = (smoothEntropy - 0.5) * 2;
-              bgR = 30 + (45 - 30) * f;
-              bgG = 20 + (10 - 20) * f;
-              bgB = 40 + (10 - 40) * f;
+              const f = smoothstep((smoothEntropy - 0.5) * 2);
+              bgR = mid.r + (crit.r - mid.r) * f;
+              bgG = mid.g + (crit.g - mid.g) * f;
+              bgB = mid.b + (crit.b - mid.b) * f;
           }
           
           ctx.fillStyle = `rgb(${bgR}, ${bgG}, ${bgB})`;

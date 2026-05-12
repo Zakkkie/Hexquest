@@ -531,6 +531,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                     props: {
                         ...item.props,
                         theme,
+                        isRevealed: item.props.isRevealed,
                         pendingCost: item.props.isPending && pendingConfirmation ? pendingConfirmation.data.costCoins : null,
                         isTutorialTarget: isTutorial,
                         isTargetArrow: isArrow,

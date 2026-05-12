@@ -47,6 +47,7 @@ export interface HexNodeProps {
   biome?: string;
   poiType?: string;
   isPassable?: boolean;
+  isRevealed: boolean;
   q: number;
   r: number;
   onHexClick: (q: number, r: number) => void; 
@@ -82,6 +83,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
       isTutorialTarget, isTargetArrow, tutorialColor, isMissingSupport, 
       isGrowing, isRankLocked, progress, durability, artifactType,
       biome, poiType, isPassable,
+      isRevealed,
       q, r, id,
       onHexClick, onHover,
       opacity = 1
@@ -453,6 +455,18 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     listening={false}
                     perfectDrawEnabled={false}
                 />
+
+                {!isRevealed && (
+                    <Path 
+                        data={BASE_PATH_D} 
+                        stroke="rgba(255,255,255,0.05)" 
+                        strokeWidth={6} 
+                        opacity={0.5}
+                        listening={false} 
+                        perfectDrawEnabled={false}
+                        shadowForStrokeEnabled={false}
+                    />
+                )}
 
                 {isMonument && (
                     <Star 
