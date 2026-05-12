@@ -97,13 +97,14 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
           // Fetch entropy without triggering React re-renders for maximum performance
           const state = useGameStore.getState();
           const entropy = state.session?.entropy;
-          let targetEntropyRatio = 0;
+          let targetDangerRatio = 0;
           if (entropy && entropy.max > 0) {
-              targetEntropyRatio = Math.min(1, Math.max(0, entropy.current / entropy.max));
+              const currentRatio = Math.min(1, Math.max(0, entropy.current / entropy.max));
+              targetDangerRatio = 1.0 - currentRatio;
           }
 
           // Smooth interpolation for visual transitions
-          smoothEntropy += (targetEntropyRatio - smoothEntropy) * 0.05;
+          smoothEntropy += (targetDangerRatio - smoothEntropy) * 0.05;
 
           // Background Color Interpolation using a cubic Hermite spline for smoother transitions
           const smoothstep = (x: number) => x * x * (3 - 2 * x);

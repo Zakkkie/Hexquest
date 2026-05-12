@@ -457,15 +457,27 @@ const HexNodeComponent = (props: HexNodeProps) => {
                 />
 
                 {!isRevealed && (
-                    <Path 
-                        data={BASE_PATH_D} 
-                        stroke="rgba(255,255,255,0.05)" 
-                        strokeWidth={6} 
-                        opacity={0.5}
-                        listening={false} 
-                        perfectDrawEnabled={false}
-                        shadowForStrokeEnabled={false}
-                    />
+                    <Group listening={false} perfectDrawEnabled={false}>
+                        <Path 
+                            data={BASE_PATH_D} 
+                            stroke="rgba(255,255,255,0.05)" 
+                            strokeWidth={6} 
+                            listening={false} 
+                            perfectDrawEnabled={false}
+                            shadowForStrokeEnabled={false}
+                        />
+                        {/* 3D-like Bevel for unrevealed hexes */}
+                        <Path 
+                            data={BASE_PATH_D} 
+                            scaleX={0.9} 
+                            scaleY={0.9} 
+                            stroke="rgba(255,255,255,0.08)" 
+                            strokeWidth={4} 
+                            listening={false}
+                            perfectDrawEnabled={false}
+                            shadowForStrokeEnabled={false}
+                        />
+                    </Group>
                 )}
 
                 {isMonument && (
