@@ -53,7 +53,7 @@ const getPseudoNoise = (q: number, r: number) => {
 };
 
 // Pure function to generate a specific hex based on config rules
-export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfig, _mapType?: 'FLAT' | 'CHAOTIC'): Hex => {
+export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTIC' = 'FLAT'): Hex => {
     const key = getHexKey(q, r);
     const dist = Math.max(Math.abs(q), Math.abs(r), Math.abs(-q-r));
     const noise = getPseudoNoise(q, r);
@@ -87,8 +87,16 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
                 isPassable = false;
             }
         }
+    } else if (mapType === 'FLAT' && !levelConfig) {
+        // SKIRMISH FLAT MODE: Level 0 everywhere
+        level = 0;
+        biome = 'PLAINS';
+    } else if (mapType === 'CHAOTIC' && !levelConfig) {
+        // SKIRMISH CHAOTIC MODE: Use noise but clamp initially (will be refined during movement discovery)
+        biome = noise > 0.6 ? 'MOUNTAINS' : (noise > 0.3 ? 'FOREST' : 'PLAINS');
+        level = Math.floor(noise * 7) - 3; // -3 to +3
     } else {
-        // --- ZONE LOGIC ---
+        // --- ZONE LOGIC (CAMPAIGN OR DEFAULT) ---
         if (dist <= 5) {
             biome = 'PLAINS';
             level = 0;

@@ -107,23 +107,23 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, hexLevel, hea
 
   // --- GLOBAL WALL UPDATER ---
   useEffect(() => {
+      const HEX_SIZE = GAME_CONFIG.HEX_SIZE || 35;
+      const rawX = HEX_SIZE * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+      const rawY = HEX_SIZE * 1.5 * r;
+
       const updater = (cos: number, sin: number, rot: number) => {
           latestRotation.current = rot;
-          if (!groupRef.current || !visualGroupRef.current) return;
+          const gr = groupRef.current;
+          if (!gr || animState.current.isMoving) return;
           
           const isPendingUpdate = 
               q !== animState.current.targetQ || 
               r !== animState.current.targetR || 
               hexLevel !== animState.current.targetLevel;
               
-          if (!animState.current.isMoving && !isPendingUpdate) {
-              const HEX_SIZE = GAME_CONFIG.HEX_SIZE || 35;
-              const rawX = HEX_SIZE * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
-              const rawY = HEX_SIZE * 1.5 * r;
-              const px = rawX * cos - rawY * sin;
-              const py = (rawX * sin + rawY * cos) * 0.8;
-              
-              groupRef.current.position({ x: px, y: py });
+          if (!isPendingUpdate) {
+              gr.x(rawX * cos - rawY * sin);
+              gr.y((rawX * sin + rawY * cos) * 0.8);
           }
       };
       wallUpdaterRegistry.add(updater);

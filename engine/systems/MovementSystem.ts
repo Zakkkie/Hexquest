@@ -358,11 +358,15 @@ export class MovementSystem implements System {
                         const rand = Math.random();
                         let modifier = 0;
                         
-                        // 30% chance +1, 30% chance -1, 40% chance same
-                        if (rand < 0.3) modifier = 1;
-                        else if (rand < 0.6) modifier = -1;
+                        // 35% chance +1, 35% chance -1, 30% chance same
+                        if (rand < 0.35) modifier = 1;
+                        else if (rand < 0.7) modifier = -1;
                         
-                        const newLevel = currentRefLevel + modifier;
+                        let newLevel = currentRefLevel + modifier;
+                        
+                        // CLAMP TO [-3, 3] AS REQUESTED
+                        if (newLevel > 3) newLevel = 3;
+                        if (newLevel < -3) newLevel = -3;
                         
                         newHex.currentLevel = newLevel;
                         newHex.maxLevel = newLevel;

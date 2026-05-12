@@ -382,8 +382,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         const [pcq, pcr] = playerChunkKey.split(',').map(Number);
         
         const visible: string[] = [];
-        const isCampaign = !!activeLevelConfig;
-        const CHUNK_RADIUS = isCampaign ? 8 : 2; // Render more chunks in campaign since Fog of War is disabled
+        const CHUNK_RADIUS = 3; // Reduced from 8 to optimize performance (covers ~24 hex radius)
         
         for (let cq = pcq - CHUNK_RADIUS; cq <= pcq + CHUNK_RADIUS; cq++) {
             for (let cr = pcr - CHUNK_RADIUS; cr <= pcr + CHUNK_RADIUS; cr++) {

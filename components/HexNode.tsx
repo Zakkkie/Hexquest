@@ -54,6 +54,7 @@ export interface HexNodeProps {
   onHover: (id: string | null) => void;
   id: string;
   opacity?: number;
+  lighting?: number;
 }
 
 // Precompute the base (unsquashed) hexagon path centered at 0,0
@@ -86,7 +87,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
       isRevealed,
       q, r, id,
       onHexClick, onHover,
-      opacity = 1
+      opacity = 1,
+      lighting = 1
   } = props;
 
   // Textures are now always loaded since LOD is removed
@@ -149,28 +151,29 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const wallGroupRefs = useRef<(Konva.Group | null)[]>([]);
   const wallPathRefs = useRef<(Konva.Path | null)[]>([]);
   const wallShadeRefs = useRef<(Konva.Path | null)[]>([]);
+  const wallLightingRefs = useRef<(Konva.Path | null)[]>([]);
   const voidWallGroupRefs = useRef<(Konva.Group | null)[]>([]);
   const voidWallPathRefs = useRef<(Konva.Path | null)[]>([]);
 
   useEffect(() => {
       const updater = (cos: number, sin: number, rot: number) => {
-          if (groupRef.current) {
-              const px = x * cos - y * sin;
-              const py = (x * sin + y * cos) * 0.8;
-              groupRef.current.position({ x: px, y: py });
+          const gn = groupRef.current;
+          if (gn) {
+              gn.x(x * cos - y * sin);
+              gn.y((x * sin + y * cos) * 0.8);
           }
-          if (topFaceGroupRef.current) {
-              topFaceGroupRef.current.rotation(rot);
+          const tfg = topFaceGroupRef.current;
+          if (tfg) {
+              tfg.rotation(rot);
           }
           
           const angleOffset = rot * DEG_TO_RAD;
-          const pts = [];
+          const px = new Float32Array(6);
+          const py = new Float32Array(6);
           for (let i = 0; i < 6; i++) {
               const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
-              pts.push({ 
-                  x: Math.cos(angle) * HEX_SIZE, 
-                  y: Math.sin(angle) * HEX_SIZE * 0.8 + offsetY
-              });
+              px[i] = Math.cos(angle) * HEX_SIZE;
+              py[i] = Math.sin(angle) * HEX_SIZE * 0.8 + offsetY;
           }
 
           for(let i=0; i<6; i++) {
@@ -178,9 +181,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
               const midAngle = (60 * i + 60) * DEG_TO_RAD + angleOffset; 
               const isFrontFacing = Math.sin(midAngle) > 0;
               
-              const t1 = pts[i];
-              const t2 = pts[next];
-
               // Normal Walls
               const groupNode = wallGroupRefs.current[i];
               if (groupNode) {
@@ -192,23 +192,25 @@ const HexNodeComponent = (props: HexNodeProps) => {
                       else nY = (Math.abs(nLevel) - 1) * 10;
 
                       if (offsetY < nY) {
-                          const safeNY = Math.min(nY, offsetY + MAX_WALL_DEPTH);
+                          const safeNY = nY < offsetY + MAX_WALL_DEPTH ? nY : offsetY + MAX_WALL_DEPTH;
                           const heightDiff = safeNY - offsetY;
-                          const b1x = t2.x;
-                          const b1y = t2.y + heightDiff;
-                          const b2x = t1.x;
-                          const b2y = t1.y + heightDiff;
+                          const b1x = px[next];
+                          const b1y = py[next] + heightDiff;
+                          const b2x = px[i];
+                          const b2y = py[i] + heightDiff;
                           
-                          const data = `M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`;
+                          const data = `M ${px[i]} ${py[i]} L ${px[next]} ${py[next]} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`;
                           
                           groupNode.show();
                           const pathNode = wallPathRefs.current[i];
                           if (pathNode) {
                               pathNode.data(data);
-                              pathNode.fillPatternScale({ x: 1, y: heightDiff / 64 });
+                              pathNode.fillPatternScale({ x: 1, y: heightDiff * 0.015625 }); // 1/64
                           }
                           const shadeNode = wallShadeRefs.current[i];
                           if (shadeNode) shadeNode.data(data);
+                          const lightingNode = wallLightingRefs.current[i];
+                          if (lightingNode) lightingNode.data(data);
                       } else {
                           groupNode.hide();
                       }
@@ -223,15 +225,17 @@ const HexNodeComponent = (props: HexNodeProps) => {
                   if (voidGroupNode) {
                       if (isFrontFacing) {
                           const VOID_DEPTH = 12;
-                          const b1x = t2.x;
-                          const b1y = t2.y + VOID_DEPTH;
-                          const b2x = t1.x;
-                          const b2y = t1.y + VOID_DEPTH;
-                          const data = `M ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`;
+                          const b1x = px[next];
+                          const b1y = py[next] + VOID_DEPTH;
+                          const b2x = px[i];
+                          const b2y = py[i] + VOID_DEPTH;
+                          const data = `M ${px[i]} ${py[i]} L ${px[next]} ${py[next]} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`;
                           
                           voidGroupNode.show();
                           const voidPathNode = voidWallPathRefs.current[i];
                           if (voidPathNode) voidPathNode.data(data);
+                          const lightingNode = wallLightingRefs.current[i];
+                          if (lightingNode) lightingNode.data(data);
                       } else {
                           voidGroupNode.hide();
                       }
@@ -317,6 +321,16 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             closed={true} 
                             shadowForStrokeEnabled={false}
                         />
+                        {/* Lighting Overlay for Void Walls */}
+                        {lighting < 1 && (
+                            <Path 
+                                ref={el => { wallLightingRefs.current[i] = el; }}
+                                fill="black"
+                                opacity={1 - lighting}
+                                listening={false}
+                                perfectDrawEnabled={false}
+                            />
+                        )}
                     </Group>
                  );
              })}
@@ -339,6 +353,17 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         shadowForStrokeEnabled={false}
                      />
                      <Path data={BASE_PATH_D} scaleX={0.8} scaleY={0.8} stroke="rgba(56, 189, 248, 0.1)" strokeWidth={1} dash={[2, 4]} listening={false} perfectDrawEnabled={false} />
+
+                    {/* LIGHTING OVERLAY for Void */}
+                    {lighting < 1 && (
+                        <Path 
+                            data={BASE_PATH_D}
+                            fill="black"
+                            opacity={1 - lighting}
+                            listening={false}
+                            perfectDrawEnabled={false}
+                        />
+                    )}
                  </Group>
              </Group>
         </Group>
@@ -397,6 +422,16 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         listening={false}
                         perfectDrawEnabled={false}
                     />
+                    {/* Lighting Overlay for Walls */}
+                    {lighting < 1 && (
+                         <Path 
+                            ref={el => { wallLightingRefs.current[i] = el; }}
+                            fill="black"
+                            opacity={1 - lighting}
+                            listening={false}
+                            perfectDrawEnabled={false}
+                        />
+                    )}
                 </Group>
             );
         })}<Group y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
@@ -426,6 +461,17 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     perfectDrawEnabled={false}
                     shadowForStrokeEnabled={false}
                 />
+
+                {/* LIGHTING OVERLAY: Darken Based on Distance */}
+                {lighting < 1 && (
+                    <Path 
+                        data={BASE_PATH_D}
+                        fill="black"
+                        opacity={1 - lighting}
+                        listening={false}
+                        perfectDrawEnabled={false}
+                    />
+                )}
 
                 {/* Top/Light Bevel */}
                 <Path 
@@ -629,6 +675,7 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.progress !== next.progress) return false;
     if (prev.durability !== next.durability) return false;
     if (prev.opacity !== next.opacity) return false;
+    if (prev.lighting !== next.lighting) return false;
     if (prev.biome !== next.biome) return false;
     if (prev.poiType !== next.poiType) return false;
     if (prev.isPassable !== next.isPassable) return false;
