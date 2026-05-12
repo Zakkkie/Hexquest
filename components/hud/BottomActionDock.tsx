@@ -26,6 +26,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
     const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
     const currentTurn = useGameStore(state => state.session?.currentTurn);
+    const entropy = useGameStore(state => state.session?.entropy);
     
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
@@ -54,14 +55,25 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         if (levelId === '1.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
         if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
         if (levelId === '1.6') return { current: player.playerLevel, target: 4, label: 'RANK' };
-        if (levelId === '2.2') return { current: player.inventory?.length ?? 0, target: 2, label: 'ITEMS' };
+        if (levelId === '1.7') return { current: player.storage ?? 0, target: 10, label: 'MATS' };
+        
+        if (levelId === '2.2') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
         if (levelId === '2.3') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
         if (levelId === '2.4') return { current: player.inventory?.length ?? 0, target: 2, label: 'ITEMS' };
         if (levelId === '2.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
-        if (levelId === '3.2') return { current: player.coins, target: 200, label: TEXT[language].HUD.TUT_1_5_COUNTER };
+        
+        if (levelId === '2.6') {
+            const playerHex = grid[getHexKey(player.q, player.r)];
+            const depth = playerHex ? -playerHex.currentLevel : 0;
+            return { current: Math.max(0, depth), target: 5, label: 'DEPTH' };
+        }
+
+        if (levelId === '3.1') return { current: player.inventory?.filter(i => i.id === 'key_fragment').length || 0, target: 3, label: 'KEYS' };
+        if (levelId === '3.2') return { current: player.coins, target: 200, label: 'CREDITS' };
         if (levelId === '3.3') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
-        if (levelId === '3.4') return { current: player.coins, target: 100, label: TEXT[language].HUD.TUT_1_5_COUNTER };
+        if (levelId === '3.4') return { current: player.coins, target: 100, label: 'CREDITS' };
         if (levelId === '3.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+
         if (levelId === '4.1') return { current: ownedByLevel(2), target: 3, label: 'L2 HEXES' };
         if (levelId === '4.3') return { current: ownedByLevel(3), target: 2, label: 'L3 HEXES' };
         if (levelId === '4.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 4, label: 'LEVEL' };
@@ -69,8 +81,14 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         if (levelId === '4.6') return { current: ownedByLevel(3), target: 8, label: 'L3 HEXES' };
         if (levelId === '4.7') return { current: ownedByLevel(4), target: 2, label: 'L4 HEXES' };
 
+        if (levelId === '4.8') {
+             const onMon = grid[getHexKey(player.q, player.r)]?.structureType === 'MONUMENT';
+             const isDone = onMon && ownedByLevel(3) >= 3 && player.coins >= 300 && player.inventory.length >= 2 && (entropy?.current ?? 0) < 60;
+             return { current: isDone ? 1 : 0, target: 1, label: 'ASCEND' };
+        }
+
         return null;
-    }, [grid, player, activeLevelConfig, language, currentTurn]);
+    }, [grid, player, activeLevelConfig, language, currentTurn, entropy]);
 
     const renderMissionStatus = () => {
         if (campaignMetrics) {
@@ -207,11 +225,10 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
             {/* UNIFIED DOCK CONTAINER */}
             <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl md:rounded-3xl shadow-2xl p-1.5 md:p-3 pointer-events-auto flex flex-col gap-1 w-full md:w-auto max-w-7xl mx-auto overflow-hidden">
                 <div className="flex items-center justify-between gap-1.5 md:gap-6">
-                    {/* LEFT: INVENTORY & MISSION */}
+                    {/* LEFT: INVENTORY & MISSION (Optimized) */}
                     <div className="flex flex-col gap-1 md:gap-1.5 shrink min-w-0 flex-1 overflow-hidden">
-                        {/* COMBINED HEADER: INV + GOAL */}
                         <div className="flex items-center gap-1.5">
-                            {/* Inventory Header */}
+                            {/* Inventory Toggle */}
                             <div 
                                 className="flex items-center gap-2 px-2 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all shrink-0 touch-manipulation" 
                                 onClick={() => { onOpenInventory(); playUiSound('CLICK'); }}
@@ -222,7 +239,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 </span>
                             </div>
 
-                            {/* Mission Goal - Compressed and placed next to Inventory */}
+                            {/* Mission Goal / Mini-Window */}
                             <div 
                                 className="flex-1 flex items-center justify-between gap-2 px-2.5 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800/50 cursor-pointer group hover:bg-slate-800 transition-all overflow-hidden"
                                 onClick={() => { onOpenMission(); playUiSound('CLICK'); }}

@@ -903,6 +903,7 @@ const OverworldView: React.FC = () => {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           draggable
+          dragDistance={10}
           x={viewState.x}
           y={viewState.y}
           scaleX={viewState.scale}

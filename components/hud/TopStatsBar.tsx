@@ -131,9 +131,9 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                     entropy && entropy.current / entropy.max < 0.6 ? 'text-amber-400' :
                                     'text-slate-400'
                                 }`}>
-                                    {entropy && entropy.current / entropy.max < 0.3 ? 'CRIT' :
-                                     entropy && entropy.current / entropy.max < 0.6 ? 'WARN' :
-                                     'STABLE'}
+                                    {entropy && entropy.current / entropy.max < 0.3 ? (language === 'RU' ? 'КРИТ' : 'CRIT') :
+                                     entropy && entropy.current / entropy.max < 0.6 ? (language === 'RU' ? 'ПРЕД' : 'WARN') :
+                                     (language === 'RU' ? 'НОРМ' : 'STABLE')}
                                 </span>
                             </div>
                         </div>

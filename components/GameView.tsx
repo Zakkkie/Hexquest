@@ -310,7 +310,7 @@ const GameView: React.FC = () => {
       
       if (pointer) {
           const dist = Math.hypot(pointer.x - mouseDownPosRef.current.x, pointer.y - mouseDownPosRef.current.y);
-          if (dist > 10) return; // Threshold check
+          if (dist > 20) return; // Threshold check: increased for mobile reliability
       }
       
       movePlayer(q, r);
@@ -405,8 +405,11 @@ const GameView: React.FC = () => {
   // -- Touch Handling --
   const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
     const touches = e.evt.touches;
+    const stage = e.target.getStage();
     if (touches.length === 1) {
         isDragging.current = true;
+        const pointer = stage?.getPointerPosition();
+        if (pointer) mouseDownPosRef.current = pointer;
         lastPointerPos.current = { x: touches[0].clientX, y: touches[0].clientY };
     } else if (touches.length === 2) {
       isMultitouch.current = true;
