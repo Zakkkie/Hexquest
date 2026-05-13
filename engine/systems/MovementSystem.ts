@@ -301,6 +301,7 @@ export class MovementSystem implements System {
     // Dynamic Fog Radius based on active statuses
     const { fogRadius } = getStatusModifiers(entity);
     const revealRadius = fogRadius;
+    const generateRadius = Math.max(revealRadius, 3);
 
     // Use BFS logic to get hexes in radius
     const visited = new Set<string>();
@@ -333,10 +334,12 @@ export class MovementSystem implements System {
     let head = 0;
     while(head < queue.length) {
         const { q, r, dist } = queue[head++];
-        if (dist >= revealRadius) continue;
+        if (dist >= generateRadius) continue;
 
         const neighbors = getNeighbors(q, r);
         for (const n of neighbors) {
+            const nDist = dist + 1;
+            const shouldReveal = nDist <= revealRadius;
             const key = getHexKey(n.q, n.r);
             if (!visited.has(key)) {
                 visited.add(key);
@@ -380,16 +383,16 @@ export class MovementSystem implements System {
                     }
 
                     if (entity.type === EntityType.PLAYER) {
-                        newHex.revealed = true;
+                        if (shouldReveal) newHex.revealed = true;
                     } else {
-                        newHex.botRevealed = { 'SHARED_BOTS': true };
+                        if (shouldReveal) newHex.botRevealed = { 'SHARED_BOTS': true };
                     }
                     gridUpdates[key] = newHex;
                     index.registerHex(newHex); // Incrementally index
                 } else {
                     const isPlayer = entity.type === EntityType.PLAYER;
-                    const needsPlayerReveal = isPlayer && !hex.revealed;
-                    const needsBotReveal = !isPlayer && (!hex.botRevealed || !hex.botRevealed['SHARED_BOTS']);
+                    const needsPlayerReveal = isPlayer && shouldReveal && !hex.revealed;
+                    const needsBotReveal = !isPlayer && shouldReveal && (!hex.botRevealed || !hex.botRevealed['SHARED_BOTS']);
                     
                     if (needsPlayerReveal) {
                         gridUpdates[key] = { ...(gridUpdates[key] || hex), revealed: true };
@@ -398,7 +401,7 @@ export class MovementSystem implements System {
                     }
                 }
                 
-                queue.push({ q: n.q, r: n.r, dist: dist + 1 });
+                queue.push({ q: n.q, r: n.r, dist: nDist });
             }
         }
     }

@@ -111,27 +111,25 @@ self.onmessage = (e) => {
                 const distToPlayer = cubeDistance({ q: playerQ, r: playerR }, { q: hq, r: hr });
                 const isRevealed = !!hex.revealed || cachedIsCampaign;
 
-                // A. Discovery Visibility (Active Radius around player)
+                // A. Active Discovery
                 let discoveryVisibility = 0;
                 if (distToPlayer <= 1) discoveryVisibility = 1.0;
                 else if (distToPlayer === 2) discoveryVisibility = 0.66;
                 else if (distToPlayer === 3) discoveryVisibility = 0.33;
-                else if (distToPlayer === 4) discoveryVisibility = 0.05;
 
-                // B. Memory/Revealed Visibility (Fades 5 -> 12)
+                // B. Memory/Revealed Visibility
                 let memoryVisibility = 0;
                 if (isRevealed) {
-                    if (distToPlayer <= 5) memoryVisibility = 1.0;
-                    else if (distToPlayer <= 12) {
-                        memoryVisibility = (12 - distToPlayer) * 0.1428; // (12 - dist) / 7
+                    if (distToPlayer <= 7) {
+                        memoryVisibility = 1.0;
+                    } else if (distToPlayer <= 12) {
+                        memoryVisibility = (12 - distToPlayer) * 0.2;
                     }
                 }
 
                 const finalVisibility = discoveryVisibility > memoryVisibility ? discoveryVisibility : memoryVisibility;
                 
-                // If not revealed, we strictly follow discovery. 
-                // If revealed, we follow the combined max (which includes fading memory)
-                const finalOpacity = isRevealed ? finalVisibility : discoveryVisibility;
+                const finalOpacity = finalVisibility;
                 const finalLighting = finalVisibility;
 
                 if (finalOpacity <= 0 && finalLighting <= 0) continue;
@@ -200,14 +198,14 @@ self.onmessage = (e) => {
             if (distToPlayer <= 1) discoveryVis = 1.0;
             else if (distToPlayer === 2) discoveryVis = 0.66;
             else if (distToPlayer === 3) discoveryVis = 0.33;
-            else if (distToPlayer === 4) discoveryVis = 0.05;
 
             // MEMORY/REVEALED 
             let memoryVis = 0;
             if (isRevealed) {
-                if (distToPlayer <= 5) memoryVis = 1.0;
-                else if (distToPlayer <= 12) {
-                    memoryVis = (12 - distToPlayer) * 0.1428;
+                if (distToPlayer <= 7) {
+                    memoryVis = 1.0;
+                } else if (distToPlayer <= 12) {
+                    memoryVis = (12 - distToPlayer) * 0.2;
                 }
             }
 

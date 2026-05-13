@@ -258,7 +258,12 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 <div className="flex gap-1">
                                     {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 bg-indigo-500 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}
                                 </div>
-                                <button onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5"/></button>
+                                <button onClick={() => {
+                                    if (gameStatus === 'BRIEFING') {
+                                        startMission();
+                                    }
+                                    closeModal();
+                                }} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5"/></button>
                             </div>
                         </div>
 
@@ -312,11 +317,16 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         {/* Footer / Action */}
                         <div className="p-6 bg-slate-900/50 border-t border-indigo-500/20 z-20">
                             <button 
-                                onClick={() => gameStatus === 'BRIEFING' ? startMission() : closeModal()} 
-                                className="relative w-full overflow-hidden group/btn"
+                                onClick={() => {
+                                    if (gameStatus === 'BRIEFING') {
+                                        startMission();
+                                    }
+                                    closeModal();
+                                }} 
+                                className="group/btn relative flex w-full flex-col items-center justify-center gap-2 px-12 py-5 bg-slate-900/80 border border-indigo-500/50 hover:bg-slate-800 transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] overflow-hidden rounded text-indigo-400 hover:text-indigo-300"
                             >
-                                <div className="absolute inset-0 bg-indigo-600 transition-transform duration-300 group-hover/btn:scale-105" />
-                                <div className="relative flex items-center justify-center gap-3 py-4 text-white font-black uppercase tracking-[0.3em] text-sm">
+                                <div className="absolute inset-0 bg-indigo-500/10 opacity-0 transition-opacity group-hover/btn:opacity-100 pointer-events-none" />
+                                <div className="relative z-10 flex items-center justify-center gap-3 text-white font-black uppercase tracking-[0.3em] text-sm">
                                     {gameStatus === 'BRIEFING' ? t.BRIEFING_BTN_START : t.BTN_READY}
                                     <ArrowRight className="w-5 h-5 transition-transform group-hover/btn:translate-x-1" />
                                 </div>

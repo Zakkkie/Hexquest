@@ -59,19 +59,41 @@ export const createInitialSessionDataAsync = async (
     startHex.revealed = true;
     initialGrid[getHexKey(0, 0)] = startHex;
 
-    getNeighbors(0, 0).forEach(n => {
-        const h = generateSingleHex(n.q, n.r, undefined, mapType as any);
-        h.revealed = true;
-        // Chaos Mode: Ensure staircase rule at starting point
-        if (mapType === 'CHAOTIC') {
-            const diff = h.currentLevel - startHex.currentLevel;
-            if (Math.abs(diff) > 1) {
-                h.currentLevel = startHex.currentLevel + (diff > 0 ? 1 : -1);
-                h.maxLevel = h.currentLevel;
+    // Use BFS to generate up to radius 3
+    const queue = [{ q: 0, r: 0, dist: 0 }];
+    const visited = new Set<string>();
+    visited.add(getHexKey(0, 0));
+
+    let head = 0;
+    while(head < queue.length) {
+        const {q, r, dist} = queue[head++];
+        if (dist >= 3) continue;
+
+        getNeighbors(q, r).forEach(n => {
+            const key = getHexKey(n.q, n.r);
+            if (!visited.has(key)) {
+                visited.add(key);
+                const h = generateSingleHex(n.q, n.r, undefined, mapType as any);
+                if (dist + 1 <= 2) {
+                    h.revealed = true;
+                }
+                
+                // Chaos Mode: Ensure staircase rule
+                if (mapType === 'CHAOTIC') {
+                    const parentHex = initialGrid[getHexKey(q, r)];
+                    if (parentHex) {
+                        const diff = h.currentLevel - parentHex.currentLevel;
+                        if (Math.abs(diff) > 1) {
+                            h.currentLevel = parentHex.currentLevel + (diff > 0 ? 1 : -1);
+                            h.maxLevel = h.currentLevel;
+                        }
+                    }
+                }
+                initialGrid[key] = h;
+                queue.push({q: n.q, r: n.r, dist: dist + 1});
             }
-        }
-        initialGrid[getHexKey(n.q, n.r)] = h;
-    });
+        });
+    }
   }
 
   // Difficulty & Config Setup
