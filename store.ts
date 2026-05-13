@@ -296,6 +296,7 @@ export const useGameStore = create<GameStore>()(
               engine.startMission();
               set({ session: engine.state });
               audioService.play('UI_CLICK');
+              get().showToast(TEXT[get().language].TOAST?.SIMULATION_VICTORY ? "Mission Started" : "Deploying...", "info"); // simple fallback toast
           }
       },
 

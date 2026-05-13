@@ -33,8 +33,8 @@ const IntroSequence: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col items-center justify-center overflow-hidden">
       {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#020617_100%)]" />
-      <div className="absolute inset-0 overflow-hidden mix-blend-screen opacity-20">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#020617_100%)] pointer-events-none" />
+      <div className="absolute inset-0 overflow-hidden mix-blend-screen opacity-20 pointer-events-none">
         <div className="absolute top-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-blue-900/40 blur-[100px] animate-blob" />
         <div className="absolute bottom-[-10%] right-[20%] w-[50%] h-[50%] rounded-full bg-indigo-900/40 blur-[100px] animate-blob animation-delay-2000" />
       </div>
@@ -110,9 +110,12 @@ const IntroSequence: React.FC = () => {
             </h2>
             <button
               onClick={skipIntro}
-              className="group flex items-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full font-bold uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] hover:scale-105"
+              className="group flex flex-col items-center justify-center gap-2 px-12 py-6 bg-slate-900/80 border border-indigo-500/50 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 font-black uppercase tracking-[0.3em] transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] hover:scale-105 relative overflow-hidden"
             >
-              Deploy <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <div className="absolute inset-0 bg-indigo-500/10 transition-opacity opacity-0 group-hover:opacity-100 pointer-events-none" />
+              <div className="flex items-center gap-3 relative z-10 text-white">
+                 Deploy Unit <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </button>
           </motion.div>
         )}

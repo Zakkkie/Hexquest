@@ -70,7 +70,7 @@ const App: React.FC = () => {
            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#020617_100%)]" />
 
            {/* Floating Light Blobs */}
-           <div className="absolute inset-0 overflow-hidden mix-blend-screen opacity-30">
+           <div className="absolute inset-0 overflow-hidden mix-blend-screen opacity-30 pointer-events-none">
               <div className="absolute top-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-blue-900/40 blur-[100px] animate-blob" />
               <div className="absolute bottom-[-10%] right-[20%] w-[50%] h-[50%] rounded-full bg-indigo-900/40 blur-[100px] animate-blob animation-delay-2000" />
            </div>
