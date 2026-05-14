@@ -855,7 +855,7 @@ const OverworldView: React.FC = () => {
 
       {/* Toast Notification */}
       {toast && (
-        <div className="absolute top-[20%] left-0 w-full flex justify-center z-[60] pointer-events-none px-4">
+        <div className="absolute top-[20%] left-0 w-full flex justify-center z-[300] pointer-events-none px-4">
           <div className={`
             relative flex items-center gap-3 px-6 py-4 rounded-lg backdrop-blur-xl shadow-2xl border-2
             animate-in slide-in-from-top-12 duration-500 max-w-[90vw] md:max-w-xl group overflow-hidden

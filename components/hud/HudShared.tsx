@@ -60,7 +60,7 @@ export const StorageBlocks: React.FC<{ current: number, max: number }> = ({ curr
     );
 };
 
-export const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity?: number, grayscale?: boolean }> = ({ item, def, size = "w-10 h-10 md:w-10 md:h-10", opacity = 1, grayscale = false }) => {
+export const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity?: number, grayscale?: boolean, silhouette?: boolean }> = ({ item, def, size = "w-10 h-10 md:w-10 md:h-10", opacity = 1, grayscale = false, silhouette = false }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -93,6 +93,7 @@ export const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity
             ctx.clearRect(0,0,64,64);
             ctx.globalAlpha = opacity;
             if (grayscale) ctx.filter = 'grayscale(100%) brightness(0.7)';
+            if (silhouette) ctx.filter = 'contrast(0) brightness(0.5)';
             ctx.drawImage(img, 0,0,64,64);
             ctx.filter = 'none';
             ctx.globalAlpha = 1.0;
@@ -106,8 +107,10 @@ export const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity
                 ctx.clearRect(0,0,64,64);
                 ctx.globalAlpha = opacity;
                 if (grayscale) ctx.filter = 'grayscale(100%) brightness(0.7)';
+                if (silhouette) ctx.filter = 'contrast(0) brightness(0.5)';
                 ctx.drawImage(fallbackImg, 0,0,64,64);
                 ctx.filter = 'none';
+
                 ctx.globalAlpha = 1.0;
             };
             img.addEventListener('error', handleError);

@@ -757,10 +757,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                         </div>
                                                     ) : isWildcard ? <HelpCircle className="w-8 h-8 md:w-12 md:h-12 text-slate-400 opacity-60" /> :
                                                     (reqDef ? (
-                                                        <div className="relative">
-                                                            <ItemIcon def={reqDef} size="w-8 h-8 md:w-12 md:h-12" opacity={0.4} grayscale />
+                                                        <div className="absolute inset-0 flex items-center justify-center opacity-60">
+                                                            <ItemIcon def={reqDef} size="w-10 h-10 md:w-16 md:h-16" opacity={0.5} silhouette />
                                                             <div className="absolute inset-0 flex items-center justify-center">
-                                                                <Lock className="w-4 h-4 md:w-6 md:h-6 text-slate-500" />
+                                                                <Lock className="w-5 h-5 md:w-8 md:h-8 text-slate-400 drop-shadow-md" />
                                                             </div>
                                                             <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[8px] text-center text-slate-300 font-mono">REQ</div>
                                                         </div>
@@ -787,9 +787,6 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 <div className="w-full px-2 md:px-4">
                                     <button onClick={activateMonument} disabled={!isMonumentReady} className={`w-full py-3 md:py-4 rounded-xl font-black uppercase tracking-[0.2em] shadow-lg transition-all flex items-center justify-center gap-2 text-sm md:text-base ${isMonumentReady ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed grayscale'}`}>
                                         {isMonumentReady ? <><Zap className="w-4 h-4 md:w-5 md:h-5 fill-current" /> {t.MONUMENT_BTN_ACTIVE}</> : t.MONUMENT_BTN_INACTIVE}
-                                    </button>
-                                    <button onClick={() => { useGameStore.getState().rerollMonumentRequirements(); }} className="w-full py-2 rounded-xl bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-300 font-bold uppercase tracking-widest text-[10px] transition-all mt-2">
-                                        {t.MONUMENT_REROLL}
                                     </button>
                                 </div>
                             </div>
