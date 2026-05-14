@@ -82,6 +82,10 @@ export interface Dictionary {
         BOT_LABEL_SKIRMISH: string;
         BOT_LABEL_WAR: string;
         BOT_LABEL_CHAOS: string;
+        MODE_STORY: string;
+        MODE_STORY_SUB: string;
+        MODE_LEVELS: string;
+        MODE_LEVELS_SUB: string;
     };
     CAMPAIGN_MAP: {
         HEADER_TITLE: string;
@@ -93,6 +97,16 @@ export interface Dictionary {
         MISSION_PREFIX: string;
         HOSTILES: string;
         ENCRYPTED: string;
+        LVL_GRID_COORDINATES: string;
+        LVL_START_RESOURCES: string;
+        LVL_THREAT_LEVEL: string;
+        LVL_THREAT_NONE: string;
+        LVL_THREAT_BASIC: string;
+        LVL_THREAT_HIGH: string;
+        LVL_GOAL: string;
+        LVL_STATUS_LOCKED: string;
+        LVL_STATUS_READY: string;
+        LVL_STATUS_COMPLETED: string;
     };
     HUD: {
         RANK: string;
@@ -483,7 +497,11 @@ export const TEXT: Record<Language, Dictionary> = {
             BOT_LABEL_DUEL: "DUEL",
             BOT_LABEL_SKIRMISH: "SKIRMISH",
             BOT_LABEL_WAR: "WAR",
-            BOT_LABEL_CHAOS: "CHAOS"
+            BOT_LABEL_CHAOS: "CHAOS",
+            MODE_STORY: "Story Mode",
+            MODE_STORY_SUB: "Plot & Cities",
+            MODE_LEVELS: "Ranked Missions",
+            MODE_LEVELS_SUB: "Sequence 1.1 - 4.8"
         },
         CAMPAIGN_MAP: {
             HEADER_TITLE: "Campaign",
@@ -494,7 +512,17 @@ export const TEXT: Record<Language, Dictionary> = {
             BADGE_DONE: "Done",
             MISSION_PREFIX: "Mission",
             HOSTILES: "Hostiles Detected",
-            ENCRYPTED: "ENCRYPTED"
+            ENCRYPTED: "ENCRYPTED",
+            LVL_GRID_COORDINATES: "Sector ID",
+            LVL_START_RESOURCES: "Initial Core",
+            LVL_THREAT_LEVEL: "Threat Assessment",
+            LVL_THREAT_NONE: "MINIMAL",
+            LVL_THREAT_BASIC: "MODERATE",
+            LVL_THREAT_HIGH: "HOSTILE",
+            LVL_GOAL: "Directives",
+            LVL_STATUS_LOCKED: "ACCESS DENIED",
+            LVL_STATUS_READY: "READY",
+            LVL_STATUS_COMPLETED: "SECURED"
         },
         HUD: {
             RANK: "Rank",
@@ -884,7 +912,11 @@ export const TEXT: Record<Language, Dictionary> = {
             BOT_LABEL_DUEL: "ДУЭЛЬ",
             BOT_LABEL_SKIRMISH: "СТЫЧКА",
             BOT_LABEL_WAR: "ВОЙНА",
-            BOT_LABEL_CHAOS: "ХАОС"
+            BOT_LABEL_CHAOS: "ХАОС",
+            MODE_STORY: "История",
+            MODE_STORY_SUB: "Сюжет и города",
+            MODE_LEVELS: "Уровни",
+            MODE_LEVELS_SUB: "Прогрессия 1.1 - 4.8"
         },
         CAMPAIGN_MAP: {
             HEADER_TITLE: "Кампания",
@@ -895,7 +927,17 @@ export const TEXT: Record<Language, Dictionary> = {
             BADGE_DONE: "Готово",
             MISSION_PREFIX: "Миссия",
             HOSTILES: "Враги",
-            ENCRYPTED: "ЗАШИФРОВАНО"
+            ENCRYPTED: "ЗАШИФРОВАНО",
+            LVL_GRID_COORDINATES: "Код сектора",
+            LVL_START_RESOURCES: "Базовый пакет",
+            LVL_THREAT_LEVEL: "Уровень угрозы",
+            LVL_THREAT_NONE: "МИНИМАЛЬНЫЙ",
+            LVL_THREAT_BASIC: "УМЕРЕННЫЙ",
+            LVL_THREAT_HIGH: "ВРАЖДЕБНЫЙ",
+            LVL_GOAL: "Директивы",
+            LVL_STATUS_LOCKED: "ДОСТУП ЗАКРЫТ",
+            LVL_STATUS_READY: "ГОТОВ",
+            LVL_STATUS_COMPLETED: "ВЫПОЛНЕНО"
         },
         HUD: {
             RANK: "Ранг",

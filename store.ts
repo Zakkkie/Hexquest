@@ -55,6 +55,7 @@ interface GameStore extends GameState {
   setUIState: (state: UIState) => void;
   setDeviceType: (type: DeviceType) => void;
   setLanguage: (lang: 'EN' | 'RU') => void;
+  setCampaignMode: (mode: 'STORY' | 'LEVELS') => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
   playUiSound: (type: UiSoundType) => void;
@@ -151,6 +152,8 @@ export const useGameStore = create<GameStore>()(
       pendingConfirmation: null,
       leaderboard: [], 
       campaignProgress: 0, 
+      levelsModeProgress: 0,
+      campaignMode: 'STORY',
       activePoi: null,
       hasActiveSession: false,
       hasHydrated: false,
@@ -187,6 +190,7 @@ export const useGameStore = create<GameStore>()(
       
       // --- UI SETTERS ---
       setLanguage: (lang) => set({ language: lang }),
+      setCampaignMode: (mode) => set({ campaignMode: mode }),
       setUIState: (uiState) => {
         set({ uiState });
       },
@@ -313,6 +317,7 @@ export const useGameStore = create<GameStore>()(
           get().abandonSession();
           set({ 
               campaignProgress: 0, 
+              levelsModeProgress: 0,
               overworld: {
                   grid: {},
                   worldGrid: {},
@@ -2148,11 +2153,25 @@ export const useGameStore = create<GameStore>()(
                     if (event.type === 'VICTORY') {
                         const currentId = engine?.state?.activeLevelConfig?.id;
                         if (currentId) {
-                            const idx = CAMPAIGN_LEVELS.findIndex(l => l.id === currentId);
-                            if (idx !== -1 && idx >= get().campaignProgress) {
-                                const nextP = Math.min(CAMPAIGN_LEVELS.length, idx + 1);
-                                if (nextP > get().campaignProgress) {
-                                    set({ campaignProgress: nextP });
+                            const mode = get().campaignMode;
+                            
+                            if (mode === 'STORY') {
+                                const idx = CAMPAIGN_LEVELS.findIndex(l => l.id === currentId);
+                                if (idx !== -1 && idx >= get().campaignProgress) {
+                                    const nextP = Math.min(CAMPAIGN_LEVELS.length, idx + 1);
+                                    if (nextP > get().campaignProgress) {
+                                        set({ campaignProgress: nextP });
+                                    }
+                                }
+                            } else {
+                                // LEVELS mode - only mission levels
+                                const missionLevels = CAMPAIGN_LEVELS.filter(l => !l.isCityLevel);
+                                const idx = missionLevels.findIndex(l => l.id === currentId);
+                                if (idx !== -1 && idx >= get().levelsModeProgress) {
+                                    const nextP = Math.min(missionLevels.length, idx + 1);
+                                    if (nextP > get().levelsModeProgress) {
+                                        set({ levelsModeProgress: nextP });
+                                    }
                                 }
                             }
                         }
@@ -2300,6 +2319,8 @@ export const useGameStore = create<GameStore>()(
           user: state.user, 
           leaderboard: state.leaderboard,
           campaignProgress: state.campaignProgress,
+          levelsModeProgress: state.levelsModeProgress,
+          campaignMode: state.campaignMode,
           isMusicMuted: state.isMusicMuted,
           isSfxMuted: state.isSfxMuted,
           language: state.language,

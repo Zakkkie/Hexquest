@@ -163,6 +163,7 @@ const MainMenu: React.FC = () => {
   const startNewGame = useGameStore(state => state.startNewGame);
   const setUIState = useGameStore(state => state.setUIState);
   const setLanguage = useGameStore(state => state.setLanguage);
+  const setCampaignMode = useGameStore(state => state.setCampaignMode);
   const logout = useGameStore(state => state.logout);
   const loginAsGuest = useGameStore(state => state.loginAsGuest);
   const loginUser = useGameStore(state => state.loginUser);
@@ -182,6 +183,7 @@ const MainMenu: React.FC = () => {
   const [selectedHead, setSelectedHead] = useState(0);
   const [selectedBody, setSelectedBody] = useState(0);
   
+  const [showCampaignModes, setShowCampaignModes] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const [showSoundMenu, setShowSoundMenu] = useState(false);
@@ -229,14 +231,21 @@ const MainMenu: React.FC = () => {
 
   const handleCampaignClick = () => {
      playUiSound('CLICK');
-     if (hasActiveSession) {
-         if (window.confirm(t.ABANDON_CONFIRM)) {
-             abandonSession();
-             setUIState('OVERWORLD');
-         }
-     } else {
-         setUIState('OVERWORLD');
-     }
+     setShowCampaignModes(!showCampaignModes);
+  };
+
+  const startCampaignWithMode = (mode: 'STORY' | 'LEVELS') => {
+    playUiSound('CLICK');
+    setCampaignMode(mode);
+    if (hasActiveSession) {
+        if (window.confirm(t.ABANDON_CONFIRM)) {
+            abandonSession();
+            setUIState('CAMPAIGN_MAP');
+        }
+    } else {
+        setUIState('CAMPAIGN_MAP');
+    }
+    setShowCampaignModes(false);
   };
 
   const handleNewGameClick = () => {
@@ -461,7 +470,45 @@ const MainMenu: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-3">
-          <MenuButton onClick={handleCampaignClick} variant="primary" icon={<BookOpen className="w-5 h-5 fill-current" />} label={t.CAMPAIGN} subLabel={t.CAMPAIGN_SUB} />
+          <div className="flex flex-col gap-2">
+            <MenuButton 
+                onClick={handleCampaignClick} 
+                variant="primary" 
+                icon={<BookOpen className="w-5 h-5 fill-current" />} 
+                label={t.CAMPAIGN} 
+                subLabel={t.CAMPAIGN_SUB} 
+            />
+            
+            {showCampaignModes && (
+                <div className="flex flex-col gap-2 pl-4 border-l-2 border-indigo-500/30 animate-in slide-in-from-top-2 duration-300">
+                    <button 
+                        onClick={() => startCampaignWithMode('STORY')}
+                        className="flex items-center gap-3 p-3 bg-slate-900/60 border border-slate-700/50 rounded-xl hover:bg-slate-800 hover:border-indigo-500/50 transition-all text-left group"
+                    >
+                        <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                            <Globe className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-wider text-white">{t.MODE_STORY}</span>
+                            <span className="text-[10px] font-mono text-slate-500 uppercase">{t.MODE_STORY_SUB}</span>
+                        </div>
+                    </button>
+                    <button 
+                        onClick={() => startCampaignWithMode('LEVELS')}
+                        className="flex items-center gap-3 p-3 bg-slate-900/60 border border-slate-700/50 rounded-xl hover:bg-slate-800 hover:border-indigo-500/50 transition-all text-left group"
+                    >
+                        <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                            <Layers className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-wider text-white">{t.MODE_LEVELS}</span>
+                            <span className="text-[10px] font-mono text-slate-500 uppercase">{t.MODE_LEVELS_SUB}</span>
+                        </div>
+                    </button>
+                </div>
+            )}
+          </div>
+
           <MenuButton onClick={handleNewGameClick} variant="battle" icon={<Swords className="w-5 h-5" />} label={t.SKIRMISH} subLabel={t.SKIRMISH_SUB} />
           {hasActiveSession && <MenuButton onClick={() => { setUIState('GAME'); playUiSound('CLICK'); }} icon={<ArrowRight className="w-5 h-5" />} label={t.RESUME} subLabel={t.RESUME_SUB} />}
           <MenuButton onClick={() => { setUIState('LEADERBOARD'); playUiSound('CLICK'); }} icon={<Trophy className="w-5 h-5" />} label={t.LEADERBOARD} subLabel={t.LEADERBOARD_SUB} />

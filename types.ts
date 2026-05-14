@@ -587,6 +587,8 @@ export interface GameState {
   
   leaderboard: LeaderboardEntry[];
   campaignProgress: number; 
+  levelsModeProgress: number;
+  campaignMode: 'STORY' | 'LEVELS';
   hasActiveSession: boolean;
   isMusicMuted: boolean;
   isSfxMuted: boolean;

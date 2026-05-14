@@ -45,6 +45,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const returnToOverworld = useGameStore(state => state.returnToOverworld);
     const isOverworldGenerated = useGameStore(state => state.overworld.isGenerated);
     const hasActiveSession = useGameStore(state => state.hasActiveSession);
+    const campaignMode = useGameStore(state => state.campaignMode);
+    const setUIState = useGameStore(state => state.setUIState);
     
     // Monument/Void Specifics
     const monumentDialogState = useGameStore(state => state.monumentDialogState);
@@ -77,24 +79,25 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const handleNextLevel = () => {
         playUiSound('CLICK');
-        if (isOverworldGenerated) {
+        if (campaignMode === 'STORY' && isOverworldGenerated) {
             returnToOverworld('VICTORY');
             return;
         }
+        
+        const levelsToUse = campaignMode === 'LEVELS' 
+            ? CAMPAIGN_LEVELS.filter(l => !l.isCityLevel)
+            : CAMPAIGN_LEVELS;
+
         if (activeLevelConfig) {
-            const currentIdx = CAMPAIGN_LEVELS.findIndex(l => l.id === activeLevelConfig.id);
-            const nextLevel = CAMPAIGN_LEVELS[currentIdx + 1];
+            const currentIdx = levelsToUse.findIndex(l => l.id === activeLevelConfig.id);
+            const nextLevel = levelsToUse[currentIdx + 1];
             if (nextLevel) {
                 startCampaignLevel(nextLevel.id);
             } else {
-                // End of campaign
-                console.log('[GameDialogs] End of campaign reached, returning to menu');
-                abandonSession(); 
+                handleMenu();
             }
         } else {
-            // Skirmish mode - handleNextLevel shouldn't be called, but if it is, go to menu
-            console.warn('[GameDialogs] handleNextLevel called in Skirmish mode');
-            abandonSession();
+            handleMenu();
         }
     };
 
@@ -108,21 +111,24 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             startNewGame(winCondition);
             return;
         }
-        if (isOverworldGenerated && hasActiveSession) {
+        if (campaignMode === 'STORY' && isOverworldGenerated && hasActiveSession && activeLevelConfig) {
             returnToOverworld('DEFEAT');
             return;
         }
         
         console.warn('[GameDialogs] handleRetry fallback - abandoning session');
-        abandonSession();
+        handleMenu();
     };
 
     const handleMenu = () => {
         playUiSound('CLICK');
-        if (isOverworldGenerated && hasActiveSession) {
+        if (campaignMode === 'STORY' && isOverworldGenerated && hasActiveSession && activeLevelConfig) {
             returnToOverworld(gameStatus === 'VICTORY' ? 'VICTORY' : 'DEFEAT');
         } else {
             abandonSession();
+            if (campaignMode === 'LEVELS' && activeLevelConfig) {
+                setUIState('CAMPAIGN_MAP');
+            }
         }
     };
 
@@ -593,7 +599,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
                         {/* Action Protocol */}
                         <div className="w-full flex flex-col md:flex-row gap-4">
-                            {isOverworldGenerated ? (
+                            {(isOverworldGenerated && campaignMode === 'STORY' && activeLevelConfig) ? (
                                 <>
                                     <button 
                                         onClick={handleMenu} 
@@ -626,6 +632,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                     )}
                                     <button onClick={handleRetry} className="flex-1 py-5 bg-slate-900 border-2 border-slate-700 hover:bg-slate-800 text-white font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 text-sm">
                                         <RotateCcw className="w-5 h-5" /> {t.BTN_RETRY}
+                                    </button>
+                                    {/* Fallback Menu Button */}
+                                    <button onClick={handleMenu} className="flex-1 py-5 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 text-sm">
+                                        <LogOut className="w-5 h-5" /> {t.BTN_MENU || 'MENU'}
                                     </button>
                                 </>
                             )}
