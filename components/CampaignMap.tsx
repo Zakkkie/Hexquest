@@ -2,9 +2,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '../store.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
-import { Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers } from 'lucide-react';
+import { Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers, Cpu } from 'lucide-react';
 import HexButton from './HexButton.tsx';
 import { TEXT } from '../services/i18n.ts';
+import { UpgradesTree } from './UpgradesTree.tsx';
 
 // --- DECORATIVE BACKGROUND COMPONENT ---
 const CampaignBackground: React.FC = () => {
@@ -62,12 +63,14 @@ const CampaignMap: React.FC = () => {
   const campaignMode = useGameStore(state => state.campaignMode);
   const deviceType = useGameStore(state => state.deviceType);
   const language = useGameStore(state => state.language);
+  const skillPoints = useGameStore(state => state.skillPoints);
 
   const currentProgress = campaignMode === 'STORY' ? campaignProgress : levelsModeProgress;
 
   // Responsive State
   const isMobile = deviceType === 'MOBILE';
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
+  const [showUpgrades, setShowUpgrades] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const currentLevelRef = useRef<HTMLDivElement>(null);
 
@@ -279,7 +282,7 @@ const CampaignMap: React.FC = () => {
           </div>
 
           {campaignMode === 'LEVELS' && !isMobile && (
-              <div className="flex items-center gap-10 border-l border-white/5 pl-10 ml-auto mr-10 group">
+              <div className="flex items-center gap-10 border-l border-white/5 pl-10 ml-auto group">
                   <div className="flex flex-col">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{TEXT[language].HUD.MISSION_COMPLETE}</span>
                       <span className="text-3xl font-black text-white font-mono leading-none group-hover:text-indigo-400 transition-colors">
@@ -297,14 +300,25 @@ const CampaignMap: React.FC = () => {
               </div>
           )}
 
-          <button onClick={() => { useGameStore.getState().setUIState('MENU'); playUiSound('CLICK'); }}
-             className="group relative px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-2xl border border-white/10 transition-all text-xs font-black uppercase tracking-widest overflow-hidden">
-             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-             <span className="relative z-10">{TEXT[language].HUD.BTN_MENU}</span>
-          </button>
+          <div className={`flex items-center gap-4 ${campaignMode === 'STORY' ? 'ml-auto' : ''}`}>
+              <button onClick={() => { setShowUpgrades(true); playUiSound('CLICK'); }}
+                 className="group relative flex items-center gap-2 px-6 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-100 rounded-2xl border border-indigo-500/20 transition-all text-xs font-black uppercase tracking-widest overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                 <Cpu className="w-4 h-4 text-indigo-400" />
+                 <span className="relative z-10">Upgrades</span>
+                 {skillPoints > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white animate-pulse">{skillPoints}</span>}
+              </button>
+
+              <button onClick={() => { useGameStore.getState().setUIState('MENU'); playUiSound('CLICK'); }}
+                 className="group relative px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-2xl border border-white/10 transition-all text-xs font-black uppercase tracking-widest overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                 <span className="relative z-10">{TEXT[language].HUD.BTN_MENU}</span>
+              </button>
+          </div>
         </div>
         {campaignMode === 'STORY' ? renderStoryTimeline() : renderLevelGrid()}
         <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none select-none text-[80px] font-black italic tracking-tighter text-white overflow-hidden whitespace-nowrap">MISSION CONTROL DATA TERMINAL</div>
+        {showUpgrades && <UpgradesTree onClose={() => setShowUpgrades(false)} />}
       </div>
     </div>
   );

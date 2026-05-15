@@ -56,6 +56,8 @@ interface GameStore extends GameState {
   setDeviceType: (type: DeviceType) => void;
   setLanguage: (lang: 'EN' | 'RU') => void;
   setCampaignMode: (mode: 'STORY' | 'LEVELS') => void;
+  setSkillPoints: (points: number) => void;
+  updateCampaignUpgrades: (upgrades: Partial<import('./types.ts').CampaignUpgrades>) => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
   playUiSound: (type: UiSoundType) => void;
@@ -117,13 +119,14 @@ interface GameStore extends GameState {
   interactOverworld: (targetQ?: number, targetR?: number) => void;
   completeStartQuiz: (rewards: { credits?: number, reputation?: number, items?: string[] }) => void;
   addTutorialMark: () => void;
+  addRewardItem: (item: import('./types.ts').Item) => void;
   setOverworldActionProgress: (progress: number) => void;
   setOverworldActiveAction: (action: 'DIG' | 'BUILD' | 'EXPLORE' | 'REST' | null) => void;
   transitionToWorldMap: () => Promise<void>;
   transitionToCity: () => Promise<void>;
   enterRift: (riftId: string) => void;
-  returnToOverworld: (result: 'VICTORY' | 'DEFEAT' | 'NEUTRAL') => void;
-  triggerEvent: (eventId: string) => void;
+  returnToOverworld: (result: 'VICTORY' | 'DEFEAT' | 'NEUTRAL', selectedItem?: import('./types.ts').Item) => void;
+      triggerEvent: (eventId: string) => void;
   resolveEventChoice: (choice: import('./types.ts').OverworldEventChoice) => void;
   closeEventSummary: () => void;
   equipItem: (itemId: string, slot: 'head' | 'body' | 'tool' | 'artifact', bagIndex: number) => void;
@@ -153,6 +156,15 @@ export const useGameStore = create<GameStore>()(
       leaderboard: [], 
       campaignProgress: 0, 
       levelsModeProgress: 0,
+      skillPoints: 0,
+      campaignUpgrades: {
+          inventorySlots: 3,
+          startingEnergy: 0,
+          startingMoves: 0,
+          startingGold: 0,
+          startingMaterials: 0,
+          maxMaterials: 3,
+      },
       campaignMode: 'STORY',
       activePoi: null,
       hasActiveSession: false,
@@ -191,6 +203,8 @@ export const useGameStore = create<GameStore>()(
       // --- UI SETTERS ---
       setLanguage: (lang) => set({ language: lang }),
       setCampaignMode: (mode) => set({ campaignMode: mode }),
+      setSkillPoints: (points) => set({ skillPoints: points }),
+      updateCampaignUpgrades: (partial) => set(state => ({ campaignUpgrades: { ...state.campaignUpgrades, ...partial }})),
       setUIState: (uiState) => {
         set({ uiState });
       },
@@ -273,12 +287,14 @@ export const useGameStore = create<GameStore>()(
 
           const stateUser = get().user;
           const overworldState = get().overworld;
+          const upgrades = get().campaignUpgrades;
           
           // Show loading state immediately while map generates in worker
           set({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME', isCampaignLoading: true });
+          await new Promise(resolve => setTimeout(resolve, 50));
           
           try {
-            const initialSessionState = await createInitialSessionData(effectiveWin ?? null, levelConfig, get().language, stateUser, overworldState);
+            const initialSessionState = await createInitialSessionData(effectiveWin ?? null, levelConfig, get().language, stateUser, overworldState, upgrades);
             engine = new GameEngine(initialSessionState); 
             set({ session: engine.state, hasActiveSession: true, isCampaignLoading: false });
           } catch (err) {
@@ -290,6 +306,7 @@ export const useGameStore = create<GameStore>()(
 
       startCampaignLevel: async (levelId) => {
          set({ isCampaignLoading: true, loadingLevelId: levelId });
+         await new Promise(r => setTimeout(r, 50)); // Allow UI to render loading state
          const cfg = CAMPAIGN_LEVELS.find(l => l.id === levelId);
          if (cfg) await get().startNewGame(undefined, cfg);
          set({ isCampaignLoading: false, loadingLevelId: null });
@@ -801,6 +818,7 @@ export const useGameStore = create<GameStore>()(
               
               const seed = Math.random();
               const grid = generateOverworld(3, seed, false); // Start in City View
+              const upgrades = get().campaignUpgrades;
               set(state => ({
                   overworld: {
                       ...state.overworld,
@@ -810,7 +828,7 @@ export const useGameStore = create<GameStore>()(
                       seed,
                       isWorldMap: false,
                       player: {
-                          q: 0, r: 0, hp: 100, maxHp: 100, energy: 50, maxEnergy: 50, credits: 0,
+                          q: 0, r: 0, hp: 100, maxHp: 100, energy: 50 + (upgrades?.startingEnergy || 0), maxEnergy: 50 + (upgrades?.startingEnergy || 0), credits: (upgrades?.startingGold || 0),
                           equipment: {}, bag: [], reputation: 0, stepCount: 0
                       },
                       flags: {},
@@ -1143,6 +1161,18 @@ export const useGameStore = create<GameStore>()(
               newOverworld.player = player;
               return { overworld: newOverworld };
           });
+      },
+
+      addRewardItem: (item) => {
+          set(state => ({
+              overworld: {
+                  ...state.overworld,
+                  player: {
+                      ...state.overworld.player,
+                      bag: [...(state.overworld.player.bag || []), item.baseId]
+                  }
+              }
+          }));
       },
 
       transitionToWorldMap: async () => {
@@ -1617,7 +1647,7 @@ export const useGameStore = create<GameStore>()(
           get().startCampaignLevel(riftId);
       },
 
-      returnToOverworld: (result: 'VICTORY' | 'DEFEAT' | 'NEUTRAL') => {
+      returnToOverworld: (result, selectedItem) => {
           if (result === 'NEUTRAL') {
               set({ session: null, uiState: 'OVERWORLD' });
               return;
@@ -1631,6 +1661,9 @@ export const useGameStore = create<GameStore>()(
                       if (result === 'VICTORY') {
                           // Reward
                           player.credits += 50;
+                          if (selectedItem) {
+                              player.bag.push(selectedItem.baseId);
+                          }
                           
                           const levelId = state.session?.activeLevelConfig?.id || '';
                           const levelIdNum = parseInt(levelId);
@@ -2112,7 +2145,7 @@ export const useGameStore = create<GameStore>()(
       // --- GAME LOOP ---
       tick: async () => {
           if (!engine || !engine.state || isProcessingTick) return;
-          if (engine.state.gameStatus !== 'PLAYING' && engine.state.gameStatus !== 'VICTORY') return;
+          if (engine.state.gameStatus !== 'PLAYING') return;
           
           isProcessingTick = true;
           const prevState = get().session;

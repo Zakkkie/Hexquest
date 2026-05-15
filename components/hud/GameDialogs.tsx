@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
@@ -43,10 +43,12 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
     const destroyItem = useGameStore(state => state.destroyItem);
     const returnToOverworld = useGameStore(state => state.returnToOverworld);
+    const addRewardItem = useGameStore(state => state.addRewardItem);
     const isOverworldGenerated = useGameStore(state => state.overworld.isGenerated);
     const hasActiveSession = useGameStore(state => state.hasActiveSession);
     const campaignMode = useGameStore(state => state.campaignMode);
     const setUIState = useGameStore(state => state.setUIState);
+    const currentTurn = useGameStore(state => state.session?.currentTurn || 0);
     
     // Monument/Void Specifics
     const monumentDialogState = useGameStore(state => state.monumentDialogState);
@@ -66,6 +68,18 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const resetProgress = useGameStore(state => state.resetProgress);
     const initOverworld = useGameStore(state => state.initOverworld);
+    const setSkillPoints = useGameStore(state => state.setSkillPoints);
+    const currentSkillPoints = useGameStore(state => state.skillPoints);
+
+    const [selectedRewardItem, setSelectedRewardItem] = useState<import('../../types.ts').Item | null>(null);
+    const [rewardInitialized, setRewardInitialized] = useState(false);
+
+    useEffect(() => {
+        if (gameStatus === 'VICTORY' && !rewardInitialized) {
+            setRewardInitialized(true);
+            setSkillPoints(currentSkillPoints + 1); // grant a skill point on victory
+        }
+    }, [gameStatus, rewardInitialized, setSkillPoints, currentSkillPoints]);
 
     // --- LOGIC ---
 
@@ -80,8 +94,11 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const handleNextLevel = () => {
         playUiSound('CLICK');
         if (campaignMode === 'STORY' && isOverworldGenerated) {
-            returnToOverworld('VICTORY');
+            returnToOverworld('VICTORY', selectedRewardItem || undefined);
             return;
+        }
+        if (campaignMode === 'LEVELS' && selectedRewardItem && gameStatus === 'VICTORY') {
+            addRewardItem(selectedRewardItem);
         }
         
         const levelsToUse = campaignMode === 'LEVELS' 
@@ -92,6 +109,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             const currentIdx = levelsToUse.findIndex(l => l.id === activeLevelConfig.id);
             const nextLevel = levelsToUse[currentIdx + 1];
             if (nextLevel) {
+                abandonSession();
                 startCampaignLevel(nextLevel.id);
             } else {
                 handleMenu();
@@ -104,6 +122,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const handleRetry = () => {
         playUiSound('CLICK');
         if (activeLevelConfig) {
+            abandonSession();
             startCampaignLevel(activeLevelConfig.id);
             return;
         }
@@ -123,8 +142,11 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const handleMenu = () => {
         playUiSound('CLICK');
         if (campaignMode === 'STORY' && isOverworldGenerated && hasActiveSession && activeLevelConfig) {
-            returnToOverworld(gameStatus === 'VICTORY' ? 'VICTORY' : 'DEFEAT');
+            returnToOverworld(gameStatus === 'VICTORY' ? 'VICTORY' : 'DEFEAT', selectedRewardItem || undefined);
         } else {
+            if (campaignMode === 'LEVELS' && selectedRewardItem && gameStatus === 'VICTORY') {
+                addRewardItem(selectedRewardItem);
+            }
             abandonSession();
             if (campaignMode === 'LEVELS' && activeLevelConfig) {
                 setUIState('CAMPAIGN_MAP');
@@ -563,62 +585,92 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                     <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none" />
                     <div className={`absolute inset-0 bg-gradient-to-b opacity-20 pointer-events-none ${gameStatus === 'VICTORY' ? 'from-emerald-500/20 to-transparent' : 'from-red-500/20 to-transparent'}`} />
 
-                    <div className="flex flex-col items-center max-w-2xl w-full relative z-10">
+                    <div className="flex flex-col items-center max-w-2xl w-full relative z-10 max-h-full overflow-y-auto no-scrollbar py-4">
                         {/* Terminal Decoration */}
-                        <div className="w-full flex items-center gap-4 mb-12 opacity-40">
+                        <div className="w-full flex items-center gap-2 md:gap-4 mb-6 md:mb-12 opacity-40">
                             <div className="h-px flex-1 bg-current" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }} />
-                            <div className="text-[10px] font-black uppercase tracking-[0.5em] font-mono" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }}>
+                            <div className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.5em] font-mono whitespace-nowrap" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }}>
                                 {gameStatus === 'VICTORY' ? 'SYSTEM_STABILITY_RESTORED' : 'LINK_TERMINATED'}
                             </div>
                             <div className="h-px flex-1 bg-current" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }} />
                         </div>
 
                         {/* Main Status Display */}
-                        <div className="relative mb-12">
-                            <div className={`absolute inset-0 blur-3xl opacity-30 animate-pulse ${gameStatus === 'VICTORY' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                            <div className={`relative px-12 py-8 border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_50px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_50px_rgba(239,68,68,0.3)]'}`}>
-                                <h1 className={`text-6xl md:text-8xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
+                        <div className="relative mb-8 md:mb-12">
+                            <div className={`absolute inset-0 blur-xl md:blur-3xl opacity-30 animate-pulse ${gameStatus === 'VICTORY' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                            <div className={`relative px-6 py-4 md:px-12 md:py-8 border-2 md:border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.3)] md:shadow-[0_0_50px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_20px_rgba(239,68,68,0.3)] md:shadow-[0_0_50px_rgba(239,68,68,0.3)]'}`}>
+                                <h1 className={`text-4xl sm:text-6xl md:text-8xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
                                     {gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}
                                 </h1>
                             </div>
                         </div>
 
                         {/* Mission Summary Data */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mb-12">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 w-full mb-6">
                             {[
                                 { label: 'STATUS', value: gameStatus === 'VICTORY' ? 'SUCCESS' : 'FAILED', color: gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-400' },
-                                { label: 'CREDITS', value: player?.coins || 0, color: 'text-amber-400' },
-                                { label: 'RANK', value: `LVL_${player?.playerLevel || 0}`, color: 'text-indigo-400' }
+                                { label: 'TURNS ELAPSED', value: currentTurn, color: 'text-slate-300' },
+                                { label: 'CREDITS EXTRACTED', value: player?.totalCoinsEarned || 0, color: 'text-amber-400' },
+                                { label: 'MATERIALS GATHERED', value: player?.storage || 0, color: 'text-purple-400' }
                             ].map((stat, i) => (
-                                <div key={i} className="bg-slate-900/50 border border-white/10 p-4 rounded-lg backdrop-blur-md">
-                                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{stat.label}</div>
-                                    <div className={`text-xl font-black font-mono leading-none ${stat.color}`}>{stat.value}</div>
+                                <div key={i} className="bg-slate-900/50 border border-white/10 p-2 md:p-4 rounded-lg backdrop-blur-md flex flex-col items-center justify-center text-center">
+                                    <div className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">{stat.label}</div>
+                                    <div className={`text-lg md:text-xl font-black font-mono leading-none ${stat.color}`}>{stat.value}</div>
                                 </div>
                             ))}
                         </div>
 
+                        {gameStatus === 'VICTORY' && (
+                            <div className="w-full mb-6 md:mb-8 flex flex-col shrink-0 min-h-0">
+                                <div className="bg-emerald-900/20 border border-emerald-500/30 p-3 md:p-4 rounded-lg mb-4 md:mb-6 shrink-0">
+                                    <h3 className="text-emerald-400 font-bold uppercase tracking-wider text-xs md:text-sm mb-1 text-center md:text-left">Performance Assessment</h3>
+                                    <p className="text-emerald-200/70 text-[10px] md:text-xs text-center md:text-left">Mission completed successfully. +1 Skill Point awarded for upgrades.</p>
+                                </div>
+                                
+                                {player?.inventory && player.inventory.length > 0 && (
+                                    <>
+                                        <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 md:mb-3 text-center shrink-0">Select ONE item to extract</div>
+                                        <div className="flex flex-wrap justify-center gap-2 md:gap-3 overflow-y-auto no-scrollbar pb-2">
+                                            {player.inventory.map(item => (
+                                                <button 
+                                                    key={item.id}
+                                                    onClick={() => { setSelectedRewardItem(item); playUiSound('CLICK'); }}
+                                                    className={`w-[45%] md:w-auto p-2 md:p-3 border-2 rounded-xl transition-all flex flex-col items-center ${selectedRewardItem?.id === item.id ? 'border-emerald-500 bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800 hover:border-slate-600'}`}
+                                                >
+                                                    <span className={`text-xl md:text-2xl mb-1 md:mb-2 ${item.rarity === 'LEGENDARY' ? 'text-amber-400' : item.rarity === 'RARE' ? 'text-purple-400' : 'text-blue-400'}`}>
+                                                        {item.visualType === 'ARTIFACT' ? '💎' : item.visualType === 'TOOL' ? '⛏️' : item.visualType === 'HEAD' ? '🪖' : '👕'}
+                                                    </span>
+                                                    <span className="text-[8px] md:text-[10px] font-bold text-white uppercase tracking-wider text-center line-clamp-1">{item.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
                         {/* Action Protocol */}
-                        <div className="w-full flex flex-col md:flex-row gap-4">
+                        <div className="w-full flex flex-col md:flex-row gap-2 md:gap-4 shrink-0 mt-auto">
                             {(isOverworldGenerated && campaignMode === 'STORY' && activeLevelConfig) ? (
                                 <>
                                     <button 
                                         onClick={handleMenu} 
-                                        className={`flex-1 py-5 relative overflow-hidden group/btn ${gameStatus === 'VICTORY' ? 'bg-emerald-600/20 border-2 border-emerald-500' : 'bg-slate-900 border-2 border-slate-700'}`}
+                                        className={`flex-1 py-3 md:py-5 relative overflow-hidden group/btn ${gameStatus === 'VICTORY' ? 'bg-emerald-600/20 border-2 border-emerald-500' : 'bg-slate-900 border-2 border-slate-700'}`}
                                     >
                                         <div className={`absolute inset-0 transform translate-y-full transition-transform duration-300 group-hover/btn:translate-y-0 ${gameStatus === 'VICTORY' ? 'bg-emerald-600' : 'bg-slate-700'}`} />
-                                        <div className="relative flex items-center justify-center gap-3 text-white font-black uppercase tracking-[0.2em] text-sm">
+                                        <div className="relative flex items-center justify-center gap-2 md:gap-3 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] text-xs md:text-sm">
                                             {gameStatus === 'VICTORY' ? 'RETURN_TO_BASE' : 'RECALL_SIGNAL'} 
-                                            <ArrowRight className="w-5 h-5 transition-transform group-hover/btn:translate-x-1" />
+                                            <ArrowRight className="w-4 h-4 md:w-5 md:h-5 transition-transform group-hover/btn:translate-x-1" />
                                         </div>
                                     </button>
                                     {gameStatus === 'DEFEAT' && (
                                         <button 
                                             onClick={handleRetry} 
-                                            className="flex-1 py-5 bg-indigo-600 border-2 border-indigo-400 relative overflow-hidden group/retry"
+                                            className="flex-1 py-3 md:py-5 bg-indigo-600 border-2 border-indigo-400 relative overflow-hidden group/retry"
                                         >
                                             <div className="absolute inset-0 bg-indigo-500 transform scale-x-0 origin-left transition-transform duration-300 group-hover/retry:scale-x-100" />
-                                            <div className="relative flex items-center justify-center gap-3 text-white font-black uppercase tracking-[0.2em] text-sm">
-                                                <RotateCcw className="w-5 h-5 transition-transform group-hover/retry:rotate-180" /> {t.BTN_RETRY}
+                                            <div className="relative flex items-center justify-center gap-2 md:gap-3 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] text-xs md:text-sm">
+                                                <RotateCcw className="w-4 h-4 md:w-5 md:h-5 transition-transform group-hover/retry:rotate-180" /> {t.BTN_RETRY}
                                             </div>
                                         </button>
                                     )}
@@ -626,23 +678,23 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             ) : (
                                 <>
                                     {gameStatus === 'VICTORY' && activeLevelConfig && (
-                                        <button onClick={handleNextLevel} className="flex-1 py-5 bg-emerald-600 border-2 border-emerald-400 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center gap-3 text-sm">
-                                            {t.BTN_NEXT} <ArrowRight className="w-5 h-5" />
+                                        <button onClick={handleNextLevel} className="flex-1 py-3 md:py-5 bg-emerald-600 border-2 border-emerald-400 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm">
+                                            {t.BTN_NEXT} <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
                                         </button>
                                     )}
-                                    <button onClick={handleRetry} className="flex-1 py-5 bg-slate-900 border-2 border-slate-700 hover:bg-slate-800 text-white font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 text-sm">
-                                        <RotateCcw className="w-5 h-5" /> {t.BTN_RETRY}
+                                    <button onClick={handleRetry} className="flex-1 py-3 md:py-5 bg-slate-900 border-2 border-slate-700 hover:bg-slate-800 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] transition-all flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm">
+                                        <RotateCcw className="w-4 h-4 md:w-5 md:h-5" /> {t.BTN_RETRY}
                                     </button>
                                     {/* Fallback Menu Button */}
-                                    <button onClick={handleMenu} className="flex-1 py-5 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 text-sm">
-                                        <LogOut className="w-5 h-5" /> {t.BTN_MENU || 'MENU'}
+                                    <button onClick={handleMenu} className="flex-1 py-3 md:py-5 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.1em] md:tracking-[0.2em] transition-all flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm">
+                                        <LogOut className="w-4 h-4 md:w-5 md:h-5" /> {campaignMode === 'LEVELS' ? (language === 'RU' ? 'ВЫБОР УРОВНЕЙ' : 'LEVELS MENU') : (t.BTN_MENU || 'MENU')}
                                     </button>
                                 </>
                             )}
                         </div>
 
                         {/* Extra Visual Detail */}
-                        <div className="mt-12 text-[8px] font-mono opacity-20 uppercase tracking-[1em] text-center w-full">
+                        <div className="mt-6 md:mt-12 text-[6px] md:text-[8px] font-mono opacity-20 uppercase tracking-[0.5em] md:tracking-[1em] text-center w-full shrink-0">
                             ENCRYPTION_KEY::0x7F2A_C0DE_NEBULA
                         </div>
                     </div>

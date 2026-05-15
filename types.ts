@@ -588,6 +588,8 @@ export interface GameState {
   leaderboard: LeaderboardEntry[];
   campaignProgress: number; 
   levelsModeProgress: number;
+  skillPoints: number;
+  campaignUpgrades: CampaignUpgrades;
   campaignMode: 'STORY' | 'LEVELS';
   hasActiveSession: boolean;
   isMusicMuted: boolean;
@@ -661,4 +663,13 @@ export interface PathResult {
 export interface ValidationResult {
     ok: boolean;
     reason?: string;
+}
+
+export interface CampaignUpgrades {
+  inventorySlots: number;
+  startingEnergy: number;
+  startingMoves: number;
+  startingGold: number;
+  startingMaterials: number;
+  maxMaterials: number;
 }

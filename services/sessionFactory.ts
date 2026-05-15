@@ -10,6 +10,27 @@ import MapWorker from './map.worker?worker';
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e'];
 
 export const generateMapAsync = async (levelConfig: LevelConfig | undefined, mapType: string): Promise<Record<string, any>> => {
+  const size = levelConfig?.mapConfig?.size || 0;
+  
+  // For standard campaign maps, synchronous generation is significantly faster
+  // and avoids the main-thread micro-freezes caused by WebWorker instantiation.
+  if (size <= 20) {
+    const grid = generateMap(levelConfig, mapType as any);
+    
+    // Pre-calculate neighborLevels for initial rendering optimization (matching worker logic)
+    for (const key in grid) {
+      const hex = grid[key];
+      const neighbors = getNeighbors(hex.q, hex.r);
+      hex.neighborLevels = neighbors.map(n => {
+        const nKey = getHexKey(n.q, n.r);
+        const nHex = grid[nKey];
+        return nHex ? nHex.maxLevel : -99; // -99 is VOID_LEVEL_FLAG
+      });
+    }
+    
+    return Promise.resolve(grid);
+  }
+
   return new Promise((resolve) => {
     try {
       const worker = new MapWorker();
@@ -44,7 +65,8 @@ export const createInitialSessionDataAsync = async (
     levelConfig: LevelConfig | undefined,
     language: Language,
     stateUser: UserProfile | null,
-    overworldState: OverworldState
+    overworldState: OverworldState,
+    campaignUpgrades: import('../types.ts').CampaignUpgrades
 ): Promise<SessionState> => {
   const mapType = winCondition?.mapType || 'FLAT';
   let initialGrid: Record<string, any> = {};
@@ -100,12 +122,21 @@ export const createInitialSessionDataAsync = async (
   const difficulty: Difficulty = winCondition?.difficulty || 'MEDIUM';
   const diffSettings = DIFFICULTY_SETTINGS[difficulty];
   let maxStorage = winCondition?.initialStorage ?? diffSettings.maxStorage; 
+  if (campaignUpgrades) {
+    maxStorage = campaignUpgrades.maxMaterials;
+  }
   
-  // Apply Overworld Equipment Bonuses
+  // Apply Overworld Equipment Bonuses & Campaign Upgrades
   let startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;
   let startMoves = levelConfig ? levelConfig.startState.moves : GAME_CONFIG.INITIAL_MOVES;
   let startRank = levelConfig ? levelConfig.startState.rank : 1;
   let startStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0;
+
+  if (campaignUpgrades) {
+      startCredits += campaignUpgrades.startingGold;
+      startMoves += campaignUpgrades.startingMoves;
+      startStorage += campaignUpgrades.startingMaterials;
+  }
 
   let activeStatuses: import('../types.ts').ActiveStatus[] = [];
 
@@ -232,6 +263,7 @@ export const createInitialSessionDataAsync = async (
       totalCoinsEarned: 0, movementQueue: [],
       storage: botStartStorage, maxStorage: maxStorage,
       inventory: [],
+      maxInventorySize: GAME_CONFIG.MAX_INVENTORY_SIZE,
       memory: { 
           lastPlayerPos: null, 
           stuckCounter: 0,
@@ -303,6 +335,7 @@ export const createInitialSessionDataAsync = async (
       storage: startStorage, 
       maxStorage: maxStorage,
       inventory: initialInventory, 
+      maxInventorySize: campaignUpgrades ? campaignUpgrades.inventorySlots : GAME_CONFIG.MAX_INVENTORY_SIZE,
       recoveredCurrentHex: false,
       recentUpgrades: [],
       avatarColor: stateUser?.avatarColor || '#3b82f6',

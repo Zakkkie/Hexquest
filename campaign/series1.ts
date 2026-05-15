@@ -42,7 +42,7 @@ export const series1Levels: LevelConfig[] = [
       { q: -1, r: 1, targetLevel: 1, label: '↑', color: 'amber' },
       { q: 0, r: -1, targetLevel: 1, label: '↑', color: 'amber' },
     ],
-    startState: { credits: 100, moves: 50, rank: 1, materials: 3, initialEntropy: 100 },
+    startState: { credits: 10, moves: 5, rank: 1, materials: 3, initialEntropy: 100 },
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => {
