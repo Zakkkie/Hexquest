@@ -73,24 +73,24 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-slate-950 border border-slate-700 w-full max-w-4xl max-h-[95vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-                <div className="bg-slate-900/50 border-b border-slate-800 p-4 md:p-6 flex justify-between items-center shrink-0">
+            <div className="bg-slate-950 border border-slate-700 w-full max-w-4xl max-h-[95vh] rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+                <div className="bg-slate-900/50 border-b border-slate-800 p-3 md:p-6 flex justify-between items-center shrink-0">
                     <div>
-                        <h2 className="text-lg md:text-2xl font-black uppercase text-white tracking-widest leading-tight">Узлы Развития</h2>
-                        <p className="text-slate-400 text-[10px] md:text-xs font-mono mt-1">Оптимизация параметров экспедиции</p>
+                        <h2 className="text-base md:text-2xl font-black uppercase text-white tracking-widest leading-tight">Узлы Развития</h2>
+                        <p className="text-slate-400 text-[9px] md:text-xs font-mono mt-0.5">Оптимизация параметров экспедиции</p>
                     </div>
-                    <div className="flex items-center gap-3 md:gap-6">
+                    <div className="flex items-center gap-2 md:gap-6">
                         <div className="flex flex-col items-end">
                             <span className="text-[8px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest">Skill Points</span>
-                            <span className="text-xl md:text-2xl font-black text-indigo-400 font-mono leading-none">{skillPoints}</span>
+                            <span className="text-lg md:text-2xl font-black text-indigo-400 font-mono leading-none">{skillPoints}</span>
                         </div>
-                        <button onClick={onClose} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white">
+                        <button onClick={onClose} className="p-1 md:p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white">
                             <X className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
                     </div>
                 </div>
 
-                <div className="p-4 md:p-8 overflow-y-auto no-scrollbar grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                <div className="p-3 md:p-8 overflow-y-auto no-scrollbar grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-6">
                     {renderNode('startingEnergy', 'Ст. Энергия', <Zap className="w-5 h-5 md:w-6 md:h-6"/>, 1, 1, 'bg-cyan-500/20 text-cyan-400', 10)}
                     {renderNode('startingMoves', 'Ст. Ходы', <Star className="w-5 h-5 md:w-6 md:h-6"/>, 1, 1, 'bg-emerald-500/20 text-emerald-400', 5)}
                     {renderNode('startingMaterials', 'Ст. Материя', <Box className="w-5 h-5 md:w-6 md:h-6"/>, 1, 1, 'bg-purple-500/20 text-purple-400', 10)}

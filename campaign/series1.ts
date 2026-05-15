@@ -75,7 +75,7 @@ export const series1Levels: LevelConfig[] = [
     title: 'Sim 1.2: Твердая Почва',
     description: 'Цель: Достигните Столицы.\n\nСКАНЕР: Обнаружен безопасный путь (Прочность 3). Следуйте по нему через пустоту.\n\nОПАСНОСТЬ: Окружающая среда НЕСТАБИЛЬНА (Прочность 1). Сход с пути вызывает немедленное обрушение и потерю Ранга.\n\nПРОВАЛ: Ранг падает до 1.',
     mapConfig: { size: 8, type: 'fixed', generateWalls: false },
-    startState: { credits: 0, moves: 20, rank: 5, materials: 0, initialEntropy: 15 },
+    startState: { credits: 12, moves: 8, rank: 5, materials: 0, initialEntropy: 15 },
     goalText: 'Достигните Столицы',
     aiMode: 'none',
     hooks: {
@@ -99,7 +99,7 @@ export const series1Levels: LevelConfig[] = [
           { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
       ]
     },
-    startState: { credits: 300, moves: 10, rank: 2, materials: 3, initialEntropy: 15 },
+    startState: { credits: 15, moves: 10, rank: 2, materials: 3, initialEntropy: 15 },
     goalText: 'Улучшите Центр до 2-го уровня',
     aiMode: 'none',
     hooks: {
@@ -136,7 +136,7 @@ export const series1Levels: LevelConfig[] = [
           { q: 0, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
       ]
     },
-    startState: { credits: 1000, moves: 20, rank: 3, materials: 0, initialEntropy: 15 },
+    startState: { credits: 15, moves: 12, rank: 3, materials: 0, initialEntropy: 15 },
     goalText: 'Улучшите Центр до 3-го уровня',
     aiMode: 'none',
     hooks: {
@@ -172,7 +172,7 @@ export const series1Levels: LevelConfig[] = [
           { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 6, rank: 5, materials: 0, initialEntropy: 15 },
+    startState: { credits: 10, moves: 6, rank: 5, materials: 0, initialEntropy: 15 },
     goalText: 'Соберите 150 Кредитов',
     aiMode: 'none',
     hooks: {
@@ -189,7 +189,7 @@ export const series1Levels: LevelConfig[] = [
       size: 5, type: 'fixed', generateWalls: false,
       customLayout: generateSymmetricLayout(5)
     },
-    startState: { credits: 100, moves: 20, rank: 1, materials: 5, initialEntropy: 100 },
+    startState: { credits: 20, moves: 15, rank: 1, materials: 5, initialEntropy: 100 },
     botSpawnPoints: [{ q: -1, r: 0 }],
     botObjective: 'COMPETE_RANK',
     aiMode: 'basic',
@@ -220,7 +220,7 @@ export const series1Levels: LevelConfig[] = [
         { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
       ]
     },
-    startState: { credits: 50, moves: 10, rank: 1, materials: 0, initialEntropy: 100 },
+    startState: { credits: 15, moves: 10, rank: 1, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => (state.player.storage ?? 0) >= 10,
