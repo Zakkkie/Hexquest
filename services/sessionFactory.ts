@@ -122,7 +122,7 @@ export const createInitialSessionDataAsync = async (
   const difficulty: Difficulty = winCondition?.difficulty || 'MEDIUM';
   const diffSettings = DIFFICULTY_SETTINGS[difficulty];
   let maxStorage = winCondition?.initialStorage ?? diffSettings.maxStorage; 
-  if (campaignUpgrades) {
+  if (levelConfig && campaignUpgrades) {
     maxStorage = campaignUpgrades.maxMaterials;
   }
   
@@ -132,7 +132,7 @@ export const createInitialSessionDataAsync = async (
   let startRank = levelConfig ? levelConfig.startState.rank : 1;
   let startStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0;
 
-  if (campaignUpgrades) {
+  if (levelConfig && campaignUpgrades) {
       startCredits += campaignUpgrades.startingGold;
       startMoves += campaignUpgrades.startingMoves;
       startStorage += campaignUpgrades.startingMaterials;
@@ -335,7 +335,7 @@ export const createInitialSessionDataAsync = async (
       storage: startStorage, 
       maxStorage: maxStorage,
       inventory: initialInventory, 
-      maxInventorySize: campaignUpgrades ? campaignUpgrades.inventorySlots : GAME_CONFIG.MAX_INVENTORY_SIZE,
+      maxInventorySize: (levelConfig && campaignUpgrades) ? campaignUpgrades.inventorySlots : GAME_CONFIG.MAX_INVENTORY_SIZE,
       recoveredCurrentHex: false,
       recentUpgrades: [],
       avatarColor: stateUser?.avatarColor || '#3b82f6',

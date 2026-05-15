@@ -27,7 +27,7 @@ class UnitRenderer {
 
   public getUnitImage(headIndex: number, bodyIndex: number, color: string, type: EntityType): HTMLCanvasElement {
     // Unique key for cache based on visual parameters
-    const key = `UNIT_${type}_${headIndex}_${bodyIndex}_${color}_v2`; 
+    const key = `UNIT_${type}_${headIndex}_${bodyIndex}_${color}_v3`; 
     
     return textureCache.getOrCreate(key, () => {
         const canvas = document.createElement('canvas');
@@ -48,170 +48,244 @@ class UnitRenderer {
   private drawBody(ctx: CanvasRenderingContext2D, index: number, color: string) {
     const idx = Math.abs(index) % 4;
 
-    // Common Shadow for floating effect
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    // Core drop shadow to ground it
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, 10, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 14, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hover Offset (Float above the shadow)
-    const floatY = -8; 
+    const hoverY = -12; // Base hovers above ground
 
     switch(idx) {
-        case 0: // The Pod (Rounded Capsule)
-            // Thruster Glow
-            ctx.fillStyle = '#0ea5e9'; // Cyan glow
-            ctx.globalAlpha = 0.6;
-            ctx.beginPath(); ctx.arc(0, floatY + 12, 6, 0, Math.PI*2); ctx.fill();
-            ctx.globalAlpha = 1.0;
-
-            // Main Hull
+        case 0: // The Crawler (Angular Industrial)
+            // Left & Right Track pods
+            ctx.fillStyle = '#1e293b';
+            this.roundRect(ctx, -18, hoverY - 6, 10, 20, 3);
+            this.roundRect(ctx, 8, hoverY - 6, 10, 20, 3);
+            ctx.fill();
+            // Accents
             ctx.fillStyle = color;
-            this.roundRect(ctx, -10, floatY - 20, 20, 30, 8);
+            ctx.fillRect(-16, hoverY - 4, 6, 16);
+            ctx.fillRect(10, hoverY - 4, 6, 16);
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.fillRect(-16, hoverY - 4, 2, 16);
+            ctx.fillRect(10, hoverY - 4, 2, 16);
+
+            // Center engine block
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.moveTo(-10, hoverY - 10);
+            ctx.lineTo(10, hoverY - 10);
+            ctx.lineTo(12, hoverY + 8);
+            ctx.lineTo(-12, hoverY + 8);
+            ctx.closePath();
             ctx.fill();
             
-            // Detail: Vertical Stripe
-            ctx.fillStyle = 'rgba(255,255,255,0.2)';
-            ctx.fillRect(-3, floatY - 18, 6, 20);
-            
-            // Detail: Bottom Rim
-            ctx.fillStyle = '#1e293b';
-            ctx.fillRect(-8, floatY + 8, 16, 4);
+            // Neon core
+            ctx.fillStyle = '#38bdf8';
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(0, hoverY, 4, 0, Math.PI*2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
             break;
 
-        case 1: // The Shard (Inverted Triangle)
-            // Hover Field
-            ctx.fillStyle = color;
+        case 1: // The Glider (Sleek Hovercraft)
+            // Repulsor glow
+            ctx.fillStyle = '#10b981';
+            ctx.shadowColor = '#10b981';
+            ctx.shadowBlur = 10;
+            ctx.beginPath(); ctx.ellipse(0, hoverY+8, 12, 4, 0, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Main chassis (sleek wings)
+            const gliderGrad = ctx.createLinearGradient(0, hoverY - 15, 0, hoverY + 5);
+            gliderGrad.addColorStop(0, '#ffffff');
+            gliderGrad.addColorStop(0.3, color);
+            gliderGrad.addColorStop(1, '#020617');
+            ctx.fillStyle = gliderGrad;
+
             ctx.beginPath();
-            ctx.moveTo(-14, floatY - 22);
-            ctx.lineTo(14, floatY - 22);
-            ctx.lineTo(0, floatY + 12); // Pointy bottom
+            ctx.moveTo(0, hoverY - 16);
+            ctx.lineTo(20, hoverY);
+            ctx.lineTo(10, hoverY + 8);
+            ctx.lineTo(0, hoverY + 2);
+            ctx.lineTo(-10, hoverY + 8);
+            ctx.lineTo(-20, hoverY);
             ctx.closePath();
             ctx.fill();
 
-            // Detail: Top Tech Plate
-            ctx.fillStyle = '#334155';
+            // Cockpit glass / inner shell
+            ctx.fillStyle = '#0f172a';
             ctx.beginPath();
-            ctx.moveTo(-10, floatY - 22);
-            ctx.lineTo(10, floatY - 22);
-            ctx.lineTo(0, floatY - 5);
-            ctx.fill();
-            break;
-
-        case 2: // The Orb (Sphere with Ring)
-            // Back Ring
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.ellipse(0, floatY - 5, 16, 5, 0, Math.PI, 0); // Bottom half drawn later? No, draw full but layer
-            ctx.stroke();
-
-            // Main Orb
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(0, floatY - 10, 11, 0, Math.PI * 2);
+            ctx.moveTo(0, hoverY - 10);
+            ctx.lineTo(10, hoverY);
+            ctx.lineTo(-10, hoverY);
             ctx.fill();
             
-            // Orb Highlight
+            // Wing accents
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath(); ctx.arc(-16, hoverY, 1.5, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(16, hoverY, 1.5, 0, Math.PI*2); ctx.fill();
+            break;
+
+        case 2: // The Monolith (Heavy Box / Shielded)
+            // Thruster fire
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath(); ctx.moveTo(-6, hoverY); ctx.lineTo(6, hoverY); ctx.lineTo(0, hoverY + 14); ctx.fill();
+            ctx.fillStyle = '#fef08a';
+            ctx.beginPath(); ctx.moveTo(-3, hoverY); ctx.lineTo(3, hoverY); ctx.lineTo(0, hoverY + 8); ctx.fill();
+
+            // Main armor block
+            const monoGrad = ctx.createLinearGradient(-15, hoverY - 20, 15, hoverY + 10);
+            monoGrad.addColorStop(0, color);
+            monoGrad.addColorStop(1, '#020617');
+            ctx.fillStyle = monoGrad;
+            ctx.fillRect(-14, hoverY - 18, 28, 22);
+            
+            // Highlights
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.fillRect(-14, hoverY - 18, 28, 2);
+            ctx.fillRect(-14, hoverY - 18, 2, 22);
+
+            // Tech panels
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(-10, hoverY - 14, 20, 6);
+            ctx.fillRect(-10, hoverY - 4, 20, 4);
+            
+            // Core
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillRect(-2, hoverY - 12, 4, 10);
+            break;
+
+        case 3: // The Prism (Ethereal Crystal)
+            // Floating pieces
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.moveTo(-16, hoverY - 10); ctx.lineTo(-11, hoverY - 4); ctx.lineTo(-20, hoverY + 2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(16, hoverY - 10); ctx.lineTo(11, hoverY - 4); ctx.lineTo(20, hoverY + 2); ctx.fill();
+
+            // Main crystal
+            const prismGrad = ctx.createLinearGradient(0, hoverY - 20, 0, hoverY + 15);
+            prismGrad.addColorStop(0, '#ffffff');
+            prismGrad.addColorStop(0.2, color);
+            prismGrad.addColorStop(0.8, '#1e293b');
+            prismGrad.addColorStop(1, '#000000');
+            ctx.fillStyle = prismGrad;
+
+            ctx.beginPath();
+            ctx.moveTo(0, hoverY - 22);
+            ctx.lineTo(12, hoverY - 2);
+            ctx.lineTo(0, hoverY + 14);
+            ctx.lineTo(-12, hoverY - 2);
+            ctx.closePath();
+            ctx.fill();
+
+            // Crystal highlight
             ctx.fillStyle = 'rgba(255,255,255,0.3)';
             ctx.beginPath();
-            ctx.arc(-3, floatY - 13, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Front Ring segment (to make it look like it goes around)
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.ellipse(0, floatY - 5, 16, 5, 0, 0, Math.PI);
-            ctx.stroke();
-            break;
-
-        case 3: // The Engine (Industrial Thruster)
-            // Flame
-            ctx.fillStyle = '#f59e0b';
-            ctx.beginPath();
-            ctx.moveTo(-4, floatY + 5);
-            ctx.lineTo(4, floatY + 5);
-            ctx.lineTo(0, floatY + 15);
-            ctx.fill();
-
-            // Main Block
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.moveTo(-12, floatY - 22);
-            ctx.lineTo(12, floatY - 22);
-            ctx.lineTo(8, floatY + 5);
-            ctx.lineTo(-8, floatY + 5);
+            ctx.moveTo(0, hoverY - 22);
+            ctx.lineTo(-12, hoverY - 2);
+            ctx.lineTo(0, hoverY + 14);
             ctx.closePath();
             ctx.fill();
-
-            // Industrial Bands
-            ctx.fillStyle = '#1e293b';
-            ctx.fillRect(-10, floatY - 15, 20, 4);
-            ctx.fillRect(-9, floatY - 2, 18, 4);
             break;
     }
   }
 
   private drawHead(ctx: CanvasRenderingContext2D, index: number, color: string, isPlayer: boolean) {
     const idx = Math.abs(index) % 4;
-    const eyeColor = isPlayer ? '#ffffff' : '#0f172a'; // White for player, Dark for bot
+    const eyeColor = isPlayer ? '#22d3ee' : '#f43f5e'; // Cyan for player, Rose/Red for bot
     
-    // Offset head position relative to body pivot
-    // Floating bodies are a bit lower/different shape, so we position head appropriately
-    const headY = -34; 
-
-    ctx.fillStyle = color;
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 1;
+    // Position head on top of the hover body
+    const headY = -24; 
 
     switch(idx) {
-        case 0: // Round Helmet
-            ctx.beginPath();
-            ctx.arc(0, headY, 8, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+        case 0: // Radar Dome
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath(); ctx.arc(0, headY, 10, Math.PI, 0); ctx.fill();
+            ctx.fillRect(-10, headY, 20, 5);
+
+            // Antenna
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(-6, headY - 8); ctx.lineTo(-10, headY - 18); ctx.stroke();
+            ctx.fillStyle = eyeColor;
+            ctx.beginPath(); ctx.arc(-10, headY - 18, 1.5, 0, Math.PI*2); ctx.fill();
+            
+            // Sensor Eye
+            ctx.fillStyle = eyeColor;
+            ctx.shadowColor = eyeColor;
+            ctx.shadowBlur = 6;
+            ctx.beginPath(); ctx.arc(0, headY - 4, 3, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+            break;
+            
+        case 1: // Tactical Visor
+            // Armored collar
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.moveTo(-8, headY + 6); ctx.lineTo(8, headY + 6); ctx.lineTo(12, headY); ctx.lineTo(-12, headY); ctx.fill();
+            
+            // Main head
+            const tacGrad = ctx.createLinearGradient(0, headY - 12, 0, headY);
+            tacGrad.addColorStop(0, '#334155');
+            tacGrad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = tacGrad;
+            ctx.beginPath(); ctx.moveTo(-10, headY); ctx.lineTo(10, headY); ctx.lineTo(6, headY - 12); ctx.lineTo(-6, headY - 12); ctx.fill();
+            
             // Visor
             ctx.fillStyle = eyeColor;
-            ctx.globalAlpha = 0.9;
-            this.roundRect(ctx, -5, headY - 2, 10, 4, 2);
-            ctx.fill();
-            ctx.globalAlpha = 1.0;
-            break;
-        case 1: // Block Head
-            this.roundRect(ctx, -7, headY - 8, 14, 14, 2);
-            ctx.fill();
-            ctx.stroke();
-            // Eyes
-            ctx.fillStyle = eyeColor;
-            ctx.fillRect(-4, headY - 2, 3, 3);
-            ctx.fillRect(1, headY - 2, 3, 3);
-            break;
-        case 2: // Spiky / Crown
-            ctx.beginPath();
-            ctx.moveTo(-7, headY);
-            ctx.lineTo(-5, headY - 11);
-            ctx.lineTo(0, headY - 5);
-            ctx.lineTo(5, headY - 11);
-            ctx.lineTo(7, headY);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            // Eye
-            ctx.fillStyle = eyeColor;
-            ctx.beginPath();
-            ctx.arc(0, headY + 2, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-            break;
-        case 3: // Cyclops / Tech
-            this.roundRect(ctx, -6, headY - 9, 12, 12, 3);
-            ctx.fill();
-            // Single Eye
-            ctx.fillStyle = '#22d3ee'; // Cyan
-            ctx.shadowColor = '#22d3ee';
-            ctx.shadowBlur = 5;
-            ctx.fillRect(-5, headY - 3, 10, 3);
+            ctx.shadowColor = eyeColor;
+            ctx.shadowBlur = 8;
+            ctx.fillRect(-8, headY - 5, 16, 3);
             ctx.shadowBlur = 0;
+            break;
+
+        case 2: // The Core Tower
+            // Cylinder
+            const cylGrad = ctx.createLinearGradient(-8, 0, 8, 0);
+            cylGrad.addColorStop(0, '#1e293b');
+            cylGrad.addColorStop(0.5, color);
+            cylGrad.addColorStop(1, '#1e293b');
+            ctx.fillStyle = cylGrad;
+            this.roundRect(ctx, -8, headY - 14, 16, 20, 2);
+            ctx.fill();
+
+            // Horizontal scan lines
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(-8, headY - 10, 16, 2);
+            ctx.fillRect(-8, headY - 5, 16, 2);
+            ctx.fillRect(-8, headY, 16, 2);
+
+            // Vertical eye slit
+            ctx.fillStyle = eyeColor;
+            ctx.shadowColor = eyeColor;
+            ctx.shadowBlur = 5;
+            ctx.fillRect(-2, headY - 12, 4, 14);
+            ctx.shadowBlur = 0;
+            break;
+
+        case 3: // Omni-Drone
+            // Flattened disc
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.ellipse(0, headY - 4, 14, 8, 0, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath(); ctx.ellipse(0, headY - 4, 10, 5, 0, 0, Math.PI*2); ctx.fill();
+
+            // Central eye array
+            ctx.fillStyle = eyeColor;
+            ctx.shadowColor = eyeColor;
+            ctx.shadowBlur = 6;
+            ctx.beginPath(); ctx.arc(0, headY - 4, 3, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(0, headY - 4, 1, 0, Math.PI*2); ctx.fill();
+
+            // Orbiting nodes
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath(); ctx.arc(-16, headY - 4, 2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(16, headY - 4, 2, 0, Math.PI*2); ctx.fill();
             break;
     }
   }

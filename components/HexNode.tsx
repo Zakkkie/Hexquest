@@ -649,7 +649,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
             )}
             
             {isGrowing && (
-                <Group y={offsetY - 18} listening={false} perfectDrawEnabled={false}>
+                <Group y={offsetY + 16} listening={false} perfectDrawEnabled={false}>
                     <Rect x={-18} y={0} width={36} height={5} fill="rgba(0,0,0,0.7)" cornerRadius={2} perfectDrawEnabled={false} />
                     <Rect x={-18} y={0} width={36 * Math.min(1, progress / (30))} height={5} fill={isRankLocked ? "#f59e0b" : "#10b981"} cornerRadius={2} perfectDrawEnabled={false} />
                 </Group>

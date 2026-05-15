@@ -124,6 +124,7 @@ export interface Dictionary {
         MISSION_FAILED: string;
         WINNER: string;
         BTN_MENU: string;
+        BTN_UPGRADES: string;
         BTN_NEXT: string;
         BTN_RETRY: string;
         BTN_VIEW_LEADERBOARD: string;
@@ -540,6 +541,7 @@ export const TEXT: Record<Language, Dictionary> = {
             MISSION_FAILED: "Operation Failed.",
             WINNER: "Winner",
             BTN_MENU: "Main Menu",
+            BTN_UPGRADES: "Upgrades",
             BTN_NEXT: "Next Sector",
             BTN_RETRY: "Retry",
             BTN_VIEW_LEADERBOARD: "Leaderboard",
@@ -955,6 +957,7 @@ export const TEXT: Record<Language, Dictionary> = {
             MISSION_FAILED: "Операция провалена.",
             WINNER: "Лидер",
             BTN_MENU: "Меню",
+            BTN_UPGRADES: "Узлы",
             BTN_NEXT: "Далее",
             BTN_RETRY: "Заново",
             BTN_VIEW_LEADERBOARD: "Рекорды",

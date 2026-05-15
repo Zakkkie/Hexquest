@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
+import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, LogOut, Ghost, ArrowRight, Shield, X, LogIn, Lock, Target, Gem, Crown, Bot, Activity, Volume2, VolumeX, BookOpen, Globe, Music, ChevronLeft, ChevronRight, Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, Mountain, Crosshair, Flame, Shuffle } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
@@ -24,85 +25,150 @@ type AuthMode = 'GUEST' | 'LOGIN' | 'REGISTER' | null;
 const CharacterPreview: React.FC<{ head: number, body: number, color: string }> = ({ head, body, color }) => {
     
     // Position adjustments for new floating bodies
-    const headY = 25;
-    const bodyY = 45;
+    const headY = 43;
+    const bodyY = 55;
+    const eyeColor = '#22d3ee'; // Player eye color cyan
 
     const renderHead = () => {
         switch(head % 4) {
-            case 0: return <circle cx="50" cy={headY} r="14" fill={color} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />; // Round
-            case 1: return <rect x="38" y={headY - 12} width="24" height="24" rx="4" fill={color} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />; // Block
-            case 2: return <path d={`M50 ${headY-15} L62 ${headY+8} L38 ${headY+8} Z`} fill={color} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />; // Spike
-            case 3: return <rect x="36" y={headY - 10} width="28" height="20" rx="6" fill={color} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />; // Visor
+            case 0: 
+                return (
+                    <g>
+                        <path d={`M 40 ${headY} A 10 10 0 0 1 60 ${headY} Z`} fill="#1e293b" />
+                        <rect x="40" y={headY} width="20" height="5" fill="#1e293b" />
+                        <line x1="44" y1={headY-8} x2="40" y2={headY-18} stroke="#94a3b8" strokeWidth="2" />
+                        <circle cx="40" cy={headY-18} r="1.5" fill={eyeColor} />
+                        <circle cx="50" cy={headY-4} r="3" fill={eyeColor} filter="url(#glow)" />
+                    </g>
+                );
+            case 1: 
+                return (
+                    <g>
+                        <path d={`M 42 ${headY+6} L 58 ${headY+6} L 62 ${headY} L 38 ${headY} Z`} fill={color} />
+                        <path d={`M 40 ${headY} L 60 ${headY} L 56 ${headY-12} L 44 ${headY-12} Z`} fill="url(#tacGrad)" />
+                        <rect x="42" y={headY-5} width="16" height="3" fill={eyeColor} filter="url(#glow)" />
+                    </g>
+                );
+            case 2: 
+                return (
+                    <g>
+                        <rect x="42" y={headY-14} width="16" height="20" rx="2" fill="url(#cylGrad)" />
+                        <rect x="42" y={headY-10} width="16" height="2" fill="#0f172a" />
+                        <rect x="42" y={headY-5} width="16" height="2" fill="#0f172a" />
+                        <rect x="42" y={headY} width="16" height="2" fill="#0f172a" />
+                        <rect x="48" y={headY-12} width="4" height="14" fill={eyeColor} filter="url(#glow)" />
+                    </g>
+                );
+            case 3: 
+                return (
+                    <g>
+                        <ellipse cx="50" cy={headY-4} rx="14" ry="8" fill={color} />
+                        <ellipse cx="50" cy={headY-4} rx="10" ry="5" fill="#0f172a" />
+                        <circle cx="50" cy={headY-4} r="3" fill={eyeColor} filter="url(#glow)" />
+                        <circle cx="50" cy={headY-4} r="1" fill="#ffffff" />
+                        <circle cx="34" cy={headY-4} r="2" fill="#38bdf8" />
+                        <circle cx="66" cy={headY-4} r="2" fill="#38bdf8" />
+                    </g>
+                );
             default: return <circle cx="50" cy={headY} r="14" fill={color} />;
         }
     };
 
     const renderBody = () => {
         // Floating Shadow
-        const shadow = <ellipse cx="50" cy="85" rx="15" ry="4" fill="rgba(0,0,0,0.3)" />;
+        const shadow = <ellipse cx="50" cy="67" rx="14" ry="5" fill="rgba(0,0,0,0.4)" filter="url(#blur)" />;
 
         switch(body % 4) {
-            case 0: // Pod
+            case 0: // Crawler
                 return (
                     <g>
                         {shadow}
-                        {/* Glow */}
-                        <circle cx="50" cy="75" r="10" fill="#0ea5e9" opacity="0.6" />
-                        <rect x="35" y={bodyY} width="30" height="35" rx="12" fill={color} />
-                        {/* Stripe */}
-                        <rect x="47" y={bodyY+2} width="6" height="25" fill="rgba(255,255,255,0.3)" />
-                        {/* Bottom Rim */}
-                        <rect x="38" y={bodyY+30} width="24" height="6" fill="#1e293b" />
+                        <rect x="32" y={bodyY-6} width="10" height="20" rx="3" fill="#1e293b" />
+                        <rect x="58" y={bodyY-6} width="10" height="20" rx="3" fill="#1e293b" />
+                        <rect x="34" y={bodyY-4} width="6" height="16" fill={color} />
+                        <rect x="60" y={bodyY-4} width="6" height="16" fill={color} />
+                        <rect x="34" y={bodyY-4} width="2" height="16" fill="rgba(255,255,255,0.4)" />
+                        <rect x="60" y={bodyY-4} width="2" height="16" fill="rgba(255,255,255,0.4)" />
+                        <path d={`M 40 ${bodyY-10} L 60 ${bodyY-10} L 62 ${bodyY+8} L 38 ${bodyY+8} Z`} fill="#0f172a" />
+                        <circle cx="50" cy={bodyY} r="4" fill="#38bdf8" filter="url(#glow)" />
                     </g>
                 );
-            case 1: // Shard
+            case 1: // Glider
                 return (
                     <g>
                         {shadow}
-                        <path d="M35 45 L65 45 L50 80 Z" fill={color} />
-                        <path d="M38 45 L62 45 L50 60 Z" fill="#334155" />
+                        <ellipse cx="50" cy={bodyY+8} rx="12" ry="4" fill="#10b981" filter="url(#glow)" />
+                        <path d={`M 50 ${bodyY-16} L 70 ${bodyY} L 60 ${bodyY+8} L 50 ${bodyY+2} L 40 ${bodyY+8} L 30 ${bodyY} Z`} fill="url(#gliderGrad)" />
+                        <path d={`M 50 ${bodyY-10} L 60 ${bodyY} L 40 ${bodyY} Z`} fill="#0f172a" />
+                        <circle cx="34" cy={bodyY} r="1.5" fill="#38bdf8" />
+                        <circle cx="66" cy={bodyY} r="1.5" fill="#38bdf8" />
                     </g>
                 );
-            case 2: // Orb
+            case 2: // Monolith
                 return (
                     <g>
                         {shadow}
-                        <ellipse cx="50" cy="65" rx="22" ry="7" fill="none" stroke="#475569" strokeWidth="3" />
-                        <circle cx="50" cy="60" r="16" fill={color} />
-                        <circle cx="45" cy="55" r="5" fill="rgba(255,255,255,0.3)" />
-                        <ellipse cx="50" cy="65" rx="22" ry="7" fill="none" stroke="#94a3b8" strokeWidth="3" strokeDasharray="20 40" />
+                        <path d={`M 44 ${bodyY} L 56 ${bodyY} L 50 ${bodyY+14} Z`} fill="#f59e0b" />
+                        <path d={`M 47 ${bodyY} L 53 ${bodyY} L 50 ${bodyY+8} Z`} fill="#fef08a" />
+                        <rect x="36" y={bodyY-18} width="28" height="22" fill="url(#monoGrad)" />
+                        <rect x="36" y={bodyY-18} width="28" height="2" fill="rgba(255,255,255,0.15)" />
+                        <rect x="36" y={bodyY-18} width="2" height="22" fill="rgba(255,255,255,0.15)" />
+                        <rect x="40" y={bodyY-14} width="20" height="6" fill="#0f172a" />
+                        <rect x="40" y={bodyY-4} width="20" height="4" fill="#0f172a" />
+                        <rect x="48" y={bodyY-12} width="4" height="10" fill="#e2e8f0" />
                     </g>
                 );
-            case 3: // Engine
+            case 3: // Prism
                 return (
                     <g>
                         {shadow}
-                        <path d="M45 75 L55 75 L50 85 Z" fill="#f59e0b" />
-                        <path d="M32 45 L68 45 L60 75 L40 75 Z" fill={color} />
-                        <rect x="36" y="52" width="28" height="5" fill="#1e293b" />
-                        <rect x="38" y="65" width="24" height="5" fill="#1e293b" />
+                        <path d={`M 34 ${bodyY-10} L 39 ${bodyY-4} L 30 ${bodyY+2} Z`} fill={color} />
+                        <path d={`M 66 ${bodyY-10} L 61 ${bodyY-4} L 70 ${bodyY+2} Z`} fill={color} />
+                        <path d={`M 50 ${bodyY-22} L 62 ${bodyY-2} L 50 ${bodyY+14} L 38 ${bodyY-2} Z`} fill="url(#prismGrad)" />
+                        <path d={`M 50 ${bodyY-22} L 38 ${bodyY-2} L 50 ${bodyY+14} Z`} fill="rgba(255,255,255,0.3)" />
                     </g>
                 );
             default: return <rect x="38" y={bodyY} width="24" height="40" rx="8" fill={color} />;
         }
     };
 
-    const renderEye = () => {
-        // Simple Eye/Visor overlay
-        switch(head % 4) {
-            case 0: return <rect x="42" y={headY-2} width="16" height="6" rx="2" fill="white" opacity="0.8" />;
-            case 1: return <g><rect x="44" y={headY-4} width="4" height="4" fill="white"/><rect x="52" y={headY-4} width="4" height="4" fill="white"/></g>;
-            case 2: return <circle cx="50" cy={headY+2} r="3" fill="white"/>;
-            case 3: return <rect x="40" y={headY-4} width="20" height="4" fill="cyan" filter="blur(1px)"/>;
-            default: return null;
-        }
-    };
-
     return (
-        <svg viewBox="0 0 100 100" className="w-24 h-24 drop-shadow-xl">
+        <svg viewBox="0 0 100 100" className="w-24 h-24 drop-shadow-2xl overflow-visible">
+            <defs>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+                <filter id="blur" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" />
+                </filter>
+                <linearGradient id="gliderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="30%" stopColor={color} />
+                    <stop offset="100%" stopColor="#020617" />
+                </linearGradient>
+                <linearGradient id="monoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor={color} />
+                    <stop offset="100%" stopColor="#020617" />
+                </linearGradient>
+                <linearGradient id="prismGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="20%" stopColor={color} />
+                    <stop offset="80%" stopColor="#1e293b" />
+                    <stop offset="100%" stopColor="#000000" />
+                </linearGradient>
+                <linearGradient id="tacGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#334155" />
+                    <stop offset="100%" stopColor="#0f172a" />
+                </linearGradient>
+                <linearGradient id="cylGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#1e293b" />
+                    <stop offset="50%" stopColor={color} />
+                    <stop offset="100%" stopColor="#1e293b" />
+                </linearGradient>
+            </defs>
             {renderBody()}
             {renderHead()}
-            {renderEye()}
         </svg>
     );
 };
@@ -116,9 +182,9 @@ const MenuButton: React.FC<{
 }> = ({ onClick, icon, label, subLabel, variant = 'default' }) => {
   const getStyle = () => {
     switch(variant) {
-      case 'primary': return 'bg-indigo-600/10 border-indigo-500/50 hover:bg-indigo-500/20 hover:border-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.1)]';
-      case 'campaign': return 'bg-gradient-to-r from-indigo-600 via-purple-500 to-indigo-600 border-indigo-400 hover:border-white text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] animate-pulse-subtle';
-      case 'battle': return 'bg-gradient-to-r from-red-600 via-rose-500 to-red-600 border-red-400 hover:border-white text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] animate-pulse-subtle';
+      case 'primary': return 'bg-indigo-600/10 border-indigo-500/50 hover:bg-indigo-500/20 hover:border-indigo-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.15)]';
+      case 'campaign': return 'bg-gradient-to-r from-indigo-600 via-purple-500 to-indigo-600 border-indigo-400 hover:border-indigo-300 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] animate-pulse-subtle';
+      case 'battle': return 'bg-gradient-to-r from-red-600/90 via-rose-500/90 to-red-600/90 border-red-400 hover:border-red-300 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] animate-pulse-subtle';
       case 'danger': return 'bg-red-900/10 border-red-900/30 hover:bg-red-900/30 hover:border-red-500 text-red-200';
       default: return 'bg-slate-900/40 border-slate-700/50 hover:bg-slate-800/60 hover:border-slate-500 text-slate-200';
     }
@@ -126,31 +192,41 @@ const MenuButton: React.FC<{
 
   const getIconStyle = () => {
     switch(variant) {
-      case 'primary': return 'bg-indigo-500 text-white';
-      case 'campaign': return 'bg-white/20 text-white backdrop-blur-sm';
-      case 'battle': return 'bg-white/20 text-white backdrop-blur-sm';
+      case 'primary': return 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] text-white';
+      case 'campaign': return 'bg-white/20 text-white backdrop-blur-sm shadow-[0_0_10px_rgba(255,255,255,0.4)]';
+      case 'battle': return 'bg-white/20 text-white backdrop-blur-sm shadow-[0_0_10px_rgba(255,255,255,0.4)]';
       case 'danger': return 'bg-red-500/20 text-red-400 group-hover:bg-red-500 group-hover:text-white';
-      default: return 'bg-slate-800 text-slate-400 group-hover:bg-white group-hover:text-slate-900';
+      default: return 'bg-slate-800 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-900 shadow-inner group-hover:shadow-[0_0_10px_rgba(255,255,255,0.8)]';
     }
   };
 
   return (
-    <button 
+    <motion.button 
       onClick={onClick}
-      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden active:scale-95 touch-manipulation ${getStyle()}`}
+      whileHover={{ scale: 1.02, x: 4 }}
+      whileTap={{ scale: 0.98 }}
+      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden touch-manipulation backdrop-blur-sm ${getStyle()}`}
     >
-      <div className={`p-3 md:p-3.5 rounded-xl transition-colors relative z-10 ${getIconStyle()}`}>
+      <div className={`p-3 md:p-3.5 rounded-xl transition-all duration-300 relative z-10 ${getIconStyle()}`}>
         {/* Pass larger icon size down if possible, but container controls visual weight */}
-        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-6 h-6 md:w-5 md:h-5' })}
+        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-6 h-6 md:w-5 md:h-5 drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]' })}
       </div>
       <div className="flex flex-col items-start relative z-10 text-left">
-        <span className={`text-base md:text-sm font-black uppercase tracking-widest break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-white' : ''}`}>{label}</span>
-        {subLabel && <span className={`text-[11px] md:text-[10px] font-mono group-hover:text-slate-200 break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-red-100' : 'text-slate-500'}`}>{subLabel}</span>}
+        <span className={`text-base md:text-sm font-black uppercase tracking-widest break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-white' : ''} group-hover:text-white transition-colors`}>{label}</span>
+        {subLabel && <span className={`text-[11px] md:text-[10px] font-mono group-hover:text-slate-300 transition-colors break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-red-100' : 'text-slate-500'}`}>{subLabel}</span>}
       </div>
       
+      {/* Dynamic Hover Glow */}
+      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      
       {/* Shimmer Effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none" />
-    </button>
+      <motion.div 
+         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" 
+         initial={{ x: '-100%' }}
+         animate={{ x: '200%' }}
+         transition={{ repeat: Infinity, duration: 2, ease: "linear", repeatDelay: 1 }}
+      />
+    </motion.button>
   );
 };
 
@@ -448,7 +524,12 @@ const MainMenu: React.FC = () => {
       <div className="flex flex-col gap-6 w-full max-w-sm px-6 z-10 max-h-screen overflow-y-auto no-scrollbar py-20 md:py-0">
         
         {/* LOGO BLOCK WITH ANIMATION */}
-        <div className={`text-center mb-4 md:mb-8 relative group cursor-default transition-all duration-1000 ease-out transform ${logoVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-12 scale-90'}`}>
+        <motion.div 
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: logoVisible ? 1 : 0, y: logoVisible ? 0 : -50, scale: logoVisible ? 1 : 0.9 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center mb-4 md:mb-8 relative group cursor-default"
+        >
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 md:w-48 h-32 md:h-48 bg-indigo-500/20 blur-[30px] md:blur-[50px] rounded-full animate-pulse"></div>
           <div className="relative flex flex-col items-center justify-center">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 md:w-28 h-20 md:h-28 border border-indigo-500/30 rounded-full animate-[spin_10s_linear_infinite]"></div>
@@ -458,7 +539,10 @@ const MainMenu: React.FC = () => {
                       <Target className="w-5 h-5 md:w-8 md:h-8 text-white drop-shadow-[0_0_10px_#fff]" />
                   </div>
               </div>
-              <h1 className="relative text-4xl md:text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] z-10 break-words whitespace-pre-wrap">
+              <h1 
+                  className="relative text-5xl md:text-7xl lg:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-100 to-indigo-400 drop-shadow-[0_0_20px_rgba(99,102,241,0.8)] z-10 break-words whitespace-pre-wrap"
+                  style={{ WebkitTextStroke: '2px rgba(99,102,241,0.3)' }}
+              >
                   {t.TITLE}
               </h1>
               <div className="flex items-center gap-2 md:gap-3 mt-1 md:mt-2 opacity-80">
@@ -467,7 +551,7 @@ const MainMenu: React.FC = () => {
                   <div className="h-px w-8 md:w-12 bg-indigo-500/50"></div>
               </div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
@@ -479,8 +563,15 @@ const MainMenu: React.FC = () => {
                 subLabel={t.CAMPAIGN_SUB} 
             />
             
+            <AnimatePresence>
             {showCampaignModes && (
-                <div className="flex flex-col gap-2 pl-4 border-l-2 border-indigo-500/30 animate-in slide-in-from-top-2 duration-300">
+                <motion.div 
+                    initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                    animate={{ opacity: 1, height: 'auto', overflow: 'hidden' }}
+                    exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col gap-2 pl-4 border-l-2 border-indigo-500/30"
+                >
                     <button 
                         onClick={() => startCampaignWithMode('STORY')}
                         className="flex items-center gap-3 p-3 bg-slate-900/60 border border-slate-700/50 rounded-xl hover:bg-slate-800 hover:border-indigo-500/50 transition-all text-left group"
@@ -505,8 +596,9 @@ const MainMenu: React.FC = () => {
                             <span className="text-[10px] font-mono text-slate-500 uppercase">{t.MODE_LEVELS_SUB}</span>
                         </div>
                     </button>
-                </div>
+                </motion.div>
             )}
+            </AnimatePresence>
           </div>
 
           <MenuButton onClick={handleNewGameClick} variant="battle" icon={<Swords className="w-5 h-5" />} label={t.SKIRMISH} subLabel={t.SKIRMISH_SUB} />
@@ -516,11 +608,23 @@ const MainMenu: React.FC = () => {
       </div>
 
       {/* AUTH MODAL */}
+      <AnimatePresence>
       {authMode && (
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-[2rem] shadow-2xl w-full max-w-sm relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
+        >
+          <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-slate-900/80 backdrop-blur-xl border border-indigo-500/30 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5),inset_0_0_20px_rgba(99,102,241,0.1)] w-full max-w-sm relative overflow-hidden flex flex-col"
+          >
             {/* ... Existing Auth Modal Content (kept as is) ... */}
-            <div className="grid grid-cols-2 border-b border-slate-700/50">
+            <div className="grid grid-cols-2 border-b border-indigo-500/20 bg-slate-900/50">
                 <button onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
                 <button onClick={() => { setAuthMode('REGISTER'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_REGISTER}</button>
             </div>
@@ -534,7 +638,18 @@ const MainMenu: React.FC = () => {
                       <p className="text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider break-words whitespace-pre-wrap">{authMode === 'GUEST' ? t.MODAL_GUEST_SUBTITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_SUBTITLE : t.MODAL_REGISTER_SUBTITLE)}</p>
                   </div>
               </div>
-              {errorMessage && <div className="p-2.5 md:p-3 bg-red-950/40 border border-red-900/50 rounded-xl flex items-center gap-2 text-red-400 text-[10px] md:text-xs font-bold animate-in slide-in-from-top-2 break-words whitespace-pre-wrap"><Shield className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> {errorMessage}</div>}
+              <AnimatePresence>
+              {errorMessage && (
+                  <motion.div 
+                      initial={{ opacity: 0, y: -10 }} 
+                      animate={{ opacity: 1, y: 0 }} 
+                      exit={{ opacity: 0, y: -10 }} 
+                      className="p-2.5 md:p-3 bg-red-950/80 backdrop-blur-md border border-red-500/50 rounded-xl flex items-center gap-2 text-red-400 text-[10px] md:text-xs font-bold shadow-[0_0_15px_rgba(220,38,38,0.2)] break-words whitespace-pre-wrap"
+                  >
+                      <Shield className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> {errorMessage}
+                  </motion.div>
+              )}
+              </AnimatePresence>
               <div className="space-y-3 md:space-y-4">
                   {(authMode === 'REGISTER' || authMode === 'GUEST') && (
                       <div className="bg-slate-950/50 rounded-2xl border border-slate-800 p-3 md:p-4 flex flex-col items-center gap-3 md:gap-4">
@@ -567,40 +682,63 @@ const MainMenu: React.FC = () => {
                       </div>
                   )}
                   <div>
-                      <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 md:mb-1.5 block flex items-center gap-1.5 break-words whitespace-pre-wrap"><User className="w-3 h-3" /> {t.INPUT_NAME}</label>
-                      <input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder={t.INPUT_NAME_PH} className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-xs md:text-sm" maxLength={16} />
+                      <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 block flex items-center gap-1.5"><User className="w-3 h-3 text-indigo-400" /> {t.INPUT_NAME}</label>
+                      <div className="relative group">
+                          <input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder={t.INPUT_NAME_PH} className="w-full bg-slate-950/80 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all font-mono text-sm shadow-inner group-hover:border-slate-600" maxLength={16} />
+                      </div>
                   </div>
                   {authMode !== 'GUEST' && (
                       <div>
-                          <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 md:mb-1.5 block flex items-center gap-1.5 break-words whitespace-pre-wrap"><Lock className="w-3 h-3" /> {t.INPUT_PASS}</label>
-                          <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder={t.INPUT_PASS_PH} className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-900 transition-all font-mono text-xs md:text-sm" />
+                          <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 block flex items-center gap-1.5"><Lock className="w-3 h-3 text-indigo-400" /> {t.INPUT_PASS}</label>
+                          <div className="relative group">
+                              <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder={t.INPUT_PASS_PH} className="w-full bg-slate-950/80 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all font-mono text-sm shadow-inner group-hover:border-slate-600" />
+                          </div>
                       </div>
                   )}
-                  <button onClick={handleAuthSubmit} className={`w-full py-3.5 md:py-4 mt-1 md:mt-2 font-bold rounded-xl uppercase tracking-[0.15em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 break-words whitespace-pre-wrap ${authMode === 'GUEST' ? 'bg-slate-700 hover:bg-slate-600 text-white' : (authMode === 'LOGIN' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/30' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30')}`}>
-                      {authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)} <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  </button>
+                  <motion.button 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleAuthSubmit} 
+                      className={`w-full py-4 mt-2 font-black rounded-xl uppercase tracking-[0.15em] shadow-lg transition-all flex items-center justify-center gap-2 relative overflow-hidden group ${authMode === 'GUEST' ? 'bg-slate-700 text-white hover:bg-slate-600 border border-slate-600' : (authMode === 'LOGIN' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] border border-indigo-500 hover:bg-indigo-500' : 'bg-emerald-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-500 hover:bg-emerald-500')}`}
+                  >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                      <span className="relative z-10">{authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}</span> <ArrowRight className="w-4 h-4 relative z-10" />
+                  </motion.button>
               </div>
-              <div className="border-t border-slate-800 pt-4 flex justify-center">
+              <div className="border-t border-slate-800/80 pt-5 flex justify-center">
                   {authMode === 'GUEST' ? (
-                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors break-words whitespace-pre-wrap">{t.BTN_BACK_LOGIN}</button>
+                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors">{t.BTN_BACK_LOGIN}</button>
                   ) : (
-                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-2 break-words whitespace-pre-wrap"><Ghost className="w-3 h-3" /> {t.BYPASS_SECURITY}</button>
+                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-600 hover:text-slate-300 transition-colors flex items-center gap-2 group"><Ghost className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition-colors" /> {t.BYPASS_SECURITY}</button>
                   )}
               </div>
             </div>
             <button onClick={() => setAuthMode(null)} className="absolute top-3 right-3 p-2 text-slate-600 hover:text-white transition-colors rounded-full hover:bg-slate-800"><X className="w-5 h-5" /></button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       
       )}
+      </AnimatePresence>
 
       {/* COMPACT BATTLE CONFIGURATOR */}
+      <AnimatePresence>
       {showMissionConfig && (
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-950/80 border border-slate-700 rounded-[2rem] shadow-2xl w-full max-w-2xl h-fit max-h-[90vh] relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+        >
+          <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-slate-950/80 backdrop-blur-xl border border-indigo-500/30 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.6),inset_0_0_20px_rgba(99,102,241,0.1)] w-full max-w-2xl h-fit max-h-[90vh] relative overflow-hidden flex flex-col"
+          >
              
              {/* Header */}
-             <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-slate-800 bg-slate-900/50 shrink-0">
+             <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-indigo-500/20 bg-slate-900/50 shrink-0">
                 <div className="flex items-center gap-3 md:gap-4">
                     <div className="p-2 bg-red-600/10 border border-red-500/30 rounded-xl shadow-[0_0_15px_rgba(220,38,38,0.2)]">
                         <Swords className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
@@ -782,7 +920,7 @@ const MainMenu: React.FC = () => {
              </div>
 
              {/* FOOTER ACTION */}
-             <div className="p-3 md:p-6 border-t border-slate-800 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between gap-3 md:gap-4 shrink-0">
+             <div className="p-3 md:p-6 border-t border-indigo-500/20 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between gap-3 md:gap-4 shrink-0">
                  <div className="flex flex-col">
                      <span className="text-[7px] md:text-[9px] text-slate-500 font-bold uppercase tracking-widest break-words whitespace-pre-wrap">{t.EST_REWARD}</span>
                      <span className="text-xs md:text-base font-mono font-black text-amber-400 flex items-center gap-1 md:gap-2 break-words whitespace-pre-wrap">
@@ -790,18 +928,21 @@ const MainMenu: React.FC = () => {
                         {selectedTier === 3 ? t.REWARD_HIGH : (selectedTier === 2 ? t.REWARD_MED : t.REWARD_STD)}
                      </span>
                  </div>
-                 <button 
+                 <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={confirmMissionStart}
-                    className="flex-1 max-w-xs py-2 md:py-3.5 bg-white hover:bg-indigo-50 text-slate-950 font-black rounded-xl uppercase tracking-[0.2em] md:tracking-[0.25em] shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-3 group text-[9px] md:text-sm break-words whitespace-pre-wrap"
+                    className="flex-1 max-w-xs py-2 md:py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-[0.2em] md:tracking-[0.25em] shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all flex items-center justify-center gap-2 md:gap-3 group text-[9px] md:text-sm break-words whitespace-pre-wrap"
                  >
-                    <Crosshair className="w-3.5 h-3.5 md:w-5 md:h-5 text-indigo-600 group-hover:rotate-90 transition-transform duration-500" />
+                    <Crosshair className="w-3.5 h-3.5 md:w-5 md:h-5 text-indigo-200 group-hover:text-white group-hover:rotate-90 transition-all duration-500" />
                     <span>{t.BTN_START}</span>
-                 </button>
+                 </motion.button>
              </div>
 
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
     </div>
   );
