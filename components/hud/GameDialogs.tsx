@@ -585,9 +585,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                     <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none" />
                     <div className={`absolute inset-0 bg-gradient-to-b opacity-20 pointer-events-none ${gameStatus === 'VICTORY' ? 'from-emerald-500/20 to-transparent' : 'from-red-500/20 to-transparent'}`} />
 
-                    <div className="flex flex-col items-center max-w-2xl w-full relative z-10 max-h-full overflow-y-auto no-scrollbar py-4">
+                    <div className="flex flex-col items-center max-w-3xl w-full relative z-10 max-h-full overflow-y-auto no-scrollbar py-4 px-4 md:px-0">
                         {/* Terminal Decoration */}
-                        <div className="w-full flex items-center gap-2 md:gap-4 mb-6 md:mb-12 opacity-40">
+                        <div className="w-full flex items-center gap-2 md:gap-4 mb-6 md:mb-10 opacity-40">
                             <div className="h-px flex-1 bg-current" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }} />
                             <div className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.5em] font-mono whitespace-nowrap" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }}>
                                 {gameStatus === 'VICTORY' ? 'SYSTEM_STABILITY_RESTORED' : 'LINK_TERMINATED'}
@@ -596,26 +596,26 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         </div>
 
                         {/* Main Status Display */}
-                        <div className="relative mb-8 md:mb-12">
+                        <div className="relative mb-6 md:mb-10">
                             <div className={`absolute inset-0 blur-xl md:blur-3xl opacity-30 animate-pulse ${gameStatus === 'VICTORY' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                            <div className={`relative px-6 py-4 md:px-12 md:py-8 border-2 md:border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.3)] md:shadow-[0_0_50px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_20px_rgba(239,68,68,0.3)] md:shadow-[0_0_50px_rgba(239,68,68,0.3)]'}`}>
-                                <h1 className={`text-4xl sm:text-6xl md:text-8xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
+                            <div className={`relative px-6 py-4 md:px-10 md:py-6 border-2 md:border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.3)] md:shadow-[0_0_50px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_20px_rgba(239,68,68,0.3)] md:shadow-[0_0_50px_rgba(239,68,68,0.3)]'}`}>
+                                <h1 className={`text-4xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none whitespace-nowrap ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
                                     {gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}
                                 </h1>
                             </div>
                         </div>
 
                         {/* Mission Summary Data */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 w-full mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 lg:gap-4 w-full mb-6">
                             {[
                                 { label: 'STATUS', value: gameStatus === 'VICTORY' ? 'SUCCESS' : 'FAILED', color: gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-400' },
                                 { label: 'TURNS ELAPSED', value: currentTurn, color: 'text-slate-300' },
                                 { label: 'CREDITS EXTRACTED', value: player?.totalCoinsEarned || 0, color: 'text-amber-400' },
                                 { label: 'MATERIALS GATHERED', value: player?.storage || 0, color: 'text-purple-400' }
                             ].map((stat, i) => (
-                                <div key={i} className="bg-slate-900/50 border border-white/10 p-2 md:p-4 rounded-lg backdrop-blur-md flex flex-col items-center justify-center text-center">
-                                    <div className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">{stat.label}</div>
-                                    <div className={`text-lg md:text-xl font-black font-mono leading-none ${stat.color}`}>{stat.value}</div>
+                                <div key={i} className="bg-slate-900/50 border border-white/10 p-2 lg:p-4 rounded-lg backdrop-blur-md flex flex-col items-center justify-center text-center">
+                                    <div className="text-[7px] md:text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-1 lg:mb-2">{stat.label}</div>
+                                    <div className={`text-base md:text-lg lg:text-xl font-black font-mono leading-none ${stat.color}`}>{stat.value}</div>
                                 </div>
                             ))}
                         </div>

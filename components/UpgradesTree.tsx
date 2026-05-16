@@ -78,11 +78,11 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                      {/* Top Section: Icon & Level */}
                      <div className="flex items-center justify-between mb-3 md:mb-4">
                          <div className="flex items-center gap-3 md:gap-4">
-                             <div className={`flex items-center justify-center w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-inner group-hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-500 shrink-0 -mt-4 ${colorClass}`}>
+                             <div className={`flex items-center justify-center w-16 h-16 rounded-xl md:rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-inner group-hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-500 shrink-0 -mt-4 pl-0 ml-0 ${colorClass}`}>
                                  {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-6 h-6 md:w-8 md:h-8 drop-shadow-lg' })}
                              </div>
-                             <div className="-mt-1">
-                                <h3 className={`text-sm md:text-lg font-black uppercase tracking-widest leading-tight transition-colors duration-300 drop-shadow-md mb-1
+                             <div className="-mt-[5px]">
+                                <h3 className={`text-sm md:text-lg font-black uppercase tracking-widest leading-tight transition-colors duration-300 drop-shadow-md mb-1 mt-0
                                     ${canAfford && !isMaxed ? 'text-slate-100 group-hover:text-white' : 'text-slate-400'}
                                 `}>
                                     {label}
