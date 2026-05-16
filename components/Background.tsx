@@ -202,10 +202,11 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
                const height = Math.max(0, rawH);
 
                let color = '#0f172a'; 
-               let stroke = `rgba(71, 85, 105, ${0.2 + height * 0.3})`;
+               let stroke = `rgba(71, 85, 105, ${0.2 + height * 0.4})`;
 
                if (height > 0.6) color = '#1e3a8a';
                if (height > 0.8) color = '#b45309';
+               if (height > 0.9) color = '#0284c7';
                
                drawHex(cx, cy, HEX_SIZE, color, height, stroke);
             }

@@ -182,21 +182,21 @@ const MenuButton: React.FC<{
 }> = ({ onClick, icon, label, subLabel, variant = 'default' }) => {
   const getStyle = () => {
     switch(variant) {
-      case 'primary': return 'bg-indigo-600/10 border-indigo-500/50 hover:bg-indigo-500/20 hover:border-indigo-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.15)]';
-      case 'campaign': return 'bg-gradient-to-r from-indigo-600 via-purple-500 to-indigo-600 border-indigo-400 hover:border-indigo-300 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] animate-pulse-subtle';
-      case 'battle': return 'bg-gradient-to-r from-red-600/90 via-rose-500/90 to-red-600/90 border-red-400 hover:border-red-300 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] animate-pulse-subtle';
-      case 'danger': return 'bg-red-900/10 border-red-900/30 hover:bg-red-900/30 hover:border-red-500 text-red-200';
-      default: return 'bg-slate-900/40 border-slate-700/50 hover:bg-slate-800/60 hover:border-slate-500 text-slate-200';
+      case 'primary': return 'bg-indigo-950/40 border-indigo-500/30 hover:bg-indigo-900/50 hover:border-indigo-400/80 text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(99,102,241,0.2)] backdrop-blur-xl border-t-white/10';
+      case 'campaign': return 'bg-gradient-to-r from-indigo-950/40 via-purple-900/30 to-indigo-950/40 border-indigo-400/30 hover:border-purple-400/80 hover:from-indigo-900/50 hover:via-purple-800/40 hover:to-indigo-900/50 text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(168,85,247,0.2)] backdrop-blur-xl border-t-white/10 transition-all duration-300';
+      case 'battle': return 'bg-gradient-to-r from-red-950/40 via-rose-900/30 to-red-950/40 backdrop-blur-xl border border-red-500/30 hover:border-red-400/80 hover:from-red-900/50 hover:via-rose-800/40 hover:to-red-900/50 text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(220,38,38,0.2)] border-t-white/10 transition-all duration-300';
+      case 'danger': return 'bg-red-950/30 border-red-900/30 hover:bg-red-900/40 hover:border-red-500/50 text-red-200 backdrop-blur-md border-t-white/5';
+      default: return 'bg-slate-900/40 border-slate-700/50 hover:bg-slate-800/50 hover:border-slate-500/80 text-slate-200 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(255,255,255,0.05)] border-t-white/10';
     }
   };
 
   const getIconStyle = () => {
     switch(variant) {
-      case 'primary': return 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] text-white';
-      case 'campaign': return 'bg-white/20 text-white backdrop-blur-sm shadow-[0_0_10px_rgba(255,255,255,0.4)]';
-      case 'battle': return 'bg-white/20 text-white backdrop-blur-sm shadow-[0_0_10px_rgba(255,255,255,0.4)]';
-      case 'danger': return 'bg-red-500/20 text-red-400 group-hover:bg-red-500 group-hover:text-white';
-      default: return 'bg-slate-800 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-900 shadow-inner group-hover:shadow-[0_0_10px_rgba(255,255,255,0.8)]';
+      case 'primary': return 'bg-indigo-500/10 border border-indigo-400/20 shadow-inner text-indigo-300 group-hover:text-indigo-100 group-hover:border-indigo-400/50 group-hover:bg-indigo-500/20 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all';
+      case 'campaign': return 'bg-purple-500/10 border border-purple-400/20 shadow-inner text-purple-300 group-hover:text-purple-100 group-hover:border-purple-400/50 group-hover:bg-purple-500/20 group-hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all';
+      case 'battle': return 'bg-red-500/10 border border-red-400/20 shadow-inner text-red-300 group-hover:text-red-100 group-hover:border-red-400/50 group-hover:bg-red-500/20 group-hover:shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all';
+      case 'danger': return 'bg-red-900/20 border border-red-800/30 text-red-400 group-hover:bg-red-800/40 group-hover:text-red-200 transition-all';
+      default: return 'bg-slate-800/30 border border-slate-600/30 text-slate-400 group-hover:bg-slate-700/50 group-hover:text-slate-200 shadow-inner group-hover:border-slate-500/50 transition-all';
     }
   };
 
@@ -209,11 +209,20 @@ const MenuButton: React.FC<{
     >
       <div className={`p-3 md:p-3.5 rounded-xl transition-all duration-300 relative z-10 ${getIconStyle()}`}>
         {/* Pass larger icon size down if possible, but container controls visual weight */}
-        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-6 h-6 md:w-5 md:h-5 drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]' })}
+        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-6 h-6 md:w-5 md:h-5 drop-shadow-md' })}
       </div>
       <div className="flex flex-col items-start relative z-10 text-left">
-        <span className={`text-base md:text-sm font-black uppercase tracking-widest break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-white' : ''} group-hover:text-white transition-colors`}>{label}</span>
-        {subLabel && <span className={`text-[11px] md:text-[10px] font-mono group-hover:text-slate-300 transition-colors break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-red-100' : 'text-slate-500'}`}>{subLabel}</span>}
+        <span className={`text-base md:text-sm font-black uppercase tracking-widest break-words whitespace-pre-wrap 
+          ${variant === 'battle' ? 'text-red-50 drop-shadow-[0_0_10px_rgba(220,38,38,0.6)] group-hover:drop-shadow-[0_0_15px_rgba(220,38,38,0.9)]' : 
+            variant === 'campaign' ? 'text-purple-50 drop-shadow-[0_0_10px_rgba(168,85,247,0.6)] group-hover:drop-shadow-[0_0_15px_rgba(168,85,247,0.9)]' : 
+            variant === 'primary' ? 'text-indigo-50 drop-shadow-[0_0_10px_rgba(99,102,241,0.6)] group-hover:drop-shadow-[0_0_15px_rgba(99,102,241,0.9)]' : 
+            'drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]'
+          } transition-all duration-300`}
+          style={{ textShadow: variant !== 'default' && variant !== 'danger' ? '0 0 20px currentColor' : undefined }}
+        >
+          {label}
+        </span>
+        {subLabel && <span className={`text-[11px] md:text-[10px] font-mono group-hover:text-slate-300 transition-colors break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-red-200/70' : variant === 'campaign' ? 'text-purple-200/70' : 'text-slate-500'}`}>{subLabel}</span>}
       </div>
       
       {/* Dynamic Hover Glow */}
@@ -477,7 +486,7 @@ const MainMenu: React.FC = () => {
             <div className="flex gap-2 relative">
                 <button 
                   onClick={() => { setShowSoundMenu(!showSoundMenu); playUiSound('CLICK'); }}
-                  className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur rounded-full transition-all border border-slate-800 bg-slate-900/50 text-slate-400 hover:text-white"
+                  className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl rounded-full transition-all border border-white/10 bg-slate-900/40 text-slate-300 hover:text-white hover:border-white/20 hover:bg-slate-800/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                 >
                   <Volume2 className="w-5 h-5" />
                 </button>
@@ -495,7 +504,7 @@ const MainMenu: React.FC = () => {
                     </div>
                 )}
                 
-                <button onClick={() => setLanguage(language === 'EN' ? 'RU' : 'EN')} className="h-10 md:h-12 px-3 md:px-4 bg-slate-900/50 hover:bg-slate-800 backdrop-blur rounded-full text-slate-400 hover:text-white transition-all border border-slate-800 flex items-center justify-center gap-1 font-bold text-xs">
+                <button onClick={() => setLanguage(language === 'EN' ? 'RU' : 'EN')} className="h-10 md:h-12 px-3 md:px-4 bg-slate-900/40 hover:bg-slate-800/60 backdrop-blur-xl rounded-full text-slate-300 hover:text-white transition-all border border-white/10 hover:border-white/20 flex items-center justify-center gap-1.5 font-black uppercase tracking-widest text-[10px] md:text-xs shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]">
                   <Globe className="w-4 h-4" /> {language}
                 </button>
             </div>
@@ -504,16 +513,16 @@ const MainMenu: React.FC = () => {
                 {!user ? (
                   <button 
                     onClick={() => { setAuthMode('LOGIN'); setInputName(''); setInputPassword(''); setErrorMessage(null); playUiSound('CLICK'); }} 
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 hover:text-white rounded-xl border border-indigo-500/30 hover:border-indigo-500/50 transition-all shadow-[0_0_10px_rgba(99,102,241,0.1)] group"
+                    className="flex items-center gap-2 px-4 py-2.5 md:py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 hover:text-white rounded-full border border-indigo-500/30 hover:border-indigo-400/60 transition-all shadow-[0_4px_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] backdrop-blur-xl group"
                   >
-                     <Fingerprint className="w-4 h-4 group-hover:text-indigo-300" />
-                     <span className="text-[10px] md:text-xs font-black uppercase tracking-wider">{t.MODAL_LOGIN_TITLE}</span>
+                     <Fingerprint className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 drop-shadow-[0_0_8px_currentColor]" />
+                     <span className="text-[10px] md:text-xs font-black uppercase tracking-widest drop-shadow-md">{t.MODAL_LOGIN_TITLE}</span>
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3 bg-slate-900/90 p-1.5 pl-4 rounded-full border border-slate-700 shadow-2xl">
-                    <div className="flex flex-col items-end"><span className="text-xs font-bold text-white leading-tight max-w-[100px] truncate break-words whitespace-pre-wrap">{user.nickname}</span><span className="text-[10px] text-slate-400 uppercase tracking-widest break-words whitespace-pre-wrap">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span></div>
+                  <div className="flex items-center gap-3 bg-slate-900/40 backdrop-blur-xl p-1.5 pl-5 md:pl-6 rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] group hover:border-white/20 hover:bg-slate-800/60 transition-all">
+                    <div className="flex flex-col items-end"><span className="text-xs font-black text-white leading-tight max-w-[100px] truncate break-words whitespace-pre-wrap drop-shadow-md">{user.nickname}</span><span className="text-[9px] md:text-[10px] text-indigo-300/80 font-mono uppercase tracking-[0.2em] break-words whitespace-pre-wrap">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span></div>
                     {renderAvatar(user.avatarColor, user.headIndex, user.bodyIndex, 'sm')}
-                    <button onClick={handleLogout} className="p-2 hover:bg-red-500/20 rounded-full text-slate-400 hover:text-red-400 transition-colors"><LogOut className="w-4 h-4" /></button>
+                    <button onClick={handleLogout} className="p-2 md:p-2.5 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-all bg-black/20 border border-transparent hover:border-red-500/30"><LogOut className="w-4 h-4 md:w-5 md:h-5" /></button>
                   </div>
                 )}
             </div>
@@ -540,15 +549,15 @@ const MainMenu: React.FC = () => {
                   </div>
               </div>
               <h1 
-                  className="relative text-5xl md:text-7xl lg:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-100 to-indigo-400 drop-shadow-[0_0_20px_rgba(99,102,241,0.8)] z-10 break-words whitespace-pre-wrap"
-                  style={{ WebkitTextStroke: '2px rgba(99,102,241,0.3)' }}
+                  className="relative text-5xl md:text-7xl lg:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-200 to-indigo-500 drop-shadow-[0_0_20px_rgba(99,102,241,0.6)] z-10 break-words whitespace-pre-wrap select-none"
+                  style={{ WebkitTextStroke: '1.5px rgba(99,102,241,0.4)' }}
               >
                   {t.TITLE}
               </h1>
-              <div className="flex items-center gap-2 md:gap-3 mt-1 md:mt-2 opacity-80">
-                  <div className="h-px w-8 md:w-12 bg-indigo-500/50"></div>
-                  <p className="text-[8px] md:text-xs text-indigo-300 font-mono tracking-[0.3em] md:tracking-[0.4em] uppercase whitespace-nowrap break-words whitespace-pre-wrap">{t.SUBTITLE}</p>
-                  <div className="h-px w-8 md:w-12 bg-indigo-500/50"></div>
+              <div className="flex items-center gap-2 md:gap-3 mt-2 md:mt-3 opacity-90 select-none">
+                  <div className="h-px w-10 md:w-16 bg-gradient-to-r from-transparent to-indigo-400"></div>
+                  <p className="text-[9px] md:text-sm text-indigo-200 font-mono font-bold tracking-[0.4em] md:tracking-[0.5em] uppercase whitespace-nowrap break-words whitespace-pre-wrap drop-shadow-[0_0_8px_rgba(99,102,241,0.7)]">{t.SUBTITLE}</p>
+                  <div className="h-px w-10 md:w-16 bg-gradient-to-l from-transparent to-indigo-400"></div>
               </div>
           </div>
         </motion.div>
@@ -574,21 +583,21 @@ const MainMenu: React.FC = () => {
                 >
                     <button 
                         onClick={() => startCampaignWithMode('STORY')}
-                        className="flex items-center gap-3 p-3 bg-slate-900/60 border border-slate-700/50 rounded-xl hover:bg-slate-800 hover:border-indigo-500/50 transition-all text-left group"
+                        className="flex items-center gap-3 p-3 bg-slate-900/40 border border-white/5 rounded-2xl hover:bg-slate-800/80 hover:border-indigo-500/50 transition-all text-left shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.15)] group backdrop-blur-md"
                     >
-                        <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                            <Globe className="w-4 h-4" />
+                        <div className="p-2.5 md:p-3 bg-indigo-500/10 rounded-xl text-indigo-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-200 transition-colors shadow-inner border border-indigo-500/20 group-hover:border-indigo-400/50">
+                            <Globe className="w-4 h-4 md:w-5 md:h-5 drop-shadow-[0_0_8px_currentColor]" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase tracking-wider text-white">{t.MODE_STORY}</span>
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">{t.MODE_STORY_SUB}</span>
+                            <span className="text-xs md:text-sm font-black uppercase tracking-widest text-indigo-50 group-hover:text-white transition-colors">{t.MODE_STORY}</span>
+                            <span className="text-[10px] md:text-[11px] font-mono text-slate-500 uppercase group-hover:text-slate-400">{t.MODE_STORY_SUB}</span>
                         </div>
                     </button>
                     <button 
                         onClick={() => startCampaignWithMode('LEVELS')}
-                        className="flex items-center gap-3 p-3 bg-slate-900/60 border border-slate-700/50 rounded-xl hover:bg-slate-800 hover:border-indigo-500/50 transition-all text-left group"
+                        className="flex items-center gap-3 p-3 bg-slate-900/40 border border-white/5 rounded-2xl hover:bg-slate-800/80 hover:border-purple-500/50 transition-all text-left shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_30px_rgba(168,85,247,0.15)] group backdrop-blur-md"
                     >
-                        <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                        <div className="p-2.5 md:p-3 bg-purple-500/10 rounded-xl text-purple-400 group-hover:bg-purple-500/20 group-hover:text-purple-200 transition-colors shadow-inner border border-purple-500/20 group-hover:border-purple-400/50">
                             <Layers className="w-4 h-4" />
                         </div>
                         <div className="flex flex-col">
@@ -625,8 +634,8 @@ const MainMenu: React.FC = () => {
           >
             {/* ... Existing Auth Modal Content (kept as is) ... */}
             <div className="grid grid-cols-2 border-b border-indigo-500/20 bg-slate-900/50">
-                <button onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
-                <button onClick={() => { setAuthMode('REGISTER'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_REGISTER}</button>
+                <button onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
+                <button onClick={() => { setAuthMode('REGISTER'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_REGISTER}</button>
             </div>
             <div className="p-4 md:p-8 flex flex-col gap-4 md:gap-5 overflow-y-auto no-scrollbar max-h-[80vh]">
               <div className="flex items-center gap-2 md:gap-3 mb-1">
@@ -699,10 +708,10 @@ const MainMenu: React.FC = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleAuthSubmit} 
-                      className={`w-full py-4 mt-2 font-black rounded-xl uppercase tracking-[0.15em] shadow-lg transition-all flex items-center justify-center gap-2 relative overflow-hidden group ${authMode === 'GUEST' ? 'bg-slate-700 text-white hover:bg-slate-600 border border-slate-600' : (authMode === 'LOGIN' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] border border-indigo-500 hover:bg-indigo-500' : 'bg-emerald-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-500 hover:bg-emerald-500')}`}
+                      className={`w-full py-4 mt-4 font-black rounded-2xl uppercase tracking-[0.15em] shadow-lg transition-all flex items-center justify-center gap-2 relative overflow-hidden group ${authMode === 'GUEST' ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-600/50 shadow-[0_4px_20px_rgba(0,0,0,0.4)]' : (authMode === 'LOGIN' ? 'bg-indigo-600/90 text-white shadow-[0_4px_25px_rgba(99,102,241,0.5)] border-t border-indigo-400/50 hover:bg-indigo-500 backdrop-blur-md' : 'bg-emerald-600/90 text-white shadow-[0_4px_25px_rgba(16,185,129,0.5)] border-t border-emerald-400/50 hover:bg-emerald-500 backdrop-blur-md')}`}
                   >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                      <span className="relative z-10">{authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}</span> <ArrowRight className="w-4 h-4 relative z-10" />
+                      <span className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}</span> <ArrowRight className="w-4 h-4 relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
                   </motion.button>
               </div>
               <div className="border-t border-slate-800/80 pt-5 flex justify-center">
@@ -930,12 +939,12 @@ const MainMenu: React.FC = () => {
                  </div>
                  <motion.button 
                     whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={confirmMissionStart}
-                    className="flex-1 max-w-xs py-2 md:py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl uppercase tracking-[0.2em] md:tracking-[0.25em] shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all flex items-center justify-center gap-2 md:gap-3 group text-[9px] md:text-sm break-words whitespace-pre-wrap"
+                    className="flex-1 max-w-xs py-3 md:py-4 bg-indigo-600/90 backdrop-blur-md hover:bg-indigo-500 text-white font-black rounded-2xl border-t border-indigo-400/50 uppercase tracking-[0.2em] md:tracking-[0.25em] shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:shadow-[0_8px_40px_rgba(99,102,241,0.5)] transition-all flex items-center justify-center gap-2 md:gap-3 group text-xs md:text-sm break-words whitespace-pre-wrap"
                  >
-                    <Crosshair className="w-3.5 h-3.5 md:w-5 md:h-5 text-indigo-200 group-hover:text-white group-hover:rotate-90 transition-all duration-500" />
-                    <span>{t.BTN_START}</span>
+                    <Crosshair className="w-3.5 h-3.5 md:w-5 md:h-5 text-indigo-100 group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] group-hover:rotate-90 transition-all duration-500" />
+                    <span className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{t.BTN_START}</span>
                  </motion.button>
              </div>
 
