@@ -324,7 +324,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 <div className="absolute top-0 right-0 p-1">
                                     <FileText className="w-3 h-3 text-indigo-500/30" />
                                 </div>
-                                <p className="text-xs md:text-sm text-indigo-100/90 leading-relaxed whitespace-pre-wrap font-mono break-words pl-4">
+                                <p className="text-xs md:text-sm text-indigo-100/90 leading-relaxed whitespace-pre-wrap font-mono break-words pl-4 -mt-2">
                                     {briefingDesc}
                                 </p>
                             </div>

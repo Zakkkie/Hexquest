@@ -7,7 +7,8 @@ import { getHexKey, getNeighbors } from '../services/hexUtils.ts';
 import { HexNode, HexNodeTheme } from './HexNode.tsx';
 import Unit from './Unit.tsx';
 import { EntityType, EntityState, FloatingText, Hex, Entity } from '../types.ts';
-import { EXCHANGE_RATE_COINS_PER_MOVE, HEX_SIZE } from '../rules/config.ts';
+import { HEX_SIZE } from '../rules/config.ts';
+import { getStatusModifiers } from '../services/hexUtils.ts';
 import { safifyCoord } from '../utils/safeCoordinates.ts';
 
 // Web Worker Import (Vite syntax)
@@ -313,15 +314,16 @@ interface MapRendererProps {
 }
 
 const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId }) => {
-    const grid = useGameStore(state => state.session?.grid) as Record<string, Hex> | undefined;
-    const player = useGameStore(state => state.session?.player) as Entity | undefined;
-    const bots = useGameStore(state => state.session?.bots) as Entity[] | undefined;
-    const effects = useGameStore(state => state.session?.effects);
-    const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
+    const session = useGameStore(state => state.session);
+    const grid = session?.grid as Record<string, Hex> | undefined;
+    const player = session?.player as Entity | undefined;
+    const bots = session?.bots as Entity[] | undefined;
+    const effects = session?.effects;
+    const activeLevelConfig = session?.activeLevelConfig;
     const pendingConfirmation = useGameStore(state => state.pendingConfirmation);
-    const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
-    const playerQ = useGameStore(state => state.session?.player.q);
-    const playerR = useGameStore(state => state.session?.player.r);
+    const isPlayerGrowing = session?.isPlayerGrowing;
+    const playerQ = session?.player.q;
+    const playerR = session?.player.r;
     const selectedHexId = useMemo(() => 
         (playerQ !== undefined && playerR !== undefined) ? getHexKey(playerQ, playerR) : null
     , [playerQ, playerR]);
@@ -490,7 +492,8 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
 
             const level = nHex ? nHex.currentLevel : 0;
             const cost = level > 1 ? level : 1;
-            const canAfford = player.moves >= cost || player.coins >= (cost * EXCHANGE_RATE_COINS_PER_MOVE);
+            const { exchangeRate } = getStatusModifiers(player, session);
+            const canAfford = player.moves >= cost || player.coins >= (cost * exchangeRate);
 
             conns.push({
                 points: [ppx, ppy - startH, npx, npy - endH],
@@ -500,7 +503,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
             });
         }
         return conns;
-    }, [grid, player, isPlayerGrowing, projectionCache]);
+    }, [grid, player, isPlayerGrowing, projectionCache, session]);
 
     const tutorialData = useMemo(() => {
         if (!grid || !player) return null;

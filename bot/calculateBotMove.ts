@@ -1,11 +1,9 @@
 import { Entity, Hex, HexCoord, WinCondition, BotAction, Difficulty, BotMemory, Plan, PlanStep } from '../types';
-import { getHexKey, cubeDistance, findPath, getNeighbors } from '../services/hexUtils';
+import { getHexKey, cubeDistance, findPath, getNeighbors, getStatusModifiers } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
 import { calculateMovementCost } from '../rules/movement';
 import { findBestDigTargets, findHiveTarget, resolveBuildChain } from './planning';
-import { GAME_CONFIG } from '../rules/config';
-
 // ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC TYPES & CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -912,7 +910,8 @@ export const calculateBotMove = (
     
     const reachable = getReachableHexes(bot, grid, navObs, 50);
 
-    const needsSurvival = bot.moves === 0 && bot.coins < GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE && !bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID';
+    const { exchangeRate } = getStatusModifiers(bot);
+    const needsSurvival = bot.moves === 0 && bot.coins < exchangeRate && !bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID';
     
     if (needsSurvival) {
         if (mem.lastActionType === 'UPGRADE') {

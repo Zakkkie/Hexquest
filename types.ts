@@ -575,6 +575,7 @@ export interface SessionState {
   entropy: EntropyState;
   activePoi: string | null;
   outgoingEvents: GameEvent[];
+  campaignUpgrades?: CampaignUpgrades;
 }
 
 export interface GameState {
@@ -672,4 +673,16 @@ export interface CampaignUpgrades {
   startingGold: number;
   startingMaterials: number;
   maxMaterials: number;
+  fuelEfficiency: number;
+  scanRadius: number;
+  fatigueResistance: number;
+  growthAccelerator: number;
+  foundationStrength: number;
+  economicMultiplier: number;
+  diggerLuck: number;
+  doubleDigChance: number;
+  reserveCapacitor: number;
+  turboRecharge: number;
+  entropyResistance: number;
+  restorationMaster: number;
 }

@@ -109,16 +109,54 @@ export const getSecondsToGrow = (level: number) => getLevelConfig(level).growthT
  * Calculates active multipliers and values based on entity status effects.
  * Iterates through all active statuses to apply stacking effects correctly.
  */
-export const getStatusModifiers = (actor: Entity): {
+export const getStatusModifiers = (actor: Entity, session?: any): {
   moveCostMultiplier: number;
   fogRadius: number;
   digRewardMultiplier: number;
+  exchangeRate: number;
+  growthAccelerator: number;
+  foundationStrength: number;
+  economicMultiplier: number;
+  diggerLuck: number;
+  doubleDigChance: number;
+  reserveCapacitor: number;
+  turboRecharge: number;
+  entropyResistance: number;
+  restorationMaster: number;
 } => {
   let moveCostMultiplier = 1.0;
   let fogRadius = 2; // Default: Center + 2 Rings
   let digRewardMultiplier = 1.0;
+  
+  let exchangeRate = GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE;
+  let growthAccelerator = 0;
+  let foundationStrength = 0;
+  let economicMultiplier = 1.0;
+  let diggerLuck = 0;
+  let doubleDigChance = 0;
+  let reserveCapacitor = 0;
+  let turboRecharge = 0;
+  let entropyResistance = 1.0;
+  let restorationMaster = 0;
 
-  if (!actor || !actor.activeStatuses) return { moveCostMultiplier, fogRadius, digRewardMultiplier };
+  const isPlayer = actor && actor.id === 'player';
+  const upgrades = session?.campaignUpgrades;
+
+  if (isPlayer && upgrades) {
+      fogRadius += upgrades.scanRadius || 0;
+      exchangeRate = Math.max(1, exchangeRate - (upgrades.fuelEfficiency || 0));
+      growthAccelerator = upgrades.growthAccelerator || 0;
+      foundationStrength = upgrades.foundationStrength || 0;
+      economicMultiplier = 1.0 + ((upgrades.economicMultiplier || 0) / 100);
+      diggerLuck = upgrades.diggerLuck || 0;
+      doubleDigChance = (upgrades.doubleDigChance || 0) / 100;
+      reserveCapacitor = upgrades.reserveCapacitor || 0;
+      turboRecharge = upgrades.turboRecharge || 0;
+      entropyResistance = 1.0 - ((upgrades.entropyResistance || 0) / 100);
+      restorationMaster = upgrades.restorationMaster || 0;
+  }
+
+  if (!actor || !actor.activeStatuses) return { moveCostMultiplier, fogRadius, digRewardMultiplier, exchangeRate, growthAccelerator, foundationStrength, economicMultiplier, diggerLuck, doubleDigChance, reserveCapacitor, turboRecharge, entropyResistance, restorationMaster };
 
   const now = Date.now();
   let hasTunnelVision = false;
@@ -128,7 +166,12 @@ export const getStatusModifiers = (actor: Entity): {
 
       switch (status.type) {
           case 'STATUS_FATIGUE':
-              moveCostMultiplier *= 2.0;
+              // Upgrade: Fatigue Resistance reduces the penalty
+              let fatigueMult = 2.0;
+              if (isPlayer && upgrades && upgrades.fatigueResistance) {
+                  fatigueMult -= (upgrades.fatigueResistance * 0.25); // e.g. 2.0 -> 1.75 -> 1.5
+              }
+              moveCostMultiplier *= fatigueMult;
               break;
           case 'STATUS_GOLD_RUSH':
               digRewardMultiplier *= 2.0;
@@ -148,7 +191,7 @@ export const getStatusModifiers = (actor: Entity): {
       fogRadius = 0; // Only current hex visible (Center only)
   }
 
-  return { moveCostMultiplier, fogRadius, digRewardMultiplier };
+  return { moveCostMultiplier, fogRadius, digRewardMultiplier, exchangeRate, growthAccelerator, foundationStrength, economicMultiplier, diggerLuck, doubleDigChance, reserveCapacitor, turboRecharge, entropyResistance, restorationMaster };
 };
 
 /**

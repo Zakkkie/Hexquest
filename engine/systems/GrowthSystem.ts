@@ -109,7 +109,7 @@ export class GrowthSystem implements System {
         // 1. Check Cooldowns / Eligibility immediately
         if (isHighLevel) {
             // L4+: Check Charges & Cooldown Timer
-            const status = checkRecoveryCooldown(hex, now);
+            const status = checkRecoveryCooldown(hex, now, state);
             if (!status.ready) {
                 // Cooldown Active
                 if (entity.type === EntityType.PLAYER) {
@@ -152,7 +152,8 @@ export class GrowthSystem implements System {
             const reward = getRecoveryReward(hex);
             
             // STATUS CHECK: Mining Offline
-            const coinReward = isMiningOffline ? 0 : reward.credits;
+            const { economicMultiplier } = getStatusModifiers(entity, state);
+            const coinReward = isMiningOffline ? 0 : Math.floor(reward.credits * economicMultiplier);
 
             entity.moves = Math.min(entity.moves + reward.moves, 999); // Soft cap moves
             entity.coins += coinReward;
@@ -163,7 +164,7 @@ export class GrowthSystem implements System {
             }
 
             // Update Hex State (Charges/Cooldown)
-            const updates = applyRecovery(hex, now);
+            const updates = applyRecovery(hex, now, state);
             
             const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
             const isVisible = entity.type === EntityType.PLAYER || hex.revealed;
@@ -216,12 +217,13 @@ export class GrowthSystem implements System {
          }
 
         // Logic for Dig Progress
-        const needed = 30; // 3 seconds fixed
+        const { growthAccelerator } = getStatusModifiers(entity, state);
+        const needed = Math.max(10, 30 - (growthAccelerator * 5));
         if (hex.progress + 1 >= needed) {
              const newLevel = hex.currentLevel - 1;
              
              // --- DIG STATUS CHECKS ---
-             const { digRewardMultiplier } = getStatusModifiers(entity);
+             const { digRewardMultiplier, diggerLuck, doubleDigChance } = getStatusModifiers(entity, state);
              const hasBreakdownRisk = this.hasStatus(entity, 'STATUS_BREAKDOWN_RISK');
 
              // BREAKDOWN RISK: 10% chance to lose rank or receive error
@@ -238,7 +240,10 @@ export class GrowthSystem implements System {
              }
 
              // GOLD RUSH: Replaced raw check with unified multiplier
-             const matGain = Math.floor(1 * digRewardMultiplier);
+             let matGain = Math.floor(1 * digRewardMultiplier);
+             if (newLevel >= 0 && Math.random() < doubleDigChance) {
+                 matGain *= 2;
+             }
              let actualMatGain = 0;
 
              // CAP MATERIAL AT MAX STORAGE, BUT ALLOW ACTION TO PROCEED
@@ -254,7 +259,8 @@ export class GrowthSystem implements System {
              // Handle Durability Logic for new level
              let newDurability = hex.durability;
              if (newLevel === 1) {
-                 newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY; 
+                 const { foundationStrength } = getStatusModifiers(entity, state);
+                 newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY + (foundationStrength * 2); 
              } else if (newLevel <= 0 || newLevel >= 2) {
                  newDurability = undefined; 
              }
@@ -277,7 +283,7 @@ export class GrowthSystem implements System {
                      // Mark this level as Depleted for this hex immediately to prevent farming
                      nextLootedLevels.push(newLevel);
 
-                     const loot = rollForLoot(newLevel, state.language);
+                     const loot = rollForLoot(newLevel - diggerLuck, state.language);
                      if (loot.type !== 'NONE') {
                          
                          if (loot.type === 'COIN') {
@@ -389,7 +395,8 @@ export class GrowthSystem implements System {
         // Calculate Growth
         const targetLevel = hex.currentLevel + 1;
         const config = getLevelConfig(targetLevel);
-        const needed = config.growthTime;
+        const { growthAccelerator } = getStatusModifiers(entity, state);
+        const needed = Math.max(10, config.growthTime - (growthAccelerator * 5));
 
         // Check Progress
         if (hex.progress + 1 >= needed) {
@@ -436,14 +443,18 @@ export class GrowthSystem implements System {
             
             // STATUS CHECK: MINING OFFLINE
             const isMiningOffline = this.hasStatus(entity, 'STATUS_MINING_OFFLINE');
-            const income = isMiningOffline ? 0 : Math.max(0, config.income);
+            const { economicMultiplier } = getStatusModifiers(entity, state);
+            const income = isMiningOffline ? 0 : Math.max(0, Math.floor(config.income * economicMultiplier));
             
             entity.coins += income;
             entity.totalCoinsEarned += income;
             entity.moves += 1;
 
             // --- ENTROPY COST ---
-            const entropyCost = targetLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(targetLevel));
+            const baseEntropyCost = targetLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(targetLevel));
+            const { entropyResistance } = getStatusModifiers(entity, state);
+            const entropyCost = Math.max(0, baseEntropyCost * (1 - entropyResistance));
+            
             const hasEntropyInversion = this.hasStatus(entity, 'STATUS_ENTROPY_INVERSION');
             
             if (hasEntropyInversion) {
@@ -454,7 +465,8 @@ export class GrowthSystem implements System {
 
             if (targetLevel === 1) {
                  newOwnerId = entity.id;
-                 newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
+                 const { foundationStrength } = getStatusModifiers(entity, state);
+                 newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY + (foundationStrength * 2);
                  const msg = `${prefix} Sector L1 Built (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
                  if (isVisible) {
                     state.messageLog.unshift({ id: `acq-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
@@ -472,7 +484,8 @@ export class GrowthSystem implements System {
             // INIT RECOVERY POINTS IF LEVEL >= 4
             // Reset to full charges if hitting L4 threshold or upgrading within high levels
             if (targetLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
-                newRecoveryCharges = GAME_CONFIG.MAX_RECOVERY_POINTS;
+                const { reserveCapacitor } = getStatusModifiers(entity, state);
+                newRecoveryCharges = GAME_CONFIG.MAX_RECOVERY_POINTS + reserveCapacitor;
                 newLastRecoveryTime = undefined; 
                 newCooldown = undefined;
             }

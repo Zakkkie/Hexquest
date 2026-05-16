@@ -244,7 +244,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 className="flex-1 flex items-center justify-between gap-2 px-2.5 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800/50 cursor-pointer group hover:bg-slate-800 transition-all overflow-hidden"
                                 onClick={() => { onOpenMission(); playUiSound('CLICK'); }}
                             >
-                                <div className="truncate text-[10px] md:text-[11px] font-black font-mono">
+                                <div className="text-[10px] md:text-[11px] font-black font-mono leading-none">
                                     {renderMissionStatus()}
                                 </div>
                                 <Info className="w-3 h-3 text-slate-500 group-hover:text-amber-400 transition-colors shrink-0" />

@@ -1,5 +1,5 @@
 import { GAME_CONFIG } from '../rules/config';
-
+import { getStatusModifiers } from '../services/hexUtils';
 import { SessionState } from "../types";
 
 export const isStranded = (state: SessionState) => {
@@ -7,7 +7,8 @@ export const isStranded = (state: SessionState) => {
     const currentHex = state.grid[`${player.q},${player.r}`];
     
     // If player has resources, they are not stranded
-    if (player.moves > 0 || player.coins >= GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE) return false;
+    const { exchangeRate } = getStatusModifiers(player, state);
+    if (player.moves > 0 || player.coins >= exchangeRate) return false;
     
     // If they are on a hex that can provide recovery (now or later), they are not stranded
     if (currentHex) {

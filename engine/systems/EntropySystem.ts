@@ -4,7 +4,7 @@ import { GameEvent, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
 import { GameEventFactory } from '../events';
 import { ENTROPY_CONFIG } from '../../rules/config';
-import { getHexKey } from '../../services/hexUtils';
+import { getHexKey, getStatusModifiers } from '../../services/hexUtils';
 
 export class EntropySystem implements System {
   update(state: SessionState, _index: WorldIndex, events: GameEvent[]): void {
@@ -33,6 +33,11 @@ export class EntropySystem implements System {
       const gridKeys = Object.keys(state.grid);
       const playerHexKey = getHexKey(state.player.q, state.player.r);
       let playerHitByShift = false;
+      
+      const { entropyResistance } = getStatusModifiers(state.player, state);
+      const collapseChance = Math.max(0, ENTROPY_CONFIG.SHIFT_COLLAPSE_CHANCE - entropyResistance);
+      const fillChance = Math.max(0, ENTROPY_CONFIG.SHIFT_FILL_CHANCE - entropyResistance);
+      const voidChance = Math.max(0, ENTROPY_CONFIG.SHIFT_VOID_CHANCE - entropyResistance);
 
       for (const key of gridKeys) {
           const hex = state.grid[key];
@@ -45,18 +50,18 @@ export class EntropySystem implements System {
           let hasChanged = false;
 
           if (hex.currentLevel >= 1) {
-              if (Math.random() < ENTROPY_CONFIG.SHIFT_COLLAPSE_CHANCE) {
+              if (Math.random() < collapseChance) {
                   newLevel = hex.currentLevel - 1;
                   hasChanged = true;
               }
           } else if (hex.currentLevel <= -1) {
-              if (Math.random() < ENTROPY_CONFIG.SHIFT_FILL_CHANCE) {
+              if (Math.random() < fillChance) {
                   newLevel = hex.currentLevel + 1;
                   hasChanged = true;
               }
           } else if (hex.currentLevel === 0) {
               // Level 0 logic
-              if (hex.structureType !== 'VOID' && Math.random() < ENTROPY_CONFIG.SHIFT_VOID_CHANCE) {
+              if (hex.structureType !== 'VOID' && Math.random() < voidChance) {
                   newType = 'VOID';
                   newLevel = 0; 
                   hasChanged = true;

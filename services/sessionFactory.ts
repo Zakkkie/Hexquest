@@ -360,6 +360,7 @@ export const createInitialSessionDataAsync = async (
         max: initialEntropy,
         threshold: ENTROPY_CONFIG.THRESHOLD
     },
+    campaignUpgrades,
     outgoingEvents: []
   };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '../store.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
-import { Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers, Cpu } from 'lucide-react';
+import { Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers, Cpu, BatteryCharging, Coins } from 'lucide-react';
 import HexButton from './HexButton.tsx';
 import { TEXT } from '../services/i18n.ts';
 import { UpgradesTree } from './UpgradesTree.tsx';
@@ -213,79 +213,112 @@ const CampaignMap: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 overflow-y-auto p-3 md:p-8 no-scrollbar bg-slate-950/40 relative"
+            className="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar bg-slate-950/20 relative"
         >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-7xl mx-auto pb-12 z-10 relative">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 max-w-7xl mx-auto pb-12 z-10 relative content-start">
                 {levelsToDisplay.map((level, i) => {
                     const isUnlocked = i <= levelsModeProgress;
                     const isCompleted = i < levelsModeProgress;
                     const isCurrent = i === levelsModeProgress;
                     const displayTitle = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_TITLE`] || level.title).replace(/Simulation\s[\d.]+:\s|Сим\s[\d.]+:\s/, '');
                     const threat = level.aiMode === 'none' ? 'NONE' : (level.aiMode === 'basic' ? 'BASIC' : 'HIGH');
-                    const threatColor = threat === 'NONE' ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]' : (threat === 'BASIC' ? 'text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]' : 'text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]');
+                    const glowColor = threat === 'NONE' ? 'emerald' : (threat === 'BASIC' ? 'amber' : 'red');
+                    const delay = i * 0.03;
 
                     return (
-                        <motion.button 
+                        <motion.div 
                             key={level.id} 
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.05 }}
-                            whileHover={isUnlocked ? { scale: 1.02, y: -4 } : {}}
+                            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ delay, duration: 0.4, type: 'spring', stiffness: 260, damping: 25 }}
+                            whileHover={isUnlocked ? { scale: 1.02, y: -2 } : { scale: 1.01 }}
                             whileTap={isUnlocked ? { scale: 0.98 } : {}}
-                            disabled={!isUnlocked} 
+                            className={`group relative flex flex-col p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] transition-all duration-300 min-h-[160px]
+                                ${isUnlocked ? 'cursor-pointer hover:shadow-[0_15px_30px_rgba(0,0,0,0.5)]' : 'opacity-60 grayscale-[40%] cursor-not-allowed'}
+                            `}
                             onClick={() => isUnlocked ? startCampaignLevel(level.id) : playUiSound('ERROR')}
-                            className={`group relative flex flex-col border transition-all duration-300 rounded-2xl md:rounded-3xl overflow-hidden text-left h-fit min-h-[180px] md:min-h-[220px] backdrop-blur-md
-                                ${isUnlocked ? 'bg-slate-900/60 border-slate-700/50 hover:border-indigo-400 hover:bg-slate-800/80 shadow-[0_0_30px_rgba(0,0,0,0.4)] hover:shadow-[0_0_40px_rgba(99,102,241,0.2)]' : 'bg-slate-950/60 border-slate-800/50 grayscale-[60%] opacity-70 cursor-not-allowed'}
-                                ${isCurrent ? 'ring-2 ring-indigo-500/80 border-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.3)]' : ''}`}>
-                            
-                            <div className={`flex items-center justify-between px-3 md:px-4 py-2 border-b border-white/5 ${isCompleted ? 'bg-emerald-500/10' : (isCurrent ? 'bg-indigo-500/20' : 'bg-slate-800/40')}`}>
-                                <span className={`text-[9px] md:text-[10px] font-black font-mono px-2 py-0.5 rounded shadow-sm ${isCompleted ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)]' : (isCurrent ? 'bg-indigo-500 text-white animate-pulse shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-slate-700 text-slate-300')}`}>
-                                    {isCompleted ? t.LVL_STATUS_COMPLETED : (isCurrent ? t.LVL_STATUS_READY : t.LVL_STATUS_LOCKED)}
-                                </span>
-                                <span className="text-[9px] md:text-[10px] font-mono text-slate-400 uppercase tracking-widest bg-slate-950/50 px-2 py-0.5 rounded-md border border-slate-700/50 flex items-center gap-1.5"><Layers className="w-3 h-3 hidden md:block" /> {t.LVL_GRID_COORDINATES}: {level.id}</span>
-                            </div>
+                        >
+                            {/* Card Background */}
+                            <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-lg border border-white/5 transition-all duration-300 rounded-2xl md:rounded-[1.5rem] overflow-hidden
+                                ${isUnlocked ? 'group-hover:bg-slate-800/80 group-hover:border-white/20' : 'bg-slate-900/20'}
+                                ${isCurrent ? 'border-indigo-500/30' : ''}
+                            `} />
 
-                            <div className="p-3 md:p-5 flex-1 flex flex-col gap-2 md:gap-3 relative z-10">
-                            <div>
-                                <h3 className={`text-sm md:text-xl font-black uppercase tracking-tight leading-none mb-1 md:mb-1.5 transition-colors ${isUnlocked ? 'text-white group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'text-slate-500'}`}>{displayTitle}</h3>
-                                <div className="h-0.5 w-8 md:w-10 bg-indigo-500/60 rounded-full group-hover:w-full transition-all duration-700" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="bg-slate-950/80 border border-white/5 rounded-lg border border-slate-800/50 p-2 flex flex-col shadow-inner">
-                                    <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-1">{t.LVL_THREAT_LEVEL}</span>
-                                    <div className={`flex items-center gap-1.5 text-[9px] md:text-[10px] font-black ${threatColor}`}><ShieldAlert className="w-2.5 h-2.5 md:w-3 md:h-3" />{(t as any)[`LVL_THREAT_${threat}`]}</div>
+                            {/* Glowing Gradient Accent */}
+                            {isUnlocked && (
+                                <div className={`absolute inset-0 bg-gradient-to-br from-${glowColor}-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl md:rounded-[1.5rem] overflow-hidden`} />
+                            )}
+                            <div className={`absolute -top-4 -right-4 w-24 h-24 bg-${glowColor}-500/10 blur-[30px] rounded-full pointer-events-none group-hover:opacity-100 transition-opacity duration-500`} />
+
+                            <div className="relative z-10 flex flex-col h-full gap-2.5">
+                                {/* Header Section: Icon & Title & Status */}
+                                <div className="flex items-start gap-3">
+                                    <div className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-950 border border-slate-700/40 shadow-inner group-hover:border-${glowColor}-400/30 transition-all duration-300 shrink-0 ${isUnlocked ? (threat === 'NONE' ? 'text-emerald-400' : (threat === 'BASIC' ? 'text-amber-400' : 'text-red-400')) : 'text-slate-600'}`}>
+                                        <MapPin className="w-5 h-5 md:w-6 md:h-6" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                       <h3 className={`text-[11px] md:text-[13px] font-black uppercase tracking-wider leading-tight transition-colors duration-300 mb-1 line-clamp-1
+                                           ${isUnlocked ? 'text-slate-100 group-hover:text-white' : 'text-slate-500'}
+                                       `}>
+                                           {displayTitle}
+                                       </h3>
+                                       <div className={`inline-flex items-center px-1.5 py-0.5 rounded-md border text-[8px] font-mono tracking-tighter uppercase font-bold
+                                          ${isCompleted ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : (isCurrent ? 'bg-indigo-500 text-white border-white/20' : 'bg-slate-800/80 text-slate-500 border-white/5')}
+                                       `}>
+                                           {isCompleted ? t.LVL_STATUS_COMPLETED : (isCurrent ? t.LVL_STATUS_READY : t.LVL_STATUS_LOCKED)}
+                                       </div>
+                                    </div>
                                 </div>
-                                <div className="bg-slate-950/80 border border-white/5 rounded-lg border border-slate-800/50 p-2 flex flex-col shadow-inner">
-                                    <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-1">{t.LVL_START_RESOURCES}</span>
-                                    <div className="flex items-center gap-2 md:gap-3 text-[9px] md:text-[10px] font-mono text-indigo-300">
-                                        <div className="flex items-center gap-1 md:gap-1.5 text-indigo-400 drop-shadow-[0_0_5px_rgba(129,140,248,0.5)]"><div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />{level.startState.moves}</div>
-                                        <div className="flex items-center gap-1 md:gap-1.5 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />{level.startState.credits}</div>
+
+                                {/* Body Section: Goal */}
+                                <div className="flex-1">
+                                    <div className="bg-black/20 rounded-lg p-2 border-l border-indigo-500/20 group-hover:border-indigo-500/40 transition-colors">
+                                        <div className="flex items-center gap-1 mb-1">
+                                            <Crosshair className="w-2 h-2 text-slate-600" />
+                                            <span className="text-[7px] font-bold text-slate-500 uppercase tracking-widest">{t.LVL_GOAL}</span>
+                                        </div>
+                                        <p className="text-[9px] md:text-[10px] text-slate-400 font-mono leading-relaxed italic line-clamp-2 select-none">
+                                            {level.goalText || ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_DESC`] || '').split('\n\n')[0]}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Bottom Footer: Threat & Resources */}
+                                <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t border-white/5 group-hover:border-white/10 transition-colors">
+                                    <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-lg border border-white/5">
+                                        <ShieldAlert className={`w-3 h-3 ${threat === 'NONE' ? 'text-emerald-400' : (threat === 'BASIC' ? 'text-amber-400' : 'text-red-400')}`} />
+                                        <span className="text-[9px] font-bold text-slate-300">{(t as any)[`LVL_THREAT_${threat}`]}</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1 text-[10px] font-mono text-indigo-400/80">
+                                            <BatteryCharging className="w-2.5 h-2.5" />
+                                            {level.startState.moves}
+                                        </div>
+                                        <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400/80">
+                                            <Coins className="w-2.5 h-2.5" />
+                                            {level.startState.credits}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="mt-0 flex-1 flex flex-col">
-                                <div className="bg-slate-950/60 rounded-lg p-2.5 mt-1 border-l-2 border-indigo-500/50 flex flex-col group-hover:border-indigo-400 transition-colors shadow-inner flex-1">
-                                    <span className="text-[6px] md:text-[7px] font-black text-slate-500 uppercase flex items-center gap-1 mb-0.5"><Crosshair className="w-2 h-2" />{t.LVL_GOAL}</span>
-                                    <p className="text-[9px] font-mono text-slate-300 leading-tight md:leading-snug italic line-clamp-3 select-none flex-1">
-                                        {level.goalText || ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_DESC`] || '').split('\n\n')[0]}
-                                    </p>
+                            
+                            {/* Lock Overlay */}
+                            {!isUnlocked && (
+                                <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/20 backdrop-blur-[1px]">
+                                    <Lock className="w-6 h-6 text-slate-700/50" />
                                 </div>
-                            </div>
-                        </div>
-                        {isUnlocked && !isCompleted && (
-                            <div className="px-3 md:px-5 py-2.5 md:py-4 bg-indigo-500/10 border-t border-indigo-500/30 flex items-center justify-between group-hover:bg-indigo-500/25 transition-all relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                <span className="text-[9px] md:text-[11px] font-black text-indigo-200 tracking-[0.2em] relative z-10 drop-shadow-[0_0_5px_rgba(165,180,252,0.5)]">ENGAGE PROTOCOL</span>
-                                <Play className="w-3 h-3 md:w-4 md:h-4 text-indigo-300 fill-current relative z-10" />
-                            </div>
-                        )}
-                        {isCompleted && (
-                            <div className="px-3 md:px-5 py-2.5 md:py-4 bg-emerald-900/30 border-t border-emerald-500/30 flex items-center justify-between relative overflow-hidden">
-                                <span className="text-[9px] md:text-[11px] font-black text-emerald-400 tracking-[0.2em] drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]">MISSION SECURED</span>
-                                <Check className="w-3 h-3 md:w-4 md:h-4 text-emerald-400" />
-                            </div>
-                        )}
-                    </motion.button>
+                            )}
+
+                            {/* Click Indicator on hover */}
+                            {isUnlocked && !isCompleted && (
+                                <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/40">
+                                        <Play className="w-2.5 h-2.5 text-indigo-400 fill-current ml-0.5" />
+                                    </div>
+                                </div>
+                            )}
+                        </motion.div>
                     );
                 })}
             </div>
@@ -306,48 +339,48 @@ const CampaignMap: React.FC = () => {
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="relative z-10 w-full h-full lg:h-[94vh] lg:w-[96vw] max-w-[1600px] flex flex-col md:bg-slate-900/60 md:backdrop-blur-2xl md:border md:border-indigo-500/30 md:rounded-[2.5rem] md:shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(99,102,241,0.1)] overflow-hidden box-border"
       >
-        <div className="px-4 md:px-8 py-3 md:py-6 border-b border-indigo-500/20 flex flex-wrap md:flex-nowrap items-center justify-between bg-slate-900/50 shrink-0 z-20 backdrop-blur-xl gap-3 md:gap-4">
+        <div className="px-3 md:px-5 py-2.5 md:py-4 border-b border-indigo-500/20 flex flex-wrap md:flex-nowrap items-center justify-between bg-slate-900/40 shrink-0 z-20 backdrop-blur-xl gap-3 md:gap-4">
           <div className="flex items-center gap-3 md:gap-4">
-             <div className={`p-2 md:p-3 rounded-xl md:rounded-2xl shadow-inner ${campaignMode === 'STORY' ? 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 shadow-[inset_0_0_15px_rgba(99,102,241,0.2)]' : 'bg-purple-500/20 border border-purple-500/40 text-purple-400 shadow-[inset_0_0_15px_rgba(168,85,247,0.2)]'}`}>
+             <div className={`p-2 md:p-3 rounded-lg md:rounded-xl shadow-inner transition-all duration-500 ${campaignMode === 'STORY' ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 shadow-[inset_0_0_15px_rgba(99,102,241,0.1)]' : 'bg-purple-500/10 border border-purple-500/30 text-purple-400 shadow-[inset_0_0_15px_rgba(168,85,247,0.1)]'}`}>
                {campaignMode === 'STORY' ? <MapPin className="w-5 h-5 md:w-6 md:h-6" /> : <Layers className="w-5 h-5 md:w-6 md:h-6" />}
              </div>
-             <div>
-               <h2 className="text-xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 uppercase tracking-tighter italic leading-none mb-0.5 md:mb-1 drop-shadow-sm">
+             <div className="flex flex-col gap-0.5">
+               <h2 className="text-lg md:text-3xl font-black text-white uppercase tracking-wider italic leading-none drop-shadow-md">
                  {campaignMode === 'STORY' ? TEXT[language].MENU.MODE_STORY : TEXT[language].MENU.MODE_LEVELS}
                </h2>
-               <p className="text-indigo-400/80 text-[8px] md:text-[11px] font-mono tracking-[0.3em] md:tracking-[0.4em] uppercase pl-1 font-bold">{t.HEADER_SUBTITLE}</p>
+               <p className="text-indigo-400/50 text-[7px] md:text-[9px] font-mono tracking-[0.3em] uppercase pl-1 font-bold">{t.HEADER_SUBTITLE}</p>
              </div>
           </div>
 
           {campaignMode === 'LEVELS' && !isMobile && (
-              <div className="flex items-center gap-10 border-l border-white/10 pl-10 ml-auto group">
+              <div className="flex items-center gap-6 lg:gap-10 border-l border-white/10 pl-6 lg:pl-10 ml-auto group">
                   <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{TEXT[language].HUD.MISSION_COMPLETE}</span>
-                      <span className="text-3xl font-black text-white font-mono leading-none group-hover:text-indigo-400 transition-colors drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
-                          {levelsModeProgress} <span className="text-slate-600 text-base">/ {levelsToDisplay.length}</span>
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">{TEXT[language].HUD.MISSION_COMPLETE}</span>
+                      <span className="text-2xl font-black text-white font-mono leading-none group-hover:text-indigo-400 transition-colors drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                          {levelsModeProgress} <span className="text-slate-600 text-sm">/ {levelsToDisplay.length}</span>
                       </span>
                   </div>
                   <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">AUTH CLEARANCE</span>
-                      <div className="flex gap-1.5">
-                          {[...Array(levelsModeProgress > 10 ? 10 : 8)].map((_, idx) => (
-                              <div key={idx} className={`h-2.5 w-6 rounded-full shadow-inner transition-all duration-1000 ${levelsModeProgress >= (idx * 4) ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]' : 'bg-slate-800 border border-slate-700/50'}`} />
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">AUTH CLEARANCE</span>
+                      <div className="flex gap-1">
+                          {[...Array(8)].map((_, idx) => (
+                              <div key={idx} className={`h-2 w-4 md:w-5 rounded-full shadow-inner transition-all duration-700 ${levelsModeProgress >= (idx * 4) ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]' : 'bg-slate-800 border border-slate-700/30'}`} />
                           ))}
                       </div>
                   </div>
               </div>
           )}
 
-          <div className={`flex items-center gap-2 md:gap-4 ${campaignMode === 'STORY' ? 'ml-auto' : ''}`}>
+          <div className={`flex items-center gap-2 md:gap-3 ${campaignMode === 'STORY' ? 'ml-auto' : ''}`}>
               <motion.button 
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
                  onClick={() => { setShowUpgrades(true); playUiSound('CLICK'); }}
-                 className="group relative flex items-center gap-1.5 md:gap-2 px-3 md:px-6 py-2 md:py-3 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-100 rounded-xl md:rounded-2xl border border-indigo-500/40 transition-all text-[9px] md:text-xs font-black uppercase tracking-widest overflow-hidden shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+                 className="group relative flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-indigo-600/10 hover:bg-indigo-600/30 text-indigo-100 rounded-lg md:rounded-xl border border-indigo-500/30 transition-all text-[9px] md:text-[10px] font-black uppercase tracking-widest overflow-hidden shadow-sm"
               >
-                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                 <Cpu className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-300 drop-shadow-[0_0_5px_rgba(165,180,252,0.8)]" />
-                 <span className="relative z-10 drop-shadow-sm">{TEXT[language].HUD.BTN_UPGRADES || 'Upgrades'}</span>
+                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                 <Cpu className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-400 drop-shadow-[0_0_5px_rgba(165,180,252,0.5)]" />
+                 <span className="relative z-10">{TEXT[language].HUD.BTN_UPGRADES || 'Upgrades'}</span>
                  {skillPoints > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] border border-white/20 text-[9px] md:text-[10px] text-white animate-pulse">{skillPoints}</span>}
               </motion.button>
 
@@ -355,9 +388,9 @@ const CampaignMap: React.FC = () => {
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
                  onClick={() => { useGameStore.getState().setUIState('MENU'); playUiSound('CLICK'); }}
-                 className="group relative px-3 md:px-6 py-2 md:py-3 bg-slate-800/50 hover:bg-slate-700 text-white rounded-xl md:rounded-2xl border border-slate-600 transition-all text-[9px] md:text-xs font-black uppercase tracking-widest overflow-hidden shadow-sm"
+                 className="group relative px-3 md:px-5 py-2 md:py-2.5 bg-slate-800/30 hover:bg-slate-700/50 text-slate-300 hover:text-white rounded-lg md:rounded-xl border border-slate-700/50 transition-all text-[9px] md:text-[10px] font-black uppercase tracking-widest overflow-hidden shadow-sm active:scale-95"
               >
-                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                  <span className="relative z-10">{TEXT[language].HUD.BTN_MENU}</span>
               </motion.button>
           </div>

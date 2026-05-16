@@ -1,7 +1,7 @@
 
 import { GameAction, EntityState, ValidationResult, SessionState, Entity, MoveAction, Item } from '../types';
 import { WorldIndex } from './WorldIndex';
-import { getHexKey, cubeDistance } from '../services/hexUtils';
+import { getHexKey, cubeDistance, getStatusModifiers } from '../services/hexUtils';
 import { ENTROPY_CONFIG } from '../rules/config';
 import { calculateMovementCost } from '../rules/movement';
 import { GameEventFactory } from './events';
@@ -90,7 +90,7 @@ export class ActionProcessor {
 
   private handleMove(state: SessionState, _index: WorldIndex, actor: Entity, action: MoveAction): ValidationResult {
       // Validate Path
-      const cost = calculateMovementCost(actor, action.path, state.grid);
+      const cost = calculateMovementCost(actor, action.path, state.grid, state);
       if (!cost.canAfford) {
           return { ok: false, reason: cost.reason || 'Cannot afford move' };
       }
@@ -322,6 +322,9 @@ export class ActionProcessor {
       if (item.rarity === 'UNCOMMON') chance = 0.40;
       if (item.rarity === 'RARE') chance = 0.65;
       if (item.rarity === 'LEGENDARY') chance = 0.90;
+
+      const { restorationMaster } = getStatusModifiers(actor, state);
+      chance += restorationMaster;
 
       if (Math.random() < chance) {
           // --- SUCCESS ---

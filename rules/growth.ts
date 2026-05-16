@@ -1,6 +1,6 @@
 
 import { Hex, Entity, HexCoord } from '../types';
-import { GAME_CONFIG } from './config';
+import { GAME_CONFIG, getLevelConfig } from './config';
 import { getHexKey } from '../services/hexUtils';
 
 export type GrowthCheckResult = {
@@ -103,42 +103,51 @@ export function checkGrowthCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel + 1;
 
+  // 1. REGROWTH: No supports or rank check needed to reach previous maxLevel
   if (targetLevel <= hex.maxLevel) {
      return { canGrow: true };
   }
 
+  // 2. MATERIAL CHECK
   if (entity.storage < 1) {
       return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
   }
 
+  // 3. RANK REQUIREMENT
+  const config = getLevelConfig(targetLevel);
+  if (entity.playerLevel < config.reqRank) {
+      return { 
+        canGrow: false, 
+        reason: `RANK TOO LOW (Required: ${config.reqRank}, Current: ${entity.playerLevel})` 
+      };
+  }
+
+  // 4. STABILITY CHECK (for L2+)
   if (targetLevel > 1) {
-    const highLevelNeighborsCount = neighbors.filter(n => {
+    const sameLevelNeighbors = neighbors.filter(n => {
+       const h = grid[getHexKey(n.q, n.r)];
+       return h && h.structureType !== 'VOID' && h.maxLevel === hex.maxLevel;
+    });
+
+    const higherLevelNeighbors = neighbors.filter(n => {
        const h = grid[getHexKey(n.q, n.r)];
        return h && h.structureType !== 'VOID' && h.maxLevel > hex.maxLevel;
-    }).length;
+    });
 
-    const isValley = highLevelNeighborsCount >= 5;
+    const isValley = higherLevelNeighbors.length >= 5;
 
-    if (!isValley) {
-        const supports = neighbors.filter(n => {
-           const h = grid[getHexKey(n.q, n.r)];
-           if (!h || h.structureType === 'VOID') return false;
-           return h.maxLevel === hex.maxLevel;
-        });
+    if (sameLevelNeighbors.length < 2 && !isValley) {
+      const potentialSupports = neighbors.filter(n => {
+          const h = grid[getHexKey(n.q, n.r)];
+          if (!h || h.structureType === 'VOID') return false;
+          return h.maxLevel < hex.maxLevel;
+      });
 
-        if (supports.length < 2) {
-          const potentialSupports = neighbors.filter(n => {
-              const h = grid[getHexKey(n.q, n.r)];
-              if (!h || h.structureType === 'VOID') return false;
-              return h.maxLevel !== hex.maxLevel;
-          });
-
-          return {
-            canGrow: false, 
-            reason: `UNSTABLE! Need 2 neighbors at Level ${hex.maxLevel}.`,
-            missingSupports: potentialSupports
-          };
-        }
+      return {
+        canGrow: false, 
+        reason: `UNSTABLE! Need 2 neighbors at Level ${hex.maxLevel} or 5 higher neighbors (Valley Rule).`,
+        missingSupports: potentialSupports
+      };
     }
   }
 
@@ -158,14 +167,17 @@ export const getRecoveryReward = (hex: Hex): { moves: number; credits: number } 
   return { moves, credits };
 };
 
-export const checkRecoveryCooldown = (hex: Hex, currentTime: number): { ready: boolean; remaining: number } => {
+export const checkRecoveryCooldown = (hex: Hex, currentTime: number, session?: import('../types.ts').SessionState): { ready: boolean; remaining: number } => {
   // For L0-L3: No specific hex cooldown, handled by Entity's `recoveredCurrentHex` flag in System
   if (hex.currentLevel < GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
     return { ready: true, remaining: 0 };
   }
   
+  const capUpgrade = session?.campaignUpgrades?.reserveCapacitor || 0;
+  const maxCharges = GAME_CONFIG.MAX_RECOVERY_POINTS + capUpgrade;
+
   // For L4+: Check charges and cooldown
-  const charges = hex.recoveryCharges ?? GAME_CONFIG.MAX_RECOVERY_POINTS; // Default 3
+  const charges = hex.recoveryCharges ?? maxCharges; // Default 3
   
   // If we have charges, we are ready
   if (charges > 0) return { ready: true, remaining: 0 };
@@ -184,18 +196,23 @@ export const checkRecoveryCooldown = (hex: Hex, currentTime: number): { ready: b
  * Updates hex state after a successful recovery action.
  * Mutates the hex object (or returns props to update).
  */
-export const applyRecovery = (hex: Hex, currentTime: number): Partial<Hex> => {
+export const applyRecovery = (hex: Hex, currentTime: number, session?: import('../types.ts').SessionState): Partial<Hex> => {
   if (hex.currentLevel < GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
     // For L0-L3: Just mark time, entity flag handles the "once per visit" rule
     return { lastRecoveryUseTime: currentTime };
   } else {
+    const capUpgrade = session?.campaignUpgrades?.reserveCapacitor || 0;
+    const maxCharges = GAME_CONFIG.MAX_RECOVERY_POINTS + capUpgrade;
+    const turboRecharge = session?.campaignUpgrades?.turboRecharge || 0;
+    const cooldownMs = GAME_CONFIG.RECOVERY_COOLDOWN_MS - (turboRecharge * 1000);
+
     // For L4+
-    let charges = hex.recoveryCharges ?? GAME_CONFIG.MAX_RECOVERY_POINTS;
+    let charges = hex.recoveryCharges ?? maxCharges;
     
     // SAFETY: If cooldown expired but charges were 0, we treat it as fully charged before decrementing
     // This handles race conditions where the maintenance tick hasn't run yet.
     if (charges === 0 && hex.cooldownEndTime && currentTime >= hex.cooldownEndTime) {
-        charges = GAME_CONFIG.MAX_RECOVERY_POINTS;
+        charges = maxCharges;
     }
 
     charges = Math.max(0, charges - 1);
@@ -207,7 +224,7 @@ export const applyRecovery = (hex: Hex, currentTime: number): Partial<Hex> => {
     
     // If depleted, start cooldown
     if (charges === 0) {
-      updates.cooldownEndTime = currentTime + GAME_CONFIG.RECOVERY_COOLDOWN_MS;
+      updates.cooldownEndTime = currentTime + cooldownMs;
     } else {
       // Ensure cooldown is cleared if we have charges (e.g. if we just reset from 0->3->2)
       updates.cooldownEndTime = undefined;

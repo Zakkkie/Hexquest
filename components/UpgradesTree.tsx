@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store.ts';
-import { Zap, Coins, Box, Star, X } from 'lucide-react';
+import { Zap, Coins, Box, Star, X, Gauge, Radar, Shield, Clock, Layers, TrendingUp, Gem, Copy, Battery, BatteryCharging, Infinity, Wrench } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Props {
@@ -53,77 +53,78 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
 
         return (
             <motion.div 
-                 initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                 initial={{ opacity: 0, y: 20, scale: 0.98 }}
                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                 transition={{ delay, duration: 0.5, type: 'spring', stiffness: 200, damping: 20 }}
-                 whileHover={!isMaxed && canAfford ? { scale: 1.04, y: -4 } : { scale: 1.01 }}
-                 whileTap={!isMaxed && canAfford ? { scale: 0.97 } : {}}
-                 className={`group relative flex flex-col p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden transition-all duration-500
-                    ${canAfford && !isMaxed ? 'cursor-pointer hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)]' : 'opacity-80 grayscale-[30%] cursor-not-allowed'}
+                 transition={{ delay, duration: 0.4, type: 'spring', stiffness: 260, damping: 25 }}
+                 whileHover={!isMaxed && canAfford ? { scale: 1.02, y: -2 } : { scale: 1.01 }}
+                 whileTap={!isMaxed && canAfford ? { scale: 0.98 } : {}}
+                 className={`group relative flex flex-col p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] transition-all duration-300 min-h-[140px]
+                    ${canAfford && !isMaxed ? 'cursor-pointer hover:shadow-[0_15px_30px_rgba(0,0,0,0.4)]' : 'opacity-85 grayscale-[20%] cursor-not-allowed'}
                  `}
                  onClick={() => !isMaxed && handleUpgrade(key, amountPerUpgrade, cost)}
             >
                  {/* Card Background */}
-                 <div className={`absolute inset-0 bg-slate-900/50 backdrop-blur-md border border-white/5 transition-all duration-500
-                    ${canAfford && !isMaxed ? 'group-hover:bg-slate-800/60 group-hover:border-white/20' : 'bg-slate-900/30'}
+                 <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-lg border border-white/5 transition-all duration-300 rounded-2xl md:rounded-[1.5rem] overflow-hidden
+                    ${canAfford && !isMaxed ? 'group-hover:bg-slate-800/80 group-hover:border-white/20' : 'bg-slate-900/20'}
                  `} />
 
                  {/* Glowing Gradient Accent */}
                  {canAfford && !isMaxed && (
-                     <div className={`absolute inset-0 bg-gradient-to-br from-${glowColor}-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
+                     <div className={`absolute inset-0 bg-gradient-to-br from-${glowColor}-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl md:rounded-[1.5rem] overflow-hidden`} />
                  )}
-                 <div className={`absolute top-0 right-0 w-32 h-32 bg-${glowColor}-500/20 blur-[50px] rounded-full pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity duration-500`} />
+                 <div className={`absolute -top-4 -right-4 w-24 h-24 bg-${glowColor}-500/10 blur-[30px] rounded-full pointer-events-none group-hover:opacity-100 transition-opacity duration-500`} />
 
-                 <div className="relative z-10 flex flex-col h-full">
-                     {/* Top Section: Icon & Level */}
-                     <div className="flex items-center justify-between mb-3 md:mb-4">
-                         <div className="flex items-center gap-3 md:gap-4">
-                             <div className={`flex items-center justify-center w-16 h-16 rounded-xl md:rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-inner group-hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-500 shrink-0 -mt-4 pl-0 ml-0 ${colorClass}`}>
-                                 {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-6 h-6 md:w-8 md:h-8 drop-shadow-lg' })}
-                             </div>
-                             <div className="-mt-[5px]">
-                                <h3 className={`text-sm md:text-lg font-black uppercase tracking-widest leading-tight transition-colors duration-300 drop-shadow-md mb-1 mt-0
-                                    ${canAfford && !isMaxed ? 'text-slate-100 group-hover:text-white' : 'text-slate-400'}
-                                `}>
-                                    {label}
-                                </h3>
-                                <div className={`inline-block px-2 md:px-3 py-0.5 rounded-full border text-[8px] md:text-[10px] font-mono tracking-widest uppercase font-bold
-                                   ${isMaxed ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.3)]' : 'bg-black/30 text-slate-300 border-white/10 group-hover:border-white/20'}
-                                `}>
-                                    Ур. {level} {isMaxed && '(MAX)'}
-                                </div>
-                             </div>
+                 <div className="relative z-10 flex flex-col h-full gap-2">
+                     {/* Header Section: Icon & Title & Level */}
+                     <div className="flex items-start gap-2.5">
+                         <div className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-900 border border-slate-700/40 shadow-inner group-hover:border-${glowColor}-400/30 transition-all duration-300 shrink-0 ${colorClass}`}>
+                             {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-5 h-5 md:w-6 md:h-6' })}
+                         </div>
+                         <div className="min-w-0 flex-1">
+                            <h3 className={`text-[10px] md:text-[12px] font-black uppercase tracking-wider leading-tight transition-colors duration-300 mb-1 line-clamp-1
+                                ${canAfford && !isMaxed ? 'text-slate-100 group-hover:text-white' : 'text-slate-500'}
+                            `}>
+                                {label}
+                            </h3>
+                            <div className={`inline-flex items-center px-1.5 py-0.5 rounded-md border text-[8px] font-mono tracking-tighter uppercase font-bold
+                               ${isMaxed ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-slate-800/80 text-indigo-300/80 border-white/5 group-hover:border-white/10'}
+                            `}>
+                                LVL {level} {isMaxed && '(MAX)'}
+                            </div>
                          </div>
                      </div>
 
-                     {/* Middle Section: Description & Value */}
-                     <div className="flex-1 mb-3 justify-center flex flex-col">
-                         <p className="text-xs md:text-sm text-slate-400/90 font-medium leading-relaxed mb-4">
+                     {/* Body Section: Description */}
+                     <div className="flex-1">
+                         <p className="text-[9px] md:text-[11px] text-slate-400/80 font-medium leading-normal line-clamp-2 md:line-clamp-3">
                              {description}
                          </p>
-                         
-                         <div className="flex items-center gap-2 md:gap-3 bg-black/30 p-2 md:p-3 rounded-xl border border-white/5 self-start">
-                             <span className="text-base md:text-2xl font-mono font-black text-slate-200 drop-shadow-md px-2">{currentValue}</span>
-                             {!isMaxed && (
-                                 <div className="flex items-center gap-2 md:gap-3 opacity-80 group-hover:opacity-100 transition-all duration-300">
-                                     <span className={`text-${glowColor}-400 font-bold`}>→</span>
-                                     <span className="text-base md:text-2xl font-mono font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] px-2">{currentValue + amountPerUpgrade}</span>
-                                 </div>
-                             )}
-                         </div>
                      </div>
 
-                     {/* Bottom Section: Cost */}
-                     {!isMaxed && (
-                         <div className="mt-auto pt-3 md:pt-4 border-t border-white/5 group-hover:border-white/10 transition-colors duration-500 flex justify-between items-center">
-                             <span className="text-[10px] md:text-xs font-mono text-slate-400 uppercase tracking-widest">Стоимость:</span>
-                             <div className={`px-4 md:px-6 py-1.5 md:py-2 rounded-full border text-[11px] md:text-sm font-black tracking-widest shadow-lg transition-all duration-500
-                                 ${canAfford ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-400 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.6)]' : 'bg-red-500/10 text-red-400 border-red-500/20'}
-                             `}>
-                                 {cost} SP
-                             </div>
-                         </div>
-                     )}
+                     {/* Bottom Footer: Stats & Cost */}
+                     <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t border-white/5 group-hover:border-white/10 transition-colors">
+                        {/* Stats Preview */}
+                        <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                            <span className="text-[10px] md:text-xs font-mono font-bold text-slate-400">{currentValue}</span>
+                            {!isMaxed && (
+                                <>
+                                    <TrendingUp className={`w-2.5 h-2.5 text-${glowColor}-400 opacity-60`} />
+                                    <span className="text-[10px] md:text-xs font-mono font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
+                                        {currentValue + amountPerUpgrade}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Upgrade Cost Button */}
+                        {!isMaxed && (
+                            <div className={`px-2.5 py-1 rounded-lg border text-[10px] md:text-[11px] font-black tracking-tight transition-all duration-300
+                                ${canAfford ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-white/20' : 'bg-slate-800/40 text-slate-600 border-slate-700/40'}
+                            `}>
+                                {cost} SP
+                            </div>
+                        )}
+                     </div>
                  </div>
             </motion.div>
         );
@@ -135,52 +136,71 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-xl"
+            className="absolute inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-2xl"
         >
             {/* Background floating effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
-               <div className="absolute top-[10%] left-[20%] w-[40%] h-[40%] rounded-full bg-indigo-600/30 blur-[120px] animate-pulse-subtle" />
-               <div className="absolute bottom-[10%] right-[20%] w-[40%] h-[40%] rounded-full bg-cyan-600/20 blur-[120px] animate-pulse-subtle" style={{ animationDelay: '2s' }} />
+            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+               <div className="absolute top-[10%] left-[20%] w-[50%] h-[50%] rounded-full bg-indigo-600/20 blur-[150px]" />
+               <div className="absolute bottom-[10%] right-[20%] w-[50%] h-[50%] rounded-full bg-blue-600/10 blur-[150px]" />
             </div>
 
             <motion.div 
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ type: "spring", damping: 25, stiffness: 250 }}
-                className="bg-slate-900/60 backdrop-blur-2xl border border-white/10 w-full max-w-5xl h-[90vh] md:h-auto md:max-h-[85vh] rounded-[2rem] md:rounded-[3rem] shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(255,255,255,0.02)] flex flex-col relative z-10"
+                exit={{ opacity: 0, scale: 0.98, y: 10 }}
+                transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 w-full max-w-6xl h-[95vh] md:h-auto md:max-h-[85vh] rounded-3xl md:rounded-[2.5rem] shadow-[0_0_80px_rgba(0,0,0,0.9)] flex flex-col relative z-10 overflow-hidden"
             >
-                {/* Close Button Mobile/Desktop Top Right */}
-                <button onClick={onClose} className="absolute top-4 right-4 md:top-6 md:right-6 lg:top-8 lg:right-8 z-30 p-2.5 md:p-3 xl:p-4 bg-slate-800/80 backdrop-blur-md border-t border-white/10 hover:bg-slate-700 hover:border-white/20 rounded-xl md:rounded-full transition-all text-slate-400 hover:text-white shadow-[0_4px_15px_rgba(0,0,0,0.3)] hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] group">
-                    <X className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-90 transition-transform duration-300" />
-                </button>
-
-                <div className="p-4 pt-5 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center shrink-0 border-b border-white/5 relative z-20 gap-4 md:gap-0">
-                    <div className="flex-1 pr-14 md:pr-0">
-                        <h2 className="text-xl md:text-3xl lg:text-4xl font-black uppercase text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-100 to-indigo-400 tracking-[0.1em] md:tracking-[0.15em] leading-tight drop-shadow-[0_0_15px_rgba(99,102,241,0.4)] mb-1 md:mb-2">Узлы Развития</h2>
-                        <div className="flex items-center gap-2 md:gap-3">
-                            <div className="h-[2px] w-6 md:w-12 bg-gradient-to-r from-indigo-500 to-transparent"></div>
-                            <p className="text-indigo-200/60 text-[9px] md:text-[11px] font-mono tracking-[0.2em] md:tracking-[0.3em] uppercase">Параметры игрока</p>
+                {/* Header with Title and Skill Points */}
+                <div className="p-2.5 md:p-3 lg:p-4 flex items-center justify-between border-b border-white/5 relative z-20">
+                    <div className="flex items-center gap-3 md:gap-4 pl-1">
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-indigo-500/10 p-1.5 rounded-lg border border-indigo-500/20">
+                                    <Layers className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-400" />
+                                </div>
+                                <h2 className="text-base md:text-lg lg:text-xl font-black uppercase text-white tracking-[0.15em] leading-none drop-shadow-md">Узлы Развития</h2>
+                            </div>
+                            <p className="hidden sm:block text-indigo-300/20 text-[7px] md:text-[8px] font-mono tracking-[0.4em] uppercase ml-9 mt-0.5">Exp_Protocol_v2.1</p>
                         </div>
                     </div>
-                    
-                    <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-4 md:gap-8 md:pr-16">
-                        <div className="flex items-center gap-4 bg-black/40 md:bg-transparent p-2 md:p-0 rounded-2xl md:rounded-none border border-white/5 md:border-none shadow-inner md:shadow-none backdrop-blur-md md:backdrop-blur-none w-full md:w-auto justify-between md:justify-end">
-                            <span className="text-[10px] md:text-[11px] text-indigo-300 font-mono font-bold uppercase tracking-[0.15em] md:tracking-widest drop-shadow-md pl-2 md:pl-0">Skill Points</span>
-                            <div className="flex items-center justify-center bg-indigo-500/10 border-t border-indigo-500/30 rounded-xl md:rounded-2xl px-4 py-2 md:px-5 md:py-3 shadow-[0_4px_20px_rgba(99,102,241,0.2),inset_0_0_15px_rgba(99,102,241,0.15)] relative overflow-hidden group">
-                                <span className="text-xl md:text-3xl font-black text-white font-mono leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.6)] relative z-10">{skillPoints}</span>
+
+                    <div className="flex items-center gap-2 md:gap-3 pr-1">
+                        {/* Lean SP Badge */}
+                        <div className="flex items-center gap-2.5 bg-slate-900/60 border border-indigo-500/20 rounded-lg px-2.5 py-1.5 md:px-3 md:py-2 transition-all shadow-inner">
+                            <div className="flex flex-col items-center leading-none">
+                                <span className="text-[6px] md:text-[7px] text-indigo-400/80 font-black uppercase">Skill</span>
+                                <span className="text-[6px] md:text-[7px] text-indigo-400/80 font-black uppercase">Points</span>
                             </div>
+                            <div className="w-[1px] h-4 bg-indigo-500/20 mx-0.5" />
+                            <span className="text-base md:text-xl font-black text-white font-mono leading-none tracking-tighter drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]">{skillPoints}</span>
                         </div>
+
+                        <button onClick={onClose} className="p-1.5 md:p-2 bg-slate-800/40 hover:bg-red-500/20 group rounded-lg border border-white/5 transition-all active:scale-95">
+                            <X className="w-4 h-4 md:w-5 md:h-5 text-slate-500 group-hover:text-red-400 group-active:text-red-500 transition-colors" />
+                        </button>
                     </div>
                 </div>
 
-                <div className="p-4 md:p-8 overflow-y-auto no-scrollbar grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 lg:gap-8 relative z-10 flex-1 content-start">
-                    {renderNode('startingEnergy', 'Стартовая Энергия', 'Увеличивает базовый запас энергии на старте', <Zap />, 1, 1, 'text-cyan-400', 10, 0.1)}
-                    {renderNode('startingMoves', 'Стартовые Ходы', 'Увеличивает количество доступных очков перемещения', <Star />, 1, 1, 'text-emerald-400', 5, 0.15)}
-                    {renderNode('startingMaterials', 'Стартовая Материя', 'Запас материалов для строительства на старте', <Box />, 1, 1, 'text-purple-400', 10, 0.2)}
-                    {renderNode('maxMaterials', 'Хранилище Материи', 'Максимальная вместимость грузового отсека для ресурсов', <Box />, 1, 1, 'text-pink-400', 20, 0.25)}
-                    {renderNode('startingGold', 'Стартовое Золото', 'Базовый капитал для торговли и экстренных покупок', <Coins />, 5, 1, 'text-amber-400', 10, 0.3)}
-                    {renderNode('inventorySlots', 'Слоты Инвентаря', 'Количество ячеек для хранения находимых артефактов', <Box />, 1, 3, 'text-indigo-400', 5, 0.35)}
+                <div className="p-4 md:p-6 lg:p-8 overflow-y-auto no-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 relative z-10 flex-1 content-start">
+                    {renderNode('startingEnergy', 'Энергия', 'Базовый запас энергии на старте', <BatteryCharging />, 1, 1, 'text-cyan-400', 10, 0.05)}
+                    {renderNode('startingMoves', 'Ходы', 'Свободные очки перемещения', <TrendingUp />, 1, 1, 'text-emerald-400', 5, 0.08)}
+                    {renderNode('startingMaterials', 'Материя', 'Запас материалов на старте', <Layers />, 1, 1, 'text-purple-400', 10, 0.11)}
+                    {renderNode('maxMaterials', 'Склад', 'Вместимость грузового отсека', <Box />, 1, 1, 'text-pink-400', 20, 0.14)}
+                    {renderNode('startingGold', 'Золото', 'Капитал для торговли', <Coins />, 5, 1, 'text-amber-400', 10, 0.17)}
+                    {renderNode('inventorySlots', 'Рюкзак', 'Ячейки для артефактов', <Gem />, 1, 3, 'text-indigo-400', 5, 0.2)}
+                    {renderNode('fuelEfficiency', 'Топливо', 'Снижение стоимости хода', <Gauge />, 1, 2, 'text-orange-400', 2, 0.23)}
+                    {renderNode('scanRadius', 'Радар', 'Дистанция обзора (Fog of War)', <Radar />, 1, 2, 'text-teal-400', 2, 0.26)}
+                    {renderNode('fatigueResistance', 'Стойкость', 'Защита от штрафов усталости', <Shield />, 1, 2, 'text-red-400', 2, 0.29)}
+                    {renderNode('growthAccelerator', 'Синтез', 'Скорость стройки объектов', <Clock />, 1, 3, 'text-blue-400', 2, 0.32)}
+                    {renderNode('foundationStrength', 'Основа', 'Прочность L1 гексов (Durability)', <Layers />, 2, 1, 'text-stone-400', 2, 0.35)}
+                    {renderNode('economicMultiplier', 'Налоги', 'Пассивный доход золота (%)', <TrendingUp />, 10, 1, 'text-yellow-400', 5, 0.38)}
+                    {renderNode('diggerLuck', 'Удача', 'Шанс редкого лута при копке', <Star />, 1, 3, 'text-fuchsia-400', 2, 0.41)}
+                    {renderNode('doubleDigChance', 'Экстрактор', 'Шанс 2x материи при копке (%)', <Copy />, 10, 2, 'text-violet-400', 3, 0.44)}
+                    {renderNode('reserveCapacitor', 'Заряд', 'Заряды восстановления L4+', <Battery />, 1, 2, 'text-sky-400', 2, 0.47)}
+                    {renderNode('turboRecharge', 'Турбо', 'Кулдаун энергетики L4+', <Zap />, 5, 3, 'text-lime-400', 1, 0.5)}
+                    {renderNode('entropyResistance', 'Стабильность', 'Снижение роста энтропии (%)', <Infinity />, 10, 2, 'text-rose-400', 3, 0.53)}
+                    {renderNode('restorationMaster', 'Ремонт', 'Шанс восстановления Бездны (%)', <Wrench />, 10, 2, 'text-amber-500', 3, 0.56)}
                 </div>
             </motion.div>
         </motion.div>

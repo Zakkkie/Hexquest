@@ -299,7 +299,7 @@ export class MovementSystem implements System {
 
     // D. STANDARD FOG OF WAR (If no monument event overrides)
     // Dynamic Fog Radius based on active statuses
-    const { fogRadius } = getStatusModifiers(entity);
+    const { fogRadius } = getStatusModifiers(entity, state);
     const revealRadius = fogRadius;
     const generateRadius = Math.max(revealRadius, 3);
 
@@ -376,7 +376,8 @@ export class MovementSystem implements System {
                         
                         // Correct durability based on the new relative level
                         if (newLevel === 1) {
-                            newHex.durability = GAME_CONFIG.L1_HEX_MAX_DURABILITY;
+                            const { foundationStrength } = getStatusModifiers(entity, state);
+                            newHex.durability = GAME_CONFIG.L1_HEX_MAX_DURABILITY + (foundationStrength * 2);
                         } else {
                             newHex.durability = undefined;
                         }

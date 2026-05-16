@@ -1,7 +1,6 @@
 
 import { Hex, Entity, HexCoord } from '../types';
 import { getHexKey, getStatusModifiers } from '../services/hexUtils';
-import { GAME_CONFIG } from './config';
 
 export interface MovementCostResult {
     totalPoints: number; // Total "Move Points" required by terrain
@@ -25,12 +24,13 @@ export interface MovementCostResult {
 export const calculateMovementCost = (
     entity: Entity, 
     path: HexCoord[],
-    grid: Record<string, Hex>
+    grid: Record<string, Hex>,
+    session?: any
 ): MovementCostResult => {
     let totalPoints = 0;
 
     // Apply Status Effects via centralized helper (Handles FATIGUE multiplier)
-    const { moveCostMultiplier } = getStatusModifiers(entity);
+    const { moveCostMultiplier, exchangeRate } = getStatusModifiers(entity, session);
 
     // Track position to validate step-by-step physics
     let currentQ = entity.q;
@@ -100,8 +100,8 @@ export const calculateMovementCost = (
         return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "Calculation Error" };
     }
 
-    // Exchange Rate: 5 coins per 1 move
-    const deductCoins = Math.ceil(movesDeficit * GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE);
+    // Exchange Rate
+    const deductCoins = Math.ceil(movesDeficit * exchangeRate);
 
     const canAfford = coinsAvailable >= deductCoins;
 
