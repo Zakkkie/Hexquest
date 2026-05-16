@@ -2203,9 +2203,15 @@ export const useGameStore = create<GameStore>()(
                             if (mode === 'STORY') {
                                 const idx = CAMPAIGN_LEVELS.findIndex(l => l.id === currentId);
                                 if (idx !== -1 && idx >= get().campaignProgress) {
+                                    // Award SP ONLY ON FIRST COMPLETION
                                     const nextP = Math.min(CAMPAIGN_LEVELS.length, idx + 1);
                                     if (nextP > get().campaignProgress) {
-                                        set({ campaignProgress: nextP });
+                                        set(state => ({ 
+                                            skillPoints: state.skillPoints + 1,
+                                            campaignProgress: nextP 
+                                        }));
+                                    } else {
+                                        set(state => ({ skillPoints: state.skillPoints + 1 }));
                                     }
                                 }
                             } else {
@@ -2213,9 +2219,15 @@ export const useGameStore = create<GameStore>()(
                                 const missionLevels = CAMPAIGN_LEVELS.filter(l => !l.isCityLevel);
                                 const idx = missionLevels.findIndex(l => l.id === currentId);
                                 if (idx !== -1 && idx >= get().levelsModeProgress) {
+                                    // Award SP ONLY ON FIRST COMPLETION
                                     const nextP = Math.min(missionLevels.length, idx + 1);
                                     if (nextP > get().levelsModeProgress) {
-                                        set({ levelsModeProgress: nextP });
+                                        set(state => ({ 
+                                            skillPoints: state.skillPoints + 1,
+                                            levelsModeProgress: nextP 
+                                        }));
+                                    } else {
+                                        set(state => ({ skillPoints: state.skillPoints + 1 }));
                                     }
                                 }
                             }

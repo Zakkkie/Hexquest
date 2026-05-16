@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
@@ -68,18 +68,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const resetProgress = useGameStore(state => state.resetProgress);
     const initOverworld = useGameStore(state => state.initOverworld);
-    const setSkillPoints = useGameStore(state => state.setSkillPoints);
-    const currentSkillPoints = useGameStore(state => state.skillPoints);
 
     const [selectedRewardItem, setSelectedRewardItem] = useState<import('../../types.ts').Item | null>(null);
-    const [rewardInitialized, setRewardInitialized] = useState(false);
-
-    useEffect(() => {
-        if (gameStatus === 'VICTORY' && !rewardInitialized) {
-            setRewardInitialized(true);
-            setSkillPoints(currentSkillPoints + 1); // grant a skill point on victory
-        }
-    }, [gameStatus, rewardInitialized, setSkillPoints, currentSkillPoints]);
 
     // --- LOGIC ---
 
