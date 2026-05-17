@@ -85,6 +85,10 @@ export class ActionProcessor {
               return { ok: false, reason: 'Unknown Action' };
       }
 
+      if (result.ok && actorId === state.player.id && action.type !== 'WAIT') {
+          actor.actionsTaken = (actor.actionsTaken || 0) + 1;
+      }
+
       return result;
   }
 

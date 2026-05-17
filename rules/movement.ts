@@ -14,7 +14,7 @@ export interface MovementCostResult {
  * Centralized logic for calculating movement costs AND validating physics.
  * Rules:
  * 1. Base cost per hex is 1.
- * 2. If hex.maxLevel > 1 (High Ground), cost equals maxLevel.
+ * 2. If hex.currentLevel > 1 (High Ground), cost equals currentLevel.
  * 3. If hex.maxLevel < 0 (Pits), cost remains 1.
  * 4. STRICT: Cannot move if height difference > 1 (Staircase Rule).
  * 5. STRICT: Cannot move into Void.

@@ -136,7 +136,11 @@ self.onmessage = (e) => {
 
                 const rawX = HEX_SIZE * (SQRT3 * hq + SQRT3_2 * hr);
                 const rawY = HEX_SIZE * (ONE_POINT_FIVE * hr);
-                const depth = (rawX * sin + rawY * cos) * 0.8;
+                
+                // Deterministic distance from camera, including height for subtle sorting stability
+                // Using 0.8 vertical squash factor to match pixel-space depth
+                const baseDepth = (rawX * sin + rawY * cos) * 0.8;
+                const depth = baseDepth + (hex.currentLevel || 0) * 0.01;
 
                 const hexId = hex.id;
                 const isVoid = hex.structureType === 'VOID';
@@ -241,8 +245,8 @@ self.onmessage = (e) => {
         });
     }
 
-    // 4. Sort by depth
-    items.sort((a, b) => a.depth - b.depth);
+    // 4. Sort by depth with ID tie-breaker for perfect stability
+    items.sort((a, b) => (a.depth - b.depth) || (a.id.localeCompare(b.id)));
 
     // 5. Check if sorted order or lighting-relevant state changed
     const playerPosKey = `${cachedPlayer.q},${cachedPlayer.r}`;

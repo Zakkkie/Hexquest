@@ -56,6 +56,7 @@ interface GameStore extends GameState {
   setDeviceType: (type: DeviceType) => void;
   setLanguage: (lang: 'EN' | 'RU') => void;
   setCampaignMode: (mode: 'STORY' | 'LEVELS') => void;
+  addMinedHexes: (hexes: Record<number, number>) => void;
   setSkillPoints: (points: number) => void;
   updateCampaignUpgrades: (upgrades: Partial<import('./types.ts').CampaignUpgrades>) => void;
   toggleMusic: () => void;
@@ -87,6 +88,11 @@ interface GameStore extends GameState {
   cancelPendingAction: () => void;
   destroyItem: (itemId: string) => void;
   
+  // Story Mode Actions
+  addCollectedHexes: (hexes: Record<number, number>) => void;
+  placeStoryHex: (q: number, r: number, level: number) => void;
+  setStoryMilestone: (milestone: number) => void;
+
   // Interactions
   openVoidDialog: (q: number, r: number) => void;
   closeVoidDialog: () => void;
@@ -157,6 +163,13 @@ export const useGameStore = create<GameStore>()(
       campaignProgress: 0, 
       levelsModeProgress: 0,
       skillPoints: 0,
+      
+      collectedHexes: {},
+      minedInSessionHexes: {},
+      totalMinedMaterial: 0,
+      storyMap: {},
+      storyMilestone: 0,
+
       campaignUpgrades: {
           inventorySlots: 3,
           startingEnergy: 0,
@@ -217,6 +230,43 @@ export const useGameStore = create<GameStore>()(
       setCampaignMode: (mode) => set({ campaignMode: mode }),
       setSkillPoints: (points) => set({ skillPoints: points }),
       updateCampaignUpgrades: (partial) => set(state => ({ campaignUpgrades: { ...state.campaignUpgrades, ...partial }})),
+      
+      // --- STORY MODE SETTERS ---
+      addCollectedHexes: (hexes) => set(state => {
+        const newCollected = { ...state.collectedHexes };
+        for (const [level, count] of Object.entries(hexes)) {
+            const lvl = Number(level);
+            newCollected[lvl] = (newCollected[lvl] || 0) + count;
+        }
+        return { collectedHexes: newCollected };
+      }),
+      addMinedHexes: (hexes) => set(state => {
+        const newMined = { ...state.minedInSessionHexes };
+        for (const [level, count] of Object.entries(hexes)) {
+            const lvl = Number(level);
+            newMined[lvl] = (newMined[lvl] || 0) + count;
+        }
+        return { minedInSessionHexes: newMined };
+      }),
+      placeStoryHex: (q: number, r: number, level: number) => set(state => {
+          const key = getHexKey(q, r);
+          // Deduct from inventory
+          const currentCount = state.collectedHexes[level] || 0;
+          if (currentCount <= 0 && level !== -999) return state; // ignore if empty (unless debugging)
+          
+          let newCollected = { ...state.collectedHexes };
+          if (level !== -999) { // Using -999 as a potential debug bypass if needed
+            newCollected[level] = currentCount - 1;
+            if (newCollected[level] <= 0) delete newCollected[level];
+          }
+
+          const newMap = { ...state.storyMap };
+          newMap[key] = level;
+          
+          return { storyMap: newMap, collectedHexes: newCollected };
+      }),
+      setStoryMilestone: (storyMilestone) => set({ storyMilestone }),
+
       setUIState: (uiState) => {
         set({ uiState });
       },
@@ -2166,6 +2216,8 @@ export const useGameStore = create<GameStore>()(
               const result = await engine.processTick();
               if (!result || !result.state) return;
 
+              set({ session: result.state, totalMinedMaterial: result.state.totalMinedMaterial });
+
               tickCount++;
               const now = Date.now();
 
@@ -2210,8 +2262,6 @@ export const useGameStore = create<GameStore>()(
                                             skillPoints: state.skillPoints + 1,
                                             campaignProgress: nextP 
                                         }));
-                                    } else {
-                                        set(state => ({ skillPoints: state.skillPoints + 1 }));
                                     }
                                 }
                             } else {
@@ -2226,8 +2276,6 @@ export const useGameStore = create<GameStore>()(
                                             skillPoints: state.skillPoints + 1,
                                             levelsModeProgress: nextP 
                                         }));
-                                    } else {
-                                        set(state => ({ skillPoints: state.skillPoints + 1 }));
                                     }
                                 }
                             }
@@ -2244,15 +2292,33 @@ export const useGameStore = create<GameStore>()(
                             entry.bodyIndex = user.bodyIndex;
                         }
                         const currentLB = [...get().leaderboard];
-                        const existingIdx = currentLB.findIndex(e => e.nickname === entry.nickname && e.difficulty === entry.difficulty);
+                        const existingIdx = currentLB.findIndex(e => e.nickname === entry.nickname);
+                        
+                        const levelId = entry.levelId || 'unknown';
+                        
                         if (existingIdx !== -1) {
-                            if (entry.maxLevel > currentLB[existingIdx].maxLevel || (entry.maxLevel === currentLB[existingIdx].maxLevel && entry.maxCoins > currentLB[existingIdx].maxCoins)) {
-                                currentLB[existingIdx] = entry;
+                            const existing = currentLB[existingIdx];
+                            existing.scoresByLevel = existing.scoresByLevel || {};
+                            
+                            // Only update if it's a new level or a better score
+                            if (!existing.scoresByLevel[levelId] || entry.score > existing.scoresByLevel[levelId]) {
+                                existing.scoresByLevel[levelId] = entry.score;
                             }
+                            
+                            // Re-sum the total score
+                            existing.score = Object.values(existing.scoresByLevel).reduce((sum, val) => sum + val, 0);
+                            
+                            if (entry.maxLevel > existing.maxLevel) existing.maxLevel = entry.maxLevel;
+                            if (entry.maxCoins > existing.maxCoins) existing.maxCoins = entry.maxCoins;
+                            existing.timestamp = entry.timestamp;
                         } else {
+                            // First time entry for this player
+                            entry.scoresByLevel = { [levelId]: entry.score };
                             currentLB.push(entry);
                         }
-                        currentLB.sort((a, b) => b.maxLevel !== a.maxLevel ? b.maxLevel - a.maxLevel : b.maxCoins - a.maxCoins);
+                        
+                        // Sort by accumulated score
+                        currentLB.sort((a, b) => b.score - a.score);
                         const sliced = currentLB.slice(0, 100);
                         set({ leaderboard: sliced });
                     }
@@ -2378,6 +2444,9 @@ export const useGameStore = create<GameStore>()(
           campaignProgress: state.campaignProgress,
           levelsModeProgress: state.levelsModeProgress,
           campaignMode: state.campaignMode,
+          collectedHexes: state.collectedHexes,
+          storyMap: state.storyMap,
+          storyMilestone: state.storyMilestone,
           isMusicMuted: state.isMusicMuted,
           isSfxMuted: state.isSfxMuted,
           language: state.language,

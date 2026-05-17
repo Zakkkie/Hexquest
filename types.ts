@@ -175,6 +175,7 @@ export interface Entity {
   playerLevel: number; 
   coins: number;
   totalCoinsEarned: number;
+  actionsTaken?: number;
   moves: number;
   recentUpgrades: string[]; 
   
@@ -374,7 +375,7 @@ export interface OverworldState {
   } | null;
 }
 
-export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'OVERWORLD' | 'INTRO' | 'CAMPAIGN_LOADING' | 'INTERIOR';
+export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'OVERWORLD' | 'INTRO' | 'CAMPAIGN_LOADING' | 'INTERIOR' | 'STORY_BUILDER';
 export type DeviceType = 'MOBILE' | 'TABLET' | 'DESKTOP';
 
 export interface UserProfile {
@@ -420,8 +421,11 @@ export interface LeaderboardEntry {
   avatarIcon?: string;
   maxCoins: number;
   maxLevel: number;
+  score: number;
   timestamp: number;
   difficulty: Difficulty;
+  levelId?: string;
+  scoresByLevel?: Record<string, number>;
 }
 
 export interface FloatingText {
@@ -555,6 +559,7 @@ export interface SessionState {
   monumentAlternatives?: string[];          // baseIds for ONE_OF slot (level 2.5)
   monumentRevealedSlots?: boolean[];        // which monument slots have been revealed by visiting obelisks
   activeLootPings?: Record<string, number>; // Для Мини-монументов
+  minedHexes?: Record<number, number>;
 
   difficulty: Difficulty;
   grid: Record<string, Hex>; 
@@ -572,6 +577,8 @@ export interface SessionState {
   effects: FloatingText[]; 
   language: Language; 
   
+  totalMinedMaterial?: number;
+
   entropy: EntropyState;
   activePoi: string | null;
   outgoingEvents: GameEvent[];
@@ -592,6 +599,13 @@ export interface GameState {
   skillPoints: number;
   campaignUpgrades: CampaignUpgrades;
   campaignMode: 'STORY' | 'LEVELS';
+  
+  collectedHexes: Record<number, number>;
+  minedInSessionHexes: Record<number, number>;
+  totalMinedMaterial?: number;
+  storyMap: Record<string, number>;
+  storyMilestone: number;
+
   hasActiveSession: boolean;
   isMusicMuted: boolean;
   isSfxMuted: boolean;

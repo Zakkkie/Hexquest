@@ -157,7 +157,7 @@ export const series1Levels: LevelConfig[] = [
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
           { q: 2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: -2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
           { q: 0, r: 2, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
@@ -223,8 +223,8 @@ export const series1Levels: LevelConfig[] = [
     startState: { credits: 15, moves: 10, rank: 1, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: (state) => (state.player.storage ?? 0) >= 10,
-      checkLossCondition: (state) => isStranded(state) && (state.player.storage ?? 0) < 10
+      checkWinCondition: (state) => (state.totalMinedMaterial ?? 0) >= 10,
+      checkLossCondition: (state) => isStranded(state) && (state.totalMinedMaterial ?? 0) < 10
     }
   }
 ];

@@ -106,7 +106,7 @@ describe('checkGrowthCondition', () => {
     it('can upgrade L1 → L2 with 2 neighbors at maxLevel 1', () => {
       // hex at (0,0) currently L1, maxLevel=1; upgrading to L2
       const hex = makeHex(0, 0, 1, 1);
-      const entity = makeEntity({ storage: 2 });
+      const entity = makeEntity({ storage: 2, playerLevel: 1 });
 
       // Two neighbors at maxLevel == hex.maxLevel (1)
       const n1 = makeHex(1, 0, 1, 1);
@@ -120,7 +120,7 @@ describe('checkGrowthCondition', () => {
 
     it('cannot upgrade L1 → L2 with only 1 neighbor at maxLevel 1', () => {
       const hex = makeHex(0, 0, 1, 1);
-      const entity = makeEntity({ storage: 2 });
+      const entity = makeEntity({ storage: 2, playerLevel: 1 });
 
       const n1 = makeHex(1, 0, 1, 1); // one matching neighbor
       const n2 = makeHex(-1, 0, 0, 0); // wrong level
@@ -134,7 +134,7 @@ describe('checkGrowthCondition', () => {
 
     it('cannot upgrade L1 → L2 with zero matching neighbors', () => {
       const hex = makeHex(0, 0, 1, 1);
-      const entity = makeEntity({ storage: 2 });
+      const entity = makeEntity({ storage: 2, playerLevel: 1 });
       // Neighbors at different levels
       const n1 = makeHex(1, 0, 0, 0);
       const n2 = makeHex(-1, 0, 3, 3);
@@ -147,7 +147,7 @@ describe('checkGrowthCondition', () => {
 
     it('valley exception: 5+ high-level neighbors bypass support check', () => {
       const hex = makeHex(0, 0, 1, 1);
-      const entity = makeEntity({ storage: 2 });
+      const entity = makeEntity({ storage: 2, playerLevel: 1 });
 
       // 5 neighbors all at maxLevel > hex.maxLevel (they are L2 to hex's L1)
       const neighbors = [
@@ -175,7 +175,7 @@ describe('checkGrowthCondition', () => {
 
     it('valley exception: exactly 5 matching neighbors → canGrow: true (>= 5 threshold)', () => {
       const hex = makeHex(0, 0, 1, 1);
-      const entity = makeEntity({ storage: 2 });
+      const entity = makeEntity({ storage: 2, playerLevel: 1 });
 
       // 5 high-level neighbors + 1 same-level neighbor (not high level)
       const neighbors = [
@@ -201,13 +201,13 @@ describe('checkGrowthCondition', () => {
       expect(result.canGrow).toBe(true);
     });
 
-    it('valley exception: exactly 4 matching neighbors → canGrow: false (below >= 5 threshold)', () => {
+    it('4 high-level neighbors + 0 same-level neighbors → canGrow: true (passes support check via high-level neighbors)', () => {
       const hex = makeHex(0, 0, 1, 1);
-      const entity = makeEntity({ storage: 2 });
+      const entity = makeEntity({ storage: 2, playerLevel: 1 });
 
-      // 4 high-level neighbors + 1 same-level neighbor + 1 lower-level neighbor
-      // Valley bypass requires >= 5 high-level neighbors → fails with only 4.
-      // Support check requires 2 neighbors at maxLevel == hex.maxLevel (1) → only 1 exists → fails.
+      // Support check requires 2 neighbors at maxLevel >= hex.maxLevel (1).
+      // Here we have 4 high-level neighbors, so this resolves to true immediately.
+      // (The valley bypass is actually redundant unless the rules change to ==!).
       const neighbors = [
         { q: 1, r: 0 },
         { q: -1, r: 0 },
@@ -218,25 +218,23 @@ describe('checkGrowthCondition', () => {
       ];
       const grid = buildGrid([
         hex,
-        makeHex(1, 0, 2, 2),   // high-level
-        makeHex(-1, 0, 2, 2),  // high-level
-        makeHex(0, 1, 2, 2),   // high-level
-        makeHex(0, -1, 2, 2),  // high-level
-        makeHex(1, -1, 1, 1),  // same level — counts as support
-        makeHex(-1, 1, 0, 0),  // lower level — not a support
+        makeHex(1, 0, 2, 2),   // high-level (support)
+        makeHex(-1, 0, 2, 2),  // high-level (support)
+        makeHex(0, 1, 2, 2),   // high-level (support)
+        makeHex(0, -1, 2, 2),  // high-level (support)
+        makeHex(1, -1, 0, 0),  // lower level
+        makeHex(-1, 1, 0, 0),  // lower level
       ]);
 
       const result = checkGrowthCondition(hex, entity, neighbors, grid);
-      // 4 high-level neighbors → valley bypass fails (need >= 5).
-      // Only 1 same-level support → support check fails (need >= 2).
-      expect(result.canGrow).toBe(false);
+      expect(result.canGrow).toBe(true);
     });
   });
 
   describe('VOID hex cannot be upgraded', () => {
     it('VOID neighbor is excluded from support count', () => {
       const hex = makeHex(0, 0, 1, 1);
-      const entity = makeEntity({ storage: 2 });
+      const entity = makeEntity({ storage: 2, playerLevel: 1 });
       // Only "valid" neighbor is at correct level, but VOID neighbors don't count
       const n1 = makeHex(1, 0, 1, 1, { structureType: 'VOID' });
       const n2 = makeHex(-1, 0, 1, 1, { structureType: 'VOID' });

@@ -146,16 +146,30 @@ export class VictorySystem implements System {
   }
 
   private generateLeaderboardEvent(state: SessionState, events: GameEvent[]): void {
+    const baseScore = 15000;
+    const timePenalty = state.currentTurn * 10;
+    const actionsPenalty = (state.player.actionsTaken || 0) * 50;
+    const resourcesBonus = state.player.playerLevel * 500 + state.player.totalCoinsEarned * 2;
+    
+    let finalScore = Math.max(0, baseScore - timePenalty - actionsPenalty + resourcesBonus);
+    if (state.gameStatus !== 'VICTORY') {
+      finalScore = Math.floor(finalScore * 0.1); // Partial score for defeat
+    } else {
+      finalScore = Math.floor(finalScore);
+    }
+
     const statsEntry: LeaderboardEntry = {
         nickname: 'Player', 
         avatarColor: state.player.avatarColor || '#000', 
         avatarIcon: 'user',
-        headIndex: state.player.headIndex,
-        bodyIndex: state.player.bodyIndex,
+        headIndex: state.player.headIndex || 0,
+        bodyIndex: state.player.bodyIndex || 0,
         maxCoins: state.player.coins, 
         maxLevel: state.player.playerLevel,
+        score: finalScore,
         difficulty: state.difficulty,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        levelId: state.activeLevelConfig?.id || 'skirmish'
     };
 
     events.push(GameEventFactory.create(

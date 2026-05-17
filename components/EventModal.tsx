@@ -160,7 +160,7 @@ const EventModal: React.FC = () => {
           )}
 
           {/* Narrative Block */}
-          <div className="p-6 md:p-10 flex flex-col gap-8 shrink-0">
+          <div className="p-6 md:p-10 flex flex-col flex-1 gap-8 overflow-y-auto no-scrollbar min-h-[150px]">
             <div className="relative">
               <div className="absolute -left-6 top-0 w-1 h-full bg-indigo-500/20" />
               <p className="text-sm md:text-lg text-slate-300 leading-relaxed font-medium tracking-tight break-words whitespace-pre-wrap selection:bg-indigo-500/30">

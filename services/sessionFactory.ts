@@ -166,8 +166,14 @@ export const createInitialSessionDataAsync = async (
   // Player Position
   let startQ = 0, startR = 0;
   // Pick the highest level hex owned by the player
-  const ownedHexes = Object.values(initialGrid).filter(h => h.ownerId === 'player-1');
-  const playerStartHex = ownedHexes.sort((a, b) => (b.currentLevel || 0) - (a.currentLevel || 0))[0];
+  let candidateHexes = Object.values(initialGrid).filter(h => h.ownerId === 'player-1' && h.structureType !== 'VOID');
+  
+  // FALLBACK: If no owned hex, pick ANY highest level reachable hex in the grid
+  if (candidateHexes.length === 0) {
+      candidateHexes = Object.values(initialGrid).filter(h => h.structureType !== 'VOID' && h.isPassable !== false);
+  }
+
+  const playerStartHex = candidateHexes.sort((a, b) => (b.currentLevel || 0) - (a.currentLevel || 0))[0];
   
   if (playerStartHex) {
       startQ = playerStartHex.q;
@@ -260,7 +266,7 @@ export const createInitialSessionDataAsync = async (
       playerLevel: startRank, 
       coins: startCredits,
       moves: botStartMoves,
-      totalCoinsEarned: 0, movementQueue: [],
+      totalCoinsEarned: 0, actionsTaken: 0, movementQueue: [],
       storage: botStartStorage, maxStorage: maxStorage,
       inventory: [],
       maxInventorySize: GAME_CONFIG.MAX_INVENTORY_SIZE,
@@ -331,7 +337,7 @@ export const createInitialSessionDataAsync = async (
       playerLevel: startRank, 
       coins: startCredits, 
       moves: startMoves,
-      totalCoinsEarned: 0, movementQueue: [],
+      totalCoinsEarned: 0, actionsTaken: 0, movementQueue: [],
       storage: startStorage, 
       maxStorage: maxStorage,
       inventory: initialInventory, 
@@ -361,6 +367,8 @@ export const createInitialSessionDataAsync = async (
         threshold: ENTROPY_CONFIG.THRESHOLD
     },
     campaignUpgrades,
+    totalMinedMaterial: 0,
+    minedHexes: {},
     outgoingEvents: []
   };
 

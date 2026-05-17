@@ -252,6 +252,12 @@ export class GrowthSystem implements System {
                  actualMatGain = Math.min(space, matGain);
                  entity.storage += actualMatGain;
              }
+             state.totalMinedMaterial = (state.totalMinedMaterial || 0) + actualMatGain;
+
+             if (entity.type === 'PLAYER') {
+                 if (!state.minedHexes) state.minedHexes = {};
+                 state.minedHexes[hex.currentLevel] = (state.minedHexes[hex.currentLevel] || 0) + 1;
+             }
              
              const depthReward = Math.max(1, Math.abs(newLevel));
              entity.moves += depthReward;

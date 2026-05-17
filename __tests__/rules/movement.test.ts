@@ -296,17 +296,17 @@ describe('calculateMovementCost', () => {
     });
   });
 
-  describe('maxLevel governs cost, not currentLevel', () => {
-    it('hex with maxLevel=3 but currentLevel=1 costs 3 move points (governed by maxLevel)', () => {
+  describe('currentLevel governs cost, not maxLevel', () => {
+    it('hex with maxLevel=3 but currentLevel=1 costs 1 move point (governed by currentLevel)', () => {
       // A hex that was previously built to L3 then dug down to L1.
-      // Movement cost uses maxLevel (3), not currentLevel (1).
+      // Movement cost uses currentLevel (1), not maxLevel (3).
       const entity = makeEntity({ q: 0, r: 0, moves: 10 });
       const grid = buildGrid([
         makeHex(0, 0, 2, { maxLevel: 2 }), // origin at maxLevel 2 so staircase allows step to maxLevel 3
         makeHex(1, 0, 1, { maxLevel: 3 }),  // target: currentLevel=1, maxLevel=3
       ]);
       const result = calculateMovementCost(entity, [{ q: 1, r: 0 }], grid);
-      expect(result.totalPoints).toBe(3);
+      expect(result.totalPoints).toBe(1);
     });
   });
 });

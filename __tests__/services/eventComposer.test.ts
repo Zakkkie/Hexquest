@@ -187,8 +187,8 @@ describe('composeEvent', () => {
     const event = composeEvent(tpl, makeCtx({ terrain: 'PLAINS' as TerrainType }));
     const text = event.nodes['start'].text;
     expect(text).not.toContain('{actor}');
-    // actorType is BANDIT → 'разбойник'
-    expect(text).toContain('разбойник');
+    // actorType is BANDIT
+    expect(text).toContain('Разбойник');
   });
 
   it('text substitution replaces {terrain} placeholder', () => {
@@ -196,8 +196,8 @@ describe('composeEvent', () => {
     const event = composeEvent(tpl, makeCtx({ terrain: 'PLAINS' as TerrainType }));
     const text = event.nodes['start'].text;
     expect(text).not.toContain('{terrain}');
-    // PLAINS → 'равнины'
-    expect(text).toContain('равнины');
+    // PLAINS
+    expect(text).toContain('Равнины');
   });
 
   it('text substitution with no placeholders leaves text unchanged', () => {

@@ -39,10 +39,10 @@ export function checkDigCondition(
       if (neighborHexes.length > 0) {
           const minNeighborLevel = Math.min(...neighborHexes.map(h => h.currentLevel));
 
-          if (targetLevel < minNeighborLevel) {
+          if (targetLevel <= minNeighborLevel) {
               return {
                   canGrow: false,
-                  reason: `Steep Drop! Stay within 1 level of L${minNeighborLevel}.`,
+                  reason: `Gradient Lock! Stay 1 level above L${minNeighborLevel}.`,
                   missingSupports: neighborHexes.filter(h => h.currentLevel > targetLevel + 1).map(h => ({q: h.q, r: h.r}))
               };
           }
@@ -124,9 +124,9 @@ export function checkGrowthCondition(
 
   // 4. STABILITY CHECK (for L2+)
   if (targetLevel > 1) {
-    const sameLevelNeighbors = neighbors.filter(n => {
+    const supportNeighbors = neighbors.filter(n => {
        const h = grid[getHexKey(n.q, n.r)];
-       return h && h.structureType !== 'VOID' && h.maxLevel === hex.maxLevel;
+       return h && h.structureType !== 'VOID' && h.maxLevel >= hex.maxLevel;
     });
 
     const higherLevelNeighbors = neighbors.filter(n => {
@@ -136,7 +136,7 @@ export function checkGrowthCondition(
 
     const isValley = higherLevelNeighbors.length >= 5;
 
-    if (sameLevelNeighbors.length < 2 && !isValley) {
+    if (supportNeighbors.length < 2 && !isValley) {
       const potentialSupports = neighbors.filter(n => {
           const h = grid[getHexKey(n.q, n.r)];
           if (!h || h.structureType === 'VOID') return false;
@@ -145,7 +145,7 @@ export function checkGrowthCondition(
 
       return {
         canGrow: false, 
-        reason: `UNSTABLE! Need 2 neighbors at Level ${hex.maxLevel} or 5 higher neighbors (Valley Rule).`,
+        reason: `UNSTABLE! Need 2 neighbors at Level ${hex.maxLevel}+ or 5 higher neighbors (Valley Rule).`,
         missingSupports: potentialSupports
       };
     }

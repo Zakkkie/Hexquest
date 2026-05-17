@@ -5,7 +5,7 @@ import GameView from './components/GameView.tsx';
 import MainMenu from './components/MainMenu.tsx';
 import Leaderboard from './components/Leaderboard.tsx';
 import CampaignMap from './components/CampaignMap.tsx';
-import OverworldView from './components/OverworldView.tsx';
+import StoryBuilderView from './components/StoryBuilderView.tsx';
 import IntroSequence from './components/IntroSequence.tsx';
 import CampaignLoading from './components/CampaignLoading.tsx';
 import Background from './components/Background.tsx';
@@ -86,7 +86,7 @@ const App: React.FC = () => {
         {uiState === 'GAME' && <GameView key={sessionId} />}
         {uiState === 'LEADERBOARD' && <Leaderboard />}
         {uiState === 'CAMPAIGN_MAP' && <CampaignMap />}
-        {uiState === 'OVERWORLD' && <OverworldView />}
+        {uiState === 'STORY_BUILDER' && <StoryBuilderView />}
         {uiState === 'INTRO' && <IntroSequence />}
         {uiState === 'CAMPAIGN_LOADING' && <CampaignLoading />}
         {uiState === 'INTERIOR' && <InteriorView />}

@@ -68,8 +68,22 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const resetProgress = useGameStore(state => state.resetProgress);
     const initOverworld = useGameStore(state => state.initOverworld);
+    const grid = useGameStore(state => state.session?.grid);
+    const addCollectedHexes = useGameStore(state => state.addCollectedHexes);
+    const addMinedHexes = useGameStore(state => state.addMinedHexes);
 
     const [selectedRewardItem, setSelectedRewardItem] = useState<import('../../types.ts').Item | null>(null);
+    const [selectedHexes, setSelectedHexes] = useState<Record<number, number>>({});
+
+    const minedHexes = useGameStore(state => state.session?.minedHexes);
+
+    const availableHexes = useMemo(() => {
+        if (!grid || !player || gameStatus !== 'VICTORY') return {};
+        // Use minedHexes from the session instead of scanning the grid.
+        return minedHexes || {};
+    }, [grid, player, gameStatus, minedHexes]);
+
+    const totalSelectedHexesCount = Object.values(selectedHexes).reduce((a,b) => a+b, 0);
 
     // --- LOGIC ---
 
@@ -87,8 +101,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             returnToOverworld('VICTORY', selectedRewardItem || undefined);
             return;
         }
-        if (campaignMode === 'LEVELS' && selectedRewardItem && gameStatus === 'VICTORY') {
-            addRewardItem(selectedRewardItem);
+        if (campaignMode === 'LEVELS' && gameStatus === 'VICTORY') {
+            if (selectedRewardItem) addRewardItem(selectedRewardItem);
+            addCollectedHexes(selectedHexes);
+            addMinedHexes(selectedHexes);
         }
         
         const levelsToUse = campaignMode === 'LEVELS' 
@@ -131,11 +147,15 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const handleMenu = () => {
         playUiSound('CLICK');
+        if (gameStatus === 'VICTORY') {
+            addMinedHexes(selectedHexes);
+        }
         if (campaignMode === 'STORY' && isOverworldGenerated && hasActiveSession && activeLevelConfig) {
             returnToOverworld(gameStatus === 'VICTORY' ? 'VICTORY' : 'DEFEAT', selectedRewardItem || undefined);
         } else {
-            if (campaignMode === 'LEVELS' && selectedRewardItem && gameStatus === 'VICTORY') {
-                addRewardItem(selectedRewardItem);
+            if (campaignMode === 'LEVELS' && gameStatus === 'VICTORY') {
+                if (selectedRewardItem) addRewardItem(selectedRewardItem);
+                addCollectedHexes(selectedHexes);
             }
             abandonSession();
             if (campaignMode === 'LEVELS' && activeLevelConfig) {
@@ -309,26 +329,19 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 </div>
                             </div>
                             
-                            <div className="relative bg-slate-900/80 border border-indigo-500/20 p-4 rounded-lg overflow-hidden group/text">
+                            <div className="relative bg-slate-900/80 border border-indigo-500/20 rounded-lg overflow-hidden flex flex-col flex-1 min-h-[100px]">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/40" />
                                 <div className="absolute top-0 right-0 p-1">
                                     <FileText className="w-3 h-3 text-indigo-500/30" />
                                 </div>
-                                <p className="text-xs md:text-sm text-indigo-100/90 leading-relaxed whitespace-pre-wrap font-mono break-words pl-4 -mt-2">
-                                    {briefingDesc}
-                                </p>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <div className="text-[10px] font-black text-indigo-500/60 uppercase tracking-[0.2em] mb-1">SECONDARY_OBJECTIVES</div>
-                                <div className="grid grid-cols-2 gap-3 text-[10px] font-bold font-mono text-slate-400">
-                                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-900/50 rounded border border-slate-800">
-                                        <Zap className="w-3 h-3 text-blue-400" /> ENERGY_OPTIMIZATION
-                                    </div>
-                                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-900/50 rounded border border-slate-800">
-                                        <Trophy className="w-3 h-3 text-amber-400" /> RANK_ASCENSION
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-5 bg-slate-950/40">
+                                    <div className="flex flex-col gap-3">
+                                        <p className="text-xs md:text-sm text-indigo-100/90 leading-relaxed whitespace-pre-wrap font-mono break-words pl-2 pb-6">
+                                            {briefingDesc}
+                                        </p>
                                     </div>
                                 </div>
+                                <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none opacity-60" />
                             </div>
                         </div>
 
@@ -596,19 +609,52 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         </div>
 
                         {/* Mission Summary Data */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 lg:gap-4 w-full mb-6">
-                            {[
-                                { label: 'STATUS', value: gameStatus === 'VICTORY' ? 'SUCCESS' : 'FAILED', color: gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-400' },
-                                { label: 'TURNS ELAPSED', value: currentTurn, color: 'text-slate-300' },
-                                { label: 'CREDITS EXTRACTED', value: player?.totalCoinsEarned || 0, color: 'text-amber-400' },
-                                { label: 'MATERIALS GATHERED', value: player?.storage || 0, color: 'text-purple-400' }
-                            ].map((stat, i) => (
-                                <div key={i} className="bg-slate-900/50 border border-white/10 p-2 lg:p-4 rounded-lg backdrop-blur-md flex flex-col items-center justify-center text-center">
-                                    <div className="text-[7px] md:text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-1 lg:mb-2">{stat.label}</div>
-                                    <div className={`text-base md:text-lg lg:text-xl font-black font-mono leading-none ${stat.color}`}>{stat.value}</div>
-                                </div>
-                            ))}
-                        </div>
+                        {(() => {
+                            const baseScore = 15000;
+                            const timePenalty = currentTurn * 10;
+                            const actionsPenalty = (player?.actionsTaken || 0) * 50;
+                            const resourcesBonus = (player?.playerLevel || 0) * 500 + (player?.totalCoinsEarned || 0) * 2;
+                            
+                            let finalScore = Math.max(0, baseScore - timePenalty - actionsPenalty + resourcesBonus);
+                            if (gameStatus !== 'VICTORY') {
+                              finalScore = Math.floor(finalScore * 0.1); 
+                            } else {
+                              finalScore = Math.floor(finalScore);
+                            }
+
+                            return (
+                                <>
+                                    {/* Final Score Banner */}
+                                    <div className="w-full bg-slate-900/40 border border-purple-500/30 rounded-xl p-4 md:p-6 mb-6 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.15)] backdrop-blur-md relative overflow-hidden">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                                        <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-purple-300 mb-1 z-10">RATING POINTS (SCORE)</div>
+                                        <div className="text-3xl md:text-5xl font-black font-mono tracking-tight text-white mb-2 z-10 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">
+                                            {finalScore.toLocaleString()}
+                                        </div>
+                                        <div className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400 flex items-center justify-center gap-4 flex-wrap text-center z-10">
+                                            <span>Base: 15,000</span>
+                                            <span className="text-red-400">Time: -{timePenalty}</span>
+                                            <span className="text-red-400">Actions: -{actionsPenalty} ({player?.actionsTaken || 0})</span>
+                                            <span className="text-emerald-400">Bonus: +{resourcesBonus}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 lg:gap-4 w-full mb-6">
+                                        {[
+                                            { label: 'STATUS', value: gameStatus === 'VICTORY' ? 'SUCCESS' : 'FAILED', color: gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-400' },
+                                            { label: 'TURNS ELAPSED', value: currentTurn, color: 'text-slate-300' },
+                                            { label: 'CREDITS EXTRACTED', value: player?.totalCoinsEarned || 0, color: 'text-amber-400' },
+                                            { label: 'ACTIONS TAKEN', value: player?.actionsTaken || 0, color: 'text-purple-400' }
+                                        ].map((stat, i) => (
+                                            <div key={i} className="bg-slate-900/50 border border-white/10 p-2 lg:p-4 rounded-lg backdrop-blur-md flex flex-col items-center justify-center text-center">
+                                                <div className="text-[7px] md:text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-1 lg:mb-2">{stat.label}</div>
+                                                <div className={`text-base md:text-lg lg:text-xl font-black font-mono leading-none ${stat.color}`}>{stat.value}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            );
+                        })()}
 
                         {gameStatus === 'VICTORY' && (
                             <div className="w-full mb-6 md:mb-8 flex flex-col shrink-0 min-h-0">
@@ -620,7 +666,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 {player?.inventory && player.inventory.length > 0 && (
                                     <>
                                         <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 md:mb-3 text-center shrink-0">Select ONE item to extract</div>
-                                        <div className="flex flex-wrap justify-center gap-2 md:gap-3 overflow-y-auto no-scrollbar pb-2">
+                                        <div className="flex flex-wrap justify-center gap-2 md:gap-3 overflow-y-auto no-scrollbar pb-2 mb-4 mt-2">
                                             {player.inventory.map(item => (
                                                 <button 
                                                     key={item.id}
@@ -635,6 +681,69 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                             ))}
                                         </div>
                                     </>
+                                )}
+
+                                {campaignMode === 'LEVELS' && Object.keys(availableHexes).length > 0 && (
+                                    <div className="bg-slate-900/40 border border-slate-700 p-3 rounded-xl mb-4 shrink-0 mt-4">
+                                        <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+                                            <h3 className="text-emerald-400 font-bold uppercase tracking-wider text-xs md:text-sm">
+                                                {language === 'RU' ? 'Протокол Извлечения Гексов' : 'Hex Extraction Protocol'}
+                                            </h3>
+                                            <div className="text-[10px] font-mono tracking-widest px-2 py-1 bg-slate-950 rounded text-amber-500">
+                                                {language === 'RU' ? 'ВМЕСТИМОСТЬ' : 'CAPACITY'}: {totalSelectedHexesCount} / {Math.max(5, player?.maxInventorySize || 5)} 
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-2 max-h-40 overflow-y-auto no-scrollbar">
+                                            {Object.entries(availableHexes).map(([level, count]) => {
+                                                const lvl = Number(level);
+                                                const selected = selectedHexes[lvl] || 0;
+                                                const capacityFull = totalSelectedHexesCount >= Math.max(5, player?.maxInventorySize || 5);
+                                                
+                                                return (
+                                                    <div key={lvl} className="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold ${
+                                                                lvl < 0 ? 'bg-indigo-900/50 text-indigo-400' :
+                                                                lvl === 0 ? 'bg-slate-800 text-slate-400' :
+                                                                'bg-emerald-900/50 text-emerald-400'
+                                                            }`}>
+                                                                L{lvl}
+                                                            </div>
+                                                            <div className="text-xs font-bold text-slate-300">
+                                                                {language === 'RU' ? 'Доступно:' : 'Available:'} {count}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="flex bg-slate-800 rounded overflow-hidden shadow-inner">
+                                                            <button 
+                                                                onClick={() => {
+                                                                    if (selected > 0) {
+                                                                        playUiSound('CLICK');
+                                                                        setSelectedHexes(prev => ({...prev, [lvl]: prev[lvl] - 1}));
+                                                                    }
+                                                                }}
+                                                                disabled={selected <= 0}
+                                                                className="w-8 h-8 flex items-center justify-center bg-slate-700/50 hover:bg-slate-600 active:bg-slate-500 disabled:opacity-30 transition-colors text-white font-bold"
+                                                            >-</button>
+                                                            <div className="w-8 h-8 flex items-center justify-center font-mono text-emerald-400">
+                                                                {selected}
+                                                            </div>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    if (selected < count && !capacityFull) {
+                                                                        playUiSound('CLICK');
+                                                                        setSelectedHexes(prev => ({...prev, [lvl]: (prev[lvl] || 0) + 1}));
+                                                                    }
+                                                                }}
+                                                                disabled={selected >= count || capacityFull}
+                                                                className="w-8 h-8 flex items-center justify-center bg-slate-700/50 hover:bg-slate-600 active:bg-slate-500 disabled:opacity-30 transition-colors text-white font-bold"
+                                                            >+</button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         )}

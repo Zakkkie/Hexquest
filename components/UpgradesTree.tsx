@@ -19,6 +19,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
     const updateUpgrades = useGameStore(state => state.updateCampaignUpgrades);
     const setSkillPoints = useGameStore(state => state.setSkillPoints);
     const playSound = useGameStore(state => state.playUiSound);
+    const language = useGameStore(state => state.language);
 
     const handleUpgrade = (key: keyof typeof upgrades, amount: number, cost: number) => {
         if (skillPoints >= cost) {
@@ -104,16 +105,21 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                      {/* Bottom Footer: Stats & Cost */}
                      <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t border-white/5 group-hover:border-white/10 transition-colors">
                         {/* Stats Preview */}
-                        <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
-                            <span className="text-[10px] md:text-xs font-mono font-bold text-slate-400">{currentValue}</span>
-                            {!isMaxed && (
-                                <>
-                                    <TrendingUp className={`w-2.5 h-2.5 text-${glowColor}-400 opacity-60`} />
-                                    <span className="text-[10px] md:text-xs font-mono font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
-                                        {currentValue + amountPerUpgrade}
-                                    </span>
-                                </>
-                            )}
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                                <span className="text-[10px] md:text-xs font-mono font-bold text-slate-400">{currentValue}</span>
+                                {!isMaxed && (
+                                    <>
+                                        <TrendingUp className={`w-2.5 h-2.5 text-${glowColor}-400 opacity-60`} />
+                                        <span className="text-[10px] md:text-xs font-mono font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
+                                            {currentValue + amountPerUpgrade}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                            <div className="text-[8px] font-mono text-slate-500 uppercase">
+                                {language === 'RU' ? 'Потрачено:' : 'Spent:'} {level * cost} SP
+                            </div>
                         </div>
 
                         {/* Upgrade Cost Button */}

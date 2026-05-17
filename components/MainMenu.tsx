@@ -325,10 +325,10 @@ const MainMenu: React.FC = () => {
     if (hasActiveSession) {
         if (window.confirm(t.ABANDON_CONFIRM)) {
             abandonSession();
-            setUIState('CAMPAIGN_MAP');
+            setUIState(mode === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
         }
     } else {
-        setUIState('CAMPAIGN_MAP');
+        setUIState(mode === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
     }
     setShowCampaignModes(false);
   };
@@ -776,7 +776,7 @@ const MainMenu: React.FC = () => {
                     <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1.5 md:mb-3 break-words whitespace-pre-wrap">
                         <Target className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.COL_GOAL_TITLE}
                     </h3>
-                    <div className="grid grid-cols-3 gap-1.5 md:gap-3">
+                    <div className="grid grid-cols-3 gap-1.5 md:gap-3 relative">
                         {[1, 2, 3].map(id => {
                               const tier = MISSION_TIERS[id as 1|2|3];
                               const isSelected = selectedTier === id;
@@ -786,15 +786,21 @@ const MainMenu: React.FC = () => {
                                   key={id} 
                                   onClick={() => { setSelectedTier(id as 1|2|3); setDifficulty(tier.difficulty); playUiSound('CLICK'); }}
                                   className={`
-                                    relative flex flex-col items-center justify-center p-1.5 md:p-3 rounded-xl transition-all duration-200 border group h-16 md:h-24
+                                    relative flex flex-col items-center justify-center p-1.5 md:p-3 rounded-2xl transition-all duration-300 border focus:outline-none group h-16 md:h-24 overflow-hidden
                                     ${isSelected 
-                                        ? 'bg-gradient-to-b from-indigo-900/40 to-slate-900/80 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' 
-                                        : 'bg-slate-900/30 border-slate-800 hover:border-slate-600 hover:bg-slate-800/50'}
+                                        ? 'bg-gradient-to-b from-indigo-500/20 to-slate-900/90 border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3),inset_0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5),inset_0_0_20px_rgba(99,102,241,0.3)] scale-[1.02]' 
+                                        : 'bg-slate-900/40 border-slate-700/50 hover:border-slate-500 hover:bg-slate-800/60 shadow-lg'}
                                   `}
                                 >
-                                   <Icon className={`w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 ${isSelected ? 'text-indigo-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
-                                   <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-wider text-center leading-tight break-words whitespace-pre-wrap ${isSelected ? 'text-white' : 'text-slate-400'}`}>{tier.label}</span>
-                                   <span className="text-[7px] md:text-[9px] font-mono text-slate-500 mt-0.5 md:mt-1">{tier.time}</span>
+                                   {isSelected && (
+                                     <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/10 to-transparent pointer-events-none" />
+                                   )}
+                                   {isSelected && (
+                                     <div className="absolute inset-0 opacity-30 shadow-[inset_0_0_15px_#818cf8] rounded-2xl pointer-events-none blur-sm" />
+                                   )}
+                                   <Icon className={`relative z-10 w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 transition-all duration-300 ${isSelected ? 'text-indigo-300 drop-shadow-[0_0_10px_rgba(165,180,252,0.8)] scale-110' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                                   <span className={`relative z-10 text-[8px] md:text-[10px] font-black uppercase tracking-wider text-center leading-tight break-words whitespace-pre-wrap transition-all duration-300 ${isSelected ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : 'text-slate-400'}`}>{tier.label}</span>
+                                   <span className={`relative z-10 text-[7px] md:text-[9px] font-mono mt-0.5 md:mt-1 transition-all duration-300 ${isSelected ? 'text-indigo-200/80 drop-shadow-md' : 'text-slate-600'}`}>{tier.time}</span>
                                 </button>
                               );
                         })}

@@ -110,9 +110,9 @@ const Leaderboard: React.FC = () => {
         {/* Table Header (Hidden on Mobile) */}
         <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-4 bg-slate-950/50 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] border-b border-slate-800 shrink-0">
           <div className="col-span-1 text-center">#</div>
-          <div className="col-span-7">{t.HEADER_COMM}</div>
-          <div className="col-span-2 text-right">{t.HEADER_CREDITS}</div>
-          <div className="col-span-2 text-right">{t.HEADER_RANK}</div>
+          <div className="col-span-5">{t.HEADER_COMM}</div>
+          <div className="col-span-3 text-right">SCORE</div>
+          <div className="col-span-3 text-right">STATS</div>
         </div>
 
         {/* List */}
@@ -131,7 +131,7 @@ const Leaderboard: React.FC = () => {
               `}
             >
               {/* Left Group: Rank, Avatar, Name */}
-              <div className="flex items-center gap-2 md:gap-4 md:col-span-8 overflow-hidden">
+              <div className="flex items-center gap-2 md:gap-4 md:col-span-6 overflow-hidden">
                  {/* Rank Number */}
                  <div className="font-mono text-slate-500 font-bold w-5 text-center text-[10px] md:text-base md:col-span-1">
                     {index + 1}
@@ -153,16 +153,26 @@ const Leaderboard: React.FC = () => {
                  </div>
               </div>
 
+              {/* Center Group: Score */}
+              <div className="hidden md:flex md:col-span-3 items-center justify-end">
+                  <div className="font-mono text-purple-400 font-black text-lg">
+                    {Math.floor(entry.score || 0).toLocaleString()} <span className="text-xs text-purple-400/50">PTS</span>
+                  </div>
+              </div>
+
               {/* Right Group: Stats */}
-              <div className="flex flex-col items-end gap-0.5 md:contents">
+              <div className="flex flex-col items-end gap-0.5 md:col-span-3 md:flex-row md:justify-end md:gap-3">
+                  <div className="md:hidden text-right font-mono text-purple-400 font-black text-[10px] mb-1">
+                    {Math.floor(entry.score || 0).toLocaleString()} PTS
+                  </div>
                   {/* Credits */}
-                  <div className="md:col-span-2 text-right font-mono text-amber-500 font-bold flex items-center justify-end gap-1 text-[10px] md:text-base">
-                    {entry.maxCoins} <Coins className="w-2.5 h-2.5 md:w-4 md:h-4 opacity-70" />
+                  <div className="text-right font-mono text-amber-500 font-bold flex items-center justify-end gap-1 text-[10px] md:text-[12px]">
+                    {entry.maxCoins} <Coins className="w-2.5 h-2.5 md:w-3 md:h-3 opacity-70" />
                   </div>
 
                   {/* Rank */}
-                  <div className="md:col-span-2 text-right font-mono text-emerald-400 font-bold flex items-center justify-end gap-1 text-[10px] md:text-base">
-                    L{entry.maxLevel} <Layers className="w-2.5 h-2.5 md:w-4 md:h-4 opacity-70" />
+                  <div className="text-right font-mono text-emerald-400 font-bold flex items-center justify-end gap-1 text-[10px] md:text-[12px]">
+                    L{entry.maxLevel} <Layers className="w-2.5 h-2.5 md:w-3 md:h-3 opacity-70" />
                   </div>
               </div>
 

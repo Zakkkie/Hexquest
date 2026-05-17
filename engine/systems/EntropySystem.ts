@@ -35,9 +35,9 @@ export class EntropySystem implements System {
       let playerHitByShift = false;
       
       const { entropyResistance } = getStatusModifiers(state.player, state);
-      const collapseChance = Math.max(0, ENTROPY_CONFIG.SHIFT_COLLAPSE_CHANCE - entropyResistance);
-      const fillChance = Math.max(0, ENTROPY_CONFIG.SHIFT_FILL_CHANCE - entropyResistance);
-      const voidChance = Math.max(0, ENTROPY_CONFIG.SHIFT_VOID_CHANCE - entropyResistance);
+      const collapseChance = Math.max(0, ENTROPY_CONFIG.SHIFT_COLLAPSE_CHANCE * entropyResistance);
+      const fillChance = Math.max(0, ENTROPY_CONFIG.SHIFT_FILL_CHANCE * entropyResistance);
+      const voidChance = Math.max(0, ENTROPY_CONFIG.SHIFT_VOID_CHANCE * entropyResistance);
 
       for (const key of gridKeys) {
           const hex = state.grid[key];

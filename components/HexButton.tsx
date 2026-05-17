@@ -42,42 +42,63 @@ const HexButton: React.FC<HexButtonProps> = ({
   const c = colors[variant];
   const pathData = "M50 2 L93 27 L93 73 L50 98 L7 73 L 7 27 Z";
   
-  const baseClasses = `relative flex items-center justify-center select-none transition-all duration-500 touch-manipulation ${className}`;
+  const baseClasses = `relative flex items-center justify-center select-none transition-all duration-500 touch-manipulation focus:outline-none ${className}`;
   
   // Interactive Classes
-  let interactClasses = 'cursor-pointer active:scale-95 hover:brightness-125 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]';
+  let interactClasses = 'cursor-pointer hover:scale-105 active:scale-95 hover:brightness-110 hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] focus-visible:ring-2 focus-visible:ring-white rounded-none bg-transparent border-none appearance-none';
   
   if (disabled) {
-      interactClasses = 'opacity-40 grayscale cursor-not-allowed';
+      interactClasses = 'opacity-40 grayscale-[80%] cursor-not-allowed bg-transparent border-none appearance-none';
   } else if (dimmed) {
-      interactClasses = 'opacity-30 grayscale saturate-0 cursor-default scale-95'; // Dimmed state
+      interactClasses = 'opacity-30 grayscale saturate-0 cursor-default scale-95 bg-transparent border-none appearance-none'; // Dimmed state
   }
 
   const glowClass = (active || pulsate) && !dimmed ? 'animate-pulse' : '';
 
   return (
-    <div 
+    <button 
+      type="button"
       className={`${baseClasses} ${interactClasses} ${glowClass} ${sClass}`}
       onClick={(!disabled && !dimmed) ? onClick : undefined}
       title={title}
     >
+      {/* Dynamic Ambient Glow Behind the Button */}
+      {(active || (!disabled && !dimmed && pulsate)) && (
+          <div className="absolute inset-0 blur-xl rounded-full scale-110 opacity-60 transition-opacity duration-300 pointer-events-none" style={{ backgroundColor: c.highlight }}></div>
+      )}
+
+      {/* Glass Backdrop */}
       <div 
-         className="absolute inset-0" 
+         className="absolute inset-0 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)] border-none" 
          style={{ 
              clipPath: 'polygon(50% 2%, 93% 27%, 93% 73%, 50% 98%, 7% 73%, 7% 27%)',
-             backdropFilter: 'blur(4px)'
+             backdropFilter: 'blur(8px)',
+             background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.2) 100%)'
          }} 
       />
 
-      <svg width="100%" height="100%" viewBox="0 0 100 100" className="overflow-visible relative z-10">
+      {/* Optional Scanlines */}
+      {!disabled && !dimmed && (
+         <div 
+           className="absolute inset-0 opacity-10 pointer-events-none"
+           style={{
+               clipPath: 'polygon(50% 2%, 93% 27%, 93% 73%, 50% 98%, 7% 73%, 7% 27%)',
+               backgroundImage: 'linear-gradient(0deg, transparent 50%, rgba(255,255,255,0.1) 50%)',
+               backgroundSize: '100% 4px'
+           }}
+         />
+      )}
+
+      <svg width="100%" height="100%" viewBox="0 0 100 100" className="overflow-visible relative z-10 transition-transform duration-300">
         <defs>
           <linearGradient id={`neon-grad-${variant}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={c.stop1} />
+            <stop offset="40%" stopColor={'rgba(0,0,0,0.1)'} />
             <stop offset="100%" stopColor={c.stop2} />
           </linearGradient>
           
-          <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
-             <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+          <filter id={`neon-glow-${variant}`} x="-50%" y="-50%" width="200%" height="200%">
+             <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
              <feMerge>
                 <feMergeNode in="coloredBlur"/>
                 <feMergeNode in="SourceGraphic"/>
@@ -85,14 +106,26 @@ const HexButton: React.FC<HexButtonProps> = ({
           </filter>
         </defs>
 
-        {/* Glow Shadow */}
+        {/* Inner shadow/glow highlight */}
+        {(active || (!disabled && !dimmed)) && (
+             <path 
+               d={pathData} 
+               fill="none" 
+               stroke={c.highlight} 
+               strokeWidth="1.5"
+               className="opacity-40"
+               style={{ filter: `blur(2px)` }}
+             />
+        )}
+
+        {/* Glow Shadow Path */}
         {(active || (!disabled && !dimmed)) && (
              <path 
                d={pathData} 
                fill="none" 
                stroke={c.stroke} 
                strokeWidth="0"
-               style={{ filter: `drop-shadow(0 0 10px ${c.glow})` }}
+               style={{ filter: `drop-shadow(0 0 12px ${c.glow})` }}
              />
         )}
 
@@ -100,18 +133,22 @@ const HexButton: React.FC<HexButtonProps> = ({
           d={pathData} 
           fill={`url(#neon-grad-${variant})`} 
           stroke="none"
+          className="transition-all duration-300"
         />
 
+        {/* Main Edge Ring */}
         <path 
           d={pathData} 
           fill="none" 
-          stroke={active ? '#ffffff' : c.stroke} 
+          stroke={active ? '#ffffff' : (disabled ? '#334155' : c.stroke)} 
           strokeWidth={active ? 3 : 2}
           strokeLinecap="round"
           strokeLinejoin="round"
           className="transition-colors duration-300"
+          style={active ? { filter: `url(#neon-glow-${variant})` } : {}}
         />
 
+        {/* Progress Ring Overlay */}
         {progress > 0 && !dimmed && (
           <path 
             d={pathData} 
@@ -129,10 +166,10 @@ const HexButton: React.FC<HexButtonProps> = ({
         )}
       </svg>
       
-      <div className={`absolute inset-0 flex flex-col items-center justify-center text-white pointer-events-none z-20 break-words whitespace-pre-wrap ${active ? 'text-white' : 'text-slate-200'}`}>
+      <div className={`absolute inset-0 flex flex-col items-center justify-center text-white pointer-events-none z-20 break-words whitespace-pre-wrap ${active ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'text-slate-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]'}`}>
         {children}
       </div>
-    </div>
+    </button>
   );
 };
 
