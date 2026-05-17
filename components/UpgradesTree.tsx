@@ -58,7 +58,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                  transition={{ delay, duration: 0.4, type: 'spring', stiffness: 260, damping: 25 }}
                  whileHover={!isMaxed && canAfford ? { scale: 1.02, y: -2 } : { scale: 1.01 }}
                  whileTap={!isMaxed && canAfford ? { scale: 0.98 } : {}}
-                 className={`group relative flex flex-col p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] transition-all duration-300 min-h-[140px]
+                 className={`group relative flex flex-col p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] transition-all duration-300 h-full
                     ${canAfford && !isMaxed ? 'cursor-pointer hover:shadow-[0_15px_30px_rgba(0,0,0,0.4)]' : 'opacity-85 grayscale-[20%] cursor-not-allowed'}
                  `}
                  onClick={() => !isMaxed && handleUpgrade(key, amountPerUpgrade, cost)}

@@ -233,7 +233,7 @@ const CampaignMap: React.FC = () => {
                             transition={{ delay, duration: 0.4, type: 'spring', stiffness: 260, damping: 25 }}
                             whileHover={isUnlocked ? { scale: 1.02, y: -2 } : { scale: 1.01 }}
                             whileTap={isUnlocked ? { scale: 0.98 } : {}}
-                            className={`group relative flex flex-col p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] transition-all duration-300 min-h-[160px]
+                            className={`group relative flex flex-col p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] transition-all duration-300 h-full
                                 ${isUnlocked ? 'cursor-pointer hover:shadow-[0_15px_30px_rgba(0,0,0,0.5)]' : 'opacity-60 grayscale-[40%] cursor-not-allowed'}
                             `}
                             onClick={() => isUnlocked ? startCampaignLevel(level.id) : playUiSound('ERROR')}

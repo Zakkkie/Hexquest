@@ -199,7 +199,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                           const b2x = px[i];
                           const b2y = py[i] + heightDiff;
                           
-                          const data = `M ${px[i]} ${py[i]} L ${px[next]} ${py[next]} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`;
+                          const data = `M ${px[i]} ${py[i]} L ${b2x} ${b2y} L ${b1x} ${b1y} L ${px[next]} ${py[next]} Z`;
                           
                           groupNode.show();
                           const pathNode = wallPathRefs.current[i];
@@ -229,7 +229,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                           const b1y = py[next] + VOID_DEPTH;
                           const b2x = px[i];
                           const b2y = py[i] + VOID_DEPTH;
-                          const data = `M ${px[i]} ${py[i]} L ${px[next]} ${py[next]} L ${b1x} ${b1y} L ${b2x} ${b2y} Z`;
+                          const data = `M ${px[i]} ${py[i]} L ${b2x} ${b2y} L ${b1x} ${b1y} L ${px[next]} ${py[next]} Z`;
                           
                           voidGroupNode.show();
                           const voidPathNode = voidWallPathRefs.current[i];
