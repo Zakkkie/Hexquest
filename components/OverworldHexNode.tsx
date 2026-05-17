@@ -263,6 +263,21 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
     );
   }, [points, offsetY, hex.terrainType, sideTexture, neighborLevels, level]);
 
+  const { gradStart, gradEnd, opacityMod } = useMemo(() => {
+      const hashStr = `${hex.q},${hex.r}`;
+      let hash = 0;
+      for (let i = 0; i < hashStr.length; i++) {
+          hash = hashStr.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const rand = Math.abs(hash) % 100 / 100;
+      const angle = rand * Math.PI * 2;
+      return {
+          gradStart: { x: Math.cos(angle) * size, y: Math.sin(angle) * size },
+          gradEnd: { x: Math.cos(angle + Math.PI) * size, y: Math.sin(angle + Math.PI) * size },
+          opacityMod: rand * 0.12
+      };
+  }, [hex.q, hex.r, size]);
+
   const terrainDetails = useMemo(() => {
     return [];
   }, [hex.terrainType, hex.q, hex.r, size]);
@@ -305,6 +320,19 @@ const OverworldHexNode: React.FC<OverworldHexNodeProps> = ({ hex, x, y, isLocked
             stroke={isHovered ? '#94a3b8' : theme.stroke} 
             strokeWidth={isHovered ? 2 : 2} 
             perfectDrawEnabled={true}
+          />
+
+          {/* Surface variation gradient */}
+          <Path
+              data={topPathData}
+              fillLinearGradientStartPoint={gradStart}
+              fillLinearGradientEndPoint={gradEnd}
+              fillLinearGradientColorStops={[
+                  0, `rgba(255,255,255,${0.02 + opacityMod})`,
+                  1, `rgba(0,0,0,${0.02 + opacityMod})`
+              ]}
+              listening={false}
+              perfectDrawEnabled={false}
           />
 
           {/* Remove internal borders for building clusters */}

@@ -141,6 +141,21 @@ const HexNodeComponent = (props: HexNodeProps) => {
       return Math.max(0, maxD - durability);
   }, [maxLevel, durability]);
 
+  const { gradStart, gradEnd, opacityMod } = useMemo(() => {
+      const hashStr = `${id}`;
+      let hash = 0;
+      for (let i = 0; i < hashStr.length; i++) {
+          hash = hashStr.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const rand = Math.abs(hash) % 100 / 100;
+      const angle = rand * Math.PI * 2;
+      return {
+          gradStart: { x: Math.cos(angle) * HEX_SIZE, y: Math.sin(angle) * HEX_SIZE },
+          gradEnd: { x: Math.cos(angle + Math.PI) * HEX_SIZE, y: Math.sin(angle + Math.PI) * HEX_SIZE },
+          opacityMod: rand * 0.12
+      };
+  }, [id]);
+
   // Void Animation Ref
   const voidOutlineRef = useRef<Konva.Path>(null);
   const monumentGlowRef = useRef<Konva.Path>(null);
@@ -461,6 +476,22 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     perfectDrawEnabled={false}
                     shadowForStrokeEnabled={false}
                 />
+
+                {/* Surface variation gradient */}
+                {isRevealed && !isMonument && (
+                    <Path
+                        data={BASE_PATH_D}
+                        fillLinearGradientStartPoint={gradStart}
+                        fillLinearGradientEndPoint={gradEnd}
+                        fillLinearGradientColorStops={[
+                            0, `rgba(255,255,255,${0.02 + opacityMod})`,
+                            1, `rgba(0,0,0,${0.02 + opacityMod})`
+                        ]}
+                        listening={false}
+                        perfectDrawEnabled={false}
+                        shadowForStrokeEnabled={false}
+                    />
+                )}
 
                 {/* LIGHTING OVERLAY: Darken Based on Distance */}
                 {lighting < 1 && (
