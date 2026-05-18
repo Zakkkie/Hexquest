@@ -1,7 +1,7 @@
 
 import { Item, ItemRarity, ItemEffectType, NegativeEffectType, Language, Difficulty } from '../types';
 
-export interface ItemDefinition {
+interface ItemDefinition {
     idPrefix: string;
     rarity: ItemRarity;
     name: Record<Language, string>;

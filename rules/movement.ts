@@ -2,7 +2,7 @@
 import { Hex, Entity, HexCoord } from '../types';
 import { getHexKey, getStatusModifiers } from '../services/hexUtils';
 
-export interface MovementCostResult {
+interface MovementCostResult {
     totalPoints: number; // Total "Move Points" required by terrain
     deductMoves: number; // Amount to be deducted from entity.moves
     deductCoins: number; // Amount to be deducted from entity.coins

@@ -7,13 +7,6 @@ export type LootResult =
     | { type: 'COIN'; amount: number }
     | { type: 'ITEM'; item: Item };
 
-export const LOOT_COLORS: Record<ItemRarity, string> = {
-    COMMON: '#94a3b8',   // Slate-400
-    UNCOMMON: '#4ade80', // Green-400
-    RARE: '#a855f7',     // Purple-500
-    LEGENDARY: '#f97316' // Orange-500
-};
-
 export const rollForLoot = (depth: number, language: 'EN' | 'RU' = 'EN'): LootResult => {
     // Depth is expected to be negative (e.g. -1, -5). We use absolute value for calculation.
     const d = Math.abs(depth);

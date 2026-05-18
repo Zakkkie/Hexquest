@@ -7,7 +7,6 @@ import { hexToPixel } from '../services/hexUtils.ts';
 import Background from './Background.tsx';
 import GameHUD from './GameHUD.tsx';
 import MapRenderer from './MapRenderer.tsx';
-import { InteriorView } from './InteriorView.tsx';
 import Fireworks from './Fireworks.tsx';
 import { audioService } from '../services/audioService.ts';
 import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
@@ -71,13 +70,12 @@ interface CameraState {
 }
 
 const GameView: React.FC = () => {
-  const grid = useGameStore(state => state.session?.grid);
+  const hasGrid = useGameStore(state => !!state.session?.grid);
   const player = useGameStore(state => state.session?.player);
   const winCondition = useGameStore(state => state.session?.winCondition);
   const deviceType = useGameStore(state => state.deviceType);
   const lastVisualEvent = useGameStore(state => state.lastVisualEvent);
   const gameStatus = useGameStore(state => state.session?.gameStatus);
-  const uiState = useGameStore(state => state.uiState);
   
   const movePlayer = useGameStore(state => state.movePlayer);
   const hideToast = useGameStore(state => state.hideToast);
@@ -88,7 +86,7 @@ const GameView: React.FC = () => {
   // HUD State
   const [hoveredHexId, setHoveredHexId] = useState<string | null>(null);
 
-  if (!grid || !player) return null;
+  if (!hasGrid || !player) return null;
   
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   
@@ -574,8 +572,6 @@ const GameView: React.FC = () => {
       <GameHUD 
         onCenterPlayer={centerOnPlayer}
       />
-
-      {uiState === 'INTERIOR' && <InteriorView />}
 
     </div>
   );

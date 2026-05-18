@@ -1,7 +1,6 @@
 
-import { Hex, HexCoord, Entity, OverworldHex, PathResult } from '../types';
+import { Hex, HexCoord, Entity, PathResult } from '../types';
 import { GAME_CONFIG, getLevelConfig, SAFETY_CONFIG } from '../rules/config';
-import { getHexHeight } from './OverworldGenerator.ts';
 
 export const getHexKey = (q: number, r: number): string => `${q},${r}`;
 export const getCoordinatesFromKey = (key: string): HexCoord => {
@@ -14,25 +13,6 @@ const SQRT_3 = Math.sqrt(3);
 const SQRT_3_DIV_2 = SQRT_3 / 2;
 const ONE_POINT_FIVE = 1.5;
 const DEG_TO_RAD = Math.PI / 180;
-
-// MOVED UP: Must be defined before pixelToHex uses it
-const axialRound = (q: number, r: number): HexCoord => {
-    let rq = Math.round(q);
-    let rr = Math.round(r);
-    let rs = Math.round(-q - r);
-
-    const qDiff = Math.abs(rq - q);
-    const rDiff = Math.abs(rr - r);
-    const sDiff = Math.abs(rs - (-q - r));
-
-    if (qDiff > rDiff && qDiff > sDiff) {
-        rq = -rr - rs;
-    } else if (rDiff > sDiff) {
-        rr = -rq - rs;
-    }
-    
-    return { q: rq, r: rr };
-};
 
 export const hexToPixel = (q: number, r: number, rotationDegrees: number = 0): { x: number, y: number } => {
   const size = GAME_CONFIG.HEX_SIZE;
@@ -58,31 +38,6 @@ export const hexToPixel = (q: number, r: number, rotationDegrees: number = 0): {
     x: rawX * cos - rawY * sin, 
     y: (rawX * sin + rawY * cos) * 0.8 
   };
-};
-
-export const pixelToHex = (x: number, y: number, rotationDegrees: number = 0): HexCoord => {
-    const size = GAME_CONFIG.HEX_SIZE;
-    
-    // Reverse Rotate
-    let rx = x;
-    let ry = y;
-    
-    if (rotationDegrees !== 0) {
-        const angleRad = -rotationDegrees * DEG_TO_RAD; // Negative for reverse
-        const cos = Math.cos(angleRad);
-        const sin = Math.sin(angleRad);
-        rx = x * cos - y * sin;
-        ry = x * sin + y * cos;
-    }
-
-    // Reverse Squash
-    const unsquashedY = ry / 0.8;
-
-    // Pixel to Axial
-    const q = (Math.sqrt(3)/3 * rx - 1/3 * unsquashedY) / size;
-    const r = (2/3 * unsquashedY) / size;
-
-    return axialRound(q, r);
 };
 
 export const cubeDistance = (a: HexCoord, b: HexCoord): number => {
@@ -388,138 +343,7 @@ export const findPath = (
   return { path: null, reason: finalReason };
 };
 
-export const findOverworldPath = (
-  start: HexCoord, 
-  end: HexCoord, 
-  grid: Record<string, OverworldHex>
-): PathResult => {
-  const startKey = getHexKey(start.q, start.r);
-  const endKey = getHexKey(end.q, end.r);
-  
-  if (startKey === endKey) return { path: [] };
-  
-  const endHex = grid[endKey];
-  if (endHex && endHex.moveCost >= 999) return { path: null, reason: 'IMPASSABLE' };
-
-  if (cubeDistance(start, end) > 50) return { path: null, reason: 'TOO_FAR' };
-
-  const openSet = new PriorityQueue<string>();
-  const cameFrom = new Map<string, HexCoord>();
-  const gScore = new Map<string, number>();
-  
-  openSet.push(startKey, cubeDistance(start, end));
-  gScore.set(startKey, 0);
-
-  let iterations = 0;
-  let blockedByHeight = false;
-  let blockedByVoid = false;
-  
-  while (openSet.length > 0 && iterations < 2000) {
-    iterations++;
-    const currentKey = openSet.pop();
-    if (!currentKey) break;
-    
-    const currentCoord = getCoordinatesFromKey(currentKey);
-
-    if (currentKey === endKey) {
-      const path: HexCoord[] = [];
-      let curr = endKey;
-      while (cameFrom.has(curr)) {
-        const c = getCoordinatesFromKey(curr);
-        path.unshift(c);
-        curr = getHexKey(cameFrom.get(curr)!.q, cameFrom.get(curr)!.r);
-      }
-      return { path };
-    }
-
-    const currentHex = grid[currentKey];
-    const currentHeight = currentHex ? (currentHex.height ?? getHexHeight(currentHex.terrainType)) : 0;
-
-    const neighbors = getNeighbors(currentCoord.q, currentCoord.r);
-    for (const neighbor of neighbors) {
-      const nKey = getHexKey(neighbor.q, neighbor.r);
-      const neighborHex = grid[nKey];
-      
-      if (!neighborHex) {
-        blockedByVoid = true;
-        continue;
-      }
-      if (neighborHex.moveCost >= 999) continue;
-
-      const neighborHeight = neighborHex.height ?? getHexHeight(neighborHex.terrainType);
-      if (Math.abs(currentHeight - neighborHeight) > 1) {
-        blockedByHeight = true;
-        continue; // Staircase rule
-      }
-
-      const moveCost = neighborHex.moveCost;
-      const tentativeG = (gScore.get(currentKey) ?? Infinity) + moveCost;
-
-      if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
-        cameFrom.set(nKey, currentCoord);
-        gScore.set(nKey, tentativeG);
-        
-        const fScore = tentativeG + cubeDistance(neighbor, end);
-        openSet.push(nKey, fScore);
-      }
-    }
-  }
-
-  let finalReason = 'BLOCKED';
-  if (blockedByVoid) finalReason = 'VOID';
-  if (blockedByHeight) finalReason = 'STEEP';
-  if (iterations >= 2000) finalReason = 'TOO_FAR';
-
-  return { path: null, reason: finalReason };
-};
-
 /**
  * Finds all reachable hexes from a starting position given an energy budget.
  * Uses Dijkstra-like BFS with a priority queue.
  */
-export const getReachableOverworldHexes = (
-  start: HexCoord,
-  energy: number,
-  grid: Record<string, OverworldHex>
-): Set<string> => {
-  const reachable = new Set<string>();
-  const startKey = getHexKey(start.q, start.r);
-  const costs = new Map<string, number>();
-  
-  const queue = new PriorityQueue<string>();
-  // @ts-ignore - PriorityQueue is defined in this file
-  queue.push(startKey, 0);
-  costs.set(startKey, 0);
-  reachable.add(startKey);
-
-  while (queue.length > 0) {
-    // @ts-ignore
-    const currentKey = queue.pop()!;
-    const currentCost = costs.get(currentKey)!;
-    const currentCoord = getCoordinatesFromKey(currentKey);
-    const currentHex = grid[currentKey];
-    const currentHeight = currentHex ? (currentHex.height ?? getHexHeight(currentHex.terrainType)) : 0;
-
-    const neighbors = getNeighbors(currentCoord.q, currentCoord.r);
-    for (const neighbor of neighbors) {
-      const nKey = getHexKey(neighbor.q, neighbor.r);
-      const neighborHex = grid[nKey];
-      
-      if (!neighborHex || neighborHex.moveCost >= 999) continue;
-
-      const neighborHeight = neighborHex.height ?? getHexHeight(neighborHex.terrainType);
-      if (Math.abs(currentHeight - neighborHeight) > 1) continue; // Staircase rule
-
-      const totalCost = currentCost + neighborHex.moveCost;
-      if (totalCost <= energy) {
-        if (!costs.has(nKey) || totalCost < costs.get(nKey)!) {
-          costs.set(nKey, totalCost);
-          reachable.add(nKey);
-          // @ts-ignore
-          queue.push(nKey, totalCost);
-        }
-      }
-    }
-  }
-  return reachable;
-};

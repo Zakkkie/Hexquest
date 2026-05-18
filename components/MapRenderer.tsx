@@ -314,16 +314,16 @@ interface MapRendererProps {
 }
 
 const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId }) => {
-    const session = useGameStore(state => state.session);
-    const grid = session?.grid as Record<string, Hex> | undefined;
-    const player = session?.player as Entity | undefined;
-    const bots = session?.bots as Entity[] | undefined;
-    const effects = session?.effects;
-    const activeLevelConfig = session?.activeLevelConfig;
+    const grid = useGameStore(state => state.session?.grid);
+    const player = useGameStore(state => state.session?.player);
+    const bots = useGameStore(state => state.session?.bots);
+    const effects = useGameStore(state => state.session?.effects);
+    const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
     const pendingConfirmation = useGameStore(state => state.pendingConfirmation);
-    const isPlayerGrowing = session?.isPlayerGrowing;
-    const playerQ = session?.player.q;
-    const playerR = session?.player.r;
+    const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
+    const campaignUpgrades = useGameStore(state => state.campaignUpgrades);
+    const playerQ = player?.q;
+    const playerR = player?.r;
     const selectedHexId = useMemo(() => 
         (playerQ !== undefined && playerR !== undefined) ? getHexKey(playerQ, playerR) : null
     , [playerQ, playerR]);
@@ -492,7 +492,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
 
             const level = nHex ? nHex.currentLevel : 0;
             const cost = level > 1 ? level : 1;
-            const { exchangeRate } = getStatusModifiers(player, session);
+            const { exchangeRate } = getStatusModifiers(player, { campaignUpgrades });
             const canAfford = player.moves >= cost || player.coins >= (cost * exchangeRate);
 
             conns.push({
@@ -503,7 +503,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
             });
         }
         return conns;
-    }, [grid, player, isPlayerGrowing, projectionCache, session]);
+    }, [grid, player, isPlayerGrowing, projectionCache, campaignUpgrades]);
 
     const tutorialData = useMemo(() => {
         if (!grid || !player) return null;

@@ -186,4 +186,4 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     );
 };
 
-export default TopStatsBar;
+export default React.memo(TopStatsBar);

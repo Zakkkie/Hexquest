@@ -1,4 +1,4 @@
-import { WinCondition, SessionState, Difficulty, Item, Entity, EntityType, EntityState, HexCoord, LogEntry, Language, UserProfile, OverworldState } from '../types.ts';
+import { WinCondition, SessionState, Difficulty, Item, Entity, EntityType, EntityState, HexCoord, LogEntry, Language, UserProfile } from '../types.ts';
 import { LevelConfig } from '../types';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../rules/config.ts';
 import { getHexKey, getNeighbors } from './hexUtils.ts';
@@ -60,12 +60,11 @@ export const generateMapAsync = async (levelConfig: LevelConfig | undefined, map
   });
 };
 
-export const createInitialSessionDataAsync = async (
+export const createInitialSessionData = async (
     winCondition: WinCondition | null,
     levelConfig: LevelConfig | undefined,
     language: Language,
     stateUser: UserProfile | null,
-    overworldState: OverworldState,
     campaignUpgrades: import('../types.ts').CampaignUpgrades
 ): Promise<SessionState> => {
   const mapType = winCondition?.mapType || 'FLAT';
@@ -140,29 +139,6 @@ export const createInitialSessionDataAsync = async (
 
   let activeStatuses: import('../types.ts').ActiveStatus[] = [];
 
-  if (overworldState && overworldState.isGenerated) {
-      const eq = overworldState.player.equipment;
-      // Example bonuses based on equipment IDs
-      if (eq.body === 'prospector_backpack' || eq.body === 'cargo_prism') {
-          maxStorage += 1;
-      }
-      if (eq.head === 'rusted_scanner') {
-          activeStatuses.push({ type: 'STATUS_SCANNER_BUFF', label: 'Active Scanner' });
-      }
-      if (eq.head === 'stability_scanner') {
-          activeStatuses.push({ type: 'STATUS_ENTROPY_INVERSION', label: 'Entropy Inversion' });
-      }
-      if (eq.tool === 'hornet_drill') {
-          startStorage += 1;
-      }
-      if (eq.tool === 'plasma_drill') {
-          activeStatuses.push({ type: 'STATUS_GOLD_RUSH', label: 'Plasma Drill' });
-      }
-      if (eq.artifact === 'cortex_overclocker') {
-          startRank += 1;
-      }
-  }
-  
   // Player Position
   let startQ = 0, startR = 0;
   // Pick the highest level hex owned by the player
@@ -385,5 +361,3 @@ export const createInitialSessionDataAsync = async (
 
   return session;
 };
-
-export const createInitialSessionData = createInitialSessionDataAsync;

@@ -8,7 +8,7 @@ import { findBestDigTargets, findHiveTarget, resolveBuildChain } from './plannin
 // PUBLIC TYPES & CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface AiResult {
+interface AiResult {
     action: BotAction | null;
     debug: string;
     memory: BotMemory;

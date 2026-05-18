@@ -3,7 +3,7 @@ import { Hex, Entity, HexCoord } from '../types';
 import { GAME_CONFIG, getLevelConfig } from './config';
 import { getHexKey } from '../services/hexUtils';
 
-export type GrowthCheckResult = {
+type GrowthCheckResult = {
   canGrow: boolean;
   reason?: string;
   missingSupports?: HexCoord[]; // Coordinates of neighbors causing the block

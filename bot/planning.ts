@@ -3,7 +3,7 @@ import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
 
-export interface ScoredTarget {
+interface ScoredTarget {
     hex: Hex;
     score: number;
     reason: string;
@@ -15,7 +15,7 @@ const MAX_RECURSION_DEPTH = 3;
 /**
  * Проверка: Не рухнет ли башня, если мы выкопаем этот гекс?
  */
-export const isLoadBearing = (hex: Hex, grid: Record<string, Hex>): boolean => {
+const isLoadBearing = (hex: Hex, grid: Record<string, Hex>): boolean => {
     // ФУНДАМЕНТАЛЬНОЕ ИСПРАВЛЕНИЕ: Гексы уровня 0 и ниже физически не могут быть опорами!
     // Опоры требуются только зданиям L2 и выше (им нужны соседи L1+).
     if (hex.maxLevel < 1) return false;
@@ -118,7 +118,7 @@ const resolveDigChain = (
  * Logic for the DESTROYER bot role.
  * Follows a patrol path and deviates to destroy player-owned hexes if nearby.
  */
-export const findDestroyerTarget = (
+const findDestroyerTarget = (
     bot: Entity,
     grid: Record<string, Hex>,
     index: WorldIndex,

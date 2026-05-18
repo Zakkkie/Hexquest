@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Hexagon, Target, ArrowRight } from 'lucide-react';
 
 const IntroSequence: React.FC = () => {
-  const { setUIState, introNextState } = useGameStore();
+  const setUIState = useGameStore(state => state.setUIState);
+  const introNextState = useGameStore(state => state.introNextState);
   const [step, setStep] = useState(0);
   const [showSafetySkip, setShowSafetySkip] = useState(false);
 
@@ -25,9 +26,6 @@ const IntroSequence: React.FC = () => {
 
   const skipIntro = () => {
     setUIState(introNextState);
-    if (introNextState === 'OVERWORLD') {
-      setTimeout(() => useGameStore.getState().triggerEvent('city_intro_task'), 100);
-    }
   };
 
   return (

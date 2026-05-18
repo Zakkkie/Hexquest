@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { useGameStore } from '../../store';
-import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, MapPin, Backpack, Info, Mountain } from 'lucide-react';
+import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Info, Mountain } from 'lucide-react';
 import HexButton from '../HexButton';
 import { getHexKey, getNeighbors, getSecondsToGrow } from '../../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
@@ -31,7 +31,6 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
     const togglePlayerGrowth = useGameStore(state => state.togglePlayerGrowth);
-    const visitPoi = useGameStore(state => state.visitPoi);
     
     const mainButtonSize = "lg";
 
@@ -281,17 +280,6 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 
                 {/* RIGHT: ACTION BUTTONS */}
                 <div className="flex items-end gap-1.5 md:gap-3 shrink-0 ml-auto">
-                    {currentHex?.poiType && (
-                        <HexButton 
-                            variant="blue" 
-                            size={mainButtonSize} 
-                            onClick={() => { visitPoi(); playUiSound('SUCCESS'); }}
-                            className="ring-4 ring-indigo-500/20 rounded-full animate-pulse"
-                            title={`Visit ${currentHex.poiType.replace('city_', '').replace('_', ' ')}`}
-                        >
-                            <MapPin className="w-5 h-5 md:w-8 md:h-8 text-white" />
-                        </HexButton>
-                    )}
                     <HexButton variant="red" size={mainButtonSize} onClick={() => handleActionClick('DIG')} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
                         <Pickaxe className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
                     </HexButton>
@@ -318,4 +306,4 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 );
 };
 
-export default BottomActionDock;
+export default React.memo(BottomActionDock);

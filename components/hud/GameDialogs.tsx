@@ -23,8 +23,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     activeModal, closeModal, helpTopic, closeHelp, inspectedItem, closeInspect, victoryStage, setVictoryStage
 }) => {
     const sessionStatus = useGameStore(state => state.session?.gameStatus);
-    const overworldStatus = useGameStore(state => state.overworld.gameStatus);
-    const gameStatus = sessionStatus || overworldStatus;
+    const gameStatus = sessionStatus;
     const player = useGameStore(state => state.session?.player);
     const bots = useGameStore(state => state.session?.bots);
     const winCondition = useGameStore(state => state.session?.winCondition);
@@ -42,10 +41,6 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const startNewGame = useGameStore(state => state.startNewGame);
     const startCampaignLevel = useGameStore(state => state.startCampaignLevel);
     const destroyItem = useGameStore(state => state.destroyItem);
-    const returnToOverworld = useGameStore(state => state.returnToOverworld);
-    const addRewardItem = useGameStore(state => state.addRewardItem);
-    const isOverworldGenerated = useGameStore(state => state.overworld.isGenerated);
-    const hasActiveSession = useGameStore(state => state.hasActiveSession);
     const campaignMode = useGameStore(state => state.campaignMode);
     const setUIState = useGameStore(state => state.setUIState);
     const currentTurn = useGameStore(state => state.session?.currentTurn || 0);
@@ -67,7 +62,6 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const t = TEXT[language].HUD;
 
     const resetProgress = useGameStore(state => state.resetProgress);
-    const initOverworld = useGameStore(state => state.initOverworld);
     const grid = useGameStore(state => state.session?.grid);
     const addCollectedHexes = useGameStore(state => state.addCollectedHexes);
     const addMinedHexes = useGameStore(state => state.addMinedHexes);
@@ -91,25 +85,17 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         playUiSound('CLICK');
         if (window.confirm(language === 'RU' ? 'Начать новую игру? Весь текущий прогресс будет сброшен.' : 'Start a new game? All current progress will be reset.')) {
             resetProgress();
-            initOverworld();
         }
     };
 
     const handleNextLevel = () => {
         playUiSound('CLICK');
-        if (campaignMode === 'STORY' && isOverworldGenerated) {
-            returnToOverworld('VICTORY', selectedRewardItem || undefined);
-            return;
-        }
         if (campaignMode === 'LEVELS' && gameStatus === 'VICTORY') {
-            if (selectedRewardItem) addRewardItem(selectedRewardItem);
             addCollectedHexes(selectedHexes);
             addMinedHexes(selectedHexes);
         }
         
-        const levelsToUse = campaignMode === 'LEVELS' 
-            ? CAMPAIGN_LEVELS.filter(l => !l.isCityLevel)
-            : CAMPAIGN_LEVELS;
+        const levelsToUse = CAMPAIGN_LEVELS;
 
         if (activeLevelConfig) {
             const currentIdx = levelsToUse.findIndex(l => l.id === activeLevelConfig.id);
@@ -136,10 +122,6 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             startNewGame(winCondition);
             return;
         }
-        if (campaignMode === 'STORY' && isOverworldGenerated && hasActiveSession && activeLevelConfig) {
-            returnToOverworld('DEFEAT');
-            return;
-        }
         
         console.warn('[GameDialogs] handleRetry fallback - abandoning session');
         handleMenu();
@@ -150,17 +132,13 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         if (gameStatus === 'VICTORY') {
             addMinedHexes(selectedHexes);
         }
-        if (campaignMode === 'STORY' && isOverworldGenerated && hasActiveSession && activeLevelConfig) {
-            returnToOverworld(gameStatus === 'VICTORY' ? 'VICTORY' : 'DEFEAT', selectedRewardItem || undefined);
-        } else {
-            if (campaignMode === 'LEVELS' && gameStatus === 'VICTORY') {
-                if (selectedRewardItem) addRewardItem(selectedRewardItem);
-                addCollectedHexes(selectedHexes);
-            }
-            abandonSession();
-            if (campaignMode === 'LEVELS' && activeLevelConfig) {
-                setUIState('CAMPAIGN_MAP');
-            }
+        
+        if (campaignMode === 'LEVELS' && gameStatus === 'VICTORY') {
+            addCollectedHexes(selectedHexes);
+        }
+        abandonSession();
+        if (campaignMode === 'LEVELS' && activeLevelConfig) {
+            setUIState('CAMPAIGN_MAP');
         }
     };
 
@@ -745,37 +723,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         </div>
                                     </div>
                                 )}
-                            </div>
-                        )}
 
-                        {/* Action Protocol */}
-                        <div className="w-full flex flex-col md:flex-row gap-2 md:gap-4 shrink-0 mt-auto">
-                            {(isOverworldGenerated && campaignMode === 'STORY' && activeLevelConfig) ? (
-                                <>
-                                    <button 
-                                        onClick={handleMenu} 
-                                        className={`flex-1 py-3 md:py-5 relative overflow-hidden group/btn ${gameStatus === 'VICTORY' ? 'bg-emerald-600/20 border-2 border-emerald-500' : 'bg-slate-900 border-2 border-slate-700'}`}
-                                    >
-                                        <div className={`absolute inset-0 transform translate-y-full transition-transform duration-300 group-hover/btn:translate-y-0 ${gameStatus === 'VICTORY' ? 'bg-emerald-600' : 'bg-slate-700'}`} />
-                                        <div className="relative flex items-center justify-center gap-2 md:gap-3 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] text-xs md:text-sm">
-                                            {gameStatus === 'VICTORY' ? 'RETURN_TO_BASE' : 'RECALL_SIGNAL'} 
-                                            <ArrowRight className="w-4 h-4 md:w-5 md:h-5 transition-transform group-hover/btn:translate-x-1" />
-                                        </div>
-                                    </button>
-                                    {gameStatus === 'DEFEAT' && (
-                                        <button 
-                                            onClick={handleRetry} 
-                                            className="flex-1 py-3 md:py-5 bg-indigo-600 border-2 border-indigo-400 relative overflow-hidden group/retry"
-                                        >
-                                            <div className="absolute inset-0 bg-indigo-500 transform scale-x-0 origin-left transition-transform duration-300 group-hover/retry:scale-x-100" />
-                                            <div className="relative flex items-center justify-center gap-2 md:gap-3 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] text-xs md:text-sm">
-                                                <RotateCcw className="w-4 h-4 md:w-5 md:h-5 transition-transform group-hover/retry:rotate-180" /> {t.BTN_RETRY}
-                                            </div>
-                                        </button>
-                                    )}
-                                </>
-                            ) : (
-                                <>
+                                <div className="w-full flex flex-col md:flex-row gap-2 md:gap-4 shrink-0 mt-auto">
                                     {gameStatus === 'VICTORY' && activeLevelConfig && (
                                         <button onClick={handleNextLevel} className="flex-1 py-3 md:py-5 bg-emerald-600 border-2 border-emerald-400 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm">
                                             {t.BTN_NEXT} <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
@@ -788,14 +737,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                     <button onClick={handleMenu} className="flex-1 py-3 md:py-5 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.1em] md:tracking-[0.2em] transition-all flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm">
                                         <LogOut className="w-4 h-4 md:w-5 md:h-5" /> {campaignMode === 'LEVELS' ? (language === 'RU' ? 'ВЫБОР УРОВНЕЙ' : 'LEVELS MENU') : (t.BTN_MENU || 'MENU')}
                                     </button>
-                                </>
-                            )}
-                        </div>
+                                </div>
 
-                        {/* Extra Visual Detail */}
-                        <div className="mt-6 md:mt-12 text-[6px] md:text-[8px] font-mono opacity-20 uppercase tracking-[0.5em] md:tracking-[1em] text-center w-full shrink-0">
-                            ENCRYPTION_KEY::0x7F2A_C0DE_NEBULA
-                        </div>
+                                {/* Extra Visual Detail */}
+                                <div className="mt-6 md:mt-12 text-[6px] md:text-[8px] font-mono opacity-20 uppercase tracking-[0.5em] md:tracking-[1em] text-center w-full shrink-0">
+                                    ENCRYPTION_KEY::0x7F2A_C0DE_NEBULA
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -988,4 +937,4 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     );
 };
 
-export default GameDialogs;
+export default React.memo(GameDialogs);

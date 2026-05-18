@@ -77,8 +77,6 @@ export class ActionProcessor {
               result = this.handleActivateMonument(state, index, actor, action); break;
           case 'ACTIVATE_MINI_MONUMENT':
               result = this.handleActivateMiniMonument(state, index, actor, action as any); break;
-          case 'VISIT_POI':
-              result = this.handleVisitPoi(state, index, actor, action); break;
           case 'WAIT':
               result = { ok: true }; break;
           default:
@@ -431,43 +429,6 @@ export class ActionProcessor {
 
       // Victory!
       state.gameStatus = 'VICTORY';
-
-      return { ok: true };
-  }
-
-  private handleVisitPoi(state: SessionState, _index: WorldIndex, actor: Entity, _action: any): ValidationResult {
-      const currentHex = state.grid[getHexKey(actor.q, actor.r)];
-      if (!currentHex || !currentHex.poiType) {
-          return { ok: false, reason: 'No Point of Interest here' };
-      }
-
-      const poiType = currentHex.poiType;
-      
-      // Handle different POI types
-      if (poiType.startsWith('RIFT')) {
-          // Rifts lead to dungeons (Overworld events or special campaign triggers)
-          if (state.outgoingEvents) {
-              state.outgoingEvents.push(GameEventFactory.create(
-                  'MONUMENT_REACHED', 
-                  `Entering Rift: ${poiType}`, 
-                  actor.id,
-                  { poiType }
-              ));
-          }
-          // For now, just grant some moves and credits as a "discovery" reward
-          actor.moves += 5;
-          actor.coins += 50;
-      } else if (poiType.startsWith('city_')) {
-          // City buildings
-          if (state.outgoingEvents) {
-              state.outgoingEvents.push(GameEventFactory.create(
-                  'MONUMENT_REACHED', 
-                  `Visited ${poiType.replace('city_', '').replace('_', ' ')}`, 
-                  actor.id,
-                  { poiType }
-              ));
-          }
-      }
 
       return { ok: true };
   }

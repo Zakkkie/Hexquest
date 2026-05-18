@@ -9,10 +9,7 @@ import StoryBuilderView from './components/StoryBuilderView.tsx';
 import IntroSequence from './components/IntroSequence.tsx';
 import CampaignLoading from './components/CampaignLoading.tsx';
 import Background from './components/Background.tsx';
-import { InteriorView } from './components/InteriorView.tsx';
 import { DeviceType } from './types.ts';
-import { preloadEventImages } from './services/eventImagePreloader.ts';
-import { EVENT_REGISTRY } from './rules/events.ts';
 
 const App: React.FC = () => {
   // Use selectors to avoid re-rendering App on every single state change
@@ -21,9 +18,6 @@ const App: React.FC = () => {
   const setDeviceType = useGameStore(state => state.setDeviceType);
 
   useEffect(() => {
-    // Preload event images
-    preloadEventImages(EVENT_REGISTRY);
-
     // One-time migration: reset overworld progress for v1 users
     try {
       if (!localStorage.getItem('reset-v1')) {
@@ -89,7 +83,6 @@ const App: React.FC = () => {
         {uiState === 'STORY_BUILDER' && <StoryBuilderView />}
         {uiState === 'INTRO' && <IntroSequence />}
         {uiState === 'CAMPAIGN_LOADING' && <CampaignLoading />}
-        {uiState === 'INTERIOR' && <InteriorView />}
       </div>
 
     </div>

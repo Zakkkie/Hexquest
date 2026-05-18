@@ -11,36 +11,24 @@ interface InventoryModalProps {
 }
 
 const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
-  const { overworld, session, language } = useGameStore();
+  const session = useGameStore(state => state.session);
+  const player = session?.player;
+  const equipment = player?.equipment || {};
+  const bag = player?.inventory || [];
+  const language = useGameStore(state => state.language);
   
-  if (!isOpen) return null;
+  if (!isOpen || !player) return null;
 
-  const isSkirmish = !!session?.grid;
-  
-  const player = isSkirmish ? session.player : overworld.player;
-  const equipment = isSkirmish ? session.player.equipment || {} : overworld.player.equipment;
-  const bag = isSkirmish ? session.player.inventory : overworld.player.bag;
-
-  const handleEquip = (itemId: string, equipSlot: string, index: number) => {
-    if (isSkirmish) {
-      // processPlayerAction is missing, we must add it to store, or just use useGameStore().equipItemSkirmish which we will define
-      useGameStore.getState().equipItemSkirmish(itemId);
-    } else {
-      useGameStore.getState().equipItem(itemId, equipSlot as any, index);
-    }
+  const handleEquip = (itemId: string) => {
+    useGameStore.getState().equipItemSkirmish(itemId);
   };
 
   const handleUnequip = (slotName: string) => {
-    if (isSkirmish) {
-      useGameStore.getState().unequipItemSkirmish(slotName);
-    } else {
-      useGameStore.getState().unequipItem(slotName as any);
-    }
+    useGameStore.getState().unequipItemSkirmish(slotName);
   };
 
   const renderEquipmentSlot = (slotName: string, icon: React.ReactNode, itemData?: any) => {
-    // In overworld, itemData is string (baseId). In skirmish, itemData is Item object.
-    const baseId = typeof itemData === 'string' ? itemData : itemData?.baseId;
+    const baseId = itemData?.baseId;
     const itemDef = baseId ? getItemDef(baseId) : null;
     
     return (
@@ -73,15 +61,14 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
   };
 
   const renderBagItem = (itemData: any, index: number) => {
-    // In overworld, itemData is string (baseId). In skirmish, itemData is Item object.
-    const baseId = typeof itemData === 'string' ? itemData : itemData.baseId;
-    const instanceId = typeof itemData === 'string' ? itemData : itemData.id;
+    // All modes use Item object now
+    const baseId = itemData.baseId;
+    const instanceId = itemData.id;
     const itemDef = getItemDef(baseId);
     if (!itemDef) return null;
 
-    // For skirmish, we can allow ANY item to be equipped. So isEquippable is true if isSkirmish, or if it has a specific slot.
-    const isEquippable = isSkirmish ? true : !!itemDef.equipSlot;
-    const equipSlot = itemDef.equipSlot || 'artifact';
+    // For skirmish/campaign, we allow items to be equipped.
+    const isEquippable = true;
 
     return (
       <div key={`${instanceId}-${index}`} className={`bg-slate-900/40 border-2 rounded-lg p-2.5 flex flex-col gap-2.5 transition-all group relative overflow-hidden ${getRarityBorder(itemDef.rarity)}`}>
@@ -101,7 +88,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
         </div>
         {isEquippable && (
           <button 
-            onClick={() => handleEquip(instanceId, equipSlot, index)}
+            onClick={() => handleEquip(instanceId)}
             className="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded border border-indigo-500/30 text-[10px] font-black uppercase tracking-[0.3em] transition-all active:scale-95"
           >
             {language === 'RU' ? 'Одеть (Использовать)' : 'Equip (Use)'}
@@ -134,7 +121,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center gap-6">
             <div className="hidden md:flex flex-col items-end">
                 <div className="text-[10px] font-black tracking-widest text-emerald-400/60 leading-none mb-1">CREDITS_AVAILABLE</div>
-                <div className="text-xl font-mono font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">{isSkirmish ? (player as any).coins : (player as any).credits}</div>
+                <div className="text-xl font-mono font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">{player.coins}</div>
             </div>
             <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white transition-colors">
               <X className="w-6 h-6 md:w-8 md:h-8" />
@@ -198,7 +185,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
         <div className="md:hidden p-4 bg-slate-900/50 border-t border-indigo-500/30 z-20 flex justify-between items-center">
             <div className="flex flex-col">
                 <div className="text-[8px] font-black tracking-widest text-emerald-400/60 leading-none mb-1 uppercase">Credits</div>
-                <div className="text-lg font-mono font-black text-emerald-400">{isSkirmish ? (player as any).coins : (player as any).credits}</div>
+                <div className="text-lg font-mono font-black text-emerald-400">{player.coins}</div>
             </div>
             <button
                 onClick={onClose}
