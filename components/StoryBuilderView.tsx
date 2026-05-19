@@ -5,7 +5,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { textureService } from '../services/textureService.ts';
-import { ArrowLeft, BookOpen, Crown, ChevronRight, Settings, Volume2, VolumeX, Music, Music2, Languages } from 'lucide-react';
+import { ArrowLeft, BookOpen, Crown, ChevronRight, Settings, Volume2, VolumeX, Music, Music2, Languages, HelpCircle, Info, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Konva from 'konva';
 
@@ -25,6 +25,16 @@ const TARGET_SHAPE = [
 ];
 
 const TARGET_KEYS = new Set(TARGET_SHAPE.map(c => getHexKey(c.q, c.r)));
+
+const isValidPlacement = (currentLvl: number | undefined, selectedLvl: number | null, isTarget: boolean) => {
+    if (selectedLvl === null) return false;
+    if (!isTarget) return false;
+    if (currentLvl === undefined) {
+        return selectedLvl === 0;
+    } else {
+        return Math.abs(currentLvl - selectedLvl) === 1;
+    }
+};
 
 const STORY_STEPS = [
     { reqLevel: 0, reqCount: 10, title: "Пробуждение Архитектора", text: "Вы стоите перед пустой бездной. Чтобы восстановить этот мир, вам необходимо заложить фундамент. Выложите 10 гексов 0 уровня. Фигура скрыта во тьме воображения, нащупайте ее форму." },
@@ -103,9 +113,10 @@ const StoryHex: React.FC<{
     level: number | undefined, 
     isSelected: boolean,
     isTarget: boolean,
+    isEligible: boolean,
     isNew?: boolean,
     onClick: (q: number, r: number) => void 
-}> = React.memo(({ q, r, level, isSelected, isTarget, isNew, onClick }) => {
+}> = React.memo(({ q, r, level, isSelected, isTarget, isEligible, isNew, onClick }) => {
     const px = useMemo(() => hexToPixel(q, r), [q, r]);
     const isBuilt = level !== undefined;
     
@@ -130,10 +141,7 @@ const StoryHex: React.FC<{
         return textureService.getSideTexture(level, undefined);
     }, [level]);
 
-    // Height calculation - visual depth - matching HexNode logic
-    // Level 0: 10px thickness (offsetY=-10)
-    // Level 1+: Thickness increases, offsetY decreases (moves UP)
-    // Level -1-: Moves DOWN
+    // Height calculation - visual depth
     const height = level !== undefined ? (level >= 0 ? 12 + level * 12 : 12) : 0;
     const yOffset = level !== undefined ? (level >= 0 ? -height : (Math.abs(level) - 1) * 12) : 0;
     const wallHeight = level !== undefined ? (level >= 0 ? height : Math.abs(level) * 12) : 0;
@@ -143,11 +151,11 @@ const StoryHex: React.FC<{
         if (isNew && groupRef.current) {
             const node = groupRef.current;
             const originalY = node.y();
-            node.y(originalY - 50);
+            node.y(originalY - 60);
             node.opacity(0);
             new Konva.Tween({
                 node: node,
-                duration: 0.4,
+                duration: 0.5,
                 y: originalY,
                 opacity: 1,
                 easing: Konva.Easings.BackEaseOut
@@ -169,7 +177,15 @@ const StoryHex: React.FC<{
             const p2 = squashedPoints[next];
             const p3 = { x: p2.x, y: p2.y + wallHeight };
             const p4 = { x: p1.x, y: p1.y + wallHeight };
-            return { id: i, data: `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} Z` };
+            const minY = Math.min(p1.y, p2.y);
+            const maxY = Math.max(p3.y, p4.y);
+            return { 
+                id: i, 
+                data: `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} Z`,
+                midX: (p1.x + p2.x) / 2,
+                minY,
+                maxY
+            };
         });
     }, [isBuilt, wallHeight, level]);
 
@@ -193,7 +209,14 @@ const StoryHex: React.FC<{
                                 key={side.id}
                                 data={side.data}
                                 fillPatternImage={sideTexture as any}
-                                fill={sideTexture ? undefined : colors.side}
+                                fillEnabled={!sideTexture}
+                                fillLinearGradientStartPoint={{ x: side.midX, y: side.minY }}
+                                fillLinearGradientEndPoint={{ x: side.midX, y: side.maxY }}
+                                fillLinearGradientColorStops={[
+                                    0, colors.top,
+                                    0.25, colors.side,
+                                    1, 'rgba(11, 17, 32, 0.05)'
+                                ]}
                                 stroke={colors.side}
                                 strokeWidth={0.5}
                                 opacity={1 - ((side.id - 1) % 4) * 0.15}
@@ -210,18 +233,18 @@ const StoryHex: React.FC<{
                 <Path
                     data={SQUASHED_BASE_PATH_D}
                     fillPatternImage={topTexture as any}
-                    fill={topTexture ? undefined : (isBuilt ? colors?.top : (isHovered ? 'rgba(99, 102, 241, 0.4)' : (isTarget ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.02)')))}
+                    fill={topTexture ? undefined : (isBuilt ? colors?.top : (isHovered ? 'rgba(99, 102, 241, 0.35)' : (isTarget ? 'rgba(99, 102, 241, 0.08)' : 'rgba(255,255,255,0.01)')))}
                     fillPatternScale={{ x: GAME_CONFIG.HEX_SIZE / 32, y: GAME_CONFIG.HEX_SIZE / 32 }}
                     fillPatternOffset={{ x: 32, y: 32 }}
                     fillPatternRepeat="repeat"
-                    stroke={isBuilt ? colors?.stroke : (isHovered ? 'rgba(99, 102, 241, 0.8)' : (isTarget ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255,255,255,0.1)'))}
+                    stroke={isBuilt ? colors?.stroke : (isHovered ? 'rgba(34, 211, 238, 0.8)' : (isTarget ? 'rgba(99, 102, 241, 0.35)' : 'rgba(255,255,255,0.06)'))}
                     strokeWidth={isBuilt ? 2 : (isHovered ? 2 : 1)}
                     perfectDrawEnabled={false}
                     shadowForStrokeEnabled={false}
                 />
                 {isBuilt && colors && (
                     <>
-                        {/* Top/Light Bevel matching HexNode */}
+                        {/* Top/Light Bevel */}
                         <Path 
                             data={`M ${BASE_POINTS[2].x} ${BASE_POINTS[2].y * 0.8} L ${BASE_POINTS[3].x} ${BASE_POINTS[3].y * 0.8} L ${BASE_POINTS[4].x} ${BASE_POINTS[4].y * 0.8} L ${BASE_POINTS[5].x} ${BASE_POINTS[5].y * 0.8}`}
                             stroke="rgba(255,255,255,0.4)"
@@ -229,7 +252,7 @@ const StoryHex: React.FC<{
                             listening={false}
                             perfectDrawEnabled={false}
                         />
-                        {/* Bottom/Dark Bevel matching HexNode */}
+                        {/* Bottom/Dark Bevel */}
                         <Path 
                             data={`M ${BASE_POINTS[5].x} ${BASE_POINTS[5].y * 0.8} L ${BASE_POINTS[0].x} ${BASE_POINTS[0].y * 0.8} L ${BASE_POINTS[1].x} ${BASE_POINTS[1].y * 0.8} L ${BASE_POINTS[2].x} ${BASE_POINTS[2].y * 0.8}`}
                             stroke="rgba(0,0,0,0.6)"
@@ -241,19 +264,93 @@ const StoryHex: React.FC<{
                 )}
             </Group>
 
-            {/* Selection/Hover Glow */}
+            {/* Empty Holographic blueprint decoration inside targets */}
+            {!isBuilt && isTarget && (
+                <Group y={yOffset}>
+                    <Path
+                        data={SQUASHED_BASE_PATH_D}
+                        scaleX={0.75}
+                        scaleY={0.75}
+                        stroke={isHovered ? 'rgba(34, 211, 238, 0.5)' : 'rgba(99, 102, 241, 0.22)'}
+                        strokeWidth={1}
+                        dash={[3, 4]}
+                        listening={false}
+                    />
+                    <Circle x={0} y={0} r={2} fill={isHovered ? 'rgb(34, 211, 238)' : 'rgba(99, 102, 241, 0.4)'} listening={false} />
+                    <Circle x={-14} y={0} r={1.2} fill="rgba(99, 102, 241, 0.2)" listening={false} />
+                    <Circle x={14} y={0} r={1.2} fill="rgba(99, 102, 241, 0.2)" listening={false} />
+                </Group>
+            )}
+
+            {/* Pulse Build Indicator for Eligible Placement Cells */}
+            {isEligible && (
+                <Group y={yOffset}>
+                    <Path
+                        data={SQUASHED_BASE_PATH_D}
+                        scaleX={1.12}
+                        scaleY={1.12}
+                        stroke={isHovered ? '#ec4899' : '#22d3ee'}
+                        strokeWidth={2}
+                        dash={[5, 4]}
+                        opacity={0.9}
+                        shadowColor={isHovered ? '#ec4899' : '#22d3ee'}
+                        shadowBlur={isHovered ? 12 : 8}
+                        shadowOpacity={0.5}
+                        listening={false}
+                    />
+                    <Group scaleX={0.65} scaleY={0.65} y={-1} listening={false}>
+                        <Path 
+                            data="M -8 0 L 8 0 M 0 -8 L 0 8" 
+                            stroke="#22d3ee" 
+                            strokeWidth={2} 
+                            opacity={0.8} 
+                        />
+                    </Group>
+                </Group>
+            )}
+
+            {/* Selection Outline */}
             {isSelected && (
                 <Path
                     y={yOffset}
                     data={SQUASHED_BASE_PATH_D}
-                    scaleX={1.1}
-                    scaleY={1.1}
-                    stroke="#22d3ee"
-                    strokeWidth={2}
-                    dash={[5, 5]}
-                    opacity={0.6}
+                    scaleX={1.18}
+                    scaleY={1.18}
+                    stroke="#a855f7"
+                    strokeWidth={2.5}
+                    dash={[4, 4]}
+                    opacity={0.8}
+                    shadowColor="#a855f7"
+                    shadowBlur={10}
                     listening={false}
                     perfectDrawEnabled={false}
+                />
+            )}
+
+            {/* Place Block Isometric Ripple Particle Effect */}
+            {isNew && (
+                <Circle
+                    y={yOffset}
+                    r={GAME_CONFIG.HEX_SIZE * 0.8}
+                    stroke="#ffffff"
+                    strokeWidth={3}
+                    opacity={0.9}
+                    scaleX={1}
+                    scaleY={0.8}
+                    listening={false}
+                    ref={(node) => {
+                        if (node) {
+                            new Konva.Tween({
+                                node: node,
+                                duration: 0.65,
+                                scaleX: 1.85,
+                                scaleY: 1.48,
+                                opacity: 0,
+                                strokeWidth: 0.5,
+                                easing: Konva.Easings.EaseOut
+                            }).play();
+                        }
+                    }}
                 />
             )}
         </Group>
@@ -282,6 +379,7 @@ const StoryBuilderView: React.FC = () => {
     const [isInitialHintDismissed, setIsInitialHintDismissed] = useState(false);
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -456,6 +554,7 @@ const StoryBuilderView: React.FC = () => {
                                         r={coord.r}
                                         level={lvl}
                                         isTarget={isTarget}
+                                        isEligible={isValidPlacement(lvl, selectedLevel, isTarget)}
                                         isSelected={lvl === selectedLevel}
                                         isNew={lastPlacedKey === key}
                                         onClick={handleCellClick}
@@ -466,27 +565,95 @@ const StoryBuilderView: React.FC = () => {
                     </Layer>
                 </Stage>
             </div>
-
-            {/* UI LAYER */}
-            <div className="absolute inset-0 z-10 pointer-events-none flex flex-col overflow-hidden p-6 md:p-8">
+            <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between overflow-hidden p-4 md:p-8">
                 
-                {/* TOP ELEMENTS */}
-                <div className="flex justify-between items-start w-full">
-                    <div className="flex items-center gap-4 md:gap-6 pointer-events-auto">
+                {/* TOP HEADER STATUS */}
+                <div className="flex justify-between items-center w-full pointer-events-auto">
+                    <div className="flex items-center gap-3">
                         <button 
                             onClick={() => { playUiSound('CLICK'); setUIState('MENU'); }}
-                            className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-slate-900/80 border border-white/10 rounded-full hover:bg-slate-800 text-white transition-all shadow-2xl backdrop-blur-md"
+                            className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-slate-900/90 border border-white/10 rounded-2xl hover:bg-slate-800 text-white transition-all shadow-[0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-md hover:border-indigo-500/50"
                         >
                             <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" /> 
                         </button>
 
-                        <div className="hidden sm:flex flex-col">
+                        <div className="bg-slate-900/95 border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-2.5 backdrop-blur-md shadow-2xl">
+                            <BookOpen className="w-4 h-4 text-indigo-400" />
+                            <div className="flex flex-col">
+                                <span className="text-[9px] text-slate-400 tracking-wider font-bold">
+                                    {language === 'RU' ? 'РЕЖИМ СИНХРОНИЗАЦИИ' : 'SYNCHRONIZER MATRIX'}
+                                </span>
+                                <span className="text-white font-black uppercase text-xs">
+                                    {language === 'RU' ? 'ГЛАВА' : 'CHAPTER'} {storyMilestone + 1}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {/* Help Manual triggering button */}
+                        <button 
+                            onClick={() => { playUiSound('CLICK'); setIsHelpOpen(true); }}
+                            className="bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 px-3.5 py-2 rounded-2xl text-[10px] md:text-xs font-black tracking-wider uppercase flex items-center gap-2 hover:bg-indigo-900/50 transition-all shadow-xl backdrop-blur-md"
+                        >
+                            <HelpCircle className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">{language === 'RU' ? 'Физика Векторов' : 'Vector Rules'}</span>
+                        </button>
+
+                        <div className="bg-slate-950/50 text-[10px] text-indigo-400 px-3 py-1.5 rounded-xl border border-indigo-500/20 font-mono tracking-widest hidden lg:block">
+                            COORD: [Q, R] ISOMETRIC_Z
+                        </div>
+                    </div>
+                </div>
+
+                {/* HELPER MATRIX STATUS AND BLOCK SELECTOR DOCK */}
+                <div className="w-full flex flex-col items-center gap-3 mt-4 pointer-events-auto max-w-xl mx-auto md:max-w-2xl">
+                    
+                    {/* Active Instruction Bar describing placement validation */}
+                    <AnimatePresence mode="wait">
+                        {selectedLevel !== null && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="w-full bg-slate-950/80 border border-cyan-500/30 rounded-2xl px-4 py-2.5 backdrop-blur-md shadow-lg flex items-center gap-3"
+                            >
+                                <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                                <p className="text-[10px] md:text-xs text-cyan-300 font-medium">
+                                    {language === 'RU' 
+                                        ? selectedLevel === 0 
+                                            ? "Гекс 0 уровня (Фундамент) можно выкладывать на любые свободные контурные ячейки."
+                                            : `Блок уровня ${selectedLevel} требует для размещения смежные блоки с перепадом высоты ровно в 1 уровень.`
+                                        : selectedLevel === 0
+                                            ? "Level 0 block (Foundation) can be laid onto any available template paths."
+                                            : `Level ${selectedLevel} block requires placing onto adjacent structures with exactly 1 level difference.`}
+                                </p>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Cyber Dock (Fluid and scrollable horizontally for any amount of blocks) */}
+                    <div className="w-full bg-slate-900/90 border border-white/10 rounded-2xl md:rounded-3xl p-3 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-indigo-500/20 to-transparent" />
+                        
+                        <div className="flex md:flex-row flex-col justify-between items-start md:items-center gap-4">
+                            <div className="flex flex-col">
+                                <span className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                                    <Sparkles className="w-3 h-3 text-indigo-400" />
+                                    {language === 'RU' ? 'ХРАНИЛИЩЕ ДОБЫТЫХ ФРАГМЕНТОВ' : 'EXTRACTED FRAGMENTS STORAGE'}
+                                </span>
+                                <span className="text-[10px] md:text-xs text-slate-300 font-bold">
+                                    {language === 'RU' ? 'Выберите блок, затем кликните по мишени на поле:' : 'Select a block to deploy onto field targets:'}
+                                </span>
+                            </div>
+
+                            {/* Dock Items */}
                             {Object.keys(minedInSessionHexes).length === 0 ? (
-                                <span className="text-[10px] md:text-xs font-black text-slate-500 uppercase tracking-[0.2em] italic">
-                                    {language === 'RU' ? 'Хранилища пусты' : 'Vaults empty'}
+                                <span className="text-xs font-black text-slate-500 uppercase tracking-widest italic animate-pulse">
+                                    {language === 'RU' ? 'Секторы пусты (играйте уровни)' : 'Matrix blank (complete levels)'}
                                 </span>
                             ) : (
-                                <div className="flex gap-2 no-scrollbar py-1">
+                                <div className="flex gap-2.5 overflow-x-auto no-scrollbar max-w-full py-1.5">
                                     {Object.entries(minedInSessionHexes).sort((a,b) => Number(a[0]) - Number(b[0])).map(([level, count]) => {
                                         const lvl = Number(level);
                                         const isSelected = selectedLevel === lvl;
@@ -496,12 +663,23 @@ const StoryBuilderView: React.FC = () => {
                                         return (
                                             <motion.button
                                                 key={lvl}
+                                                whileHover={{ scale: 1.05 }}
                                                 whileTap={{ scale: 0.95 }}
                                                 onClick={() => { playUiSound('CLICK'); setSelectedLevel(isSelected ? null : lvl); }}
-                                                className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all relative ${isSelected ? 'bg-indigo-600/30 border-indigo-500 shadow-[0_0_15px_rgba(34,211,238,0.2)]' : 'bg-slate-900/50 border-white/5 hover:border-indigo-500/30'}`}
+                                                className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all relative ${isSelected ? 'bg-indigo-600/30 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.25)]' : 'bg-slate-950/60 border-white/5 hover:border-indigo-500/30'}`}
                                             >
-                                                <div className="w-4 h-4 rotate-12" style={{ backgroundColor: hexCol, borderRadius: '3px' }} />
-                                                <span className="text-[10px] font-black text-white">x{count}</span>
+                                                <div className="w-3.5 h-3.5 rotate-12 relative flex items-center justify-center" style={{ backgroundColor: hexCol, borderRadius: '3px' }}>
+                                                    <span className="text-[7px] text-white/50 font-black absolute">{lvl}</span>
+                                                </div>
+                                                <div className="flex flex-col items-start">
+                                                    <span className="text-[8px] text-slate-400 uppercase font-black tracking-wider leading-none">
+                                                        {lvl === 0 ? (language === 'RU' ? 'Почва' : 'Ground') : (lvl < 0 ? (language === 'RU' ? 'Шахта' : 'Depth') : (language === 'RU' ? 'Пик' : 'Peak'))}
+                                                    </span>
+                                                    <span className="text-[11px] font-black text-white mt-1">x{count}</span>
+                                                </div>
+                                                {isSelected && (
+                                                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee] animate-ping" />
+                                                )}
                                             </motion.button>
                                         );
                                     })}
@@ -509,73 +687,48 @@ const StoryBuilderView: React.FC = () => {
                             )}
                         </div>
                     </div>
-
-                    <div className="bg-slate-900/80 border border-white/10 rounded-2xl px-3 py-2 md:px-4 md:py-2 flex items-center gap-2 md:gap-3 backdrop-blur-md pointer-events-auto shadow-2xl">
-                        <BookOpen className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-400" />
-                        <span className="text-white font-black uppercase tracking-[0.15em] text-[9px] md:text-xs whitespace-nowrap">
-                            {language === 'RU' ? 'ГЛАВА' : 'CHAPTER'} {storyMilestone + 1}
-                        </span>
-                    </div>
                 </div>
 
-                {/* Mobile Resource Bar */}
-                <div className="flex sm:hidden w-full mt-4 justify-start pointer-events-auto">
-                    <div className="bg-slate-900/60 backdrop-blur-lg rounded-2xl border border-white/5 p-2 flex gap-2 overflow-x-auto no-scrollbar max-w-full">
-                        {Object.entries(minedInSessionHexes).sort((a,b) => Number(a[0]) - Number(b[0])).map(([level, count]) => {
-                            const lvl = Number(level);
-                            const isSelected = selectedLevel === lvl;
-                            const hexCol = lvl < 0 ? '#4338ca' : (lvl === 0 ? '#475569' : (lvl === 1 ? '#059669' : (lvl === 2 ? '#d97706' : '#dc2626')));
-                            if (count <= 0) return null;
-
-                            return (
-                                <button
-                                    key={lvl}
-                                    onClick={() => { playUiSound('CLICK'); setSelectedLevel(isSelected ? null : lvl); }}
-                                    className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${isSelected ? 'bg-indigo-600/30 border-indigo-500' : 'bg-slate-950/50 border-white/5'}`}
-                                >
-                                    <div className="w-3 h-3 rotate-12" style={{ backgroundColor: hexCol, borderRadius: '2px' }} />
-                                    <span className="text-[10px] font-black text-white">x{count}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* BOTTOM CONTENT - Narrative & Controls */}
-                <div className="mt-auto flex items-end justify-between gap-4 pointer-events-none">
+                {/* BOTTOM CONTENT - Narrative & Settings Container */}
+                <div className="mt-auto flex md:flex-row flex-col items-stretch md:items-end justify-between gap-4 pointer-events-none pt-4">
+                    
+                    {/* NARRATIVE CONSTRUCT PANEL */}
                     <motion.div 
                         initial={{ y: 50, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        className="bg-[#0b1120]/95 border border-white/10 rounded-2xl md:rounded-[40px] w-full max-w-[calc(100vw-32px)] md:max-w-sm lg:max-w-md shadow-2xl backdrop-blur-3xl flex flex-col overflow-hidden pointer-events-auto p-4 md:p-8 relative"
+                        className="bg-slate-950/95 border border-white/10 rounded-3xl w-full max-w-[calc(100vw-32px)] md:max-w-sm lg:max-w-md shadow-2xl backdrop-blur-3xl flex flex-col overflow-hidden pointer-events-auto p-5 md:p-7 relative"
                     >
-                        {/* Dots Indicator */}
-                        <div className="absolute top-4 right-4 md:top-8 md:right-8 flex gap-1 md:gap-1.5">
+                        {/* Dots Chapter Indicator */}
+                        <div className="absolute top-5 right-5 flex gap-1.5">
                             {STORY_STEPS.map((_, i) => (
-                                <div key={i} className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-full transition-all duration-500 ${i < storyMilestone ? 'bg-indigo-500' : (i === storyMilestone ? 'bg-white w-3 md:w-4' : 'bg-slate-700')}`} />
+                                <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${i < storyMilestone ? 'bg-indigo-500' : (i === storyMilestone ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 w-4' : 'bg-slate-800')}`} />
                             ))}
                         </div>
 
                         {STORY_STEPS[storyMilestone] ? (
                             <>
-                                <h3 className="text-sm md:text-xl font-black text-white uppercase tracking-tight mb-2 md:mb-4 pr-10 md:pr-16 leading-tight">
+                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">
+                                    {language === 'RU' ? 'ТЕКУЩАЯ СТАДИЯ ИНТЕГРАЦИИ' : 'CURRENT INTEGRATION OBJECTIVE'}
+                                </span>
+                                <h3 className="text-base md:text-lg font-black text-white uppercase tracking-tight mb-2 pr-16 leading-tight">
                                     {STORY_STEPS[storyMilestone].title}
                                 </h3>
                                 
-                                <p className="text-slate-400 text-[10px] md:text-sm leading-relaxed mb-4 md:mb-8 font-medium italic opacity-90 line-clamp-3 md:line-clamp-none">
+                                <p className="text-slate-400 text-[10px] md:text-sm leading-relaxed mb-4 font-medium italic opacity-95">
                                     "{STORY_STEPS[storyMilestone].text}"
                                 </p>
                                 
-                                <div className="flex items-center gap-3 md:gap-6">
+                                <div className="flex items-center gap-4">
                                     <div className="flex-1">
-                                    <div className="flex justify-between text-[9px] md:text-[11px] font-black font-mono text-indigo-400 mb-1.5 md:mb-2 uppercase tracking-widest">
-                                        <span>{language === 'RU' ? 'СИНХРОНИЗАЦИЯ' : 'SYNC'}</span>
-                                        <span>
-                                            {Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length} / {STORY_STEPS[storyMilestone].reqCount}
-                                        </span>
-                                    </div>
-                                    <div className="w-full h-1.5 md:h-2 bg-slate-950 rounded-full overflow-hidden border border-white/5">
+                                        <div className="flex justify-between text-[9px] md:text-[11px] font-black font-mono text-cyan-400 mb-1.5 uppercase tracking-widest">
+                                            <span>{language === 'RU' ? 'ДИСПЕРСИЯ СЕТКИ' : 'MATRIX ALIGNMENT'}</span>
+                                            <span className="bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-500/20">
+                                                {Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length} / {STORY_STEPS[storyMilestone].reqCount}
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5">
                                             <motion.div 
-                                                className="h-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-400 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                                                className="h-full bg-gradient-to-r from-indigo-500 via-indigo-400 to-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.6)]"
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${Math.min(100, Math.floor((Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length / STORY_STEPS[storyMilestone].reqCount) * 100))}%` }}
                                             />
@@ -591,21 +744,21 @@ const StoryBuilderView: React.FC = () => {
                                                 setUIState('CAMPAIGN_MAP');
                                             }
                                         }}
-                                        className="w-8 h-8 md:w-12 md:h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg md:rounded-2xl flex items-center justify-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-indigo-400/50 grow-0 shrink-0"
+                                        className="w-10 h-10 md:w-12 md:h-12 bg-indigo-600 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-indigo-400/50 grow-0 shrink-0 hover:border-indigo-500"
                                     >
-                                        <ChevronRight className="w-4 h-4 md:w-6 md:h-6" />
+                                        <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
                                     </button>
                                 </div>
                             </>
                         ) : (
                             <div className="py-2 flex items-center gap-4">
-                                <Crown className="w-6 h-6 md:w-10 md:h-10 text-amber-400" />
+                                <Crown className="w-8 h-8 md:w-10 md:h-10 text-amber-400" />
                                 <div className="flex flex-col">
                                     <h3 className="text-sm md:text-xl font-black text-amber-400 uppercase tracking-tight">
-                                        {language === 'RU' ? 'МИР ВОССТАНОВЛЕН' : 'WORLD RESTORED'}
+                                        {language === 'RU' ? 'ПРОСТРАНСТВО СТАБИЛИЗИРОВАНО' : 'CHRONOS SYNCHRONIZED'}
                                     </h3>
                                     <p className="text-[9px] md:text-xs text-amber-200/50 italic font-medium">
-                                        {language === 'RU' ? 'Полотно завершено.' : 'Canvas complete.'}
+                                        {language === 'RU' ? 'Сектор Небула полностью спроектирован.' : 'Nebula sector successfully aligned.'}
                                     </p>
                                 </div>
                             </div>
@@ -613,14 +766,14 @@ const StoryBuilderView: React.FC = () => {
                     </motion.div>
 
                     {/* SETTINGS AREA */}
-                    <div className="flex flex-col gap-2 pointer-events-auto relative">
+                    <div className="flex flex-row md:flex-col gap-2 pointer-events-auto relative mt-2 md:mt-0 justify-end">
                         <AnimatePresence>
                             {isSettingsOpen && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.9, y: 10 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                    className="absolute bottom-full right-0 mb-2 p-2 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl flex flex-col gap-1 min-w-[140px]"
+                                    className="absolute bottom-full right-0 mb-3 p-2 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl flex flex-col gap-1 min-w-[150px]"
                                 >
                                     <button 
                                         onClick={() => { playUiSound('CLICK'); toggleMusic(); }}
@@ -654,13 +807,13 @@ const StoryBuilderView: React.FC = () => {
                                         <div className="flex gap-1">
                                             <button 
                                                 onClick={() => { playUiSound('CLICK'); setLanguage('RU'); }}
-                                                className={`flex-1 py-1 rounded-lg text-[9px] font-black border transition-all ${language === 'RU' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-950 border-white/5 text-slate-500 hover:text-slate-300'}`}
+                                                className={`flex-1 py-1 rounded-lg text-[9px] font-black border transition-all ${language === 'RU' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-white/5 text-slate-500 hover:text-slate-300'}`}
                                             >
                                                 RU
                                             </button>
                                             <button 
                                                 onClick={() => { playUiSound('CLICK'); setLanguage('EN'); }}
-                                                className={`flex-1 py-1 rounded-lg text-[9px] font-black border transition-all ${language === 'EN' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-950 border-white/5 text-slate-500 hover:text-slate-300'}`}
+                                                className={`flex-1 py-1 rounded-lg text-[9px] font-black border transition-all ${language === 'EN' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-white/5 text-slate-500 hover:text-slate-300'}`}
                                             >
                                                 EN
                                             </button>
@@ -674,13 +827,94 @@ const StoryBuilderView: React.FC = () => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
-                            className={`w-14 h-14 border rounded-full flex items-center justify-center transition-all shadow-2xl backdrop-blur-md ${isSettingsOpen ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-900/80 border-white/10 text-slate-400 hover:text-white'}`}
+                            className={`w-12 h-12 md:w-14 md:h-14 border rounded-2xl flex items-center justify-center transition-all shadow-2xl backdrop-blur-md ${isSettingsOpen ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-900/90 border-white/10 text-slate-400 hover:text-white hover:border-indigo-500'}`}
                         >
-                            <Settings className={`w-6 h-6 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-500`} />
+                            <Settings className={`w-5.5 h-5.5 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-500`} />
                         </motion.button>
                     </div>
                 </div>
             </div>
+
+            {/* HIGH TECH INTERACTIVE VECTOR GUIDELINES MANUAL (Rulebook Modal) */}
+            <AnimatePresence>
+                {isHelpOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-50 bg-slate-950/90 [backdrop-filter:blur(8px)] flex items-center justify-center p-4 pointer-events-auto"
+                        onClick={() => setIsHelpOpen(false)}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-slate-900 border border-indigo-500/40 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative overflow-hidden text-left"
+                        >
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500" />
+                            
+                            <div className="flex items-center gap-3 mb-5">
+                                <Info className="w-6 h-6 text-cyan-400 shrink-0" />
+                                <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight">
+                                    {language === 'RU' ? 'КОНСТРУКЦИЯ И ГЕОМЕТРИЯ' : 'CONSTRUCTION SPECS MATRIX'}
+                                </h2>
+                            </div>
+
+                            <p className="text-slate-400 text-xs md:text-sm mb-6 leading-relaxed">
+                                {language === 'RU' 
+                                    ? 'Векторная сетка сектора подчиняется строгим законам стабильности пространства. Чтобы успешно синхронизировать элементы, соблюдайте следующие правила:' 
+                                    : 'The sectors vector grid obeys strict spatial stability equations. To successfully align and persist templates, adhere to the mechanics below:'}
+                            </p>
+
+                            <div className="space-y-4 mb-6">
+                                <div className="p-3 bg-slate-950/60 rounded-xl border border-white/5">
+                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                                        {language === 'RU' ? 'Правило Нулевой Базы (Фундамент)' : 'Ground Foundations (Level 0)'}
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 leading-normal">
+                                        {language === 'RU'
+                                            ? 'Гексы 0 уровня формируют базовую энерго-опору. Их можно беспрепятственно выкладывать на любые свободные чертежные ячейки (мишени).'
+                                            : 'Level 0 blocks serve as the vital base ground state. They can be freely placed onto any empty design templates.'}
+                                    </p>
+                                </div>
+
+                                <div className="p-3 bg-slate-950/60 rounded-xl border border-white/5">
+                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                        {language === 'RU' ? 'Правило Лестницы (Перепад высот)' : 'Staircase Rule (Step Heights)'}
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 leading-normal">
+                                        {language === 'RU'
+                                            ? 'Конструкция остальных уровней требует опоры. Вы можете поставить гекс только тогда, когда перепад высоты с соседней ячейкой составляет ровно 1 шаг по модулю (|ΔH| = 1).'
+                                            : 'Other tiers require physical support. You can only deploy a block if the height delta to an adjacent structured cell is exactly 1 step (|ΔH| = 1).'}
+                                    </p>
+                                </div>
+
+                                <div className="p-3 bg-slate-950/60 rounded-xl border border-white/5">
+                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
+                                        {language === 'RU' ? 'Целевая Подсветка диапазонов' : 'Holographic Range Indicators'}
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 leading-normal">
+                                        {language === 'RU'
+                                            ? 'При выборе любого блока из Хранилища, все доступные для строительства ячейки замигают бирюзовыми кольцами!'
+                                            : 'When selecting any block from your Storage, all valid constructive targets instantly pulse with cyan indicators.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => { playUiSound('CLICK'); setIsHelpOpen(false); }}
+                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-2xl transition-all uppercase tracking-widest text-xs shadow-xl"
+                            >
+                                {language === 'RU' ? 'Запустить Синхронизатор' : 'Resume Matrix'}
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* INITIAL HINT OVERLAY */}
             <AnimatePresence>

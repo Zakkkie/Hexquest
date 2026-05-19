@@ -171,6 +171,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const wallLightingRefs = useRef<(Konva.Path | null)[]>([]);
   const voidWallGroupRefs = useRef<(Konva.Group | null)[]>([]);
   const voidWallPathRefs = useRef<(Konva.Path | null)[]>([]);
+  const wallFadeRefs = useRef<(Konva.Path | null)[]>([]);
 
   // SPRING VERTICAL MOVEMENT PHYSICS (Dynamic height animation and elegant staggered page-load waterfalls)
   const currentOffsetYRef = useRef<number>(offsetY + 80); // Start deep for rise ripple effect
@@ -295,6 +296,17 @@ const HexNodeComponent = (props: HexNodeProps) => {
                           }
                           const shadeNode = wallShadeRefs.current[i];
                           if (shadeNode) shadeNode.data(data);
+                          const fadeNode = wallFadeRefs.current[i];
+                          if (fadeNode) {
+                              fadeNode.data(data);
+                              fadeNode.fillLinearGradientStartPoint({ x: (px[i] + px[next]) / 2, y: Math.min(py[i], py[next]) });
+                              fadeNode.fillLinearGradientEndPoint({ x: (px[i] + px[next]) / 2, y: Math.max(py[i], py[next]) + heightDiff });
+                              fadeNode.fillLinearGradientColorStops([
+                                  0, 'rgba(2, 6, 23, 0)',
+                                  0.45, 'rgba(2, 6, 23, 0.25)',
+                                  1, 'rgba(2, 6, 23, 0.95)'
+                              ]);
+                          }
                           const lightingNode = wallLightingRefs.current[i];
                           if (lightingNode) lightingNode.data(data);
                       } else {
@@ -501,13 +513,19 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         perfectDrawEnabled={false} 
                         listening={false} 
                         closed={true} 
-                        opacity={1} 
+                        opacity={0.88} 
                         shadowForStrokeEnabled={false}
                     />
                     {/* Shading Overlay */}
                     <Path 
                         ref={el => { wallShadeRefs.current[i] = el; }}
                         fill={shading > 0 ? `rgba(255,255,255,${shading})` : `rgba(0,0,0,${Math.abs(shading)})`}
+                        listening={false}
+                        perfectDrawEnabled={false}
+                    />
+                    {/* Bottom-fade overlay (DISSOLVES column into dark space background) */}
+                    <Path 
+                        ref={el => { wallFadeRefs.current[i] = el; }}
                         listening={false}
                         perfectDrawEnabled={false}
                     />
@@ -660,7 +678,18 @@ const HexNodeComponent = (props: HexNodeProps) => {
                 })}
 
                 {isSelected && (
-                    <Path data={BASE_PATH_D} stroke="#22d3ee" strokeWidth={2.5} listening={false} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
+                    <Path 
+                        data={BASE_PATH_D} 
+                        stroke="#22d3ee" 
+                        strokeWidth={2.5} 
+                        shadowColor="#22d3ee"
+                        shadowBlur={12}
+                        shadowOpacity={0.8}
+                        shadowOffset={{ x: 0, y: 0 }}
+                        listening={false} 
+                        perfectDrawEnabled={false} 
+                        shadowForStrokeEnabled={true} 
+                    />
                 )}
 
                 {!isPassable && !isRealVoid && (

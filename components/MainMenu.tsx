@@ -529,40 +529,88 @@ const MainMenu: React.FC = () => {
         </div>
       </div>
 
-      {/* CENTER MENU */}
-      <div className="flex flex-col gap-6 w-full max-w-sm px-6 z-10 max-h-screen overflow-y-auto no-scrollbar py-20 md:py-0">
+      {/* CENTER MENU - ADAPTIVE GRID SYSTEM */}
+      <div className="flex flex-col md:grid md:grid-cols-12 gap-10 md:gap-14 lg:gap-20 w-full max-w-sm md:max-w-4xl lg:max-w-5xl px-6 md:px-10 z-10 max-h-screen overflow-y-auto no-scrollbar py-20 md:py-6 items-center justify-center">
         
-        {/* LOGO BLOCK WITH ANIMATION */}
+        {/* LOGO BLOCK WITH ANIMATION (Column 1) */}
         <motion.div 
-            initial={{ opacity: 0, y: -50, scale: 0.9 }}
-            animate={{ opacity: logoVisible ? 1 : 0, y: logoVisible ? 0 : -50, scale: logoVisible ? 1 : 0.9 }}
+            initial={{ opacity: 0, x: -40, scale: 0.95 }}
+            animate={{ opacity: logoVisible ? 1 : 0, x: logoVisible ? 0 : -40, scale: logoVisible ? 1 : 0.95 }}
             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-center mb-4 md:mb-8 relative group cursor-default"
+            className="md:col-span-6 lg:col-span-7 flex flex-col items-center md:items-start text-center md:text-left selection:bg-indigo-500/30 font-sans"
         >
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 md:w-48 h-32 md:h-48 bg-indigo-500/20 blur-[30px] md:blur-[50px] rounded-full animate-pulse"></div>
-          <div className="relative flex flex-col items-center justify-center">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 md:w-28 h-20 md:h-28 border border-indigo-500/30 rounded-full animate-[spin_10s_linear_infinite]"></div>
-              <div className="relative mb-1 md:mb-2">
-                  <Hexagon className="w-14 h-14 md:w-20 md:h-20 text-indigo-500 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] fill-indigo-900/20" strokeWidth={1.5} />
-                  <div className="absolute inset-0 flex items-center justify-center animate-pulse">
-                      <Target className="w-5 h-5 md:w-8 md:h-8 text-white drop-shadow-[0_0_10px_#fff]" />
-                  </div>
-              </div>
-              <h1 
-                  className="relative text-5xl md:text-7xl lg:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-200 to-indigo-500 drop-shadow-[0_0_20px_rgba(99,102,241,0.6)] z-10 break-words whitespace-pre-wrap select-none"
-                  style={{ WebkitTextStroke: '1.5px rgba(99,102,241,0.4)' }}
-              >
-                  {t.TITLE}
-              </h1>
-              <div className="flex items-center gap-2 md:gap-3 mt-2 md:mt-3 opacity-90 select-none">
-                  <div className="h-px w-10 md:w-16 bg-gradient-to-r from-transparent to-indigo-400"></div>
-                  <p className="text-[9px] md:text-sm text-indigo-200 font-mono font-bold tracking-[0.4em] md:tracking-[0.5em] uppercase whitespace-nowrap break-words whitespace-pre-wrap drop-shadow-[0_0_8px_rgba(99,102,241,0.7)]">{t.SUBTITLE}</p>
-                  <div className="h-px w-10 md:w-16 bg-gradient-to-l from-transparent to-indigo-400"></div>
-              </div>
-          </div>
+            {/* Top Security Status Header */}
+            <div className="flex items-center gap-2 mb-3 px-3 py-1 bg-indigo-950/40 border border-indigo-500/20 rounded-full select-none shadow-[0_0_15px_rgba(99,102,241,0.15)] animate-[pulse_3s_ease-in-out_infinite]">
+                <Activity className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                <span className="text-[9px] md:text-[10px] text-indigo-300 font-mono font-bold tracking-[0.2em] uppercase">
+                    {language === 'RU' ? 'СЕКТОР_НЕБУЛА // СФЕРА_02' : 'NEBULA_SECTOR // HUB_02'}
+                </span>
+            </div>
+
+            {/* Rotating Cyber HUD and Central Hexagon */}
+            <div className="relative w-28 h-28 md:w-36 md:h-36 mb-4 flex items-center justify-center select-none group">
+                {/* Background radial overlay */}
+                <div className="absolute w-36 h-36 md:w-48 md:h-48 bg-indigo-500/20 blur-[35px] md:blur-[50px] rounded-full animate-[pulse_4s_ease-in-out_infinite]" />
+
+                {/* Rotating Outer Tech Ring with Custom Segments */}
+                <svg className="absolute w-full h-full animate-[spin_30s_linear_infinite]" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="44" stroke="#4f46e5" strokeWidth="1" strokeDasharray="6 8 36 8 16 12" fill="none" opacity="0.3" />
+                    <circle cx="50" cy="50" r="44" stroke="#c084fc" strokeWidth="2" strokeDasharray="2 18" fill="none" opacity="0.5" />
+                </svg>
+
+                {/* Rotating Counter-Clockwise Dotted Ring */}
+                <div className="absolute inset-2 border border-dotted border-indigo-400/40 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
+
+                {/* Middle Hex-Boundary Ring */}
+                <div className="absolute inset-4 border border-dashed border-indigo-500/20 rounded-full animate-[spin_20s_linear_infinite]" />
+
+                {/* Central Double-layered Hexagon Logo Core */}
+                <div className="relative z-10 p-0.5 bg-slate-950/80 rounded-2xl border border-indigo-500/30 shadow-[inset_0_0_15px_rgba(99,102,241,0.3)] transition-transform duration-500 group-hover:scale-110">
+                    <Hexagon className="w-14 h-14 md:w-18 md:h-18 text-indigo-400 drop-shadow-[0_0_20px_rgba(99,102,241,0.8)] fill-indigo-950/60" strokeWidth={1.25} />
+                    <div className="absolute inset-0 flex items-center justify-center animate-pulse">
+                        <Target className="w-5 h-5 md:w-7 md:h-7 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
+                    </div>
+                </div>
+
+                {/* Isometric coordinate tick marks for corner decoration */}
+                <div className="absolute top-2 left-2 text-[7px] text-indigo-400/55 font-mono">Q+0.2</div>
+                <div className="absolute bottom-2 right-2 text-[7px] text-indigo-400/55 font-mono">R-0.8</div>
+            </div>
+
+            {/* Main Typographic Pile */}
+            <div className="flex flex-col items-center md:items-start mt-1">
+                <h1 
+                    className="relative text-5xl sm:text-6xl md:text-5xl lg:text-7xl xl:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-100 to-indigo-300 drop-shadow-[0_0_30px_rgba(99,102,241,0.55)] select-none uppercase"
+                    style={{ WebkitTextStroke: '1px rgba(255,255,255,0.15)' }}
+                >
+                    {t.TITLE}
+                </h1>
+                <div className="text-xl sm:text-2xl md:text-xl lg:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-fuchsia-400 to-pink-400 font-mono font-black uppercase tracking-[0.25em] md:tracking-[0.35em] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)] -mt-1 md:-mt-2 select-none">
+                    {language === 'RU' ? 'ЭКОНОМИКА' : 'ECONOMY'}
+                </div>
+            </div>
+
+            {/* Custom Divider Line & Subtitle */}
+            <div className="flex items-center gap-3 mt-4 md:mt-5 select-none opacity-90 w-full justify-center md:justify-start">
+                <div className="h-px w-8 md:w-12 bg-gradient-to-r from-transparent to-indigo-500/40"></div>
+                <p className="text-[9px] md:text-xs text-indigo-200/90 font-mono font-bold tracking-[0.3em] uppercase drop-shadow-[0_0_8px_rgba(99,102,241,0.45)] whitespace-nowrap">
+                    {t.SUBTITLE}
+                </p>
+                <div className="h-px w-8 md:w-12 bg-gradient-to-l from-transparent to-indigo-500/40"></div>
+            </div>
+
+            {/* Lower decorative protocol footprint */}
+            <div className="hidden md:flex items-center gap-1.5 mt-5 text-[8px] text-slate-500 font-mono select-none uppercase tracking-wider">
+                <span>VER: 2.0.0</span>
+                <span>•</span>
+                <span>SYS_INIT_OK</span>
+                <span>•</span>
+                <span>STABILITY: ACTIVE</span>
+            </div>
         </motion.div>
 
-        <div className="flex flex-col gap-3">
+        {/* PANELS & CONTROL ACTIONS BLOCK (Column 2) */}
+        <div className="md:col-span-6 lg:col-span-5 flex flex-col gap-3.5 w-full max-w-sm shrink-0">
           <div className="flex flex-col gap-2">
             <MenuButton 
                 onClick={handleCampaignClick} 
@@ -614,6 +662,7 @@ const MainMenu: React.FC = () => {
           {hasActiveSession && <MenuButton onClick={() => { setUIState('GAME'); playUiSound('CLICK'); }} icon={<ArrowRight className="w-5 h-5" />} label={t.RESUME} subLabel={t.RESUME_SUB} />}
           <MenuButton onClick={() => { setUIState('LEADERBOARD'); playUiSound('CLICK'); }} icon={<Trophy className="w-5 h-5" />} label={t.LEADERBOARD} subLabel={t.LEADERBOARD_SUB} />
         </div>
+
       </div>
 
       {/* AUTH MODAL */}

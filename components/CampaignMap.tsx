@@ -219,10 +219,55 @@ const CampaignMap: React.FC = () => {
                                         {isCurrent ? t.BADGE_CURRENT : (isCompleted ? t.BADGE_DONE : t.BADGE_LOCKED)}
                                     </div>
                                 </motion.div>
-                                <div className={`absolute flex flex-col bg-slate-900/95 backdrop-blur-xl border border-indigo-500/30 p-4 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.6)] w-[260px] transition-all z-10 ${isMobile ? 'left-full ml-4 text-left' : (i % 2 === 0 ? 'left-full ml-8 text-left' : 'right-full mr-8 text-right items-end')}`}>
-                                    <span className="text-[9px] font-bold uppercase tracking-[0.2em] mb-1 text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.5)]">{t.MISSION_PREFIX} {pos.level.id}</span>
-                                    <h3 className="text-sm md:text-lg font-black uppercase leading-tight mb-2 text-white">{displayTitle}</h3>
-                                    {isUnlocked && <p className="text-[10px] text-slate-300 font-mono line-clamp-2 leading-relaxed italic opacity-90">{displayDesc}</p>}
+                                <div className={`absolute flex flex-col bg-slate-900/80 backdrop-blur-xl border p-4 rounded-2xl md:rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.7)] w-[260px] md:w-[280px] transition-all duration-300 z-10 hover:border-indigo-400 group-hover:bg-slate-900/90
+                                    ${isCompleted ? 'border-emerald-500/30' : (isCurrent ? 'border-amber-500/50' : 'border-indigo-500/20')}
+                                    ${isMobile ? 'left-full ml-4 text-left' : (i % 2 === 0 ? 'left-full ml-8 text-left' : 'right-full mr-8 text-right items-end')}
+                                `}>
+                                    {/* Glowing accent spot */}
+                                    <div className={`absolute top-0 w-24 h-24 bg-indigo-500/5 blur-[25px] rounded-full pointer-events-none -translate-y-6 ${i % 2 === 0 ? 'left-0' : 'right-0'}`} />
+
+                                    <div className="flex items-center gap-1.5 mb-1.5 shrink-0">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${isCompleted ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : (isCurrent ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b]' : 'bg-slate-600')}`} />
+                                        <span className={`text-[9.5px] font-black uppercase tracking-[0.2em] ${isCompleted ? 'text-emerald-400' : (isCurrent ? 'text-amber-400 animate-pulse' : 'text-indigo-400/80')}`}>{t.MISSION_PREFIX} {pos.level.id}</span>
+                                    </div>
+
+                                    <h3 className={`text-xs md:text-base font-black uppercase leading-tight mb-2 transition-colors duration-300 ${isCurrent ? 'text-amber-300' : 'text-slate-100'}`}>{displayTitle}</h3>
+                                    
+                                    {isUnlocked ? (
+                                        <>
+                                            <p className={`text-[10px] md:text-[11px] text-slate-400 font-mono leading-relaxed italic mb-3 opacity-90 line-clamp-2 ${i % 2 === 0 ? 'text-left' : 'text-right'}`}>{displayDesc}</p>
+                                            
+                                            {/* Mission Details matching card grid */}
+                                            {pos.level && (
+                                                <div className={`flex flex-wrap items-center gap-2 mt-auto pt-2 border-t border-white/5 w-full ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                                                    {/* Threat Tag */}
+                                                    {(() => {
+                                                        const threat = pos.level.aiMode === 'none' ? 'NONE' : (pos.level.aiMode === 'basic' ? 'BASIC' : 'HIGH');
+                                                        return (
+                                                            <div className="flex items-center gap-1 bg-black/30 px-1.5 py-0.5 rounded border border-white/5 text-[8px] font-bold text-slate-300 font-mono">
+                                                                <ShieldAlert className={`w-2.5 h-2.5 ${threat === 'NONE' ? 'text-emerald-400' : (threat === 'BASIC' ? 'text-amber-400' : 'text-red-400')}`} />
+                                                                <span>{(t as any)[`LVL_THREAT_${threat}`]}</span>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    
+                                                    {/* Goal/Stat Indicators */}
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-0.5 text-[8px] font-mono text-indigo-400 font-bold">
+                                                            <BatteryCharging className="w-2.5 h-2.5 text-indigo-400" />
+                                                            <span>{pos.level.startState.moves}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-0.5 text-[8px] font-mono text-emerald-400 font-bold">
+                                                            <Coins className="w-2.5 h-2.5 text-emerald-400" />
+                                                            <span>{pos.level.startState.credits}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <p className={`text-[10px] text-slate-600 font-semibold italic ${i % 2 === 0 ? 'text-left' : 'text-right'}`}>{t.LVL_STATUS_LOCKED}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>

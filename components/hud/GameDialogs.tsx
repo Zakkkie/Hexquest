@@ -4,7 +4,7 @@ import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
 import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
-import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Globe, Activity } from 'lucide-react';
+import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Globe, Activity, Timer, Coins, Sparkles, Footprints } from 'lucide-react';
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
 import { Item } from '../../types';
 
@@ -561,14 +561,15 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* VICTORY / DEFEAT */}
             {(gameStatus === 'DEFEAT' || (gameStatus === 'VICTORY' && victoryStage === 'MODAL')) && (
-                <div className="absolute inset-0 z-[250] flex items-center justify-center bg-black/95 backdrop-blur-2xl animate-in fade-in duration-1000 pointer-events-auto p-4 md:p-8">
+                <div className="absolute inset-0 z-[250] flex items-center justify-center bg-black/95 backdrop-blur-3xl animate-in fade-in duration-700 pointer-events-auto p-3 sm:p-6 md:p-8">
                     {/* Background Grid & Scanlines */}
                     <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none" />
-                    <div className={`absolute inset-0 bg-gradient-to-b opacity-20 pointer-events-none ${gameStatus === 'VICTORY' ? 'from-emerald-500/20 to-transparent' : 'from-red-500/20 to-transparent'}`} />
+                    <div className={`absolute inset-0 bg-gradient-to-b opacity-25 pointer-events-none ${gameStatus === 'VICTORY' ? 'from-emerald-500/20 to-transparent shadow-[inset_0_0_100px_rgba(16,185,129,0.1)]' : 'from-red-500/20 to-transparent shadow-[inset_0_0_100px_rgba(239,68,68,0.1)]'}`} />
 
-                    <div className="flex flex-col items-center max-w-3xl w-full relative z-10 max-h-full overflow-y-auto no-scrollbar py-4 px-4 md:px-0">
+                    {/* Premium Sci-Fi Terminal Layout */}
+                    <div className="bg-slate-950/90 border border-slate-800/80 rounded-2xl md:rounded-[2rem] p-5 md:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.05)] max-w-4xl w-full flex flex-col relative z-10 max-h-[92vh] overflow-y-auto no-scrollbar py-6 px-4 md:px-8 border-t-indigo-500/20">
                         {/* Terminal Decoration */}
-                        <div className="w-full flex items-center gap-2 md:gap-4 mb-6 md:mb-10 opacity-40">
+                        <div className="w-full flex items-center gap-2 md:gap-4 mb-4 md:mb-6 opacity-45 shrink-0">
                             <div className="h-px flex-1 bg-current" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }} />
                             <div className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.5em] font-mono whitespace-nowrap" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }}>
                                 {gameStatus === 'VICTORY' ? 'SYSTEM_STABILITY_RESTORED' : 'LINK_TERMINATED'}
@@ -577,16 +578,16 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         </div>
 
                         {/* Main Status Display */}
-                        <div className="relative mb-6 md:mb-10">
+                        <div className="relative mb-5 md:mb-7 mx-auto shrink-0">
                             <div className={`absolute inset-0 blur-xl md:blur-3xl opacity-30 animate-pulse ${gameStatus === 'VICTORY' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                            <div className={`relative px-6 py-4 md:px-10 md:py-6 border-2 md:border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.3)] md:shadow-[0_0_50px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_20px_rgba(239,68,68,0.3)] md:shadow-[0_0_50px_rgba(239,68,68,0.3)]'}`}>
-                                <h1 className={`text-4xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none whitespace-nowrap ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
+                            <div className={`relative px-6 py-3.5 md:px-10 md:py-5 border-2 md:border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_20px_rgba(239,68,68,0.3)]'}`}>
+                                <h1 className={`text-3xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none whitespace-nowrap ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
                                     {gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}
                                 </h1>
                             </div>
                         </div>
 
-                        {/* Mission Summary Data */}
+                        {/* Mission Summary Data in Two-Column Layout */}
                         {(() => {
                             const baseScore = 15000;
                             const timePenalty = currentTurn * 10;
@@ -602,83 +603,164 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
                             return (
                                 <>
-                                    {/* Final Score Banner */}
-                                    <div className="w-full bg-slate-900/40 border border-purple-500/30 rounded-xl p-4 md:p-6 mb-6 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.15)] backdrop-blur-md relative overflow-hidden">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
-                                        <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-purple-300 mb-1 z-10">RATING POINTS (SCORE)</div>
-                                        <div className="text-3xl md:text-5xl font-black font-mono tracking-tight text-white mb-2 z-10 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-                                            {finalScore.toLocaleString()}
-                                        </div>
-                                        <div className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400 flex items-center justify-center gap-4 flex-wrap text-center z-10">
-                                            <span>Base: 15,000</span>
-                                            <span className="text-red-400">Time: -{timePenalty}</span>
-                                            <span className="text-red-400">Actions: -{actionsPenalty} ({player?.actionsTaken || 0})</span>
-                                            <span className="text-emerald-400">Bonus: +{resourcesBonus}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 lg:gap-4 w-full mb-6">
-                                        {[
-                                            { label: 'STATUS', value: gameStatus === 'VICTORY' ? 'SUCCESS' : 'FAILED', color: gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-400' },
-                                            { label: 'TURNS ELAPSED', value: currentTurn, color: 'text-slate-300' },
-                                            { label: 'CREDITS EXTRACTED', value: player?.totalCoinsEarned || 0, color: 'text-amber-400' },
-                                            { label: 'ACTIONS TAKEN', value: player?.actionsTaken || 0, color: 'text-purple-400' }
-                                        ].map((stat, i) => (
-                                            <div key={i} className="bg-slate-900/50 border border-white/10 p-2 lg:p-4 rounded-lg backdrop-blur-md flex flex-col items-center justify-center text-center">
-                                                <div className="text-[7px] md:text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-1 lg:mb-2">{stat.label}</div>
-                                                <div className={`text-base md:text-lg lg:text-xl font-black font-mono leading-none ${stat.color}`}>{stat.value}</div>
+                                    {/* Responsive Dashboard Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5 w-full mb-4 md:mb-6 shrink-0 text-left">
+                                        
+                                        {/* COLUMN 1: Score & detailed breakdown */}
+                                        <div className="md:col-span-12 lg:col-span-7 flex flex-col justify-between">
+                                            <div className="bg-slate-900/40 border border-purple-500/20 rounded-xl md:rounded-2xl p-4 md:p-5 flex flex-col flex-1 shadow-[0_4px_24px_rgba(147,51,234,0.05)] backdrop-blur-md relative overflow-hidden group">
+                                                <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
+                                                
+                                                <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-purple-400 mb-1 z-10 flex items-center gap-1.5">
+                                                    <Trophy className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                                                    {language === 'RU' ? 'ОЧКИ РЕЙТИНГА' : 'RATING POINTS (SCORE)'}
+                                                </div>
+                                                
+                                                <div className="text-3xl md:text-5xl font-black font-mono tracking-tight text-white mb-4 z-10 drop-shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all group-hover:drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] leading-none">
+                                                    {finalScore.toLocaleString()}
+                                                </div>
+                                                
+                                                {/* Breakdown table with sleek design */}
+                                                <div className="w-full z-10 border border-slate-800/80 rounded-xl bg-slate-950/60 p-3 text-[10.5px] md:text-[11.5px] font-mono space-y-2 shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)] mt-auto">
+                                                    
+                                                    {/* Base */}
+                                                    <div className="flex items-center justify-between border-b border-slate-900/80 pb-1.5">
+                                                        <span className="text-slate-400 flex items-center gap-2">
+                                                            <span className="w-2 h-2 rounded bg-indigo-500 shadow-[0_0_6px_#6366f1]" />
+                                                            <span>{language === 'RU' ? 'База' : 'Base'}</span>
+                                                        </span>
+                                                        <span className="text-white font-black">+15,000</span>
+                                                    </div>
+                                                    
+                                                    {/* Time Penalty */}
+                                                    <div className="flex items-center justify-between border-b border-slate-900/80 pb-1.5">
+                                                        <span className="text-slate-400 flex items-center gap-2">
+                                                            <span className="w-2 h-2 rounded bg-red-500 shadow-[0_0_6px_#ef4444]" />
+                                                            <span>{language === 'RU' ? 'Время' : 'Time'}</span>
+                                                            <span className="text-slate-500 text-[9px] md:text-[10px] font-normal">({currentTurn} {language === 'RU' ? 'ходов' : 'turns'} &times; -10)</span>
+                                                        </span>
+                                                        <span className="text-red-400 font-bold">-{timePenalty.toLocaleString()}</span>
+                                                    </div>
+                                                    
+                                                    {/* Actions Penalty */}
+                                                    <div className="flex items-center justify-between border-b border-slate-900/80 pb-1.5">
+                                                        <span className="text-slate-400 flex items-center gap-2">
+                                                            <span className="w-2 h-2 rounded bg-red-400 shadow-[0_0_6px_#f87171]" />
+                                                            <span>{language === 'RU' ? 'Действия' : 'Action'}</span>
+                                                            <span className="text-slate-500 text-[9px] md:text-[10px] font-normal">({player?.actionsTaken || 0} {language === 'RU' ? 'действ.' : 'acts'} &times; -50)</span>
+                                                        </span>
+                                                        <span className="text-red-400 font-bold font-semibold">-{actionsPenalty.toLocaleString()}</span>
+                                                    </div>
+                                                    
+                                                    {/* Resource Bonus */}
+                                                    <div className="flex items-center justify-between pt-0.5">
+                                                        <span className="text-slate-400 flex items-center gap-2">
+                                                            <span className="w-2 h-2 rounded bg-emerald-500 shadow-[0_0_6px_#10b981] animate-pulse" />
+                                                            <span>{language === 'RU' ? 'Бонусы' : 'Bonus'}</span>
+                                                            <span className="text-slate-500 text-[8.5px] md:text-[9.5px] font-normal">
+                                                                ({language === 'RU' ? 'Ранг' : 'Rank'} {player?.playerLevel || 1} &times; 500 + {player?.totalCoinsEarned || 0} &times; 2)
+                                                            </span>
+                                                        </span>
+                                                        <span className="text-emerald-400 font-black">+{resourcesBonus.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        ))}
+                                        </div>
+                                        
+                                        {/* COLUMN 2: Statistics & Assessment */}
+                                        <div className="md:col-span-12 lg:col-span-5 flex flex-col gap-3.5 h-full justify-between">
+                                            {/* Grid */}
+                                            <div className="grid grid-cols-2 gap-2 md:gap-3 w-full">
+                                                {[
+                                                    { label: language === 'RU' ? 'СТАТУС' : 'STATUS', value: gameStatus === 'VICTORY' ? (language === 'RU' ? 'УСПЕХ' : 'SUCCESS') : (language === 'RU' ? 'КРАХ' : 'FAILED'), color: gameStatus === 'VICTORY' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold', icon: Activity },
+                                                    { label: language === 'RU' ? 'ХОДОВ ПРОШЛО' : 'TURNS ELAPSED', value: currentTurn, color: 'text-slate-300', icon: Timer },
+                                                    { label: language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS', value: player?.totalCoinsEarned || 0, color: 'text-amber-400', icon: Coins },
+                                                    { label: language === 'RU' ? 'ДЕЙСТВИЙ' : 'ACTIONS TAKEN', value: player?.actionsTaken || 0, color: 'text-purple-400', icon: Footprints }
+                                                ].map((stat, i) => {
+                                                    const IconComponent = stat.icon;
+                                                    return (
+                                                        <div key={i} className="bg-slate-900/30 border border-slate-850/80 p-2 text-center rounded-xl flex flex-col items-center justify-center relative overflow-hidden group hover:border-slate-800 transition-colors">
+                                                            <IconComponent className="w-3.5 h-3.5 text-slate-500 mb-1" />
+                                                            <div className="text-[7.5px] md:text-[8px] font-black uppercase tracking-widest text-slate-500 mb-1">{stat.label}</div>
+                                                            <div className={`text-sm md:text-base font-extrabold font-mono leading-none ${stat.color}`}>{stat.value}</div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            
+                                            {/* Performance Card */}
+                                            {gameStatus === 'VICTORY' ? (
+                                                <div className="bg-emerald-950/20 border border-emerald-500/25 p-3 md:p-4 rounded-xl flex flex-col justify-center flex-1 shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)]">
+                                                    <div className="flex items-center gap-1.5 mb-1 shrink-0 text-emerald-400 font-extrabold uppercase tracking-widest text-[9px] md:text-[9.5px]">
+                                                        <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                                                        <span>{language === 'RU' ? 'ЭФФЕКТИВНОСТЬ' : 'PERFORMANCE'}</span>
+                                                    </div>
+                                                    <p className="text-emerald-200/60 text-[10px] md:text-[10.5px] font-sans leading-relaxed">
+                                                        {language === 'RU' ? 'Миссия закончена. Сектор стабилизирован. Начислен +1 балл улучшений.' : 'Simulated core extracted perfectly. +1 Skill Point awarded for upgrades.'}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-red-950/20 border border-red-500/25 p-3 md:p-4 rounded-xl flex flex-col justify-center flex-1 shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)]">
+                                                    <div className="flex items-center gap-1.5 mb-1 shrink-0 text-red-400 font-extrabold uppercase tracking-widest text-[9px] md:text-[9.5px]">
+                                                        <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                                                        <span>{language === 'RU' ? 'ОТКАЗ СИСТЕМЫ' : 'FAULT REPORT'}</span>
+                                                    </div>
+                                                    <p className="text-red-200/60 text-[10px] md:text-[10.5px] font-sans leading-relaxed">
+                                                        {language === 'RU' ? 'Ядро перегружено. Квантовая связь разорвана из-за критической энтропии.' : 'Core connection terminated. Link disrupted due to excessive system entropy.'}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </>
                             );
                         })()}
 
                         {gameStatus === 'VICTORY' && (
-                            <div className="w-full mb-6 md:mb-8 flex flex-col shrink-0 min-h-0">
-                                <div className="bg-emerald-900/20 border border-emerald-500/30 p-3 md:p-4 rounded-lg mb-4 md:mb-6 shrink-0">
-                                    <h3 className="text-emerald-400 font-bold uppercase tracking-wider text-xs md:text-sm mb-1 text-center md:text-left">Performance Assessment</h3>
-                                    <p className="text-emerald-200/70 text-[10px] md:text-xs text-center md:text-left">Mission completed successfully. +1 Skill Point awarded for upgrades.</p>
-                                </div>
-                                
+                            <div className="w-full flex flex-col shrink-0 min-h-0 text-left">
+                                {/* Item extraction selection */}
                                 {player?.inventory && player.inventory.length > 0 && (
-                                    <>
-                                        <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 md:mb-3 text-center shrink-0">Select ONE item to extract</div>
-                                        <div className="flex flex-wrap justify-center gap-2 md:gap-3 overflow-y-auto no-scrollbar pb-2 mb-4 mt-2">
+                                    <div className="w-full bg-slate-900/15 border border-slate-900/60 p-3 md:p-4 rounded-xl mb-3 shrink-0 flex flex-col">
+                                        <div className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 md:mb-3 text-center">
+                                            {language === 'RU' ? 'ВЫБЕРИТЕ ОДИН ПРЕДМЕТ ДЛЯ ЭКСТРАКЦИИ' : 'SELECT ONE ITEM TO EXTRACT'}
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 w-full mt-1">
                                             {player.inventory.map(item => (
                                                 <button 
                                                     key={item.id}
                                                     onClick={() => { setSelectedRewardItem(item); playUiSound('CLICK'); }}
-                                                    className={`w-[45%] md:w-auto p-2 md:p-3 border-2 rounded-xl transition-all flex flex-col items-center ${selectedRewardItem?.id === item.id ? 'border-emerald-500 bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800 hover:border-slate-600'}`}
+                                                    className={`p-2 border rounded-xl transition-all duration-300 flex flex-col items-center justify-center text-center ${selectedRewardItem?.id === item.id ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.3)] scale-[1.02]' : 'border-slate-800 bg-slate-950/40 hover:bg-slate-900/30 hover:border-slate-750'}`}
                                                 >
-                                                    <span className={`text-xl md:text-2xl mb-1 md:mb-2 ${item.rarity === 'LEGENDARY' ? 'text-amber-400' : item.rarity === 'RARE' ? 'text-purple-400' : 'text-blue-400'}`}>
+                                                    <span className={`text-xl md:text-2xl mb-1 ${item.rarity === 'LEGENDARY' ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]' : item.rarity === 'RARE' ? 'text-purple-400' : 'text-blue-400'}`}>
                                                         {item.visualType === 'ARTIFACT' ? '💎' : item.visualType === 'TOOL' ? '⛏️' : item.visualType === 'HEAD' ? '🪖' : '👕'}
                                                     </span>
-                                                    <span className="text-[8px] md:text-[10px] font-bold text-white uppercase tracking-wider text-center line-clamp-1">{item.name}</span>
+                                                    <span className="text-[9px] font-extrabold text-slate-200 uppercase tracking-wide truncate w-full">{item.name}</span>
+                                                    <span className={`text-[7px] font-bold font-mono mt-0.5 uppercase ${item.rarity === 'LEGENDARY' ? 'text-amber-400' : item.rarity === 'RARE' ? 'text-purple-400' : 'text-blue-400'}`}>{item.rarity}</span>
                                                 </button>
                                             ))}
                                         </div>
-                                    </>
+                                    </div>
                                 )}
 
+                                {/* Hex extraction extraction container */}
                                 {campaignMode === 'LEVELS' && Object.keys(availableHexes).length > 0 && (
-                                    <div className="bg-slate-900/40 border border-slate-700 p-3 rounded-xl mb-4 shrink-0 mt-4">
-                                        <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
-                                            <h3 className="text-emerald-400 font-bold uppercase tracking-wider text-xs md:text-sm">
+                                    <div className="bg-slate-900/20 border border-slate-905 p-3 rounded-xl mb-4 shrink-0 mt-1">
+                                        <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-900/80">
+                                            <h3 className="text-emerald-400 font-extrabold uppercase tracking-wider text-[10px] md:text-xs">
                                                 {language === 'RU' ? 'Протокол Извлечения Гексов' : 'Hex Extraction Protocol'}
                                             </h3>
-                                            <div className="text-[10px] font-mono tracking-widest px-2 py-1 bg-slate-950 rounded text-amber-500">
+                                            <div className="text-[9px] font-mono tracking-widest px-2 py-0.5 bg-slate-950 rounded text-amber-500 border border-amber-900/30">
                                                 {language === 'RU' ? 'ВМЕСТИМОСТЬ' : 'CAPACITY'}: {totalSelectedHexesCount} / {Math.max(5, player?.maxInventorySize || 5)} 
                                             </div>
                                         </div>
-                                        <div className="flex flex-col gap-2 max-h-40 overflow-y-auto no-scrollbar">
+                                        <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto no-scrollbar">
                                             {Object.entries(availableHexes).map(([level, count]) => {
                                                 const lvl = Number(level);
                                                 const selected = selectedHexes[lvl] || 0;
                                                 const capacityFull = totalSelectedHexesCount >= Math.max(5, player?.maxInventorySize || 5);
                                                 
                                                 return (
-                                                    <div key={lvl} className="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800">
+                                                    <div key={lvl} className="flex items-center justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-900">
                                                         <div className="flex items-center gap-3">
                                                             <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold ${
                                                                 lvl < 0 ? 'bg-indigo-900/50 text-indigo-400' :
@@ -687,12 +769,12 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                             }`}>
                                                                 L{lvl}
                                                             </div>
-                                                            <div className="text-xs font-bold text-slate-300">
+                                                            <div className="text-[10px] md:text-xs font-bold text-slate-300">
                                                                 {language === 'RU' ? 'Доступно:' : 'Available:'} {count}
                                                             </div>
                                                         </div>
                                                         
-                                                        <div className="flex bg-slate-800 rounded overflow-hidden shadow-inner">
+                                                        <div className="flex bg-slate-900 rounded-md overflow-hidden shadow-inner border border-slate-800">
                                                             <button 
                                                                 onClick={() => {
                                                                     if (selected > 0) {
@@ -701,9 +783,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                                     }
                                                                 }}
                                                                 disabled={selected <= 0}
-                                                                className="w-8 h-8 flex items-center justify-center bg-slate-700/50 hover:bg-slate-600 active:bg-slate-500 disabled:opacity-30 transition-colors text-white font-bold"
+                                                                className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-750 active:bg-slate-700 disabled:opacity-30 transition-colors text-white font-bold"
                                                             >-</button>
-                                                            <div className="w-8 h-8 flex items-center justify-center font-mono text-emerald-400">
+                                                            <div className="w-8 h-7 flex items-center justify-center font-mono text-emerald-400 text-xs font-bold">
                                                                 {selected}
                                                             </div>
                                                             <button 
@@ -714,7 +796,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                                     }
                                                                 }}
                                                                 disabled={selected >= count || capacityFull}
-                                                                className="w-8 h-8 flex items-center justify-center bg-slate-700/50 hover:bg-slate-600 active:bg-slate-500 disabled:opacity-30 transition-colors text-white font-bold"
+                                                                className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-755 active:bg-slate-700 disabled:opacity-30 transition-colors text-white font-bold"
                                                             >+</button>
                                                         </div>
                                                     </div>
@@ -723,28 +805,29 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         </div>
                                     </div>
                                 )}
-
-                                <div className="w-full flex flex-col md:flex-row gap-2 md:gap-4 shrink-0 mt-auto">
-                                    {gameStatus === 'VICTORY' && activeLevelConfig && (
-                                        <button onClick={handleNextLevel} className="flex-1 py-3 md:py-5 bg-emerald-600 border-2 border-emerald-400 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm">
-                                            {t.BTN_NEXT} <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
-                                        </button>
-                                    )}
-                                    <button onClick={handleRetry} className="flex-1 py-3 md:py-5 bg-slate-900 border-2 border-slate-700 hover:bg-slate-800 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] transition-all flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm">
-                                        <RotateCcw className="w-4 h-4 md:w-5 md:h-5" /> {t.BTN_RETRY}
-                                    </button>
-                                    {/* Fallback Menu Button */}
-                                    <button onClick={handleMenu} className="flex-1 py-3 md:py-5 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.1em] md:tracking-[0.2em] transition-all flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm">
-                                        <LogOut className="w-4 h-4 md:w-5 md:h-5" /> {campaignMode === 'LEVELS' ? (language === 'RU' ? 'ВЫБОР УРОВНЕЙ' : 'LEVELS MENU') : (t.BTN_MENU || 'MENU')}
-                                    </button>
-                                </div>
-
-                                {/* Extra Visual Detail */}
-                                <div className="mt-6 md:mt-12 text-[6px] md:text-[8px] font-mono opacity-20 uppercase tracking-[0.5em] md:tracking-[1em] text-center w-full shrink-0">
-                                    ENCRYPTION_KEY::0x7F2A_C0DE_NEBULA
-                                </div>
                             </div>
                         )}
+
+                        {/* Navigation buttons at the absolute bottom of the panel */}
+                        <div className="w-full flex flex-col sm:flex-row gap-2 md:gap-3 shrink-0 mt-3 md:mt-5 text-left">
+                            {gameStatus === 'VICTORY' && activeLevelConfig && (
+                                <button onClick={handleNextLevel} className="flex-1 py-3 md:py-4 bg-emerald-600 border-2 border-emerald-400/80 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] shadow-[0_4px_20px_rgba(16,185,129,0.3)] hover:shadow-[0_4px_25px_rgba(16,185,129,0.5)] rounded-xl transition-all flex items-center justify-center gap-2 text-xs md:text-sm">
+                                    {t.BTN_NEXT} <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
+                                </button>
+                            )}
+                            <button onClick={handleRetry} className="flex-1 py-3 md:py-4 bg-slate-900 border-2 border-slate-750 hover:bg-slate-800 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 text-xs md:text-sm">
+                                <RotateCcw className="w-4 h-4 md:w-5 md:h-5 animate-[spin_10s_linear_infinite]" /> {t.BTN_RETRY}
+                            </button>
+                            {/* Fallback Menu Button */}
+                            <button onClick={handleMenu} className="flex-1 py-3 md:py-4 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.1em] md:tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 text-xs md:text-sm">
+                                <LogOut className="w-4 h-4 md:w-5 md:h-5 animate-[pulse_2s_infinite]" /> {campaignMode === 'LEVELS' ? (language === 'RU' ? 'ВЫБОР УРОВНЕЙ' : 'LEVELS MENU') : (t.BTN_MENU || 'MENU')}
+                            </button>
+                        </div>
+
+                        {/* Extra Visual Detail */}
+                        <div className="mt-4 md:mt-6 text-[6px] md:text-[8px] font-mono opacity-20 uppercase tracking-[0.5em] md:tracking-[1em] text-center w-full shrink-0">
+                            ENCRYPTION_KEY::0x7F2A_C0DE_NEBULA
+                        </div>
                     </div>
                 </div>
             )}
