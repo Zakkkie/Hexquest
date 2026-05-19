@@ -163,12 +163,83 @@ const HexNodeComponent = (props: HexNodeProps) => {
   
   const groupRef = useRef<Konva.Group>(null);
   const topFaceGroupRef = useRef<Konva.Group>(null);
+  const faceContainerRef = useRef<Konva.Group>(null);
+  const overlaysContainerRef = useRef<Konva.Group>(null);
   const wallGroupRefs = useRef<(Konva.Group | null)[]>([]);
   const wallPathRefs = useRef<(Konva.Path | null)[]>([]);
   const wallShadeRefs = useRef<(Konva.Path | null)[]>([]);
   const wallLightingRefs = useRef<(Konva.Path | null)[]>([]);
   const voidWallGroupRefs = useRef<(Konva.Group | null)[]>([]);
   const voidWallPathRefs = useRef<(Konva.Path | null)[]>([]);
+
+  // SPRING VERTICAL MOVEMENT PHYSICS (Dynamic height animation and elegant staggered page-load waterfalls)
+  const currentOffsetYRef = useRef<number>(offsetY + 80); // Start deep for rise ripple effect
+  const velocityRef = useRef<number>(0);
+  const animationFrameRef = useRef<number | null>(null);
+  const isFirstRender = useRef<boolean>(true);
+  const updaterRef = useRef<any>(null);
+
+  useEffect(() => {
+      let active = true;
+      const stiffness = 0.08;
+      const damping = 0.75;
+      
+      const bounceLoop = () => {
+          if (!active) return;
+          
+          const target = offsetY;
+          const current = currentOffsetYRef.current;
+          
+          const delta = target - current;
+          const force = delta * stiffness;
+          velocityRef.current = (velocityRef.current + force) * damping;
+          currentOffsetYRef.current += velocityRef.current;
+
+          const isSettled = Math.abs(currentOffsetYRef.current - target) < 0.04 && Math.abs(velocityRef.current) < 0.04;
+          if (isSettled) {
+              currentOffsetYRef.current = target;
+              velocityRef.current = 0;
+          }
+
+          if (faceContainerRef.current) {
+              faceContainerRef.current.y(currentOffsetYRef.current);
+          }
+          if (overlaysContainerRef.current) {
+              overlaysContainerRef.current.y(currentOffsetYRef.current);
+          }
+
+          if (updaterRef.current) {
+              updaterRef.current(wallUpdaterRegistry.latestCos, wallUpdaterRegistry.latestSin, wallUpdaterRegistry.latestRot);
+          }
+
+          if (!isSettled) {
+              animationFrameRef.current = requestAnimationFrame(bounceLoop);
+          } else {
+              animationFrameRef.current = null;
+          }
+      };
+
+      if (isFirstRender.current) {
+          isFirstRender.current = false;
+          // Ripple stagger offset based on radial coordinate distance from grid center
+          const delay = (Math.abs(q) + Math.abs(r)) * 18; 
+          const timer = setTimeout(() => {
+              animationFrameRef.current = requestAnimationFrame(bounceLoop);
+          }, delay);
+          return () => {
+              active = false;
+              clearTimeout(timer);
+              if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+          };
+      } else {
+          // Play immediately on dynamic state-driven level changes
+          animationFrameRef.current = requestAnimationFrame(bounceLoop);
+          return () => {
+              active = false;
+              if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+          };
+      }
+  }, [offsetY, q, r]);
 
   useEffect(() => {
       const updater = (cos: number, sin: number, rot: number) => {
@@ -185,10 +256,11 @@ const HexNodeComponent = (props: HexNodeProps) => {
           const angleOffset = rot * DEG_TO_RAD;
           const px = new Float32Array(6);
           const py = new Float32Array(6);
+          const curY = currentOffsetYRef.current;
           for (let i = 0; i < 6; i++) {
               const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
               px[i] = Math.cos(angle) * HEX_SIZE;
-              py[i] = Math.sin(angle) * HEX_SIZE * 0.8 + offsetY;
+              py[i] = Math.sin(angle) * HEX_SIZE * 0.8 + curY;
           }
 
           for(let i=0; i<6; i++) {
@@ -196,19 +268,18 @@ const HexNodeComponent = (props: HexNodeProps) => {
               const midAngle = (60 * i + 60) * DEG_TO_RAD + angleOffset; 
               const isFrontFacing = Math.sin(midAngle) > 0;
               
-              // Normal Walls
               const groupNode = wallGroupRefs.current[i];
               if (groupNode) {
                   if (isFrontFacing) {
                       const nLevel = neighborLevels[5 - i];
                       let nY = 0;
-                      if (nLevel === -99) nY = offsetY + MAX_WALL_DEPTH; 
+                      if (nLevel === -99) nY = curY + MAX_WALL_DEPTH; 
                       else if (nLevel >= 0) nY = -(10 + nLevel * 10);
                       else nY = (Math.abs(nLevel) - 1) * 10;
 
-                      if (offsetY < nY) {
-                          const safeNY = nY < offsetY + MAX_WALL_DEPTH ? nY : offsetY + MAX_WALL_DEPTH;
-                          const heightDiff = safeNY - offsetY;
+                      if (curY < nY) {
+                          const safeNY = nY < curY + MAX_WALL_DEPTH ? nY : curY + MAX_WALL_DEPTH;
+                          const heightDiff = safeNY - curY;
                           const b1x = px[next];
                           const b1y = py[next] + heightDiff;
                           const b2x = px[i];
@@ -220,7 +291,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                           const pathNode = wallPathRefs.current[i];
                           if (pathNode) {
                               pathNode.data(data);
-                              pathNode.fillPatternScale({ x: 1, y: heightDiff * 0.015625 }); // 1/64
+                              pathNode.fillPatternScale({ x: 1, y: heightDiff * 0.015625 });
                           }
                           const shadeNode = wallShadeRefs.current[i];
                           if (shadeNode) shadeNode.data(data);
@@ -234,7 +305,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
                   }
               }
 
-              // Void Walls
               if (isRealVoid) {
                   const voidGroupNode = voidWallGroupRefs.current[i];
                   if (voidGroupNode) {
@@ -259,11 +329,16 @@ const HexNodeComponent = (props: HexNodeProps) => {
           }
       };
       
+      updaterRef.current = updater;
+      
       // Initialize immediately
       updater(wallUpdaterRegistry.latestCos, wallUpdaterRegistry.latestSin, wallUpdaterRegistry.latestRot); 
       wallUpdaterRegistry.add(updater);
-      return () => wallUpdaterRegistry.remove(updater);
-  }, [x, y, offsetY, neighborLevels, isRealVoid]);
+      return () => {
+          wallUpdaterRegistry.remove(updater);
+          updaterRef.current = null;
+      };
+  }, [x, y, neighborLevels, isRealVoid]);
 
   useEffect(() => {
       if (isRealVoid && voidOutlineRef.current) {
@@ -294,22 +369,21 @@ const HexNodeComponent = (props: HexNodeProps) => {
       }
   }, [isMonument]);
 
-  // Bouncing Arrow Animation
+  // Bouncing Arrow Animation - Decoupled from absolute coordinate recalculation
   useEffect(() => {
       if (isTargetArrow && arrowRef.current) {
           const tween = new Konva.Tween({
               node: arrowRef.current,
-              y: offsetY - 60, // Target Y (Up)
+              y: -50,
               duration: 0.6,
               yoyo: true,
               easing: Konva.Easings.EaseInOut
           });
-          // Set initial Y
-          arrowRef.current.y(offsetY - 40);
+          arrowRef.current.y(-30);
           tween.play();
           return () => tween.destroy();
       }
-  }, [isTargetArrow, offsetY]);
+  }, [isTargetArrow]);
 
   if (isRealVoid) {
       return (
@@ -449,7 +523,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     )}
                 </Group>
             );
-        })}<Group y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
+        })}<Group ref={faceContainerRef} y={offsetY} scaleY={0.8} perfectDrawEnabled={false}>
             <Group ref={topFaceGroupRef} perfectDrawEnabled={false}>
                 {isMonument && (
                     <Path 
@@ -646,46 +720,49 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     </Group>
                 )}
             </Group>
-        </Group>{/* 3. FLOATING OVERLAYS (No Perspective Squash/Rotation applied to container, logic handled by billboard) */}{isTargetArrow && (
-            <Group ref={arrowRef} y={offsetY - 40} listening={false} perfectDrawEnabled={false}>
-                {/* Shadow/Depth Layer */}
-                <Path 
-                    data={ARROW_SIDE_PATH} 
-                    fill={getArrowColor(tutorialColor, 'shadow')}
-                    perfectDrawEnabled={false}
-                />
-                {/* Main Face */}
-                <Path 
-                    data={ARROW_FACE_PATH} 
-                    fill={getArrowColor(tutorialColor, 'main')}
-                    stroke="rgba(0,0,0,0.5)"
-                    strokeWidth={1}
-                    perfectDrawEnabled={false}
-                />
-            </Group>
-        )}{/* ARTIFACTS / COST / PROGRESS */}
-        <>
+        </Group>
+        {/* 3. FLOATING OVERLAYS (Wrapped inside an animated overlays group container) */}
+        <Group ref={overlaysContainerRef} y={offsetY} listening={false} perfectDrawEnabled={false}>
+            {isTargetArrow && (
+                <Group ref={arrowRef} y={-40} listening={false} perfectDrawEnabled={false}>
+                    {/* Shadow/Depth Layer */}
+                    <Path 
+                        data={ARROW_SIDE_PATH} 
+                        fill={getArrowColor(tutorialColor, 'shadow')}
+                        perfectDrawEnabled={false}
+                    />
+                    {/* Main Face */}
+                    <Path 
+                        data={ARROW_FACE_PATH} 
+                        fill={getArrowColor(tutorialColor, 'main')}
+                        stroke="rgba(0,0,0,0.5)"
+                        strokeWidth={1}
+                        perfectDrawEnabled={false}
+                    />
+                </Group>
+            )}
+
             {artifactType && !isRealVoid && (
-                <Group y={offsetY - 12} listening={false} perfectDrawEnabled={false}>
+                <Group y={-12} listening={false} perfectDrawEnabled={false}>
                     <Circle radius={9} fill={artifactType.includes('RELIC') ? '#f59e0b' : '#3b82f6'} perfectDrawEnabled={false} />
                     <Text text={artifactType.includes('RELIC') ? '★' : '?'} fontSize={13} fontStyle="bold" fill="white" offsetX={4.5} offsetY={6.5} perfectDrawEnabled={false} />
                 </Group>
             )}
 
             {isPending && (
-                <Group y={offsetY - 38} listening={false} perfectDrawEnabled={false}>
+                <Group y={-38} listening={false} perfectDrawEnabled={false}>
                     <Circle radius={15} fill="#fbbf24" stroke="#92400e" strokeWidth={2} perfectDrawEnabled={false} />
                     <Text text={`${pendingCost}`} y={-6} fontSize={13} fontStyle="bold" fill="#78350f" align="center" width={30} offsetX={15} perfectDrawEnabled={false} />
                 </Group>
             )}
             
             {isGrowing && (
-                <Group y={offsetY + 16} listening={false} perfectDrawEnabled={false}>
+                <Group y={16} listening={false} perfectDrawEnabled={false}>
                     <Rect x={-18} y={0} width={36} height={5} fill="rgba(0,0,0,0.7)" cornerRadius={2} perfectDrawEnabled={false} />
                     <Rect x={-18} y={0} width={36 * Math.min(1, progress / (30))} height={5} fill={isRankLocked ? "#f59e0b" : "#10b981"} cornerRadius={2} perfectDrawEnabled={false} />
                 </Group>
             )}
-        </>
+        </Group>
     </Group>
   );
 };
@@ -694,6 +771,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
 function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.id !== next.id) return false;
     if (prev.x !== next.x || prev.y !== next.y) return false;
+    if (prev.offsetY !== next.offsetY) return false;
     if (prev.level !== next.level) return false;
     if (prev.maxLevel !== next.maxLevel) return false;
     if (prev.isSelected !== next.isSelected) return false;

@@ -50,6 +50,9 @@ const CampaignBackground: React.FC = () => {
                     0% { transform: translateY(-20vh); }
                     100% { transform: translateY(120vh); }
                 }
+                @keyframes pulse-dash {
+                    to { stroke-dashoffset: -40; }
+                }
             `}</style>
         </div>
     );
@@ -149,7 +152,29 @@ const CampaignMap: React.FC = () => {
                const cpY2 = nextPos.y - (nextPos.y - pos.y) * 0.5;
                const pathD = `M ${pos.x} ${pos.y} C ${pos.x} ${cpY1}, ${nextPos.x} ${cpY2}, ${nextPos.x} ${nextPos.y}`;
                return (
-                   <path key={`path-${i}`} d={pathD} fill="none" stroke={isPathUnlocked ? 'url(#pathGradient)' : '#1e293b'} strokeWidth={isMobile ? "2" : "3"} strokeDasharray={isPathUnlocked ? "0" : "6 6"} style={{ filter: isPathUnlocked ? 'url(#glow)' : 'none' }} />
+                   <React.Fragment key={`paths-grp-${i}`}>
+                       {/* Base connection state path */}
+                       <path 
+                           d={pathD} 
+                           fill="none" 
+                           stroke={isPathUnlocked ? 'url(#pathGradient)' : '#1e293b'} 
+                           strokeWidth={isMobile ? "2" : "3"} 
+                           strokeDasharray={isPathUnlocked ? "0" : "6 6"} 
+                           style={{ filter: isPathUnlocked ? 'url(#glow)' : 'none' }} 
+                       />
+                       {/* High-voltage flowing data particle thread */}
+                       {isPathUnlocked && (
+                           <path 
+                               d={pathD} 
+                               fill="none" 
+                               stroke="#06b6d4" 
+                               strokeWidth={isMobile ? "1.5" : "2"} 
+                               strokeDasharray="4 14" 
+                               className="animate-[pulse-dash_3s_linear_infinite]" 
+                               style={{ filter: 'drop-shadow(0 0 4px #06b6d4)' }}
+                           />
+                       )}
+                   </React.Fragment>
                );
            })}
         </svg>

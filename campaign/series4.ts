@@ -3,9 +3,9 @@ import { getHexKey } from '../services/hexUtils';
 import { isStranded } from './utils';
 
 /**
- * SERIES 4: ADVANCED PUZZLES (8 levels)
- * Full economic model — see Series 2 header for reference.
- * All starts: minimal resources, player earns through gameplay.
+ * ============================================================================
+ *  SERIES 4: ADVANCED PUZZLES (8 levels)
+ * ============================================================================
  */
 
 // Helper: count player-owned hexes at given level
@@ -15,7 +15,6 @@ const countOwned = (state: any, minLevel: number): number =>
 export const series4Levels: LevelConfig[] = [
 
   // 4.1 RESONANCE — Build 3 adjacent L2 hexes
-  // Economy: DIG 9× → 9mat +12mv. Upgrade 9× → 150cr income. ~20 actions.
   {
     id: '4.1',
     title: 'Sim 4.1: Протокол Резонанса',
@@ -40,12 +39,43 @@ export const series4Levels: LevelConfig[] = [
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => countOwned(state, 2) >= 3,
-      checkLossCondition: (state) => isStranded(state)
+      checkLossCondition: (state) => isStranded(state),
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        const isRu = state.language === 'RU';
+        
+        if (turn === 1) {
+          state.messageLog.unshift({
+            id: `msg-41-init-${Date.now()}`,
+            text: isRu
+              ? 'ИИ-Помощник: Начните цикл. Сначала КОПАЙТЕ (Красная кнопка) Ур. 0, чтобы накопить конструкционный материал. Проектируйте уступы для Ранга 2!'
+              : 'AI-Assistant: Start the cycle. First, DIG (Red button) on Level 0 hexes to extract raw materials. Design step ladders to reach Rank 2 support constraints!',
+            type: 'INFO',
+            source: 'NEBULA_AI',
+            timestamp: Date.now()
+          });
+        }
+
+        // Refund bonus at (0, 0) for smart start
+        const centerHex = state.grid[getHexKey(0, 0)];
+        if (centerHex && centerHex.maxLevel === 1 && !(state as any)._resonanceInitiated) {
+          (state as any)._resonanceInitiated = true;
+          state.player.storage = Math.min(state.player.maxStorage, state.player.storage + 1);
+          state.messageLog.unshift({
+            id: `msg-41-bonus-${Date.now()}`,
+            text: isRu
+              ? 'ГАРМОНИКА: Центральный гекс (0,0) настроен отлично! Материал возвращен: +1.'
+              : 'HARMONICS: Center hex (0,0) resonance point activated! Materials refunded: +1.',
+            type: 'SUCCESS',
+            source: 'SYSTEM',
+            timestamp: Date.now()
+          });
+        }
+      }
     }
   },
 
   // 4.2 MIRROR MAZE — Own symmetric positions (-2,0) and (2,0)
-  // Economy: Recovery cycles for fuel. DIG 2× for mat. ~17 actions.
   {
     id: '4.2',
     title: 'Sim 4.2: Зеркальный Лабиринт',
@@ -56,7 +86,7 @@ export const series4Levels: LevelConfig[] = [
           { q: 0, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
           // WEST PATH (clear)
           { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
+          { q: -2, r: 0, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true }, // Adjusted to owned to allow expansion/checks
           // EAST PATH (blocked by VOID)
           { q: 1, r: 0, maxLevel: 0, currentLevel: 0, structureType: 'VOID', revealed: true },
           { q: 2, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
@@ -73,7 +103,7 @@ export const series4Levels: LevelConfig[] = [
       ]
     },
     startState: {
-      credits: 0, moves: 3, rank: 0, materials: 0,
+      credits: 0, moves: 3, rank: 1, materials: 0,
       items: [
         { baseId: 'fuel_cell', rarity: 'COMMON' },
         { baseId: 'reality_patch', rarity: 'COMMON' },
@@ -86,12 +116,27 @@ export const series4Levels: LevelConfig[] = [
         const b = state.grid[getHexKey(2, 0)];
         return !!(a?.ownerId === 'player-1' && a.maxLevel >= 1 && b?.ownerId === 'player-1' && b.maxLevel >= 1);
       },
-      checkLossCondition: (state) => isStranded(state)
+      checkLossCondition: (state) => isStranded(state),
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        const isRu = state.language === 'RU';
+
+        if (turn === 1) {
+          state.messageLog.unshift({
+            id: `msg-42-init-${Date.now()}`,
+            text: isRu
+              ? 'СИСТЕМА: Прямой проход разрушен разломом Пустоты на (1, 0). Используйте южный объезд (-1, 0 → 1, -1), либо пожертвуйте Reality Patch для быстрого восстановления клетки (шансы: Common: 25%)!'
+              : 'SYSTEM: Direct pathway collapsed by Void at (1,0). Use the southern detour (-1,0 → 1,-1) or sacrifice your Reality Patch item to restore the hex directly (Common success rate: 25%)!',
+            type: 'INFO',
+            source: 'NEBULA_AI',
+            timestamp: Date.now()
+          });
+        }
+      }
     }
   },
 
   // 4.3 RECURSION ENGINE — Build 2 hexes to L3
-  // Economy: ~16mat from digging. Upgrade chain: L1→L2→L3. Income: 2×70cr=140cr. ~25 actions.
   {
     id: '4.3',
     title: 'Sim 4.3: Рекурсивный Движок',
@@ -118,15 +163,27 @@ export const series4Levels: LevelConfig[] = [
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => countOwned(state, 3) >= 2,
-      checkLossCondition: (state) => isStranded(state)
+      checkLossCondition: (state) => isStranded(state),
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        const isRu = state.language === 'RU';
+
+        if (turn === 1) {
+          state.messageLog.unshift({
+            id: `msg-43-init-${Date.now()}`,
+            text: isRu
+              ? 'ТЕКТОНИКА: Вы начинаете с Рангом 2. Копайте глубоко, чтобы добывать ресурсы и золото. Для возведения Ур. 3 понадобится развернуть широкий фундамент!'
+              : 'TECTONICS: You start with Rank 2. Dig deep to accumulate construction elements and income. Erecting a Level 3 hex requires a sound broad base platform!',
+            type: 'INFO',
+            source: 'NEBULA_AI',
+            timestamp: Date.now()
+          });
+        }
+      }
     }
   },
 
   // 4.4 THERMAL EQUILIBRIUM — Upgrade to L4 under entropy pressure
-  // Entropy: +3 per action (via hook). Starts at 70 (of 100). At 100 → loss.
-  // Player has ~10 actions before entropy overflows.
-  // Economy: DIG 4× (+4mat,+6mv). Upgrade 4× (L0→L4 chain). Recovery for credits.
-  // But: need rank 3 for L4! Start rank=3.
   {
     id: '4.4',
     title: 'Sim 4.4: Тепловое Равновесие',
@@ -149,8 +206,39 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 50, moves: 8, rank: 3, materials: 4, initialEntropy: 70 },
     aiMode: 'none',
     hooks: {
+      onBeforeAction: () => null,
       onAfterAction: (state) => {
         state.entropy.current = Math.min(100, (state.entropy.current ?? 70) + 3);
+        const turn = state.currentTurn ?? 0;
+        const isRu = state.language === 'RU';
+
+        if (turn === 1) {
+          state.messageLog.unshift({
+            id: `msg-44-init-${Date.now()}`,
+            text: isRu
+              ? 'ТЕРМАЛЬНЫЙ КОНТУР: Внимание! Каждое действие повышает нагрев (Энтропия) на +3. Шаг на клетку (0,1) поглотит флуктуации и охладит ядро на -15 пунктов стабильности!'
+              : 'THERMAL CORE: Caution! Every single action expands core temperature (Entropy) by +3. Stepping on hex (0,1) discharges heat by -15 Entropy points!',
+            type: 'WARN',
+            source: 'NEBULA_AI',
+            timestamp: Date.now()
+          });
+        }
+
+        // Cooling valve at (0, 1) L2
+        if (state.player.q === 0 && state.player.r === 1 && !(state as any)._thermalEquilibriumCooled) {
+          (state as any)._thermalEquilibriumCooled = true;
+          state.entropy.current = Math.max(0, state.entropy.current - 15);
+          state.messageLog.unshift({
+            id: `msg-44-cooled-${Date.now()}`,
+            text: isRu
+              ? 'ОХЛАЖДЕНИЕ: Охладительный вентиль на (0,1) задействован. Энтропия аварийно снижена на -15 пунктов!'
+              : 'COOLING VALVE: Thermal safety discharge triggered at (0,1). Core temperature reduced by -15 points!',
+            type: 'SUCCESS',
+            source: 'SYSTEM',
+            timestamp: Date.now()
+          });
+        }
+
         return state;
       },
       checkWinCondition: (state) => (state.grid[getHexKey(0, 0)]?.maxLevel ?? 0) >= 4,
@@ -162,8 +250,6 @@ export const series4Levels: LevelConfig[] = [
   },
 
   // 4.5 CONVERGENCE POINT — Achieve 2 of 3 goals before bot
-  // Goals: (A) 5 owned L2+, (B) 200cr, (C) stand on monument.
-  // Economy: DIG-heavy start. ~20 actions. Bot arrives in ~16.
   {
     id: '4.5',
     title: 'Sim 4.5: Точка Конвергенции',
@@ -192,10 +278,10 @@ export const series4Levels: LevelConfig[] = [
           { q: -1, r: 0, maxLevel: 5, currentLevel: 5, revealed: true },
       ]
     },
+    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'basic',
     botObjective: 'MONUMENT_RACE',
     botSpawnPoints: [{ q: 0, r: -3 }],
-    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     hooks: {
       checkWinCondition: (state) => {
         let goals = 0;
@@ -207,14 +293,27 @@ export const series4Levels: LevelConfig[] = [
       checkLossCondition: (state) => {
         if (state.bots?.some((b: any) => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT')) return true;
         return isStranded(state);
+      },
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        const isRu = state.language === 'RU';
+
+        if (turn === 1) {
+          state.messageLog.unshift({
+            id: `msg-45-init-${Date.now()}`,
+            text: isRu
+              ? 'ГОНКА НА КОНВЕРГЕНЦИЮ: Дрон Scout-Race приближается с севера. Сфокусируйтесь на Кредитах (глубокие раскопки) и наборе 6 гексов Ур. 2 — это быстрейший путь.'
+              : 'CONVERGENCE RACE: Racing drone Scout-Race accelerates from (0,-3). Concentrate on Gold accumulation (deep mining) and securing 6 Level 2 hexes!',
+            type: 'INFO',
+            source: 'NEBULA_AI',
+            timestamp: Date.now()
+          });
+        }
       }
     }
   },
 
   // 4.6 CASCADE PROTOCOL — Chain reaction: L3 auto-upgrades neighbors
-  // Hook: After each upgrade, if hex reaches L3, all adjacent L2 hexes auto-upgrade to L3.
-  // Win: 8+ hexes at L3+.
-  // Economy: Build L2 cluster, then trigger cascade by upgrading one to L3.
   {
     id: '4.6',
     title: 'Sim 4.6: Каскадный Протокол',
@@ -247,11 +346,17 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
     hooks: {
+      onBeforeAction: () => null,
       onAfterAction: (state) => {
+        const isRu = state.language === 'RU';
+        
         // CASCADE: Any hex that just reached L3 triggers adjacent L2→L3
-        let cascaded = true;
-        while (cascaded) {
-          cascaded = false;
+        let cascaded = false;
+        let cascadeCount = 0;
+        let keepChecking = true;
+
+        while (keepChecking) {
+          keepChecking = false;
           const hexes = Object.values(state.grid) as any[];
           for (const hex of hexes) {
             if (hex.maxLevel === 3 && hex.ownerId === 'player-1') {
@@ -266,14 +371,28 @@ export const series4Levels: LevelConfig[] = [
                   state.grid[getHexKey(n.q, n.r)] = {
                     ...nHex, currentLevel: 3, maxLevel: 3
                   };
-                  // Cascading drain: each triggered upgrade reduces entropy by 1%
                   state.entropy.current = Math.max(0, (state.entropy.current ?? 100) - 1);
                   cascaded = true;
+                  cascadeCount++;
+                  keepChecking = true;
                 }
               }
             }
           }
         }
+
+        if (cascaded && cascadeCount > 0) {
+          state.messageLog.unshift({
+            id: `msg-46-cascade-${Date.now()}`,
+            text: isRu
+              ? `ЦЕПНАЯ РЕАКЦИЯ: Высота 3 запустила резонансные микроколебания! Каскадно улучшено гексов: +${cascadeCount}!`
+              : `RESONANCE CASCADE: Level 3 triggered kinetic pulse wave alignments! Auto-upgraded: +${cascadeCount} sectors!`,
+            type: 'SUCCESS',
+            source: 'SYSTEM',
+            timestamp: Date.now()
+          });
+        }
+
         return state;
       },
       checkWinCondition: (state) => countOwned(state, 3) >= 8,
@@ -282,7 +401,6 @@ export const series4Levels: LevelConfig[] = [
   },
 
   // 4.7 DUALITY ENGINE — Build 4×L3 AND 2×L4 simultaneously
-  // Economy: ~20mat from digging. Heavy upgrade chain. ~35 actions.
   {
     id: '4.7',
     title: 'Sim 4.7: Двойной Движок',
@@ -313,13 +431,27 @@ export const series4Levels: LevelConfig[] = [
     aiMode: 'none',
     hooks: {
       checkWinCondition: (state) => countOwned(state, 3) >= 4 && countOwned(state, 4) >= 2,
-      checkLossCondition: (state) => isStranded(state)
+      checkLossCondition: (state) => isStranded(state),
+      onAfterAction: (state) => {
+        const turn = state.currentTurn ?? 0;
+        const isRu = state.language === 'RU';
+
+        if (turn === 1) {
+          state.messageLog.unshift({
+            id: `msg-47-init-${Date.now()}`,
+            text: isRu
+              ? 'КАЛИБРОВКА: Два потока одновременно. Развивайте широкую базу Ур. 3, прежде чем наращивать конус высоты Ур. 4.'
+              : 'CALIBRATION: Dual vector tasks. Broaden your Level 3 arrays before extending into Level 4 structural cones.',
+            type: 'INFO',
+            source: 'NEBULA_AI',
+            timestamp: Date.now()
+          });
+        }
+      }
     }
   },
 
   // 4.8 OMEGA SYNTHESIS — Final trial. 4 simultaneous conditions + entropy.
-  // Win: 3 L3+ hexes AND 300cr AND stand on monument AND ≥2 items.
-  // Entropy: +2 per action. Start at 50/100. ~25 actions max.
   {
     id: '4.8',
     title: 'Sim 4.8: Омега Синтез',
@@ -355,8 +487,37 @@ export const series4Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 2, materials: 0, initialEntropy: 40 },
     aiMode: 'none',
     hooks: {
+      onBeforeAction: () => null,
       onAfterAction: (state) => {
         state.entropy.current = Math.min(100, (state.entropy.current ?? 40) + 2);
+        const turn = state.currentTurn ?? 0;
+        const isRu = state.language === 'RU';
+
+        if (turn === 1) {
+          state.messageLog.unshift({
+            id: `msg-48-init-${Date.now()}`,
+            text: isRu
+              ? 'ФИНАЛЬНЫЙ СУММАТОР: Все системы на пике износа. Накопите 300 Кредитов, владейте 3+ гексами Ур. 3, соберите 2 предмета в инвентарь и зайдите на Монумент при Энтропии < 60!'
+              : 'FINAL INTEGRATOR: All indicators in tension. Gather 300 Credits, own 3+ Level 3 slots, hold 2 items in hand and activate the Monument with Entropy < 60%!',
+            type: 'INFO',
+            source: 'NEBULA_AI',
+            timestamp: Date.now()
+          });
+        }
+
+        // Tense status logs every 5 turns
+        if (turn > 0 && turn % 5 === 0) {
+          state.messageLog.unshift({
+            id: `msg-48-tension-${turn}-${Date.now()}`,
+            text: isRu
+              ? `ОМЕГА МОНИТОР: Шаг ${turn}. Энтропия ядра: ${state.entropy.current}%. Время уплотняется!`
+              : `OMEGA CORE MONITOR: Step ${turn}. Entropy current: ${state.entropy.current}%. Coordinates contracting!`,
+            type: 'WARN',
+            source: 'SYSTEM',
+            timestamp: Date.now()
+          });
+        }
+
         return state;
       },
       checkWinCondition: (state) => {

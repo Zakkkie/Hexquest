@@ -271,15 +271,29 @@ export const createInitialSessionData = async (
   }
 
   let monumentRequirements: string[] | undefined;
+  let monumentAlternatives: string[] | undefined;
   
   if (levelConfig) {
       switch (levelConfig.id) {
           case '2.1': monumentRequirements = []; break; 
           case '2.2': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
+          case '2.3': monumentRequirements = []; break;
           case '2.4': monumentRequirements = ['ANY', 'ANY']; break;
           case '2.5': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
-          case '3.5': monumentRequirements = ['ANY', 'ANY', 'ANY']; break;
-          case '3.8': monumentRequirements = ['ANY', 'ANY']; break;
+          case '3.1': monumentRequirements = ['cargo_prism']; break;
+          case '3.2': monumentRequirements = ['hornet_drill', 'emergency_gen']; break;
+          case '3.3': monumentRequirements = ['UNCOMMON']; break;
+          case '3.4': monumentRequirements = ['reality_patch', 'RARE']; break;
+          case '3.5': monumentRequirements = ['RARE']; break;
+          case '3.6': 
+              monumentRequirements = ['ONE_OF']; 
+              monumentAlternatives = ['cargo_prism', 'hornet_drill', 'emergency_gen'];
+              break;
+          case '3.7': monumentRequirements = ['hornet_drill', 'matter_prism']; break;
+          case '3.8': monumentRequirements = ['cargo_prism', 'stability_scanner', 'matter_prism']; break;
+          case '4.2': monumentRequirements = []; break;
+          case '4.4': monumentRequirements = []; break;
+          case '4.5': monumentRequirements = []; break;
           case '4.8': monumentRequirements = ['ANY', 'ANY']; break;
           default: monumentRequirements = undefined;
       }
@@ -306,6 +320,7 @@ export const createInitialSessionData = async (
     activePoi: null,
     secretMonumentCoord,
     monumentRequirements,
+    monumentAlternatives,
     difficulty,
     grid: initialGrid,
     player: {
