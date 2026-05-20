@@ -31,7 +31,8 @@ export function checkDigCondition(
   // Interpretation: You can dig down, but the new level must strictly be higher than the lowest neighbor.
   // Example: Neighbors L0. Current L2. Dig to L1? (1 > 0) OK.
   // Example: Neighbors L0. Current L1. Dig to L0? (0 > 0) False. Blocked.
-  if (currentLevel > 0) {
+  // Exception: Level 1 hexes can be excavated down to 0 without support (currentLevel > 1 restriction).
+  if (currentLevel > 1) {
       const neighborHexes = neighbors
           .map(n => grid[getHexKey(n.q, n.r)])
           .filter(h => h && h.structureType !== 'VOID');
@@ -103,14 +104,14 @@ export function checkGrowthCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel + 1;
 
-  // 1. MATERIAL CHECK
-  if (entity.storage < 1) {
-      return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
-  }
-
-  // 2. REGROWTH: No supports or rank check needed to reach previous maxLevel
+  // 1. REGROWTH: No supports, material or rank check needed to reach previous maxLevel
   if (targetLevel <= hex.maxLevel) {
      return { canGrow: true };
+  }
+
+  // 2. MATERIAL CHECK
+  if (entity.storage < 1) {
+      return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
   }
 
   // 3. RANK REQUIREMENT

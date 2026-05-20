@@ -279,17 +279,16 @@ describe('checkDigCondition', () => {
       expect(result.canGrow).toBe(true);
     });
 
-    it('cannot dig L1 when neighbors are at L0 (gradient lock)', () => {
+    it('can dig L1 when neighbors are at L0 (exception: L1 can be dug to L0 without support)', () => {
       const hex = makeHex(0, 0, 1, 1);
       const entity = makeEntity();
       const n1 = makeHex(1, 0, 0, 0);
       const neighbors = [{ q: 1, r: 0 }];
       const grid = buildGrid([hex, n1]);
 
-      // Dig to L0 (targetLevel=0). Min neighbor = 0. 0 <= 0 → BLOCKED
+      // Dig to L0 (targetLevel=0). L1 to L0 doesn't check gradient lock/support anymore.
       const result = checkDigCondition(hex, entity, neighbors, grid);
-      expect(result.canGrow).toBe(false);
-      expect(result.reason).toContain('Gradient Lock');
+      expect(result.canGrow).toBe(true);
     });
   });
 
