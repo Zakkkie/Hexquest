@@ -5,7 +5,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { textureService } from '../services/textureService.ts';
-import { ArrowLeft, BookOpen, Crown, ChevronRight, Settings, Volume2, VolumeX, Music, Music2, Languages, HelpCircle, Info, Sparkles } from 'lucide-react';
+import { ArrowLeft, BookOpen, Crown, ChevronRight, Settings, Volume2, VolumeX, Music, Music2, Languages, HelpCircle, Info, Sparkles, Eye, EyeOff, ZoomIn, ZoomOut, Compass, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Konva from 'konva';
 
@@ -374,7 +374,10 @@ const StoryBuilderView: React.FC = () => {
     const toggleSfx = useGameStore(state => state.toggleSfx);
 
     const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-    const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 50 });
+    const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 30 });
+    const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 0.75 : 1.1);
+    const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(window.innerWidth < 768);
+    const [isUiHidden, setIsUiHidden] = useState(false);
     const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
     const [isInitialHintDismissed, setIsInitialHintDismissed] = useState(false);
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
@@ -386,11 +389,10 @@ const StoryBuilderView: React.FC = () => {
     useEffect(() => {
         const handleResize = () => {
             if (containerRef.current) {
-                setStageSize({ width: containerRef.current.clientWidth, height: containerRef.current.clientHeight });
-                // Only center camera if it's the very first hit
-                if (cameraPos.x === window.innerWidth / 2 && cameraPos.y === window.innerHeight / 2) {
-                    setCameraPos({ x: containerRef.current.clientWidth / 2, y: containerRef.current.clientHeight / 2 - 50 });
-                }
+                const w = containerRef.current.clientWidth;
+                const h = containerRef.current.clientHeight;
+                setStageSize({ width: w, height: h });
+                setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
             }
         };
         window.addEventListener('resize', handleResize);
@@ -499,6 +501,24 @@ const StoryBuilderView: React.FC = () => {
         setTimeout(() => { isPanning.current = false; }, 50); 
     };
 
+    const handleZoomIn = () => {
+        setZoomScale(prev => Math.min(2.0, prev + 0.15));
+        playUiSound('CLICK');
+    };
+
+    const handleZoomOut = () => {
+        setZoomScale(prev => Math.max(0.4, prev - 0.15));
+        playUiSound('CLICK');
+    };
+
+    const handleResetCamera = () => {
+        const w = containerRef.current?.clientWidth || window.innerWidth;
+        const h = containerRef.current?.clientHeight || window.innerHeight;
+        setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
+        setZoomScale(w < 768 ? 0.75 : 1.1);
+        playUiSound('CLICK');
+    };
+
     return (
         <div ref={containerRef} className="absolute inset-0 bg-[#020617] flex flex-col font-sans overflow-hidden">
             {/* CANVAS */}
@@ -526,15 +546,17 @@ const StoryBuilderView: React.FC = () => {
                     <Layer 
                         x={cameraPos.x} 
                         y={cameraPos.y} 
+                        scaleX={zoomScale}
+                        scaleY={zoomScale}
                         draggable 
                         onDragStart={handleDragStart} 
                         onDragEnd={handleDragEnd}
                         dragBoundFunc={(pos) => {
-                            // Tighter boundary logic for the story mode
-                            const BOUND_X = stageSize.width * 0.4;
-                            const BOUND_Y = stageSize.height * 0.4;
+                            // Boundary logic adjusted for zoom scale
+                            const BOUND_X = stageSize.width * 0.7 * Math.max(1, zoomScale);
+                            const BOUND_Y = stageSize.height * 0.7 * Math.max(1, zoomScale);
                             const centerX = stageSize.width / 2;
-                            const centerY = stageSize.height / 2 - 50;
+                            const centerY = stageSize.height / 2 - (stageSize.width < 768 ? 20 : 50);
                             return {
                                 x: Math.max(Math.min(pos.x, centerX + BOUND_X), centerX - BOUND_X),
                                 y: Math.max(Math.min(pos.y, centerY + BOUND_Y), centerY - BOUND_Y),
@@ -568,58 +590,137 @@ const StoryBuilderView: React.FC = () => {
             <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between overflow-hidden p-4 md:p-8">
                 
                 {/* TOP HEADER STATUS */}
-                <div className="flex justify-between items-center w-full pointer-events-auto">
-                    <div className="flex items-center gap-3">
+                <motion.div 
+                    animate={{ y: isUiHidden ? -100 : 0, opacity: isUiHidden ? 0 : 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex justify-between items-center w-full pointer-events-auto"
+                >
+                    <div className="flex items-center gap-2 md:gap-3">
                         <button 
                             onClick={() => { playUiSound('CLICK'); setUIState('MENU'); }}
-                            className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-slate-900/90 border border-white/10 rounded-2xl hover:bg-slate-800 text-white transition-all shadow-[0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-md hover:border-indigo-500/50"
+                            className="flex items-center justify-center w-10 h-10 bg-slate-900/90 border border-white/10 rounded-2xl hover:bg-slate-800 text-white transition-all shadow-[0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-md hover:border-indigo-500/50"
                         >
-                            <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" /> 
+                            <ArrowLeft className="w-5 h-5" /> 
                         </button>
 
-                        <div className="bg-slate-900/95 border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-2.5 backdrop-blur-md shadow-2xl">
-                            <BookOpen className="w-4 h-4 text-indigo-400" />
+                        <div className="bg-slate-900/95 border border-white/10 rounded-2xl px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 backdrop-blur-md shadow-2xl">
+                            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
                             <div className="flex flex-col">
-                                <span className="text-[9px] text-slate-400 tracking-wider font-bold">
+                                <span className="text-[8px] text-slate-400 tracking-wider font-bold leading-none mb-0.5">
                                     {language === 'RU' ? 'РЕЖИМ СИНХРОНИЗАЦИИ' : 'SYNCHRONIZER MATRIX'}
                                 </span>
-                                <span className="text-white font-black uppercase text-xs">
+                                <span className="text-white font-black uppercase text-[10px] md:text-xs">
                                     {language === 'RU' ? 'ГЛАВА' : 'CHAPTER'} {storyMilestone + 1}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 relative">
                         {/* Help Manual triggering button */}
                         <button 
                             onClick={() => { playUiSound('CLICK'); setIsHelpOpen(true); }}
-                            className="bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 px-3.5 py-2 rounded-2xl text-[10px] md:text-xs font-black tracking-wider uppercase flex items-center gap-2 hover:bg-indigo-900/50 transition-all shadow-xl backdrop-blur-md"
+                            className="bg-indigo-950/85 border border-indigo-500/35 text-indigo-300 px-3 py-1.5 md:py-2 rounded-2xl text-[9px] md:text-xs font-black tracking-wider uppercase flex items-center gap-1.5 hover:bg-indigo-900/50 transition-all shadow-xl backdrop-blur-md"
                         >
-                            <HelpCircle className="w-3.5 h-3.5" />
+                            <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
                             <span className="hidden sm:inline">{language === 'RU' ? 'Физика Векторов' : 'Vector Rules'}</span>
                         </button>
+
+                        {/* Settings Button & Popover */}
+                        <div className="relative">
+                            <button 
+                                onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
+                                className={`px-3 py-1.5 md:py-2 rounded-2xl text-[9px] md:text-xs font-black tracking-wider uppercase flex items-center justify-center gap-1.5 transition-all shadow-xl backdrop-blur-md border ${
+                                    isSettingsOpen 
+                                        ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
+                                        : 'bg-slate-900/95 border-white/10 text-slate-400 hover:text-white hover:border-indigo-500/50'
+                                }`}
+                            >
+                                <Settings className={`w-3.5 h-3.5 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-500`} />
+                                <span className="hidden sm:inline">{language === 'RU' ? 'Настройки' : 'Settings'}</span>
+                            </button>
+
+                            <AnimatePresence>
+                                {isSettingsOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                                        className="absolute top-full right-0 mt-2 p-2 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-1 min-w-[155px] z-50 origin-top-right font-sans"
+                                    >
+                                        <button 
+                                            onClick={() => { playUiSound('CLICK'); toggleMusic(); }}
+                                            className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-white/5 rounded-xl transition-all"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {isMusicMuted ? <Music className="w-4 h-4 text-slate-500" /> : <Music2 className="w-4 h-4 text-indigo-400" />}
+                                                <span className="text-[10px] font-bold text-white uppercase tracking-wider">{language === 'RU' ? 'Музыка' : 'Music'}</span>
+                                            </div>
+                                            <div className={`w-2 h-2 rounded-full ${isMusicMuted ? 'bg-slate-700' : 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]'}`} />
+                                        </button>
+
+                                        <button 
+                                            onClick={() => { playUiSound('CLICK'); toggleSfx(); }}
+                                            className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-white/5 rounded-xl transition-all"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {isSfxMuted ? <VolumeX className="w-4 h-4 text-slate-500" /> : <Volume2 className="w-4 h-4 text-indigo-400" />}
+                                                <span className="text-[10px] font-bold text-white uppercase tracking-wider">{language === 'RU' ? 'Звуки' : 'Sounds'}</span>
+                                            </div>
+                                            <div className={`w-2 h-2 rounded-full ${isSfxMuted ? 'bg-slate-700' : 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]'}`} />
+                                        </button>
+
+                                        <div className="h-px bg-white/5 my-1" />
+
+                                        <div className="px-3 py-2 flex flex-col gap-2">
+                                            <div className="flex items-center gap-2 text-[8px] font-black uppercase text-slate-500 tracking-widest">
+                                                <Languages className="w-3 h-3" />
+                                                {language === 'RU' ? 'Язык' : 'Language'}
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <button 
+                                                    onClick={() => { playUiSound('CLICK'); setLanguage('RU'); }}
+                                                    className={`flex-1 py-1 rounded-lg text-[9px] font-black border transition-all ${language === 'RU' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-white/5 text-slate-500 hover:text-slate-300'}`}
+                                                >
+                                                    RU
+                                                </button>
+                                                <button 
+                                                    onClick={() => { playUiSound('CLICK'); setLanguage('EN'); }}
+                                                    className={`flex-1 py-1 rounded-lg text-[9px] font-black border transition-all ${language === 'EN' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-white/5 text-slate-500 hover:text-slate-300'}`}
+                                                >
+                                                    EN
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
 
                         <div className="bg-slate-950/50 text-[10px] text-indigo-400 px-3 py-1.5 rounded-xl border border-indigo-500/20 font-mono tracking-widest hidden lg:block">
                             COORD: [Q, R] ISOMETRIC_Z
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* HELPER MATRIX STATUS AND BLOCK SELECTOR DOCK */}
-                <div className="w-full flex flex-col items-center gap-3 mt-4 pointer-events-auto max-w-xl mx-auto md:max-w-2xl">
+                <motion.div 
+                    animate={{ y: isUiHidden ? -180 : 0, opacity: isUiHidden ? 0 : 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="w-full flex flex-col items-center gap-2 mt-2 pointer-events-auto max-w-xl mx-auto md:max-w-2xl"
+                >
                     
                     {/* Active Instruction Bar describing placement validation */}
                     <AnimatePresence mode="wait">
                         {selectedLevel !== null && (
                             <motion.div 
-                                initial={{ opacity: 0, y: -10 }}
+                                initial={{ opacity: 0, y: -8 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="w-full bg-slate-950/80 border border-cyan-500/30 rounded-2xl px-4 py-2.5 backdrop-blur-md shadow-lg flex items-center gap-3"
+                                exit={{ opacity: 0, y: -8 }}
+                                className="w-full bg-slate-950/90 border border-cyan-500/30 rounded-xl px-3 py-1.5 backdrop-blur-md shadow-lg flex items-center gap-2"
                             >
-                                <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-                                <p className="text-[10px] md:text-xs text-cyan-300 font-medium">
+                                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                                <p className="text-[9px] md:text-xs text-cyan-300 font-medium leading-snug">
                                     {language === 'RU' 
                                         ? selectedLevel === 0 
                                             ? "Гекс 0 уровня (Фундамент) можно выкладывать на любые свободные контурные ячейки."
@@ -633,27 +734,27 @@ const StoryBuilderView: React.FC = () => {
                     </AnimatePresence>
 
                     {/* Cyber Dock (Fluid and scrollable horizontally for any amount of blocks) */}
-                    <div className="w-full bg-slate-900/90 border border-white/10 rounded-2xl md:rounded-3xl p-3 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                    <div className="w-full bg-slate-900/90 border border-white/10 rounded-2xl md:rounded-3xl p-2 md:p-3.5 backdrop-blur-xl shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-indigo-500/20 to-transparent" />
                         
-                        <div className="flex md:flex-row flex-col justify-between items-start md:items-center gap-4">
+                        <div className="flex sm:flex-row flex-col justify-between items-stretch sm:items-center gap-2 md:gap-4">
                             <div className="flex flex-col">
-                                <span className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                                <span className="text-[7.5px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
                                     <Sparkles className="w-3 h-3 text-indigo-400" />
                                     {language === 'RU' ? 'ХРАНИЛИЩЕ ДОБЫТЫХ ФРАГМЕНТОВ' : 'EXTRACTED FRAGMENTS STORAGE'}
                                 </span>
-                                <span className="text-[10px] md:text-xs text-slate-300 font-bold">
+                                <span className="text-[9px] md:text-xs text-slate-300 font-bold hidden sm:block">
                                     {language === 'RU' ? 'Выберите блок, затем кликните по мишени на поле:' : 'Select a block to deploy onto field targets:'}
                                 </span>
                             </div>
 
                             {/* Dock Items */}
                             {Object.keys(minedInSessionHexes).length === 0 ? (
-                                <span className="text-xs font-black text-slate-500 uppercase tracking-widest italic animate-pulse">
+                                <span className="text-xs font-black text-slate-500 uppercase tracking-widest italic animate-pulse py-1">
                                     {language === 'RU' ? 'Секторы пусты (играйте уровни)' : 'Matrix blank (complete levels)'}
                                 </span>
                             ) : (
-                                <div className="flex gap-2.5 overflow-x-auto no-scrollbar max-w-full py-1.5">
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar max-w-full py-1">
                                     {Object.entries(minedInSessionHexes).sort((a,b) => Number(a[0]) - Number(b[0])).map(([level, count]) => {
                                         const lvl = Number(level);
                                         const isSelected = selectedLevel === lvl;
@@ -666,19 +767,19 @@ const StoryBuilderView: React.FC = () => {
                                                 whileHover={{ scale: 1.05 }}
                                                 whileTap={{ scale: 0.95 }}
                                                 onClick={() => { playUiSound('CLICK'); setSelectedLevel(isSelected ? null : lvl); }}
-                                                className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all relative ${isSelected ? 'bg-indigo-600/30 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.25)]' : 'bg-slate-950/60 border-white/5 hover:border-indigo-500/30'}`}
+                                                className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all relative ${isSelected ? 'bg-indigo-600/30 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.25)]' : 'bg-slate-950/60 border-white/5 hover:border-indigo-500/30'}`}
                                             >
-                                                <div className="w-3.5 h-3.5 rotate-12 relative flex items-center justify-center" style={{ backgroundColor: hexCol, borderRadius: '3px' }}>
+                                                <div className="w-3 h-3 rotate-12 relative flex items-center justify-center rounded-sm" style={{ backgroundColor: hexCol }}>
                                                     <span className="text-[7px] text-white/50 font-black absolute">{lvl}</span>
                                                 </div>
-                                                <div className="flex flex-col items-start">
-                                                    <span className="text-[8px] text-slate-400 uppercase font-black tracking-wider leading-none">
+                                                <div className="flex flex-col items-start leading-none gap-0.5">
+                                                    <span className="text-[7.5px] text-slate-400 uppercase font-black tracking-wider">
                                                         {lvl === 0 ? (language === 'RU' ? 'Почва' : 'Ground') : (lvl < 0 ? (language === 'RU' ? 'Шахта' : 'Depth') : (language === 'RU' ? 'Пик' : 'Peak'))}
                                                     </span>
-                                                    <span className="text-[11px] font-black text-white mt-1">x{count}</span>
+                                                    <span className="text-[10px] font-black text-white">x{count}</span>
                                                 </div>
                                                 {isSelected && (
-                                                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee] animate-ping" />
+                                                    <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee] animate-ping" />
                                                 )}
                                             </motion.button>
                                         );
@@ -687,151 +788,160 @@ const StoryBuilderView: React.FC = () => {
                             )}
                         </div>
                     </div>
+                </motion.div>
+
+                {/* IMMERSIVE COMPASS & ZOOM DECK CONTROLS */}
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 pointer-events-auto flex flex-col gap-2 bg-slate-900/90 border border-white/10 rounded-2xl p-2 backdrop-blur-md shadow-2xl animate-fade-in">
+                    <button 
+                        onClick={handleZoomIn}
+                        title={language === 'RU' ? 'Приблизить' : 'Zoom In'}
+                        className="w-9 h-9 bg-slate-950/40 border border-white/5 hover:bg-indigo-600 hover:text-white rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-sm"
+                    >
+                        <ZoomIn className="w-4.5 h-4.5" />
+                    </button>
+                    <button 
+                        onClick={handleZoomOut}
+                        title={language === 'RU' ? 'Отдалить' : 'Zoom Out'}
+                        className="w-9 h-9 bg-slate-950/40 border border-white/5 hover:bg-indigo-600 hover:text-white rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-sm"
+                    >
+                        <ZoomOut className="w-4.5 h-4.5" />
+                    </button>
+                    <button 
+                        onClick={handleResetCamera}
+                        title={language === 'RU' ? 'Сбросить обзор' : 'Reset Focus'}
+                        className="w-9 h-9 bg-slate-950/40 border border-white/5 hover:bg-indigo-600 hover:text-white rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-sm"
+                    >
+                        <Compass className="w-4.5 h-4.5" />
+                    </button>
+                    <div className="h-px bg-white/10 mx-1" />
+                    <button 
+                        onClick={() => { playUiSound('CLICK'); setIsUiHidden(!isUiHidden); }}
+                        title={isUiHidden ? (language === 'RU' ? 'Показать интерфейс' : 'Show UI') : (language === 'RU' ? 'Скрыть интерфейс' : 'Hide UI')}
+                        className={`w-9 h-9 border rounded-xl flex items-center justify-center transition-all ${isUiHidden ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]' : 'bg-slate-950/40 border-white/5 hover:bg-indigo-600 hover:text-white text-slate-300'}`}
+                    >
+                        {isUiHidden ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                    </button>
                 </div>
 
                 {/* BOTTOM CONTENT - Narrative & Settings Container */}
-                <div className="mt-auto flex md:flex-row flex-col items-stretch md:items-end justify-between gap-4 pointer-events-none pt-4">
+                <div className="mt-auto flex md:flex-row flex-col items-stretch md:items-end justify-between gap-4 pointer-events-none pt-4 w-full">
                     
                     {/* NARRATIVE CONSTRUCT PANEL */}
                     <motion.div 
                         initial={{ y: 50, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="bg-slate-950/95 border border-white/10 rounded-3xl w-full max-w-[calc(100vw-32px)] md:max-w-sm lg:max-w-md shadow-2xl backdrop-blur-3xl flex flex-col overflow-hidden pointer-events-auto p-5 md:p-7 relative"
+                        animate={{ 
+                            y: isUiHidden ? 100 : 0, 
+                            opacity: isUiHidden ? 0 : 1,
+                            pointerEvents: isUiHidden ? 'none' : 'auto'
+                        }}
+                        transition={{ duration: 0.3 }}
+                        className="bg-slate-950/95 border border-white/10 rounded-2xl w-full max-w-[calc(100vw-32px)] md:max-w-sm lg:max-w-md shadow-2xl backdrop-blur-3xl flex flex-col overflow-hidden pointer-events-auto p-4 md:p-5 relative"
                     >
                         {/* Dots Chapter Indicator */}
-                        <div className="absolute top-5 right-5 flex gap-1.5">
+                        <div className="absolute top-4 right-4 flex gap-1">
                             {STORY_STEPS.map((_, i) => (
-                                <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${i < storyMilestone ? 'bg-indigo-500' : (i === storyMilestone ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 w-4' : 'bg-slate-800')}`} />
+                                <div key={i} className={`w-1 h-1 rounded-full transition-all duration-500 ${i < storyMilestone ? 'bg-indigo-500' : (i === storyMilestone ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 w-3' : 'bg-slate-800')}`} />
                             ))}
                         </div>
 
-                        {STORY_STEPS[storyMilestone] ? (
+                        {!isNarrativeCollapsed ? (
                             <>
-                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">
-                                    {language === 'RU' ? 'ТЕКУЩАЯ СТАДИЯ ИНТЕГРАЦИИ' : 'CURRENT INTEGRATION OBJECTIVE'}
-                                </span>
-                                <h3 className="text-base md:text-lg font-black text-white uppercase tracking-tight mb-2 pr-16 leading-tight">
-                                    {STORY_STEPS[storyMilestone].title}
-                                </h3>
-                                
-                                <p className="text-slate-400 text-[10px] md:text-sm leading-relaxed mb-4 font-medium italic opacity-95">
-                                    "{STORY_STEPS[storyMilestone].text}"
-                                </p>
-                                
-                                <div className="flex items-center gap-4">
-                                    <div className="flex-1">
-                                        <div className="flex justify-between text-[9px] md:text-[11px] font-black font-mono text-cyan-400 mb-1.5 uppercase tracking-widest">
-                                            <span>{language === 'RU' ? 'ДИСПЕРСИЯ СЕТКИ' : 'MATRIX ALIGNMENT'}</span>
-                                            <span className="bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-500/20">
-                                                {Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length} / {STORY_STEPS[storyMilestone].reqCount}
-                                            </span>
-                                        </div>
-                                        <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5">
-                                            <motion.div 
-                                                className="h-full bg-gradient-to-r from-indigo-500 via-indigo-400 to-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.6)]"
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${Math.min(100, Math.floor((Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length / STORY_STEPS[storyMilestone].reqCount) * 100))}%` }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Action Button */}
+                                <div className="flex justify-between items-start mb-1 pr-12">
+                                    <span className="text-[7.5px] font-black text-indigo-400 uppercase tracking-widest">
+                                        {language === 'RU' ? 'ЗАДАЧА НА ГЛАВУ' : 'CHAPTER OBJECTIVE'}
+                                    </span>
                                     <button 
-                                        onClick={() => { 
-                                            playUiSound('CLICK'); 
-                                            if (Object.keys(minedInSessionHexes).length === 0) {
-                                                setCampaignMode('LEVELS');
-                                                setUIState('CAMPAIGN_MAP');
-                                            }
-                                        }}
-                                        className="w-10 h-10 md:w-12 md:h-12 bg-indigo-600 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-indigo-400/50 grow-0 shrink-0 hover:border-indigo-500"
+                                        onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(true); }}
+                                        className="text-[8px] font-black text-cyan-400 hover:text-cyan-300 uppercase underline pointer-events-auto flex items-center gap-0.5 animate-pulse"
                                     >
-                                        <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+                                        <ChevronDown className="w-3.5 h-3.5" />
+                                        <span>{language === 'RU' ? 'СВЕРНУТЬ' : 'COLLAPSE'}</span>
                                     </button>
                                 </div>
+
+                                {STORY_STEPS[storyMilestone] ? (
+                                    <>
+                                        <h3 className="text-xs md:text-sm font-black text-white uppercase tracking-tight mb-1 pr-12 leading-tight">
+                                            {STORY_STEPS[storyMilestone].title}
+                                        </h3>
+                                        
+                                        <p className="text-slate-400 text-[10px] md:text-xs leading-relaxed mb-3 font-medium italic opacity-95">
+                                            "{STORY_STEPS[storyMilestone].text}"
+                                        </p>
+                                        
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex-1 font-sans">
+                                                <div className="flex justify-between text-[8px] md:text-[9px] font-black font-mono text-cyan-400 mb-1 uppercase tracking-widest">
+                                                    <span>{language === 'RU' ? 'ДИСПЕРСИЯ СЕТКИ' : 'MATRIX ALIGNMENT'}</span>
+                                                    <span className="bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-500/20">
+                                                        {Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length} / {STORY_STEPS[storyMilestone].reqCount}
+                                                    </span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                                                    <motion.div 
+                                                        className="h-full bg-gradient-to-r from-indigo-500 via-indigo-400 to-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.6)]"
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${Math.min(100, Math.floor((Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length / STORY_STEPS[storyMilestone].reqCount) * 100))}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Action Button */}
+                                            <button 
+                                                onClick={() => { 
+                                                    playUiSound('CLICK'); 
+                                                    if (Object.keys(minedInSessionHexes).length === 0) {
+                                                        setCampaignMode('LEVELS');
+                                                        setUIState('CAMPAIGN_MAP');
+                                                    }
+                                                }}
+                                                className="w-10 h-10 bg-indigo-600 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-indigo-400/50 grow-0 shrink-0 hover:border-indigo-500"
+                                            >
+                                                <ChevronRight className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="py-2 flex items-center gap-3">
+                                        <Crown className="w-6 h-6 text-amber-400 animate-bounce" />
+                                        <div className="flex flex-col font-sans">
+                                            <h3 className="text-xs md:text-sm font-black text-amber-400 uppercase tracking-tight">
+                                                {language === 'RU' ? 'ПРОСТРАНСТВО СТАБИЛИЗИРОВАНО' : 'CHRONOS SYNCHRONIZED'}
+                                            </h3>
+                                            <p className="text-[9px] text-amber-200/50 italic font-medium">
+                                                {language === 'RU' ? 'Сектор Небула полностью спроектирован.' : 'Nebula sector successfully aligned.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         ) : (
-                            <div className="py-2 flex items-center gap-4">
-                                <Crown className="w-8 h-8 md:w-10 md:h-10 text-amber-400" />
+                            <div className="flex justify-between items-center pr-12 w-full font-sans pointer-events-auto">
                                 <div className="flex flex-col">
-                                    <h3 className="text-sm md:text-xl font-black text-amber-400 uppercase tracking-tight">
-                                        {language === 'RU' ? 'ПРОСТРАНСТВО СТАБИЛИЗИРОВАНО' : 'CHRONOS SYNCHRONIZED'}
+                                    <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">
+                                        {language === 'RU' ? 'ЗАДАЧА' : 'OBJECTIVE'}
+                                    </span>
+                                    <h3 className="text-[10px] md:text-xs font-black text-white uppercase tracking-tight line-clamp-1 pr-4">
+                                        {STORY_STEPS[storyMilestone] ? STORY_STEPS[storyMilestone].title : (language === 'RU' ? 'СТАБИЛИЗИРОВАНО' : 'ALIGNED')}
                                     </h3>
-                                    <p className="text-[9px] md:text-xs text-amber-200/50 italic font-medium">
-                                        {language === 'RU' ? 'Сектор Небула полностью спроектирован.' : 'Nebula sector successfully aligned.'}
-                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {STORY_STEPS[storyMilestone] && (
+                                        <span className="bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-500/30 text-[9px] font-black font-mono text-cyan-400">
+                                            {Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length}/{STORY_STEPS[storyMilestone].reqCount}
+                                        </span>
+                                    )}
+                                    <button 
+                                        onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(false); }}
+                                        className="text-[8px] font-black text-cyan-400 hover:text-cyan-300 uppercase underline flex items-center gap-0.5 animate-pulse"
+                                    >
+                                        <ChevronUp className="w-3.5 h-3.5" />
+                                        <span>{language === 'RU' ? 'ОБЗОР' : 'EXPAND'}</span>
+                                    </button>
                                 </div>
                             </div>
                         )}
                     </motion.div>
-
-                    {/* SETTINGS AREA */}
-                    <div className="flex flex-row md:flex-col gap-2 pointer-events-auto relative mt-2 md:mt-0 justify-end">
-                        <AnimatePresence>
-                            {isSettingsOpen && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                    className="absolute bottom-full right-0 mb-3 p-2 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl flex flex-col gap-1 min-w-[150px]"
-                                >
-                                    <button 
-                                        onClick={() => { playUiSound('CLICK'); toggleMusic(); }}
-                                        className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-white/5 rounded-xl transition-all"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            {isMusicMuted ? <Music className="w-4 h-4 text-slate-500" /> : <Music2 className="w-4 h-4 text-indigo-400" />}
-                                            <span className="text-[10px] font-bold text-white uppercase tracking-wider">{language === 'RU' ? 'Музыка' : 'Music'}</span>
-                                        </div>
-                                        <div className={`w-2 h-2 rounded-full ${isMusicMuted ? 'bg-slate-700' : 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]'}`} />
-                                    </button>
-
-                                    <button 
-                                        onClick={() => { playUiSound('CLICK'); toggleSfx(); }}
-                                        className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-white/5 rounded-xl transition-all"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            {isSfxMuted ? <VolumeX className="w-4 h-4 text-slate-500" /> : <Volume2 className="w-4 h-4 text-indigo-400" />}
-                                            <span className="text-[10px] font-bold text-white uppercase tracking-wider">{language === 'RU' ? 'Звуки' : 'Sounds'}</span>
-                                        </div>
-                                        <div className={`w-2 h-2 rounded-full ${isSfxMuted ? 'bg-slate-700' : 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]'}`} />
-                                    </button>
-
-                                    <div className="h-px bg-white/5 my-1" />
-
-                                    <div className="px-3 py-2 flex flex-col gap-2">
-                                        <div className="flex items-center gap-2 text-[8px] font-black uppercase text-slate-500 tracking-widest">
-                                            <Languages className="w-3 h-3" />
-                                            {language === 'RU' ? 'Язык' : 'Language'}
-                                        </div>
-                                        <div className="flex gap-1">
-                                            <button 
-                                                onClick={() => { playUiSound('CLICK'); setLanguage('RU'); }}
-                                                className={`flex-1 py-1 rounded-lg text-[9px] font-black border transition-all ${language === 'RU' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-white/5 text-slate-500 hover:text-slate-300'}`}
-                                            >
-                                                RU
-                                            </button>
-                                            <button 
-                                                onClick={() => { playUiSound('CLICK'); setLanguage('EN'); }}
-                                                className={`flex-1 py-1 rounded-lg text-[9px] font-black border transition-all ${language === 'EN' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-white/5 text-slate-500 hover:text-slate-300'}`}
-                                            >
-                                                EN
-                                            </button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
-                            className={`w-12 h-12 md:w-14 md:h-14 border rounded-2xl flex items-center justify-center transition-all shadow-2xl backdrop-blur-md ${isSettingsOpen ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-900/90 border-white/10 text-slate-400 hover:text-white hover:border-indigo-500'}`}
-                        >
-                            <Settings className={`w-5.5 h-5.5 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-500`} />
-                        </motion.button>
-                    </div>
                 </div>
             </div>
 
