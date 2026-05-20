@@ -142,7 +142,7 @@ const initMemory = (bot: Entity): BotMemory => ({
     lastPlayerPos: null, stuckCounter: 0, mode: 'GATHER', projectFailCount: 0,
     botRole: 'BUILDER', waitStreak: 0, targetHexId: null, plan: null,
     blacklistedTargets: [], phase: 'EXPLORE', exploreAnchor: null, stockpileWaitTicks: 0,
-    lastActionType: null,
+    lastActionType: null, stayStreak: 0, lastPosKey: null,
     ...(bot.memory ?? {}),
 });
 
@@ -903,6 +903,26 @@ export const calculateBotMove = (
     mem.isCampaign = !!activeLevelConfig;
     if (!mem.exploreAnchor) mem.exploreAnchor = { q: bot.q, r: bot.r };
 
+    const currentPosKey = `${bot.q},${bot.r}`;
+    if (mem.lastPosKey === currentPosKey) {
+        mem.stayStreak = (mem.stayStreak ?? 0) + 1;
+    } else {
+        mem.stayStreak = 0;
+        mem.stuckCounter = 0;
+    }
+    mem.lastPosKey = currentPosKey;
+
+    if ((mem.stayStreak ?? 0) >= 5) {
+        if (mem.targetHexId) {
+            mem.blacklistedTargets = [...(mem.blacklistedTargets ?? []), mem.targetHexId].slice(-50);
+        }
+        mem.plan = null;
+        mem.targetHexId = null;
+        mem.waitStreak = 0;
+        mem.stuckCounter = STUCK_THRESHOLD;
+        mem.stayStreak = 0;
+    }
+
     const navObs   = buildNavObstacles(bot, obstacles, reservedHexKeys);
     const claimed  = buildClaimedSet(bot, allBots ?? []);
     const monument = index.getHexesByStructureType('MONUMENT').find(h => h.botRevealed && (h.botRevealed[bot.id] || h.botRevealed['SHARED_BOTS'])) ?? null;
@@ -931,7 +951,6 @@ export const calculateBotMove = (
     if (!mem.plan || mem.plan.steps.length === 0 || planStale) {
         mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, activeLevelId, activeLevelConfig, reachable);
         mem.waitStreak = 0;
-        mem.stuckCounter = 0;
     }
 
     while (mem.plan && mem.plan.steps.length > 0) {

@@ -191,6 +191,7 @@ export interface Dictionary {
         TUT_1_6_CYCLE_HINT: string;
         TUT_1_6_COUNTER: string;
         TUT_1_6_RIVAL: string;
+        TUT_1_7_COUNTER: string;
         ERROR_RANK: string;
         
         VOID_TITLE: string;
@@ -602,6 +603,7 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_6_CYCLE_HINT: "Locked!",
             TUT_1_6_COUNTER: "RANK",
             TUT_1_6_RIVAL: "RIVAL",
+            TUT_1_7_COUNTER: "DIGS",
             ERROR_RANK: "RANK TOO LOW",
             
             VOID_TITLE: "Sector Collapsed",
@@ -731,7 +733,7 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_1_6_TITLE: 'Sim 1.6: Vertical Limit',
             LEVEL_1_6_DESC: 'Reach Level 4.\n\nSpace is extremely limited. A rival is competing for the same peak. Manage your footprint carefully.',
             LEVEL_1_7_TITLE: 'Sim 1.7: Energy Crisis',
-            LEVEL_1_7_DESC: 'Collect 10 materials. Dig deep, but watch your moves. Every step is expensive. Use credit-to-move exchange if you get stuck.',
+            LEVEL_1_7_DESC: 'Excavate 10 hexes. Dig deep, but watch your moves. Every step is expensive. Use credit-to-move exchange if you get stuck.',
             LEVEL_2_1_TITLE: 'Sim 2.1: The Monolith',
             LEVEL_2_1_DESC: 'Reach the Monolith (Center, L3). It requires NO items to activate. Just step on it and press ACTIVATE in the interface.\n\nDirect path blocked by L4 wall. Find the staircase along the left ridge.\n\nAlmost no fuel. Use RECOVERY (Blue) on your start hex, then MOVE away and back to reset it. Repeat to stockpile fuel.',
             LEVEL_2_2_TITLE: 'Sim 2.2: Buried Secrets',
@@ -1012,6 +1014,7 @@ export const TEXT: Record<Language, Dictionary> = {
             TUT_1_6_CYCLE_HINT: "Блок!",
             TUT_1_6_COUNTER: "РАНГ",
             TUT_1_6_RIVAL: "ВРАГ",
+            TUT_1_7_COUNTER: "Вскопано",
             ERROR_RANK: "РАНГ МАЛ",
             
             VOID_TITLE: "Сбой Реальности",
@@ -1141,7 +1144,7 @@ export const TEXT: Record<Language, Dictionary> = {
             LEVEL_1_6_TITLE: 'Сим 1.6: Вертикальный Предел',
             LEVEL_1_6_DESC: 'Достичь Уровня 4.\n\nПространство крайне ограничено. Соперник претендует на тот же пик. Тщательно планируйте свои действия.',
             LEVEL_1_7_TITLE: 'Сим 1.7: Энергетический Кризис',
-            LEVEL_1_7_DESC: 'Соберите 10 материалов. Копайте глубоко, но следите за ходами. Каждый шаг стоит дорого. Используйте обмен кредитов на ходы, если застрянете.',
+            LEVEL_1_7_DESC: 'Вскопайте 10 гексов. Копайте глубоко, но следите за ходами. Каждый шаг стоит дорого. Используйте обмен кредитов на ходы, если застрянете.',
             LEVEL_2_1_TITLE: 'Сим 2.1: Монолит',
             LEVEL_2_1_DESC: 'Встать на Монолит (Центр, Ур.3). Для активации НЕ нужны предметы. Просто встаньте на него и нажмите АКТИВИРОВАТЬ в интерфейсе.\n\nДоступ заблокирован стеной Ур.4. Найдите лестницу вдоль левого хребта.\n\nИспользуйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на старте, затем СДВИНЬТЕСЬ для сброса. Повторяйте для накопления топлива.',
             LEVEL_2_2_TITLE: 'Сим 2.2: Тайны Недр',

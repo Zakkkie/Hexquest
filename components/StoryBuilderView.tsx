@@ -621,7 +621,7 @@ const StoryBuilderView: React.FC = () => {
                         <div className="relative">
                             <button 
                                 onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
-                                className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${
+                                className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ml-0 px-0 pt-0 -mr-6 ${
                                     isSettingsOpen 
                                         ? 'bg-slate-800 border-indigo-500/50 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
                                         : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'
@@ -694,7 +694,7 @@ const StoryBuilderView: React.FC = () => {
                             </AnimatePresence>
                         </div>
 
-                        <div className="bg-slate-950/50 text-[10px] text-indigo-400 px-3 py-1.5 rounded-xl border border-indigo-500/20 font-mono tracking-widest hidden lg:block">
+                        <div className="bg-slate-950/50 text-[10px] text-indigo-400 font-mono tracking-widest hidden lg:block overflow-hidden p-0 text-[0px] leading-[0px] w-0 h-0">
                             COORD: [Q, R] ISOMETRIC_Z
                         </div>
                     </div>
@@ -1052,19 +1052,19 @@ const StoryBuilderView: React.FC = () => {
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500" />
                             <BookOpen className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
                             <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-4 italic">
-                                {language === 'RU' ? 'Ваша История еще не началась' : 'Your Story hasn\'t started yet'}
+                                {language === 'RU' ? 'Хранилище фрагментов пусто' : 'Fragment storage is empty'}
                             </h2>
                             <p className="text-slate-400 text-sm mb-8 leading-relaxed">
                                 {language === 'RU' 
-                                    ? 'Этот режим требует физические фрагменты миров. Чтобы получить их, отправляйтесь на Карту Уровней и одержите победу. В конце уровня вы сможете забрать с собой добытые гексы.'
-                                    : 'This mode requires physical fragments of worlds. To get them, go to the Levels Map and achieve victory. At the end of each level, you can extract collected hexes.'}
+                                    ? 'Для строительства собственной карты вам нужны добытые гексы. Проходите симуляции на Карте Уровней и забирайте трофейные фрагменты ландшафта по завершении миссии.'
+                                    : 'To build your own map, you need extracted hexes. Complete simulations on the Levels Map and extract landscape fragments upon mission completion.'}
                             </p>
                             <div className="flex gap-4">
                                 <button 
                                     onClick={() => { playUiSound('CLICK'); setCampaignMode('LEVELS'); setUIState('CAMPAIGN_MAP'); }}
                                     className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition-all shadow-xl uppercase tracking-widest text-xs"
                                 >
-                                    {language === 'RU' ? 'К Картам' : 'To Maps'}
+                                    {language === 'RU' ? 'Карта Уровней' : 'Levels Map'}
                                 </button>
                                 <button 
                                     onClick={() => { playUiSound('CLICK'); setIsInitialHintDismissed(true); }}

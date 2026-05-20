@@ -249,9 +249,9 @@ describe('GrowthSystem', () => {
       state.grid['0,0'].maxLevel = 1;
       state.grid['0,0'].ownerId = 'player';
 
-      // Set neighbors to L1 so L2 support check passes
+      // Set neighbors to L2 so L2 support check passes
       for (const key of ['1,0', '-1,0', '0,1', '0,-1', '1,-1', '-1,1']) {
-        state.grid[key] = { ...state.grid[key], currentLevel: 1, maxLevel: 1 };
+        state.grid[key] = { ...state.grid[key], currentLevel: 2, maxLevel: 2 };
       }
 
       const events: GameEvent[] = [];

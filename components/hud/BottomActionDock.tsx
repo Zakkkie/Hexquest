@@ -27,6 +27,8 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
     const currentTurn = useGameStore(state => state.session?.currentTurn);
     const entropy = useGameStore(state => state.session?.entropy);
+    const totalMinedMaterial = useGameStore(state => state.session?.totalMinedMaterial || 0);
+    const minedHexes = useGameStore(state => state.session?.minedHexes);
     
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
@@ -36,6 +38,10 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const mainButtonSize = "lg";
 
     // --- COMPUTED STATE ---
+    
+    const totalDigs = useMemo(() => {
+        return Object.values(minedHexes || {}).reduce((sum, val) => sum + val, 0);
+    }, [minedHexes]);
     
     const currentHex = (grid && player) ? grid[getHexKey(player.q, player.r)] : undefined;
     const neighbors = player ? getNeighbors(player.q, player.r) : [];
@@ -55,7 +61,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         if (levelId === '1.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
         if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
         if (levelId === '1.6') return { current: player.playerLevel, target: 4, label: 'RANK' };
-        if (levelId === '1.7') return { current: player.storage ?? 0, target: 10, label: 'MATS' };
+        if (levelId === '1.7') return { current: totalDigs, target: 10, label: TEXT[language].HUD.TUT_1_7_COUNTER || 'DIGS' };
         
         if (levelId === '2.2') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
         if (levelId === '2.3') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
@@ -88,7 +94,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         }
 
         return null;
-    }, [grid, player, activeLevelConfig, language, currentTurn, entropy]);
+    }, [grid, player, activeLevelConfig, language, currentTurn, entropy, totalMinedMaterial, totalDigs]);
 
     const renderMissionStatus = () => {
         if (campaignMetrics) {

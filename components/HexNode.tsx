@@ -1,10 +1,11 @@
 
 import React, { useMemo, useEffect, useRef } from 'react';
-import { Group, Path, Circle, Text, Rect, Line, Star } from 'react-konva';
+import { Group, Path, Circle, Text, Line, Star } from 'react-konva';
 import Konva from 'konva';
 import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { textureService } from '../services/textureService.ts';
 import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
+import { useGameStore } from '../store.ts';
 
 const DEG_TO_RAD = Math.PI / 180;
 const ARROW_UP_PATH = "M12 4l-8 8h6v8h4v-8h6z";
@@ -84,7 +85,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
       x, y, offsetY, level, maxLevel, neighborLevels, structureType,
       theme, isSelected, isPending, pendingCost, 
       isTutorialTarget, isTargetArrow, tutorialColor, isMissingSupport, 
-      isGrowing, isRankLocked, progress, durability, artifactType,
+      isGrowing, progress, durability, artifactType,
       biome, poiType, isPassable,
       isRevealed,
       q, r, id,
@@ -94,6 +95,16 @@ const HexNodeComponent = (props: HexNodeProps) => {
       isExcavated,
       isPlayerBuilt
   } = props;
+
+  const playerQ = useGameStore(state => state.session?.player?.q);
+  const playerR = useGameStore(state => state.session?.player?.r);
+  const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
+  const growthAccelerator = useGameStore(state => state.session?.campaignUpgrades?.growthAccelerator || 0);
+
+  const isPlayerAction = !!(isGrowing && playerQ === q && playerR === r);
+  const currentIntent = isPlayerAction ? (playerGrowthIntent || 'UPGRADE') : 'UPGRADE'; 
+  const neededTicks = isPlayerAction ? Math.max(10, 30 - (growthAccelerator * 5)) : 30;
+  const progressRatio = isGrowing ? Math.min(1.0, progress / neededTicks) : 0;
 
   // Textures are now always loaded since LOD is removed
   const topTexture = useMemo(() => {
@@ -169,6 +180,61 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const topFaceGroupRef = useRef<Konva.Group>(null);
   const faceContainerRef = useRef<Konva.Group>(null);
   const overlaysContainerRef = useRef<Konva.Group>(null);
+
+  // Holographic scan matrix animation refs
+  const growingGlowGroupRef = useRef<Konva.Group>(null);
+  const growingGlowOppositeRef = useRef<Konva.Group>(null);
+
+  const growthRequestRef = useRef<number | null>(null);
+  const growthRotValRef = useRef<number>(0);
+  const growthPulseScaleRef = useRef<number>(1);
+  const growthPulseDirRef = useRef<number>(1);
+
+  useEffect(() => {
+      let active = true;
+      if (!isGrowing) {
+          if (growthRequestRef.current) cancelAnimationFrame(growthRequestRef.current);
+          growthRequestRef.current = null;
+          return;
+      }
+
+      const animateGrowth = () => {
+          if (!active) return;
+          
+          // Rotate matrix rings
+          growthRotValRef.current = (growthRotValRef.current + 2.0) % 360;
+          const antiRot = (360 - growthRotValRef.current) % 360;
+          
+          // Pulsate scale dynamically
+          growthPulseScaleRef.current += growthPulseDirRef.current * 0.012;
+          if (growthPulseScaleRef.current >= 1.12) {
+              growthPulseScaleRef.current = 1.12;
+              growthPulseDirRef.current = -1;
+          } else if (growthPulseScaleRef.current <= 0.88) {
+              growthPulseScaleRef.current = 0.88;
+              growthPulseDirRef.current = 1;
+          }
+
+          if (growingGlowGroupRef.current) {
+              growingGlowGroupRef.current.rotation(growthRotValRef.current);
+              growingGlowGroupRef.current.scale({ x: growthPulseScaleRef.current, y: growthPulseScaleRef.current });
+          }
+
+          if (growingGlowOppositeRef.current) {
+              growingGlowOppositeRef.current.rotation(antiRot);
+              growingGlowOppositeRef.current.scale({ x: growthPulseScaleRef.current * 0.9, y: growthPulseScaleRef.current * 0.9 });
+          }
+
+          growthRequestRef.current = requestAnimationFrame(animateGrowth);
+      };
+
+      growthRequestRef.current = requestAnimationFrame(animateGrowth);
+
+      return () => {
+          active = false;
+          if (growthRequestRef.current) cancelAnimationFrame(growthRequestRef.current);
+      };
+  }, [isGrowing]);
   const wallGroupRefs = useRef<(Konva.Group | null)[]>([]);
   const wallPathRefs = useRef<(Konva.Path | null)[]>([]);
   const wallShadeRefs = useRef<(Konva.Path | null)[]>([]);
@@ -858,6 +924,91 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         ))}
                     </Group>
                 )}
+
+                {isGrowing && (
+                    <Group listening={false} perfectDrawEnabled={false}>
+                        {/* Clockwise rotating holographic scanner ring */}
+                        <Group ref={growingGlowGroupRef}>
+                            {/* Outer dashed scanner boundary */}
+                            <Path 
+                                data={BASE_PATH_D} 
+                                stroke={currentIntent === 'DIG' ? '#ef4444' : (currentIntent === 'RECOVER' ? '#0ea5e9' : '#10b981')} 
+                                strokeWidth={1.5} 
+                                dash={[6, 8]}
+                                opacity={0.65}
+                                perfectDrawEnabled={false}
+                            />
+                            {/* Rotating laser target spokes */}
+                            <Line 
+                                points={[-HEX_SIZE * 0.75, 0, HEX_SIZE * 0.75, 0]} 
+                                stroke={currentIntent === 'DIG' ? '#ef4444' : (currentIntent === 'RECOVER' ? '#38bdf8' : '#34d399')} 
+                                strokeWidth={0.5} 
+                                opacity={0.25} 
+                                perfectDrawEnabled={false}
+                            />
+                            <Line 
+                                points={[0, -HEX_SIZE * 0.75, 0, HEX_SIZE * 0.75]} 
+                                stroke={currentIntent === 'DIG' ? '#ef4444' : (currentIntent === 'RECOVER' ? '#38bdf8' : '#34d399')} 
+                                strokeWidth={0.5} 
+                                opacity={0.25} 
+                                perfectDrawEnabled={false}
+                            />
+                        </Group>
+
+                        {/* Counter-clockwise rotating inner stabilization ring */}
+                        <Group ref={growingGlowOppositeRef}>
+                            <Circle 
+                                radius={HEX_SIZE * 0.45} 
+                                stroke={currentIntent === 'DIG' ? '#f87171' : (currentIntent === 'RECOVER' ? '#06b6d4' : '#6ee7b7')} 
+                                strokeWidth={1.2} 
+                                dash={[15, 6]}
+                                opacity={0.7}
+                                perfectDrawEnabled={false}
+                            />
+                            {/* Scanning core diamond */}
+                            <Star 
+                                numPoints={4}
+                                innerRadius={3}
+                                outerRadius={6}
+                                fill={currentIntent === 'DIG' ? '#fca5a5' : (currentIntent === 'RECOVER' ? '#67e8f9' : '#a7f3d0')}
+                                opacity={0.8}
+                                perfectDrawEnabled={false}
+                            />
+                        </Group>
+
+                        {/* HIGH-TECH SEGMENTED CIRCULAR PROGRESS GAUGE HALO */}
+                        {Array.from({ length: 12 }).map((_, idx) => {
+                            const angle = (360 / 12) * idx * DEG_TO_RAD;
+                            const dx = Math.cos(angle) * (HEX_SIZE * 0.82);
+                            const dy = Math.sin(angle) * (HEX_SIZE * 0.82);
+                            const isActive = progressRatio > idx / 12;
+
+                            return (
+                                <Circle 
+                                    key={`gauge-${idx}`}
+                                    x={dx}
+                                    y={dy}
+                                    radius={isActive ? 3.0 : 1.8}
+                                    fill={isActive 
+                                        ? (currentIntent === 'DIG' ? '#ef4444' : (currentIntent === 'RECOVER' ? '#06b6d4' : '#10b981')) 
+                                        : 'rgba(255, 255, 255, 0.15)'
+                                    }
+                                    stroke={isActive 
+                                        ? (currentIntent === 'DIG' ? '#fca5a5' : (currentIntent === 'RECOVER' ? '#22d3ee' : '#34d399')) 
+                                        : 'rgba(0,0,0,0.4)'
+                                    }
+                                    strokeWidth={isActive ? 1.0 : 0.5}
+                                    shadowColor={isActive 
+                                        ? (currentIntent === 'DIG' ? '#ef4444' : (currentIntent === 'RECOVER' ? '#06b6d4' : '#10b981')) 
+                                        : undefined
+                                    }
+                                    shadowBlur={isActive ? 6 : 0}
+                                    perfectDrawEnabled={false}
+                                />
+                            );
+                        })}
+                    </Group>
+                )}
             </Group>
         </Group>
         {/* 3. FLOATING OVERLAYS (Wrapped inside an animated overlays group container) */}
@@ -892,13 +1043,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
                 <Group y={-38} listening={false} perfectDrawEnabled={false}>
                     <Circle radius={15} fill="#fbbf24" stroke="#92400e" strokeWidth={2} perfectDrawEnabled={false} />
                     <Text text={`${pendingCost}`} y={-6} fontSize={13} fontStyle="bold" fill="#78350f" align="center" width={30} offsetX={15} perfectDrawEnabled={false} />
-                </Group>
-            )}
-            
-            {isGrowing && (
-                <Group y={16} listening={false} perfectDrawEnabled={false}>
-                    <Rect x={-18} y={0} width={36} height={5} fill="rgba(0,0,0,0.7)" cornerRadius={2} perfectDrawEnabled={false} />
-                    <Rect x={-18} y={0} width={36 * Math.min(1, progress / (30))} height={5} fill={isRankLocked ? "#f59e0b" : "#10b981"} cornerRadius={2} perfectDrawEnabled={false} />
                 </Group>
             )}
         </Group>

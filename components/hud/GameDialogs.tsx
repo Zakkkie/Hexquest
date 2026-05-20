@@ -7,6 +7,7 @@ import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
 import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Globe, Activity, Timer, Coins, Sparkles, Footprints } from 'lucide-react';
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
 import { Item } from '../../types';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface GameDialogsProps {
     activeModal: string | null;
@@ -204,6 +205,62 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         briefingDesc = `SCENARIO: KING OF THE HILL\n\nA dormant Monument has been detected...`;
     }
 
+    const entropy = useGameStore(state => state.session?.entropy);
+    const totalMinedMaterial = useGameStore(state => state.session?.totalMinedMaterial || 0);
+    const restoredHexesCount = useGameStore(state => state.session?.restoredHexesCount || 0);
+
+    const totalDigs = useMemo(() => {
+        return Object.values(minedHexes || {}).reduce((sum, val) => sum + val, 0);
+    }, [minedHexes]);
+
+    const campaignMetrics = useMemo(() => {
+        if (!grid || !player || !activeLevelConfig) return null;
+        const levelId = activeLevelConfig.id;
+        const ownedByLevel = (minLvl: number) =>
+            Object.values(grid).filter((h: any) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
+
+        if (levelId === '1.1') return { current: Math.max(0, ownedByLevel(1) - 1), target: 3, label: TEXT[language].HUD.TUT_1_1_COUNTER };
+        if (levelId === '1.3') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 2, label: 'LEVEL' };
+        if (levelId === '1.4') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
+        if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
+        if (levelId === '1.6') return { current: player.playerLevel, target: 4, label: 'RANK' };
+        if (levelId === '1.7') {
+           return { current: restoredHexesCount, target: 5, label: TEXT[language].HUD.TUT_1_7_COUNTER || 'RESTORED' };
+        }
+        
+        if (levelId === '2.2') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+        if (levelId === '2.3') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+        if (levelId === '2.4') return { current: player.inventory?.length ?? 0, target: 2, label: 'ITEMS' };
+        if (levelId === '2.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+        
+        if (levelId === '2.6') {
+            const playerHex = grid[`${player.q},${player.r}`];
+            const depth = playerHex ? -playerHex.currentLevel : 0;
+            return { current: Math.max(0, depth), target: 5, label: 'DEPTH' };
+        }
+
+        if (levelId === '3.1') return { current: player.inventory?.filter(i => i.id === 'key_fragment').length || 0, target: 3, label: 'KEYS' };
+        if (levelId === '3.2') return { current: player.coins, target: 200, label: 'CREDITS' };
+        if (levelId === '3.3') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
+        if (levelId === '3.4') return { current: player.coins, target: 100, label: 'CREDITS' };
+        if (levelId === '3.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+
+        if (levelId === '4.1') return { current: ownedByLevel(2), target: 3, label: 'L2 HEXES' };
+        if (levelId === '4.3') return { current: ownedByLevel(3), target: 2, label: 'L3 HEXES' };
+        if (levelId === '4.4') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 4, label: 'LEVEL' };
+        if (levelId === '4.5') return { current: ownedByLevel(2), target: 6, label: 'L2 HEXES' };
+        if (levelId === '4.6') return { current: ownedByLevel(3), target: 8, label: 'L3 HEXES' };
+        if (levelId === '4.7') return { current: ownedByLevel(4), target: 2, label: 'L4 HEXES' };
+
+        if (levelId === '4.8') {
+             const onMon = grid[`${player.q},${player.r}`]?.structureType === 'MONUMENT';
+             const isDone = onMon && ownedByLevel(3) >= 3 && player.coins >= 300 && player.inventory.length >= 2 && (entropy?.current ?? 0) < 60;
+             return { current: isDone ? 1 : 0, target: 1, label: 'ASCEND' };
+        }
+
+        return null;
+    }, [grid, player, activeLevelConfig, language, entropy, totalMinedMaterial, totalDigs, restoredHexesCount]);
+
     const availableInventory = player?.inventory.filter(i => !monumentDialogState.slots.some(s => s?.id === i.id)) || [];
     const isMonumentReady = monumentDialogState.slots.every(s => s !== null);
 
@@ -215,349 +272,629 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {victoryStage === 'SALUTE' && <div className="absolute inset-0 z-[150] pointer-events-auto cursor-pointer" onClick={() => setVictoryStage('MODAL')} onTouchStart={() => setVictoryStage('MODAL')} />}
 
             {/* EXIT CONFIRMATION */}
-            {activeModal === 'EXIT' && (
-                <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-red-900/50 p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-[320px] md:max-w-sm w-full text-center relative overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="absolute top-0 left-0 w-full h-1 bg-red-600"></div>
-                        <div className="w-14 h-14 rounded-2xl bg-red-900/20 flex items-center justify-center mx-auto mb-4 border border-red-500/30 shadow-lg shadow-red-900/20"><LogOut className="w-7 h-7 text-red-500" /></div>
-                        <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight break-words whitespace-pre-wrap">{t.ABORT_TITLE}</h3>
-                        <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2 break-words whitespace-pre-wrap">{t.ABORT_DESC}</p>
-                        <div className="flex flex-col gap-3">
-                            <button onClick={() => { handleMenu(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black uppercase text-xs transition-all active:scale-95 shadow-lg shadow-red-900/40">{t.BTN_CONFIRM}</button>
-                            <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold uppercase text-[10px] transition-colors">{t.BTN_CANCEL}</button>
-                        </div>
+            <AnimatePresence>
+                {activeModal === 'EXIT' && (
+                    <div className="absolute inset-0 z-[200] flex items-center justify-center p-4 pointer-events-auto">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeModal}
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 15, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 15, opacity: 0 }}
+                            transition={{ type: "spring", duration: 0.4 }}
+                            className="bg-slate-950/90 border border-red-500/30 p-6 md:p-8 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.15)] max-w-[340px] md:max-w-sm w-full text-center relative overflow-hidden backdrop-blur-xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Corner brackets */}
+                            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-red-500/50" />
+                            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-red-500/50" />
+                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-red-500/50" />
+                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-red-500/50" />
+                            
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-red-400" />
+                            <div className="w-14 h-14 rounded-2xl bg-red-950/30 flex items-center justify-center mx-auto mb-4 border border-red-500/40 shadow-lg shadow-red-900/30">
+                                <LogOut className="w-7 h-7 text-red-500" />
+                            </div>
+                            <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight break-words whitespace-pre-wrap">{t.ABORT_TITLE}</h3>
+                            <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2 break-words whitespace-pre-wrap">{t.ABORT_DESC}</p>
+                            <div className="flex flex-col gap-3">
+                                <button onClick={() => { handleMenu(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 hover:brightness-110 text-white font-extrabold uppercase text-xs transition-all active:scale-95 shadow-lg shadow-red-900/40 cursor-pointer">{t.BTN_CONFIRM}</button>
+                                <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-850/80 text-slate-400 font-bold uppercase text-[10px] border border-slate-850 hover:border-slate-800 transition-all active:scale-95 cursor-pointer">{t.BTN_CANCEL}</button>
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
 
             {/* RESTART CONFIRMATION */}
-            {activeModal === 'RESTART' && (
-                <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-amber-900/50 p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-[320px] md:max-w-sm w-full text-center relative overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="absolute top-0 left-0 w-full h-1 bg-amber-600"></div>
-                        <div className="w-14 h-14 rounded-2xl bg-amber-900/20 flex items-center justify-center mx-auto mb-4 border border-amber-500/30 shadow-lg shadow-amber-900/20"><RotateCcw className="w-7 h-7 text-amber-500" /></div>
-                        <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight break-words whitespace-pre-wrap">{t.BTN_RETRY}?</h3>
-                        <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2 break-words whitespace-pre-wrap">{language === 'RU' ? 'Начать уровень заново? Текущий прогресс будет потерян.' : 'Restart the level? Current progress will be lost.'}</p>
-                        <div className="flex flex-col gap-3">
-                            <button onClick={() => { handleRetry(); closeModal(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black uppercase text-xs transition-all active:scale-95 shadow-lg shadow-amber-900/40">{t.BTN_CONFIRM}</button>
-                            <button 
-                                onClick={() => { handleNewGame(); closeModal(); }} 
-                                className="w-full py-3 rounded-xl bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/30 hover:border-red-500/50 font-bold uppercase text-[10px] transition-all flex items-center justify-center gap-2"
-                            >
-                                <RefreshCw className="w-4 h-4" />
-                                {language === 'RU' ? 'Новая Игра (Сброс)' : 'New Game (Reset)'}
-                            </button>
-                            <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-2 rounded-xl bg-transparent text-slate-500 hover:text-slate-300 font-bold uppercase text-[10px] transition-colors">{t.BTN_CANCEL}</button>
-                        </div>
+            <AnimatePresence>
+                {activeModal === 'RESTART' && (
+                    <div className="absolute inset-0 z-[200] flex items-center justify-center p-4 pointer-events-auto">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeModal}
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 15, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 15, opacity: 0 }}
+                            transition={{ type: "spring", duration: 0.4 }}
+                            className="bg-slate-950/90 border border-amber-500/30 p-6 md:p-8 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.15)] max-w-[340px] md:max-w-sm w-full text-center relative overflow-hidden backdrop-blur-xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Corner brackets */}
+                            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-amber-500/50" />
+                            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-amber-500/50" />
+                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-amber-500/50" />
+                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-amber-500/50" />
+
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-600 to-amber-400" />
+                            <div className="w-14 h-14 rounded-2xl bg-amber-950/30 flex items-center justify-center mx-auto mb-4 border border-amber-500/40 shadow-lg shadow-amber-900/30">
+                                <RotateCcw className="w-7 h-7 text-amber-500" />
+                            </div>
+                            <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight break-words whitespace-pre-wrap">{t.BTN_RETRY}?</h3>
+                            <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2 break-words whitespace-pre-wrap">{language === 'RU' ? 'Начать уровень заново? Текущий прогресс будет потерян.' : 'Restart the level? Current progress will be lost.'}</p>
+                            <div className="flex flex-col gap-3">
+                                <button onClick={() => { handleRetry(); closeModal(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 hover:brightness-110 text-white font-extrabold uppercase text-xs transition-shadow shadow-lg shadow-amber-900/40 cursor-pointer active:scale-95 transition-all">{t.BTN_CONFIRM}</button>
+                                <button 
+                                    onClick={() => { handleNewGame(); closeModal(); }} 
+                                    className="w-full py-3 rounded-xl bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-900/40 hover:border-red-500/50 font-bold uppercase text-[10px] transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                                >
+                                    <RefreshCw className="w-4 h-4 animate-[spin_20s_linear_infinite]" />
+                                    {language === 'RU' ? 'Новая Игра (Сброс)' : 'New Game (Reset)'}
+                                </button>
+                                <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-2 rounded-xl bg-transparent text-slate-500 hover:text-slate-300 font-bold uppercase text-[10px] transition-colors cursor-pointer">{t.BTN_CANCEL}</button>
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
 
             {/* MISSION BRIEFING / DETAILS */}
-            {(activeModal === 'MISSION' || gameStatus === 'BRIEFING') && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 md:p-6 pointer-events-auto animate-in fade-in duration-300">
-                    <div className="relative bg-slate-950 border-2 border-indigo-500/40 rounded-lg shadow-[0_0_40px_rgba(79,70,229,0.2)] max-w-lg w-full max-h-[95vh] md:max-h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 group">
-                        {/* Scanline effect */}
-                        <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
-                        <div className="absolute top-0 left-0 w-full h-1 bg-white/5 animate-scan-slow z-10" />
+            <AnimatePresence>
+                {(activeModal === 'MISSION' || gameStatus === 'BRIEFING') && (
+                    <div className="absolute inset-0 z-[100] flex items-center justify-center p-4 md:p-6 pointer-events-auto">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => {
+                                if (gameStatus !== 'BRIEFING') closeModal();
+                            }}
+                            className="absolute inset-0 bg-black/95 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 30, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 30, opacity: 0 }}
+                            transition={{ type: "spring", duration: 0.4 }}
+                            className="relative bg-slate-950/90 border-2 border-indigo-500/40 rounded-xl shadow-[0_0_50px_rgba(79,70,229,0.3)] max-w-lg w-full max-h-[92vh] md:max-h-[85vh] overflow-hidden flex flex-col backdrop-blur-xl group"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Corner brackets */}
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/60 z-30" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/60 z-30" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/60 z-30" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/60 z-30" />
 
-                        {/* Technical Header */}
-                        <div className="bg-indigo-900/20 border-b border-indigo-500/30 p-3 flex items-center justify-between z-20">
-                            <div className="flex items-center gap-3">
-                                <Terminal className="w-5 h-5 text-indigo-400" />
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400/60 leading-none">MISSION_PROTOCOL_INIT</span>
-                                    <span className="text-xs font-bold text-white uppercase tracking-widest">{activeLevelConfig?.id || 'SKIRMISH_OPS'}</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="flex gap-1">
-                                    {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 bg-indigo-500 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}
-                                </div>
-                                <button onClick={() => {
-                                    if (gameStatus === 'BRIEFING') {
-                                        startMission();
-                                    }
-                                    closeModal();
-                                }} className="text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5"/></button>
-                            </div>
-                        </div>
+                            {/* Scanline effect */}
+                            <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+                            <div className="absolute top-0 left-0 w-full h-1 bg-white/5 animate-scan-slow z-10" />
 
-                        <div className="flex-1 overflow-y-auto no-scrollbar relative z-20 p-6 md:p-8 flex flex-col gap-6">
-                            <div className="flex flex-col items-center">
-                                <div className="relative mb-6">
-                                    <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full" />
-                                    <div className="relative w-20 h-20 bg-slate-900 border-2 border-indigo-500/30 rounded-xl flex items-center justify-center shadow-2xl">
-                                        <Target className="w-10 h-10 text-indigo-400" />
-                                    </div>
-                                    <div className="absolute -bottom-2 -right-2 bg-indigo-600 p-1.5 rounded text-white shadow-lg">
-                                        <Activity className="w-3.5 h-3.5" />
-                                    </div>
-                                </div>
-                                <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter text-center leading-none mb-4">{briefingTitle}</h2>
+                            {/* Technical Header */}
+                            <div className="bg-indigo-950/35 border-b border-indigo-500/30 p-4 flex items-center justify-between z-20 shrink-0">
                                 <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-700 rounded text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        <Globe className="w-3 h-3" /> {difficulty || 'NORMAL'}
+                                    <Terminal className="w-5 h-5 text-indigo-400" />
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400/75 leading-none font-mono">MISSION_PROTOCOL_INIT</span>
+                                        <span className="text-xs font-bold text-white uppercase tracking-widest truncate">{activeLevelConfig?.id || 'SKIRMISH_OPS'}</span>
                                     </div>
-                                    {bots && bots.length > 0 && (
-                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-red-950/30 border border-red-500/30 rounded text-[10px] font-black text-red-400 uppercase tracking-widest">
-                                            <Swords className="w-3 h-3"/> {t.BRIEFING_RIVAL}
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex gap-1">
+                                        {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 bg-indigo-500 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}
+                                    </div>
+                                    <button onClick={() => {
+                                        if (gameStatus === 'BRIEFING') {
+                                            startMission();
+                                        }
+                                        closeModal();
+                                    }} className="text-slate-500 hover:text-white transition-colors cursor-pointer"><X className="w-5 h-5"/></button>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar relative z-20 p-5 md:p-8 flex flex-col gap-5 scrollbar-thin">
+                                <div className="flex flex-col items-center shrink-0">
+                                    <div className="relative mb-5">
+                                        <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full" />
+                                        <div className="relative w-20 h-20 bg-slate-900/60 border-2 border-indigo-500/30 rounded-xl flex items-center justify-center shadow-2xl">
+                                            <Target className="w-10 h-10 text-indigo-400" />
+                                        </div>
+                                        <div className="absolute -bottom-2 -right-2 bg-indigo-600 p-1.5 rounded text-white shadow-lg">
+                                            <Activity className="w-3.5 h-3.5 animate-pulse" />
+                                        </div>
+                                    </div>
+                                    <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter text-center leading-none mb-3 break-words whitespace-pre-wrap">{briefingTitle}</h2>
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-850 rounded text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                            <Globe className="w-3 h-3" /> {difficulty || 'NORMAL'}
+                                        </div>
+                                        {bots && bots.length > 0 && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-red-950/30 border border-red-500/30 rounded text-[9px] font-black text-red-400 uppercase tracking-widest">
+                                                <Swords className="w-3 h-3"/> {t.BRIEFING_RIVAL}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                {/* 1. OVERALL OBJECTIVE & SPECIFICATION CARD */}
+                                <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 md:p-5 flex flex-col gap-2.5">
+                                    <span className="text-[10px] uppercase font-black tracking-widest text-indigo-400 flex items-center gap-1.5 font-mono">
+                                        <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                        {language === 'RU' ? 'ОБЩАЯ ЦЕЛЬ СЦЕНАРИЯ' : 'OVERALL MISSION OBJECTIVE'}
+                                    </span>
+                                    <p className="text-xs md:text-sm text-slate-300 leading-relaxed font-mono whitespace-pre-line break-words pl-1">
+                                        {briefingDesc}
+                                    </p>
+                                    {activeLevelConfig?.goalText && (
+                                        <div className="mt-2 pt-3 border-t border-slate-800/60">
+                                            <span className="text-[9px] uppercase font-black tracking-wider text-amber-400/80 font-mono">
+                                                {language === 'RU' ? 'ОСНОВНАЯ ДИРЕКТИВА' : 'PRIMARY DIRECTIVE'}
+                                            </span>
+                                            <p className="text-sm font-bold text-amber-300 font-sans mt-0.5">
+                                                {activeLevelConfig.goalText}
+                                            </p>
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                            
-                            <div className="relative bg-slate-900/80 border border-indigo-500/20 rounded-lg overflow-hidden flex flex-col flex-1 min-h-[100px]">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/40" />
-                                <div className="absolute top-0 right-0 p-1">
-                                    <FileText className="w-3 h-3 text-indigo-500/30" />
-                                </div>
-                                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-5 bg-slate-950/40">
-                                    <div className="flex flex-col gap-3">
-                                        <p className="text-xs md:text-sm text-indigo-100/90 leading-relaxed whitespace-pre-wrap font-mono break-words pl-2 pb-6">
-                                            {briefingDesc}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none opacity-60" />
-                            </div>
-                        </div>
 
-                        {/* Footer / Action */}
-                        <div className="p-6 bg-slate-900/50 border-t border-indigo-500/20 z-20">
-                            <button 
-                                onClick={() => {
-                                    if (gameStatus === 'BRIEFING') {
-                                        startMission();
-                                    }
-                                    closeModal();
-                                }} 
-                                className="group/btn relative flex w-full flex-col items-center justify-center gap-2 px-12 py-5 bg-slate-900/80 border border-indigo-500/50 hover:bg-slate-800 transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] overflow-hidden rounded text-indigo-400 hover:text-indigo-300"
-                            >
-                                <div className="absolute inset-0 bg-indigo-500/10 opacity-0 transition-opacity group-hover/btn:opacity-100 pointer-events-none" />
-                                <div className="relative z-10 flex items-center justify-center gap-3 text-white font-black uppercase tracking-[0.3em] text-sm">
-                                    {gameStatus === 'BRIEFING' ? t.BRIEFING_BTN_START : t.BTN_READY}
-                                    <ArrowRight className="w-5 h-5 transition-transform group-hover/btn:translate-x-1" />
-                                </div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* RANKINGS */}
-            {activeModal === 'RANKINGS' && (
-                <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-950 border-2 border-amber-500/40 rounded-lg shadow-[0_0_40px_rgba(245,158,11,0.2)] w-full max-w-[340px] md:max-w-md max-h-[80vh] flex flex-col overflow-hidden relative group" onClick={e => e.stopPropagation()}>
-                        {/* Scanline effect */}
-                        <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
-                        
-                        <div className="p-4 border-b border-amber-500/30 flex items-center justify-between bg-amber-900/10 z-20">
-                            <div className="flex items-center gap-3">
-                                <Trophy className="w-5 h-5 text-amber-500" />
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/60 leading-none">NETWORK_HIERARCHY</span>
-                                    <span className="text-xs font-bold text-white uppercase tracking-widest">{t.MINI_LB_TITLE}</span>
-                                </div>
-                            </div>
-                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-3 z-20 bg-slate-950/40">
-                            {liveRankings.length === 0 ? <div className="p-8 text-center text-slate-500 text-xs font-mono uppercase tracking-widest opacity-40">NO_DATA_STREAM</div> : 
-                                <div className="flex flex-col gap-2">{liveRankings.map((entry, idx) => (
-                                    <div key={entry.id} className={`grid grid-cols-12 gap-2 items-center p-3 rounded border-l-4 transition-all ${entry.isPlayer ? 'bg-indigo-900/20 border-indigo-500/60 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'bg-slate-900/60 border-slate-700/60 hover:bg-slate-800'}`}>
-                                        <div className="col-span-1 flex justify-center">
-                                            <div className={`text-[10px] font-black font-mono ${idx === 0 ? 'text-amber-400' : 'text-slate-500'}`}>
-                                                {String(idx + 1).padStart(2, '0')}
-                                            </div>
-                                        </div>
-                                        <div className="col-span-5 flex items-center gap-2 overflow-hidden">
-                                            <div className="w-1.5 h-4" style={{ backgroundColor: entry.color }}></div>
-                                            <span className={`text-[11px] font-black uppercase truncate tracking-tight ${entry.isPlayer ? 'text-indigo-300' : 'text-slate-300'}`}>
-                                                {entry.nickname}
-                                            </span>
-                                        </div>
-                                        <div className="col-span-2 text-right">
-                                            <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5">LVL</div>
-                                            <span className="text-[10px] font-mono text-emerald-400 font-bold">{entry.level}</span>
-                                        </div>
-                                        <div className="col-span-2 text-right">
-                                            <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5">CRD</div>
-                                            <span className="text-[10px] font-mono text-amber-400 font-bold">{entry.coins}</span>
-                                        </div>
-                                        <div className="col-span-2 text-right">
-                                            <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5">MOV</div>
-                                            <span className="text-[10px] font-mono text-blue-400 font-bold">{entry.moves}</span>
-                                        </div>
-                                    </div>
-                                ))}</div>
-                            }
-                        </div>
-                        <div className="p-4 bg-slate-900/80 border-t border-amber-500/30 z-20 shadow-inner">
-                            <button onClick={closeModal} className="w-full py-3 bg-amber-600/20 border border-amber-500 hover:bg-amber-600 hover:text-white text-amber-400 font-black uppercase text-xs tracking-[0.3em] transition-all">
-                                {t.BTN_READY}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* LOG */}
-            {activeModal === 'LOG' && (
-                <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-950 border-2 border-indigo-500/40 rounded-lg shadow-[0_0_40px_rgba(79,70,229,0.2)] w-full max-w-[340px] md:max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative group" onClick={e => e.stopPropagation()}>
-                        {/* Scanline effect */}
-                        <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
-                        
-                        <div className="p-4 border-b border-indigo-500/30 flex items-center justify-between bg-indigo-900/10 z-20">
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-indigo-500/20 rounded border border-indigo-500/30">
-                                    <FileText className="w-4 h-4 text-indigo-400" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none">DATA_FETCH_COMPLETE</span>
-                                    <span className="text-xs font-bold text-white uppercase tracking-widest">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
-                                </div>
-                            </div>
-                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2 bg-slate-950/40 z-20">
-                            {messageLog && messageLog.length > 0 ? (
-                                [...messageLog].reverse().map((log) => (
-                                    <div key={log.id} className="relative flex gap-3 p-3 bg-slate-900/40 border border-slate-800 hover:bg-slate-800 transition-all group/item overflow-hidden">
-                                        <div className={`absolute top-0 left-0 w-1 h-full ${log.type === 'INFO' ? 'bg-indigo-500' : log.type === 'ERROR' ? 'bg-red-500' : log.type === 'WARN' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className={`text-[9px] font-black uppercase tracking-widest ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                                    [{log.type}]
-                                                </span>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[8px] font-mono text-slate-600">STAMP::</span>
-                                                    <span className="text-[9px] font-mono text-slate-400">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                                </div>
-                                            </div>
-                                            <p className="text-[11px] md:text-xs text-slate-200 font-mono leading-relaxed break-words whitespace-pre-wrap">
-                                                <span className="text-slate-600 mr-2 opacity-50">&gt;</span>
-                                                {log.text}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full opacity-10 gap-3">
-                                    <Terminal className="w-16 h-16 text-slate-500" />
-                                    <div className="text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.5em]">BUFFER_EMPTY</div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="p-4 bg-slate-900/80 border-t border-indigo-500/30 z-20 shadow-inner">
-                            <button onClick={closeModal} className="w-full py-3 bg-indigo-600/20 border border-indigo-500 hover:bg-indigo-600 hover:text-white text-indigo-400 font-black uppercase text-xs tracking-[0.3em] transition-all">
-                                {t.BTN_READY}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* CODEX */}
-            {activeModal === 'CODEX' && (
-                <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeModal}>
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-[340px] md:max-w-3xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
-                        <div className="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
-                        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-purple-500/20 rounded-lg border border-purple-500/30">
-                                    <BookOpen className="w-4 h-4 text-purple-400" />
-                                </div>
-                                <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white break-words whitespace-pre-wrap">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</h3>
-                            </div>
-                            <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-6 bg-slate-950/30">
-                            {(['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'] as const).map(rarity => {
-                                const items = ITEM_REGISTRY.filter(i => i.rarity === rarity);
-                                if (items.length === 0) return null;
-                                return (
-                                    <div key={rarity}>
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <h4 className={`text-[10px] font-black uppercase tracking-[0.2em] ${rarity === 'COMMON' ? 'text-slate-400' : rarity === 'UNCOMMON' ? 'text-emerald-400' : rarity === 'RARE' ? 'text-purple-400' : 'text-amber-400'}`}>{rarity}</h4>
-                                            <div className={`flex-1 h-px ${rarity === 'COMMON' ? 'bg-slate-800' : rarity === 'UNCOMMON' ? 'bg-emerald-900/50' : rarity === 'RARE' ? 'bg-purple-900/50' : 'bg-amber-900/50'}`} />
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            {items.map(def => (
-                                                <div key={def.idPrefix} className="flex gap-3 p-2.5 bg-slate-900/40 border border-slate-800/50 rounded-xl hover:bg-slate-800/40 transition-colors group">
-                                                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-950 flex items-center justify-center border border-slate-800 shrink-0 shadow-inner group-hover:scale-105 transition-transform ${getRarityBorder(def.rarity)}`}><ItemIcon def={def} size="w-7 h-7 md:w-9 md:h-9" /></div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between mb-0.5"><span className="text-[11px] font-bold text-white truncate group-hover:text-indigo-300 transition-colors break-words whitespace-pre-wrap">{def.name[language]}</span></div>
-                                                        <p className="text-[9px] text-slate-500 italic leading-tight line-clamp-2 break-words whitespace-pre-wrap">"{def.description[language]}"</p>
+                                {/* 2. LIVE METRICS & CURRENT GOAL CARD */}
+                                <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 md:p-5 flex flex-col gap-3">
+                                    <span className="text-[10px] uppercase font-black tracking-widest text-indigo-400 flex items-center gap-1.5 font-mono">
+                                        <Activity className="w-3.5 h-3.5 text-indigo-400 animate-pulse shrink-0" />
+                                        {language === 'RU' ? 'ТЕКУЩАЯ ЦЕЛЬ И ПРОГРЕСС' : 'CURRENT STATUS & LIVE GOALS'}
+                                    </span>
+                                    
+                                    <div className="flex flex-col gap-3 mt-1.5 font-mono">
+                                        {activeLevelConfig && campaignMetrics ? (() => {
+                                            const progressPercent = Math.min(100, (campaignMetrics.current / campaignMetrics.target) * 100);
+                                            const isCompleted = campaignMetrics.current >= campaignMetrics.target;
+                                            return (
+                                                <div className="flex flex-col gap-2 p-3 rounded-lg bg-slate-950/60 border border-slate-900">
+                                                    <div className="flex items-center justify-between text-xs font-bold font-mono">
+                                                        <span className="text-slate-300 uppercase shrink truncate">{campaignMetrics.label}</span>
+                                                        <span className={isCompleted ? "text-emerald-400" : "text-amber-400"}>
+                                                            {campaignMetrics.current} / {campaignMetrics.target}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {/* Progress bar */}
+                                                    <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                                            style={{ width: `${progressPercent}%` }}
+                                                        />
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-1.5 text-[10px] mt-1 font-bold">
+                                                        {isCompleted ? (
+                                                            <span className="text-emerald-400 flex items-center gap-1">
+                                                                <CheckCircle className="w-3.5 h-3.5" /> {language === 'RU' ? 'ЗАДАЧА ВЫПОЛНЕНА' : 'GOAL REACHED'}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-500 flex items-center gap-1">
+                                                                <Timer className="w-3.5 h-3.5" /> {language === 'RU' ? 'ОЖИДАНИЕ ВЫПОЛНЕНИЯ...' : 'PROCESSING...'}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
+                                            );
+                                        })() : (
+                                            /* If in skirmish battle mode, show rank and/or credits targets depending on winType */
+                                            winCondition && player ? (
+                                                <div className="flex flex-col gap-3">
+                                                    {/* Rank Goal */}
+                                                    <div className="flex flex-col gap-2 p-3 rounded-lg bg-slate-950/60 border border-slate-900">
+                                                        <div className="flex items-center justify-between text-xs font-bold font-mono">
+                                                            <span className="text-slate-300 uppercase flex items-center gap-1">
+                                                                <Crown className="w-3.5 h-3.5 text-indigo-450" />
+                                                                {language === 'RU' ? 'ЦЕЛЕВОЙ РАНГ' : 'TARGET RANK'}
+                                                            </span>
+                                                            <span className={player.playerLevel >= winCondition.targetLevel ? "text-emerald-400" : "text-amber-400"}>
+                                                                {player.playerLevel} / {winCondition.targetLevel}
+                                                            </span>
+                                                        </div>
+                                                        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                                            <div 
+                                                                className={`h-full rounded-full transition-all duration-500 ${player.playerLevel >= winCondition.targetLevel ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                                                style={{ width: `${Math.min(100, (player.playerLevel / winCondition.targetLevel) * 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Coins Goal */}
+                                                    {winCondition.winType !== 'SUMMIT' && winCondition.targetCoins > 0 && (
+                                                        <div className="flex flex-col gap-2 p-3 rounded-lg bg-slate-950/60 border border-slate-900">
+                                                            <div className="flex items-center justify-between text-xs font-bold font-mono">
+                                                                <span className="text-slate-300 uppercase flex items-center gap-1">
+                                                                    <Coins className="w-3.5 h-3.5 text-amber-400" />
+                                                                    {language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS'}
+                                                                </span>
+                                                                <span className={player.coins >= winCondition.targetCoins ? "text-emerald-400" : "text-amber-400"}>
+                                                                    {player.coins} / {winCondition.targetCoins}
+                                                                </span>
+                                                            </div>
+                                                            <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                                                <div 
+                                                                    className={`h-full rounded-full transition-all duration-500 ${player.coins >= winCondition.targetCoins ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                                                    style={{ width: `${Math.min(100, (player.coins / winCondition.targetCoins) * 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-slate-500 italic">No objectives assigned.</p>
+                                            )
+                                        )}
                                     </div>
-                                );
-                            })}
-                        </div>
-                        <div className="p-3 bg-slate-950/50 border-t border-slate-800">
-                            <button onClick={closeModal} className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase text-[10px] transition-colors">{t.BTN_READY}</button>
-                        </div>
+                                </div>
+                            </div>
+
+                            {/* Footer / Action */}
+                            <div className="p-4 md:p-6 bg-slate-900/45 border-t border-indigo-500/20 z-20 shrink-0">
+                                <button 
+                                    onClick={() => {
+                                        if (gameStatus === 'BRIEFING') {
+                                            startMission();
+                                        }
+                                        closeModal();
+                                    }} 
+                                    className="group/btn relative flex w-full flex-col items-center justify-center gap-2 px-1 py-4 bg-slate-900 border border-indigo-500/50 hover:bg-indigo-950/20 transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] overflow-hidden rounded-md text-indigo-400 hover:text-indigo-300 cursor-pointer active:scale-98"
+                                >
+                                    <div className="absolute inset-0 bg-indigo-500/10 opacity-0 transition-opacity group-hover/btn:opacity-100 pointer-events-none" />
+                                    <div className="relative z-10 flex items-center justify-center gap-3 text-white font-black uppercase tracking-[0.3em] text-xs md:text-sm">
+                                        {gameStatus === 'BRIEFING' ? t.BRIEFING_BTN_START : t.BTN_READY}
+                                        <ArrowRight className="w-5 h-5 transition-transform group-hover/btn:translate-x-1.5" />
+                                    </div>
+                                </button>
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
+
+            {/* RANKINGS */}
+            <AnimatePresence>
+                {activeModal === 'RANKINGS' && (
+                    <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 pointer-events-auto">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeModal}
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 20, opacity: 0 }}
+                            transition={{ type: "spring", duration: 0.4 }}
+                            className="bg-slate-950/90 border-2 border-amber-500/40 rounded-xl shadow-[0_0_50px_rgba(245,158,11,0.25)] w-full max-w-[340px] md:max-w-md max-h-[82vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Corner brackets */}
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-500/60 z-30" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-500/60 z-30" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-500/60 z-30" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-500/60 z-30" />
+
+                            {/* Scanline effect */}
+                            <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+                            
+                            <div className="p-4 border-b border-amber-500/30 flex items-center justify-between bg-amber-950/20 z-20 shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <Trophy className="w-5 h-5 text-amber-500" />
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500/60 leading-none">NETWORK_HIERARCHY</span>
+                                        <span className="text-xs font-bold text-white uppercase tracking-widest truncate">{t.MINI_LB_TITLE}</span>
+                                    </div>
+                                </div>
+                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1 cursor-pointer"><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-3 z-20 bg-slate-950/40">
+                                {liveRankings.length === 0 ? <div className="p-8 text-center text-slate-500 text-xs font-mono uppercase tracking-widest opacity-40">NO_DATA_STREAM</div> : 
+                                    <div className="flex flex-col gap-2">{liveRankings.map((entry, idx) => (
+                                        <div key={entry.id} className={`grid grid-cols-12 gap-2 items-center p-3 rounded-lg border-l-4 transition-all ${entry.isPlayer ? 'bg-indigo-900/20 border-indigo-500/60 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'bg-slate-900/40 border-slate-700/60 hover:bg-slate-800'}`}>
+                                            <div className="col-span-1 flex justify-center">
+                                                <div className={`text-[10px] font-black font-mono ${idx === 0 ? 'text-amber-400 font-extrabold' : 'text-slate-500'}`}>
+                                                    {String(idx + 1).padStart(2, '0')}
+                                                </div>
+                                            </div>
+                                            <div className="col-span-5 flex items-center gap-2 overflow-hidden">
+                                                <div className="w-1.5 h-4 shrink-0 rounded-sm" style={{ backgroundColor: entry.color }}></div>
+                                                <span className={`text-[11px] font-black uppercase truncate tracking-tight ${entry.isPlayer ? 'text-indigo-300' : 'text-slate-300'}`}>
+                                                    {entry.nickname}
+                                                </span>
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5 leading-none">LVL</div>
+                                                <span className="text-[10px] font-mono text-emerald-400 font-bold">{entry.level}</span>
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5 leading-none">CRD</div>
+                                                <span className="text-[10px] font-mono text-amber-400 font-bold">{entry.coins}</span>
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5 leading-none">MOV</div>
+                                                <span className="text-[10px] font-mono text-blue-400 font-bold">{entry.moves}</span>
+                                            </div>
+                                        </div>
+                                    ))}</div>
+                                }
+                            </div>
+                            <div className="p-4 bg-slate-900/60 border-t border-amber-500/30 z-20 shadow-inner shrink-0">
+                                <button onClick={closeModal} className="w-full py-3 bg-amber-600/20 border border-amber-500 hover:bg-amber-600 hover:text-white text-amber-400 font-extrabold uppercase text-xs tracking-[0.3em] transition-all rounded shadow-md cursor-pointer active:scale-98">
+                                    {t.BTN_READY}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* LOG */}
+            <AnimatePresence>
+                {activeModal === 'LOG' && (
+                    <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 pointer-events-auto">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeModal}
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 20, opacity: 0 }}
+                            transition={{ type: "spring", duration: 0.4 }}
+                            className="bg-slate-950/90 border-2 border-indigo-500/40 rounded-xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-[340px] md:max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Corner brackets */}
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/60 z-30" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/60 z-30" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/60 z-30" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/60 z-30" />
+
+                            {/* Scanline effect */}
+                            <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+                            
+                            <div className="p-4 border-b border-indigo-500/30 flex items-center justify-between bg-indigo-950/20 z-20 shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-1.5 bg-indigo-500/20 rounded border border-indigo-500/30">
+                                        <FileText className="w-4 h-4 text-indigo-400" />
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none">DATA_FETCH_COMPLETE</span>
+                                        <span className="text-xs font-bold text-white uppercase tracking-widest truncate">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
+                                    </div>
+                                </div>
+                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1 cursor-pointer"><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2 bg-slate-950/40 z-20 custom-scrollbar">
+                                {messageLog && messageLog.length > 0 ? (
+                                    [...messageLog].reverse().map((log) => (
+                                        <div key={log.id} className="relative flex gap-3 p-3 bg-slate-900/30 border border-slate-850 rounded hover:bg-slate-850/40 transition-all group/item overflow-hidden">
+                                            <div className={`absolute top-0 left-0 w-1 h-full ${log.type === 'INFO' ? 'bg-indigo-505' : log.type === 'ERROR' ? 'bg-red-500' : log.type === 'WARN' ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ backgroundColor: log.type === 'INFO' ? 'rgb(99, 102, 241)' : undefined }} />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className={`text-[9px] font-black uppercase tracking-widest ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                                        [{log.type}]
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[8px] font-mono text-slate-600">STAMP::</span>
+                                                        <span className="text-[9px] font-mono text-slate-400">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-[11px] md:text-xs text-slate-200 font-mono leading-relaxed break-words whitespace-pre-wrap">
+                                                    <span className="text-slate-600 mr-2 opacity-50">&gt;</span>
+                                                    {log.text}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full opacity-10 gap-3 py-16">
+                                        <Terminal className="w-16 h-16 text-slate-500" />
+                                        <div className="text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.5em]">BUFFER_EMPTY</div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="p-4 bg-slate-900/60 border-t border-indigo-500/30 z-20 shadow-inner shrink-0">
+                                <button onClick={closeModal} className="w-full py-3 bg-indigo-600/20 border border-indigo-500 hover:bg-indigo-600 hover:text-white text-indigo-400 font-extrabold uppercase text-xs tracking-[0.3em] transition-all rounded shadow-md cursor-pointer active:scale-98">
+                                    {t.BTN_READY}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* CODEX */}
+            <AnimatePresence>
+                {activeModal === 'CODEX' && (
+                    <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 pointer-events-auto">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeModal}
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 25, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 25, opacity: 0 }}
+                            transition={{ type: "spring", duration: 0.4 }}
+                            className="bg-slate-950/90 border border-slate-800 rounded-xl shadow-2xl w-full max-w-[340px] md:max-w-3xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Corner brackets */}
+                            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-purple-500/50 z-30" />
+                            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-purple-500/50 z-30" />
+                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-purple-500/50 z-30" />
+                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-purple-500/50 z-30" />
+
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 to-purple-400" />
+                            <div className="p-4 border-b border-slate-850 flex items-center justify-between bg-slate-950/50 shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-1.5 bg-purple-500/20 rounded-lg border border-purple-500/30">
+                                        <BookOpen className="w-4 h-4 text-purple-400" />
+                                    </div>
+                                    <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white leading-none">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</h3>
+                                </div>
+                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1 cursor-pointer"><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-6 bg-slate-950/30 custom-scrollbar">
+                                {(['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'] as const).map(rarity => {
+                                    const items = ITEM_REGISTRY.filter(i => i.rarity === rarity);
+                                    if (items.length === 0) return null;
+                                    return (
+                                        <div key={rarity}>
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <h4 className={`text-[10px] font-black uppercase tracking-[0.2em] ${rarity === 'COMMON' ? 'text-slate-400' : rarity === 'UNCOMMON' ? 'text-emerald-400' : rarity === 'RARE' ? 'text-purple-400' : 'text-amber-400'}`}>{rarity}</h4>
+                                                <div className={`flex-1 h-px ${rarity === 'COMMON' ? 'bg-slate-800/60' : rarity === 'UNCOMMON' ? 'bg-emerald-900/40' : rarity === 'RARE' ? 'bg-purple-900/40' : 'bg-amber-900/40'}`} />
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {items.map(def => (
+                                                    <div key={def.idPrefix} className="flex gap-3 p-2.5 bg-slate-900/30 border border-slate-850 rounded-xl hover:bg-slate-800/30 transition-all group cursor-default">
+                                                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-950 flex items-center justify-center border border-slate-850 shrink-0 shadow-inner group-hover:scale-105 transition-transform ${getRarityBorder(def.rarity)}`}><ItemIcon def={def} size="w-7 h-7 md:w-9 md:h-9" /></div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between mb-0.5"><span className="text-[11px] font-black text-white truncate group-hover:text-indigo-300 transition-colors">{def.name[language]}</span></div>
+                                                            <p className="text-[9px] text-slate-500 italic leading-tight line-clamp-2">"{def.description[language]}"</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="p-3 bg-slate-950/50 border-t border-slate-850/65 shrink-0">
+                                <button onClick={closeModal} className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-extrabold uppercase text-[10px] transition-all cursor-pointer active:scale-98">{t.BTN_READY}</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* HELP */}
-            {helpTopic && helpData && (
-                <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 pointer-events-auto animate-in fade-in" onClick={closeHelp}>
-                    <div className="bg-slate-900 border border-slate-700 p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-[320px] md:max-w-sm w-full max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
-                        <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
-                        <h3 className="text-xl font-black text-white uppercase mb-2 text-center tracking-tight break-words whitespace-pre-wrap">{helpData.title}</h3>
-                        <p className="text-xs text-slate-400 mb-5 text-center leading-relaxed px-2 break-words whitespace-pre-wrap">{helpData.desc}</p>
-                        {(helpData as any).extra ? (
-                            <div className="flex flex-col gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 mb-5">
-                                {(helpData as any).extra.map((line: string, i: number) => (
-                                    <p key={i} className="text-[10px] text-slate-300 font-mono leading-tight border-l-2 border-indigo-500 pl-2 py-1 break-words whitespace-pre-wrap">{line}</p>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="bg-slate-800 p-3 rounded-xl text-[10px] font-mono text-emerald-400 text-center mb-5 border border-emerald-900/30">
-                                {helpData.hint}
-                            </div>
-                        )}
-                        <button onClick={closeHelp} className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase text-[10px] transition-colors">{t.BTN_READY}</button>
+            <AnimatePresence>
+                {helpTopic && helpData && (
+                    <div className="absolute inset-0 z-[150] flex items-center justify-center p-4 pointer-events-auto">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeHelp}
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 15, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 15, opacity: 0 }}
+                            transition={{ type: "spring", duration: 0.4 }}
+                            className="bg-slate-950/90 border border-indigo-500/30 p-6 md:p-8 rounded-xl shadow-2xl max-w-[340px] md:max-w-sm w-full max-h-[90vh] overflow-y-auto relative backdrop-blur-xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Corner brackets */}
+                            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-indigo-500/50" />
+                            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-indigo-500/50" />
+                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-indigo-500/50" />
+                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50" />
+
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-600 to-indigo-450" />
+                            <h3 className="text-xl font-black text-white uppercase mb-2 text-center tracking-tight break-words whitespace-pre-wrap">{helpData.title}</h3>
+                            <p className="text-xs text-slate-400 mb-5 text-center leading-relaxed px-2 break-words whitespace-pre-wrap">{helpData.desc}</p>
+                            {(helpData as any).extra ? (
+                                <div className="flex flex-col gap-2 bg-slate-950/70 p-3 rounded-lg border border-slate-850 mb-5 max-h-[25vh] overflow-y-auto no-scrollbar">
+                                    {(helpData as any).extra.map((line: string, i: number) => (
+                                        <p key={i} className="text-[10px] text-slate-300 font-mono leading-tight border-l-2 border-indigo-500 pl-2 py-1 break-words whitespace-pre-wrap">{line}</p>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="bg-slate-900/60 p-3 rounded-lg text-[10px] font-mono text-emerald-400 text-center mb-5 border border-emerald-950">
+                                    {helpData.hint}
+                                </div>
+                            )}
+                            <button onClick={closeHelp} className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase text-xs transition-shadow shadow-lg shadow-indigo-900/40 cursor-pointer active:scale-95 transition-all">{t.BTN_READY}</button>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
 
             {/* ITEM INSPECTION */}
-            {inspectedItem && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 pointer-events-auto animate-in fade-in duration-200" onClick={closeInspect}>
-                    <div className="bg-slate-950 border border-slate-700 rounded-2xl md:rounded-3xl shadow-2xl max-w-[340px] md:max-w-sm w-full max-h-[90vh] overflow-y-auto relative flex flex-col gap-4 p-5 md:p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                        <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
-                        <button onClick={closeInspect} className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors p-1"><X className="w-5 h-5"/></button>
-                        {(() => {
-                            const data = resolveItemText(inspectedItem, language);
-                            return (
-                                <>
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-24 h-24 rounded-2xl bg-slate-900 border flex items-center justify-center mb-3 shadow-inner ${getRarityBorder(inspectedItem.rarity)}`}><ItemIcon item={inspectedItem} size="w-16 h-16" /></div>
-                                        <h3 className="text-lg font-black text-white uppercase tracking-tight text-center leading-tight break-words whitespace-pre-wrap">{data.name}</h3>
-                                        <span className={`text-[10px] font-bold uppercase mt-1.5 px-2 py-0.5 rounded-full bg-slate-900 border ${getRarityBorder(inspectedItem.rarity)} text-slate-300`}>{inspectedItem.rarity}</span>
-                                    </div>
-                                    <p className="text-xs text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-800/50 py-4 break-words whitespace-pre-wrap">"{data.description}"</p>
-                                    <div className="flex flex-col gap-2.5">
-                                        <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/30"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><div><span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5 break-words whitespace-pre-wrap">Success</span><span className="text-[11px] text-emerald-100 font-mono leading-tight break-words whitespace-pre-wrap">{data.effectDesc}</span></div></div>
-                                        {inspectedItem.negativeEffectType && <div className="flex items-start gap-3 p-3 rounded-xl bg-red-950/20 border border-red-900/30"><AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" /><div><span className="text-[9px] font-bold text-red-400 uppercase tracking-widest block mb-0.5 break-words whitespace-pre-wrap">Failure</span><span className="text-[11px] text-red-100 font-mono leading-tight break-words whitespace-pre-wrap">{data.negDesc}</span></div></div>}
-                                    </div>
-                                    <div className="flex flex-col gap-2 mt-2">
-                                        <button onClick={closeInspect} className="w-full py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-wider text-xs transition-colors">Close</button>
-                                        <button onClick={() => { destroyItem(inspectedItem.id); closeInspect(); }} className="w-full py-2.5 bg-transparent hover:bg-red-900/20 text-slate-500 hover:text-red-400 rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center gap-2 group"><Trash2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" /> Discard Item</button>
-                                    </div>
-                                </>
-                            );
-                        })()}
+            <AnimatePresence>
+                {inspectedItem && (
+                    <div className="absolute inset-0 z-[150] flex items-center justify-center p-4 pointer-events-auto">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeInspect}
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 15, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 15, opacity: 0 }}
+                            transition={{ type: "spring", duration: 0.4 }}
+                            className="bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl max-w-[340px] md:max-w-sm w-full max-h-[92vh] overflow-y-auto relative flex flex-col gap-4 p-5 md:p-8 backdrop-blur-xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Corner brackets */}
+                            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-indigo-500/50" />
+                            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-indigo-500/50" />
+                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-indigo-500/50" />
+                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50" />
+
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-indigo-700" />
+                            <button onClick={closeInspect} className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors p-1 cursor-pointer"><X className="w-5 h-5"/></button>
+                            {(() => {
+                                const data = resolveItemText(inspectedItem, language);
+                                return (
+                                    <>
+                                        <div className="flex flex-col items-center shrink-0">
+                                            <div className={`w-20 h-20 rounded-2xl bg-slate-900/50 border flex items-center justify-center mb-3 shadow-inner ${getRarityBorder(inspectedItem.rarity)}`}><ItemIcon item={inspectedItem} size="w-12 h-12" /></div>
+                                            <h3 className="text-base font-black text-white uppercase tracking-tight text-center leading-tight break-words whitespace-pre-wrap">{data.name}</h3>
+                                            <span className={`text-[9px] font-black uppercase mt-1.5 px-2 py-0.5 rounded-full bg-slate-900 border ${getRarityBorder(inspectedItem.rarity)} text-slate-300`}>{inspectedItem.rarity}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-400 text-center italic leading-relaxed border-t border-b border-slate-900 py-3.5 break-words whitespace-pre-wrap shrink-0 font-mono">"{data.description}"</p>
+                                        <div className="flex flex-col gap-2 flex-1 overflow-y-auto no-scrollbar py-1">
+                                            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/30"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><div className="min-w-0"><span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest block mb-0.5 leading-none">Success</span><span className="text-[11px] text-emerald-100 font-mono leading-tight break-words whitespace-pre-wrap">{data.effectDesc}</span></div></div>
+                                            {inspectedItem.negativeEffectType && <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-950/15 border border-red-900/25"><AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" /><div className="min-w-0"><span className="text-[8px] font-black text-red-400 uppercase tracking-widest block mb-0.5 leading-none font-sans">Failure</span><span className="text-[11px] text-red-100 font-mono leading-tight break-words whitespace-pre-wrap">{data.negDesc}</span></div></div>}
+                                        </div>
+                                        <div className="flex flex-col gap-2 mt-2 shrink-0">
+                                            <button onClick={closeInspect} className="w-full py-3 bg-white text-black hover:bg-slate-200 transition-colors rounded-lg font-black uppercase tracking-wider text-xs cursor-pointer">{t.BTN_READY}</button>
+                                            <button onClick={() => { destroyItem(inspectedItem.id); closeInspect(); }} className="w-full py-2 bg-transparent hover:bg-red-900/20 text-slate-500 hover:text-red-400 rounded-lg font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center gap-2 group cursor-pointer active:scale-98"><Trash2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" /> Discard Item</button>
+                                        </div>
+                                    </>
+                                );
+                             })()}
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
 
             {/* VICTORY / DEFEAT */}
             {(gameStatus === 'DEFEAT' || (gameStatus === 'VICTORY' && victoryStage === 'MODAL')) && (

@@ -146,6 +146,8 @@ export interface BotMemory {
   lastPlayerPos: HexCoord | null;
   stuckCounter: number;
   waitStreak?: number;
+  lastPosKey?: string | null;
+  stayStreak?: number;
   
   botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER' | 'MINER' | 'DESTROYER' | 'GUARDIAN';
   mode?: 'GATHER' | 'BUILD' | 'AGGRESSOR';
@@ -448,6 +450,7 @@ export interface SessionState {
   monumentRevealedSlots?: boolean[];        // which monument slots have been revealed by visiting obelisks
   activeLootPings?: Record<string, number>; // Для Мини-монументов
   minedHexes?: Record<number, number>;
+  restoredHexesCount?: number;
 
   difficulty: Difficulty;
   grid: Record<string, Hex>; 

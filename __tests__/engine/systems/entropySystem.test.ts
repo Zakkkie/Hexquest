@@ -184,6 +184,7 @@ describe('EntropySystem', () => {
 
     it('does NOT trigger global DEFEAT when post-shift max is still >= THRESHOLD', () => {
       // max=100 → halved to 50 → 50 >= THRESHOLD(6)
+      vi.spyOn(Math, 'random').mockReturnValue(1); // prevent random voiding of player hex
       const state = makeState({ entropy: { current: 0, max: 100, threshold: 6 } });
       const events: GameEvent[] = [];
       system.update(state, makeIndex(state), events);

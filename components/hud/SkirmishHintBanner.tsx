@@ -86,6 +86,10 @@ const SkirmishHintBanner: React.FC = () => {
     }, [progressText, dismissedText]);
 
     if (!isSkirmish || !winCondition || !player) return null;
+    
+    // Hide for SUMMIT since MonumentHintBanner handles its multi-step logic
+    if (winCondition.winType === 'SUMMIT') return null;
+    
     if (dismissedText === progressText) return null;
 
     const handleDismiss = (e: React.MouseEvent) => {

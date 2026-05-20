@@ -339,6 +339,7 @@ export class ActionProcessor {
               durability: undefined 
           };
           
+          state.restoredHexesCount = (state.restoredHexesCount || 0) + 1;
           state.entropy.current = Math.min(state.entropy.max, state.entropy.current + ENTROPY_CONFIG.GAIN_RESTORE_SUCCESS);
           
           // APPLY POSITIVE

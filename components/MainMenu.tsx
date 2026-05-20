@@ -578,25 +578,53 @@ const MainMenu: React.FC = () => {
             </div>
 
             {/* Main Typographic Pile */}
-            <div className="flex flex-col items-center md:items-start mt-1">
-                <h1 
-                    className="relative text-5xl sm:text-6xl md:text-5xl lg:text-7xl xl:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-100 to-indigo-300 drop-shadow-[0_0_30px_rgba(99,102,241,0.55)] select-none uppercase"
-                    style={{ WebkitTextStroke: '1px rgba(255,255,255,0.15)' }}
-                >
-                    {t.TITLE}
-                </h1>
-                <div className="text-xl sm:text-2xl md:text-xl lg:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-fuchsia-400 to-pink-400 font-mono font-black uppercase tracking-[0.25em] md:tracking-[0.35em] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)] -mt-1 md:-mt-2 select-none">
-                    {language === 'RU' ? 'ЭКОНОМИКА' : 'ECONOMY'}
+            <div className="flex flex-col items-center md:items-start mt-2 relative group-hover:scale-[1.01] transition-transform duration-500">
+                {/* Sci-Fi Decorative Grid Backdrop Accent */}
+                <div className="absolute -inset-x-4 -inset-y-2 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.1)_0%,transparent_70%)] pointer-events-none rounded-2xl" />
+
+                {/* Left/Right Bracket Matrix Decorations */}
+                <div className="relative flex items-center">
+                    <span className="hidden md:inline-block text-indigo-500/30 text-4xl lg:text-5xl font-mono mr-3 select-none leading-none animate-pulse">[</span>
+                    
+                    <h1 
+                        className="relative text-5xl sm:text-6xl md:text-5xl lg:text-7xl xl:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-50 to-indigo-200 select-none uppercase transition-all duration-300"
+                        style={{ 
+                            WebkitTextStroke: '1.2px rgba(255,255,255,0.22)',
+                            filter: 'drop-shadow(0 0 25px rgba(99,102,241,0.45)) drop-shadow(0 0 50px rgba(168,85,247,0.2))'
+                        }}
+                    >
+                        {t.TITLE}
+                        
+                        {/* Interactive Scanline Glint Mask */}
+                        <motion.div 
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent pointer-events-none mix-blend-color-dodge rounded-lg"
+                            initial={{ x: '-100%', skewX: -25 }}
+                            animate={{ x: '200%' }}
+                            transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut", repeatDelay: 1.2 }}
+                        />
+                    </h1>
+
+                    <span className="hidden md:inline-block text-indigo-500/30 text-4xl lg:text-5xl font-mono ml-3 select-none leading-none animate-pulse">]</span>
+                </div>
+
+                {/* Subtitle with Scan Banner background & colorful text gradient */}
+                <div className="relative mt-1 px-4 py-1.5 rounded bg-slate-900/50 border border-indigo-500/10 backdrop-blur-sm shadow-[inset_0_0_12px_rgba(99,102,241,0.15)] flex items-center justify-center overflow-hidden">
+                    {/* Pulsating horizontal laser light */}
+                    <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-fuchsia-500 to-transparent animate-pulse" />
+
+                    <div className="text-sm sm:text-base md:text-sm lg:text-lg text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-fuchsia-400 to-pink-400 font-mono font-black uppercase tracking-[0.3em] md:tracking-[0.4em] drop-shadow-[0_0_8px_rgba(168,85,247,0.3)] select-none">
+                        {language === 'RU' ? 'ЭКОНОМИКА' : 'ECONOMY'}
+                    </div>
                 </div>
             </div>
 
             {/* Custom Divider Line & Subtitle */}
-            <div className="flex items-center gap-3 mt-4 md:mt-5 select-none opacity-90 w-full justify-center md:justify-start">
-                <div className="h-px w-8 md:w-12 bg-gradient-to-r from-transparent to-indigo-500/40"></div>
-                <p className="text-[9px] md:text-xs text-indigo-200/90 font-mono font-bold tracking-[0.3em] uppercase drop-shadow-[0_0_8px_rgba(99,102,241,0.45)] whitespace-nowrap">
+            <div className="flex items-center gap-3 mt-5 md:mt-6 select-none opacity-90 w-full justify-center md:justify-start">
+                <div className="h-[2px] w-10 md:w-16 bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent md:to-indigo-500/40"></div>
+                <p className="text-[10px] md:text-xs text-indigo-200/90 font-mono font-black tracking-[0.25em] uppercase drop-shadow-[0_0_10px_rgba(99,102,241,0.6)] whitespace-nowrap">
                     {t.SUBTITLE}
                 </p>
-                <div className="h-px w-8 md:w-12 bg-gradient-to-l from-transparent to-indigo-500/40"></div>
+                <div className="h-[2px] w-10 md:w-16 bg-gradient-to-l from-transparent via-indigo-500/60 to-transparent md:to-indigo-500/40"></div>
             </div>
 
             {/* Lower decorative protocol footprint */}

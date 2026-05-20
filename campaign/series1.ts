@@ -205,26 +205,64 @@ export const series1Levels: LevelConfig[] = [
   },
   {
     id: '1.7',
-    title: 'Sim 1.7: Энергетический Кризис',
-    description: 'Цель: Соберите 10 материалов. Копайте глубоко, но следите за ходами. Каждый шаг стоит дорого. Используйте обмен кредитов на ходы, если застрянете.',
-    goalText: 'Соберите 10 материалов',
+    title: 'Sim 1.7: Восстановите Пустоту',
+    description: 'Цель: Восстановите 5 пустотных гексов.\n\nЭнтропия разрушила сектора, образовав разломы Пустоты. Вам выданы аварийные припасы: подойдите к Пустоте и пожертвуйте предметом из рюкзака, чтобы материализовать спасительный грунт.\n\nПодсказка: чтобы использовать предмет, встаньте рядом с Пустотой и кликните на нее.',
+    goalText: 'Восстановите 5 гексов Пустоты',
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
+      size: 3, type: 'fixed', generateWalls: false,
       customLayout: [
+        // Center (Starting hex)
         { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-        { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
+        
+        // Ring 1 (Radius 1)
+        { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
         { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 1, r: -1, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
+        
+        // Ring 2 (Radius 2)
+        { q: 2, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 1, r: 1, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 0, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: -1, r: 2, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: -2, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: -2, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: -2, r: 0, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: -1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 0, r: -2, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 1, r: -2, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 2, r: -2, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 2, r: -1, maxLevel: 2, currentLevel: 2, revealed: true }
       ]
     },
-    startState: { credits: 15, moves: 10, rank: 1, materials: 0, initialEntropy: 100 },
+    startState: { 
+      credits: 30, 
+      moves: 20, 
+      rank: 2, 
+      materials: 0, 
+      initialEntropy: 30,
+      items: [
+        { baseId: 'fuel_cell', rarity: 'COMMON' },
+        { baseId: 'fuel_cell', rarity: 'COMMON' },
+        { baseId: 'data_disc', rarity: 'COMMON' },
+        { baseId: 'raw_container', rarity: 'UNCOMMON' },
+        { baseId: 'reality_patch', rarity: 'RARE' },
+        { baseId: 'reality_patch', rarity: 'LEGENDARY' },
+        { baseId: 'emerald_necklace', rarity: 'RARE' },
+        { baseId: 'shoes_leather', rarity: 'COMMON' },
+        { baseId: 'plasma_drill', rarity: 'RARE' }
+      ]
+    },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: (state) => (state.totalMinedMaterial ?? 0) >= 10,
-      checkLossCondition: (state) => isStranded(state) && (state.totalMinedMaterial ?? 0) < 10
+      checkWinCondition: (state) => {
+        return (state.restoredHexesCount || 0) >= 5;
+      },
+      checkLossCondition: (state) => {
+        return isStranded(state) && (state.restoredHexesCount || 0) < 5;
+      }
     }
   }
 ];

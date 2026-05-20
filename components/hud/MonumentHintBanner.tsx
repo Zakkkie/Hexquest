@@ -68,31 +68,31 @@ const MonumentHintBanner: React.FC = () => {
             case 'FIND':
                 return {
                     text: langRu ? 'Разведайте туман на карте и найдите Древний Монумент' : 'Scout the fog of war to locate the Ancient Monument',
-                    title: langRu ? 'Поиск Монумента' : 'Find Monument',
+                    title: langRu ? 'Задача: Найти Монумент' : 'Objective: Find Monument',
                     icon: Compass,
                     color: 'from-amber-500/20 to-orange-500/10 border-amber-500/40 shadow-amber-900/10 text-amber-300',
                     badge: langRu ? 'Скрыт в тумане' : 'Hidden in fog'
                 };
             case 'REACH':
                 return {
-                    text: langRu ? 'Поднимитесь по ступеням к Монументу и достигните его вершины' : 'Climb adjacently and step onto the Monument’s summit',
-                    title: langRu ? 'Вершина Монумента' : 'Reach Summit',
+                    text: langRu ? 'Поднимите фундамент до уровня Монумента, чтобы взойти на него' : 'Climb to the Monument’s level to step onto its summit',
+                    title: langRu ? 'Задача: Достичь Вершины' : 'Objective: Reach Summit',
                     icon: ChevronsUp,
                     color: 'from-sky-500/20 to-indigo-500/10 border-sky-500/40 shadow-sky-900/10 text-sky-300',
                     badge: langRu ? 'Монумент найден' : 'Monument spotted'
                 };
             case 'FIND_KEYS':
                 return {
-                    text: langRu ? 'Изучите Обелиски и найдите нужные предметы для активации' : 'Visit Obelisks and assemble the required keys',
-                    title: langRu ? 'Ключи активации' : 'Find Activation Items',
+                    text: langRu ? 'Найдите нужные артефакты для активации в шахтах или обелисках' : 'Find the required artifact keys in mines or obelisks',
+                    title: langRu ? 'Задача: Найти Предмет' : 'Objective: Find Items',
                     icon: Key,
                     color: 'from-rose-500/20 to-purple-500/10 border-rose-500/40 shadow-rose-900/10 text-rose-300',
                     badge: langRu ? 'Нужны предметы' : 'Requires items'
                 };
             case 'ACTIVATE':
                 return {
-                    text: langRu ? 'Все условия выполнены! Нажмите «АКТИВАЦИЯ» в меню Монумента' : 'Authorization ready. Trigger monument activation mechanism',
-                    title: langRu ? 'Активация!' : 'Ready to Activate',
+                    text: langRu ? 'Все предметы собраны! Нажмите «АКТИВАЦИЯ» в меню Монумента' : 'Authorization ready. Trigger monument activation mechanism',
+                    title: langRu ? 'Задача: Активировать!' : 'Objective: Activate!',
                     icon: Zap,
                     color: 'from-emerald-500/25 to-teal-500/10 border-emerald-500/40 shadow-emerald-950/10 text-emerald-300',
                     badge: langRu ? 'Готов к запуску' : 'Ready'

@@ -55,32 +55,23 @@ export function checkDigCondition(
       return { canGrow: true };
   }
 
-  // 3. REVERSE STAIRCASE RULE (Deep Digging < -1)
-  const deepNeighbors = neighbors.filter(n => {
-      const neighborHex = grid[getHexKey(n.q, n.r)];
-      // Void or missing hexes provide no support
-      if (!neighborHex || neighborHex.structureType === 'VOID') return false;
-      
-      const neighborLevel = neighborHex.currentLevel ?? 0;
-      // Strict Check: Neighbor must be at same depth (=).
-      return neighborLevel === currentLevel;
-  });
-
-  if (deepNeighbors.length < 2) {
-      const potentialSupports = neighbors.filter(n => {
-          const h = grid[getHexKey(n.q, n.r)];
-          if (!h || h.structureType === 'VOID') return false;
-          const nLevel = h.currentLevel ?? 0;
-          return nLevel > currentLevel;
+  // 3. REVERSE STAIRCASE RULE (Deep Digging currentLevel <= -2)
+  if (currentLevel <= -2) {
+      const deepNeighbors = neighbors.filter(n => {
+          const neighborHex = grid[getHexKey(n.q, n.r)];
+          if (!neighborHex || neighborHex.structureType === 'VOID') return false;
+          
+          const neighborLevel = neighborHex.currentLevel ?? 0;
+          // Strict Rule: Neighbors must have EQUAL level to current level
+          return neighborLevel === currentLevel;
       });
 
-      const reqLvlStr = currentLevel >= 0 ? `L${currentLevel}` : `${currentLevel}`;
-
-      return { 
-          canGrow: false, 
-          reason: `UNSTABLE! Dig 2 neighbors to ${reqLvlStr} or lower.`,
-          missingSupports: potentialSupports
-      };
+      if (deepNeighbors.length < 2) {
+          return { 
+              canGrow: false, 
+              reason: `UNSTABLE! Need 2 neighbors at Level ${currentLevel} to dig deeper.`,
+          };
+      }
   }
 
   return { canGrow: true };
@@ -104,11 +95,6 @@ export function checkGrowthCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel + 1;
 
-  // 1. REGROWTH: No supports, material or rank check needed to reach previous maxLevel
-  if (targetLevel <= hex.maxLevel) {
-     return { canGrow: true };
-  }
-
   // 2. MATERIAL CHECK
   if (entity.storage < 1) {
       return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
@@ -123,31 +109,17 @@ export function checkGrowthCondition(
       };
   }
 
-  // 4. STABILITY CHECK (for L2+)
-  if (targetLevel > 1) {
+  // 4. STABILITY CHECK (Strict Equal Level Rule for L2+)
+  if (currentLevel >= 2) {
     const supportNeighbors = neighbors.filter(n => {
        const h = grid[getHexKey(n.q, n.r)];
-       return h && h.structureType !== 'VOID' && h.maxLevel >= hex.maxLevel;
+       return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) === currentLevel;
     });
 
-    const higherLevelNeighbors = neighbors.filter(n => {
-       const h = grid[getHexKey(n.q, n.r)];
-       return h && h.structureType !== 'VOID' && h.maxLevel > hex.maxLevel;
-    });
-
-    const isValley = higherLevelNeighbors.length >= 5;
-
-    if (supportNeighbors.length < 2 && !isValley) {
-      const potentialSupports = neighbors.filter(n => {
-          const h = grid[getHexKey(n.q, n.r)];
-          if (!h || h.structureType === 'VOID') return false;
-          return h.maxLevel < hex.maxLevel;
-      });
-
+    if (supportNeighbors.length < 2) {
       return {
         canGrow: false, 
-        reason: `UNSTABLE! Need 2 neighbors at Level ${hex.maxLevel}+ or 5 higher neighbors (Valley Rule).`,
-        missingSupports: potentialSupports
+        reason: `UNSTABLE! Need 2 neighbors at Level ${currentLevel} to build higher.`,
       };
     }
   }
