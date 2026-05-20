@@ -86,8 +86,6 @@ const GameView: React.FC = () => {
   // HUD State
   const [hoveredHexId, setHoveredHexId] = useState<string | null>(null);
 
-  if (!hasGrid || !player) return null;
-  
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   
   // RESPONSIVE: Scale Logic based on Device Type
@@ -152,7 +150,7 @@ const GameView: React.FC = () => {
       if (player && winCondition) {
           audioService.updateMusic(player.coins, winCondition.targetCoins || 500);
       }
-  }, [player.coins, winCondition]);
+  }, [player?.coins, winCondition]);
 
   // --- SCREEN SHAKE TRIGGER ---
   useEffect(() => {
@@ -205,6 +203,7 @@ const GameView: React.FC = () => {
   }, []);
 
   const centerOnPlayer = useCallback(() => {
+      if (!player) return;
       const rot = currentCameraRef.current.rotation;
       const { x: px, y: py } = hexToPixel(player.q, player.r, rot);
       
@@ -229,7 +228,7 @@ const GameView: React.FC = () => {
       
       const safeT = { x: clamp(tx, -5000, 5000), y: clamp(ty, -5000, 5000) };
       targetCameraRef.current = { ...targetCameraRef.current, x: safeT.x, y: safeT.y };
-  }, [player.q, player.r, dimensions, deviceType]);
+  }, [player?.q, player?.r, dimensions, deviceType]);
   useEffect(() => {
       const anim = new Konva.Animation((frame) => {
           if (!frame) return;
@@ -483,6 +482,8 @@ const GameView: React.FC = () => {
       isDragging.current = false;
       lastDist.current = 0;
   };
+
+  if (!hasGrid || !player) return null;
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#020617] touch-none" onContextMenu={(e) => e.preventDefault()}>

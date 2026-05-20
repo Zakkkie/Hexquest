@@ -844,8 +844,16 @@ const StoryBuilderView: React.FC = () => {
                             ))}
                         </div>
 
+                        <AnimatePresence mode="wait">
                         {!isNarrativeCollapsed ? (
-                            <>
+                            <motion.div
+                                key={`expanded-${storyMilestone}`}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex flex-col"
+                            >
                                 <div className="flex justify-between items-start mb-1 pr-12">
                                     <span className="text-[7.5px] font-black text-indigo-400 uppercase tracking-widest">
                                         {language === 'RU' ? 'ЗАДАЧА НА ГЛАВУ' : 'CHAPTER OBJECTIVE'}
@@ -902,7 +910,7 @@ const StoryBuilderView: React.FC = () => {
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="py-2 flex items-center gap-3">
+                                    <div className="py-2 flex items-center gap-3 block w-full">
                                         <Crown className="w-6 h-6 text-amber-400 animate-bounce" />
                                         <div className="flex flex-col font-sans">
                                             <h3 className="text-xs md:text-sm font-black text-amber-400 uppercase tracking-tight">
@@ -914,9 +922,16 @@ const StoryBuilderView: React.FC = () => {
                                         </div>
                                     </div>
                                 )}
-                            </>
+                            </motion.div>
                         ) : (
-                            <div className="flex justify-between items-center pr-12 w-full font-sans pointer-events-auto">
+                            <motion.div
+                                key={`collapsed-${storyMilestone}`}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex justify-between items-center pr-12 w-full font-sans pointer-events-auto"
+                            >
                                 <div className="flex flex-col">
                                     <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">
                                         {language === 'RU' ? 'ЗАДАЧА' : 'OBJECTIVE'}
@@ -939,8 +954,9 @@ const StoryBuilderView: React.FC = () => {
                                         <span>{language === 'RU' ? 'ОБЗОР' : 'EXPAND'}</span>
                                     </button>
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
+                        </AnimatePresence>
                     </motion.div>
                 </div>
             </div>

@@ -88,6 +88,7 @@ class AudioService {
   private current16thNote = 0;
   private timerID: number | null = null;
   private schedulerId: number = 0; // Generation ID to kill old loops
+  private stopTimerID: any = null;
 
   // Composition State
   private context: MusicalContext = {
@@ -238,8 +239,8 @@ class AudioService {
           const time = this.ctx.currentTime;
           if (muted) {
               this.musicBus.gain.setValueAtTime(0, time);
-              // Kill the loop to save CPU and ensure clean restart
-              this.stopMusic();
+              // Kill the loop to save CPU and ensure clean restart (immediate stop)
+              this.stopMusic(true);
           } else {
               this.musicBus.gain.setValueAtTime(0, time);
               this.musicBus.gain.linearRampToValueAtTime(0.5, time + 0.3);
@@ -347,11 +348,22 @@ class AudioService {
   // --- AUDIO SCHEDULER ---
 
   public startMusic() {
-      // CRITICAL: Stop previous instance fully to prevent overlap from double-mounting in StrictMode
-      this.stopMusic();
+      // Cancel any pending lazy stop
+      if (this.stopTimerID !== null) {
+          window.clearTimeout(this.stopTimerID);
+          this.stopTimerID = null;
+      }
 
       this.init();
       if (!this.ctx || this.isMusicMuted) return;
+      
+      // If already running, do NOT restart/regenerate or start a new scheduler
+      if (this.musicRunning) {
+          if (this.ctx.state === 'suspended') {
+              this.ctx.resume().catch(e => console.error("Could not resume audio context", e));
+          }
+          return;
+      }
       
       // If we are resetting completely, gen new track
       if (this.arrangementState.totalBars === 0) {
@@ -368,12 +380,26 @@ class AudioService {
       this.scheduler(currentId);
   }
 
-  public stopMusic() {
-      this.musicRunning = false;
-      this.schedulerId++; // Invalidate any pending loops
-      if (this.timerID !== null) {
-          window.clearTimeout(this.timerID);
-          this.timerID = null;
+  public stopMusic(immediate: boolean = false) {
+      if (this.stopTimerID !== null) {
+          window.clearTimeout(this.stopTimerID);
+          this.stopTimerID = null;
+      }
+
+      const triggerStop = () => {
+          this.musicRunning = false;
+          this.schedulerId++; // Invalidate any pending loops
+          if (this.timerID !== null) {
+              window.clearTimeout(this.timerID);
+              this.timerID = null;
+          }
+          this.stopTimerID = null;
+      };
+
+      if (immediate) {
+          triggerStop();
+      } else {
+          this.stopTimerID = window.setTimeout(triggerStop, 350);
       }
   }
 
