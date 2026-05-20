@@ -408,7 +408,6 @@ export class GrowthSystem implements System {
         if (hex.progress + 1 >= needed) {
           // LEVEL UP
           let newMaxLevel = hex.maxLevel;
-          let didMaxIncrease = false;
           let newOwnerId = hex.ownerId; 
           let newDurability = hex.durability;
           let newRecoveryCharges = hex.recoveryCharges;
@@ -420,7 +419,6 @@ export class GrowthSystem implements System {
 
           if (targetLevel > hex.maxLevel) {
             newMaxLevel = targetLevel;
-            didMaxIncrease = true;
             entity.playerLevel = Math.max(entity.playerLevel, targetLevel);
             
             // STATUS CHECK: SOIL EATER
@@ -509,16 +507,7 @@ export class GrowthSystem implements System {
               cooldownEndTime: newCooldown
           });
           
-          let shouldContinue = targetLevel < newMaxLevel;
-          
-          if (!shouldContinue && effectiveIntent === 'UPGRADE' && !didMaxIncrease) {
-              const nextCheck = checkGrowthCondition(state.grid[key], entity, neighbors, state.grid, occupied, queueSize);
-              // Handle Free Build Override again for chaining
-              let canNext = nextCheck.canGrow;
-              if (!canNext && hasFreeBuild && nextCheck.reason?.includes("NEED MATERIAL")) canNext = true;
-              
-              if (canNext) shouldContinue = true;
-          }
+          let shouldContinue = false;
 
           if (!shouldContinue) {
              if (hasUpgradeCmd) entity.movementQueue.shift();

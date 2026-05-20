@@ -131,8 +131,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     // Conditions
     const upgradeCondition = useMemo(() => {
         if (!currentHex || !player || !grid) return { canGrow: false, reason: 'Invalid Hex' };
-        const simulatedHex = { ...currentHex, currentLevel: Math.max(0, currentHex.maxLevel) };
-        return checkGrowthCondition(simulatedHex, player, neighbors, grid, botPositions, queueSize);
+        return checkGrowthCondition(currentHex, player, neighbors, grid, botPositions, queueSize);
     }, [currentHex, player, grid, neighbors, botPositions, queueSize]);
 
     const digCondition = useMemo(() => {

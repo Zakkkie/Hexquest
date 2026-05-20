@@ -746,7 +746,7 @@ export const useGameStore = create<GameStore>()(
               const result = await engine.processTick();
               if (!result || !result.state) return;
 
-              set({ session: result.state, totalMinedMaterial: result.state.totalMinedMaterial });
+              set({ totalMinedMaterial: result.state.totalMinedMaterial });
 
               tickCount++;
               const now = Date.now();

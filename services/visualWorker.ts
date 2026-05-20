@@ -248,16 +248,19 @@ self.onmessage = (e) => {
     // 4. Sort by depth with ID tie-breaker for perfect stability
     items.sort((a, b) => (a.depth - b.depth) || (a.id.localeCompare(b.id)));
 
-    // 5. Check if sorted order or lighting-relevant state changed
-    const playerPosKey = `${cachedPlayer.q},${cachedPlayer.r}`;
+    // 5. Build a signature of sorted IDs and rendering-critical properties to prevent stale visual updates on selection/pending states
+    let sigParts = [];
+    for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        sigParts.push(`${it.id}:${it.depth.toFixed(1)}:${it.props?.level || 0}:${it.props?.isSelected ? 1 : 0}:${it.props?.isPending ? 1 : 0}:${it.props?.isOccupied ? 1 : 0}`);
+    }
+    const signature = sigParts.join('|');
     const shouldUpdate = 
-        items.length !== (self as any).lastLen ||
-        playerPosKey !== (self as any).lastPlayerPosKey ||
+        signature !== (self as any).lastSignature ||
         type === 'SET_GRID';
 
     if (shouldUpdate) {
-        (self as any).lastLen = items.length;
-        (self as any).lastPlayerPosKey = playerPosKey;
+        (self as any).lastSignature = signature;
         self.postMessage({ renderItems: items });
     }
 }

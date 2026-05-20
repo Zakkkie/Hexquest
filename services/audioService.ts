@@ -80,6 +80,7 @@ class AudioService {
   private isMusicMuted: boolean = false;
   private isSfxMuted: boolean = false;
   private musicRunning: boolean = false;
+  private whiteNoiseBuffer: AudioBuffer | null = null;
   
   // Scheduler
   private lookahead = 25.0; // ms
@@ -137,6 +138,14 @@ class AudioService {
     if (!this.ctx) {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       this.ctx = new AudioContextClass();
+      
+      // Precompute a global white noise buffer to prevent CPU-heavy synchronous array generation
+      const noiseLength = this.ctx.sampleRate * 2; // 2 seconds of noise
+      this.whiteNoiseBuffer = this.ctx.createBuffer(1, noiseLength, this.ctx.sampleRate);
+      const noiseData = this.whiteNoiseBuffer.getChannelData(0);
+      for (let i = 0; i < noiseLength; i++) {
+          noiseData[i] = Math.random() * 2 - 1;
+      }
       
       // 1. Master Chain: Compressor -> Master Gain -> Destination
       this.masterCompressor = this.ctx.createDynamicsCompressor();
@@ -655,15 +664,10 @@ class AudioService {
   }
 
   private triggerHat(time: number, accent: boolean) {
-      if (!this.ctx || !this.musicBus) return;
+      if (!this.ctx || !this.musicBus || !this.whiteNoiseBuffer) return;
       
-      const bufferSize = this.ctx.sampleRate * 0.05;
-      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
       const noise = this.ctx.createBufferSource();
-      noise.buffer = buffer;
+      noise.buffer = this.whiteNoiseBuffer;
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'highpass';
@@ -678,7 +682,7 @@ class AudioService {
       gain.connect(this.musicBus);
       
       noise.start(time);
-      noise.stop(time + 0.05);
+      noise.stop(time + (accent ? 0.05 : 0.03));
       noise.onended = () => { noise.disconnect(); filter.disconnect(); gain.disconnect(); };
   }
 
@@ -715,20 +719,18 @@ class AudioService {
         break;
       case 'COIN': playOsc(1200, 'sine', 0.4, 0.05); break;
       case 'MOVE': 
-        // Noise swish
-        const b = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.1, this.ctx.sampleRate);
-        const d = b.getChannelData(0);
-        for(let i=0; i<d.length; i++) d[i] = Math.random()*2-1;
-        const src = this.ctx.createBufferSource();
-        src.buffer = b;
-        const f = this.ctx.createBiquadFilter();
-        f.type = 'lowpass'; f.frequency.setValueAtTime(500, t); f.frequency.linearRampToValueAtTime(100, t+0.1);
-        const g = this.ctx.createGain();
-        g.gain.setValueAtTime(0.1, t); g.gain.linearRampToValueAtTime(0, t+0.1);
-        src.connect(f); f.connect(g); g.connect(this.sfxBus); 
-        src.start(t);
-        src.stop(t + 0.1);
-        src.onended = () => { src.disconnect(); f.disconnect(); g.disconnect(); };
+        if (this.whiteNoiseBuffer) {
+            const src = this.ctx.createBufferSource();
+            src.buffer = this.whiteNoiseBuffer;
+            const f = this.ctx.createBiquadFilter();
+            f.type = 'lowpass'; f.frequency.setValueAtTime(500, t); f.frequency.linearRampToValueAtTime(100, t+0.1);
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(0.1, t); g.gain.linearRampToValueAtTime(0, t+0.1);
+            src.connect(f); f.connect(g); g.connect(this.sfxBus); 
+            src.start(t);
+            src.stop(t + 0.1);
+            src.onended = () => { src.disconnect(); f.disconnect(); g.disconnect(); };
+        }
         break;
       case 'LEVEL_UP':
          playOsc(440, 'triangle', 0.6, 0.1, t);
@@ -737,30 +739,26 @@ class AudioService {
       case 'COLLAPSE': playOsc(60, 'sawtooth', 0.6, 0.3); break;
       case 'CRACK': playOsc(300, 'square', 0.05, 0.2); break;
       case 'FIREWORK': {
-          // Noise Burst
-          const bufSize = this.ctx.sampleRate * 0.5;
-          const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
-          const data = buf.getChannelData(0);
-          for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
-          
-          const noise = this.ctx.createBufferSource();
-          noise.buffer = buf;
-          
-          const filter = this.ctx.createBiquadFilter();
-          filter.type = 'lowpass';
-          filter.frequency.setValueAtTime(1200, t);
-          filter.frequency.exponentialRampToValueAtTime(50, t + 0.4);
-          
-          const gain = this.ctx.createGain();
-          gain.gain.setValueAtTime(0.3, t);
-          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
-          
-          noise.connect(filter);
-          filter.connect(gain);
-          gain.connect(this.sfxBus);
-          noise.start(t);
-          noise.stop(t + 0.5);
-          noise.onended = () => { noise.disconnect(); filter.disconnect(); gain.disconnect(); };
+          if (this.whiteNoiseBuffer) {
+              const noise = this.ctx.createBufferSource();
+              noise.buffer = this.whiteNoiseBuffer;
+              
+              const filter = this.ctx.createBiquadFilter();
+              filter.type = 'lowpass';
+              filter.frequency.setValueAtTime(1200, t);
+              filter.frequency.exponentialRampToValueAtTime(50, t + 0.4);
+              
+              const gain = this.ctx.createGain();
+              gain.gain.setValueAtTime(0.3, t);
+              gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+              
+              noise.connect(filter);
+              filter.connect(gain);
+              gain.connect(this.sfxBus);
+              noise.start(t);
+              noise.stop(t + 0.5);
+              noise.onended = () => { noise.disconnect(); filter.disconnect(); gain.disconnect(); };
+          }
           break;
       }
     }

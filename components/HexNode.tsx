@@ -803,20 +803,26 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.offsetY !== next.offsetY) return false;
     if (prev.level !== next.level) return false;
     if (prev.maxLevel !== next.maxLevel) return false;
+    if (prev.structureType !== next.structureType) return false;
     if (prev.isSelected !== next.isSelected) return false;
     if (prev.isPending !== next.isPending) return false;
+    if (prev.pendingCost !== next.pendingCost) return false;
     if (prev.isTutorialTarget !== next.isTutorialTarget) return false;
     if (prev.isTargetArrow !== next.isTargetArrow) return false; 
+    if (prev.tutorialColor !== next.tutorialColor) return false;
     if (prev.isMissingSupport !== next.isMissingSupport) return false;
     if (prev.isOccupied !== next.isOccupied) return false;
     if (prev.isGrowing !== next.isGrowing) return false;
+    if (prev.isRankLocked !== next.isRankLocked) return false;
     if (prev.progress !== next.progress) return false;
     if (prev.durability !== next.durability) return false;
+    if (prev.artifactType !== next.artifactType) return false;
     if (prev.opacity !== next.opacity) return false;
     if (prev.lighting !== next.lighting) return false;
     if (prev.biome !== next.biome) return false;
     if (prev.poiType !== next.poiType) return false;
     if (prev.isPassable !== next.isPassable) return false;
+    if (prev.isRevealed !== next.isRevealed) return false;
     
     for (let i = 0; i < 6; i++) {
         if (prev.neighborLevels[i] !== next.neighborLevels[i]) return false;

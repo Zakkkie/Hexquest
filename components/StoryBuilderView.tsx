@@ -5,7 +5,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { textureService } from '../services/textureService.ts';
-import { ArrowLeft, BookOpen, Crown, ChevronRight, Settings, Volume2, VolumeX, Music, Music2, Languages, HelpCircle, Info, Sparkles, Eye, EyeOff, ZoomIn, ZoomOut, Compass, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, BookOpen, Crown, ChevronRight, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, Sparkles, Eye, EyeOff, ZoomIn, ZoomOut, Compass, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Konva from 'konva';
 
@@ -617,27 +617,18 @@ const StoryBuilderView: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2 relative">
-                        {/* Help Manual triggering button */}
-                        <button 
-                            onClick={() => { playUiSound('CLICK'); setIsHelpOpen(true); }}
-                            className="bg-indigo-950/85 border border-indigo-500/35 text-indigo-300 px-3 py-1.5 md:py-2 rounded-2xl text-[9px] md:text-xs font-black tracking-wider uppercase flex items-center gap-1.5 hover:bg-indigo-900/50 transition-all shadow-xl backdrop-blur-md"
-                        >
-                            <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
-                            <span className="hidden sm:inline">{language === 'RU' ? 'Физика Векторов' : 'Vector Rules'}</span>
-                        </button>
-
                         {/* Settings Button & Popover */}
                         <div className="relative">
                             <button 
                                 onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
-                                className={`px-3 py-1.5 md:py-2 rounded-2xl text-[9px] md:text-xs font-black tracking-wider uppercase flex items-center justify-center gap-1.5 transition-all shadow-xl backdrop-blur-md border ${
+                                className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${
                                     isSettingsOpen 
-                                        ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
-                                        : 'bg-slate-900/95 border-white/10 text-slate-400 hover:text-white hover:border-indigo-500/50'
+                                        ? 'bg-slate-800 border-indigo-500/50 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
+                                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'
                                 }`}
+                                title={language === 'RU' ? 'Настройки и Правила' : 'Settings & Rules'}
                             >
-                                <Settings className={`w-3.5 h-3.5 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-500`} />
-                                <span className="hidden sm:inline">{language === 'RU' ? 'Настройки' : 'Settings'}</span>
+                                <Settings className={`w-5 h-5 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-500`} />
                             </button>
 
                             <AnimatePresence>
@@ -646,34 +637,40 @@ const StoryBuilderView: React.FC = () => {
                                         initial={{ opacity: 0, scale: 0.9, y: -10 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                                        className="absolute top-full right-0 mt-2 p-2 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-1 min-w-[155px] z-50 origin-top-right font-sans"
+                                        className="absolute top-full right-0 mt-2 p-3 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2 min-w-[180px] z-[60] origin-top-right font-sans"
                                     >
+                                        {/* Unified Vector Rules Button inside Settings Popover */}
                                         <button 
-                                            onClick={() => { playUiSound('CLICK'); toggleMusic(); }}
-                                            className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-white/5 rounded-xl transition-all"
+                                            onClick={() => { playUiSound('CLICK'); setIsHelpOpen(true); setIsSettingsOpen(false); }}
+                                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all w-full text-left font-black uppercase text-[10px] tracking-[0.15em] shadow-sm active:scale-95"
                                         >
-                                            <div className="flex items-center gap-2">
-                                                {isMusicMuted ? <Music className="w-4 h-4 text-slate-500" /> : <Music2 className="w-4 h-4 text-indigo-400" />}
-                                                <span className="text-[10px] font-bold text-white uppercase tracking-wider">{language === 'RU' ? 'Музыка' : 'Music'}</span>
-                                            </div>
-                                            <div className={`w-2 h-2 rounded-full ${isMusicMuted ? 'bg-slate-700' : 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]'}`} />
+                                            <HelpCircle className="w-4 h-4 shrink-0" />
+                                            <span>{language === 'RU' ? 'Физика Векторов' : 'Vector Rules'}</span>
                                         </button>
 
-                                        <button 
-                                            onClick={() => { playUiSound('CLICK'); toggleSfx(); }}
-                                            className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-white/5 rounded-xl transition-all"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                {isSfxMuted ? <VolumeX className="w-4 h-4 text-slate-500" /> : <Volume2 className="w-4 h-4 text-indigo-400" />}
-                                                <span className="text-[10px] font-bold text-white uppercase tracking-wider">{language === 'RU' ? 'Звуки' : 'Sounds'}</span>
-                                            </div>
-                                            <div className={`w-2 h-2 rounded-full ${isSfxMuted ? 'bg-slate-700' : 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]'}`} />
-                                        </button>
+                                        <div className="h-px bg-white/5 my-0.5" />
 
-                                        <div className="h-px bg-white/5 my-1" />
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => { playUiSound('CLICK'); toggleMusic(); }}
+                                                className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isMusicMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-indigo-900/40 border-indigo-500/50 text-indigo-400'}`}
+                                                title={language === 'RU' ? 'Музыка' : 'Music'}
+                                            >
+                                                {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
+                                            </button>
+                                            <button 
+                                                onClick={() => { playUiSound('CLICK'); toggleSfx(); }}
+                                                className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isSfxMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-emerald-900/40 border-emerald-500/50 text-emerald-400'}`}
+                                                title={language === 'RU' ? 'Звуки' : 'Sounds'}
+                                            >
+                                                {isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                                            </button>
+                                        </div>
 
-                                        <div className="px-3 py-2 flex flex-col gap-2">
-                                            <div className="flex items-center gap-2 text-[8px] font-black uppercase text-slate-500 tracking-widest">
+                                        <div className="h-px bg-white/5 my-0.5" />
+
+                                        <div className="px-1 py-1 flex flex-col gap-1.5">
+                                            <div className="flex items-center gap-2 text-[8px] font-black uppercase text-slate-500 tracking-widest pl-1">
                                                 <Languages className="w-3 h-3" />
                                                 {language === 'RU' ? 'Язык' : 'Language'}
                                             </div>
