@@ -328,7 +328,9 @@ export class GrowthSystem implements System {
                  recoveryCharges: newRecoveryPoints,
                  lastRecoveryUseTime: newLastRecoveryTime,
                  cooldownEndTime: newCooldown,
-                 lootedLevels: nextLootedLevels // Persist updated loot history
+                 lootedLevels: nextLootedLevels, // Persist updated loot history
+                  isExcavated: entity.type === EntityType.PLAYER ? true : hex.isExcavated,
+                  isPlayerBuilt: entity.type === EntityType.PLAYER ? false : hex.isPlayerBuilt
              });
              
              // --- ENTROPY COST ---
@@ -416,6 +418,7 @@ export class GrowthSystem implements System {
 
           const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
           const isVisible = entity.type === EntityType.PLAYER || hex.revealed;
+          const isRegrowth = targetLevel <= hex.maxLevel;
 
           if (targetLevel > hex.maxLevel) {
             newMaxLevel = targetLevel;
@@ -439,60 +442,68 @@ export class GrowthSystem implements System {
                     events.push(GameEventFactory.create('HEX_COLLAPSE', 'Soil Eater consumed land', entity.id, { q: victim.q, r: victim.r }));
                 }
             }
+          }
 
-            // Cost & Reward
-            if (!hasFreeBuild) {
-                entity.storage = Math.max(0, entity.storage - 1);
-            }
-            
-            // STATUS CHECK: MINING OFFLINE
-            const isMiningOffline = this.hasStatus(entity, 'STATUS_MINING_OFFLINE');
-            const { economicMultiplier } = getStatusModifiers(entity, state);
-            const income = isMiningOffline ? 0 : Math.max(0, Math.floor(config.income * economicMultiplier));
-            
-            entity.coins += income;
-            entity.totalCoinsEarned += income;
-            entity.moves += 1;
+          // Cost & Reward (Deducted for regrowth too!)
+          if (!hasFreeBuild) {
+              entity.storage = Math.max(0, entity.storage - 1);
+          }
+          
+          // STATUS CHECK: MINING OFFLINE
+          const isMiningOffline = this.hasStatus(entity, 'STATUS_MINING_OFFLINE');
+          const { economicMultiplier } = getStatusModifiers(entity, state);
+          const income = isMiningOffline ? 0 : Math.max(0, Math.floor(config.income * economicMultiplier));
+          
+          entity.coins += income;
+          entity.totalCoinsEarned += income;
+          entity.moves += 1;
 
-            // --- ENTROPY COST ---
-            const baseEntropyCost = targetLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(targetLevel));
-            const { entropyResistance } = getStatusModifiers(entity, state);
-            const entropyCost = Math.max(0, baseEntropyCost * (1 - entropyResistance));
-            
-            const hasEntropyInversion = this.hasStatus(entity, 'STATUS_ENTROPY_INVERSION');
-            
-            if (hasEntropyInversion) {
-                state.entropy.current = Math.min(state.entropy.max, state.entropy.current + entropyCost);
-            } else {
-                state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
-            }
+          // --- ENTROPY COST ---
+          const baseEntropyCost = targetLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(targetLevel));
+          const { entropyResistance } = getStatusModifiers(entity, state);
+          const entropyCost = Math.max(0, baseEntropyCost * (1 - entropyResistance));
+          
+          const hasEntropyInversion = this.hasStatus(entity, 'STATUS_ENTROPY_INVERSION');
+          
+          if (hasEntropyInversion) {
+              state.entropy.current = Math.min(state.entropy.max, state.entropy.current + entropyCost);
+          } else {
+              state.entropy.current = Math.max(0, state.entropy.current - entropyCost);
+          }
 
-            if (targetLevel === 1) {
-                 newOwnerId = entity.id;
-                 const { foundationStrength } = getStatusModifiers(entity, state);
-                 newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY + (foundationStrength * 2);
-                 const msg = `${prefix} Sector L1 Built (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
-                 if (isVisible) {
-                    state.messageLog.unshift({ id: `acq-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
-                    events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id, { level: 1 }));
-                 }
-            } else {
-                 newDurability = undefined;
-                 const msg = `${prefix} Upgraded to L${targetLevel} (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
-                 if (isVisible) {
-                    state.messageLog.unshift({ id: `lvl-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
-                    events.push(GameEventFactory.create('LEVEL_UP', msg, entity.id, { level: targetLevel }));
-                 }
-            }
+          if (targetLevel === 1) {
+               newOwnerId = entity.id;
+               const { foundationStrength } = getStatusModifiers(entity, state);
+               newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY + (foundationStrength * 2);
+               
+               const msg = isRegrowth
+                  ? `${prefix} Sector L1 Restored (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`
+                  : `${prefix} Sector L1 Built (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
+               
+               if (isVisible) {
+                  state.messageLog.unshift({ id: `acq-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
+                  events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id, { level: 1 }));
+               }
+          } else {
+               newDurability = undefined;
+               
+               const msg = isRegrowth
+                  ? `${prefix} Restored to L${targetLevel} (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`
+                  : `${prefix} Upgraded to L${targetLevel} (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
+               
+               if (isVisible) {
+                  state.messageLog.unshift({ id: `lvl-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
+                  events.push(GameEventFactory.create('LEVEL_UP', msg, entity.id, { level: targetLevel }));
+               }
+          }
 
-            // INIT RECOVERY POINTS IF LEVEL >= 4
-            // Reset to full charges if hitting L4 threshold or upgrading within high levels
-            if (targetLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
-                const { reserveCapacitor } = getStatusModifiers(entity, state);
-                newRecoveryCharges = GAME_CONFIG.MAX_RECOVERY_POINTS + reserveCapacitor;
-                newLastRecoveryTime = undefined; 
-                newCooldown = undefined;
-            }
+          // INIT RECOVERY POINTS IF LEVEL >= 4
+          // Reset to full charges if hitting L4 threshold or upgrading within high levels
+          if (targetLevel >= GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
+              const { reserveCapacitor } = getStatusModifiers(entity, state);
+              newRecoveryCharges = GAME_CONFIG.MAX_RECOVERY_POINTS + reserveCapacitor;
+              newLastRecoveryTime = undefined; 
+              newCooldown = undefined;
           }
 
           // Update Hex (Mutate draft)
@@ -504,7 +515,9 @@ export class GrowthSystem implements System {
               durability: newDurability,
               recoveryCharges: newRecoveryCharges,
               lastRecoveryUseTime: newLastRecoveryTime,
-              cooldownEndTime: newCooldown
+              cooldownEndTime: newCooldown,
+              isPlayerBuilt: entity.type === EntityType.PLAYER ? true : hex.isPlayerBuilt,
+              isExcavated: entity.type === EntityType.PLAYER ? false : hex.isExcavated
           });
           
           let shouldContinue = false;
@@ -512,6 +525,7 @@ export class GrowthSystem implements System {
           if (!shouldContinue) {
              if (hasUpgradeCmd) entity.movementQueue.shift();
              entity.state = EntityState.IDLE;
+             if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
              return false;
           }
           

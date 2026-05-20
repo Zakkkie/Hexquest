@@ -532,6 +532,8 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                         isTargetArrow: isArrow,
                         tutorialColor: tutColor,
                         renderMode: FULL_RENDER_MODE,
+                        isExcavated: hex.isExcavated,
+                        isPlayerBuilt: hex.isPlayerBuilt,
                     }
                 };
             } else {

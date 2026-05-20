@@ -3,6 +3,7 @@ import React from 'react';
 
 interface HexButtonProps {
   onClick?: () => void;
+  onDisabledClick?: () => void; // New prop for clicks when disabled
   children: React.ReactNode;
   active?: boolean;
   disabled?: boolean;
@@ -16,7 +17,7 @@ interface HexButtonProps {
 }
 
 const HexButton: React.FC<HexButtonProps> = ({ 
-  onClick, children, active, disabled, dimmed, variant = 'slate', size = 'md', progress = 0, className = '', pulsate = false, title
+  onClick, onDisabledClick, children, active, disabled, dimmed, variant = 'slate', size = 'md', progress = 0, className = '', pulsate = false, title
 }) => {
   
   // RESPONSIVE SIZE MAPPING
@@ -59,7 +60,7 @@ const HexButton: React.FC<HexButtonProps> = ({
     <button 
       type="button"
       className={`${baseClasses} ${interactClasses} ${glowClass} ${sClass}`}
-      onClick={(!disabled && !dimmed) ? onClick : undefined}
+      onClick={(!disabled && !dimmed) ? onClick : onDisabledClick}
       title={title}
     >
       {/* Dynamic Ambient Glow Behind the Button */}

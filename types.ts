@@ -12,6 +12,8 @@ export interface HexView {
   structureType?: 'NONE' | 'BARRIER' | 'CAPITAL' | 'VOID' | 'MONUMENT' | 'MINE' | 'MINI_MONUMENT';
   ownerId?: string; 
   neighborLevels?: number[];
+  isExcavated?: boolean;
+  isPlayerBuilt?: boolean;
 }
 
 // Full State Hex

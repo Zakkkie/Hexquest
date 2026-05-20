@@ -231,12 +231,6 @@ export interface Dictionary {
         MINI_LB_EMPTY: string;
     };
     POI: {
-        BAR: string;
-        BANK: string;
-        SHOP: string;
-        WORKSHOP: string;
-        CAPITOL: string;
-        HUB: string;
         CHECKPOINT: string;
     };
     TOAST: {
@@ -649,12 +643,6 @@ export const TEXT: Record<Language, Dictionary> = {
             MINI_LB_EMPTY: "No active signals."
         },
         POI: {
-            BAR: "Bar",
-            BANK: "Bank",
-            SHOP: "Shop",
-            WORKSHOP: "Workshop",
-            CAPITOL: "Capitol",
-            HUB: "Hub",
             CHECKPOINT: "Checkpoint",
         },
         TOAST: {
@@ -1065,12 +1053,6 @@ export const TEXT: Record<Language, Dictionary> = {
             MINI_LB_EMPTY: "Нет сигналов."
         },
         POI: {
-            BAR: "Бар",
-            BANK: "Банк",
-            SHOP: "Магазин",
-            WORKSHOP: "Мастерская",
-            CAPITOL: "Капитолий",
-            HUB: "Хаб",
             CHECKPOINT: "Блокпост",
         },
         TOAST: {

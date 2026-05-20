@@ -103,14 +103,14 @@ export function checkGrowthCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel + 1;
 
-  // 1. REGROWTH: No supports or rank check needed to reach previous maxLevel
-  if (targetLevel <= hex.maxLevel) {
-     return { canGrow: true };
-  }
-
-  // 2. MATERIAL CHECK
+  // 1. MATERIAL CHECK
   if (entity.storage < 1) {
       return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
+  }
+
+  // 2. REGROWTH: No supports or rank check needed to reach previous maxLevel
+  if (targetLevel <= hex.maxLevel) {
+     return { canGrow: true };
   }
 
   // 3. RANK REQUIREMENT

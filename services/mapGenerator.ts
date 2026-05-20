@@ -27,16 +27,7 @@ const isCityWall = (q: number, r: number) => {
     return !isExit;
 };
 
-const getCityPoi = (q: number, r: number) => {
-    const dq = q - CITY_Q;
-    const dr = r - CITY_R;
-    
-    if (dq === 0 && dr === 0) return 'city_capitol';
-    if (dq === 2 && dr === -1) return 'city_bar';
-    if (dq === -2 && dr === 1) return 'city_bank';
-    if (dq === 1 && dr === 2) return 'city_shop';
-    if (dq === -1 && dr === -2) return 'city_workshop';
-    
+const getCityPoi = (_q: number, _r: number) => {
     return null;
 };
 

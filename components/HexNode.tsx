@@ -55,6 +55,8 @@ export interface HexNodeProps {
   id: string;
   opacity?: number;
   lighting?: number;
+  isExcavated?: boolean;
+  isPlayerBuilt?: boolean;
 }
 
 // Precompute the base (unsquashed) hexagon path centered at 0,0
@@ -88,7 +90,9 @@ const HexNodeComponent = (props: HexNodeProps) => {
       q, r, id,
       onHexClick, onHover,
       opacity = 1,
-      lighting = 1
+      lighting = 1,
+      isExcavated,
+      isPlayerBuilt
   } = props;
 
   // Textures are now always loaded since LOD is removed
@@ -748,6 +752,112 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="#ef4444" opacity={0.8} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                     </Group>
                 )}
+
+                {/* VISUAL EFFECTS FOR EXCAVATED (MINED) HEXES */}
+                {isExcavated && !isRealVoid && (
+                    <Group listening={false} perfectDrawEnabled={false}>
+                        {/* Central crater / drilling pit shadow */}
+                        <Circle 
+                            radius={14}
+                            fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+                            fillRadialGradientStartRadius={0}
+                            fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+                            fillRadialGradientEndRadius={14}
+                            fillRadialGradientColorStops={[
+                                0, 'rgba(12, 10, 9, 0.95)', // Solid dark center for deep pit
+                                0.6, 'rgba(28, 25, 23, 0.8)',
+                                1, 'rgba(41, 37, 36, 0.0)' // Gradual fade-out
+                            ]}
+                            stroke="#1c1917"
+                            strokeWidth={1.5}
+                            perfectDrawEnabled={false}
+                        />
+                        {/* Scattered loose debris (rubble pieces) for player satisfaction */}
+                        {/* Rubble Piece 1: Large clay rock */}
+                        <Circle 
+                            x={-13}
+                            y={-7}
+                            radius={3.2}
+                            fill="#78350f"
+                            stroke="#451a03"
+                            strokeWidth={1}
+                            perfectDrawEnabled={false}
+                        />
+                        {/* Rubble Piece 2: Angular gravel shard */}
+                        <Line 
+                            points={[-2, 11, 3, 13, 1, 8]}
+                            closed={true}
+                            fill="#44403c"
+                            stroke="#292524"
+                            strokeWidth={1}
+                            perfectDrawEnabled={false}
+                        />
+                        {/* Rubble Piece 3: Small iron ore nugget */}
+                        <Circle 
+                            x={11}
+                            y={-9}
+                            radius={2.5}
+                            fill="#b45309"
+                            stroke="#78350f"
+                            strokeWidth={0.8}
+                            perfectDrawEnabled={false}
+                        />
+                        {/* Rubble Piece 4: Loose dust ring */}
+                        <Circle 
+                            radius={18}
+                            stroke="#57534e"
+                            strokeWidth={1}
+                            opacity={0.4}
+                            dash={[2, 6]}
+                            perfectDrawEnabled={false}
+                        />
+                    </Group>
+                )}
+
+                {/* VISUAL EFFECTS FOR COSTRUCTED / PLAYER-BUILT SECTORS */}
+                {isPlayerBuilt && !isRealVoid && (
+                    <Group listening={false} perfectDrawEnabled={false}>
+                        {/* Glowing secondary blueprint outline inside */}
+                        <Path 
+                            data={BASE_PATH_D} 
+                            scaleX={0.84}
+                            scaleY={0.84}
+                            stroke="#10b981" 
+                            strokeWidth={1.2}
+                            dash={[4, 5]}
+                            opacity={0.7}
+                            perfectDrawEnabled={false}
+                            shadowForStrokeEnabled={false}
+                        />
+                        {/* Reinforced diagonal corner supports (connecting inner to outer edge) */}
+                        {BASE_POINTS.slice(0, 3).map((pt, idx) => (
+                            <Line 
+                                key={`bracket-${idx}`}
+                                points={[pt.x * 0.84, pt.y * 0.84, pt.x * 0.96, pt.y * 0.96]}
+                                stroke="#10b981"
+                                strokeWidth={1}
+                                opacity={0.5}
+                                perfectDrawEnabled={false}
+                            />
+                        ))}
+                        {/* Precision metallic rivet joints in vertices */}
+                        {BASE_POINTS.map((pt, idx) => (
+                            <Circle 
+                                key={`rivet-${idx}`}
+                                x={pt.x * 0.84}
+                                y={pt.y * 0.84}
+                                radius={2.2}
+                                fill="#34d399"
+                                stroke="#134e4a"
+                                strokeWidth={1}
+                                shadowColor="#10b981"
+                                shadowBlur={4}
+                                shadowOpacity={0.8}
+                                perfectDrawEnabled={false}
+                            />
+                        ))}
+                    </Group>
+                )}
             </Group>
         </Group>
         {/* 3. FLOATING OVERLAYS (Wrapped inside an animated overlays group container) */}
@@ -823,6 +933,8 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.poiType !== next.poiType) return false;
     if (prev.isPassable !== next.isPassable) return false;
     if (prev.isRevealed !== next.isRevealed) return false;
+    if (prev.isExcavated !== next.isExcavated) return false;
+    if (prev.isPlayerBuilt !== next.isPlayerBuilt) return false;
     
     for (let i = 0; i < 6; i++) {
         if (prev.neighborLevels[i] !== next.neighborLevels[i]) return false;

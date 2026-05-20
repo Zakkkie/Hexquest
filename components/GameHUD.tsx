@@ -5,6 +5,8 @@ import TopStatsBar from './hud/TopStatsBar.tsx';
 import BottomActionDock from './hud/BottomActionDock.tsx';
 import GameDialogs from './hud/GameDialogs.tsx';
 import InventoryModal from './InventoryModal.tsx';
+import MonumentHintBanner from './hud/MonumentHintBanner.tsx';
+import SkirmishHintBanner from './hud/SkirmishHintBanner.tsx';
 import { Item } from '../types.ts';
 
 interface GameHUDProps {
@@ -47,6 +49,13 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                     onOpenModal={(modal) => setActiveModal(modal)} 
                     setHelpTopic={setHelpTopic}
                 />
+                
+                {gameStatus === 'PLAYING' && (
+                    <div className="absolute top-[calc(74px+env(safe-area-inset-top))] md:top-[96px] left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2">
+                        <MonumentHintBanner />
+                        <SkirmishHintBanner />
+                    </div>
+                )}
                 
                 {gameStatus === 'PLAYING' && (
                     <BottomActionDock 

@@ -31,6 +31,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
     const togglePlayerGrowth = useGameStore(state => state.togglePlayerGrowth);
+    const showToast = useGameStore(state => state.showToast);
     
     const mainButtonSize = "lg";
 
@@ -279,13 +280,13 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 
                 {/* RIGHT: ACTION BUTTONS */}
                 <div className="flex items-end gap-1.5 md:gap-3 shrink-0 ml-auto">
-                    <HexButton variant="red" size={mainButtonSize} onClick={() => handleActionClick('DIG')} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
+                    <HexButton variant="red" size={mainButtonSize} onClick={() => handleActionClick('DIG')} onDisabledClick={() => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
                         <Pickaxe className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
                     </HexButton>
-                    <HexButton variant="amber" size={mainButtonSize} onClick={() => handleActionClick('UPGRADE')} active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} disabled={!canUpgrade} pulsate={canUpgrade && !isPlayerGrowing} progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-1 ring-4 ring-amber-500/20 rounded-full' : ''} title={upgradeTooltip}>
+                    <HexButton variant="amber" size={mainButtonSize} onClick={() => handleActionClick('UPGRADE')} onDisabledClick={() => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }} active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} disabled={!canUpgrade} pulsate={canUpgrade && !isPlayerGrowing} progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-1 ring-4 ring-amber-500/20 rounded-full' : ''} title={upgradeTooltip}>
                         <ChevronsUp className={`w-6 h-6 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
                     </HexButton>
-                    <HexButton variant="blue" size={mainButtonSize} onClick={() => handleActionClick('RECOVER')} active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} disabled={!recoveryState.canRecover} progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''} title={recoverTooltip}>
+                    <HexButton variant="blue" size={mainButtonSize} onClick={() => handleActionClick('RECOVER')} onDisabledClick={() => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }} active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} disabled={!recoveryState.canRecover} progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''} title={recoverTooltip}>
                         {recoveryState.cooling ? (
                             <div className="flex flex-col items-center">
                                 <Hourglass className="w-4 h-4 md:w-6 md:h-6 animate-spin-slow text-slate-300" />

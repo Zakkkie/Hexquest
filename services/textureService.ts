@@ -432,11 +432,6 @@ export class TextureService {
   private getTerrainColors(type: string, poiId?: string): { base: string, accent: string, sec: string } {
       if (poiId) {
           switch(poiId) {
-              case 'city_capitol':  return { base: '#1e3a8a', accent: '#60a5fa', sec: '#2563eb' }; // Blue
-              case 'city_bar':      return { base: '#7c2d12', accent: '#fb923c', sec: '#c2410c' }; // Orange/Brown
-              case 'city_bank':     return { base: '#064e3b', accent: '#34d399', sec: '#059669' }; // Green
-              case 'city_shop':     return { base: '#4c1d95', accent: '#a78bfa', sec: '#7c3aed' }; // Purple
-              case 'city_workshop': return { base: '#713f12', accent: '#facc15', sec: '#ca8a04' }; // Yellow/Brown
               case 'city_checkpoint': return { base: '#3f3f46', accent: '#a1a1aa', sec: '#52525b' }; // Gray
           }
       }
