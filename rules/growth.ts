@@ -55,8 +55,8 @@ export function checkDigCondition(
       return { canGrow: true };
   }
 
-  // 3. REVERSE STAIRCASE RULE (Deep Digging currentLevel <= -2)
-  if (currentLevel <= -2) {
+  // 3. REVERSE STAIRCASE RULE (Deep Digging currentLevel <= -1)
+  if (currentLevel <= -1) {
       const deepNeighbors = neighbors.filter(n => {
           const neighborHex = grid[getHexKey(n.q, n.r)];
           if (!neighborHex || neighborHex.structureType === 'VOID') return false;
@@ -109,8 +109,8 @@ export function checkGrowthCondition(
       };
   }
 
-  // 4. STABILITY CHECK (Strict Equal Level Rule for L2+)
-  if (currentLevel >= 2) {
+  // 4. STABILITY CHECK (Strict Equal Level Rule for L1+)
+  if (currentLevel >= 1) {
     const supportNeighbors = neighbors.filter(n => {
        const h = grid[getHexKey(n.q, n.r)];
        return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) === currentLevel;
