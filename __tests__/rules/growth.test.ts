@@ -256,16 +256,66 @@ describe('checkDigCondition', () => {
   });
 
   describe('gradient lock (high ground rule)', () => {
-    it('can dig L2 when neighbors are at L0 (result L1 > L0)', () => {
+    it('can dig L2 to L1 when neighbors are at L0 (result L1 > L0) OK', () => {
       const hex = makeHex(0, 0, 2, 2);
       const entity = makeEntity();
       const n1 = makeHex(1, 0, 0, 0);
       const neighbors = [{ q: 1, r: 0 }];
       const grid = buildGrid([hex, n1]);
 
-      // Dig to L1 (targetLevel=1). Min neighbor = 0. 1 > 0 → OK
       const result = checkDigCondition(hex, entity, neighbors, grid);
       expect(result.canGrow).toBe(true);
+    });
+
+    it('can dig L2 to L0 when neighbors are at L0 (result L0 == L0) OK (new relaxation)', () => {
+        // If currentLevel is 2, target is 1. Min neighbor 1. 1 < 1 is false. OK.
+        const hex2 = makeHex(0, 0, 2, 2);
+        const n1 = makeHex(1, 0, 1, 1);
+        const neighbors = [{ q: 1, r: 0 }];
+        const grid = buildGrid([hex2, n1]);
+
+        const result = checkDigCondition(hex2, makeEntity(), neighbors, grid);
+        expect(result.canGrow).toBe(true);
+    });
+    
+    it('cannot dig L2 to L0 when neighbors are at L1 (result L0 < L1) NO', () => {
+        // Digging from 2 to 0 (we can't do this in one step, but checkDigCondition handles targetLevel = current-1)
+        // Wait, `if (currentLevel > 1)`. If current is 1, it skips the check.
+        // So let's test currentLevel=2, targetLevel=1, neighbors at L2.
+        const hexHigh = makeHex(0, 0, 2, 2);
+        const nHigh = makeHex(1, 0, 2, 2);
+        const result = checkDigCondition(hexHigh, makeEntity(), [{q: 1, r: 0}], buildGrid([hexHigh, nHigh]));
+        expect(result.canGrow).toBe(false);
+        expect(result.reason).toContain('Gradient Lock');
+    });
+
+    it('can dig L2 to L1 even if neighbors are at L2 (+ Gradient Lock bypass via player rank)', () => {
+        // Hex L2. Target L1. Neighbors L2. 
+        // Gradient Lock would normally block (1 < 2).
+        // BUT if playerLevel is 1, targetLevel (1) >= playerLevel (1) -> ALLOWED.
+        const hex = makeHex(0, 0, 2, 2);
+        const entity = makeEntity({ playerLevel: 1 });
+        const n1 = makeHex(1, 0, 2, 2);
+        const neighbors = [{ q: 1, r: 0 }];
+        const grid = buildGrid([hex, n1]);
+
+        const result = checkDigCondition(hex, entity, neighbors, grid);
+        expect(result.canGrow).toBe(true);
+    });
+
+    it('cannot dig L2 to L1 if neighbors are at L2 and targetLevel is BELOW player rank', () => {
+        // Hex L2. Target L1. Neighbors L2. 
+        // PlayerLevel is 3. Target L1 < playerLevel 3.
+        // Gradient Lock applies if target is below neighbors AND target is below playerLevel.
+        const hex = makeHex(0, 0, 2, 2);
+        const entity = makeEntity({ playerLevel: 3 });
+        const n1 = makeHex(1, 0, 2, 2);
+        const neighbors = [{ q: 1, r: 0 }];
+        const grid = buildGrid([hex, n1]);
+
+        const result = checkDigCondition(hex, entity, neighbors, grid);
+        expect(result.canGrow).toBe(false);
+        expect(result.reason).toContain('Gradient Lock');
     });
 
     it('can dig L1 when neighbors are at L0 (exception: L1 can be dug to L0 without support)', () => {
@@ -328,6 +378,18 @@ describe('checkDigCondition', () => {
   });
 
   describe('pit escape constraint (user request)', () => {
+    it('can dig from peak L3 to L2 even if neighbors are at L0', () => {
+      const hex = makeHex(0, 0, 3, 3);
+      const entity = makeEntity({ playerLevel: 3 });
+      // Dig to L2. Neighbor at L0. Target (2) is >= Neighbor (0). NOT TRAPPED.
+      const n1 = makeHex(1, 0, 0, 0);
+      const neighbors = [{ q: 1, r: 0 }];
+      const grid = buildGrid([hex, n1]);
+
+      const result = checkDigCondition(hex, entity, neighbors, grid);
+      expect(result.canGrow).toBe(true);
+    });
+
     it('cannot dig L0 to -1 if neighbors are too high (L2)', () => {
       const hex = makeHex(0, 0, 0, 0);
       const entity = makeEntity({ playerLevel: 3 });

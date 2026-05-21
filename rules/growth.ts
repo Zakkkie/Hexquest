@@ -37,30 +37,33 @@ export function checkDigCondition(
       const hLevel = h.currentLevel ?? 0;
       const heightDiff = Math.abs(targetLevel - hLevel);
       const hasRank = h.maxLevel <= _entity.playerLevel;
+      
+      // If we are at or above neighbors, we aren't trapped in a hole, 
+      // even if we can't jump to them yet (diff > 1), because we can keep digging down.
+      if (targetLevel >= hLevel) return true;
+
       return heightDiff <= 1 && hasRank;
   });
 
   if (neighborHexes.length > 0 && !hasEscapeHex) {
       return {
           canGrow: false,
-          reason: `TRAPPED! No escape route if you dig here. Вы застрянете в яме (все соседи слишком высоко или требуют выше ранг).`
+          reason: `TRAPPED! No escape route if you dig here. Вы застрянете в яме (все соседи выше и нет выхода).`
       };
   }
 
   // 2. HIGH GROUND RULE (User Request)
   // "Dig up to not reaching 1 level to the level of the nearest hex"
-  // Interpretation: You can dig down, but the new level must strictly be higher than the lowest neighbor.
-  // Example: Neighbors L0. Current L2. Dig to L1? (1 > 0) OK.
-  // Example: Neighbors L0. Current L1. Dig to L0? (0 > 0) False. Blocked.
-  // Exception: Level 1 hexes can be excavated down to 0 without support (currentLevel > 1 restriction).
+  // Correction: Allow digging down TO the level of neighbors, but not BELOW them on high ground (L1+).
   if (currentLevel > 1) {
       if (neighborHexes.length > 0) {
           const minNeighborLevel = Math.min(...neighborHexes.map(h => h.currentLevel));
 
-          if (targetLevel <= minNeighborLevel) {
+          // Exception: A player can always dig down if the target level is >= their Rank (Player Level).
+          if (targetLevel < minNeighborLevel && targetLevel < _entity.playerLevel) {
               return {
                   canGrow: false,
-                  reason: `Gradient Lock! Stay 1 level above L${minNeighborLevel}.`,
+                  reason: `Gradient Lock! You cannot dig below the surrounding terrain (L${minNeighborLevel}) or below your engineering rank (Rank ${_entity.playerLevel}).`,
                   missingSupports: neighborHexes.filter(h => h.currentLevel > targetLevel + 1).map(h => ({q: h.q, r: h.r}))
               };
           }
@@ -112,12 +115,12 @@ export function checkGrowthCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel + 1;
 
-  // 2. MATERIAL CHECK
+  // 1. MATERIAL CHECK (Still costs material unless free status active)
   if (entity.storage < 1) {
       return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
   }
 
-  // 3. RANK REQUIREMENT
+  // 2. RANK REQUIREMENT
   const config = getLevelConfig(targetLevel);
   if (entity.playerLevel < config.reqRank) {
       return { 

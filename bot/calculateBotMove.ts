@@ -20,7 +20,8 @@ const MAX_WAIT_STREAK     = 4;
 const MONUMENT_ZONE_R     = 4;   
 const MAX_BFS_STEPS       = 400;
 const MAX_COLUMN_HEIGHT   = 8;   
-const STUCK_THRESHOLD     = 5;   
+const STUCK_THRESHOLD     = 7;   
+const REALTIME_STUCK_MS   = 10000; // 10 seconds
 
 const STOCKPILE_TARGET    = 3;   
 const EXPLORE_RADIUS      = 50;
@@ -904,6 +905,12 @@ export const calculateBotMove = (
     if (!mem.exploreAnchor) mem.exploreAnchor = { q: bot.q, r: bot.r };
 
     const currentPosKey = `${bot.q},${bot.r}`;
+    if (bot.lastMoveTime === undefined) {
+        bot.lastMoveTime = Date.now();
+    }
+    const timeSinceMove = Date.now() - bot.lastMoveTime;
+    const isRealtimeStuck = timeSinceMove > REALTIME_STUCK_MS;
+
     if (mem.lastPosKey === currentPosKey) {
         mem.stayStreak = (mem.stayStreak ?? 0) + 1;
     } else {
@@ -912,7 +919,7 @@ export const calculateBotMove = (
     }
     mem.lastPosKey = currentPosKey;
 
-    if ((mem.stayStreak ?? 0) >= 5) {
+    if (isRealtimeStuck || (mem.stayStreak ?? 0) >= STUCK_THRESHOLD) {
         if (mem.targetHexId) {
             mem.blacklistedTargets = [...(mem.blacklistedTargets ?? []), mem.targetHexId].slice(-50);
         }
