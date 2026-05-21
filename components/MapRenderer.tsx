@@ -322,6 +322,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     const pendingConfirmation = useGameStore(state => state.pendingConfirmation);
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
     const campaignUpgrades = useGameStore(state => state.campaignUpgrades);
+    const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
     const playerQ = player?.q;
     const playerR = player?.r;
     const selectedHexId = useMemo(() => 
@@ -564,6 +565,10 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                                 onHexClick={memoizedOnHexClick} 
                                 onHover={onHover} 
                                 isHovered={hoveredHexId === item.props.id} 
+                                playerQ={playerQ}
+                                playerR={playerR}
+                                playerGrowthIntent={playerGrowthIntent}
+                                growthAccelerator={campaignUpgrades?.growthAccelerator || 0}
                             />
                         );
                     } else {

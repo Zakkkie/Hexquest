@@ -5,7 +5,6 @@ import Konva from 'konva';
 import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { textureService } from '../services/textureService.ts';
 import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
-import { useGameStore } from '../store.ts';
 
 const DEG_TO_RAD = Math.PI / 180;
 const ARROW_UP_PATH = "M12 4l-8 8h6v8h4v-8h6z";
@@ -58,6 +57,11 @@ export interface HexNodeProps {
   lighting?: number;
   isExcavated?: boolean;
   isPlayerBuilt?: boolean;
+  isHovered?: boolean;
+  playerQ?: number;
+  playerR?: number;
+  playerGrowthIntent?: string | null;
+  growthAccelerator?: number;
 }
 
 // Precompute the base (unsquashed) hexagon path centered at 0,0
@@ -70,6 +74,11 @@ let BASE_PATH_D = `M ${BASE_POINTS[0].x} ${BASE_POINTS[0].y}`;
 for (let i = 1; i < 6; i++) BASE_PATH_D += ` L ${BASE_POINTS[i].x} ${BASE_POINTS[i].y}`;
 BASE_PATH_D += " Z";
 
+const BASE_POINTS_THREE = BASE_POINTS.slice(0, 3);
+const GAUGE_SECTORS = Array.from({ length: 12 }, (_, i) => i);
+const FILL_SCALE = { x: HEX_SIZE / 32, y: HEX_SIZE / 32 };
+const FILL_OFFSET = { x: 32, y: 32 };
+
 // Damage Cracks Logic
 const CRACK_PATHS = [
     "M-10,-5 L0,0 L10,-2",
@@ -79,6 +88,37 @@ const CRACK_PATHS = [
     "M-8,-12 L2,-5 L-5,0",
     "M0,15 L-5,8 L5,2"
 ];
+
+const getPoiIcon = (type: string): string => {
+    switch(type) {
+        case 'city_hub': return '🏛️';
+        case 'tavern_travelers': return '🍺';
+        case 'bulletin_board': return '📋';
+        case 'guard_post': return '🛡️';
+        case 'forge': return '⚒️';
+        case 'alchemist': return '🧪';
+        case 'watchtower': return '🔭';
+        case 'market': return '⚖️';
+        case 'warehouse': return '📦';
+        case 'healer': return '🩹';
+        case 'temple': return '⛪';
+        case 'archive': return '📜';
+        case 'tavern_spirit': return '🍷';
+        case 'RIFT_S1_2': return '🌀';
+        case 'RIFT_S3_4': return '🌋';
+        default: return '📍';
+    }
+};
+
+const getArrowColor = (type: string, part: 'main' | 'shadow'): string => {
+    const isShadow = part === 'shadow';
+    switch(type) {
+        case 'amber': return isShadow ? '#b45309' : '#fbbf24';
+        case 'cyan': return isShadow ? '#0e7490' : '#22d3ee';
+        case 'red': return isShadow ? '#991b1b' : '#ef4444';
+        default: return isShadow ? '#0f766e' : '#34d399'; // emerald
+    }
+};
 
 const HexNodeComponent = (props: HexNodeProps) => {
   const { 
@@ -93,13 +133,12 @@ const HexNodeComponent = (props: HexNodeProps) => {
       opacity = 1,
       lighting = 1,
       isExcavated,
-      isPlayerBuilt
+      isPlayerBuilt,
+      playerQ,
+      playerR,
+      playerGrowthIntent,
+      growthAccelerator = 0
   } = props;
-
-  const playerQ = useGameStore(state => state.session?.player?.q);
-  const playerR = useGameStore(state => state.session?.player?.r);
-  const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
-  const growthAccelerator = useGameStore(state => state.session?.campaignUpgrades?.growthAccelerator || 0);
 
   const isPlayerAction = !!(isGrowing && playerQ === q && playerR === r);
   const currentIntent = isPlayerAction ? (playerGrowthIntent || 'UPGRADE') : 'UPGRADE'; 
@@ -118,27 +157,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const isRealVoid = structureType === 'VOID';
   const isMonument = structureType === 'MONUMENT';
   const isNegative = level < 0;
-
-  const getPoiIcon = (type: string) => {
-      switch(type) {
-          case 'city_hub': return '🏛️';
-          case 'tavern_travelers': return '🍺';
-          case 'bulletin_board': return '📋';
-          case 'guard_post': return '🛡️';
-          case 'forge': return '⚒️';
-          case 'alchemist': return '🧪';
-          case 'watchtower': return '🔭';
-          case 'market': return '⚖️';
-          case 'warehouse': return '📦';
-          case 'healer': return '🩹';
-          case 'temple': return '⛪';
-          case 'archive': return '📜';
-          case 'tavern_spirit': return '🍷';
-          case 'RIFT_S1_2': return '🌀';
-          case 'RIFT_S3_4': return '🌋';
-          default: return '📍';
-      }
-  };
 
   const handleClick = (e: any) => {
       if (e.evt && e.evt.button !== undefined && e.evt.button !== 0) return;
@@ -543,19 +561,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   const strokeColor = isMonument ? '#fcd34d' : theme.stroke;
   const strokeWidth = isMonument ? 3.0 : 2.0; 
-  
-  const fillScale = { x: HEX_SIZE / 32, y: HEX_SIZE / 32 }; 
-  const fillOffset = { x: 32, y: 32 }; 
-
-  const getArrowColor = (type: string, part: 'main' | 'shadow') => {
-      const isShadow = part === 'shadow';
-      switch(type) {
-          case 'amber': return isShadow ? '#b45309' : '#fbbf24';
-          case 'cyan': return isShadow ? '#0e7490' : '#22d3ee';
-          case 'red': return isShadow ? '#991b1b' : '#ef4444';
-          default: return isShadow ? '#0f766e' : '#34d399'; // emerald
-      }
-  };
 
   return (
     <Group 
@@ -629,8 +634,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     data={BASE_PATH_D} 
                     fillPatternImage={topTexture as any}
                     fill={topTexture ? undefined : theme.main} // Fallback fill
-                    fillPatternScale={fillScale}
-                    fillPatternOffset={fillOffset}
+                    fillPatternScale={FILL_SCALE}
+                    fillPatternOffset={FILL_OFFSET}
                     fillPatternRepeat="repeat"
                     stroke={strokeColor} 
                     strokeWidth={strokeWidth} 
@@ -896,7 +901,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             shadowForStrokeEnabled={false}
                         />
                         {/* Reinforced diagonal corner supports (connecting inner to outer edge) */}
-                        {BASE_POINTS.slice(0, 3).map((pt, idx) => (
+                        {BASE_POINTS_THREE.map((pt, idx) => (
                             <Line 
                                 key={`bracket-${idx}`}
                                 points={[pt.x * 0.84, pt.y * 0.84, pt.x * 0.96, pt.y * 0.96]}
@@ -977,7 +982,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         </Group>
 
                         {/* HIGH-TECH SEGMENTED CIRCULAR PROGRESS GAUGE HALO */}
-                        {Array.from({ length: 12 }).map((_, idx) => {
+                        {GAUGE_SECTORS.map((idx) => {
                             const angle = (360 / 12) * idx * DEG_TO_RAD;
                             const dx = Math.cos(angle) * (HEX_SIZE * 0.82);
                             const dy = Math.sin(angle) * (HEX_SIZE * 0.82);
@@ -1079,6 +1084,11 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.isRevealed !== next.isRevealed) return false;
     if (prev.isExcavated !== next.isExcavated) return false;
     if (prev.isPlayerBuilt !== next.isPlayerBuilt) return false;
+    if (prev.isHovered !== next.isHovered) return false;
+    if (prev.playerQ !== next.playerQ) return false;
+    if (prev.playerR !== next.playerR) return false;
+    if (prev.playerGrowthIntent !== next.playerGrowthIntent) return false;
+    if (prev.growthAccelerator !== next.growthAccelerator) return false;
     
     for (let i = 0; i < 6; i++) {
         if (prev.neighborLevels[i] !== next.neighborLevels[i]) return false;
