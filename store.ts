@@ -194,19 +194,27 @@ export const useGameStore = create<GameStore>()(
       placeStoryHex: (q: number, r: number, level: number) => set(state => {
           const key = getHexKey(q, r);
           // Deduct from inventory
-          const currentCount = state.collectedHexes[level] || 0;
-          if (currentCount <= 0 && level !== -999) return state; // ignore if empty (unless debugging)
+          const currentCountCollected = state.collectedHexes[level] || 0;
+          const currentCountMined = state.minedInSessionHexes[level] || 0;
+          const maxAvailable = Math.max(currentCountCollected, currentCountMined);
+          
+          if (maxAvailable <= 0 && level !== -999) return state; // ignore if empty (unless debugging)
           
           let newCollected = { ...state.collectedHexes };
-          if (level !== -999) { // Using -999 as a potential debug bypass if needed
-            newCollected[level] = currentCount - 1;
+          let newMined = { ...state.minedInSessionHexes };
+          
+          if (level !== -999) {
+            newCollected[level] = Math.max(0, (state.collectedHexes[level] || maxAvailable) - 1);
             if (newCollected[level] <= 0) delete newCollected[level];
+            
+            newMined[level] = Math.max(0, (state.minedInSessionHexes[level] || maxAvailable) - 1);
+            if (newMined[level] <= 0) delete newMined[level];
           }
 
           const newMap = { ...state.storyMap };
           newMap[key] = level;
           
-          return { storyMap: newMap, collectedHexes: newCollected };
+          return { storyMap: newMap, collectedHexes: newCollected, minedInSessionHexes: newMined };
       }),
       setStoryMilestone: (storyMilestone) => set({ storyMilestone }),
 

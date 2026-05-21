@@ -20,21 +20,14 @@ for (let i = 0; i < 6; i++) {
 
 const TARGET_SHAPE = [
     {q: 0, r: 0},
-    {q: 1, r: 0}, {q: 0, r: 1}, {q: -1, r: 1}, {q: -1, r: 0}, {q: 0, r: -1}, {q: 1, r: -1}, // Ring 1
-    {q: 0, r: -2}, {q: -2, r: 2}, {q: 2, r: 0} // 3 points of Ring 2
+    // Ring 1 (6 cells)
+    {q: 1, r: -1}, {q: 1, r: 0}, {q: 0, r: 1}, {q: -1, r: 1}, {q: -1, r: 0}, {q: 0, r: -1},
+    // Ring 2 (12 cells)
+    {q: 2, r: -2}, {q: 2, r: -1}, {q: 2, r: 0}, {q: 1, r: 1}, {q: 0, r: 2}, {q: -1, r: 2},
+    {q: -2, r: 2}, {q: -2, r: 1}, {q: -2, r: 0}, {q: -1, r: -1}, {q: 0, r: -2}, {q: 1, r: -2}
 ];
 
 const TARGET_KEYS = new Set(TARGET_SHAPE.map(c => getHexKey(c.q, c.r)));
-
-const isValidPlacement = (currentLvl: number | undefined, selectedLvl: number | null, isTarget: boolean) => {
-    if (selectedLvl === null) return false;
-    if (!isTarget) return false;
-    if (currentLvl === undefined) {
-        return selectedLvl === 0;
-    } else {
-        return Math.abs(currentLvl - selectedLvl) === 1;
-    }
-};
 
 const STORY_STEPS = [
     { reqLevel: 0, reqCount: 10, title: "Пробуждение Архитектора", text: "Вы стоите перед пустой бездной. Чтобы восстановить этот мир, вам необходимо заложить фундамент. Выложите 10 гексов 0 уровня. Фигура скрыта во тьме воображения, нащупайте ее форму." },
@@ -378,11 +371,11 @@ const StoryBuilderView: React.FC = () => {
     const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 0.75 : 1.1);
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(window.innerWidth < 768);
     const [isUiHidden, setIsUiHidden] = useState(false);
-    const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
     const [isInitialHintDismissed, setIsInitialHintDismissed] = useState(false);
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [popupCell, setPopupCell] = useState<{ q: number, r: number } | null>(null);
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -442,57 +435,21 @@ const StoryBuilderView: React.FC = () => {
         });
     }, [storyMap]);
 
-    const stateRef = useRef({ storyMap, selectedLevel, minedInSessionHexes });
+    const stateRef = useRef({ storyMap, minedInSessionHexes });
     useEffect(() => {
-        stateRef.current = { storyMap, selectedLevel, minedInSessionHexes };
-    }, [storyMap, selectedLevel, minedInSessionHexes]);
+        stateRef.current = { storyMap, minedInSessionHexes };
+    }, [storyMap, minedInSessionHexes]);
 
     const handleCellClick = useCallback((q: number, r: number) => {
         if (isPanning.current) return;
-        const { storyMap: currentStoryMap, selectedLevel: currentSelectedLevel, minedInSessionHexes: currentMinedHexes } = stateRef.current;
         const key = getHexKey(q, r);
-        
-        if (currentSelectedLevel === null) {
-            return; 
-        }
-
-        const count = currentMinedHexes[currentSelectedLevel] || 0;
-        if (count <= 0) {
-            playUiSound('ERROR');
-            return;
-        }
-
         if (!TARGET_KEYS.has(key)) {
             playUiSound('ERROR');
             return;
         }
-
-        const currentLevel = currentStoryMap[key];
-
-        // Placement Rules
-        if (currentLevel === undefined) {
-            if (currentSelectedLevel !== 0) {
-                playUiSound('ERROR');
-                return;
-            }
-            placeStoryHex(q, r, currentSelectedLevel);
-            setLastPlacedKey(key);
-            playUiSound('CLICK');
-        } else {
-            const diff = Math.abs(currentLevel - currentSelectedLevel);
-            if (diff !== 1 && currentLevel !== currentSelectedLevel) {
-                playUiSound('ERROR');
-                return; 
-            }
-            if (currentLevel === currentSelectedLevel) {
-                 playUiSound('ERROR');
-                 return;
-            }
-            placeStoryHex(q, r, currentSelectedLevel);
-            setLastPlacedKey(key);
-            playUiSound('CLICK');
-        }
-    }, [placeStoryHex, playUiSound]);
+        playUiSound('CLICK');
+        setPopupCell({ q, r });
+    }, [playUiSound]);
 
     const isPanning = useRef(false);
     const handleDragStart = () => { isPanning.current = true; };
@@ -576,8 +533,8 @@ const StoryBuilderView: React.FC = () => {
                                         r={coord.r}
                                         level={lvl}
                                         isTarget={isTarget}
-                                        isEligible={isValidPlacement(lvl, selectedLevel, isTarget)}
-                                        isSelected={lvl === selectedLevel}
+                                        isEligible={isTarget && lvl === undefined}
+                                        isSelected={popupCell !== null && popupCell.q === coord.q && popupCell.r === coord.r}
                                         isNew={lastPlacedKey === key}
                                         onClick={handleCellClick}
                                     />
@@ -706,79 +663,48 @@ const StoryBuilderView: React.FC = () => {
                     transition={{ duration: 0.3 }}
                     className="w-full flex flex-col items-center gap-2 mt-2 pointer-events-auto max-w-xl mx-auto md:max-w-2xl"
                 >
-                    
-                    {/* Active Instruction Bar describing placement validation */}
-                    <AnimatePresence mode="wait">
-                        {selectedLevel !== null && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: -8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -8 }}
-                                className="w-full bg-slate-950/90 border border-cyan-500/30 rounded-xl px-3 py-1.5 backdrop-blur-md shadow-lg flex items-center gap-2"
-                            >
-                                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-                                <p className="text-[9px] md:text-xs text-cyan-300 font-medium leading-snug">
-                                    {language === 'RU' 
-                                        ? selectedLevel === 0 
-                                            ? "Гекс 0 уровня (Фундамент) можно выкладывать на любые свободные контурные ячейки."
-                                            : `Блок уровня ${selectedLevel} требует для размещения смежные блоки с перепадом высоты ровно в 1 уровень.`
-                                        : selectedLevel === 0
-                                            ? "Level 0 block (Foundation) can be laid onto any available template paths."
-                                            : `Level ${selectedLevel} block requires placing onto adjacent structures with exactly 1 level difference.`}
-                                </p>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
                     {/* Cyber Dock (Fluid and scrollable horizontally for any amount of blocks) */}
-                    <div className="w-full bg-slate-900/90 border border-white/10 rounded-2xl md:rounded-3xl p-2 md:p-3.5 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                    <div className="w-full bg-slate-900/90 border border-white/10 rounded-2xl md:rounded-3xl p-2.5 backdrop-blur-xl shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-indigo-500/20 to-transparent" />
                         
                         <div className="flex sm:flex-row flex-col justify-between items-stretch sm:items-center gap-2 md:gap-4">
                             <div className="flex flex-col">
-                                <span className="text-[7.5px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                                    <Sparkles className="w-3 h-3 text-indigo-400" />
-                                    {language === 'RU' ? 'ХРАНИЛИЩЕ ДОБЫТЫХ ФРАГМЕНТОВ' : 'EXTRACTED FRAGMENTS STORAGE'}
+                                <span className="text-[7.5px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1 leading-none mb-1">
+                                    <Sparkles className="w-3 h-3 text-indigo-400 animate-pulse" />
+                                    {language === 'RU' ? 'СКЛАД ФРАГМЕНТОВ РЕАЛЬНОСТИ' : 'REALITY FRAGMENTS STORAGE'}
                                 </span>
-                                <span className="text-[9px] md:text-xs text-slate-300 font-bold hidden sm:block">
-                                    {language === 'RU' ? 'Выберите блок, затем кликните по мишени на поле:' : 'Select a block to deploy onto field targets:'}
+                                <span className="text-[9px] text-slate-400 font-medium font-sans">
+                                    {language === 'RU' ? 'Кликните по гексу на поле, чтобы открыть меню размещения' : 'Click any hex on the grid to deploy materials'}
                                 </span>
                             </div>
 
                             {/* Dock Items */}
                             {Object.keys(minedInSessionHexes).length === 0 ? (
-                                <span className="text-xs font-black text-slate-500 uppercase tracking-widest italic animate-pulse py-1">
-                                    {language === 'RU' ? 'Секторы пусты (играйте уровни)' : 'Matrix blank (complete levels)'}
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic animate-pulse py-1">
+                                    {language === 'RU' ? 'Склад пуст (проходите уровни на карте)' : 'Warehouse blank (complete levels)'}
                                 </span>
                             ) : (
-                                <div className="flex gap-2 overflow-x-auto no-scrollbar max-w-full py-1">
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar max-w-full py-0.5">
                                     {Object.entries(minedInSessionHexes).sort((a,b) => Number(a[0]) - Number(b[0])).map(([level, count]) => {
                                         const lvl = Number(level);
-                                        const isSelected = selectedLevel === lvl;
                                         const hexCol = lvl < 0 ? '#4338ca' : (lvl === 0 ? '#475569' : (lvl === 1 ? '#059669' : (lvl === 2 ? '#d97706' : '#dc2626')));
                                         if (count <= 0) return null;
 
                                         return (
-                                            <motion.button
+                                            <div
                                                 key={lvl}
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                onClick={() => { playUiSound('CLICK'); setSelectedLevel(isSelected ? null : lvl); }}
-                                                className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all relative ${isSelected ? 'bg-indigo-600/30 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.25)]' : 'bg-slate-950/60 border-white/5 hover:border-indigo-500/30'}`}
+                                                className="shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-slate-950/40 border-white/5"
                                             >
-                                                <div className="w-3 h-3 rotate-12 relative flex items-center justify-center rounded-sm" style={{ backgroundColor: hexCol }}>
-                                                    <span className="text-[7px] text-white/50 font-black absolute">{lvl}</span>
+                                                <div className="w-3.5 h-3.5 rotate-12 relative flex items-center justify-center rounded-sm" style={{ backgroundColor: hexCol }}>
+                                                    <span className="text-[7px] text-white/90 font-black absolute">{lvl >= 0 ? `+${lvl}` : lvl}</span>
                                                 </div>
-                                                <div className="flex flex-col items-start leading-none gap-0.5">
-                                                    <span className="text-[7.5px] text-slate-400 uppercase font-black tracking-wider">
+                                                <div className="flex flex-col items-start leading-none gap-0.5 font-sans">
+                                                    <span className="text-[7px] text-slate-500 uppercase font-bold tracking-wider">
                                                         {lvl === 0 ? (language === 'RU' ? 'Почва' : 'Ground') : (lvl < 0 ? (language === 'RU' ? 'Шахта' : 'Depth') : (language === 'RU' ? 'Пик' : 'Peak'))}
                                                     </span>
-                                                    <span className="text-[10px] font-black text-white">x{count}</span>
+                                                    <span className="text-[10.5px] font-black text-slate-200">x{count}</span>
                                                 </div>
-                                                {isSelected && (
-                                                    <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee] animate-ping" />
-                                                )}
-                                            </motion.button>
+                                            </div>
                                         );
                                     })}
                                 </div>
@@ -1037,6 +963,161 @@ const StoryBuilderView: React.FC = () => {
                         </motion.div>
                     </motion.div>
                 )}
+            </AnimatePresence>
+
+            {/* INTERACTIVE PLACEMENT POPUP MODAL */}
+            <AnimatePresence>
+                {popupCell && (() => {
+                    const key = getHexKey(popupCell.q, popupCell.r);
+                    const currentLevel = storyMap[key]; // undefined if empty
+                    
+                    // Options that are VALID to build on this cell
+                    const validOptions = currentLevel === undefined 
+                        ? [0] 
+                        : [currentLevel - 1, currentLevel + 1].filter(l => l >= -3 && l <= 3);
+
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto"
+                            onClick={() => setPopupCell(null)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.95, y: 15 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.95, y: 15 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-slate-900 border border-indigo-500/30 rounded-3xl p-5 md:p-6 max-w-sm w-full shadow-[0_0_50px_rgba(99,102,241,0.2)] relative text-left"
+                            >
+                                {/* Top colored bar decoration */}
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-purple-500" />
+                                
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-[8px] font-black tracking-widest text-indigo-400 uppercase">
+                                            {language === 'RU' ? 'ИНЖЕНЕРНЫЙ МОДУЛЬ' : 'CONSTRUCTION CELL'}
+                                        </span>
+                                        <h3 className="text-sm font-black text-white uppercase tracking-tight">
+                                            {language === 'RU' ? 'Гекс' : 'Hex'} [{popupCell.q}, {popupCell.r}]
+                                        </h3>
+                                    </div>
+                                    <button 
+                                        onClick={() => { playUiSound('CLICK'); setPopupCell(null); }}
+                                        className="text-slate-400 hover:text-white transition-colors bg-white/5 w-7 h-7 rounded-full flex items-center justify-center border border-white/5 active:scale-90"
+                                    >
+                                        &times;
+                                    </button>
+                                </div>
+
+                                <div className="p-3 bg-slate-950/50 border border-white/5 rounded-2xl flex items-center gap-3 mb-5">
+                                    <div className="shrink-0">
+                                        {currentLevel === undefined ? (
+                                            <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex flex-col items-center justify-center text-slate-600 font-mono text-[10px]">
+                                                <span>Ø</span>
+                                            </div>
+                                        ) : (
+                                            <div 
+                                                className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-mono font-black border"
+                                                style={{ 
+                                                    backgroundColor: currentLevel < 0 ? '#4338ca' : (currentLevel === 0 ? '#4a5568' : (currentLevel === 1 ? '#059669' : (currentLevel === 2 ? '#d97706' : '#dc2626'))),
+                                                    borderColor: currentLevel < 0 ? '#4f46e5' : (currentLevel === 0 ? '#718096' : (currentLevel === 1 ? '#10b981' : (currentLevel === 2 ? '#f59e0b' : '#ef4444')))
+                                                }}
+                                            >
+                                                {currentLevel >= 0 ? `+${currentLevel}` : currentLevel}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col leading-tight">
+                                        <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-widest">
+                                            {language === 'RU' ? 'Текущий Статус' : 'Current Status'}
+                                        </span>
+                                        <span className="text-xs font-black text-slate-200">
+                                            {currentLevel === undefined 
+                                                ? (language === 'RU' ? 'Пустая Бездна' : 'Empty Void') 
+                                                : currentLevel === 0 
+                                                    ? (language === 'RU' ? 'Почва L0' : 'Ground L0') 
+                                                    : currentLevel < 0 
+                                                        ? `${language === 'RU' ? 'Глубинная Шахта' : 'Extrapolated Depth'} L${currentLevel}` 
+                                                        : `${language === 'RU' ? 'Возвышенный Пик' : 'Elevated Peak'} L${currentLevel}`
+                                            }
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Header for available materials */}
+                                <h4 className="text-[8.5px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">
+                                    {language === 'RU' ? 'ДОСТУПНЫЕ ИЗМЕНЕНИЯ' : 'AVAILABLE TRANSFORMATIONS'}
+                                </h4>
+
+                                <div className="flex flex-col gap-2">
+                                    {validOptions.map(lvl => {
+                                        const count = minedInSessionHexes[lvl] || 0;
+                                        const canPlace = count > 0;
+                                        const hexCol = lvl < 0 ? '#4338ca' : (lvl === 0 ? '#475569' : (lvl === 1 ? '#059669' : (lvl === 2 ? '#d97706' : '#dc2626')));
+                                        
+                                        return (
+                                            <div 
+                                                key={lvl}
+                                                className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                                                    canPlace 
+                                                        ? 'bg-slate-900/60 border-indigo-500/10 hover:border-indigo-500/30' 
+                                                        : 'bg-slate-950/20 border-white/5 opacity-40'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div 
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black text-white font-mono shrink-0"
+                                                        style={{ backgroundColor: hexCol }}
+                                                    >
+                                                        {lvl >= 0 ? `+${lvl}` : lvl}
+                                                    </div>
+                                                    <div className="flex flex-col leading-tight">
+                                                        <span className="text-[10px] font-black text-white">
+                                                            {lvl === 0 
+                                                                ? (language === 'RU' ? 'Почва L0' : 'Ground L0') 
+                                                                : lvl < 0 
+                                                                    ? `${language === 'RU' ? 'Шахта' : 'Depth'} L${lvl}` 
+                                                                    : `${language === 'RU' ? 'Пик' : 'Peak'} L${lvl}`
+                                                            }
+                                                        </span>
+                                                        <span className={`text-[8.5px] font-bold ${count > 0 ? 'text-indigo-400' : 'text-slate-500'}`}>
+                                                            {language === 'RU' ? `В наличии: ${count}` : `Available: ${count}`}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    disabled={!canPlace}
+                                                    onClick={() => {
+                                                        playUiSound('CLICK');
+                                                        placeStoryHex(popupCell.q, popupCell.r, lvl);
+                                                        setLastPlacedKey(key);
+                                                        setPopupCell(null);
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 ${
+                                                        canPlace 
+                                                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20' 
+                                                            : 'bg-slate-800 text-slate-600 border border-slate-700/50 cursor-not-allowed'
+                                                    }`}
+                                                >
+                                                    {language === 'RU' ? 'Разместить' : 'Deploy'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    
+                                    {validOptions.length === 0 && (
+                                        <span className="text-[10px] text-slate-500 italic text-center py-2">
+                                            {language === 'RU' ? 'Нет доступных уровней для перехода' : 'No available heights to transition'}
+                                        </span>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    );
+                })()}
             </AnimatePresence>
 
             {/* INITIAL HINT OVERLAY */}
