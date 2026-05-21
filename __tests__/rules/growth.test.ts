@@ -326,4 +326,33 @@ describe('checkDigCondition', () => {
       expect(result.reason).toContain('UNSTABLE');
     });
   });
+
+  describe('pit escape constraint (user request)', () => {
+    it('cannot dig L0 to -1 if neighbors are too high (L2)', () => {
+      const hex = makeHex(0, 0, 0, 0);
+      const entity = makeEntity({ playerLevel: 3 });
+      // Digs to -1. Neighbor at L2 has difference | -1 - 2 | = 3 > 1. Trapped!
+      const n1 = makeHex(1, 0, 2, 2);
+      const neighbors = [{ q: 1, r: 0 }];
+      const grid = buildGrid([hex, n1]);
+
+      const result = checkDigCondition(hex, entity, neighbors, grid);
+      expect(result.canGrow).toBe(false);
+      expect(result.reason).toContain('TRAPPED');
+    });
+
+    it('can dig L0 to -1 if there is at least one escape neighbor at L0', () => {
+      const hex = makeHex(0, 0, 0, 0);
+      const entity = makeEntity({ playerLevel: 3 });
+      // Digs to -1. Escape neighbor n1 is at L0, difference | -1 - 0 | = 1 <= 1. OK!
+      // Other neighbor n2 is too high (L2).
+      const n1 = makeHex(1, 0, 0, 0);
+      const n2 = makeHex(-1, 0, 2, 2);
+      const neighbors = [{ q: 1, r: 0 }, { q: -1, r: 0 }];
+      const grid = buildGrid([hex, n1, n2]);
+
+      const result = checkDigCondition(hex, entity, neighbors, grid);
+      expect(result.canGrow).toBe(true);
+    });
+  });
 });

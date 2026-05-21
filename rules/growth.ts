@@ -26,17 +26,34 @@ export function checkDigCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel - 1;
 
-  // 1. HIGH GROUND RULE (User Request)
+  // 1. PIT ESCAPE CONSTRAINT (User Request)
+  // Ensure that if we dig down to targetLevel, there is at least one non-void passable neighbor
+  // we can safely transition to under the staircase rule (height difference <= 1) and of appropriate rank.
+  const neighborHexes = neighbors
+      .map(n => grid[getHexKey(n.q, n.r)])
+      .filter((h): h is Hex => !!(h && h.structureType !== 'VOID' && h.isPassable !== false));
+  
+  const hasEscapeHex = neighborHexes.some(h => {
+      const hLevel = h.currentLevel ?? 0;
+      const heightDiff = Math.abs(targetLevel - hLevel);
+      const hasRank = h.maxLevel <= _entity.playerLevel;
+      return heightDiff <= 1 && hasRank;
+  });
+
+  if (neighborHexes.length > 0 && !hasEscapeHex) {
+      return {
+          canGrow: false,
+          reason: `TRAPPED! No escape route if you dig here. Вы застрянете в яме (все соседи слишком высоко или требуют выше ранг).`
+      };
+  }
+
+  // 2. HIGH GROUND RULE (User Request)
   // "Dig up to not reaching 1 level to the level of the nearest hex"
   // Interpretation: You can dig down, but the new level must strictly be higher than the lowest neighbor.
   // Example: Neighbors L0. Current L2. Dig to L1? (1 > 0) OK.
   // Example: Neighbors L0. Current L1. Dig to L0? (0 > 0) False. Blocked.
   // Exception: Level 1 hexes can be excavated down to 0 without support (currentLevel > 1 restriction).
   if (currentLevel > 1) {
-      const neighborHexes = neighbors
-          .map(n => grid[getHexKey(n.q, n.r)])
-          .filter(h => h && h.structureType !== 'VOID');
-      
       if (neighborHexes.length > 0) {
           const minNeighborLevel = Math.min(...neighborHexes.map(h => h.currentLevel));
 
@@ -50,12 +67,12 @@ export function checkDigCondition(
       }
   }
 
-  // 2. FIRST CUT EXCEPTION (If not blocked by High Ground Rule above)
+  // 3. FIRST CUT EXCEPTION (If not blocked by High Ground Rule above)
   if (targetLevel >= -1) {
       return { canGrow: true };
   }
 
-  // 3. REVERSE STAIRCASE RULE (Deep Digging currentLevel <= -1)
+  // 4. REVERSE STAIRCASE RULE (Deep Digging currentLevel <= -1)
   if (currentLevel <= -1) {
       const deepNeighbors = neighbors.filter(n => {
           const neighborHex = grid[getHexKey(n.q, n.r)];
@@ -111,16 +128,26 @@ export function checkGrowthCondition(
 
   // 4. STABILITY CHECK (Strict Equal Level Rule for L1+)
   if (currentLevel >= 1) {
-    const supportNeighbors = neighbors.filter(n => {
+    // Check if there are at least 5 neighbors strictly higher than the current hex (Depression rule)
+    const higherNeighbors = neighbors.filter(n => {
        const h = grid[getHexKey(n.q, n.r)];
-       return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) === currentLevel;
+       return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) > currentLevel;
     });
 
-    if (supportNeighbors.length < 2) {
-      return {
-        canGrow: false, 
-        reason: `UNSTABLE! Need 2 neighbors at Level ${currentLevel} to build higher.`,
-      };
+    const isDepressionRule = higherNeighbors.length >= 5;
+
+    if (!isDepressionRule) {
+      const supportNeighbors = neighbors.filter(n => {
+         const h = grid[getHexKey(n.q, n.r)];
+         return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) === currentLevel;
+       });
+
+      if (supportNeighbors.length < 2) {
+        return {
+          canGrow: false, 
+          reason: `UNSTABLE! Need 2 neighbors at Level ${currentLevel} to build higher, or 5 higher neighbors (depression rule).`,
+        };
+      }
     }
   }
 
