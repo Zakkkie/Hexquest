@@ -4,6 +4,7 @@ import { X, Shield, Wrench, Zap, Package, Footprints, Gem, Circle, Terminal, Act
 import { getItemDef } from '../rules/items.ts';
 import { ItemIcon, getRarityBorder } from './hud/HudShared.tsx';
 import { GAME_CONFIG } from '../rules/config.ts';
+import { getStatusModifiers } from '../services/hexUtils.ts';
 
 interface InventoryModalProps {
   isOpen: boolean;
@@ -130,24 +131,84 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
         </div>
         
         <div className="p-4 md:p-8 overflow-y-auto flex-1 flex flex-col md:grid md:grid-cols-12 gap-8 relative z-20 no-scrollbar">
-          {/* Equipment Section */}
-          <div className="md:col-span-4 flex flex-col gap-5">
-            <div className="flex items-center gap-3">
-              <div className="w-1 h-4 bg-indigo-500" />
-              <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">
-                {language === 'RU' ? 'Активная Экипировка' : 'Active Equipment'}
-              </h3>
-            </div>
-            <div className="flex flex-col gap-2">
-              {renderEquipmentSlot('head', <Shield className="w-4 h-4" />, equipment.head)}
-              {renderEquipmentSlot('body', <Shield className="w-4 h-4" />, equipment.body)}
-              {renderEquipmentSlot('feet', <Footprints className="w-4 h-4" />, equipment.feet)}
-              {renderEquipmentSlot('necklace', <Gem className="w-4 h-4" />, equipment.necklace)}
-              {renderEquipmentSlot('ring', <Circle className="w-4 h-4" />, equipment.ring)}
-              {renderEquipmentSlot('tool', <Wrench className="w-4 h-4" />, equipment.tool)}
-              {renderEquipmentSlot('artifact', <Zap className="w-4 h-4" />, equipment.artifact)}
-            </div>
-          </div>
+          {(() => {
+            const modifiers = player ? getStatusModifiers(player, session) : null;
+            return (
+              <>
+                {/* Equipment Section */}
+                <div className="md:col-span-4 flex flex-col gap-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-4 bg-indigo-500" />
+                    <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">
+                      {language === 'RU' ? 'Активная Экипировка' : 'Active Equipment'}
+                    </h3>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {renderEquipmentSlot('head', <Shield className="w-4 h-4" />, equipment.head)}
+                    {renderEquipmentSlot('body', <Shield className="w-4 h-4" />, equipment.body)}
+                    {renderEquipmentSlot('feet', <Footprints className="w-4 h-4" />, equipment.feet)}
+                    {renderEquipmentSlot('necklace', <Gem className="w-4 h-4" />, equipment.necklace)}
+                    {renderEquipmentSlot('ring', <Circle className="w-4 h-4" />, equipment.ring)}
+                    {renderEquipmentSlot('tool', <Wrench className="w-4 h-4" />, equipment.tool)}
+                    {renderEquipmentSlot('artifact', <Zap className="w-4 h-4" />, equipment.artifact)}
+                  </div>
+
+                  {modifiers && (
+                    <div className="mt-3 p-4 bg-slate-900/60 border border-indigo-500/20 rounded-lg flex flex-col gap-2.5 relative">
+                      <div className="flex items-center gap-2 border-b border-indigo-500/10 pb-2">
+                        <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+                        <span className="text-[10px] font-black uppercase text-indigo-300 tracking-[0.1em]">
+                          {language === 'RU' ? 'Пассивные Бонусы' : 'Passive Equipment Effects'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                        <div className="flex flex-col bg-slate-950/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 text-[8px] uppercase font-sans font-extrabold tracking-wider leading-none mb-1">
+                            {language === 'RU' ? 'Расход Энергии' : 'Move Cost'}
+                          </span>
+                          <span className="text-amber-400 font-bold text-xs uppercase">
+                            {Math.round(modifiers.moveCostMultiplier * 100)}%
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-slate-950/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 text-[8px] uppercase font-sans font-extrabold tracking-wider leading-none mb-1">
+                            {language === 'RU' ? 'Радиус Обзора' : 'Scan Radius'}
+                          </span>
+                          <span className="text-sky-400 font-bold text-xs uppercase">
+                            {modifiers.fogRadius} hex
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-slate-950/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 text-[8px] uppercase font-sans font-extrabold tracking-wider leading-none mb-1">
+                            {language === 'RU' ? 'Добыча Бура' : 'Dig Yield'}
+                          </span>
+                          <span className="text-emerald-400 font-bold text-xs uppercase">
+                            +{Math.round((modifiers.digRewardMultiplier - 1) * 100)}%
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-slate-950/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 text-[8px] uppercase font-sans font-extrabold tracking-wider leading-none mb-1">
+                            {language === 'RU' ? 'Защита от Распада' : 'Reality Guard'}
+                          </span>
+                          <span className="text-purple-400 font-bold text-xs uppercase">
+                            {Math.round((1 - modifiers.entropyResistance) * 100)}%
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-slate-950/40 p-2 rounded border border-slate-900/50 col-span-2">
+                          <span className="text-slate-500 text-[8px] uppercase font-sans font-extrabold tracking-wider leading-none mb-1">
+                            {language === 'RU' ? 'Скорость Роста Экосистем' : 'Growth Acceleration'}
+                          </span>
+                          <span className="text-indigo-400 font-bold text-xs uppercase">
+                            +{modifiers.growthAccelerator} epochs / turn
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
 
           {/* Bag Section */}
           <div className="md:col-span-8 flex flex-col gap-5">

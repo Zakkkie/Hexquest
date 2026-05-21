@@ -1,6 +1,7 @@
 
 import { Hex, HexCoord, Entity, PathResult } from '../types';
 import { GAME_CONFIG, getLevelConfig, SAFETY_CONFIG } from '../rules/config';
+import { getItemDef } from '../rules/items';
 
 export const getHexKey = (q: number, r: number): string => `${q},${r}`;
 export const getCoordinatesFromKey = (key: string): HexCoord => {
@@ -109,6 +110,84 @@ export const getStatusModifiers = (actor: Entity, session?: any): {
       turboRecharge = upgrades.turboRecharge || 0;
       entropyResistance = 1.0 - ((upgrades.entropyResistance || 0) / 100);
       restorationMaster = upgrades.restorationMaster || 0;
+  }
+
+  // --- PASSIVE EQUIPMENT BONUSES ---
+  if (actor && actor.equipment) {
+      for (const [slot, item] of Object.entries(actor.equipment)) {
+          if (!item) continue;
+          const itemDef = getItemDef(item.baseId);
+          if (!itemDef) continue;
+
+          // 1. Armor item maxHpBonus -> passive reality/entropy decay resistance
+          if (itemDef.maxHpBonus) {
+              const resScale = itemDef.maxHpBonus * 0.0075; // e.g. 50 maxHP = 37.5% resistance
+              entropyResistance = Math.max(0.1, entropyResistance - resScale);
+              foundationStrength += Math.floor(itemDef.maxHpBonus / 10);
+          }
+
+          // 2. Boots item maxEnergyBonus -> moveCostMultiplier reduction & turbo recharge
+          if (itemDef.maxEnergyBonus) {
+              const energyScale = itemDef.maxEnergyBonus * 0.01; // e.g. 15 energy = 15% cheaper moves
+              moveCostMultiplier = Math.max(0.5, moveCostMultiplier - energyScale);
+              turboRecharge += Math.floor(itemDef.maxEnergyBonus / 3);
+          }
+
+          // 3. Drill/tools reward multiplier
+          if (itemDef.idPrefix.includes('drill') || itemDef.idPrefix.includes('pickaxe') || slot === 'tool') {
+              if (itemDef.idPrefix.includes('plasma_drill')) {
+                  digRewardMultiplier *= 1.5;
+                  doubleDigChance += 0.25;
+              } else if (itemDef.idPrefix.includes('hornet_drill')) {
+                  digRewardMultiplier *= 1.8;
+                  doubleDigChance += 0.35;
+              } else if (itemDef.idPrefix.includes('pickaxe')) {
+                  digRewardMultiplier *= 1.25;
+                  doubleDigChance += 0.50;
+              } else {
+                  digRewardMultiplier *= 1.15;
+                  diggerLuck += 1;
+              }
+          }
+
+          // 4. Rings & Necklaces (economy multiplier)
+          if (slot === 'ring' || slot === 'necklace' || itemDef.idPrefix.includes('ring') || itemDef.idPrefix.includes('necklace')) {
+              economicMultiplier += 0.20; // +20% coins
+              exchangeRate = Math.max(1, exchangeRate - 1); // 1 credit cheaper move recharge
+          }
+
+          // 5. Helmets & scannable visors (sensor range boost)
+          if (slot === 'head' || itemDef.idPrefix.includes('visor') || itemDef.idPrefix.includes('scanner') || itemDef.idPrefix.includes('helm')) {
+              if (itemDef.idPrefix.includes('scanner') || itemDef.idPrefix.includes('visor')) {
+                  fogRadius += 2;
+              } else {
+                  fogRadius += 1;
+              }
+          }
+
+          // 6. Artifact slots (uncommon/rare/legendary components)
+          if (slot === 'artifact' || itemDef.equipSlot === 'artifact') {
+              if (itemDef.idPrefix === 'cargo_prism') {
+                  growthAccelerator += 2;
+              } else if (itemDef.idPrefix === 'chronos_core') {
+                  growthAccelerator += 4;
+                  turboRecharge += 5;
+              } else if (itemDef.idPrefix === 'apex_core') {
+                  growthAccelerator += 5;
+                  entropyResistance = Math.max(0.05, entropyResistance - 0.5);
+                  economicMultiplier += 0.5;
+              } else if (itemDef.idPrefix === 'midas_chip') {
+                  economicMultiplier += 0.75;
+              } else if (itemDef.idPrefix === 'matter_prism') {
+                  growthAccelerator += 3;
+              } else if (itemDef.idPrefix === 'architect_nanites') {
+                  foundationStrength += 3;
+                  growthAccelerator += 3;
+              } else if (itemDef.idPrefix === 'stability_scanner') {
+                  entropyResistance = Math.max(0.1, entropyResistance - 0.3);
+              }
+          }
+      }
   }
 
   if (!actor || !actor.activeStatuses) return { moveCostMultiplier, fogRadius, digRewardMultiplier, exchangeRate, growthAccelerator, foundationStrength, economicMultiplier, diggerLuck, doubleDigChance, reserveCapacitor, turboRecharge, entropyResistance, restorationMaster };
