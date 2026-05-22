@@ -330,8 +330,42 @@ const HexNodeComponent = (props: HexNodeProps) => {
       }
   }, [offsetY, q, r]);
 
+  const neighborLevelsRef = useRef(neighborLevels);
   useEffect(() => {
+      neighborLevelsRef.current = neighborLevels;
+      if (updaterRef.current) {
+          updaterRef.current(wallUpdaterRegistry.latestCos, wallUpdaterRegistry.latestSin, wallUpdaterRegistry.latestRot);
+      }
+  }, [neighborLevels]);
+
+  useEffect(() => {
+      let lastRot: number | null = null;
+      let lastCurY: number | null = null;
+      let lastNeighLevels: number[] | null = null;
+
       const updater = (cos: number, sin: number, rot: number) => {
+          const curY = currentOffsetYRef.current;
+          const nLvl = neighborLevelsRef.current;
+          
+          let neighborChanged = false;
+          if (!lastNeighLevels) {
+              neighborChanged = true;
+          } else {
+              for (let i = 0; i < 6; i++) {
+                  if (nLvl[i] !== lastNeighLevels[i]) {
+                      neighborChanged = true;
+                      break;
+                  }
+              }
+          }
+          
+          if (rot === lastRot && curY === lastCurY && !neighborChanged) {
+              return; // Absolutely nothing changed! Avoid heavy computations or Konva updates completely!
+          }
+          lastRot = rot;
+          lastCurY = curY;
+          lastNeighLevels = [...nLvl];
+
           const gn = groupRef.current;
           if (gn) {
               gn.x(x * cos - y * sin);
@@ -345,7 +379,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
           const angleOffset = rot * DEG_TO_RAD;
           const px = new Float32Array(6);
           const py = new Float32Array(6);
-          const curY = currentOffsetYRef.current;
           for (let i = 0; i < 6; i++) {
               const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
               px[i] = Math.cos(angle) * HEX_SIZE;
@@ -360,7 +393,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
               const groupNode = wallGroupRefs.current[i];
               if (groupNode) {
                   if (isFrontFacing) {
-                      const nLevel = neighborLevels[5 - i];
+                      const nLevel = nLvl[5 - i];
                       let nY = 0;
                       if (nLevel === -99) nY = curY + MAX_WALL_DEPTH; 
                       else if (nLevel >= 0) nY = -(10 + nLevel * 10);
@@ -438,7 +471,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
           wallUpdaterRegistry.remove(updater);
           updaterRef.current = null;
       };
-  }, [x, y, neighborLevels, isRealVoid]);
+  }, [x, y, isRealVoid]);
 
   useEffect(() => {
       if (isRealVoid && voidOutlineRef.current) {

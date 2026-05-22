@@ -73,6 +73,7 @@ export const useGameStore = create<GameStore>()(
       lastVisualEvent: undefined,
       isCampaignLoading: false,
       loadingLevelId: null,
+      isCampaignHintCollapsed: false,
 
       // --- ASSEMBLE COMBINED ACTIONS VIA SLICES ---
       ...createAuthSlice(set as any, get as any),

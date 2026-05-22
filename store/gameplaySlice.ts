@@ -87,7 +87,12 @@ export const createGameplaySlice = (
     try {
       const initialSessionState = await createInitialSessionData(effectiveWin ?? null, levelConfig, get().language, stateUser, upgrades);
       engine = new GameEngine(initialSessionState); 
-      set(() => ({ session: engine!.state, hasActiveSession: true, isCampaignLoading: false }));
+      set(() => ({ 
+        session: engine!.state, 
+        hasActiveSession: true, 
+        isCampaignLoading: false,
+        isCampaignHintCollapsed: get().deviceType === 'MOBILE'
+      }));
     } catch (err) {
       console.error("Failed to start session", err);
       set(() => ({ isCampaignLoading: false, uiState: 'MENU' }));
@@ -768,7 +773,8 @@ export const createGameplaySlice = (
         newToast = { message: error.message || 'Error', type: 'error', timestamp: now };
       }
 
-      const shouldRender = tickCount % 2 === 0; 
+      const playerIsMoving = result.state.player.state === 'MOVING' || (prevState && (prevState.player.q !== result.state.player.q || prevState.player.r !== result.state.player.r));
+      const shouldRender = tickCount % 2 === 0 || playerIsMoving; 
       const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
       const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
 

@@ -19,6 +19,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
   const gameStatus = useGameStore(state => state.session?.gameStatus);
   const player = useGameStore(state => state.session?.player);
   const toast = useGameStore(state => state.toast);
+  const deviceType = useGameStore(state => state.deviceType);
+  const isMobile = deviceType === 'MOBILE';
   
   // UI State orchestration
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -96,7 +98,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                             <>
                                 <MonumentHintBanner />
                                 <SkirmishHintBanner />
-                                <CampaignHintBanner />
+                                {!isMobile && <CampaignHintBanner />}
                             </>
                         )}
                     </div>
@@ -109,6 +111,12 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                         onInspectItem={(item) => setInspectedItem(item)}
                         onOpenInventory={() => setShowInventory(true)}
                     />
+                )}
+
+                {gameStatus === 'PLAYING' && isMobile && (
+                    <div className="absolute bottom-[calc(90px+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm pointer-events-none flex flex-col gap-2.5">
+                        <CampaignHintBanner />
+                    </div>
                 )}
             </>
         )}

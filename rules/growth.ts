@@ -36,7 +36,7 @@ export function checkDigCondition(
   const hasEscapeHex = neighborHexes.some(h => {
       const hLevel = h.currentLevel ?? 0;
       const heightDiff = Math.abs(targetLevel - hLevel);
-      const hasRank = h.maxLevel <= _entity.playerLevel;
+      const hasRank = hLevel <= _entity.playerLevel;
       
       // If we are at or above neighbors, we aren't trapped in a hole, 
       // even if we can't jump to them yet (diff > 1), because we can keep digging down.

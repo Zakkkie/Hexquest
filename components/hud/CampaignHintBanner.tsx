@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useGameStore } from '../../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Target, CheckCircle, HelpCircle } from 'lucide-react';
+import { Target, CheckCircle, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { TEXT } from '../../services/i18n';
 
 const CampaignHintBanner: React.FC = () => {
@@ -10,6 +10,11 @@ const CampaignHintBanner: React.FC = () => {
     const grid = useGameStore(state => state.session?.grid);
     const minedHexes = useGameStore(state => state.session?.minedHexes);
     const language = useGameStore(state => state.language);
+    const isCampaignHintCollapsed = useGameStore(state => state.isCampaignHintCollapsed);
+    const toggleCampaignHintCollapse = useGameStore(state => state.toggleCampaignHintCollapse);
+    const playUiSound = useGameStore(state => state.playUiSound);
+    const deviceType = useGameStore(state => state.deviceType);
+    const isMobile = deviceType === 'MOBILE';
     
     const entropy = useGameStore(state => state.session?.entropy);
     const totalMinedMaterial = useGameStore(state => state.session?.totalMinedMaterial || 0);
@@ -190,55 +195,65 @@ const CampaignHintBanner: React.FC = () => {
 
     return (
         <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                className="pointer-events-auto w-full"
-                id="campaign-hint-banner"
-            >
-                <div className="p-3 md:p-4 rounded-xl md:rounded-2xl border bg-slate-950/85 backdrop-blur-md shadow-2xl flex flex-col gap-2 transition-all duration-300">
-                    <div className="flex items-center gap-2">
-                         <div className="p-2 rounded-lg bg-indigo-900/40 border border-indigo-500/30">
-                            {isCompleted ? <CheckCircle className="w-5 h-5 text-emerald-400" /> : <Target className="w-5 h-5 text-indigo-400" />}
-                         </div>
-                         <div className="flex flex-col flex-1 min-w-0">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
-                                {language === 'RU' ? 'ЗАДАЧА СИМУЛЯЦИИ' : 'SIMULATION OBJECTIVE'}
-                            </span>
-                            <span className="text-xs font-black text-white truncate leading-none uppercase">
-                                {activeLevelConfig.goalText}
-                            </span>
-                         </div>
-                    </div>
-                    {/* Progress */}
-                    <div className="flex flex-col gap-1.5 p-2 rounded-lg bg-slate-900/60 border border-slate-800 mt-1">
-                         <div className="flex items-center justify-between text-xs font-bold font-mono">
-                             <span className="text-slate-300 uppercase shrink truncate">{metrics.label}</span>
-                             <span className={isCompleted ? "text-emerald-400" : "text-amber-400"}>
-                                 {metrics.current} / {metrics.target}
-                             </span>
-                         </div>
-                         <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                             <div 
-                                 className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                                 style={{ width: `${progressPercent}%` }}
-                             />
-                         </div>
-                    </div>
-                    
-                    {tutorialHint && !isCompleted && (
-                        <div className="mt-1 p-2 md:p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex flex-col md:flex-row items-baseline md:items-start gap-1.5 md:gap-2.5">
-                            <div className="flex items-center gap-1.5 shrink-0 text-indigo-400 font-black text-[10px] uppercase tracking-widest leading-none pt-0.5">
-                                <HelpCircle className="w-3 h-3 animate-pulse" />
-                            </div>
-                            <p className="text-[11px] md:text-xs text-indigo-200/90 font-medium leading-normal md:leading-relaxed">
-                                {tutorialHint}
-                            </p>
+            {!isCampaignHintCollapsed && (
+                <motion.div
+                    initial={{ opacity: 0, y: isMobile ? 20 : -20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: isMobile ? 20 : -20, scale: 0.95 }}
+                    className="pointer-events-auto w-full"
+                    id="campaign-hint-banner"
+                >
+                    <div className="p-3 md:p-4 rounded-xl md:rounded-2xl border bg-slate-950/85 backdrop-blur-md shadow-2xl flex flex-col gap-2 transition-all duration-300">
+                        <div className="flex items-center gap-2">
+                             <div className="p-2 rounded-lg bg-indigo-900/40 border border-indigo-500/30">
+                                {isCompleted ? <CheckCircle className="w-5 h-5 text-emerald-400" /> : <Target className="w-5 h-5 text-indigo-400" />}
+                             </div>
+                             <div className="flex flex-col flex-1 min-w-0">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                                    {language === 'RU' ? 'ЗАДАЧА СИМУЛЯЦИИ' : 'SIMULATION OBJECTIVE'}
+                                </span>
+                                <span className="text-xs font-black text-white truncate leading-none uppercase">
+                                    {activeLevelConfig.goalText}
+                                </span>
+                             </div>
+                             <button
+                                 onClick={(e) => { e.stopPropagation(); toggleCampaignHintCollapse(); playUiSound('CLICK'); }}
+                                 className="p-1 px-1.5 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors shrink-0 cursor-pointer flex items-center justify-center touch-manipulation"
+                                 title={language === 'RU' ? 'Свернуть' : 'Collapse'}
+                                 id="campaign-hint-collapse-btn"
+                             >
+                                 {isMobile ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                             </button>
                         </div>
-                    )}
-                </div>
-            </motion.div>
+                        {/* Progress */}
+                        <div className="flex flex-col gap-1.5 p-2 rounded-lg bg-slate-900/60 border border-slate-800 mt-1">
+                             <div className="flex items-center justify-between text-xs font-bold font-mono">
+                                 <span className="text-slate-300 uppercase shrink truncate">{metrics.label}</span>
+                                 <span className={isCompleted ? "text-emerald-400" : "text-amber-400"}>
+                                     {metrics.current} / {metrics.target}
+                                 </span>
+                             </div>
+                             <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                 <div 
+                                     className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                     style={{ width: `${progressPercent}%` }}
+                                 />
+                             </div>
+                        </div>
+                        
+                        {tutorialHint && !isCompleted && (
+                            <div className="mt-1 p-2 md:p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex flex-col md:flex-row items-baseline md:items-start gap-1.5 md:gap-2.5">
+                                <div className="flex items-center gap-1.5 shrink-0 text-indigo-400 font-black text-[10px] uppercase tracking-widest leading-none pt-0.5">
+                                    <HelpCircle className="w-3 h-3 animate-pulse" />
+                                </div>
+                                <p className="text-[11px] md:text-xs text-indigo-200/90 font-medium leading-normal md:leading-relaxed">
+                                    {tutorialHint}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </motion.div>
+            )}
         </AnimatePresence>
     );
 };

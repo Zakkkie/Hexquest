@@ -36,6 +36,10 @@ export const createUiSlice = (
     audioService.setSfxMuted(val);
     set(() => ({ isSfxMuted: val }));
   },
+
+  toggleCampaignHintCollapse: () => {
+    set((state) => ({ isCampaignHintCollapsed: !state.isCampaignHintCollapsed }));
+  },
   
   playUiSound: (type: UiSoundType) => {
     const map: Record<UiSoundType, string> = {

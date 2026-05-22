@@ -19,7 +19,6 @@ const getHeightOffset = (level: number) => {
 
 // Worker State
 let cachedGrid: any = null;
-let cachedNeighborLevelsMap: Record<string, number[]> = {};
 
 let cachedPlayer: any = null;
 let cachedRotation: number = 0;
@@ -27,23 +26,6 @@ let cachedBots: any = null;
 let cachedPendingKey: string | null = null;
 let cachedSelectedHexId: string | null = null;
 let cachedIsCampaign: boolean = false;
-
-const calculateNeighborLevels = (grid: any, isCampaign: boolean) => {
-    const map: Record<string, number[]> = {};
-    for (const key in grid) {
-        const hex: any = grid[key];
-        const neighbors = NEIGHBOR_DIRECTIONS.map(d => ({ q: hex.q + d.q, r: hex.r + d.r }));
-        const levels = neighbors.map(n => {
-            const nKey = getHexKey(n.q, n.r);
-            const nHex = grid[nKey];
-            // If neighbor is missing OR not revealed, treat it as VOID to drop the wall and create actual volume at edges
-            if (!nHex || (!nHex.revealed && !isCampaign)) return VOID_LEVEL_FLAG;
-            return nHex.currentLevel ?? 0;
-        });
-        map[key] = levels;
-    }
-    return map;
-};
 
 self.onmessage = (e) => {
     const { 
@@ -64,7 +46,6 @@ self.onmessage = (e) => {
 
     if (gridChanged) {
         cachedGrid = grid;
-        cachedNeighborLevelsMap = calculateNeighborLevels(grid, !!isCampaign);
     }
 
     const items: any[] = [];
@@ -135,7 +116,12 @@ self.onmessage = (e) => {
         const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : currentLevel);
 
         const isOccupiedByPlayer = hq === playerQ && hr === playerR;
-        const neighborLevels = cachedNeighborLevelsMap[hexId] || [VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG];
+        const neighborLevels = NEIGHBOR_DIRECTIONS.map(d => {
+            const nKey = getHexKey(hq + d.q, hr + d.r);
+            const nHex = grid[nKey];
+            if (!nHex || (!nHex.revealed && !cachedIsCampaign)) return VOID_LEVEL_FLAG;
+            return nHex.currentLevel ?? 0;
+        });
 
         items.push({
             type: 'HEX',

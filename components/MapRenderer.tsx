@@ -351,18 +351,49 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
     const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
 
+    const lastPostedRef = useRef<{
+        grid: any;
+        rotation: number;
+        player: any;
+        bots: any;
+        pendingKey: any;
+        selectedHexId: any;
+    }>({
+        grid: null,
+        rotation: -999,
+        player: null,
+        bots: null,
+        pendingKey: null,
+        selectedHexId: null
+    });
+
     // Unified Worker Update Strategy: Consolidates both grid & view to minimize serializing overhead and prevent multiple cloning frames.
     useEffect(() => {
         if (grid && player && workerRef.current) {
-            workerRef.current.postMessage({ 
-                grid,
-                rotation, 
-                player, 
-                bots,
-                pendingKey,
-                selectedHexId,
-                isCampaign: !!activeLevelConfig
-            });
+            const last = lastPostedRef.current;
+            
+            // Check if anything significant changed to avoid redundant postMessage calls
+            const gridChanged = grid !== last.grid;
+            const playerChanged = player !== last.player;
+            const botsChanged = bots !== last.bots;
+            const pendingKeyChanged = pendingKey !== last.pendingKey;
+            const selectedHexIdChanged = selectedHexId !== last.selectedHexId;
+            
+            // Throttling/Debouncing rotation changes: Only update depth sorting if changed by > 4 degrees
+            const rotationChanged = Math.abs(rotation - last.rotation) > 4;
+            
+            if (gridChanged || playerChanged || botsChanged || pendingKeyChanged || selectedHexIdChanged || rotationChanged) {
+                lastPostedRef.current = { grid, rotation, player, bots, pendingKey, selectedHexId };
+                workerRef.current.postMessage({ 
+                    grid,
+                    rotation, 
+                    player, 
+                    bots,
+                    pendingKey,
+                    selectedHexId,
+                    isCampaign: !!activeLevelConfig
+                });
+            }
         }
     }, [grid, rotation, player, bots, pendingKey, selectedHexId, activeLevelConfig]);
 

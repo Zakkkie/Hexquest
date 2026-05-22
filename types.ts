@@ -511,6 +511,7 @@ export interface GameState {
   lastVisualEvent?: { type: string; time: number };
   isCampaignLoading: boolean;
   loadingLevelId: string | null;
+  isCampaignHintCollapsed?: boolean;
 }
 
 // --- ACTION TYPES ---

@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { useGameStore } from '../../store';
-import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Info, Mountain } from 'lucide-react';
+import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Info, Mountain, Target } from 'lucide-react';
 import HexButton from '../HexButton';
 import { getHexKey, getNeighbors, getSecondsToGrow } from '../../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
@@ -34,6 +34,9 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const playUiSound = useGameStore(state => state.playUiSound);
     const togglePlayerGrowth = useGameStore(state => state.togglePlayerGrowth);
     const showToast = useGameStore(state => state.showToast);
+    
+    const isCampaignHintCollapsed = useGameStore(state => state.isCampaignHintCollapsed);
+    const toggleCampaignHintCollapse = useGameStore(state => state.toggleCampaignHintCollapse);
     
     const mainButtonSize = "lg";
 
@@ -235,14 +238,30 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                         <div className="flex items-center gap-1.5">
                             {/* Inventory Toggle */}
                             <div 
-                                className="flex items-center gap-2 px-2 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all shrink-0 touch-manipulation" 
+                                className="flex items-center gap-1.5 px-2 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all shrink-0 touch-manipulation" 
                                 onClick={() => { onOpenInventory(); playUiSound('CLICK'); }}
+                                title={language === 'RU' ? 'Инвентарь' : 'Inventory'}
                             >
                                 <Backpack className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-400 transition-colors" />
-                                <span className="text-[10px] font-bold text-slate-500 group-hover:text-white font-mono tracking-widest uppercase hidden md:inline">
+                                <span className="text-[10px] font-bold text-slate-500 group-hover:text-white font-mono tracking-widest uppercase inline">
                                     {language === 'RU' ? 'ИНВ' : 'INV'}
                                 </span>
                             </div>
+
+                            {/* Campaign Hint Toggle Button next to Inventory */}
+                            {activeLevelConfig && (
+                                <div 
+                                    className={`flex items-center gap-1.5 px-2 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border cursor-pointer group hover:bg-slate-800 transition-all shrink-0 touch-manipulation [content-visibility:auto] ${isCampaignHintCollapsed ? 'border-amber-500/50 text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse' : 'border-slate-800 text-slate-500'}`} 
+                                    onClick={() => { toggleCampaignHintCollapse(); playUiSound('CLICK'); }}
+                                    title={language === 'RU' ? 'Показать/Скрыть Цель' : 'Show/Hide Objective'}
+                                    id="campaign-hint-dock-toggle"
+                                >
+                                    <Target className={`w-3.5 h-3.5 transition-colors ${isCampaignHintCollapsed ? 'text-amber-400' : 'text-slate-500 group-hover:text-indigo-400'}`} />
+                                    <span className={`text-[10px] font-bold font-mono tracking-widest uppercase inline ${isCampaignHintCollapsed ? 'text-amber-400' : 'text-slate-500 group-hover:text-white'}`}>
+                                        {language === 'RU' ? 'ЦЕЛЬ' : 'GOAL'}
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Mission Goal / Mini-Window */}
                             <div 
