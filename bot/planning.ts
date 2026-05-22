@@ -182,7 +182,7 @@ const findDestroyerTarget = (
         if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
         
         // НОВОЕ ИСПРАВЛЕНИЕ: Игнорируем гексы, на которые бот не может залезть из-за ранга
-        if (hex.maxLevel > bot.playerLevel) continue;
+        if (hex.currentLevel > bot.playerLevel) continue;
         
         let score = 0;
         if (hex.ownerId === player.id) {
@@ -242,7 +242,7 @@ export const findHiveTarget = (
         if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
 
         // НОВОЕ ИСПРАВЛЕНИЕ: Игнорируем гексы, на которые бот не может залезть из-за ранга
-        if (hex.maxLevel > bot.playerLevel) continue;
+        if (hex.currentLevel > bot.playerLevel) continue;
 
         let potentialScore = 0;
         let chainResult: ScoredTarget | null = null;
@@ -317,7 +317,7 @@ export const findBestDigTargets = (
         
         // 1. Игнорируем гексы, на которые бот не может залезть из-за ранга
         // (Но если он уже стоит на нём — игнорировать не нужно!)
-        if (hex.maxLevel > bot.playerLevel && cubeDistance(botPos, hex) > 0) continue;
+        if (hex.currentLevel > bot.playerLevel && cubeDistance(botPos, hex) > 0) continue;
 
         // 2. Защита: не копаем чужие базы (если мы не DESTROYER)
         if (hex.ownerId && hex.ownerId !== bot.id && hex.maxLevel > 0) continue;

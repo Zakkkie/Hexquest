@@ -80,7 +80,7 @@ const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObstacles:
         if (current.dist >= maxDist) continue;
         
         const currentHex = grid[hexKey(current.q, current.r)];
-        const currentLevel = currentHex ? currentHex.maxLevel : 0;
+        const currentLevel = currentHex ? currentHex.currentLevel : 0;
         
         const neighbors = getNeighbors(current.q, current.r);
         for (const n of neighbors) {
@@ -89,8 +89,8 @@ const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObstacles:
             
             const nHex = grid[nKey];
             if (!nHex || nHex.structureType === 'VOID') continue;
-            if (nHex.maxLevel > bot.playerLevel) continue;
-            if (Math.abs(currentLevel - nHex.maxLevel) > 1) continue;
+            if (nHex.currentLevel > bot.playerLevel) continue;
+            if (Math.abs(currentLevel - nHex.currentLevel) > 1) continue;
             
             reachable.add(nKey);
             queue.push({ q: n.q, r: n.r, dist: current.dist + 1 });
@@ -102,7 +102,7 @@ const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObstacles:
 const yieldMove = (bot: Entity, grid: Record<string, Hex>, obstacles: HexCoord[], monument: Hex | null, stateVersion: number, mem: BotMemory, reason: string): AiResult | null => {
     const nbs = getNeighbors(bot.q, bot.r).filter(n => {
         const h = grid[hexKey(n.q, n.r)];
-        if (!h || h.structureType === 'VOID' || h.maxLevel > bot.playerLevel) return false;
+        if (!h || h.structureType === 'VOID' || h.currentLevel > bot.playerLevel) return false;
         if (obstacles.some(o => o.q === n.q && o.r === n.r)) return false;
         return true;
     });
@@ -236,7 +236,7 @@ const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, index: WorldIn
                 const hex = grid[id];
                 if (!hex || hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
                 if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
-                if (hex.maxLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
+                if (hex.currentLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
                 if (claimedSet.has(hex.id) || (mem.blacklistedTargets || []).includes(hex.id)) continue;
 
                 const check = checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, _navObstacles);
@@ -403,7 +403,7 @@ const buildCompetePlan = (
         if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
         
         // Не можем залезть, если ранг слишком мал (кроме случая когда мы уже стоим на нем)
-        if (hex.maxLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
+        if (hex.currentLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
         
         if (claimedSet.has(hex.id) || (mem.blacklistedTargets || []).includes(hex.id)) continue;
 
@@ -578,7 +578,7 @@ const buildCampaignPlan = (
                     const hex = grid[id];
                     if (!hex || hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
                     if (hex.ownerId && hex.ownerId !== bot.id) continue;
-                    if (hex.maxLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
+                    if (hex.currentLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
                     
                     if (claimedSet.has(hex.id) || (mem.blacklistedTargets || []).includes(hex.id)) continue;
                     

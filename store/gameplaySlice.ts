@@ -7,6 +7,7 @@ import { generateMonumentRecipe } from '../rules/items.ts';
 import { effectPool } from '../services/effectPool.ts';
 import { historyService } from '../services/historyService.ts';
 import { createInitialSessionData } from '../services/sessionFactory.ts';
+import { textureCache } from '../services/textureCache.ts';
 import { TEXT } from '../services/i18n.ts';
 import { getHexKey, findPath, cubeDistance } from '../services/hexUtils.ts';
 import { 
@@ -45,6 +46,9 @@ export const createGameplaySlice = (
   startNewGame: async (winCondition?: WinCondition, levelConfig?: LevelConfig) => {
     audioService.play('UI_CLICK');
     get().abandonSession();
+    
+    // Clear the rendering canvas/texture cache to free precious RAM/GPU memory on level transitions
+    textureCache.clear();
     
     let effectiveWin = winCondition;
 
@@ -117,6 +121,7 @@ export const createGameplaySlice = (
       engine = null;
     }
     historyService.clear();
+    textureCache.clear();
     set(() => ({ 
       session: null, 
       hasActiveSession: false, 
@@ -260,7 +265,7 @@ export const createGameplaySlice = (
     }
     
     // LEVEL RESTRICTIONS CHECKS
-    if (targetHex && targetHex.structureType !== 'VOID' && targetHex.maxLevel > session.player.playerLevel) {
+    if (targetHex && targetHex.structureType !== 'VOID' && targetHex.currentLevel > session.player.playerLevel) {
       audioService.play('ERROR');
       set(() => ({ toast: { message: lConfig?.HUD?.ERROR_RANK || "Insufficient Rank", type: 'error', timestamp: Date.now() } }));
       return;

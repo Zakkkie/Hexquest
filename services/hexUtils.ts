@@ -385,7 +385,7 @@ export const findPath = (
       if (neighborHex && neighborHex.structureType === 'VOID') continue;
 
       // 1. Rank Check: Cannot enter hex higher than player rank
-      if (neighborHex && neighborHex.maxLevel > rank) {
+      if (neighborHex && neighborHex.currentLevel > rank) {
         blockedByRank = true;
         continue; 
       }

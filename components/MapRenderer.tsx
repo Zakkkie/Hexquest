@@ -15,15 +15,6 @@ import { safifyCoord } from '../utils/safeCoordinates.ts';
 // @ts-ignore
 import VisualWorker from '../services/visualWorker.ts?worker';
 
-// CHUNK CONFIGURATION
-const CHUNK_SIZE = 8; // 8x8 hexes per chunk
-
-const getChunkKey = (q: number, r: number) => {
-    const cq = Math.floor(q / CHUNK_SIZE);
-    const cr = Math.floor(r / CHUNK_SIZE);
-    return `${cq},${cr}`;
-};
-
 // Optimized Tutorial Status Check
 const getTutorialData = (grid: Record<string, Hex>, player: Entity, levelId?: string) => {
     if (!levelId) return null;
@@ -360,61 +351,20 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
     const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
 
-    const chunks = useMemo(() => {
-        if (!grid) return {};
-        const newChunks: Record<string, Hex[]> = {};
-        Object.values(grid).forEach(hex => {
-            const key = getChunkKey(hex.q, hex.r);
-            if (!newChunks[key]) newChunks[key] = [];
-            newChunks[key].push(hex);
-        });
-        return newChunks;
-    }, [grid]);
-
-    const visibleChunks = useMemo(() => {
-        if (!grid) return [];
-        // Simple culling: only chunks near the player (since we have radial fog anyway)
-        const playerChunkKey = getChunkKey(playerQ || 0, playerR || 0);
-        const [pcq, pcr] = playerChunkKey.split(',').map(Number);
-        
-        const visible: string[] = [];
-        const CHUNK_RADIUS = 3; // Reduced from 8 to optimize performance (covers ~24 hex radius)
-        
-        for (let cq = pcq - CHUNK_RADIUS; cq <= pcq + CHUNK_RADIUS; cq++) {
-            for (let cr = pcr - CHUNK_RADIUS; cr <= pcr + CHUNK_RADIUS; cr++) {
-                const key = `${cq},${cr}`;
-                if (chunks[key]) visible.push(key);
-            }
-        }
-        return visible;
-    }, [chunks, playerQ, playerR]);
-
-    // 1. Update worker with Grid/Chunks (Expensive, only on grid change)
-    useEffect(() => {
-        if (grid && workerRef.current) {
-            workerRef.current.postMessage({ 
-                type: 'SET_GRID',
-                grid, 
-                chunks
-            });
-        }
-    }, [grid, chunks]);
-
-    // 2. Update worker with View (Frequent: rotation, player movement, bots, selection)
+    // Unified Worker Update Strategy: Consolidates both grid & view to minimize serializing overhead and prevent multiple cloning frames.
     useEffect(() => {
         if (grid && player && workerRef.current) {
             workerRef.current.postMessage({ 
-                type: 'UPDATE_VIEW',
+                grid,
                 rotation, 
                 player, 
                 bots,
-                visibleChunks,
                 pendingKey,
                 selectedHexId,
                 isCampaign: !!activeLevelConfig
             });
         }
-    }, [rotation, player, bots, visibleChunks, pendingKey, selectedHexId, activeLevelConfig]);
+    }, [grid, rotation, player, bots, pendingKey, selectedHexId, activeLevelConfig]);
 
     // Explicitly memoize onHexClick to ensure stability for renderList
     const memoizedOnHexClick = useCallback((q: number, r: number) => {

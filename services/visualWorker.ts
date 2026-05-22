@@ -1,4 +1,3 @@
-
 const VOID_LEVEL_FLAG = -99;
 const HEX_SIZE = 35;
 
@@ -20,18 +19,16 @@ const getHeightOffset = (level: number) => {
 
 // Worker State
 let cachedGrid: any = null;
-let cachedChunks: any = null;
 let cachedNeighborLevelsMap: Record<string, number[]> = {};
 
 let cachedPlayer: any = null;
 let cachedRotation: number = 0;
 let cachedBots: any = null;
-let cachedVisibleChunks: any = null;
 let cachedPendingKey: string | null = null;
 let cachedSelectedHexId: string | null = null;
 let cachedIsCampaign: boolean = false;
 
-const calculateNeighborLevels = (grid: any) => {
+const calculateNeighborLevels = (grid: any, isCampaign: boolean) => {
     const map: Record<string, number[]> = {};
     for (const key in grid) {
         const hex: any = grid[key];
@@ -40,7 +37,7 @@ const calculateNeighborLevels = (grid: any) => {
             const nKey = getHexKey(n.q, n.r);
             const nHex = grid[nKey];
             // If neighbor is missing OR not revealed, treat it as VOID to drop the wall and create actual volume at edges
-            if (!nHex || (!nHex.revealed && !cachedIsCampaign)) return VOID_LEVEL_FLAG;
+            if (!nHex || (!nHex.revealed && !isCampaign)) return VOID_LEVEL_FLAG;
             return nHex.currentLevel ?? 0;
         });
         map[key] = levels;
@@ -50,34 +47,25 @@ const calculateNeighborLevels = (grid: any) => {
 
 self.onmessage = (e) => {
     const { 
-        type,
         grid, rotation, player, bots, 
-        visibleChunks, chunks, pendingKey, 
-        selectedHexId, isCampaign
+        pendingKey, selectedHexId, isCampaign
     } = e.data;
 
-    if (type === 'SET_GRID') {
-        cachedGrid = grid;
-        cachedChunks = chunks;
-        cachedNeighborLevelsMap = calculateNeighborLevels(grid);
-        self.postMessage({ neighborLevelsMap: cachedNeighborLevelsMap });
-        // Don't return, fall through to re-render if we have the view cached
-        if (!cachedPlayer) return; 
-    } else {
-        cachedRotation = rotation;
-        cachedPlayer = player;
-        cachedBots = bots;
-        cachedVisibleChunks = visibleChunks;
-        cachedPendingKey = pendingKey;
-        cachedSelectedHexId = selectedHexId;
-        cachedIsCampaign = !!isCampaign;
-    }
+    if (!grid || !player) return;
 
-    // Default or 'UPDATE_VIEW'
-    const currentGrid = cachedGrid;
-    const currentChunks = cachedChunks;
+    const gridChanged = grid !== cachedGrid || !!isCampaign !== cachedIsCampaign;
     
-    if (!currentGrid || !cachedPlayer) return;
+    cachedRotation = rotation;
+    cachedPlayer = player;
+    cachedBots = bots;
+    cachedPendingKey = pendingKey;
+    cachedSelectedHexId = selectedHexId;
+    cachedIsCampaign = !!isCampaign;
+
+    if (gridChanged) {
+        cachedGrid = grid;
+        cachedNeighborLevelsMap = calculateNeighborLevels(grid, !!isCampaign);
+    }
 
     const items: any[] = [];
 
@@ -99,88 +87,85 @@ self.onmessage = (e) => {
     const playerQ = cachedPlayer.q;
     const playerR = cachedPlayer.r;
 
-    // 2. Collect Hexes from visible chunks
-    if (cachedVisibleChunks && currentChunks) {
-        for (const chunkKey of cachedVisibleChunks) {
-            const hexes = currentChunks[chunkKey];
-            if (!hexes) continue;
+    // 2. Iterate flat over the grid and perform rapid distance checking (O(1) metric with distance culling)
+    for (const hexId in grid) {
+        const hex = grid[hexId];
+        const hq = hex.q;
+        const hr = hex.r;
+        const distToPlayer = cubeDistance({ q: playerQ, r: playerR }, { q: hq, r: hr });
+        
+        // Culling: Any hex further than 12 tiles from the player cannot have active opacity or lighting, skip it immediately.
+        if (distToPlayer > 12) continue;
 
-            for (const hex of hexes) {
-                const hq = hex.q;
-                const hr = hex.r;
-                const distToPlayer = cubeDistance({ q: playerQ, r: playerR }, { q: hq, r: hr });
-                const isRevealed = !!hex.revealed || cachedIsCampaign;
+        const isRevealed = !!hex.revealed || cachedIsCampaign;
 
-                // A. Active Discovery
-                let discoveryVisibility = 0;
-                if (distToPlayer <= 1) discoveryVisibility = 1.0;
-                else if (distToPlayer === 2) discoveryVisibility = 0.66;
-                else if (distToPlayer === 3) discoveryVisibility = 0.33;
+        // A. Active Discovery
+        let discoveryVisibility = 0;
+        if (distToPlayer <= 1) discoveryVisibility = 1.0;
+        else if (distToPlayer === 2) discoveryVisibility = 0.66;
+        else if (distToPlayer === 3) discoveryVisibility = 0.33;
 
-                // B. Memory/Revealed Visibility
-                let memoryVisibility = 0;
-                if (isRevealed) {
-                    if (distToPlayer <= 7) {
-                        memoryVisibility = 1.0;
-                    } else if (distToPlayer <= 12) {
-                        memoryVisibility = (12 - distToPlayer) * 0.2;
-                    }
-                }
-
-                const finalVisibility = discoveryVisibility > memoryVisibility ? discoveryVisibility : memoryVisibility;
-                
-                const finalOpacity = finalVisibility;
-                const finalLighting = finalVisibility;
-
-                if (finalOpacity <= 0 && finalLighting <= 0) continue;
-
-                const rawX = HEX_SIZE * (SQRT3 * hq + SQRT3_2 * hr);
-                const rawY = HEX_SIZE * (ONE_POINT_FIVE * hr);
-                
-                // Deterministic distance from camera, including height for subtle sorting stability
-                // Using 0.8 vertical squash factor to match pixel-space depth
-                const baseDepth = (rawX * sin + rawY * cos) * 0.8;
-                const depth = baseDepth + (hex.currentLevel || 0) * 0.01;
-
-                const hexId = hex.id;
-                const isVoid = hex.structureType === 'VOID';
-                const currentLevel = hex.currentLevel ?? 0;
-                const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : currentLevel);
-
-                const isOccupiedByPlayer = hq === playerQ && hr === playerR;
-                const neighborLevels = cachedNeighborLevelsMap[hexId] || [VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG];
-
-                items.push({
-                    type: 'HEX',
-                    depth: depth,
-                    id: hexId,
-                    props: {
-                        x: rawX, y: rawY,
-                        q: hq, r: hr,
-                        id: hexId,
-                        offsetY: isRevealed ? offsetY : -10,
-                        level: isRevealed ? currentLevel : 0,
-                        maxLevel: isRevealed ? hex.maxLevel : 0,
-                        structureType: isRevealed ? (hex.structureType as string) : 'NONE',
-                        neighborLevels: isRevealed ? neighborLevels : [0,0,0,0,0,0],
-                        isSelected: cachedSelectedHexId === hexId,
-                        isPending: hexId === cachedPendingKey,
-                        isOccupied: isRevealed && (isOccupiedByPlayer || botPositions.has(`${hq},${hr}`)),
-                        isGrowing: isRevealed && hex.progress > 0 && !isVoid,
-                        isRankLocked: isRevealed && hex.maxLevel > cachedPlayer.playerLevel,
-                        progress: isRevealed ? hex.progress : 0,
-                        durability: isRevealed ? hex.durability : 0,
-                        artifactType: isRevealed ? hex.artifact?.type : undefined,
-                        biome: isRevealed ? hex.biome : undefined,
-                        poiType: isRevealed ? hex.poiType : undefined,
-                        isPassable: hex.isPassable,
-                        isRevealed: isRevealed,
-                        opacity: finalOpacity,
-                        lighting: finalLighting
-                    }
-                });
+        // B. Memory/Revealed Visibility
+        let memoryVisibility = 0;
+        if (isRevealed) {
+            if (distToPlayer <= 7) {
+                memoryVisibility = 1.0;
+            } else if (distToPlayer <= 12) {
+                memoryVisibility = (12 - distToPlayer) * 0.2;
             }
         }
+
+        const finalVisibility = discoveryVisibility > memoryVisibility ? discoveryVisibility : memoryVisibility;
+        
+        const finalOpacity = finalVisibility;
+        const finalLighting = finalVisibility;
+
+        if (finalOpacity <= 0 && finalLighting <= 0) continue;
+
+        const rawX = HEX_SIZE * (SQRT3 * hq + SQRT3_2 * hr);
+        const rawY = HEX_SIZE * (ONE_POINT_FIVE * hr);
+        
+        // Deterministic distance from camera, including height for subtle sorting stability
+        // Using 0.8 vertical squash factor to match pixel-space depth
+        const baseDepth = (rawX * sin + rawY * cos) * 0.8;
+        const depth = baseDepth + (hex.currentLevel || 0) * 0.01;
+
+        const isVoid = hex.structureType === 'VOID';
+        const currentLevel = hex.currentLevel ?? 0;
+        const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : currentLevel);
+
+        const isOccupiedByPlayer = hq === playerQ && hr === playerR;
+        const neighborLevels = cachedNeighborLevelsMap[hexId] || [VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG, VOID_LEVEL_FLAG];
+
+        items.push({
+            type: 'HEX',
+            depth: depth,
+            id: hexId,
+            props: {
+                x: rawX, y: rawY,
+                q: hq, r: hr,
+                id: hexId,
+                offsetY: isRevealed ? offsetY : -10,
+                level: isRevealed ? currentLevel : 0,
+                maxLevel: isRevealed ? hex.maxLevel : 0,
+                structureType: isRevealed ? (hex.structureType as string) : 'NONE',
+                neighborLevels: isRevealed ? neighborLevels : [0,0,0,0,0,0],
+                isSelected: cachedSelectedHexId === hexId,
+                isPending: hexId === cachedPendingKey,
+                isOccupied: isRevealed && (isOccupiedByPlayer || botPositions.has(`${hq},${hr}`)),
+                isGrowing: isRevealed && hex.progress > 0 && !isVoid,
+                isRankLocked: isRevealed && currentLevel > cachedPlayer.playerLevel,
+                progress: isRevealed ? hex.progress : 0,
+                durability: isRevealed ? hex.durability : 0,
+                artifactType: isRevealed ? hex.artifact?.type : undefined,
+                biome: isRevealed ? hex.biome : undefined,
+                poiType: isRevealed ? hex.poiType : undefined,
+                isPassable: hex.isPassable,
+                isRevealed: isRevealed,
+                opacity: finalOpacity,
+                lighting: finalLighting
+            }
+        });
     }
 
     // 3. Collect Units
@@ -193,7 +178,7 @@ self.onmessage = (e) => {
         const uR = u.r;
 
         if (!u.isPlayer) {
-            const uHex = currentGrid[getHexKey(uQ, uR)];
+            const uHex = grid[getHexKey(uQ, uR)];
             const distToPlayer = cubeDistance({ q: uQ, r: uR }, playerPos);
             const isRevealed = uHex && (uHex.revealed || cachedIsCampaign);
             
@@ -221,7 +206,7 @@ self.onmessage = (e) => {
         const rawY = HEX_SIZE * (ONE_POINT_FIVE * uR);
         const baseDepth = (rawX * sin + rawY * cos) * 0.8;
 
-        const uHex = currentGrid[getHexKey(uQ, uR)];
+        const uHex = grid[getHexKey(uQ, uR)];
         const hLevel = uHex ? (uHex.currentLevel ?? 0) : 0;
         const depthBias = u.state === 'MOVING' ? 50 : 1; 
 
@@ -257,10 +242,10 @@ self.onmessage = (e) => {
     const signature = sigParts.join('|');
     const shouldUpdate = 
         signature !== (self as any).lastSignature ||
-        type === 'SET_GRID';
+        gridChanged;
 
     if (shouldUpdate) {
         (self as any).lastSignature = signature;
         self.postMessage({ renderItems: items });
     }
-}
+};
