@@ -2,6 +2,7 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { Group, Path, Circle, Text, Line, Star } from 'react-konva';
 import Konva from 'konva';
+import { useGameStore } from '../store.ts';
 import { HEX_SIZE, GAME_CONFIG } from '../rules/config.ts';
 import { textureService } from '../services/textureService.ts';
 import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
@@ -62,6 +63,7 @@ export interface HexNodeProps {
   playerR?: number;
   playerGrowthIntent?: string | null;
   growthAccelerator?: number;
+  renderMode?: { detailLevel: string; showTexture: boolean; showGlow: boolean; showDetails: boolean };
 }
 
 // Precompute the base (unsquashed) hexagon path centered at 0,0
@@ -126,7 +128,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
       theme, isSelected, isPending, pendingCost, 
       isTutorialTarget, isTargetArrow, tutorialColor, isMissingSupport, 
       isGrowing, progress, durability, artifactType,
-      biome, poiType, isPassable,
+      poiType,
       isRevealed,
       q, r, id,
       onHexClick, onHover,
@@ -137,7 +139,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
       playerQ,
       playerR,
       playerGrowthIntent,
-      growthAccelerator = 0
+      growthAccelerator = 0,
+      renderMode
   } = props;
 
   const isPlayerAction = !!(isGrowing && playerQ === q && playerR === r);
@@ -147,12 +150,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Textures are now always loaded since LOD is removed
   const topTexture = useMemo(() => {
+      if (renderMode && !renderMode.showTexture) return null;
       return textureService.getTexture(level, q, r, undefined);
-  }, [level, q, r]);
+  }, [level, q, r, renderMode]);
 
   const sideTexture = useMemo(() => {
+      if (renderMode && !renderMode.showTexture) return null;
       return textureService.getSideTexture(level, undefined);
-  }, [level]);
+  }, [level, renderMode]);
 
   const isRealVoid = structureType === 'VOID';
   const isMonument = structureType === 'MONUMENT';
@@ -474,6 +479,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   }, [x, y, isRealVoid]);
 
   useEffect(() => {
+      if (useGameStore.getState().isLiteMode) return;
       if (isRealVoid && voidOutlineRef.current) {
           const tween = new Konva.Tween({
               node: voidOutlineRef.current,
@@ -489,6 +495,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   }, [isRealVoid]);
 
   useEffect(() => {
+      if (useGameStore.getState().isLiteMode) return;
       if (isMonument && monumentGlowRef.current) {
           const tween = new Konva.Tween({
               node: monumentGlowRef.current,
@@ -504,6 +511,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Bouncing Arrow Animation - Decoupled from absolute coordinate recalculation
   useEffect(() => {
+      if (useGameStore.getState().isLiteMode) return;
       if (isTargetArrow && arrowRef.current) {
           const tween = new Konva.Tween({
               node: arrowRef.current,
@@ -790,47 +798,17 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         data={BASE_PATH_D} 
                         stroke="#22d3ee" 
                         strokeWidth={2.5} 
-                        shadowColor="#22d3ee"
-                        shadowBlur={12}
-                        shadowOpacity={0.8}
-                        shadowOffset={{ x: 0, y: 0 }}
+                        shadowColor={renderMode?.showGlow === false ? undefined : "#22d3ee"}
+                        shadowBlur={renderMode?.showGlow === false ? undefined : 12}
+                        shadowOpacity={renderMode?.showGlow === false ? undefined : 0.8}
+                        shadowOffset={renderMode?.showGlow === false ? undefined : { x: 0, y: 0 }}
                         listening={false} 
                         perfectDrawEnabled={false} 
-                        shadowForStrokeEnabled={true} 
+                        shadowForStrokeEnabled={renderMode?.showGlow === false ? false : true} 
                     />
                 )}
 
-                {!isPassable && !isRealVoid && (
-                    <Group listening={false} perfectDrawEnabled={false}>
-                        <Path 
-                            data={BASE_PATH_D} 
-                            fill="rgba(239, 68, 68, 0.1)" 
-                            stroke="#ef4444" 
-                            strokeWidth={1} 
-                            dash={[4, 4]}
-                            perfectDrawEnabled={false} 
-                        />
-                        {biome === 'WATER' ? (
-                            <Path 
-                                data="M-8,0 Q-4,-4 0,0 T8,0" 
-                                stroke="#38bdf8" 
-                                strokeWidth={2} 
-                                opacity={0.8}
-                                perfectDrawEnabled={false}
-                                listening={false}
-                            />
-                        ) : (
-                            <Circle 
-                                radius={6}
-                                stroke="#ef4444"
-                                strokeWidth={2}
-                                opacity={0.6}
-                                perfectDrawEnabled={false}
-                                listening={false}
-                            />
-                        )}
-                    </Group>
-                )}{poiType && (
+{poiType && (
                     <Group listening={false} perfectDrawEnabled={false}>
                         <Circle radius={10} fill="rgba(0,0,0,0.4)" stroke="rgba(255,255,255,0.2)" strokeWidth={1} perfectDrawEnabled={false} />
                         <Text 
@@ -954,9 +932,9 @@ const HexNodeComponent = (props: HexNodeProps) => {
                                 fill="#34d399"
                                 stroke="#134e4a"
                                 strokeWidth={1}
-                                shadowColor="#10b981"
-                                shadowBlur={4}
-                                shadowOpacity={0.8}
+                                shadowColor={renderMode?.showGlow === false ? undefined : "#10b981"}
+                                shadowBlur={renderMode?.showGlow === false ? undefined : 4}
+                                shadowOpacity={renderMode?.showGlow === false ? undefined : 0.8}
                                 perfectDrawEnabled={false}
                             />
                         ))}
@@ -1036,11 +1014,13 @@ const HexNodeComponent = (props: HexNodeProps) => {
                                         : 'rgba(0,0,0,0.4)'
                                     }
                                     strokeWidth={isActive ? 1.0 : 0.5}
-                                    shadowColor={isActive 
-                                        ? (currentIntent === 'DIG' ? '#ef4444' : (currentIntent === 'RECOVER' ? '#06b6d4' : '#10b981')) 
-                                        : undefined
+                                    shadowColor={renderMode?.showGlow === false 
+                                        ? undefined 
+                                        : (isActive 
+                                            ? (currentIntent === 'DIG' ? '#ef4444' : (currentIntent === 'RECOVER' ? '#06b6d4' : '#10b981')) 
+                                            : undefined)
                                     }
-                                    shadowBlur={isActive ? 6 : 0}
+                                    shadowBlur={renderMode?.showGlow === false ? 0 : (isActive ? 6 : 0)}
                                     perfectDrawEnabled={false}
                                 />
                             );

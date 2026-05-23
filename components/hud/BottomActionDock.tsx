@@ -1,13 +1,14 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useGameStore } from '../../store';
 import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Info, Mountain, Target } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import HexButton from '../HexButton';
 import { getHexKey, getNeighbors, getSecondsToGrow } from '../../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
 import { Item, Hex } from '../../types';
 import { ItemIcon, StatusIcon, getRarityBorder } from './HudShared';
-import { GAME_CONFIG } from '../../rules/config';
+import { GAME_CONFIG, getLevelConfig } from '../../rules/config';
 import { TEXT } from '../../services/i18n';
 
 interface BottomActionDockProps {
@@ -16,6 +17,88 @@ interface BottomActionDockProps {
     onOpenInventory: () => void;
     onOpenMission: () => void;
 }
+
+interface ActionTooltipProps {
+    visible: boolean;
+    title: string;
+    costText?: string;
+    rewardText?: string;
+    statusText: string;
+    statusType: 'success' | 'warning' | 'error' | 'info';
+    colorTheme?: 'red' | 'amber' | 'blue' | 'indigo' | 'rose' | 'slate';
+    language: string;
+}
+
+const ActionTooltip: React.FC<ActionTooltipProps> = ({
+    visible,
+    title,
+    costText,
+    rewardText,
+    statusText,
+    statusType,
+    colorTheme = 'slate',
+    language
+}) => {
+    if (!visible) return null;
+
+    const accentBorderColor = {
+        red: 'border-t-red-500 shadow-red-500/10',
+        amber: 'border-t-amber-500 shadow-amber-500/10',
+        blue: 'border-t-sky-500 shadow-sky-500/10',
+        indigo: 'border-t-indigo-500 shadow-indigo-500/10',
+        rose: 'border-t-rose-500 shadow-rose-500/10',
+        slate: 'border-t-slate-500 shadow-slate-500/10',
+    }[colorTheme];
+
+    const statusBadge = {
+        success: 'text-emerald-400 bg-emerald-950/45 border-emerald-900/40',
+        warning: 'text-amber-400 bg-amber-950/45 border-amber-900/40',
+        error: 'text-rose-400 bg-rose-950/45 border-rose-900/40',
+        info: 'text-sky-400 bg-sky-950/45 border-sky-900/40',
+    }[statusType];
+
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                transition={{ duration: 0.12, ease: 'easeOut' }}
+                className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 z-50 pointer-events-none w-64 p-3.5 bg-slate-950/95 backdrop-blur-xl border border-slate-800/80 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.85)] border-t-2 ${accentBorderColor} flex flex-col gap-2 origin-bottom`}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider font-sans text-slate-100">{title}</span>
+                </div>
+
+                {/* Info block */}
+                <div className="flex flex-col gap-1 text-[10px] leading-normal text-slate-400">
+                    {costText && (
+                        <div className="flex justify-between border-b border-slate-900/50 pb-1">
+                            <span>{language === 'RU' ? 'Стоимость:' : 'Cost Requirements:'}</span>
+                            <span className="font-mono font-semibold text-slate-200">{costText}</span>
+                        </div>
+                    )}
+                    {rewardText && (
+                        <div className="flex flex-col gap-0.5 mt-0.5">
+                            <span className="text-slate-500 text-[8px] uppercase tracking-tighter">{language === 'RU' ? 'Экономический эффект:' : 'Extraction Reward:'}</span>
+                            <span className="text-slate-300 font-sans whitespace-pre-wrap leading-tight text-[9.5px]">{rewardText}</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Status Indicator */}
+                <div className={`mt-1 px-2 py-1 rounded-md border text-[9.5px] font-bold font-mono ${statusBadge} flex items-center gap-1.5`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse shrink-0" />
+                    <span className="leading-tight truncate">{statusText}</span>
+                </div>
+
+                {/* Arrow */}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-950" />
+            </motion.div>
+        </AnimatePresence>
+    );
+};
 
 const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onInspectItem, onOpenInventory, onOpenMission }) => {
     const player = useGameStore(state => state.session?.player);
@@ -38,7 +121,23 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const isCampaignHintCollapsed = useGameStore(state => state.isCampaignHintCollapsed);
     const toggleCampaignHintCollapse = useGameStore(state => state.toggleCampaignHintCollapse);
     
-    const mainButtonSize = "lg";
+    const [isMobile, setIsMobile] = useState(false);
+    const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const hasAnyItems = useMemo(() => {
+        return player?.inventory && player.inventory.some(Boolean);
+    }, [player?.inventory]);
+
+    const mainButtonSize = isMobile ? "md" : "lg";
 
     // --- COMPUTED STATE ---
     
@@ -196,9 +295,104 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     }, [currentHex, isPlayerGrowing, playerGrowthIntent]);
 
     // Tooltips
-    const digTooltip = isMoving ? "Unit moving" : (!digCondition.canGrow ? (digCondition.reason || "Blocked") : "Excavate");
-    const upgradeTooltip = isMoving ? "Unit moving" : (!upgradeCondition.canGrow ? (upgradeCondition.reason || "Blocked") : "Upgrade");
-    const recoverTooltip = isMoving ? "Unit moving" : (recoveryState.cooling ? "Cooldown" : (!recoveryState.canRecover ? "Done" : "Recover"));
+    const digTooltip = isMoving ? (language === 'RU' ? "В движении" : "Unit moving") : (!digCondition.canGrow ? (digCondition.reason || (language === 'RU' ? "Заблокировано" : "Blocked")) : "Excavate");
+    const upgradeTooltip = isMoving ? (language === 'RU' ? "В движении" : "Unit moving") : (!upgradeCondition.canGrow ? (upgradeCondition.reason || (language === 'RU' ? "Заблокировано" : "Blocked")) : "Upgrade");
+    const recoverTooltip = isMoving ? (language === 'RU' ? "В движении" : "Unit moving") : (recoveryState.cooling ? (language === 'RU' ? "Охлаждение" : "Cooldown") : (!recoveryState.canRecover ? (language === 'RU' ? "Истощено" : "Done") : "Recover"));
+
+    const digTooltipData = useMemo(() => {
+        const nextLevel = (currentHex?.currentLevel ?? 0) - 1;
+        const rewardDesc = language === 'RU'
+            ? `L >= 1: +1 Материал в рюкзак\nL < 0: +|L| Ходов и случайная добыча в шахте (целевое: L${nextLevel})`
+            : `L >= 1: +1 Material inside backpack\nL < 0: +|L| Moves & random underground loot (target: L${nextLevel})`;
+
+        return {
+            title: language === 'RU' ? 'БУРЕНИЕ СЕКТОРА (РАСКОПКИ)' : 'EXCAVATE (DIG)',
+            costText: language === 'RU' ? '0 мат · -1 ход (базовый)' : '0 Mat · -1 Move (Base)',
+            rewardText: rewardDesc,
+            statusText: canDig 
+                ? (language === 'RU' ? '🟢 ГОТОВО К РАЗГРУЗКЕ' : '🟢 READY TO EXCAVATE')
+                : `🔴 LOCKED: ${digCondition.reason || (language === 'RU' ? 'Условия стабильности не выполнены' : 'Stability constraints not met')}`,
+            statusType: (canDig ? 'success' : 'error') as any,
+        };
+    }, [currentHex, canDig, digCondition, language]);
+
+    const upgradeTooltipData = useMemo(() => {
+        const targetLevel = (currentHex?.currentLevel ?? 0) + 1;
+        const config = getLevelConfig(targetLevel);
+        const hasFreeBuild = player?.activeStatuses?.some(s => s.type === 'STATUS_FREE_BUILD');
+
+        const costDesc = language === 'RU'
+            ? (hasFreeBuild ? '0 Материалов (Наниты!)' : '1 Материал')
+            : (hasFreeBuild ? '0 Materials (Free Build!)' : '1 Material');
+
+        return {
+            title: language === 'RU' ? 'СТРОИТЕЛЬСТВО (УЛУЧШЕНИЕ)' : 'CONSTRUCTION (UPGRADE)',
+            costText: `${costDesc} · ${language === 'RU' ? 'Требуемый Ранг' : 'Required Rank'}: ${config.reqRank}`,
+            rewardText: language === 'RU'
+                ? `Повышает сектор до L${targetLevel}. Требуется инженерная поддержка 2 смежных секторов.`
+                : `Elevates coordinate structure to L${targetLevel}. Requires engineering layout support from 2 neighbors.`,
+            statusText: canUpgrade
+                ? (language === 'RU' ? '🟢 ГОТОВО К СТРОИТЕЛЬСТВУ' : '🟢 READY TO UPGRADE')
+                : `🔴 LOCKED: ${upgradeCondition.reason || (language === 'RU' ? 'Недостаточно материалов или ранга' : 'Insufficient materials or rank')}`,
+            statusType: (canUpgrade ? 'success' : 'error') as any,
+        };
+    }, [currentHex, player, canUpgrade, upgradeCondition, language]);
+
+    const recoverTooltipData = useMemo(() => {
+        const currentLvl = currentHex?.currentLevel ?? 0;
+        const rewardCoins = 5 * Math.max(0, currentLvl);
+
+        const rewardDesc = language === 'RU'
+            ? `Термический съем: +1 Ход, +${rewardCoins} Кредитов`
+            : `Thermodynamic release: +1 Move, +${rewardCoins} Credits`;
+
+        let statusText = '';
+        let statusType: 'success' | 'warning' | 'error' | 'info' = 'success';
+
+        if (recoveryState.cooling) {
+            statusText = language === 'RU' ? `⏳ ПЕРЕГРЕВ: Термо-кулдаун (${recoveryState.label})` : `⏳ OVERHEATED: Thermal cooldown (${recoveryState.label})`;
+            statusType = 'warning';
+        } else if (!recoveryState.canRecover) {
+            statusText = language === 'RU' ? '⚪ ИСТОЩЕНО: Сделайте шаг для перезарядки' : '⚪ EXHAUSTED: Step away to reset generator';
+            statusType = 'error';
+        } else {
+            statusText = language === 'RU' ? '🔵 ЗАРЯЖЕНО И ГОТОВО' : '🔵 CHARGED & ACTIVE';
+            statusType = 'success';
+        }
+
+        return {
+            title: language === 'RU' ? 'СЪЕМ ЭНЕРГИИ (ВОССТАНОВЛЕНИЕ)' : 'THERMO SIPHON (RECOVER)',
+            costText: language === 'RU' ? '0 мат (требует заряд)' : '0 Mat (requires charge)',
+            rewardText: rewardDesc,
+            statusText,
+            statusType,
+        };
+    }, [currentHex, recoveryState, language]);
+
+    const inventoryTooltipData = useMemo(() => {
+        const occupied = player?.inventory ? player.inventory.filter(Boolean).length : 0;
+        return {
+            title: language === 'RU' ? 'ИНВЕНТАРНЫЙ ПОРТ' : 'BACKPACK CONDUIT',
+            costText: language === 'RU' ? '5 ячеек максимум' : '5 Slots capacity',
+            rewardText: language === 'RU'
+                ? 'Резервуар для сохранения ценных дисков с данными, нано-чипов и древних ключей Обелиска.'
+                : 'Shielded containment for encrypted hard drives, nanite chips, and Monolith keys.',
+            statusText: language === 'RU' ? `🎒 Слотов занято: ${occupied} / 5` : `🎒 Slots used: ${occupied} / 5`,
+            statusType: 'info' as any,
+        };
+    }, [player?.inventory, language]);
+
+    const goalTooltipData = useMemo(() => {
+        return {
+            title: language === 'RU' ? 'ДИРЕКТИВА АНОМАЛИИ' : 'SECTOR DIRECTIVE',
+            costText: undefined,
+            rewardText: activeLevelConfig?.description || (language === 'RU' ? 'Основное пошаговое задание в данной симуляции.' : 'Primary turn-by-turn objective in the current simulation.'),
+            statusText: campaignMetrics 
+                ? `${campaignMetrics.label}: ${campaignMetrics.current} / ${campaignMetrics.target}` 
+                : (language === 'RU' ? '🎯 В процессе' : '🎯 In Progress'),
+            statusType: 'info' as any,
+        };
+    }, [activeLevelConfig, campaignMetrics, language]);
 
     const renderActiveStatuses = () => {
         if (!player?.activeStatuses || player.activeStatuses.length === 0) return null;
@@ -225,110 +419,387 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     };
 
     return (
-        <div className="absolute inset-x-0 bottom-0 p-2 md:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end z-30">
+        <div className="absolute inset-x-0 bottom-0 p-2 md:p-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end z-30">
             <div className="mb-2 pointer-events-auto">
                 {renderActiveStatuses()}
             </div>
             
-            {/* UNIFIED DOCK CONTAINER */}
-            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl md:rounded-3xl shadow-2xl p-1.5 md:p-3 pointer-events-auto flex flex-col gap-1 w-full md:w-auto max-w-7xl mx-auto overflow-hidden">
-                <div className="flex items-center justify-between gap-1.5 md:gap-6">
-                    {/* LEFT: INVENTORY & MISSION (Optimized) */}
-                    <div className="flex flex-col gap-1 md:gap-1.5 shrink min-w-0 flex-1 overflow-hidden">
-                        <div className="flex items-center gap-1.5">
-                            {/* Inventory Toggle */}
+            {isMobile ? (
+                /* MOBILE VIEW: Ultra-compact single-line layout to save screen real estate */
+                <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-[0_12px_30px_black] p-2 pointer-events-auto flex items-center justify-between gap-1.5 w-full max-w-md mx-auto relative overflow-visible animate-in fade-in zoom-in-95 duration-200">
+                    
+                    {/* LEFT CLUSTER: Inventory and Goal info */}
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        {/* Compact Inventory Toggle Button */}
+                        <div 
+                            className="relative shrink-0"
+                            onMouseEnter={() => setHoveredId('inventory_mobile')}
+                            onMouseLeave={() => setHoveredId(null)}
+                        >
                             <div 
-                                className="flex items-center gap-1.5 px-2 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800 transition-all shrink-0 touch-manipulation" 
+                                onClick={() => { onOpenInventory(); playUiSound('CLICK'); }}
+                                className="flex items-center justify-center w-9.5 h-9.5 bg-slate-950/75 rounded-xl border border-slate-800/80 cursor-pointer hover:bg-slate-850 active:scale-95 transition-all text-slate-400 hover:text-white"
+                                title={language === 'RU' ? 'Инвентарь' : 'Inventory'}
+                            >
+                                <Backpack className="w-4.5 h-4.5" />
+                            </div>
+                            <ActionTooltip 
+                                visible={hoveredId === 'inventory_mobile'} 
+                                {...inventoryTooltipData} 
+                                language={language}
+                            />
+                        </div>
+
+                        {/* Inventory Slots (Show occupied slots on mobile only OR first few) */}
+                        {hasAnyItems && (
+                            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[120px] sm:max-w-[150px] shrink-0 pr-1 border-r border-slate-800/50">
+                                {inventoryList.map(index => {
+                                    const item = player.inventory[index];
+                                    if (!item) return null; // Avoid rendering empty space slots on mobile
+                                    return (
+                                        <div 
+                                            key={index}
+                                            onClick={() => { onInspectItem(item); playUiSound('CLICK'); }}
+                                            className={`w-9 h-9 rounded-lg border bg-slate-950/60 flex items-center justify-center cursor-pointer transition-all active:scale-95 shrink-0 ${getRarityBorder(item.rarity)}`}
+                                        >
+                                            <ItemIcon item={item} size="w-9 h-9" />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Level Goal display area */}
+                        <div 
+                            className="relative flex-1 min-w-0"
+                            onMouseEnter={() => setHoveredId('goal_mobile')}
+                            onMouseLeave={() => setHoveredId(null)}
+                        >
+                            <div 
+                                onClick={() => { onOpenMission(); playUiSound('CLICK'); }}
+                                className="w-full flex items-center gap-1 px-1.5 py-1 bg-slate-950/30 hover:bg-slate-950/65 rounded-lg border border-slate-850 cursor-pointer overflow-hidden transition-all"
+                            >
+                                {activeLevelConfig && (
+                                    <Target className="w-3.5 h-3.5 text-amber-500/90 shrink-0" />
+                                )}
+                                <div className="text-[9.5px] font-bold font-mono text-slate-300 leading-none truncate select-none">
+                                    {renderMissionStatus()}
+                                </div>
+                            </div>
+                            <ActionTooltip 
+                                visible={hoveredId === 'goal_mobile'} 
+                                {...goalTooltipData} 
+                                language={language}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Compact Separator */}
+                    <div className="w-px h-6 bg-slate-800/60 shrink-0"></div>
+
+                    {/* RIGHT CLUSTER: Core Action Buttons */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {/* DIG Action */}
+                        <div 
+                            className="relative"
+                            onMouseEnter={() => setHoveredId('dig_mobile')}
+                            onMouseLeave={() => setHoveredId(null)}
+                        >
+                            <HexButton 
+                                variant="red" 
+                                size="sm" 
+                                onClick={() => handleActionClick('DIG')} 
+                                onDisabledClick={() => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }}
+                                active={isPlayerGrowing && playerGrowthIntent === 'DIG'}
+                                disabled={!canDig}
+                                progress={timeData.mode === 'DIG' ? timeData.percent : 0}
+                                className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''}
+                                title={digTooltip}
+                            >
+                                <Pickaxe className="w-4 h-4 text-red-400" />
+                            </HexButton>
+                            <ActionTooltip 
+                                visible={hoveredId === 'dig_mobile'} 
+                                {...digTooltipData} 
+                                language={language}
+                            />
+                        </div>
+
+                        {/* UPGRADE Action */}
+                        <div 
+                            className="relative"
+                            onMouseEnter={() => setHoveredId('upgrade_mobile')}
+                            onMouseLeave={() => setHoveredId(null)}
+                        >
+                            <HexButton 
+                                variant="amber" 
+                                size="sm" 
+                                onClick={() => handleActionClick('UPGRADE')} 
+                                onDisabledClick={() => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }}
+                                active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
+                                disabled={!canUpgrade}
+                                pulsate={canUpgrade && !isPlayerGrowing}
+                                progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0}
+                                className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'ring-2 ring-amber-500/30' : ''}
+                                title={upgradeTooltip}
+                            >
+                                <ChevronsUp className="w-4.5 h-4.5 text-amber-400" />
+                            </HexButton>
+                            <ActionTooltip 
+                                visible={hoveredId === 'upgrade_mobile'} 
+                                {...upgradeTooltipData} 
+                                language={language}
+                            />
+                        </div>
+
+                        {/* RECOVER Action */}
+                        <div 
+                            className="relative"
+                            onMouseEnter={() => setHoveredId('recover_mobile')}
+                            onMouseLeave={() => setHoveredId(null)}
+                        >
+                            <HexButton 
+                                variant="blue" 
+                                size="sm" 
+                                onClick={() => handleActionClick('RECOVER')} 
+                                onDisabledClick={() => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }}
+                                active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'}
+                                disabled={!recoveryState.canRecover}
+                                progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0}
+                                className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''}
+                                title={recoverTooltip}
+                            >
+                                {recoveryState.cooling ? (
+                                    <div className="flex flex-col items-center justify-center leading-none">
+                                        <Hourglass className="w-3.5 h-3.5 animate-spin-slow text-blue-300" />
+                                        <span className="text-[6.5px] font-mono mt-0.5 text-slate-400">{recoveryState.label}</span>
+                                    </div>
+                                ) : (
+                                    <div className="relative flex flex-col items-center justify-center">
+                                        <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
+                                        {recoveryState.label && (
+                                            <span className="absolute -bottom-1 bg-slate-950 px-1 rounded-full text-[5.5px] font-black text-emerald-400 border border-emerald-950 border-opacity-40 font-mono">
+                                                {recoveryState.label}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </HexButton>
+                            <ActionTooltip 
+                                visible={hoveredId === 'recover_mobile'} 
+                                {...recoverTooltipData} 
+                                language={language}
+                            />
+                        </div>
+                    </div>
+
+                </div>
+            ) : (
+                /* DESKTOP VIEW: High-definition controls panel with maximum clarity and organization */
+                <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl md:rounded-3xl shadow-[0_15px_45px_black] p-1.5 md:p-3 pointer-events-auto flex flex-col gap-1.5 md:gap-2.5 w-full md:w-auto max-w-7xl mx-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    
+                    <div className="flex items-center gap-1.5 w-full">
+                        {/* Inventory Toggle */}
+                        <div 
+                            className="relative shrink-0"
+                            onMouseEnter={() => setHoveredId('inventory')}
+                            onMouseLeave={() => setHoveredId(null)}
+                        >
+                            <div 
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-950/60 rounded-xl border border-slate-800 cursor-pointer group hover:bg-slate-800/80 transition-all shrink-0 touch-manipulation active:scale-95" 
                                 onClick={() => { onOpenInventory(); playUiSound('CLICK'); }}
                                 title={language === 'RU' ? 'Инвентарь' : 'Inventory'}
                             >
                                 <Backpack className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-400 transition-colors" />
-                                <span className="text-[10px] font-bold text-slate-500 group-hover:text-white font-mono tracking-widest uppercase inline">
+                                <span className="text-[10px] font-bold text-slate-400 group-hover:text-white font-mono tracking-wider uppercase inline">
                                     {language === 'RU' ? 'ИНВ' : 'INV'}
                                 </span>
                             </div>
+                            <ActionTooltip 
+                                visible={hoveredId === 'inventory'} 
+                                {...inventoryTooltipData} 
+                                language={language}
+                            />
+                        </div>
 
-                            {/* Campaign Hint Toggle Button next to Inventory */}
-                            {activeLevelConfig && (
+                        {/* Campaign Hint Toggle Button next to Inventory */}
+                        {activeLevelConfig && (
+                            <div 
+                                className="relative shrink-0"
+                                onMouseEnter={() => setHoveredId('goal_toggle')}
+                                onMouseLeave={() => setHoveredId(null)}
+                            >
                                 <div 
-                                    className={`flex items-center gap-1.5 px-2 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border cursor-pointer group hover:bg-slate-800 transition-all shrink-0 touch-manipulation [content-visibility:auto] ${isCampaignHintCollapsed ? 'border-amber-500/50 text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse' : 'border-slate-800 text-slate-500'}`} 
+                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-950/60 rounded-xl border cursor-pointer group hover:bg-slate-800/80 transition-all shrink-0 touch-manipulation active:scale-95 [content-visibility:auto] ${isCampaignHintCollapsed ? 'border-amber-500/50 text-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.25)]' : 'border-slate-800 text-slate-400'}`} 
                                     onClick={() => { toggleCampaignHintCollapse(); playUiSound('CLICK'); }}
                                     title={language === 'RU' ? 'Показать/Скрыть Цель' : 'Show/Hide Objective'}
                                     id="campaign-hint-dock-toggle"
                                 >
-                                    <Target className={`w-3.5 h-3.5 transition-colors ${isCampaignHintCollapsed ? 'text-amber-400' : 'text-slate-500 group-hover:text-indigo-400'}`} />
-                                    <span className={`text-[10px] font-bold font-mono tracking-widest uppercase inline ${isCampaignHintCollapsed ? 'text-amber-400' : 'text-slate-500 group-hover:text-white'}`}>
+                                    <Target className={`w-3.5 h-3.5 transition-colors ${isCampaignHintCollapsed ? 'text-amber-400' : 'text-slate-400 group-hover:text-amber-400'}`} />
+                                    <span className={`text-[10px] font-bold font-mono tracking-wider uppercase inline ${isCampaignHintCollapsed ? 'text-amber-400' : 'text-slate-400 group-hover:text-white'}`}>
                                         {language === 'RU' ? 'ЦЕЛЬ' : 'GOAL'}
                                     </span>
                                 </div>
-                            )}
+                                <ActionTooltip 
+                                    visible={hoveredId === 'goal_toggle'} 
+                                    {...goalTooltipData} 
+                                    language={language}
+                                />
+                            </div>
+                        )}
 
-                            {/* Mission Goal / Mini-Window */}
+                        {/* Mission Goal / Mini-Window */}
+                        <div 
+                            className="relative flex-1"
+                            onMouseEnter={() => setHoveredId('goal')}
+                            onMouseLeave={() => setHoveredId(null)}
+                        >
                             <div 
-                                className="flex-1 flex items-center justify-between gap-2 px-2.5 py-1 bg-slate-950/50 rounded-lg md:rounded-xl border border-slate-800/50 cursor-pointer group hover:bg-slate-800 transition-all overflow-hidden"
+                                className="w-full flex items-center justify-between gap-1.5 px-3 py-1.5 bg-slate-950/50 rounded-xl border border-slate-800/60 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)] cursor-pointer group hover:bg-slate-800/50 transition-all overflow-hidden"
                                 onClick={() => { onOpenMission(); playUiSound('CLICK'); }}
                             >
-                                <div className="text-[10px] md:text-[11px] font-black font-mono leading-none">
+                                <div className="text-[11px] font-bold font-mono leading-none tracking-tight truncate">
                                     {renderMissionStatus()}
                                 </div>
-                                <Info className="w-3 h-3 text-slate-500 group-hover:text-amber-400 transition-colors shrink-0" />
+                                <Info className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors shrink-0" />
+                            </div>
+                            <ActionTooltip 
+                                visible={hoveredId === 'goal'} 
+                                {...goalTooltipData} 
+                                language={language}
+                            />
+                        </div>
+                    </div>
+
+                    {/* ROW 2: SIDE-BY-SIDE SLOTS & TRIGGERS */}
+                    <div className="flex items-center justify-between gap-6 md:flex-row flex-row">
+                        
+                        {/* LEFT PART: Inventory Slots tray (Flexible fill) */}
+                        <div className="flex-1 min-w-0 pointer-events-auto">
+                            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-linear-fade-right">
+                                {inventoryList.map(index => {
+                                    const item = player.inventory[index];
+                                    const slotSize = "w-10 h-10"; 
+                                    return (
+                                        <div 
+                                            key={index} 
+                                            onClick={() => { if(item) { onInspectItem(item); playUiSound('CLICK'); } }}
+                                            draggable={!!item}
+                                            onDragStart={(e) => { if(item) e.dataTransfer.setData("itemId", item.id); }}
+                                            className={`
+                                                ${slotSize} rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all shrink-0 touch-manipulation active:scale-95
+                                                ${item 
+                                                    ? `bg-slate-800/90 ${getRarityBorder(item.rarity)} shadow-md hover:scale-105` 
+                                                    : 'bg-slate-950/45 border-slate-800/40 border-dashed'}
+                                            `}
+                                        >
+                                            {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-800/40" />}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        {/* Inventory Slots */}
-                    <div className="flex items-center gap-1 md:gap-1.5 justify-start overflow-x-auto no-scrollbar mask-linear-fade-right pr-2">
-                        {inventoryList.map(index => {
-                            const item = player.inventory[index];
-                            const slotSize = "w-8 h-8 md:w-10 md:h-10"; 
-                            return (
-                                <div 
-                                    key={index} 
-                                    onClick={() => { if(item) { onInspectItem(item); playUiSound('CLICK'); } }}
-                                    draggable={!!item}
-                                    onDragStart={(e) => { if(item) e.dataTransfer.setData("itemId", item.id); }}
-                                    className={`
-                                        ${slotSize} rounded-md md:rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all shrink-0 touch-manipulation
-                                        ${item 
-                                            ? `bg-slate-800 ${getRarityBorder(item.rarity)} shadow-md hover:scale-105 active:scale-95` 
-                                            : 'bg-slate-950/50 border-slate-800/50 border-dashed'}
-                                    `}
+                        {/* SLIGHT DIVIDER */}
+                        <div className="w-px h-10 bg-slate-800/80 mx-1 shrink-0"></div>
+
+                        {/* RIGHT PART: CORE ACTION TRIGGERS */}
+                        <div className="flex items-center justify-center gap-2.5 shrink-0 select-none">
+                            {/* DIG TRIGGER */}
+                            <div 
+                                className="relative shrink-0"
+                                onMouseEnter={() => setHoveredId('dig')}
+                                onMouseLeave={() => setHoveredId(null)}
+                            >
+                                <HexButton 
+                                    variant="red" 
+                                    size={mainButtonSize} 
+                                    onClick={() => handleActionClick('DIG')} 
+                                    onDisabledClick={() => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }} 
+                                    active={isPlayerGrowing && playerGrowthIntent === 'DIG'} 
+                                    disabled={!canDig} 
+                                    progress={timeData.mode === 'DIG' ? timeData.percent : 0} 
+                                    className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''} 
+                                    title={digTooltip}
                                 >
-                                    {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-800/50" />}
-                                </div>
-                            );
-                        })}
+                                    <Pickaxe className={`w-6 h-6 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12 text-white font-bold' : 'text-red-400'}`} />
+                                </HexButton>
+                                <ActionTooltip 
+                                    visible={hoveredId === 'dig'} 
+                                    {...digTooltipData} 
+                                    language={language}
+                                />
+                            </div>
+
+                            {/* UPGRADE TRIGGER */}
+                            <div 
+                                className="relative shrink-0"
+                                onMouseEnter={() => setHoveredId('upgrade')}
+                                onMouseLeave={() => setHoveredId(null)}
+                            >
+                                <HexButton 
+                                    variant="amber" 
+                                    size={mainButtonSize} 
+                                    onClick={() => handleActionClick('UPGRADE')} 
+                                    onDisabledClick={() => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }} 
+                                    active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} 
+                                    disabled={!canUpgrade} 
+                                    pulsate={canUpgrade && !isPlayerGrowing} 
+                                    progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} 
+                                    className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-0.5 ring-2 ring-amber-500/30 font-bold' : ''} 
+                                    title={upgradeTooltip}
+                                >
+                                    <ChevronsUp className={`w-7 h-7 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-115 -translate-y-0.5 text-white' : 'text-amber-400'}`} />
+                                </HexButton>
+                                <ActionTooltip 
+                                    visible={hoveredId === 'upgrade'} 
+                                    {...upgradeTooltipData} 
+                                    language={language}
+                                />
+                            </div>
+
+                            {/* RECOVER TRIGGER */}
+                            <div 
+                                className="relative shrink-0"
+                                onMouseEnter={() => setHoveredId('recover')}
+                                onMouseLeave={() => setHoveredId(null)}
+                            >
+                                <HexButton 
+                                    variant="blue" 
+                                    size={mainButtonSize} 
+                                    onClick={() => handleActionClick('RECOVER')} 
+                                    onDisabledClick={() => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }} 
+                                    active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} 
+                                    disabled={!recoveryState.canRecover} 
+                                    progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} 
+                                    className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''} 
+                                    title={recoverTooltip}
+                                >
+                                    {recoveryState.cooling ? (
+                                        <div className="flex flex-col items-center">
+                                            <Hourglass className="w-5 h-5 animate-spin-slow text-blue-300" />
+                                            <span className="text-[9.5px] font-mono mt-0.5 text-slate-400 leading-none">{recoveryState.label}</span>
+                                        </div>
+                                    ) : (
+                                        <div className="relative flex flex-col items-center justify-center">
+                                            <RefreshCw className={`w-6 h-6 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180 text-white font-bold' : 'text-blue-400'}`} />
+                                            {recoveryState.label && <span className="absolute -bottom-1 bg-slate-950 px-1 rounded-full text-[8.5px] font-black text-emerald-400 border border-emerald-900 border-opacity-30 shadow-sm font-mono leading-none">{recoveryState.label}</span>}
+                                        </div>
+                                    )}
+                                </HexButton>
+                                <ActionTooltip 
+                                    visible={hoveredId === 'recover'} 
+                                    {...recoverTooltipData} 
+                                    language={language}
+                                />
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-
-                {/* DIVIDER */}
-                <div className="w-px h-12 md:h-16 bg-slate-800 mx-1 hidden md:block shrink-0"></div>
-
-                {/* RIGHT: ACTION BUTTONS */}
-                <div className="flex items-end gap-1.5 md:gap-3 shrink-0 ml-auto">
-                    <HexButton variant="red" size={mainButtonSize} onClick={() => handleActionClick('DIG')} onDisabledClick={() => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }} active={isPlayerGrowing && playerGrowthIntent === 'DIG'} disabled={!canDig} progress={timeData.mode === 'DIG' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-4 ring-red-500/20 rounded-full' : ''} title={digTooltip}>
-                        <Pickaxe className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12' : ''}`} />
-                    </HexButton>
-                    <HexButton variant="amber" size={mainButtonSize} onClick={() => handleActionClick('UPGRADE')} onDisabledClick={() => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }} active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} disabled={!canUpgrade} pulsate={canUpgrade && !isPlayerGrowing} progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-1 ring-4 ring-amber-500/20 rounded-full' : ''} title={upgradeTooltip}>
-                        <ChevronsUp className={`w-6 h-6 md:w-10 md:h-10 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-110 -translate-y-1' : ''}`} />
-                    </HexButton>
-                    <HexButton variant="blue" size={mainButtonSize} onClick={() => handleActionClick('RECOVER')} onDisabledClick={() => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }} active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} disabled={!recoveryState.canRecover} progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-4 ring-blue-500/20 rounded-full' : ''} title={recoverTooltip}>
-                        {recoveryState.cooling ? (
-                            <div className="flex flex-col items-center">
-                                <Hourglass className="w-4 h-4 md:w-6 md:h-6 animate-spin-slow text-slate-300" />
-                                <span className="text-[8px] md:text-[10px] font-mono mt-0.5 text-slate-400">{recoveryState.label}</span>
-                            </div>
-                        ) : (
-                            <>
-                              <RefreshCw className={`w-5 h-5 md:w-8 md:h-8 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180' : ''}`} />
-                              {recoveryState.label && <span className="absolute -bottom-1 md:-bottom-2 bg-slate-900 px-1.5 rounded-full text-[7px] md:text-[9px] font-bold text-emerald-400 border border-emerald-900 shadow-sm">{recoveryState.label}</span>}
-                            </>
-                        )}
-                    </HexButton>
-                </div>
-            </div>
+            )}
         </div>
-    </div>
-);
+    );
 };
 
 export default React.memo(BottomActionDock);

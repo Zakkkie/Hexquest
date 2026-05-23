@@ -93,9 +93,17 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
       lastFrameTime = timestamp - (elapsed % FRAME_INTERVAL);
       time += 0.0001 * elapsed; 
 
+      const state = useGameStore.getState();
+      const isLiteMode = state.isLiteMode;
+
+      if (isLiteMode) {
+          ctx.fillStyle = '#020617';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          return;
+      }
+
       if (variant === 'GAME') {
           // Fetch entropy without triggering React re-renders for maximum performance
-          const state = useGameStore.getState();
           const entropy = state.session?.entropy;
           let targetDangerRatio = 0;
           if (entropy && entropy.max > 0) {

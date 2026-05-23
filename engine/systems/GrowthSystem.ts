@@ -418,7 +418,6 @@ export class GrowthSystem implements System {
 
           const prefix = entity.type === EntityType.PLAYER ? "[YOU]" : `[${entity.id}]`;
           const isVisible = entity.type === EntityType.PLAYER || hex.revealed;
-          const isRegrowth = targetLevel <= hex.maxLevel;
 
           if (targetLevel > hex.maxLevel) {
             newMaxLevel = targetLevel;
@@ -444,7 +443,7 @@ export class GrowthSystem implements System {
             }
           }
 
-          // Cost & Reward (Deducted for regrowth too!)
+          // Cost & Reward (Deducted always)
           if (!hasFreeBuild) {
               entity.storage = Math.max(0, entity.storage - 1);
           }
@@ -476,9 +475,7 @@ export class GrowthSystem implements System {
                const { foundationStrength } = getStatusModifiers(entity, state);
                newDurability = GAME_CONFIG.L1_HEX_MAX_DURABILITY + (foundationStrength * 2);
                
-               const msg = isRegrowth
-                  ? `${prefix} Sector L1 Restored (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`
-                  : `${prefix} Sector L1 Built (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
+               const msg = `${prefix} Sector L1 Built (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
                
                if (isVisible) {
                   state.messageLog.unshift({ id: `acq-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
@@ -487,9 +484,7 @@ export class GrowthSystem implements System {
           } else {
                newDurability = undefined;
                
-               const msg = isRegrowth
-                  ? `${prefix} Restored to L${targetLevel} (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`
-                  : `${prefix} Upgraded to L${targetLevel} (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
+               const msg = `${prefix} Upgraded to L${targetLevel} (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
                
                if (isVisible) {
                   state.messageLog.unshift({ id: `lvl-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });

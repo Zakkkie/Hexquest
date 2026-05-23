@@ -512,6 +512,7 @@ export interface GameState {
   isCampaignLoading: boolean;
   loadingLevelId: string | null;
   isCampaignHintCollapsed?: boolean;
+  isLiteMode?: boolean;
 }
 
 // --- ACTION TYPES ---

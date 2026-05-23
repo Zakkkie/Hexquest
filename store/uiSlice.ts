@@ -37,6 +37,15 @@ export const createUiSlice = (
     set(() => ({ isSfxMuted: val }));
   },
 
+  toggleLiteMode: () => {
+    const nextVal = !get().isLiteMode;
+    set(() => ({ isLiteMode: nextVal }));
+    const msg = nextVal 
+      ? (get().language === 'RU' ? 'Облегченный режим активирован! Эффекты отключены.' : 'Lite mode activated! Visual effects disabled.')
+      : (get().language === 'RU' ? 'Стандартный режим активирован.' : 'Standard mode activated.');
+    get().showToast(msg, 'success');
+  },
+
   toggleCampaignHintCollapse: () => {
     set((state) => ({ isCampaignHintCollapsed: !state.isCampaignHintCollapsed }));
   },

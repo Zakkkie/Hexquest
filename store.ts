@@ -66,6 +66,7 @@ export const useGameStore = create<GameStore>()(
       hasHydrated: false,
       isMusicMuted: false,
       isSfxMuted: false,
+      isLiteMode: false,
       session: null,
       language: 'RU', 
       voidDialogTarget: null,
@@ -104,6 +105,7 @@ export const useGameStore = create<GameStore>()(
         storyMilestone: state.storyMilestone,
         isMusicMuted: state.isMusicMuted,
         isSfxMuted: state.isSfxMuted,
+        isLiteMode: state.isLiteMode,
         language: state.language
       })
     }

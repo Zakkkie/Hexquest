@@ -33,20 +33,20 @@ self.onmessage = (e) => {
         pendingKey, selectedHexId, isCampaign
     } = e.data;
 
-    if (!grid || !player) return;
-
-    const gridChanged = grid !== cachedGrid || !!isCampaign !== cachedIsCampaign;
+    const gridChanged = (grid && grid !== cachedGrid) || (isCampaign !== undefined && !!isCampaign !== cachedIsCampaign);
     
-    cachedRotation = rotation;
-    cachedPlayer = player;
-    cachedBots = bots;
-    cachedPendingKey = pendingKey;
-    cachedSelectedHexId = selectedHexId;
-    cachedIsCampaign = !!isCampaign;
+    if (rotation !== undefined) cachedRotation = rotation;
+    if (player !== undefined) cachedPlayer = player;
+    if (bots !== undefined) cachedBots = bots;
+    if (pendingKey !== undefined) cachedPendingKey = pendingKey;
+    if (selectedHexId !== undefined) cachedSelectedHexId = selectedHexId;
+    if (isCampaign !== undefined) cachedIsCampaign = !!isCampaign;
 
-    if (gridChanged) {
+    if (grid) {
         cachedGrid = grid;
     }
+
+    if (!cachedGrid || !cachedPlayer) return;
 
     const items: any[] = [];
 
@@ -69,8 +69,8 @@ self.onmessage = (e) => {
     const playerR = cachedPlayer.r;
 
     // 2. Iterate flat over the grid and perform rapid distance checking (O(1) metric with distance culling)
-    for (const hexId in grid) {
-        const hex = grid[hexId];
+    for (const hexId in cachedGrid) {
+        const hex = cachedGrid[hexId];
         const hq = hex.q;
         const hr = hex.r;
         const distToPlayer = cubeDistance({ q: playerQ, r: playerR }, { q: hq, r: hr });
@@ -118,7 +118,7 @@ self.onmessage = (e) => {
         const isOccupiedByPlayer = hq === playerQ && hr === playerR;
         const neighborLevels = NEIGHBOR_DIRECTIONS.map(d => {
             const nKey = getHexKey(hq + d.q, hr + d.r);
-            const nHex = grid[nKey];
+            const nHex = cachedGrid[nKey];
             if (!nHex || (!nHex.revealed && !cachedIsCampaign)) return VOID_LEVEL_FLAG;
             return nHex.currentLevel ?? 0;
         });
@@ -164,7 +164,7 @@ self.onmessage = (e) => {
         const uR = u.r;
 
         if (!u.isPlayer) {
-            const uHex = grid[getHexKey(uQ, uR)];
+            const uHex = cachedGrid[getHexKey(uQ, uR)];
             const distToPlayer = cubeDistance({ q: uQ, r: uR }, playerPos);
             const isRevealed = uHex && (uHex.revealed || cachedIsCampaign);
             
@@ -192,7 +192,7 @@ self.onmessage = (e) => {
         const rawY = HEX_SIZE * (ONE_POINT_FIVE * uR);
         const baseDepth = (rawX * sin + rawY * cos) * 0.8;
 
-        const uHex = grid[getHexKey(uQ, uR)];
+        const uHex = cachedGrid[getHexKey(uQ, uR)];
         const hLevel = uHex ? (uHex.currentLevel ?? 0) : 0;
         const depthBias = u.state === 'MOVING' ? 50 : 1; 
 

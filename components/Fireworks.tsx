@@ -126,6 +126,30 @@ const Fireworks: React.FC = () => {
         let frameCount = 0;
 
         const loop = () => {
+            const isLiteMode = useGameStore.getState().isLiteMode;
+            if (isLiteMode) {
+                ctx.fillStyle = 'rgba(2, 6, 23, 0.9)'; 
+                ctx.fillRect(0, 0, width, height);
+                
+                ctx.save();
+                ctx.font = 'bold 18px JetBrains Mono, Courier New, monospace';
+                ctx.fillStyle = '#10b981';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(16, 185, 129, 0.5)';
+                ctx.shadowBlur = 8;
+                ctx.fillText(
+                    language === 'RU' 
+                        ? 'ПРОЦЕСС УСПЕШНО ЗАВЕРШЕН // 100%' 
+                        : 'DEC-LINK SYNCHRONIZATION COMPLETE // 100%', 
+                    width / 2, 
+                    height / 2
+                );
+                ctx.restore();
+                
+                animationFrameId = requestAnimationFrame(loop);
+                return;
+            }
+
             frameCount++;
             // Soft clear to leave trail glow
             ctx.fillStyle = 'rgba(2, 6, 23, 0.15)'; 

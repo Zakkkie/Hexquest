@@ -21,10 +21,10 @@ const HexButton: React.FC<HexButtonProps> = ({
 }) => {
   
   // RESPONSIVE SIZE MAPPING
-  // Optimized for cleaner UI footprint but larger touch targets on mobile
+  // Optimized for cleaner UI footprint but larger touch targets on mobile (40px/48px thresholds)
   const sizeClasses = {
-    sm: 'w-8 h-8 md:w-10 md:h-10',
-    md: 'w-10 h-10 md:w-14 md:h-14',
+    sm: 'w-10 h-10 md:w-12 md:h-12',
+    md: 'w-12 h-12 md:w-16 md:h-16',
     lg: 'w-14 h-14 md:w-20 md:h-20',
     xl: 'w-16 h-16 md:w-24 md:h-24'
   };

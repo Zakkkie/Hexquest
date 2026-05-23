@@ -15,6 +15,34 @@ import { safifyCoord } from '../utils/safeCoordinates.ts';
 // @ts-ignore
 import VisualWorker from '../services/visualWorker.ts?worker';
 
+const areGridsEqual = (a: Record<string, Hex> | null, b: Record<string, Hex> | null): boolean => {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    for (let i = 0; i < keysA.length; i++) {
+        const key = keysA[i];
+        const hexA = a[key];
+        const hexB = b[key];
+        if (!hexB) return false;
+        if (
+            hexA.currentLevel !== hexB.currentLevel ||
+            hexA.maxLevel !== hexB.maxLevel ||
+            hexA.revealed !== hexB.revealed ||
+            hexA.durability !== hexB.durability ||
+            hexA.biome !== hexB.biome ||
+            hexA.structureType !== hexB.structureType ||
+            hexA.isPassable !== hexB.isPassable ||
+            hexA.ownerId !== hexB.ownerId ||
+            hexA.progress !== hexB.progress
+        ) {
+            return false;
+        }
+    }
+    return true;
+};
+
 // Optimized Tutorial Status Check
 const getTutorialData = (grid: Record<string, Hex>, player: Entity, levelId?: string) => {
     if (!levelId) return null;
@@ -297,6 +325,13 @@ const FULL_RENDER_MODE = {
     showDetails: true 
 };
 
+const LITE_RENDER_MODE = { 
+    detailLevel: 'simple', 
+    showTexture: false, 
+    showGlow: false, 
+    showDetails: false 
+};
+
 interface MapRendererProps {
     rotation: number;
     onHexClick: (q: number, r: number) => void;
@@ -314,8 +349,10 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
     const campaignUpgrades = useGameStore(state => state.campaignUpgrades);
     const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
-    const playerQ = player?.q;
-    const playerR = player?.r;
+    const playerQ = player?.q ?? 0;
+    const playerR = player?.r ?? 0;
+    const playerStorage = player?.storage ?? 0;
+    const isLiteMode = useGameStore(state => state.isLiteMode);
     const selectedHexId = useMemo(() => 
         (playerQ !== undefined && playerR !== undefined) ? getHexKey(playerQ, playerR) : null
     , [playerQ, playerR]);
@@ -373,9 +410,32 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
             const last = lastPostedRef.current;
             
             // Check if anything significant changed to avoid redundant postMessage calls
-            const gridChanged = grid !== last.grid;
-            const playerChanged = player !== last.player;
-            const botsChanged = bots !== last.bots;
+            const gridChanged = !areGridsEqual(grid, last.grid);
+            
+            // Spatial, rank, and visual state verification, ignoring coins/moves/storage to prevent 100ms interval spam
+            const playerChanged = !last.player || 
+                player.q !== last.player.q || 
+                player.r !== last.player.r || 
+                player.playerLevel !== last.player.playerLevel || 
+                player.state !== last.player.state;
+
+            let botsChanged = !last.bots || !bots || bots.length !== last.bots.length;
+            if (!botsChanged && bots && last.bots) {
+                for (let i = 0; i < bots.length; i++) {
+                    const b = bots[i];
+                    const lb = last.bots[i];
+                    if (!lb || 
+                        b.q !== lb.q || 
+                        b.r !== lb.r || 
+                        b.state !== lb.state || 
+                        b.playerLevel !== lb.playerLevel
+                    ) {
+                        botsChanged = true;
+                        break;
+                    }
+                }
+            }
+
             const pendingKeyChanged = pendingKey !== last.pendingKey;
             const selectedHexIdChanged = selectedHexId !== last.selectedHexId;
             
@@ -385,7 +445,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
             if (gridChanged || playerChanged || botsChanged || pendingKeyChanged || selectedHexIdChanged || rotationChanged) {
                 lastPostedRef.current = { grid, rotation, player, bots, pendingKey, selectedHexId };
                 workerRef.current.postMessage({ 
-                    grid,
+                    grid: gridChanged ? grid : undefined,
                     rotation, 
                     player, 
                     bots,
@@ -408,6 +468,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
 
     // Explicitly memoize spawnDust
     const spawnDust = useCallback((x: number, y: number, color: string) => {
+        if (useGameStore.getState().isLiteMode) return;
         const id = `dust-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         setParticles(p => [...p, { id, x, y, color }]);
     }, []);
@@ -490,17 +551,19 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     const tutorialData = useMemo(() => {
         if (!grid || !player) return null;
         return getTutorialData(grid, player, activeLevelConfig?.id);
-    }, [grid, player, activeLevelConfig?.id]);
+    }, [grid, playerQ, playerR, activeLevelConfig?.id]);
 
     const renderList = useMemo(() => {
         if (!grid || !player || !workerData.renderItems.length) return { items: [] };
+
+        const tempPlayer = { q: playerQ, r: playerR, storage: playerStorage } as any;
 
         const items = workerData.renderItems.map(item => {
             if (item.type === 'HEX') {
                 const hex = grid[item.id];
                 if (!hex) return null;
 
-                const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, player, grid, tutorialData, activeLevelConfig);
+                const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, tempPlayer, grid, tutorialData, activeLevelConfig);
                 const theme = getTheme(item.props.isRevealed ? hex.maxLevel : 0);
 
                 return {
@@ -513,7 +576,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                         isTutorialTarget: isTutorial,
                         isTargetArrow: isArrow,
                         tutorialColor: tutColor,
-                        renderMode: FULL_RENDER_MODE,
+                        renderMode: isLiteMode ? LITE_RENDER_MODE : FULL_RENDER_MODE,
                         isExcavated: hex.isExcavated,
                         isPlayerBuilt: hex.isPlayerBuilt,
                     }
@@ -532,7 +595,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         }).filter(Boolean);
 
         return { items };
-    }, [grid, player, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems]);
+    }, [grid, playerQ, playerR, playerStorage, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems, isLiteMode]);
 
     return (
         <>
@@ -565,10 +628,13 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                 {connections.map((conn, i) => (
                     <Line key={`conn-${i}`} {...conn} strokeWidth={2} listening={false} perfectDrawEnabled={false} />
                 ))}
-            </Layer><Layer listening={false}>
-                {particles.map(p => <DustCloud key={p.id} {...p} onComplete={removeParticle} />)}
-                {stackedEffects.map(eff => <FloatingEffect key={eff.id} effect={eff} rotation={rotation} stackIndex={eff.stackIndex} />)}
             </Layer>
+            {!isLiteMode && (
+                <Layer listening={false}>
+                    {particles.map(p => <DustCloud key={p.id} {...p} onComplete={removeParticle} />)}
+                    {stackedEffects.map(eff => <FloatingEffect key={eff.id} effect={eff} rotation={rotation} stackIndex={eff.stackIndex} />)}
+                </Layer>
+            )}
         </>
     );
 };

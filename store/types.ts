@@ -23,6 +23,7 @@ export interface GameStore extends GameState {
   updateCampaignUpgrades: (upgrades: Partial<import('../types.ts').CampaignUpgrades>) => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
+  toggleLiteMode: () => void;
   toggleCampaignHintCollapse: () => void;
   playUiSound: (type: UiSoundType) => void;
   showToast: (msg: string, type: 'error' | 'success' | 'info') => void;

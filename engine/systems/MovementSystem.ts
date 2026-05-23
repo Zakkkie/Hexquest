@@ -125,7 +125,7 @@ export class MovementSystem implements System {
         if (d <= 0) {
              const collapsedHex: Hex = {
                 ...oldHex,
-                maxLevel: oldHex.maxLevel, // FIXED: Preserve maxLevel for regrowth
+                maxLevel: oldHex.maxLevel, // FIXED: Preserve maxLevel when cell collapses
                 currentLevel: 0,
                 progress: 0,
                 ownerId: undefined,
