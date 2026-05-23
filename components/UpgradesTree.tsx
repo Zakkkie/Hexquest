@@ -142,7 +142,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-2xl"
+            className="absolute inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-xl"
         >
             {/* Background floating effects */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
@@ -155,19 +155,28 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.98, y: 10 }}
                 transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 w-full max-w-6xl h-[95vh] md:h-auto md:max-h-[85vh] rounded-3xl md:rounded-[2.5rem] shadow-[0_0_80px_rgba(0,0,0,0.9)] flex flex-col relative z-10 overflow-hidden"
+                className="bg-slate-950 border-2 border-indigo-500/40 w-full max-w-6xl h-[95vh] md:h-auto md:max-h-[85vh] rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] flex flex-col relative z-10 overflow-hidden group"
             >
+                {/* Cyber Corner Brackets */}
+                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+
+                {/* Scanline Effect */}
+                <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+
                 {/* Header with Title and Skill Points */}
-                <div className="p-2.5 md:p-3 lg:p-4 flex items-center justify-between border-b border-white/5 relative z-20">
+                <div className="p-3 md:p-4 flex items-center justify-between border-b border-indigo-500/30 bg-indigo-905/10 relative z-20">
                     <div className="flex items-center gap-3 md:gap-4 pl-1">
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2">
-                                <div className="bg-indigo-500/10 p-1.5 rounded-lg border border-indigo-500/20">
-                                    <Layers className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-400" />
+                                <div className="bg-indigo-500/15 p-1.5 rounded-lg border border-indigo-500/35">
+                                    <Layers className="w-4 h-4 text-indigo-400" />
                                 </div>
                                 <h2 className="text-base md:text-lg lg:text-xl font-black uppercase text-white tracking-[0.15em] leading-none drop-shadow-md">Узлы Развития</h2>
                             </div>
-                            <p className="hidden sm:block text-indigo-300/20 text-[7px] md:text-[8px] font-mono tracking-[0.4em] uppercase ml-9 mt-0.5">Exp_Protocol_v2.1</p>
+                            <p className="hidden sm:block text-indigo-400/50 text-[8px] font-mono tracking-[0.4em] uppercase ml-11 mt-1 leading-none">Exp_Protocol_v2.1</p>
                         </div>
                     </div>
 
@@ -175,14 +184,14 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                         {/* Lean SP Badge */}
                         <div className="flex items-center gap-2.5 bg-slate-900/60 border border-indigo-500/20 rounded-lg px-2.5 py-1.5 md:px-3 md:py-2 transition-all shadow-inner">
                             <div className="flex flex-col items-center leading-none">
-                                <span className="text-[6px] md:text-[7px] text-indigo-400/80 font-black uppercase">Skill</span>
-                                <span className="text-[6px] md:text-[7px] text-indigo-400/80 font-black uppercase">Points</span>
+                                <span className="text-[6px] md:text-[7px] text-indigo-400/85 font-black uppercase">Skill</span>
+                                <span className="text-[6px] md:text-[7px] text-indigo-400/85 font-black uppercase">Points</span>
                             </div>
-                            <div className="w-[1px] h-4 bg-indigo-500/20 mx-0.5" />
+                            <div className="w-[1px] h-4 bg-indigo-500/25 mx-0.5" />
                             <span className="text-base md:text-xl font-black text-white font-mono leading-none tracking-tighter drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]">{skillPoints}</span>
                         </div>
 
-                        <button onClick={onClose} className="p-1.5 md:p-2 bg-slate-800/40 hover:bg-red-500/20 group rounded-lg border border-white/5 transition-all active:scale-95">
+                        <button onClick={onClose} className="p-1.5 md:p-2 bg-slate-800/40 hover:bg-red-500/20 group rounded-lg border border-white/5 transition-all transform hover:scale-110 active:scale-95 cursor-pointer">
                             <X className="w-4 h-4 md:w-5 md:h-5 text-slate-500 group-hover:text-red-400 group-active:text-red-500 transition-colors" />
                         </button>
                     </div>

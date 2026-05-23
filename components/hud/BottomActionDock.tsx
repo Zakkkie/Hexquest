@@ -27,6 +27,7 @@ interface ActionTooltipProps {
     statusType: 'success' | 'warning' | 'error' | 'info';
     colorTheme?: 'red' | 'amber' | 'blue' | 'indigo' | 'rose' | 'slate';
     language: string;
+    align?: 'left' | 'center' | 'right';
 }
 
 const ActionTooltip: React.FC<ActionTooltipProps> = ({
@@ -37,7 +38,8 @@ const ActionTooltip: React.FC<ActionTooltipProps> = ({
     statusText,
     statusType,
     colorTheme = 'slate',
-    language
+    language,
+    align = 'center'
 }) => {
     if (!visible) return null;
 
@@ -57,6 +59,18 @@ const ActionTooltip: React.FC<ActionTooltipProps> = ({
         info: 'text-sky-400 bg-sky-950/45 border-sky-900/40',
     }[statusType];
 
+    const positionClasses = {
+        left: 'absolute bottom-full left-0 translate-x-0 mb-3.5 z-50 pointer-events-none w-64 p-3.5 bg-slate-950/95 backdrop-blur-xl border border-slate-800/80 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.85)] border-t-2 origin-bottom-left',
+        center: 'absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 z-50 pointer-events-none w-64 p-3.5 bg-slate-950/95 backdrop-blur-xl border border-slate-800/80 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.85)] border-t-2 origin-bottom',
+        right: 'absolute bottom-full right-0 translate-x-0 mb-3.5 z-50 pointer-events-none w-64 p-3.5 bg-slate-950/95 backdrop-blur-xl border border-slate-800/80 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.85)] border-t-2 origin-bottom-right',
+    }[align];
+
+    const arrowClasses = {
+        left: 'absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-950',
+        center: 'absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-950',
+        right: 'absolute top-full right-4 -mt-1 border-4 border-transparent border-t-slate-950',
+    }[align];
+
     return (
         <AnimatePresence>
             <motion.div
@@ -64,7 +78,7 @@ const ActionTooltip: React.FC<ActionTooltipProps> = ({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.96 }}
                 transition={{ duration: 0.12, ease: 'easeOut' }}
-                className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 z-50 pointer-events-none w-64 p-3.5 bg-slate-950/95 backdrop-blur-xl border border-slate-800/80 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.85)] border-t-2 ${accentBorderColor} flex flex-col gap-2 origin-bottom`}
+                className={`${positionClasses} ${accentBorderColor} flex flex-col gap-2`}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between">
@@ -94,7 +108,7 @@ const ActionTooltip: React.FC<ActionTooltipProps> = ({
                 </div>
 
                 {/* Arrow */}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-950" />
+                <div className={arrowClasses} />
             </motion.div>
         </AnimatePresence>
     );
@@ -447,6 +461,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 visible={hoveredId === 'inventory_mobile'} 
                                 {...inventoryTooltipData} 
                                 language={language}
+                                align="left"
                             />
                         </div>
 
@@ -490,6 +505,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 visible={hoveredId === 'goal_mobile'} 
                                 {...goalTooltipData} 
                                 language={language}
+                                align="center"
                             />
                         </div>
                     </div>
@@ -522,6 +538,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 visible={hoveredId === 'dig_mobile'} 
                                 {...digTooltipData} 
                                 language={language}
+                                align="right"
                             />
                         </div>
 
@@ -549,6 +566,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 visible={hoveredId === 'upgrade_mobile'} 
                                 {...upgradeTooltipData} 
                                 language={language}
+                                align="right"
                             />
                         </div>
 
@@ -589,6 +607,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 visible={hoveredId === 'recover_mobile'} 
                                 {...recoverTooltipData} 
                                 language={language}
+                                align="right"
                             />
                         </div>
                     </div>

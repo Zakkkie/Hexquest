@@ -100,8 +100,14 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 pointer-events-auto animate-in fade-in" onClick={onClose}>
-      <div className="bg-slate-950 border-2 border-indigo-500/40 rounded-lg shadow-[0_0_50px_rgba(79,70,229,0.2)] max-w-lg md:max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 relative group" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 pointer-events-auto animate-in fade-in" onClick={onClose}>
+      <div className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] max-w-lg md:max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 relative group" onClick={e => e.stopPropagation()}>
+        {/* Cyber Corner Brackets */}
+        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+
         {/* Scanline effect */}
         <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
         <div className="absolute top-0 left-0 w-full h-1 bg-white/5 animate-scan-slow z-10" />
@@ -109,11 +115,11 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="p-4 md:p-6 border-b border-indigo-500/30 flex justify-between items-center bg-indigo-900/10 relative z-20">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-indigo-500/20 rounded border border-indigo-500/30 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+            <div className="p-2.5 bg-indigo-500/15 rounded-lg border border-indigo-500/35 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
               <Terminal className="w-5 h-5 md:w-6 md:h-6" />
             </div>
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none mb-1">LOCAL_ASSET_REPOSITORY</div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none mb-1">LOCAL_ASSET_REPOSITORY</div>
               <h2 className="text-lg md:text-2xl font-black text-white uppercase tracking-widest leading-none">
                 {language === 'RU' ? 'Инвентарь' : 'Inventory'}
               </h2>
@@ -124,7 +130,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
                 <div className="text-[10px] font-black tracking-widest text-emerald-400/60 leading-none mb-1">CREDITS_AVAILABLE</div>
                 <div className="text-xl font-mono font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">{player.coins}</div>
             </div>
-            <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white transition-colors">
+            <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white transition-all transform hover:scale-110 active:scale-95 cursor-pointer">
               <X className="w-6 h-6 md:w-8 md:h-8" />
             </button>
           </div>

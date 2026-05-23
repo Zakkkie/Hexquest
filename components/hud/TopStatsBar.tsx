@@ -354,7 +354,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                 animate={{ opacity: 1, y: 3, scale: 1 }}
                                 exit={{ opacity: 0, y: -4, scale: 0.95 }}
                                 transition={{ duration: 0.15 }}
-                                className={`absolute left-0 mt-1 max-w-[280px] p-2 bg-slate-950/95 backdrop-blur border rounded-lg shadow-xl z-50 pointer-events-auto flex flex-col gap-0.5 ${activeStatTooltip.theme}`}
+                                className={`absolute left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 mt-1 max-w-[280px] w-64 p-2 bg-slate-950/95 backdrop-blur border rounded-lg shadow-xl z-50 pointer-events-auto flex flex-col gap-0.5 border-slate-800 ${activeStatTooltip.theme}`}
                             >
                                 <div className="text-[9px] font-black tracking-widest uppercase flex items-center justify-between border-b border-white/5 pb-0.5">
                                     <span>{activeStatTooltip.title}</span>

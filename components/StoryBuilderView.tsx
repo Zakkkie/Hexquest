@@ -5,7 +5,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { textureService } from '../services/textureService.ts';
-import { ArrowLeft, BookOpen, Crown, ChevronRight, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, Sparkles, Eye, EyeOff, ZoomIn, ZoomOut, Compass, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, BookOpen, Crown, ChevronRight, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, Sparkles, Eye, EyeOff, ZoomIn, ZoomOut, Compass, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Konva from 'konva';
 
@@ -891,7 +891,7 @@ const StoryBuilderView: React.FC = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-50 bg-slate-950/90 [backdrop-filter:blur(8px)] flex items-center justify-center p-4 pointer-events-auto"
+                        className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto"
                         onClick={() => setIsHelpOpen(false)}
                     >
                         <motion.div 
@@ -899,27 +899,44 @@ const StoryBuilderView: React.FC = () => {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.95, y: 20 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-slate-900 border border-indigo-500/40 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative overflow-hidden text-left"
+                            className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-[0_0_50px_rgba(79,70,229,0.25)] relative overflow-hidden text-left group"
                         >
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500" />
-                            
-                            <div className="flex items-center gap-3 mb-5">
-                                <Info className="w-6 h-6 text-cyan-400 shrink-0" />
-                                <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight">
-                                    {language === 'RU' ? 'КОНСТРУКЦИЯ И ГЕОМЕТРИЯ' : 'CONSTRUCTION SPECS MATRIX'}
-                                </h2>
+                            {/* Cyber Corner Brackets */}
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+
+                            {/* Scanlines */}
+                            <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+
+                            <div className="flex justify-between items-start mb-6 z-20 relative">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-indigo-500/15 rounded-lg border border-indigo-500/35 text-indigo-400">
+                                        <Info className="w-5 h-5 text-cyan-400 shrink-0" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none mb-1">SYSTEM_MANUAL</span>
+                                        <h2 className="text-base md:text-lg font-black text-white uppercase tracking-wider leading-none">
+                                            {language === 'RU' ? 'Конструкция Сектора' : 'Sector Blueprint Specs'}
+                                        </h2>
+                                    </div>
+                                </div>
+                                <button onClick={() => { playUiSound('CLICK'); setIsHelpOpen(false); }} className="text-slate-500 hover:text-white transition-all transform hover:scale-110 active:scale-95 cursor-pointer">
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
 
-                            <p className="text-slate-400 text-xs md:text-sm mb-6 leading-relaxed">
+                            <p className="text-slate-400 text-xs md:text-sm mb-6 leading-relaxed relative z-20">
                                 {language === 'RU' 
                                     ? 'Векторная сетка сектора подчиняется строгим законам стабильности пространства. Чтобы успешно синхронизировать элементы, соблюдайте следующие правила:' 
                                     : 'The sectors vector grid obeys strict spatial stability equations. To successfully align and persist templates, adhere to the mechanics below:'}
                             </p>
 
-                            <div className="space-y-4 mb-6">
-                                <div className="p-3 bg-slate-950/60 rounded-xl border border-white/5">
-                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                            <div className="space-y-4 mb-6 relative z-20 max-h-[40vh] overflow-y-auto no-scrollbar pr-1">
+                                <div className="p-3 bg-slate-900/40 rounded-xl border border-white/5">
+                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
                                         {language === 'RU' ? 'Правило Нулевой Базы (Фундамент)' : 'Ground Foundations (Level 0)'}
                                     </h4>
                                     <p className="text-[11px] text-slate-400 leading-normal">
@@ -929,9 +946,9 @@ const StoryBuilderView: React.FC = () => {
                                     </p>
                                 </div>
 
-                                <div className="p-3 bg-slate-950/60 rounded-xl border border-white/5">
-                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                <div className="p-3 bg-slate-900/40 rounded-xl border border-white/5">
+                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" />
                                         {language === 'RU' ? 'Правило Лестницы (Перепад высот)' : 'Staircase Rule (Step Heights)'}
                                     </h4>
                                     <p className="text-[11px] text-slate-400 leading-normal">
@@ -941,9 +958,9 @@ const StoryBuilderView: React.FC = () => {
                                     </p>
                                 </div>
 
-                                <div className="p-3 bg-slate-950/60 rounded-xl border border-white/5">
-                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
+                                <div className="p-3 bg-slate-900/40 rounded-xl border border-white/5">
+                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.5)]" />
                                         {language === 'RU' ? 'Целевая Подсветка диапазонов' : 'Holographic Range Indicators'}
                                     </h4>
                                     <p className="text-[11px] text-slate-400 leading-normal">
@@ -956,7 +973,7 @@ const StoryBuilderView: React.FC = () => {
 
                             <button
                                 onClick={() => { playUiSound('CLICK'); setIsHelpOpen(false); }}
-                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-2xl transition-all uppercase tracking-widest text-xs shadow-xl"
+                                className="w-full bg-indigo-600/25 border border-indigo-500 text-indigo-400 hover:bg-indigo-600 hover:text-white font-black py-3 rounded-xl transition-all uppercase tracking-[0.25em] text-xs shadow-xl active:scale-98 cursor-pointer relative z-20"
                             >
                                 {language === 'RU' ? 'Запустить Синхронизатор' : 'Resume Matrix'}
                             </button>
@@ -981,7 +998,7 @@ const StoryBuilderView: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto"
+                            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto"
                             onClick={() => setPopupCell(null)}
                         >
                             <motion.div
@@ -989,14 +1006,20 @@ const StoryBuilderView: React.FC = () => {
                                 animate={{ scale: 1, y: 0 }}
                                 exit={{ scale: 0.95, y: 15 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="bg-slate-900 border border-indigo-500/30 rounded-3xl p-5 md:p-6 max-w-sm w-full shadow-[0_0_50px_rgba(99,102,241,0.2)] relative text-left"
+                                className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl p-5 md:p-6 max-w-sm w-full shadow-[0_0_50px_rgba(79,70,229,0.25)] relative text-left group"
                             >
-                                {/* Top colored bar decoration */}
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-purple-500" />
+                                {/* Cyber Corner Brackets */}
+                                <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+                                <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+                                <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+                                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+
+                                {/* Scanlines */}
+                                <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
                                 
-                                <div className="flex justify-between items-center mb-4">
+                                <div className="flex justify-between items-center mb-4 z-20 relative">
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-[8px] font-black tracking-widest text-indigo-400 uppercase">
+                                        <span className="text-[8px] font-black tracking-widest text-indigo-400 uppercase font-mono">
                                             {language === 'RU' ? 'ИНЖЕНЕРНЫЙ МОДУЛЬ' : 'CONSTRUCTION CELL'}
                                         </span>
                                         <h3 className="text-sm font-black text-white uppercase tracking-tight">
@@ -1005,7 +1028,7 @@ const StoryBuilderView: React.FC = () => {
                                     </div>
                                     <button 
                                         onClick={() => { playUiSound('CLICK'); setPopupCell(null); }}
-                                        className="text-slate-400 hover:text-white transition-colors bg-white/5 w-7 h-7 rounded-full flex items-center justify-center border border-white/5 active:scale-90"
+                                        className="text-slate-500 hover:text-white transition-all transform hover:scale-110 active:scale-95 bg-white/5 w-7 h-7 rounded-full flex items-center justify-center border border-white/5 cursor-pointer z-30"
                                     >
                                         &times;
                                     </button>
@@ -1127,29 +1150,37 @@ const StoryBuilderView: React.FC = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6 text-center pointer-events-auto"
+                        className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 text-center pointer-events-auto"
                     >
-                        <div className="max-w-md bg-slate-900 border border-indigo-500/50 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500" />
-                            <BookOpen className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-4 italic">
+                        <div className="max-w-md bg-slate-950 border-2 border-indigo-500/40 rounded-2xl p-8 shadow-[0_0_50px_rgba(79,70,229,0.25)] relative overflow-hidden group">
+                            {/* Cyber Corner Brackets */}
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+
+                            {/* Scanline Effect */}
+                            <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+
+                            <BookOpen className="w-16 h-16 text-indigo-400 mx-auto mb-6 z-20 relative animate-pulse" />
+                            <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-4 italic z-20 relative">
                                 {language === 'RU' ? 'Хранилище фрагментов пусто' : 'Fragment storage is empty'}
                             </h2>
-                            <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+                            <p className="text-slate-400 text-sm mb-8 leading-relaxed z-20 relative font-sans">
                                 {language === 'RU' 
                                     ? 'Для строительства собственной карты вам нужны добытые гексы. Проходите симуляции на Карте Уровней и забирайте трофейные фрагменты ландшафта по завершении миссии.'
                                     : 'To build your own map, you need extracted hexes. Complete simulations on the Levels Map and extract landscape fragments upon mission completion.'}
                             </p>
-                            <div className="flex gap-4">
+                            <div className="flex gap-4 z-20 relative">
                                 <button 
                                     onClick={() => { playUiSound('CLICK'); setCampaignMode('LEVELS'); setUIState('CAMPAIGN_MAP'); }}
-                                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition-all shadow-xl uppercase tracking-widest text-xs"
+                                    className="flex-1 bg-indigo-600/25 border border-indigo-500 text-indigo-400 hover:bg-indigo-600 hover:text-white font-black py-4 rounded-xl transition-all shadow-xl uppercase tracking-widest text-xs cursor-pointer active:scale-98"
                                 >
                                     {language === 'RU' ? 'Карта Уровней' : 'Levels Map'}
                                 </button>
                                 <button 
                                     onClick={() => { playUiSound('CLICK'); setIsInitialHintDismissed(true); }}
-                                    className="px-6 border border-white/10 hover:bg-white/5 text-slate-400 font-bold rounded-2xl transition-all text-xs"
+                                    className="px-6 border border-white/10 hover:bg-white/5 text-slate-400 font-bold rounded-xl transition-all text-xs cursor-pointer"
                                 >
                                     {language === 'RU' ? 'Позже' : 'Later'}
                                 </button>

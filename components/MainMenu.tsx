@@ -179,7 +179,9 @@ const MenuButton: React.FC<{
   label: string; 
   subLabel?: string; 
   variant?: 'primary' | 'battle' | 'campaign' | 'danger' | 'default';
-}> = ({ onClick, icon, label, subLabel, variant = 'default' }) => {
+  className?: string;
+  style?: React.CSSProperties;
+}> = ({ onClick, icon, label, subLabel, variant = 'default', className = '', style }) => {
   const getStyle = () => {
     switch(variant) {
       case 'primary': return 'bg-indigo-950/40 border-indigo-500/30 hover:bg-indigo-900/50 hover:border-indigo-400/80 text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(99,102,241,0.2)] backdrop-blur-xl border-t-white/10';
@@ -205,7 +207,8 @@ const MenuButton: React.FC<{
       onClick={onClick}
       whileHover={{ scale: 1.02, x: 4 }}
       whileTap={{ scale: 0.98 }}
-      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden touch-manipulation backdrop-blur-sm ${getStyle()}`}
+      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden touch-manipulation backdrop-blur-sm ${getStyle()} ${className}`}
+      style={style}
     >
       <div className={`p-3 md:p-3.5 rounded-xl transition-all duration-300 relative z-10 ${getIconStyle()}`}>
         {/* Pass larger icon size down if possible, but container controls visual weight */}
@@ -483,7 +486,15 @@ const MainMenu: React.FC = () => {
       {/* HEADER BAR */}
       <div className="absolute top-0 left-0 w-full p-4 md:p-6 flex flex-col md:flex-row justify-between items-center md:items-start z-50 pointer-events-auto">
         <div className="w-full flex justify-between items-start">
-            <div className="flex gap-2 relative">
+            <div 
+              className="flex gap-2 relative"
+              style={{
+                paddingTop: '0px',
+                marginTop: '0px',
+                paddingLeft: '0px',
+                paddingRight: '0px'
+              }}
+            >
                 <button 
                   onClick={() => { setShowSoundMenu(!showSoundMenu); playUiSound('CLICK'); }}
                   className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl rounded-full transition-all border border-white/10 bg-slate-900/40 text-slate-300 hover:text-white hover:border-white/20 hover:bg-slate-800/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
@@ -520,7 +531,10 @@ const MainMenu: React.FC = () => {
                   </button>
                 ) : (
                   <div className="flex items-center gap-3 bg-slate-900/40 backdrop-blur-xl p-1.5 pl-5 md:pl-6 rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] group hover:border-white/20 hover:bg-slate-800/60 transition-all">
-                    <div className="flex flex-col items-end"><span className="text-xs font-black text-white leading-tight max-w-[100px] truncate break-words whitespace-pre-wrap drop-shadow-md">{user.nickname}</span><span className="text-[9px] md:text-[10px] text-indigo-300/80 font-mono uppercase tracking-[0.2em] break-words whitespace-pre-wrap">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span></div>
+                    <div className="hidden md:flex flex-col items-end">
+                      <span className="text-xs font-black text-white leading-tight max-w-[100px] truncate break-words whitespace-pre-wrap drop-shadow-md">{user.nickname}</span>
+                      <span className="text-[9px] md:text-[10px] text-indigo-300/80 font-mono uppercase tracking-[0.2em] break-words whitespace-pre-wrap">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span>
+                    </div>
                     {renderAvatar(user.avatarColor, user.headIndex, user.bodyIndex, 'sm')}
                     <button onClick={handleLogout} className="p-2 md:p-2.5 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-all bg-black/20 border border-transparent hover:border-red-500/30"><LogOut className="w-4 h-4 md:w-5 md:h-5" /></button>
                   </div>
@@ -540,7 +554,7 @@ const MainMenu: React.FC = () => {
             className="md:col-span-6 lg:col-span-7 flex flex-col items-center md:items-start text-center md:text-left selection:bg-indigo-500/30 font-sans"
         >
             {/* Top Security Status Header */}
-            <div className="flex items-center gap-2 mb-3 px-3 py-1 bg-indigo-950/40 border border-indigo-500/20 rounded-full select-none shadow-[0_0_15px_rgba(99,102,241,0.15)] animate-[pulse_3s_ease-in-out_infinite]">
+            <div className="hidden md:flex items-center gap-2 mb-3 px-3 py-1 bg-indigo-950/40 border border-indigo-500/20 rounded-full select-none shadow-[0_0_15px_rgba(99,102,241,0.15)] animate-[pulse_3s_ease-in-out_infinite]">
                 <Activity className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
                 <span className="text-[9px] md:text-[10px] text-indigo-300 font-mono font-bold tracking-[0.2em] uppercase">
                     {language === 'RU' ? 'СЕКТОР_НЕБУЛА // СФЕРА_02' : 'NEBULA_SECTOR // HUB_02'}
@@ -646,6 +660,7 @@ const MainMenu: React.FC = () => {
                 icon={<BookOpen className="w-5 h-5 fill-current" />} 
                 label={t.CAMPAIGN} 
                 subLabel={t.CAMPAIGN_SUB} 
+                style={{ marginRight: '0px' }}
             />
             
             <AnimatePresence>
@@ -700,15 +715,23 @@ const MainMenu: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            className="absolute inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4"
         >
           <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-slate-900/80 backdrop-blur-xl border border-indigo-500/30 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5),inset_0_0_20px_rgba(99,102,241,0.1)] w-full max-w-sm relative overflow-hidden flex flex-col"
+              className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-sm relative overflow-hidden flex flex-col group"
           >
+              {/* Cyber Corner Brackets */}
+              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+
+              {/* Scanlines */}
+              <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
             {/* ... Existing Auth Modal Content (kept as is) ... */}
             <div className="grid grid-cols-2 border-b border-indigo-500/20 bg-slate-900/50">
                 <button onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
@@ -813,15 +836,23 @@ const MainMenu: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            className="absolute inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4"
         >
           <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-slate-950/80 backdrop-blur-xl border border-indigo-500/30 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.6),inset_0_0_20px_rgba(99,102,241,0.1)] w-full max-w-2xl h-fit max-h-[90vh] relative overflow-hidden flex flex-col"
+              className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-2xl h-fit max-h-[90vh] relative overflow-hidden flex flex-col group"
           >
+              {/* Cyber Corner Brackets */}
+              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+
+              {/* Scanlines */}
+              <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
              
              {/* Header */}
              <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-indigo-500/20 bg-slate-900/50 shrink-0">

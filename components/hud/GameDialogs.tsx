@@ -376,14 +376,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 30, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="relative bg-slate-950/90 border-2 border-indigo-500/40 rounded-xl shadow-[0_0_50px_rgba(79,70,229,0.3)] max-w-lg w-full max-h-[92vh] md:max-h-[85vh] overflow-hidden flex flex-col backdrop-blur-xl group"
+                            className="relative bg-slate-950/95 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] max-w-lg w-full max-h-[92vh] md:max-h-[85vh] overflow-hidden flex flex-col backdrop-blur-xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
-                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/60 z-30" />
-                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/60 z-30" />
-                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/60 z-30" />
-                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/60 z-30" />
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/60 z-30 pointer-events-none" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/60 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/60 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/60 z-30 pointer-events-none" />
 
                             {/* Scanline effect */}
                             <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
@@ -588,14 +588,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 20, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/90 border-2 border-amber-500/40 rounded-xl shadow-[0_0_50px_rgba(245,158,11,0.25)] w-full max-w-[340px] md:max-w-md max-h-[82vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
+                            className="bg-slate-950/95 border-2 border-amber-500/40 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.25)] w-full max-w-[340px] md:max-w-md max-h-[82vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
-                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-500/60 z-30" />
-                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-500/60 z-30" />
-                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-500/60 z-30" />
-                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-500/60 z-30" />
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-500/60 z-30 pointer-events-none" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-500/60 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-500/60 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-500/60 z-30 pointer-events-none" />
 
                             {/* Scanline effect */}
                             <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
@@ -667,14 +667,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 20, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/90 border-2 border-indigo-500/40 rounded-xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-[340px] md:max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
+                            className="bg-slate-950/95 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-[340px] md:max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
-                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/60 z-30" />
-                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/60 z-30" />
-                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/60 z-30" />
-                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/60 z-30" />
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/60 z-30 pointer-events-none" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/60 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/60 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/60 z-30 pointer-events-none" />
 
                             {/* Scanline effect */}
                             <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
@@ -746,17 +746,21 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 25, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/90 border border-slate-800 rounded-xl shadow-2xl w-full max-w-[340px] md:max-w-3xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
+                            className="bg-slate-950/95 border-2 border-purple-500/40 rounded-2xl shadow-[0_0_50px_rgba(168,85,247,0.25)] w-full max-w-[340px] md:max-w-3xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
-                            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-purple-500/50 z-30" />
-                            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-purple-500/50 z-30" />
-                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-purple-500/50 z-30" />
-                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-purple-500/50 z-30" />
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-purple-500/60 z-30 pointer-events-none" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-purple-500/60 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-purple-500/60 z-30 pointer-events-none" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-purple-500/60 z-30 pointer-events-none" />
 
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 to-purple-400" />
-                            <div className="p-4 border-b border-slate-850 flex items-center justify-between bg-slate-950/50 shrink-0">
+                            {/* Scanline effect */}
+                            <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+                            <div className="absolute top-0 left-0 w-full h-1 bg-white/5 animate-scan-slow z-10" />
+
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 to-purple-400 z-10" />
+                            <div className="p-4 border-b border-purple-500/30 flex items-center justify-between bg-purple-950/20 z-20 shrink-0">
                                 <div className="flex items-center gap-3">
                                     <div className="p-1.5 bg-purple-500/20 rounded-lg border border-purple-500/30">
                                         <BookOpen className="w-4 h-4 text-purple-400" />
@@ -904,9 +908,15 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                     <div className={`absolute inset-0 bg-gradient-to-b opacity-25 pointer-events-none ${gameStatus === 'VICTORY' ? 'from-emerald-500/20 to-transparent shadow-[inset_0_0_100px_rgba(16,185,129,0.1)]' : 'from-red-500/20 to-transparent shadow-[inset_0_0_100px_rgba(239,68,68,0.1)]'}`} />
 
                     {/* Premium Sci-Fi Terminal Layout */}
-                    <div className="bg-slate-950/90 border border-slate-800/80 rounded-2xl md:rounded-[2rem] p-5 md:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.05)] max-w-4xl w-full flex flex-col relative z-10 max-h-[92vh] overflow-y-auto no-scrollbar py-6 px-4 md:px-8 border-t-indigo-500/20">
+                    <div className="bg-slate-950/95 border-2 border-slate-800/80 rounded-2xl md:rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.05)] max-w-4xl w-full flex flex-col relative z-10 max-h-[95vh] overflow-y-auto no-scrollbar py-4 md:py-6 px-3 sm:px-6 md:px-8 border-t-indigo-500/30 group">
+                        {/* Corner brackets */}
+                        <div className={`absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
+                        <div className={`absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
+                        <div className={`absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
+                        <div className={`absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
+
                         {/* Terminal Decoration */}
-                        <div className="w-full flex items-center gap-2 md:gap-4 mb-4 md:mb-6 opacity-45 shrink-0">
+                        <div className="w-full flex items-center gap-2 md:gap-4 mb-3 md:mb-6 opacity-45 shrink-0">
                             <div className="h-px flex-1 bg-current" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }} />
                             <div className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.5em] font-mono whitespace-nowrap" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }}>
                                 {gameStatus === 'VICTORY' ? 'SYSTEM_STABILITY_RESTORED' : 'LINK_TERMINATED'}
@@ -915,10 +925,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         </div>
 
                         {/* Main Status Display */}
-                        <div className="relative mb-5 md:mb-7 mx-auto shrink-0">
+                        <div className="relative mb-3.5 md:mb-7 mx-auto shrink-0">
                             <div className={`absolute inset-0 blur-xl md:blur-3xl opacity-30 animate-pulse ${gameStatus === 'VICTORY' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                            <div className={`relative px-6 py-3.5 md:px-10 md:py-5 border-2 md:border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_20px_rgba(239,68,68,0.3)]'}`}>
-                                <h1 className={`text-3xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none whitespace-nowrap ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
+                            <div className={`relative px-4 py-2 sm:px-6 md:px-10 md:py-4 border-2 md:border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_20px_rgba(239,68,68,0.3)]'}`}>
+                                <h1 className={`text-2xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
                                     {gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}
                                 </h1>
                             </div>
@@ -941,11 +951,11 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             return (
                                 <>
                                     {/* Responsive Dashboard Grid */}
-                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5 w-full mb-4 md:mb-6 shrink-0 text-left">
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-5 w-full mb-3 md:mb-6 shrink-0 text-left">
                                         
                                         {/* COLUMN 1: Score & detailed breakdown */}
-                                        <div className="md:col-span-12 lg:col-span-7 flex flex-col justify-between">
-                                            <div className="bg-slate-900/40 border border-purple-500/20 rounded-xl md:rounded-2xl p-4 md:p-5 flex flex-col flex-1 shadow-[0_4px_24px_rgba(147,51,234,0.05)] backdrop-blur-md relative overflow-hidden group">
+                                        <div className="md:col-span-7 lg:col-span-7 flex flex-col justify-between">
+                                            <div className="bg-slate-900/40 border border-purple-500/20 rounded-xl md:rounded-2xl p-3.5 md:p-5 flex flex-col flex-1 shadow-[0_4px_24px_rgba(147,51,234,0.05)] backdrop-blur-md relative overflow-hidden group">
                                                 <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
                                                 
                                                 <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-purple-400 mb-1 z-10 flex items-center gap-1.5">
@@ -953,7 +963,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                     {language === 'RU' ? 'ОЧКИ РЕЙТИНГА' : 'RATING POINTS (SCORE)'}
                                                 </div>
                                                 
-                                                <div className="text-3xl md:text-5xl font-black font-mono tracking-tight text-white mb-4 z-10 drop-shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all group-hover:drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] leading-none">
+                                                <div className="text-2xl sm:text-3xl md:text-5xl font-black font-mono tracking-tight text-white mb-2 z-10 drop-shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all group-hover:drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] leading-none">
                                                     {finalScore.toLocaleString()}
                                                 </div>
                                                 
@@ -1005,7 +1015,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         </div>
                                         
                                         {/* COLUMN 2: Statistics & Assessment */}
-                                        <div className="md:col-span-12 lg:col-span-5 flex flex-col gap-3.5 h-full justify-between">
+                                        <div className="md:col-span-5 lg:col-span-5 flex flex-col gap-2.5 md:gap-3.5 h-full justify-between">
                                             {/* Grid */}
                                             <div className="grid grid-cols-2 gap-2 md:gap-3 w-full">
                                                 {[
@@ -1146,19 +1156,20 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         )}
 
                         {/* Navigation buttons at the absolute bottom of the panel */}
-                        <div className="w-full flex flex-col sm:flex-row gap-2 md:gap-3 shrink-0 mt-3 md:mt-5 text-left">
+                        <div className="w-full flex flex-col gap-2 shrink-0 mt-3 md:mt-5 text-left">
                             {gameStatus === 'VICTORY' && activeLevelConfig && (
-                                <button onClick={handleNextLevel} className="flex-1 py-3 md:py-4 bg-emerald-600 border-2 border-emerald-400/80 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] shadow-[0_4px_20px_rgba(16,185,129,0.3)] hover:shadow-[0_4px_25px_rgba(16,185,129,0.5)] rounded-xl transition-all flex items-center justify-center gap-2 text-xs md:text-sm">
+                                <button onClick={handleNextLevel} className="w-full py-2.5 sm:py-3 md:py-4 bg-emerald-600 border-2 border-emerald-400/80 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_4px_20px_rgba(16,185,129,0.3)] hover:shadow-[0_4px_25px_rgba(16,185,129,0.5)] rounded-xl transition-all flex items-center justify-center gap-2 text-xs md:text-sm">
                                     {t.BTN_NEXT} <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
                                 </button>
                             )}
-                            <button onClick={handleRetry} className="flex-1 py-3 md:py-4 bg-slate-900 border-2 border-slate-750 hover:bg-slate-800 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 text-xs md:text-sm">
-                                <RotateCcw className="w-4 h-4 md:w-5 md:h-5 animate-[spin_10s_linear_infinite]" /> {t.BTN_RETRY}
-                            </button>
-                            {/* Fallback Menu Button */}
-                            <button onClick={handleMenu} className="flex-1 py-3 md:py-4 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.1em] md:tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 text-xs md:text-sm">
-                                <LogOut className="w-4 h-4 md:w-5 md:h-5 animate-[pulse_2s_infinite]" /> {campaignMode === 'LEVELS' ? (language === 'RU' ? 'ВЫБОР УРОВНЕЙ' : 'LEVELS MENU') : (t.BTN_MENU || 'MENU')}
-                            </button>
+                            <div className="grid grid-cols-2 gap-2 w-full">
+                                <button onClick={handleRetry} className="py-2.5 md:py-4 bg-slate-900 border-2 border-slate-750 hover:bg-slate-800 text-white font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] rounded-xl transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] md:text-sm">
+                                    <RotateCcw className="w-3.5 h-3.5 md:w-5 md:h-5 animate-[spin_10s_linear_infinite]" /> {t.BTN_RETRY}
+                                </button>
+                                <button onClick={handleMenu} className="py-2.5 md:py-4 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] rounded-xl transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] md:text-sm">
+                                    <LogOut className="w-3.5 h-3.5 md:w-5 md:h-5 animate-[pulse_2s_infinite]" /> {campaignMode === 'LEVELS' ? (language === 'RU' ? 'ВЫБОР УРОВНЕЙ' : 'LEVELS') : (t.BTN_MENU || 'MENU')}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Extra Visual Detail */}
@@ -1171,11 +1182,20 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* MONUMENT DIALOG */}
             {monumentDialogState.isOpen && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 md:p-4 animate-in fade-in duration-300 pointer-events-auto">
-                    <div className="bg-slate-950 border border-amber-900/50 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95">
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 pointer-events-auto">
+                    <div className="bg-slate-950 border-2 border-amber-500/40 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.25)] max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95 group">
+                        {/* Corner brackets */}
+                        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-500/60 z-30 pointer-events-none" />
+                        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-500/60 z-30 pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-500/60 z-30 pointer-events-none" />
+                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-500/60 z-30 pointer-events-none" />
+
+                        {/* Scanline effect */}
+                        <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+
                         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
                         <button onClick={closeMonumentDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
-                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0">
+                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0 relative z-20">
                             <div className="p-2 md:p-3 bg-amber-950/50 rounded-xl border border-amber-900/50 shadow-inner"><Crown className="w-6 h-6 md:w-8 md:h-8 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" /></div>
                             <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none break-words whitespace-pre-wrap">{t.MONUMENT_TITLE}</h3><p className="text-[10px] md:text-xs text-amber-600 uppercase tracking-widest font-mono mt-1 break-words whitespace-pre-wrap">{t.MONUMENT_SUB}</p></div>
                         </div>
@@ -1327,11 +1347,20 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* VOID DIALOG */}
             {voidDialogTarget && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 md:p-4 animate-in fade-in duration-300 pointer-events-auto" onClick={closeVoidDialog}>
-                    <div className="bg-slate-950 border border-red-900/50 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl max-w-lg w-full max-h-[95vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 pointer-events-auto" onClick={closeVoidDialog}>
+                    <div className="bg-slate-950 border-2 border-red-500/40 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.25)] max-w-lg w-full max-h-[95vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95 group" onClick={e => e.stopPropagation()}>
+                        {/* Corner brackets */}
+                        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-red-500/60 z-30 pointer-events-none" />
+                        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-red-500/60 z-30 pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-red-500/60 z-30 pointer-events-none" />
+                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-red-500/60 z-30 pointer-events-none" />
+
+                        {/* Scanline effect */}
+                        <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+
                         <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
                         <button onClick={closeVoidDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
-                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0">
+                        <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0 relative z-20">
                             <div className="p-2 md:p-3 bg-red-950/50 rounded-xl border border-red-900/50 shadow-inner animate-pulse"><AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" /></div>
                             <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none break-words whitespace-pre-wrap">{t.VOID_TITLE}</h3><p className="text-[10px] md:text-xs text-red-400 uppercase tracking-widest font-mono mt-1 break-words whitespace-pre-wrap">{t.VOID_SUB}</p></div>
                         </div>
