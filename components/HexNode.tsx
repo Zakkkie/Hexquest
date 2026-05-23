@@ -59,7 +59,8 @@ export interface HexNodeProps {
   isExcavated?: boolean;
   isPlayerBuilt?: boolean;
   isHovered?: boolean;
-  isPlayerAction?: boolean;
+  playerQ?: number;
+  playerR?: number;
   playerGrowthIntent?: string | null;
   growthAccelerator?: number;
   renderMode?: { detailLevel: string; showTexture: boolean; showGlow: boolean; showDetails: boolean };
@@ -135,12 +136,14 @@ const HexNodeComponent = (props: HexNodeProps) => {
       lighting = 1,
       isExcavated,
       isPlayerBuilt,
-      isPlayerAction,
+      playerQ,
+      playerR,
       playerGrowthIntent,
       growthAccelerator = 0,
       renderMode
   } = props;
 
+  const isPlayerAction = !!(isGrowing && playerQ === q && playerR === r);
   const currentIntent = isPlayerAction ? (playerGrowthIntent || 'UPGRADE') : 'UPGRADE'; 
   const neededTicks = isPlayerAction ? Math.max(10, 30 - (growthAccelerator * 5)) : 30;
   const progressRatio = isGrowing ? Math.min(1.0, progress / neededTicks) : 0;
@@ -1095,7 +1098,8 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.isExcavated !== next.isExcavated) return false;
     if (prev.isPlayerBuilt !== next.isPlayerBuilt) return false;
     if (prev.isHovered !== next.isHovered) return false;
-    if (prev.isPlayerAction !== next.isPlayerAction) return false;
+    if (prev.playerQ !== next.playerQ) return false;
+    if (prev.playerR !== next.playerR) return false;
     if (prev.playerGrowthIntent !== next.playerGrowthIntent) return false;
     if (prev.growthAccelerator !== next.growthAccelerator) return false;
     
