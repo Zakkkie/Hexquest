@@ -267,6 +267,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const voidWallGroupRefs = useRef<(Konva.Group | null)[]>([]);
   const voidWallPathRefs = useRef<(Konva.Path | null)[]>([]);
   const wallFadeRefs = useRef<(Konva.Path | null)[]>([]);
+  const voidWallFadeRefs = useRef<(Konva.Path | null)[]>([]);
 
   // SPRING VERTICAL MOVEMENT PHYSICS (Dynamic height animation and elegant staggered page-load waterfalls)
   const currentOffsetYRef = useRef<number>(offsetY + 80); // Start deep for rise ripple effect
@@ -449,7 +450,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                   const voidGroupNode = voidWallGroupRefs.current[i];
                   if (voidGroupNode) {
                       if (isFrontFacing) {
-                          const VOID_DEPTH = 12;
+                          const VOID_DEPTH = MAX_WALL_DEPTH;
                           const b1x = px[next];
                           const b1y = py[next] + VOID_DEPTH;
                           const b2x = px[i];
@@ -459,6 +460,18 @@ const HexNodeComponent = (props: HexNodeProps) => {
                           voidGroupNode.show();
                           const voidPathNode = voidWallPathRefs.current[i];
                           if (voidPathNode) voidPathNode.data(data);
+                          const shadeNode = wallShadeRefs.current[i];
+                          if (shadeNode) shadeNode.data(data);
+                          const fadeNode = voidWallFadeRefs.current[i];
+                          if (fadeNode) {
+                              fadeNode.data(data);
+                              fadeNode.fillLinearGradientStartPoint({ x: (px[i] + px[next]) / 2, y: Math.min(py[i], py[next]) });
+                              fadeNode.fillLinearGradientEndPoint({ x: (px[i] + px[next]) / 2, y: Math.max(py[i], py[next]) + VOID_DEPTH });
+                              fadeNode.fillLinearGradientColorStops([
+                                  0, 'rgba(2, 6, 23, 0)',
+                                  1, 'rgba(0, 0, 0, 1)'
+                              ]);
+                          }
                           const lightingNode = wallLightingRefs.current[i];
                           if (lightingNode) lightingNode.data(data);
                       } else {
@@ -552,6 +565,19 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             listening={false} 
                             closed={true} 
                             shadowForStrokeEnabled={false}
+                        />
+                        {/* Shading Overlay for Void Walls */}
+                        <Path 
+                            ref={el => { wallShadeRefs.current[i] = el; }}
+                            fill='rgba(0,0,0,0.4)'
+                            listening={false}
+                            perfectDrawEnabled={false}
+                        />
+                        {/* Fade Overlay for Void Walls */}
+                        <Path 
+                            ref={el => { voidWallFadeRefs.current[i] = el; }}
+                            listening={false}
+                            perfectDrawEnabled={false}
                         />
                         {/* Lighting Overlay for Void Walls */}
                         {lighting < 1 && (
@@ -832,7 +858,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     />
                 )}{isMissingSupport && (
                     <Group listening={false} perfectDrawEnabled={false}>
-                        <Path data={BASE_PATH_D} stroke="#ef4444" strokeWidth={2} dash={[5, 5]} fill="rgba(239, 68, 68, 0.15)" perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
+                        <Path data={BASE_PATH_D} scaleX={0.94} scaleY={0.94} stroke="#ef4444" strokeWidth={2} dash={[5, 5]} fill="rgba(239, 68, 68, 0.15)" perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                         <Path data={ARROW_UP_PATH} x={-12} y={-12} fill="#ef4444" opacity={0.8} perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
                     </Group>
                 )}
@@ -950,6 +976,8 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             {/* Outer dashed scanner boundary */}
                             <Path 
                                 data={BASE_PATH_D} 
+                                scaleX={0.94}
+                                scaleY={0.94}
                                 stroke={currentIntent === 'DIG' ? '#ef4444' : (currentIntent === 'RECOVER' ? '#0ea5e9' : '#10b981')} 
                                 strokeWidth={1.5} 
                                 dash={[6, 8]}

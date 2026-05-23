@@ -4,11 +4,31 @@ import { GameEvent, LeaderboardEntry, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
 import { GameEventFactory } from '../events';
 import { getHexKey } from '../../services/hexUtils';
+import { checkShapeExists } from '../../services/shapeUtils';
 
 export class VictorySystem implements System {
   update(state: SessionState, _index: WorldIndex, events: GameEvent[]): void {
     if (state.gameStatus === 'VICTORY' || state.gameStatus === 'DEFEAT') {
         return;
+    }
+
+    // --- CHECK SHAPE REQUIREMENTS ---
+    if (state.activeLevelConfig && state.activeLevelConfig.requiredShapes && state.activeLevelConfig.requiredShapes.length > 0) {
+        const allShapesBuilt = state.activeLevelConfig.requiredShapes.every(req => checkShapeExists(state, req));
+        if (allShapesBuilt) {
+            state.gameStatus = 'VICTORY';
+            const msg = 'Shapes Completed!';
+            state.messageLog.unshift({
+                id: `win-shapes-${Date.now()}`,
+                text: msg,
+                type: 'SUCCESS',
+                source: 'SYSTEM',
+                timestamp: Date.now()
+            });
+            events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
+            this.generateLeaderboardEvent(state, events);
+            return;
+        }
     }
 
     // --- CHECK CAMPAIGN HOOKS ---

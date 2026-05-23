@@ -71,6 +71,7 @@ export const useGameStore = create<GameStore>()(
       language: 'RU', 
       voidDialogTarget: null,
       monumentDialogState: { isOpen: false, slots: [null, null, null] },
+      miniMonumentDialogState: { isOpen: false },
       lastVisualEvent: undefined,
       isCampaignLoading: false,
       loadingLevelId: null,

@@ -135,7 +135,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                 
                 {/* STATS STRIP */}
                 <div className="flex flex-col gap-1 flex-1 min-w-0">
-                    <div className="pointer-events-auto flex items-center justify-between md:justify-start bg-slate-950/85 backdrop-blur-xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-2 py-1 md:px-4 md:py-2 gap-1 md:gap-4 transition-all duration-300 hover:border-slate-700/60 overflow-hidden w-full md:w-fit md:shrink-0 relative">
+                    <div className="pointer-events-auto flex items-center justify-between md:justify-start bg-slate-950/85 backdrop-blur-xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-0 py-1 pt-1 md:pt-1 md:px-4 md:py-2 gap-1 md:gap-4 transition-all duration-300 hover:border-slate-700/60 overflow-hidden w-[313.2px] h-[38.2px] md:w-fit md:h-auto md:shrink-0 relative">
                         
                         {/* RANK widget */}
                         <div 
@@ -158,8 +158,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                             </div>
                         </div>
 
-                        <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0"></div>
-
+                        <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0 -mx-[5px]"></div>
                         {/* MATERIAL widget */}
                         <div 
                             onClick={() => { setHelpTopic('MATERIAL'); playUiSound('CLICK'); }}
@@ -214,8 +213,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                             </div>
                         </div>
 
-                        <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0"></div>
-
+                        <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0 -mx-[5px]"></div>
                         {/* CREDITS widget */}
                         <div 
                             onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }}
@@ -283,8 +281,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                             </div>
                         </div>
 
-                        <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0"></div>
-
+                        <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0 -mx-[5px]"></div>
                         {/* MOVES widget */}
                         <div 
                             onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }}
@@ -306,8 +303,8 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                             </div>
                         </div>
 
-                        <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0"></div>
-
+                        <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0 -mx-[5px]"></div>
+                        
                         {/* ENTROPY widget */}
                         <div 
                             onClick={() => { setHelpTopic('ENTROPY'); playUiSound('CLICK'); }}

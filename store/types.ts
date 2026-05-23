@@ -61,6 +61,9 @@ export interface GameStore extends GameState {
   openVoidDialog: (q: number, r: number) => void;
   closeVoidDialog: () => void;
   restoreVoidHex: (itemId: string) => void;
+
+  openMiniMonumentDialog: (hint: string) => void;
+  closeMiniMonumentDialog: () => void;
   
   openMonumentDialog: () => void;
   closeMonumentDialog: () => void;

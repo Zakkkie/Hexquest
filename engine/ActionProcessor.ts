@@ -441,7 +441,7 @@ export class ActionProcessor {
       
       if (state.outgoingEvents) {
           state.outgoingEvents.push(GameEventFactory.create(
-              'MONUMENT_REACHED',
+              'MINI_MONUMENT_REACHED',
               'Mini Monument Activated!',
               actor.id,
               { hexKey: action.miniMonumentHexKey }

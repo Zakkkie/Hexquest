@@ -4,11 +4,12 @@ import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
 import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
-import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Globe, Activity, Timer, Coins, Sparkles, Footprints } from 'lucide-react';
+import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Swords, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Globe, Activity, Timer, Coins, Sparkles, Footprints, Info } from 'lucide-react';
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
 import { Item } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Fireworks from '../Fireworks';
+import { MiniMonumentDialog } from './MiniMonumentDialog';
 
 interface GameDialogsProps {
     activeModal: string | null;
@@ -57,6 +58,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const activateMonument = useGameStore(state => state.activateMonument);
     const placeItemInMonument = useGameStore(state => state.placeItemInMonument);
     
+    // Mini Monument Specifics
+    const miniMonumentDialogState = useGameStore(state => state.miniMonumentDialogState);
+    const closeMiniMonumentDialog = useGameStore(state => state.closeMiniMonumentDialog);
+
     const voidDialogTarget = useGameStore(state => state.voidDialogTarget);
     const closeVoidDialog = useGameStore(state => state.closeVoidDialog);
     const restoreVoidHex = useGameStore(state => state.restoreVoidHex);
@@ -1189,6 +1194,34 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                 </div>
             )}
 
+            {/* MINI MONUMENT DIALOG */}
+            {miniMonumentDialogState?.isOpen && (
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 pointer-events-auto">
+                    <div className="bg-slate-950 border-2 border-indigo-500/40 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.25)] max-w-lg w-full relative overflow-hidden flex flex-col gap-4">
+                        {/* Corner brackets */}
+                        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/60 z-30 pointer-events-none" />
+                        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/60 z-30 pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/60 z-30 pointer-events-none" />
+                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/60 z-30 pointer-events-none" />
+                        
+                        <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                        <button onClick={closeMiniMonumentDialog} className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5"/></button>
+
+                        <div className="flex items-center gap-3 border-b border-slate-800 pb-3 relative z-20">
+                            <div className="p-2 bg-indigo-950/50 rounded-xl border border-indigo-900/50 shadow-inner"><Info className="w-6 h-6 text-indigo-500" /></div>
+                            <div>
+                                <h3 className="text-xl font-black text-white uppercase tracking-tighter leading-none">Подсказка Обелиска</h3>
+                            </div>
+                        </div>
+
+                        <div className="relative z-20 p-4 bg-slate-900 border border-slate-800 rounded-xl">
+                            <p className="text-slate-300 font-mono text-sm whitespace-pre-wrap">{miniMonumentDialogState.hint}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* MONUMENT DIALOG */}
             {monumentDialogState.isOpen && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 pointer-events-auto">
@@ -1391,6 +1424,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                     </div>
                 </div>
             )}
+            <MiniMonumentDialog isOpen={miniMonumentDialogState.isOpen} hint={miniMonumentDialogState.hint} onClose={closeMiniMonumentDialog} />
         </>
     );
 };

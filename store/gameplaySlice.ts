@@ -243,6 +243,16 @@ export const createGameplaySlice = (
       openMonumentDialog();
       return;
     }
+    if (targetHex?.structureType === 'MINI_MONUMENT' && dist === 0) {
+      const action: import('../types').ActivateMiniMonumentAction = { 
+        type: 'ACTIVATE_MINI_MONUMENT', 
+        entityId: session.player.id, 
+        miniMonumentHexKey: targetKey 
+      };
+      engine.applyAction(session.player.id, action);
+      set(() => ({ session: engine!.state }));
+      return;
+    }
 
     // PENDING CONFIRM ACTION CHECK
     if (pendingConfirmation) {
@@ -385,6 +395,16 @@ export const createGameplaySlice = (
       audioService.play('ERROR');
       set(() => ({ toast: { message: res.reason || lConfig?.TOAST?.RESTORE_ERROR || "Restoration bad", type: 'error', timestamp: Date.now() } }));
     }
+  },
+
+  openMiniMonumentDialog: (hint: string) => {
+    audioService.play('UI_CLICK');
+    set(() => ({ miniMonumentDialogState: { isOpen: true, hint } }));
+  },
+
+  closeMiniMonumentDialog: () => {
+    audioService.play('UI_CLICK');
+    set(() => ({ miniMonumentDialogState: { isOpen: false, hint: undefined } }));
   },
 
   openMonumentDialog: () => {
@@ -571,11 +591,27 @@ export const createGameplaySlice = (
       tickCount++;
       const now = Date.now();
 
+      
       // OPTIMIZED GC - CLEAN EFFECTS IN MAIN STATE
       result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
 
-      if (result.events.some(e => e.type === 'MONUMENT_REACHED')) {
-        get().openMonumentDialog();
+      try {
+        if (result.events.some(e => e.type === 'MONUMENT_REACHED')) {
+          get().openMonumentDialog();
+        }
+
+        const miniEvent = result.events.find(e => e.type === 'MINI_MONUMENT_REACHED');
+        if (miniEvent) {
+            const shapes = get().session?.activeLevelConfig?.requiredShapes || [];
+            if (shapes.length > 0) {
+                const hintText = shapes.map(s => s.hint).join('\n\n');
+                get().openMiniMonumentDialog(hintText);
+            } else {
+                get().openMiniMonumentDialog("Фигур не требуется. Восстанавливайте гексы.");
+            }
+        }
+      } catch (e) {
+        console.warn("Error processing events, likely proxy revocation:", e);
       }
 
       if (result.events.length > 0) {

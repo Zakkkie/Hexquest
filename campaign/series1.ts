@@ -264,5 +264,66 @@ export const series1Levels: LevelConfig[] = [
         return isStranded(state) && (state.restoredHexesCount || 0) < 5;
       }
     }
+  },
+  {
+    id: '1.8',
+    title: 'Sim 1.8: Энтропийный Щит',
+    description: 'Цель: Стабилизируйте сектор.\n\nЭнтропия растет. Вы должны удерживать уровень Энтропии ниже 50% в течение 30 секунд, используя Восстановление и Артефакты Стабилизации.',
+    goalText: 'Стабилизируйте Энтропию ниже 50% на 30 сек',
+    mapConfig: {
+      size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
+      customLayout: [
+         { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+         { q: 1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
+         { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+         { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
+         { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
+         { q: 0, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
+         { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
+      ]
+    },
+    startState: { credits: 25, moves: 15, rank: 2, materials: 2, initialEntropy: 60 },
+    aiMode: 'none',
+    hooks: {
+      checkWinCondition: (state) => {
+        if (state.entropy.current < 50) {
+            if (!state.stableStartTime) state.stableStartTime = Date.now();
+            return (Date.now() - state.stableStartTime) > 30000;
+        }
+        state.stableStartTime = undefined;
+        return false;
+      },
+      checkLossCondition: (state) => isStranded(state) || state.entropy.current >= 100
+    }
+  },
+  {
+    id: '1.9',
+    title: 'Sim 1.9: Обелиски Создателей',
+    description: 'Вам стали доступны подсказки Обелисков. Подойдите к минимонументу, чтобы узнать требуемую форму и собрать фигуру на карте.',
+    mapConfig: {
+      size: 3, type: 'fixed', generateWalls: false,
+      customLayout: [
+        { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+        { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
+        { q: 1, r: -1, structureType: 'MINI_MONUMENT', maxLevel: 0, currentLevel: 0, revealed: true },
+      ]
+    },
+    startState: { credits: 50, moves: 15, rank: 3, materials: 5, initialEntropy: 10 },
+    goalText: 'Выполните требование Обелиска',
+    aiMode: 'none',
+    requiredShapes: [
+      {
+        type: 'LINE_3',
+        level: 1,
+        hint: 'Постройте прямую Линию из 3-х гексов уровня 1 или выше. Они должны принадлежать вам.'
+      }
+    ],
+    hooks: {
+      checkWinCondition: () => false, // Handled automatically by requiredShapes Check inside VictorySystem
+      checkLossCondition: (state) => isStranded(state)
+    }
   }
 ];

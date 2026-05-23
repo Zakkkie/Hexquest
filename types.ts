@@ -224,6 +224,7 @@ export type GameEventType =
   | 'HEX_RESTORED' 
   | 'HEX_RESTORE_FAILED' 
   | 'MONUMENT_REACHED'
+  | 'MINI_MONUMENT_REACHED'
   | 'STATUS_APPLIED'
   | 'ENTROPY_SHIFT'; 
 
@@ -426,6 +427,7 @@ export interface LevelConfig {
   monumentRecipe?: MonumentRecipe;
   miniMonumentCoords?: HexCoord[];
   preGeneratedLootHexes?: HexCoord[];
+  requiredShapes?: import('./services/shapeUtils').RequiredShape[];
 
   aiMode: 'none' | 'dummy' | 'basic';
   hooks: ScenarioHooks;
@@ -451,6 +453,7 @@ export interface SessionState {
   activeLootPings?: Record<string, number>; // Для Мини-монументов
   minedHexes?: Record<number, number>;
   restoredHexesCount?: number;
+  stableStartTime?: number;
 
   difficulty: Difficulty;
   grid: Record<string, Hex>; 
@@ -506,6 +509,10 @@ export interface GameState {
   monumentDialogState: {
       isOpen: boolean;
       slots: (Item | null)[]; 
+  };
+  miniMonumentDialogState: {
+      isOpen: boolean;
+      hint?: string;
   };
 
   lastVisualEvent?: { type: string; time: number };
