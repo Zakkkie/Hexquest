@@ -26,11 +26,14 @@ let cachedBots: any = null;
 let cachedPendingKey: string | null = null;
 let cachedSelectedHexId: string | null = null;
 let cachedIsCampaign: boolean = false;
+let cachedCamera: any = null;
+let cachedDimensions: any = null;
 
 self.onmessage = (e) => {
     const { 
         grid, rotation, player, bots, 
-        pendingKey, selectedHexId, isCampaign
+        pendingKey, selectedHexId, isCampaign,
+        camera, dimensions
     } = e.data;
 
     const gridChanged = (grid && grid !== cachedGrid) || (isCampaign !== undefined && !!isCampaign !== cachedIsCampaign);
@@ -41,6 +44,8 @@ self.onmessage = (e) => {
     if (pendingKey !== undefined) cachedPendingKey = pendingKey;
     if (selectedHexId !== undefined) cachedSelectedHexId = selectedHexId;
     if (isCampaign !== undefined) cachedIsCampaign = !!isCampaign;
+    if (camera !== undefined) cachedCamera = camera;
+    if (dimensions !== undefined) cachedDimensions = dimensions;
 
     if (grid) {
         cachedGrid = grid;
@@ -106,6 +111,31 @@ self.onmessage = (e) => {
         const rawX = HEX_SIZE * (SQRT3 * hq + SQRT3_2 * hr);
         const rawY = HEX_SIZE * (ONE_POINT_FIVE * hr);
         
+        // --- View Frustum Culling ---
+        if (cachedCamera && cachedDimensions) {
+            // Calculate screen position according to MapRenderer simpleHexToPixel logic
+            const x = rawX * cos - rawY * sin;
+            const y = (rawX * sin + rawY * cos) * 0.8;
+            
+            const screenX = cachedCamera.x + x * cachedCamera.scale;
+            const screenY = cachedCamera.y + y * cachedCamera.scale;
+            
+            // Adjust margin based on whether it is a very tall structure, we use 4.0 as a safe upper bound
+            const margin = HEX_SIZE * 4.0;
+            const scaledMargin = margin * cachedCamera.scale;
+            
+            if (
+                screenX < -scaledMargin ||
+                screenX > cachedDimensions.width + scaledMargin ||
+                screenY < -scaledMargin ||
+                screenY > cachedDimensions.height + scaledMargin
+            ) {
+                // Skip rendering hexes entirely outside the viewport frustum
+                continue;
+            }
+        }
+        // ----------------------------
+
         // Deterministic distance from camera, including height for subtle sorting stability
         // Using 0.8 vertical squash factor to match pixel-space depth
         const baseDepth = (rawX * sin + rawY * cos) * 0.8;
@@ -190,6 +220,26 @@ self.onmessage = (e) => {
 
         const rawX = HEX_SIZE * (SQRT3 * uQ + SQRT3_2 * uR);
         const rawY = HEX_SIZE * (ONE_POINT_FIVE * uR);
+        
+        // --- View Frustum Culling ---
+        if (cachedCamera && cachedDimensions) {
+            const x = rawX * cos - rawY * sin;
+            const y = (rawX * sin + rawY * cos) * 0.8;
+            const screenX = cachedCamera.x + x * cachedCamera.scale;
+            const screenY = cachedCamera.y + y * cachedCamera.scale;
+            const margin = HEX_SIZE * 4.0;
+            const scaledMargin = margin * cachedCamera.scale;
+            if (
+                screenX < -scaledMargin ||
+                screenX > cachedDimensions.width + scaledMargin ||
+                screenY < -scaledMargin ||
+                screenY > cachedDimensions.height + scaledMargin
+            ) {
+                continue;
+            }
+        }
+        // ----------------------------
+
         const baseDepth = (rawX * sin + rawY * cos) * 0.8;
 
         const uHex = cachedGrid[getHexKey(uQ, uR)];
@@ -223,7 +273,14 @@ self.onmessage = (e) => {
     let sigParts = [];
     for (let i = 0; i < items.length; i++) {
         const it = items[i];
-        sigParts.push(`${it.id}:${it.depth.toFixed(1)}:${it.props?.level || 0}:${it.props?.isSelected ? 1 : 0}:${it.props?.isPending ? 1 : 0}:${it.props?.isOccupied ? 1 : 0}`);
+        if (it.type === 'HEX') {
+            sigParts.push(
+                `${it.id}:${it.depth.toFixed(1)}:${it.props.level}:${it.props.isSelected ? 1 : 0}:${it.props.isPending ? 1 : 0}:` +
+                `${it.props.isOccupied ? 1 : 0}:${it.props.durability}:${it.props.isRevealed ? 1 : 0}:${it.props.opacity.toFixed(2)}`
+            );
+        } else {
+            sigParts.push(`${it.id}:${it.depth.toFixed(1)}:${it.props.opacity.toFixed(2)}:UNIT`);
+        }
     }
     const signature = sigParts.join('|');
     const shouldUpdate = 

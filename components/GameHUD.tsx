@@ -33,14 +33,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
   useEffect(() => {
       if (gameStatus === 'VICTORY' && victoryStage === 'HIDDEN') {
           setVictoryStage('SALUTE');
-          const timer = setTimeout(() => {
-              setVictoryStage(current => current === 'SALUTE' ? 'MODAL' : current);
-          }, 5000);
-          return () => clearTimeout(timer);
       } else if (gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT') {
           setVictoryStage('HIDDEN');
       }
-  }, [gameStatus]);
+  }, [gameStatus, victoryStage]);
 
   if (!player) return null;
 

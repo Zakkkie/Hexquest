@@ -49,6 +49,7 @@ export interface HexNodeProps {
   poiType?: string;
   isPassable?: boolean;
   isRevealed: boolean;
+  drawVoidWalls?: boolean;
   q: number;
   r: number;
   onHexClick: (q: number, r: number) => void; 
@@ -130,6 +131,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
       isGrowing, progress, durability, artifactType,
       poiType,
       isRevealed,
+      drawVoidWalls = true,
       q, r, id,
       onHexClick, onHover,
       opacity = 1,
@@ -538,7 +540,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
             opacity={opacity}
         >
              {/* 1. VOID WALLS (Real 3D Geometry) */}
-             {neighborLevels.map((_nLevel, i) => {
+             {drawVoidWalls && neighborLevels.map((_nLevel, i) => {
                  return (
                     <Group key={`vw-group-${i}`} ref={el => { voidWallGroupRefs.current[i] = el; }} listening={false} perfectDrawEnabled={false}>
                         <Path 

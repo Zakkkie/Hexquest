@@ -337,9 +337,11 @@ interface MapRendererProps {
     onHexClick: (q: number, r: number) => void;
     onHover: (id: string | null) => void;
     hoveredHexId: string | null;
+    camera?: { x: number; y: number; scale: number; rotation: number };
+    dimensions?: { width: number; height: number };
 }
 
-const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId }) => {
+const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId, camera, dimensions }) => {
     const grid = useGameStore(state => state.session?.grid);
     const player = useGameStore(state => state.session?.player);
     const bots = useGameStore(state => state.session?.bots);
@@ -395,13 +397,17 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         bots: any;
         pendingKey: any;
         selectedHexId: any;
+        camera: any;
+        dimensions: any;
     }>({
         grid: null,
         rotation: -999,
         player: null,
         bots: null,
         pendingKey: null,
-        selectedHexId: null
+        selectedHexId: null,
+        camera: null,
+        dimensions: null
     });
 
     // Unified Worker Update Strategy: Consolidates both grid & view to minimize serializing overhead and prevent multiple cloning frames.
@@ -441,9 +447,18 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
             
             // Throttling/Debouncing rotation changes: Only update depth sorting if changed by > 4 degrees
             const rotationChanged = Math.abs(rotation - last.rotation) > 4;
-            
-            if (gridChanged || playerChanged || botsChanged || pendingKeyChanged || selectedHexIdChanged || rotationChanged) {
-                lastPostedRef.current = { grid, rotation, player, bots, pendingKey, selectedHexId };
+
+            const cameraChanged = !last.camera || !camera || 
+                Math.abs(camera.x - last.camera.x) > 10 || 
+                Math.abs(camera.y - last.camera.y) > 10 || 
+                camera.scale !== last.camera.scale;
+
+            const dimensionsChanged = !last.dimensions || !dimensions || 
+                dimensions.width !== last.dimensions.width || 
+                dimensions.height !== last.dimensions.height;
+
+            if (gridChanged || playerChanged || botsChanged || pendingKeyChanged || selectedHexIdChanged || rotationChanged || cameraChanged || dimensionsChanged) {
+                lastPostedRef.current = { grid, rotation, player, bots, pendingKey, selectedHexId, camera, dimensions };
                 workerRef.current.postMessage({ 
                     grid: gridChanged ? grid : undefined,
                     rotation, 
@@ -451,11 +466,13 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                     bots,
                     pendingKey,
                     selectedHexId,
+                    camera,
+                    dimensions,
                     isCampaign: !!activeLevelConfig
                 });
             }
         }
-    }, [grid, rotation, player, bots, pendingKey, selectedHexId, activeLevelConfig]);
+    }, [grid, rotation, player, bots, pendingKey, selectedHexId, activeLevelConfig, camera, dimensions]);
 
     // Explicitly memoize onHexClick to ensure stability for renderList
     const memoizedOnHexClick = useCallback((q: number, r: number) => {
@@ -566,12 +583,14 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                 const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, tempPlayer, grid, tutorialData, activeLevelConfig);
                 const theme = getTheme(item.props.isRevealed ? hex.maxLevel : 0);
 
+                const isRevealed = !!item.props.isRevealed;
+                
                 return {
                     ...item,
                     props: {
                         ...item.props,
                         theme,
-                        isRevealed: item.props.isRevealed,
+                        drawVoidWalls: isRevealed,
                         pendingCost: item.props.isPending && pendingConfirmation ? pendingConfirmation.data.costCoins : null,
                         isTutorialTarget: isTutorial,
                         isTargetArrow: isArrow,
@@ -595,7 +614,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         }).filter(Boolean);
 
         return { items };
-    }, [grid, playerQ, playerR, playerStorage, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems, isLiteMode]);
+    }, [grid, playerQ, playerR, playerStorage, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems, isLiteMode, camera, dimensions, rotation]);
 
     return (
         <>

@@ -872,16 +872,16 @@ const MainMenu: React.FC = () => {
                     <button onClick={randomizeConfig} className="p-2 text-slate-400 hover:text-white transition-colors rounded-full hover:bg-slate-800 border border-slate-700 hover:border-slate-500" title="Randomize Conditions">
                         <Shuffle className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
-                    <button onClick={() => setShowMissionConfig(false)} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800"><X className="w-4 h-4 md:w-5 md:h-5"/></button>
+                    <button onClick={() => setShowMissionConfig(false)} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800"><X className="w-5 h-5" /></button>
                 </div>
              </div>
 
              {/* SCROLLABLE CONTENT */}
-             <div className="flex-1 overflow-y-auto no-scrollbar p-3 md:p-6 space-y-4 md:space-y-6">
+             <div className="flex-1 overflow-y-auto no-scrollbar p-2 md:p-6 space-y-2 md:space-y-6">
                  
                  {/* 1. MISSION SELECTION (Compact Grid) */}
                  <div>
-                    <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1.5 md:mb-3 break-words whitespace-pre-wrap">
+                    <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-3 break-words whitespace-pre-wrap">
                         <Target className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.COL_GOAL_TITLE}
                     </h3>
                     <div className="grid grid-cols-3 gap-1.5 md:gap-3 relative">
@@ -894,7 +894,7 @@ const MainMenu: React.FC = () => {
                                   key={id} 
                                   onClick={() => { setSelectedTier(id as 1|2|3); setDifficulty(tier.difficulty); playUiSound('CLICK'); }}
                                   className={`
-                                    relative flex flex-col items-center justify-center p-1.5 md:p-3 rounded-2xl transition-all duration-300 border focus:outline-none group h-16 md:h-24 overflow-hidden
+                                    relative flex flex-col items-center justify-center p-1 md:p-3 rounded-2xl transition-all duration-300 border focus:outline-none group h-14 md:h-24 overflow-hidden
                                     ${isSelected 
                                         ? 'bg-gradient-to-b from-indigo-500/20 to-slate-900/90 border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3),inset_0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5),inset_0_0_20px_rgba(99,102,241,0.3)] scale-[1.02]' 
                                         : 'bg-slate-900/40 border-slate-700/50 hover:border-slate-500 hover:bg-slate-800/60 shadow-lg'}
@@ -906,9 +906,9 @@ const MainMenu: React.FC = () => {
                                    {isSelected && (
                                      <div className="absolute inset-0 opacity-30 shadow-[inset_0_0_15px_#818cf8] rounded-2xl pointer-events-none blur-sm" />
                                    )}
-                                   <Icon className={`relative z-10 w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 transition-all duration-300 ${isSelected ? 'text-indigo-300 drop-shadow-[0_0_10px_rgba(165,180,252,0.8)] scale-110' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                                   <Icon className={`relative z-10 w-3.5 h-3.5 md:w-6 md:h-6 mb-0.5 md:mb-2 transition-all duration-300 ${isSelected ? 'text-indigo-300 drop-shadow-[0_0_10px_rgba(165,180,252,0.8)] scale-110' : 'text-slate-500 group-hover:text-slate-300'}`} />
                                    <span className={`relative z-10 text-[8px] md:text-[10px] font-black uppercase tracking-wider text-center leading-tight break-words whitespace-pre-wrap transition-all duration-300 ${isSelected ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : 'text-slate-400'}`}>{tier.label}</span>
-                                   <span className={`relative z-10 text-[7px] md:text-[9px] font-mono mt-0.5 md:mt-1 transition-all duration-300 ${isSelected ? 'text-indigo-200/80 drop-shadow-md' : 'text-slate-600'}`}>{tier.time}</span>
+                                   <span className={`relative z-10 text-[7px] md:text-[9px] font-mono mt-0 md:mt-1 transition-all duration-300 ${isSelected ? 'text-indigo-200/80 drop-shadow-md' : 'text-slate-600'}`}>{tier.time}</span>
                                 </button>
                               );
                         })}
@@ -918,13 +918,13 @@ const MainMenu: React.FC = () => {
                  <div className="h-px bg-slate-800 w-full" />
 
                  {/* 2. CONFIGURATION GRID */}
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
                      
                      {/* LEFT: DIFFICULTY & MAP TYPE */}
-                     <div className="flex flex-col gap-3 md:gap-4">
+                     <div className="flex flex-col gap-2 md:gap-4">
                         {/* DIFFICULTY */}
                         <div>
-                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1.5 md:mb-3 break-words whitespace-pre-wrap">
+                            <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-3 break-words whitespace-pre-wrap">
                                 <Shield className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.LBL_DIFFICULTY}
                             </h3>
                             <div className="flex bg-slate-900 p-0.5 md:p-1 rounded-xl border border-slate-800 mb-1.5 md:mb-3">
@@ -940,7 +940,7 @@ const MainMenu: React.FC = () => {
                                         <button 
                                             key={d} 
                                             onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
-                                            className={`flex-1 py-1 md:py-2 rounded-lg text-[7px] md:text-[10px] font-black uppercase tracking-wider transition-all break-words whitespace-pre-wrap ${colorClass}`}
+                                            className={`flex-1 py-1 md:py-2 rounded-lg text-[7.5px] md:text-[10px] font-black uppercase tracking-wider transition-all break-words whitespace-pre-wrap ${colorClass}`}
                                         >
                                             {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
                                         </button>
@@ -948,30 +948,30 @@ const MainMenu: React.FC = () => {
                                 })}
                             </div>
                             
-                            <div className={`p-2 md:p-3 rounded-xl border flex items-start gap-2 ${getDifficultyColor(difficulty)}`}>
-                                <Activity className="w-2.5 h-2.5 md:w-4 md:h-4 shrink-0 mt-0.5 animate-pulse" />
+                            <div className={`p-1.5 md:p-3 rounded-xl border flex items-start gap-1.5 md:gap-2 ${getDifficultyColor(difficulty)}`}>
+                                <Activity className="w-2.5 h-2.5 md:w-4 md:h-4 shrink-0 animate-pulse mt-0.5" />
                                 <div>
-                                    <span className="block text-[7px] md:text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5 break-words whitespace-pre-wrap">{t.RULES_ENGAGEMENT}</span>
-                                    <span className="text-[8px] md:text-[10px] font-bold leading-tight block break-words whitespace-pre-wrap">{getDifficultyDesc(difficulty)}</span>
+                                    <span className="block text-[7px] md:text-[9px] font-black uppercase tracking-widest opacity-70 break-words whitespace-pre-wrap">{t.RULES_ENGAGEMENT}</span>
+                                    <span className="text-[7.5px] md:text-[10px] font-bold leading-tight block break-words whitespace-pre-wrap">{getDifficultyDesc(difficulty)}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* MAP TYPE SELECTOR */}
                         <div>
-                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
+                            <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
                                 <MapIcon className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Ландшафт' : 'Terrain'}
                             </h3>
                             <div className="flex bg-slate-900 p-0.5 md:p-1 rounded-xl border border-slate-800">
                                 <button 
                                     onClick={() => { setMapType('FLAT'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 break-words whitespace-pre-wrap ${mapType === 'FLAT' ? 'bg-slate-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 break-words whitespace-pre-wrap ${mapType === 'FLAT' ? 'bg-slate-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
                                 >
                                     <Layers className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Плоский' : 'Flat'}
                                 </button>
                                 <button 
                                     onClick={() => { setMapType('CHAOTIC'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 break-words whitespace-pre-wrap ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 break-words whitespace-pre-wrap ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-500 hover:text-slate-300'}`}
                                 >
                                     <Activity className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Хаос' : 'Chaos'}
                                 </button>
@@ -980,10 +980,10 @@ const MainMenu: React.FC = () => {
                      </div>
 
                      {/* RIGHT: BOTS & STORAGE */}
-                     <div className="flex flex-col gap-3 md:gap-4">
+                     <div className="flex flex-col gap-2 md:gap-4">
                         {/* BOTS */}
                         <div>
-                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
+                            <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
                                 <Bot className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.LBL_RIVALS}
                             </h3>
                             <div className="grid grid-cols-6 gap-1 md:gap-1.5">
@@ -992,7 +992,7 @@ const MainMenu: React.FC = () => {
                                         key={count} 
                                         onClick={() => { setBotCount(count); playUiSound('CLICK'); }}
                                         className={`
-                                            h-7 md:h-9 rounded-lg border flex items-center justify-center transition-all relative overflow-hidden group
+                                            h-6 md:h-9 rounded-lg border flex items-center justify-center transition-all relative overflow-hidden group
                                             ${botCount === count 
                                                 ? 'border-red-500 bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]' 
                                                 : 'border-slate-800 bg-slate-900 text-slate-600 hover:border-slate-600 hover:text-slate-400'}
@@ -1012,7 +1012,7 @@ const MainMenu: React.FC = () => {
 
                         {/* STORAGE SELECTOR (NEW) */}
                         <div>
-                            <h3 className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
+                            <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
                                 <Box className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.CARGO_CAP}
                             </h3>
                             <div className="flex gap-1 md:gap-2">
@@ -1021,7 +1021,7 @@ const MainMenu: React.FC = () => {
                                         key={cap}
                                         onClick={() => { setStorageCap(cap); playUiSound('CLICK'); }}
                                         className={`
-                                            flex-1 h-7 md:h-9 rounded-lg border flex items-center justify-center gap-1 transition-all
+                                            flex-1 h-6 md:h-9 rounded-lg border flex items-center justify-center gap-1 transition-all
                                             ${storageCap === cap 
                                                 ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]' 
                                                 : 'border-slate-800 bg-slate-900 text-slate-600 hover:border-slate-600 hover:text-slate-400'}

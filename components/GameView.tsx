@@ -7,7 +7,6 @@ import { hexToPixel } from '../services/hexUtils.ts';
 import Background from './Background.tsx';
 import GameHUD from './GameHUD.tsx';
 import MapRenderer from './MapRenderer.tsx';
-import Fireworks from './Fireworks.tsx';
 import { audioService } from '../services/audioService.ts';
 import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
 import { safifyCoord } from '../utils/safeCoordinates.ts';
@@ -74,7 +73,6 @@ const GameView: React.FC = () => {
   const winCondition = useGameStore(state => state.session?.winCondition);
   const deviceType = useGameStore(state => state.deviceType);
   const lastVisualEvent = useGameStore(state => state.lastVisualEvent);
-  const gameStatus = useGameStore(state => state.session?.gameStatus);
   
   const movePlayer = useGameStore(state => state.movePlayer);
   const hideToast = useGameStore(state => state.hideToast);
@@ -241,13 +239,19 @@ const GameView: React.FC = () => {
           // Damping Factors
           // Snappy response when interacting (0.4), smooth drift when released/animating (0.08)
           const dampingPos = isUserInteracting ? 0.4 : 0.12; 
-          const dampingScale = 0.1;
           const dampingRot = isUserInteracting ? 0.4 : 0.08;
+
+          // Easing function for smoother scale updates
+          const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+          const scaleDiff = Math.abs(target.scale - current.scale);
+          // Map the difference against a max reasonable zoom step (~1.5 scale delta)
+          const scaleProgress = Math.min(scaleDiff / 1.5, 1.0);
+          const dynamicScaleDamping = 0.05 + easeOutCubic(scaleProgress) * 0.15;
 
           // Interpolate
           const nextX = lerp(current.x, target.x, dampingPos);
           const nextY = lerp(current.y, target.y, dampingPos);
-          const nextScale = lerp(current.scale, target.scale, dampingScale);
+          const nextScale = lerp(current.scale, target.scale, dynamicScaleDamping);
           const nextRot = lerp(current.rotation, target.rotation, dampingRot);
 
           // Convergence Check (Optimization)
@@ -493,9 +497,6 @@ const GameView: React.FC = () => {
          <div className="absolute inset-0 bg-slate-950/20" />
       </div>
 
-      {/* FIREWORKS */}
-      {gameStatus === 'VICTORY' && <Fireworks />}
-
       {/* CANVAS */}
       <div className="absolute inset-0 z-10">
         <Stage 
@@ -526,6 +527,8 @@ const GameView: React.FC = () => {
             onHexClick={handleHexClick}
             onHover={setHoveredHexId}
             hoveredHexId={hoveredHexId}
+            camera={renderCamera}
+            dimensions={dimensions}
           />
         </Stage>
       </div>

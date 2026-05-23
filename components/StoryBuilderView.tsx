@@ -37,11 +37,11 @@ const STORY_STEPS = [
 ];
 
 const getBasePathD = () => {
-    let d = `M ${BASE_POINTS[0].x} ${BASE_POINTS[0].y * 0.8}`;
-    for (let i = 1; i < 6; i++) d += ` L ${BASE_POINTS[i].x} ${BASE_POINTS[i].y * 0.8}`;
+    let d = `M ${BASE_POINTS[0].x} ${BASE_POINTS[0].y}`;
+    for (let i = 1; i < 6; i++) d += ` L ${BASE_POINTS[i].x} ${BASE_POINTS[i].y}`;
     return d + " Z";
 };
-const SQUASHED_BASE_PATH_D = getBasePathD();
+const BASE_PATH_D = getBasePathD();
 
 const NebulaBackground: React.FC<{ width: number; height: number }> = ({ width, height }) => {
     const clouds = useMemo(() => Array.from({ length: 6 }).map((_, i) => ({
@@ -158,13 +158,13 @@ const StoryHex: React.FC<{
 
     const [isHovered, setIsHovered] = useState(false);
 
-    // Front-facing sides for isometric view
+    // Front-facing sides for isometric view (0, 1, 5)
     const visibleSides = useMemo(() => {
         if (!isBuilt) return null;
         const squashedPoints = BASE_POINTS.map(p => ({ x: p.x, y: p.y * 0.8 }));
         
-        // Point-up hex, front sides are 1,2,3,4
-        return [1, 2, 3, 4].map(i => {
+        // Point-up hex, front facing sides are 0, 1 and 5
+        return [0, 1, 5].map(i => {
             const next = (i + 1) % 6;
             const p1 = squashedPoints[i];
             const p2 = squashedPoints[next];
@@ -180,7 +180,13 @@ const StoryHex: React.FC<{
                 maxY
             };
         });
-    }, [isBuilt, wallHeight, level]);
+    }, [isBuilt, wallHeight]);
+
+    const getSideOpacity = useCallback((id: number) => {
+        if (id === 0) return 0.95;
+        if (id === 1) return 0.75;
+        return 0.85; // id === 5
+    }, []);
 
     return (
         <Group 
@@ -194,37 +200,37 @@ const StoryHex: React.FC<{
             perfectDrawEnabled={false}
             transformsEnabled="position"
         >
-            {/* 3D Sides */}
+            {/* 3D Sides / Walls */}
             {isBuilt && colors && visibleSides && (
                 <Group y={yOffset}>
                     {visibleSides.map(side => (
-                            <Path
-                                key={side.id}
-                                data={side.data}
-                                fillPatternImage={sideTexture as any}
-                                fillEnabled={!sideTexture}
-                                fillLinearGradientStartPoint={{ x: side.midX, y: side.minY }}
-                                fillLinearGradientEndPoint={{ x: side.midX, y: side.maxY }}
-                                fillLinearGradientColorStops={[
-                                    0, colors.top,
-                                    0.25, colors.side,
-                                    1, 'rgba(11, 17, 32, 0.05)'
-                                ]}
-                                stroke={colors.side}
-                                strokeWidth={0.5}
-                                opacity={1 - ((side.id - 1) % 4) * 0.15}
-                                listening={false}
-                                perfectDrawEnabled={false}
-                                shadowForStrokeEnabled={false}
-                            />
+                        <Path
+                            key={side.id}
+                            data={side.data}
+                            fillPatternImage={sideTexture as any}
+                            fillEnabled={!sideTexture}
+                            fillLinearGradientStartPoint={{ x: side.midX, y: side.minY }}
+                            fillLinearGradientEndPoint={{ x: side.midX, y: side.maxY }}
+                            fillLinearGradientColorStops={[
+                                0, colors.top,
+                                0.25, colors.side,
+                                1, 'rgba(11, 17, 32, 0.05)'
+                            ]}
+                            stroke={colors.side}
+                            strokeWidth={1.5}
+                            opacity={getSideOpacity(side.id)}
+                            listening={false}
+                            perfectDrawEnabled={false}
+                            shadowForStrokeEnabled={false}
+                        />
                     ))}
                 </Group>
             )}
 
-            {/* Top Face */}
-            <Group y={yOffset}>
+            {/* Top Face inside a scaled Group for pixel-perfect non-crooked isometric scaling */}
+            <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                 <Path
-                    data={SQUASHED_BASE_PATH_D}
+                    data={BASE_PATH_D}
                     fillPatternImage={topTexture as any}
                     fill={topTexture ? undefined : (isBuilt ? colors?.top : (isHovered ? 'rgba(99, 102, 241, 0.35)' : (isTarget ? 'rgba(99, 102, 241, 0.08)' : 'rgba(255,255,255,0.01)')))}
                     fillPatternScale={{ x: GAME_CONFIG.HEX_SIZE / 32, y: GAME_CONFIG.HEX_SIZE / 32 }}
@@ -239,7 +245,7 @@ const StoryHex: React.FC<{
                     <>
                         {/* Top/Light Bevel */}
                         <Path 
-                            data={`M ${BASE_POINTS[2].x} ${BASE_POINTS[2].y * 0.8} L ${BASE_POINTS[3].x} ${BASE_POINTS[3].y * 0.8} L ${BASE_POINTS[4].x} ${BASE_POINTS[4].y * 0.8} L ${BASE_POINTS[5].x} ${BASE_POINTS[5].y * 0.8}`}
+                            data={`M ${BASE_POINTS[2].x} ${BASE_POINTS[2].y} L ${BASE_POINTS[3].x} ${BASE_POINTS[3].y} L ${BASE_POINTS[4].x} ${BASE_POINTS[4].y} L ${BASE_POINTS[5].x} ${BASE_POINTS[5].y}`}
                             stroke="rgba(255,255,255,0.4)"
                             strokeWidth={2}
                             listening={false}
@@ -247,7 +253,7 @@ const StoryHex: React.FC<{
                         />
                         {/* Bottom/Dark Bevel */}
                         <Path 
-                            data={`M ${BASE_POINTS[5].x} ${BASE_POINTS[5].y * 0.8} L ${BASE_POINTS[0].x} ${BASE_POINTS[0].y * 0.8} L ${BASE_POINTS[1].x} ${BASE_POINTS[1].y * 0.8} L ${BASE_POINTS[2].x} ${BASE_POINTS[2].y * 0.8}`}
+                            data={`M ${BASE_POINTS[5].x} ${BASE_POINTS[5].y} L ${BASE_POINTS[0].x} ${BASE_POINTS[0].y} L ${BASE_POINTS[1].x} ${BASE_POINTS[1].y} L ${BASE_POINTS[2].x} ${BASE_POINTS[2].y}`}
                             stroke="rgba(0,0,0,0.6)"
                             strokeWidth={2}
                             listening={false}
@@ -259,13 +265,13 @@ const StoryHex: React.FC<{
 
             {/* Empty Holographic blueprint decoration inside targets */}
             {!isBuilt && isTarget && (
-                <Group y={yOffset}>
+                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                     <Path
-                        data={SQUASHED_BASE_PATH_D}
+                        data={BASE_PATH_D}
                         scaleX={0.75}
                         scaleY={0.75}
                         stroke={isHovered ? 'rgba(34, 211, 238, 0.5)' : 'rgba(99, 102, 241, 0.22)'}
-                        strokeWidth={1}
+                        strokeWidth={1.2}
                         dash={[3, 4]}
                         listening={false}
                     />
@@ -277,11 +283,11 @@ const StoryHex: React.FC<{
 
             {/* Pulse Build Indicator for Eligible Placement Cells */}
             {isEligible && (
-                <Group y={yOffset}>
+                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                     <Path
-                        data={SQUASHED_BASE_PATH_D}
-                        scaleX={1.12}
-                        scaleY={1.12}
+                        data={BASE_PATH_D}
+                        scaleX={0.96}
+                        scaleY={0.96}
                         stroke={isHovered ? '#ec4899' : '#22d3ee'}
                         strokeWidth={2}
                         dash={[5, 4]}
@@ -304,47 +310,47 @@ const StoryHex: React.FC<{
 
             {/* Selection Outline */}
             {isSelected && (
-                <Path
-                    y={yOffset}
-                    data={SQUASHED_BASE_PATH_D}
-                    scaleX={1.18}
-                    scaleY={1.18}
-                    stroke="#a855f7"
-                    strokeWidth={2.5}
-                    dash={[4, 4]}
-                    opacity={0.8}
-                    shadowColor="#a855f7"
-                    shadowBlur={10}
-                    listening={false}
-                    perfectDrawEnabled={false}
-                />
+                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
+                    <Path
+                        data={BASE_PATH_D}
+                        scaleX={0.92}
+                        scaleY={0.92}
+                        stroke="#a855f7"
+                        strokeWidth={2.5}
+                        dash={[4, 4]}
+                        opacity={0.8}
+                        shadowColor="#a855f7"
+                        shadowBlur={10}
+                        listening={false}
+                        perfectDrawEnabled={false}
+                    />
+                </Group>
             )}
 
             {/* Place Block Isometric Ripple Particle Effect */}
             {isNew && (
-                <Circle
-                    y={yOffset}
-                    r={GAME_CONFIG.HEX_SIZE * 0.8}
-                    stroke="#ffffff"
-                    strokeWidth={3}
-                    opacity={0.9}
-                    scaleX={1}
-                    scaleY={0.8}
-                    listening={false}
-                    ref={(node) => {
-                        if (node) {
-                            new Konva.Tween({
-                                node: node,
-                                duration: 0.65,
-                                scaleX: 1.85,
-                                scaleY: 1.48,
-                                opacity: 0,
-                                strokeWidth: 0.5,
-                                easing: Konva.Easings.EaseOut
-                            }).play();
-                        }
-                    }}
-                />
+                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
+                    <Circle
+                        r={GAME_CONFIG.HEX_SIZE * 0.8}
+                        stroke="#ffffff"
+                        strokeWidth={3}
+                        opacity={0.9}
+                        listening={false}
+                        ref={(node) => {
+                            if (node) {
+                                new Konva.Tween({
+                                    node: node,
+                                    duration: 0.65,
+                                    scaleX: 1.85,
+                                    scaleY: 1.85,
+                                    opacity: 0,
+                                    strokeWidth: 0.5,
+                                    easing: Konva.Easings.EaseOut
+                                }).play();
+                            }
+                        }}
+                    />
+                </Group>
             )}
         </Group>
     );
@@ -578,7 +584,7 @@ const StoryBuilderView: React.FC = () => {
                         <div className="relative">
                             <button 
                                 onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
-                                className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ml-0 px-0 pt-0 -mr-6 ${
+                                className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ml-0 px-0 pt-0 ${
                                     isSettingsOpen 
                                         ? 'bg-slate-800 border-indigo-500/50 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
                                         : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'

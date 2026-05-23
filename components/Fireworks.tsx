@@ -66,10 +66,17 @@ const CONSOLE_LOGS_EN = [
     "[SECURITY] Transferring energetic vector to hyper-core."
 ];
 
-const Fireworks: React.FC = () => {
+interface FireworksProps {
+    onComplete?: () => void;
+}
+
+const Fireworks: React.FC<FireworksProps> = ({ onComplete }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const language = useGameStore(state => state.language);
     const logs = language === 'RU' ? CONSOLE_LOGS_RU : CONSOLE_LOGS_EN;
+    
+    // We use a ref to make sure we don't trigger onComplete multiple times
+    const isCompleteFired = useRef(false);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -128,6 +135,17 @@ const Fireworks: React.FC = () => {
         const loop = () => {
             const isLiteMode = useGameStore.getState().isLiteMode;
             if (isLiteMode) {
+                if (lastLogTime === 0) {
+                     lastLogTime = Date.now();
+                }
+                const now = Date.now();
+                if (now - lastLogTime > 4000) {
+                    if (onComplete && !isCompleteFired.current) {
+                        isCompleteFired.current = true;
+                        onComplete();
+                    }
+                }
+                
                 ctx.fillStyle = 'rgba(2, 6, 23, 0.9)'; 
                 ctx.fillRect(0, 0, width, height);
                 
@@ -310,6 +328,14 @@ const Fireworks: React.FC = () => {
                     activeLogs.shift();
                 }
             }
+            
+            // Check for animation completion
+            if (currentLogIndex >= logs.length && now - lastLogTime > 1200) {
+                if (onComplete && !isCompleteFired.current) {
+                    isCompleteFired.current = true;
+                    onComplete();
+                }
+            }
 
             // Draw Holographic Logs on Canvas
             ctx.save();
@@ -318,14 +344,18 @@ const Fireworks: React.FC = () => {
             ctx.shadowColor = 'rgba(16, 185, 129, 0.6)';
             ctx.shadowBlur = 10;
             
-            // Console Header box
-            const boxX = 20;
+            // Console Header box (Responsive for Mobile)
+            const boxMargin = 20;
+            const boxWidth = Math.min(width - (boxMargin * 2), 380);
+            // Center the box instead of hardcoding 20 if it's smaller, though 20 is fine since we do width-40
+            const boxX = boxMargin; 
             const boxY = height - 190;
+            
             ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
             ctx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.roundRect(boxX, boxY, 380, 160, 4);
+            ctx.roundRect(boxX, boxY, boxWidth, 160, 4);
             ctx.fill();
             ctx.stroke();
 
@@ -335,26 +365,36 @@ const Fireworks: React.FC = () => {
             // Top left corner
             ctx.beginPath(); ctx.moveTo(boxX, boxY + 12); ctx.lineTo(boxX, boxY); ctx.lineTo(boxX + 12, boxY); ctx.stroke();
             // Bottom right corner
-            ctx.beginPath(); ctx.moveTo(boxX + 380, boxY + 160 - 12); ctx.lineTo(boxX + 380, boxY + 160); ctx.lineTo(boxX + 380 - 12, boxY + 160); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(boxX + boxWidth, boxY + 160 - 12); ctx.lineTo(boxX + boxWidth, boxY + 160); ctx.lineTo(boxX + boxWidth - 12, boxY + 160); ctx.stroke();
 
             // Display title
             ctx.fillStyle = '#34d399';
-            ctx.fillText("NEBULA DEC-LINK PROCESSED // STABLE", boxX + 15, boxY + 22);
+            // Adjust title for very small screens
+            const titleText = boxWidth < 280 ? "NEBULA STABLE" : "NEBULA DEC-LINK PROCESSED // STABLE";
+            ctx.fillText(titleText, boxX + 15, boxY + 22);
+            
             ctx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
             ctx.beginPath();
             ctx.moveTo(boxX + 15, boxY + 30);
-            ctx.lineTo(boxX + 365, boxY + 30);
+            ctx.lineTo(boxX + boxWidth - 15, boxY + 30);
             ctx.stroke();
 
             // Scrolling text
             ctx.fillStyle = '#a7f3d0';
             activeLogs.forEach((log, index) => {
-                ctx.fillText(log, boxX + 15, boxY + 48 + index * 14);
+                // Truncate logs if they don't fit
+                const maxChars = Math.floor((boxWidth - 30) / 6.6); // roughly 6.6px per char
+                const displayLog = log.length > maxChars ? log.substring(0, maxChars - 3) + '...' : log;
+                ctx.fillText(displayLog, boxX + 15, boxY + 48 + index * 14);
             });
 
             // Caret blink
             if (Math.floor(Date.now() / 400) % 2 === 0) {
-                const caretX = boxX + 15 + (activeLogs[activeLogs.length - 1]?.length || 0) * 6.6;
+                const lastLog = activeLogs[activeLogs.length - 1] || '';
+                const maxChars = Math.floor((boxWidth - 30) / 6.6);
+                const displayLogCount = lastLog.length > maxChars ? maxChars : lastLog.length;
+                
+                const caretX = boxX + 15 + displayLogCount * 6.6;
                 const caretY = boxY + 48 + (Math.max(0, activeLogs.length - 1)) * 14 - 9;
                 ctx.fillStyle = '#10b981';
                 ctx.fillRect(caretX, caretY, 6, 11);

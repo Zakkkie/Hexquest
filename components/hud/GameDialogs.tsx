@@ -8,6 +8,7 @@ import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Swords, Crown, Zap, H
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
 import { Item } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
+import Fireworks from '../Fireworks';
 
 interface GameDialogsProps {
     activeModal: string | null;
@@ -268,8 +269,16 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     return (
         <>
-            {/* SALUTE CLICK LAYER */}
-            {victoryStage === 'SALUTE' && <div className="absolute inset-0 z-[150] pointer-events-auto cursor-pointer" onClick={() => setVictoryStage('MODAL')} onTouchStart={() => setVictoryStage('MODAL')} />}
+            {/* SALUTE CLICK LAYER AND FIREWORKS */}
+            {victoryStage === 'SALUTE' && (
+                <div 
+                    className="absolute inset-0 z-[150] pointer-events-auto cursor-pointer" 
+                    onClick={() => setVictoryStage('MODAL')} 
+                    onTouchStart={() => setVictoryStage('MODAL')}
+                >
+                    <Fireworks onComplete={() => setVictoryStage('MODAL')} />
+                </div>
+            )}
 
             {/* EXIT CONFIRMATION */}
             <AnimatePresence>
@@ -908,27 +917,27 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                     <div className={`absolute inset-0 bg-gradient-to-b opacity-25 pointer-events-none ${gameStatus === 'VICTORY' ? 'from-emerald-500/20 to-transparent shadow-[inset_0_0_100px_rgba(16,185,129,0.1)]' : 'from-red-500/20 to-transparent shadow-[inset_0_0_100px_rgba(239,68,68,0.1)]'}`} />
 
                     {/* Premium Sci-Fi Terminal Layout */}
-                    <div className="bg-slate-950/95 border-2 border-slate-800/80 rounded-2xl md:rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.05)] max-w-4xl w-full flex flex-col relative z-10 max-h-[95vh] overflow-y-auto no-scrollbar py-4 md:py-6 px-3 sm:px-6 md:px-8 border-t-indigo-500/30 group">
+                    <div className="bg-slate-950/95 border-2 border-slate-800/80 rounded-2xl md:rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.05)] max-w-4xl w-full flex flex-col relative z-10 max-h-[98vh] overflow-y-auto no-scrollbar py-2 md:py-6 px-2 sm:px-6 md:px-8 border-t-indigo-500/30 group leading-tight">
                         {/* Corner brackets */}
-                        <div className={`absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
-                        <div className={`absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
-                        <div className={`absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
-                        <div className={`absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
+                        <div className={`absolute top-0 left-0 w-3 h-3 md:w-5 md:h-5 border-t-2 border-l-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
+                        <div className={`absolute top-0 right-0 w-3 h-3 md:w-5 md:h-5 border-t-2 border-r-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
+                        <div className={`absolute bottom-0 left-0 w-3 h-3 md:w-5 md:h-5 border-b-2 border-l-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
+                        <div className={`absolute bottom-0 right-0 w-3 h-3 md:w-5 md:h-5 border-b-2 border-r-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
 
                         {/* Terminal Decoration */}
-                        <div className="w-full flex items-center gap-2 md:gap-4 mb-3 md:mb-6 opacity-45 shrink-0">
+                        <div className="w-full flex items-center gap-1 md:gap-4 mb-1.5 md:mb-6 opacity-45 shrink-0 px-2 mt-1 md:mt-0">
                             <div className="h-px flex-1 bg-current" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }} />
-                            <div className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.5em] font-mono whitespace-nowrap" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }}>
+                            <div className="text-[7.5px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.5em] font-mono whitespace-nowrap" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }}>
                                 {gameStatus === 'VICTORY' ? 'SYSTEM_STABILITY_RESTORED' : 'LINK_TERMINATED'}
                             </div>
                             <div className="h-px flex-1 bg-current" style={{ color: gameStatus === 'VICTORY' ? '#10b981' : '#ef4444' }} />
                         </div>
 
                         {/* Main Status Display */}
-                        <div className="relative mb-3.5 md:mb-7 mx-auto shrink-0">
+                        <div className="relative mb-2 md:mb-7 mx-auto shrink-0">
                             <div className={`absolute inset-0 blur-xl md:blur-3xl opacity-30 animate-pulse ${gameStatus === 'VICTORY' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                            <div className={`relative px-4 py-2 sm:px-6 md:px-10 md:py-4 border-2 md:border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_20px_rgba(239,68,68,0.3)]'}`}>
-                                <h1 className={`text-2xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
+                            <div className={`relative px-3 py-1.5 sm:px-6 md:px-10 md:py-4 border-2 md:border-4 transform skew-x-[-12deg] ${gameStatus === 'VICTORY' ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'border-red-500 bg-red-950/20 shadow-[0_0_20px_rgba(239,68,68,0.3)]'}`}>
+                                <h1 className={`text-xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter italic transform skew-x-[12deg] leading-none ${gameStatus === 'VICTORY' ? 'text-emerald-400' : 'text-red-500'}`}>
                                     {gameStatus === 'VICTORY' ? t.VICTORY : t.DEFEAT}
                                 </h1>
                             </div>
@@ -951,29 +960,29 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             return (
                                 <>
                                     {/* Responsive Dashboard Grid */}
-                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-5 w-full mb-3 md:mb-6 shrink-0 text-left">
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-1.5 md:gap-5 w-full mb-1.5 md:mb-6 shrink-0 text-left px-1 md:px-0">
                                         
                                         {/* COLUMN 1: Score & detailed breakdown */}
                                         <div className="md:col-span-7 lg:col-span-7 flex flex-col justify-between">
-                                            <div className="bg-slate-900/40 border border-purple-500/20 rounded-xl md:rounded-2xl p-3.5 md:p-5 flex flex-col flex-1 shadow-[0_4px_24px_rgba(147,51,234,0.05)] backdrop-blur-md relative overflow-hidden group">
+                                            <div className="bg-slate-900/40 border border-purple-500/20 rounded-xl md:rounded-2xl p-2 md:p-5 flex flex-col flex-1 shadow-[0_4px_24px_rgba(147,51,234,0.05)] backdrop-blur-md relative overflow-hidden group">
                                                 <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
                                                 
-                                                <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-purple-400 mb-1 z-10 flex items-center gap-1.5">
-                                                    <Trophy className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                                                <div className="text-[9px] md:text-xs font-bold uppercase tracking-[0.2em] text-purple-400 mb-0.5 z-10 flex items-center gap-1.5">
+                                                    <Trophy className="w-3 md:w-3.5 h-3 md:h-3.5 text-purple-400 animate-pulse" />
                                                     {language === 'RU' ? 'ОЧКИ РЕЙТИНГА' : 'RATING POINTS (SCORE)'}
                                                 </div>
                                                 
-                                                <div className="text-2xl sm:text-3xl md:text-5xl font-black font-mono tracking-tight text-white mb-2 z-10 drop-shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all group-hover:drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] leading-none">
+                                                <div className="text-xl sm:text-3xl md:text-5xl font-black font-mono tracking-tight text-white mb-1.5 z-10 drop-shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all group-hover:drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] leading-none">
                                                     {finalScore.toLocaleString()}
                                                 </div>
                                                 
                                                 {/* Breakdown table with sleek design */}
-                                                <div className="w-full z-10 border border-slate-800/80 rounded-xl bg-slate-950/60 p-3 text-[10.5px] md:text-[11.5px] font-mono space-y-2 shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)] mt-auto">
+                                                <div className="w-full z-10 border border-slate-800/80 rounded-xl bg-slate-950/60 p-2 md:p-3 text-[9px] md:text-[11.5px] font-mono space-y-1.5 shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)] mt-auto">
                                                     
                                                     {/* Base */}
-                                                    <div className="flex items-center justify-between border-b border-slate-900/80 pb-1.5">
-                                                        <span className="text-slate-400 flex items-center gap-2">
-                                                            <span className="w-2 h-2 rounded bg-indigo-500 shadow-[0_0_6px_#6366f1]" />
+                                                    <div className="flex items-center justify-between border-b border-slate-900/80 pb-1">
+                                                        <span className="text-slate-400 flex items-center gap-1.5">
+                                                            <span className="w-1.5 h-1.5 rounded bg-indigo-500 shadow-[0_0_6px_#6366f1]" />
                                                             <span>{language === 'RU' ? 'База' : 'Base'}</span>
                                                         </span>
                                                         <span className="text-white font-black">+15,000</span>
@@ -1064,25 +1073,25 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         })()}
 
                         {gameStatus === 'VICTORY' && (
-                            <div className="w-full flex flex-col shrink-0 min-h-0 text-left">
+                            <div className="w-full flex flex-col shrink-0 min-h-0 text-left px-1 md:px-0">
                                 {/* Item extraction selection */}
                                 {player?.inventory && player.inventory.length > 0 && (
-                                    <div className="w-full bg-slate-900/15 border border-slate-900/60 p-3 md:p-4 rounded-xl mb-3 shrink-0 flex flex-col">
-                                        <div className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 md:mb-3 text-center">
+                                    <div className="w-full bg-slate-900/15 border border-slate-900/60 p-2 md:p-4 rounded-xl mb-1.5 md:mb-3 shrink-0 flex flex-col">
+                                        <div className="text-[9px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1.5 md:mb-3 text-center">
                                             {language === 'RU' ? 'ВЫБЕРИТЕ ОДИН ПРЕДМЕТ ДЛЯ ЭКСТРАКЦИИ' : 'SELECT ONE ITEM TO EXTRACT'}
                                         </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 w-full mt-1">
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 md:gap-2.5 w-full mt-0.5">
                                             {player.inventory.map(item => (
                                                 <button 
                                                     key={item.id}
                                                     onClick={() => { setSelectedRewardItem(item); playUiSound('CLICK'); }}
-                                                    className={`p-2 border rounded-xl transition-all duration-300 flex flex-col items-center justify-center text-center ${selectedRewardItem?.id === item.id ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.3)] scale-[1.02]' : 'border-slate-800 bg-slate-950/40 hover:bg-slate-900/30 hover:border-slate-750'}`}
+                                                    className={`p-1.5 md:p-2 border rounded-xl transition-all duration-300 flex flex-col items-center justify-center text-center ${selectedRewardItem?.id === item.id ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.3)] scale-[1.02]' : 'border-slate-800 bg-slate-950/40 hover:bg-slate-900/30 hover:border-slate-750'}`}
                                                 >
                                                     <span className={`text-xl md:text-2xl mb-1 ${item.rarity === 'LEGENDARY' ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]' : item.rarity === 'RARE' ? 'text-purple-400' : 'text-blue-400'}`}>
                                                         {item.visualType === 'ARTIFACT' ? '💎' : item.visualType === 'TOOL' ? '⛏️' : item.visualType === 'HEAD' ? '🪖' : '👕'}
                                                     </span>
-                                                    <span className="text-[9px] font-extrabold text-slate-200 uppercase tracking-wide truncate w-full">{item.name}</span>
-                                                    <span className={`text-[7px] font-bold font-mono mt-0.5 uppercase ${item.rarity === 'LEGENDARY' ? 'text-amber-400' : item.rarity === 'RARE' ? 'text-purple-400' : 'text-blue-400'}`}>{item.rarity}</span>
+                                                    <span className="text-[8.5px] font-extrabold text-slate-200 uppercase tracking-wide truncate w-full">{item.name}</span>
+                                                    <span className={`text-[7px] font-bold font-mono mt-0 md:mt-0.5 uppercase ${item.rarity === 'LEGENDARY' ? 'text-amber-400' : item.rarity === 'RARE' ? 'text-purple-400' : 'text-blue-400'}`}>{item.rarity}</span>
                                                 </button>
                                             ))}
                                         </div>
@@ -1091,32 +1100,32 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
                                 {/* Hex extraction extraction container */}
                                 {campaignMode === 'LEVELS' && Object.keys(availableHexes).length > 0 && (
-                                    <div className="bg-slate-900/20 border border-slate-905 p-3 rounded-xl mb-4 shrink-0 mt-1">
-                                        <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-900/80">
-                                            <h3 className="text-emerald-400 font-extrabold uppercase tracking-wider text-[10px] md:text-xs">
+                                    <div className="bg-slate-900/20 border border-slate-905 p-2 rounded-xl mb-1.5 md:mb-4 shrink-0 mt-0.5">
+                                        <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-slate-900/80">
+                                            <h3 className="text-emerald-400 font-extrabold uppercase tracking-wider text-[9px] md:text-xs">
                                                 {language === 'RU' ? 'Протокол Извлечения Гексов' : 'Hex Extraction Protocol'}
                                             </h3>
-                                            <div className="text-[9px] font-mono tracking-widest px-2 py-0.5 bg-slate-950 rounded text-amber-500 border border-amber-900/30">
+                                            <div className="text-[8px] font-mono tracking-widest px-1.5 py-0.5 bg-slate-950 rounded text-amber-500 border border-amber-900/30">
                                                 {language === 'RU' ? 'ВМЕСТИМОСТЬ' : 'CAPACITY'}: {totalSelectedHexesCount} / {Math.max(5, player?.maxInventorySize || 5)} 
                                             </div>
                                         </div>
-                                        <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto no-scrollbar">
+                                        <div className="flex flex-col gap-1 max-h-[100px] overflow-y-auto no-scrollbar">
                                             {Object.entries(availableHexes).map(([level, count]) => {
                                                 const lvl = Number(level);
                                                 const selected = selectedHexes[lvl] || 0;
                                                 const capacityFull = totalSelectedHexesCount >= Math.max(5, player?.maxInventorySize || 5);
                                                 
                                                 return (
-                                                    <div key={lvl} className="flex items-center justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-900">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold ${
+                                                    <div key={lvl} className="flex items-center justify-between bg-slate-950/60 p-1.5 md:p-2 rounded-lg border border-slate-900">
+                                                        <div className="flex items-center gap-2 md:gap-3">
+                                                            <div className={`w-5 h-5 md:w-6 md:h-6 rounded-md flex items-center justify-center text-[9px] md:text-[10px] font-mono font-bold ${
                                                                 lvl < 0 ? 'bg-indigo-900/50 text-indigo-400' :
                                                                 lvl === 0 ? 'bg-slate-800 text-slate-400' :
                                                                 'bg-emerald-900/50 text-emerald-400'
                                                             }`}>
                                                                 L{lvl}
                                                             </div>
-                                                            <div className="text-[10px] md:text-xs font-bold text-slate-300">
+                                                            <div className="text-[9px] md:text-xs font-bold text-slate-300">
                                                                 {language === 'RU' ? 'Доступно:' : 'Available:'} {count}
                                                             </div>
                                                         </div>
@@ -1130,9 +1139,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                                     }
                                                                 }}
                                                                 disabled={selected <= 0}
-                                                                className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-750 active:bg-slate-700 disabled:opacity-30 transition-colors text-white font-bold"
+                                                                className="w-5 h-5 md:w-7 md:h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-750 active:bg-slate-700 disabled:opacity-30 transition-colors text-white font-bold text-xs"
                                                             >-</button>
-                                                            <div className="w-8 h-7 flex items-center justify-center font-mono text-emerald-400 text-xs font-bold">
+                                                            <div className="w-6 h-5 md:w-8 md:h-7 flex items-center justify-center font-mono text-emerald-400 text-[10px] md:text-xs font-bold">
                                                                 {selected}
                                                             </div>
                                                             <button 
@@ -1143,7 +1152,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                                     }
                                                                 }}
                                                                 disabled={selected >= count || capacityFull}
-                                                                className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-755 active:bg-slate-700 disabled:opacity-30 transition-colors text-white font-bold"
+                                                                className="w-5 h-5 md:w-7 md:h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-755 active:bg-slate-700 disabled:opacity-30 transition-colors text-white font-bold text-xs"
                                                             >+</button>
                                                         </div>
                                                     </div>
@@ -1156,24 +1165,24 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         )}
 
                         {/* Navigation buttons at the absolute bottom of the panel */}
-                        <div className="w-full flex flex-col gap-2 shrink-0 mt-3 md:mt-5 text-left">
+                        <div className="w-full flex flex-col gap-1.5 md:gap-2 shrink-0 mt-1 md:mt-5 text-left px-1 md:px-0">
                             {gameStatus === 'VICTORY' && activeLevelConfig && (
-                                <button onClick={handleNextLevel} className="w-full py-2.5 sm:py-3 md:py-4 bg-emerald-600 border-2 border-emerald-400/80 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_4px_20px_rgba(16,185,129,0.3)] hover:shadow-[0_4px_25px_rgba(16,185,129,0.5)] rounded-xl transition-all flex items-center justify-center gap-2 text-xs md:text-sm">
-                                    {t.BTN_NEXT} <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
+                                <button onClick={handleNextLevel} className="w-full py-2 sm:py-3 md:py-4 bg-emerald-600 border-2 border-emerald-400/80 hover:bg-emerald-500 text-white font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_4px_20px_rgba(16,185,129,0.3)] hover:shadow-[0_4px_25px_rgba(16,185,129,0.5)] rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] md:text-sm">
+                                    {t.BTN_NEXT} <ArrowRight className="w-3.5 h-3.5 md:w-5 md:h-5" />
                                 </button>
                             )}
-                            <div className="grid grid-cols-2 gap-2 w-full">
-                                <button onClick={handleRetry} className="py-2.5 md:py-4 bg-slate-900 border-2 border-slate-750 hover:bg-slate-800 text-white font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] rounded-xl transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] md:text-sm">
-                                    <RotateCcw className="w-3.5 h-3.5 md:w-5 md:h-5 animate-[spin_10s_linear_infinite]" /> {t.BTN_RETRY}
+                            <div className="grid grid-cols-2 gap-1.5 md:gap-2 w-full">
+                                <button onClick={handleRetry} className="py-2.5 md:py-4 bg-slate-900 border-2 border-slate-750 hover:bg-slate-800 text-white font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] rounded-xl transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-[9px] md:text-sm">
+                                    <RotateCcw className="w-3 h-3 md:w-5 md:h-5 animate-[spin_10s_linear_infinite]" /> {t.BTN_RETRY}
                                 </button>
-                                <button onClick={handleMenu} className="py-2.5 md:py-4 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] rounded-xl transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] md:text-sm">
-                                    <LogOut className="w-3.5 h-3.5 md:w-5 md:h-5 animate-[pulse_2s_infinite]" /> {campaignMode === 'LEVELS' ? (language === 'RU' ? 'ВЫБОР УРОВНЕЙ' : 'LEVELS') : (t.BTN_MENU || 'MENU')}
+                                <button onClick={handleMenu} className="py-2.5 md:py-4 bg-slate-950 border-2 border-slate-800 hover:bg-slate-900 text-slate-400 font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] rounded-xl transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-[9px] md:text-sm">
+                                    <LogOut className="w-3 h-3 md:w-5 md:h-5 animate-[pulse_2s_infinite]" /> {campaignMode === 'LEVELS' ? (language === 'RU' ? 'ВЫБОР УРОВНЕЙ' : 'LEVELS') : (t.BTN_MENU || 'MENU')}
                                 </button>
                             </div>
                         </div>
 
-                        {/* Extra Visual Detail */}
-                        <div className="mt-4 md:mt-6 text-[6px] md:text-[8px] font-mono opacity-20 uppercase tracking-[0.5em] md:tracking-[1em] text-center w-full shrink-0">
+                        {/* Extra Visual Detail (hidden on smallest screens to save space) */}
+                        <div className="hidden md:block mt-6 text-[8px] font-mono opacity-20 uppercase tracking-[1em] text-center w-full shrink-0">
                             ENCRYPTION_KEY::0x7F2A_C0DE_NEBULA
                         </div>
                     </div>
