@@ -332,6 +332,155 @@ const LITE_RENDER_MODE = {
     showDetails: false 
 };
 
+interface HexSectorProps {
+    sectorKey: string;
+    items: any[];
+    grid: Record<string, Hex>;
+    playerQ: number;
+    playerR: number;
+    playerStorage: number;
+    pendingConfirmation: any;
+    tutorialData: any;
+    activeLevelConfig: any;
+    isLiteMode?: boolean;
+    memoizedOnHexClick: (q: number, r: number) => void;
+    onHover: (id: string | null) => void;
+    hoveredHexId: string | null;
+    playerGrowthIntent?: string | null;
+    campaignUpgrades: any;
+}
+
+const HexSector = React.memo<HexSectorProps>(({
+    sectorKey: _sectorKey,
+    items,
+    grid,
+    playerQ,
+    playerR,
+    playerStorage,
+    pendingConfirmation,
+    tutorialData,
+    activeLevelConfig,
+    isLiteMode,
+    memoizedOnHexClick,
+    onHover,
+    hoveredHexId,
+    playerGrowthIntent,
+    campaignUpgrades,
+}) => {
+    const tempPlayer = useMemo(() => ({ q: playerQ, r: playerR, storage: playerStorage } as any), [playerQ, playerR, playerStorage]);
+
+    const renderedNodes = useMemo(() => {
+        return items.map(item => {
+            const hex = grid[item.id];
+            if (!hex) return null;
+
+            const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, tempPlayer, grid, tutorialData, activeLevelConfig);
+            const theme = getTheme(item.props.isRevealed ? hex.maxLevel : 0);
+
+            const isCurrentPlayerActiveHex = playerQ === hex.q && playerR === hex.r;
+            const isPlayerAction = !!(item.props.isGrowing && isCurrentPlayerActiveHex);
+
+            const pendingCost = item.props.isPending && pendingConfirmation ? pendingConfirmation.data.costCoins : null;
+
+            return (
+                <HexNode 
+                    key={item.props.id} 
+                    {...item.props} 
+                    theme={theme}
+                    isRevealed={item.props.isRevealed ?? false}
+                    pendingCost={pendingCost}
+                    isTutorialTarget={isTutorial}
+                    isTargetArrow={isArrow}
+                    tutorialColor={tutColor}
+                    renderMode={isLiteMode ? LITE_RENDER_MODE : FULL_RENDER_MODE}
+                    isExcavated={hex.isExcavated}
+                    isPlayerBuilt={hex.isPlayerBuilt}
+                    onHexClick={memoizedOnHexClick} 
+                    onHover={onHover} 
+                    isHovered={hoveredHexId === item.props.id} 
+                    isPlayerAction={isPlayerAction}
+                    playerGrowthIntent={isPlayerAction ? (playerGrowthIntent || null) : null}
+                    growthAccelerator={isPlayerAction ? (campaignUpgrades?.growthAccelerator || 0) : 0}
+                />
+            );
+        }).filter(Boolean);
+    }, [items, grid, tempPlayer, playerQ, playerR, pendingConfirmation, tutorialData, activeLevelConfig, isLiteMode, memoizedOnHexClick, onHover, hoveredHexId, playerGrowthIntent, campaignUpgrades]);
+
+    return (
+        <Group perfectDrawEnabled={false}>
+            {renderedNodes}
+        </Group>
+    );
+}, (prev, next) => {
+    if (prev.items !== next.items) return false;
+    if (prev.grid !== next.grid) {
+        for (let i = 0; i < prev.items.length; i++) {
+            const id = prev.items[i].id;
+            const hA = prev.grid[id];
+            const hB = next.grid[id];
+            if (!hA || !hB) return false;
+            // 'dirty' checking mechanism: only trigger a partial re-draw if level, durability, or revealed status changed
+            if (
+                hA.currentLevel !== hB.currentLevel ||
+                hA.maxLevel !== hB.maxLevel ||
+                hA.revealed !== hB.revealed ||
+                hA.durability !== hB.durability
+            ) {
+                return false;
+            }
+        }
+    }
+    const wasPlayerInSector = prev.items.some(it => {
+        const h = prev.grid[it.id];
+        return h && h.q === prev.playerQ && h.r === prev.playerR;
+    });
+    const isPlayerInSector = next.items.some(it => {
+        const h = next.grid[it.id];
+        return h && h.q === next.playerQ && h.r === next.playerR;
+    });
+    if (wasPlayerInSector !== isPlayerInSector) return false;
+    if (isPlayerInSector || wasPlayerInSector) {
+        if (prev.playerQ !== next.playerQ || prev.playerR !== next.playerR || prev.playerStorage !== next.playerStorage) return false;
+        if (prev.playerGrowthIntent !== next.playerGrowthIntent) return false;
+        if (prev.campaignUpgrades !== next.campaignUpgrades) return false;
+    }
+
+    const hasPendingInSector = (key: string | null) => {
+        if (!key) return false;
+        return prev.items.some(it => it.id === key);
+    };
+    const prevPendingKey = prev.pendingConfirmation?.data.path[prev.pendingConfirmation.data.path.length - 1];
+    const prevPendingId = prevPendingKey ? getHexKey(prevPendingKey.q, prevPendingKey.r) : null;
+    const nextPendingKey = next.pendingConfirmation?.data.path[next.pendingConfirmation.data.path.length - 1];
+    const nextPendingId = nextPendingKey ? getHexKey(nextPendingKey.q, nextPendingKey.r) : null;
+    
+    if (hasPendingInSector(prevPendingId) || hasPendingInSector(nextPendingId)) {
+        if (prev.pendingConfirmation !== next.pendingConfirmation) return false;
+    }
+
+    const hasTutorialInSector = prev.items.some(it => {
+        const hex = prev.grid[it.id];
+        if (!hex) return false;
+        return prev.tutorialData && (prev.tutorialData.mainTarget?.q === hex.q && prev.tutorialData.mainTarget?.r === hex.r);
+    });
+    if (hasTutorialInSector) {
+        if (prev.tutorialData !== next.tutorialData) return false;
+    }
+
+    if (prev.isLiteMode !== next.isLiteMode) return false;
+    if (prev.activeLevelConfig !== next.activeLevelConfig) return false;
+    if (prev.onHover !== next.onHover) return false;
+    if (prev.memoizedOnHexClick !== next.memoizedOnHexClick) return false;
+
+    const isPrevHoveredInSector = prev.hoveredHexId && prev.items.some(it => it.id === prev.hoveredHexId);
+    const isNextHoveredInSector = next.hoveredHexId && next.items.some(it => it.id === next.hoveredHexId);
+    if (isPrevHoveredInSector || isNextHoveredInSector) {
+        if (prev.hoveredHexId !== next.hoveredHexId) return false;
+    }
+
+    return true;
+});
+
 interface MapRendererProps {
     rotation: number;
     onHexClick: (q: number, r: number) => void;
@@ -553,77 +702,80 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         return getTutorialData(grid, player, activeLevelConfig?.id);
     }, [grid, playerQ, playerR, activeLevelConfig?.id]);
 
-    const renderList = useMemo(() => {
-        if (!grid || !player || !workerData.renderItems.length) return { items: [] };
+    // Separate HEX items from other items (e.g., UNIT)
+    const hexItems = useMemo(() => {
+        return workerData.renderItems.filter((item: any) => item.type === 'HEX');
+    }, [workerData.renderItems]);
 
-        const tempPlayer = { q: playerQ, r: playerR, storage: playerStorage } as any;
+    const unitItems = useMemo(() => {
+        return workerData.renderItems.filter((item: any) => item.type !== 'HEX');
+    }, [workerData.renderItems]);
 
-        const items = workerData.renderItems.map(item => {
-            if (item.type === 'HEX') {
-                const hex = grid[item.id];
-                if (!hex) return null;
-
-                const { isTutorial, isArrow, tutColor } = getHexTutorialStatus(hex, tempPlayer, grid, tutorialData, activeLevelConfig);
-                const theme = getTheme(item.props.isRevealed ? hex.maxLevel : 0);
-
-                return {
-                    ...item,
-                    props: {
-                        ...item.props,
-                        theme,
-                        isRevealed: item.props.isRevealed,
-                        pendingCost: item.props.isPending && pendingConfirmation ? pendingConfirmation.data.costCoins : null,
-                        isTutorialTarget: isTutorial,
-                        isTargetArrow: isArrow,
-                        tutorialColor: tutColor,
-                        renderMode: isLiteMode ? LITE_RENDER_MODE : FULL_RENDER_MODE,
-                        isExcavated: hex.isExcavated,
-                        isPlayerBuilt: hex.isPlayerBuilt,
-                    }
-                };
-            } else {
-                // UNIT
-                return {
-                    ...item,
-                    props: {
-                        ...item.props,
-                        type: item.props.isPlayer ? EntityType.PLAYER : EntityType.BOT,
-                        onMoveComplete: spawnDust
-                    }
-                };
+    // Group HEX items into spatial sectors (e.g. 4x4 coordinate chunks) to prevent wide scale re-renders
+    const sectorsMap = useMemo(() => {
+        const sectors: Record<string, any[]> = {};
+        for (const item of hexItems) {
+            const hq = item.props.q;
+            const hr = item.props.r;
+            // Coordinate division for chunking (covers roughly 16 hexes per sector)
+            const sectorQ = Math.floor(hq / 4);
+            const sectorR = Math.floor(hr / 4);
+            const key = `${sectorQ},${sectorR}`;
+            if (!sectors[key]) {
+                sectors[key] = [];
             }
-        }).filter(Boolean);
+            sectors[key].push(item);
+        }
+        return sectors;
+    }, [hexItems]);
 
-        return { items };
-    }, [grid, playerQ, playerR, playerStorage, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems, isLiteMode]);
+    const sectorKeys = useMemo(() => {
+        return Object.keys(sectorsMap);
+    }, [sectorsMap]);
+
+    const renderedUnits = useMemo(() => {
+        return unitItems.map((item: any) => {
+            return {
+                ...item,
+                props: {
+                    ...item.props,
+                    type: item.props.isPlayer ? EntityType.PLAYER : EntityType.BOT,
+                    onMoveComplete: spawnDust
+                }
+            };
+        });
+    }, [unitItems, spawnDust]);
 
     return (
         <>
             <Layer>
-                {renderList.items.map(item => {
-                    if (item.type === 'HEX') {
-                        return (
-                            <HexNode 
-                                key={item.props.id} 
-                                {...item.props} 
-                                onHexClick={memoizedOnHexClick} 
-                                onHover={onHover} 
-                                isHovered={hoveredHexId === item.props.id} 
-                                playerQ={playerQ}
-                                playerR={playerR}
-                                playerGrowthIntent={playerGrowthIntent}
-                                growthAccelerator={campaignUpgrades?.growthAccelerator || 0}
-                            />
-                        );
-                    } else {
-                        return (
-                            <Unit 
-                                key={item.props.id} 
-                                {...item.props} 
-                            />
-                        );
-                    }
-                })}
+                {sectorKeys.map(key => (
+                    <HexSector 
+                        key={key}
+                        sectorKey={key}
+                        items={sectorsMap[key]}
+                        grid={grid!}
+                        playerQ={playerQ}
+                        playerR={playerR}
+                        playerStorage={playerStorage}
+                        pendingConfirmation={pendingConfirmation}
+                        tutorialData={tutorialData}
+                        activeLevelConfig={activeLevelConfig}
+                        isLiteMode={isLiteMode}
+                        memoizedOnHexClick={memoizedOnHexClick}
+                        onHover={onHover}
+                        hoveredHexId={hoveredHexId}
+                        playerGrowthIntent={playerGrowthIntent}
+                        campaignUpgrades={campaignUpgrades}
+                    />
+                ))}
+
+                {renderedUnits.map((unit: any) => (
+                    <Unit 
+                        key={unit.props.id} 
+                        {...unit.props} 
+                    />
+                ))}
 
                 {connections.map((conn, i) => (
                     <Line key={`conn-${i}`} {...conn} strokeWidth={2} listening={false} perfectDrawEnabled={false} />
