@@ -34,6 +34,8 @@ export const useGameStore = create<GameStore>()(
       campaignProgress: 0, 
       levelsModeProgress: 0,
       skillPoints: 0,
+      hexActivationPoints: 0,
+      activatedHexes: {},
       
       collectedHexes: {},
       minedInSessionHexes: {},
@@ -80,7 +82,7 @@ export const useGameStore = create<GameStore>()(
       // --- ASSEMBLE COMBINED ACTIONS VIA SLICES ---
       ...createAuthSlice(set as any, get as any),
       ...createUiSlice(set as any, get as any),
-      ...createCampaignSlice(set as any),
+      ...createCampaignSlice(set as any, get as any),
       ...createGameplaySlice(set as any, get as any),
     }),
     {
@@ -104,6 +106,8 @@ export const useGameStore = create<GameStore>()(
         collectedHexes: state.collectedHexes,
         storyMap: state.storyMap,
         storyMilestone: state.storyMilestone,
+        hexActivationPoints: state.hexActivationPoints,
+        activatedHexes: state.activatedHexes,
         isMusicMuted: state.isMusicMuted,
         isSfxMuted: state.isSfxMuted,
         isLiteMode: state.isLiteMode,

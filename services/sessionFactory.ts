@@ -3,7 +3,7 @@ import { LevelConfig } from '../types';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../rules/config.ts';
 import { getHexKey, getNeighbors } from './hexUtils.ts';
 import { generateMap } from './mapGenerator.ts';
-import { generateMonumentRecipe, getItemDef } from '../rules/items.ts';
+import { generateMonumentRecipe, getItemDef, ITEM_REGISTRY } from '../rules/items.ts';
 // @ts-ignore
 import MapWorker from './map.worker?worker';
 
@@ -278,8 +278,13 @@ export const createInitialSessionData = async (
           case '2.1': monumentRequirements = []; break; 
           case '2.2': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
           case '2.3': monumentRequirements = []; break;
-          case '2.4': monumentRequirements = ['ANY', 'ANY']; break;
-          case '2.5': monumentRequirements = ['ANY', 'ANY', 'ANY']; break; 
+          case '2.4': monumentRequirements = ['ANY']; break;
+          case '2.5': monumentRequirements = []; break; 
+          case '2.6': monumentRequirements = []; break;
+          case '2.7': monumentRequirements = []; break;
+          case '2.8': monumentRequirements = []; break;
+          case '2.9': monumentRequirements = []; break;
+          case '2.10': monumentRequirements = ['fuel_cell', 'reality_patch']; break; 
           case '3.1': monumentRequirements = ['cargo_prism']; break;
           case '3.2': monumentRequirements = ['hornet_drill', 'emergency_gen']; break;
           case '3.3': monumentRequirements = ['UNCOMMON']; break;
@@ -363,6 +368,49 @@ export const createInitialSessionData = async (
     outgoingEvents: []
   };
 
+  // --- SECRET LOOT HEXES GENERATION FOR MONUMENTS ---
+  if (monumentRequirements && monumentRequirements.length > 0) {
+    const secretLootHexes: any[] = [];
+    const candidates = Object.values(initialGrid).filter(h => 
+      h.structureType !== 'MONUMENT' && 
+      h.structureType !== 'MINI_MONUMENT' && 
+      h.structureType !== 'VOID' && 
+      h.structureType !== 'CAPITAL' &&
+      !(h.q === startQ && h.r === startR)
+    );
+
+    const shuffled = [...candidates].sort(() => 0.5 - Math.random());
+    
+    for (let i = 0; i < monumentRequirements.length; i++) {
+      const req = monumentRequirements[i];
+      const hexCandidate = shuffled[i % shuffled.length];
+      if (hexCandidate) {
+        let itemBaseId = req;
+        if (['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'].includes(req)) {
+          const matching = ITEM_REGISTRY.filter(item => item.rarity === req);
+          const chosen = matching[Math.floor(Math.random() * matching.length)];
+          itemBaseId = chosen ? chosen.idPrefix : 'cargo_prism';
+        } else if (req === 'ANY') {
+          const chosen = ITEM_REGISTRY[Math.floor(Math.random() * ITEM_REGISTRY.length)];
+          itemBaseId = chosen ? chosen.idPrefix : 'cargo_prism';
+        } else if (req === 'ONE_OF') {
+          const pool = monumentAlternatives && monumentAlternatives.length > 0 ? monumentAlternatives : ['cargo_prism'];
+          itemBaseId = pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        secretLootHexes.push({
+          q: hexCandidate.q,
+          r: hexCandidate.r,
+          itemBaseId: itemBaseId,
+          level: -1 - Math.floor(Math.random() * 3), // -1, -2, -3, -4
+          found: false
+        });
+      }
+    }
+    session.secretLootHexes = secretLootHexes;
+    session.activatedMiniMonuments = [];
+  }
+
   // Dynamic objective for Level 1.2
   if (levelConfig?.id === '1.2' && session.activeLevelConfig) {
     const finishHex = Object.values(initialGrid).find(h => h.structureType === 'CAPITAL');
@@ -372,6 +420,12 @@ export const createInitialSessionData = async (
         objectiveHexes: [{ q: finishHex.q, r: finishHex.r, targetLevel: 99, label: '↑', color: 'emerald' }]
       };
     }
+  }
+
+  // Immediate portal activation for Level 1.1
+  if (levelConfig?.id === '1.1') {
+    session.portalActive = true;
+    session.portalHex = { q: -2, r: 0 };
   }
 
   return session;

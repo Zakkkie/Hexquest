@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
-import { Crown, Box, Wallet, Coins, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, Clock, RotateCcw, Zap } from 'lucide-react';
+import { Crown, Box, Wallet, Coins, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, RotateCcw, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 import EntropyGauge from '../EntropyGauge';
 import { StorageBlocks } from './HudShared';
@@ -13,11 +13,32 @@ interface TopStatsBarProps {
 }
 
 const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) => {
-    const player = useGameStore(state => state.session?.player);
-    const gameStatus = useGameStore(state => state.session?.gameStatus);
+    const playerExists = useGameStore(state => !!state.session?.player);
+    const playerLevel = useGameStore(state => state.session?.player?.playerLevel ?? 0);
+    const playerStorage = useGameStore(state => state.session?.player?.storage ?? 0);
+    const playerMaxStorage = useGameStore(state => state.session?.player?.maxStorage ?? 0);
+    const playerCoins = useGameStore(state => state.session?.player?.coins ?? 0);
+    const playerMoves = useGameStore(state => state.session?.player?.moves ?? 0);
+    const playerState = useGameStore(state => state.session?.player?.state);
+
     const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
-    const sessionStartTime = useGameStore(state => state.session?.sessionStartTime);
-    const entropy = useGameStore(state => state.session?.entropy);
+    const isLevel14 = activeLevelConfig?.id === '1.4';
+    const entropyCurrent = useGameStore(state => state.session?.entropy?.current);
+    const entropyMax = useGameStore(state => state.session?.entropy?.max);
+    
+    const player = playerExists ? {
+        playerLevel,
+        storage: playerStorage,
+        maxStorage: playerMaxStorage,
+        coins: playerCoins,
+        moves: playerMoves,
+        state: playerState
+    } : null;
+
+    const entropy = entropyCurrent !== undefined && entropyMax !== undefined ? {
+        current: entropyCurrent,
+        max: entropyMax
+    } : undefined;
     
     const language = useGameStore(state => state.language);
     const isMusicMuted = useGameStore(state => state.isMusicMuted);
@@ -31,15 +52,14 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const playUiSound = useGameStore(state => state.playUiSound);
     const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
     const systemMenuRef = useRef<HTMLDivElement>(null);
-    const [timeLeft, setTimeLeft] = useState(75);
 
     // Tracking Material changes
-    const [prevStorage, setPrevStorage] = useState(player?.storage ?? 0);
+    const [prevStorage, setPrevStorage] = useState(playerStorage);
     const [storageChanged, setStorageChanged] = useState<'gain' | 'drain' | null>(null);
     const [storageAnimKey, setStorageAnimKey] = useState(0);
 
     // Tracking Credits value changes 
-    const [prevCoins, setPrevCoins] = useState(player?.coins ?? 0);
+    const [prevCoins, setPrevCoins] = useState(playerCoins);
     const [coinsChanged, setCoinsChanged] = useState<'gain' | 'drain' | null>(null);
     const [coinsAnimKey, setCoinsAnimKey] = useState(0);
 
@@ -87,8 +107,6 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
 
     const t = TEXT[language].HUD;
     const isMoving = player?.state === 'MOVING';
-    const isLevel1_5 = activeLevelConfig?.id === '1.5';
-    const isLevel3_2 = activeLevelConfig?.id === '3.2';
 
     // Click Outside for System Menu
     useEffect(() => {
@@ -101,36 +119,10 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Timer Logic for L1.5 and L3.2
-    useEffect(() => {
-        const isTimedLevel = isLevel1_5 || isLevel3_2;
-        if (isTimedLevel && gameStatus === 'PLAYING') {
-            const timeLimit = isLevel3_2 ? 180 : 75; // 3 minutes for 3.2, 75s for 1.5
-            const interval = setInterval(() => {
-                const elapsed = Date.now() - (sessionStartTime || 0);
-                const remaining = Math.max(0, timeLimit - Math.floor(elapsed / 1000));
-                setTimeLeft(remaining);
-            }, 250);
-            return () => clearInterval(interval);
-        }
-    }, [isLevel1_5, isLevel3_2, gameStatus, sessionStartTime]);
-
     if (!player) return null;
 
     return (
         <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-30 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in">
-            {/* Timer Overlay */}
-            {(isLevel1_5 || isLevel3_2) && gameStatus === 'PLAYING' && (
-                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in slide-in-from-top-4">
-                    <div className={`px-4 py-2 bg-slate-900/90 border-2 rounded-xl shadow-xl flex items-center gap-2 ${timeLeft < 10 ? 'border-red-500 animate-pulse' : 'border-slate-600'}`}>
-                        <Clock className={`w-5 h-5 ${timeLeft < 10 ? 'text-red-500' : 'text-amber-400'}`} />
-                        <span className={`text-xl font-black font-mono leading-none ${timeLeft < 10 ? 'text-red-400' : 'text-white'}`}>
-                            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-                        </span>
-                    </div>
-                </div>
-            )}
-
             <div className="w-full flex justify-between items-start gap-2 md:gap-4 max-w-7xl mx-auto relative pointer-events-none">
                 
                 {/* STATS STRIP */}
@@ -160,13 +152,25 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
 
                         <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0 -mx-[5px]"></div>
                         {/* MATERIAL widget */}
-                        <div 
+                        <motion.div 
                             onClick={() => { setHelpTopic('MATERIAL'); playUiSound('CLICK'); }}
                             onMouseEnter={() => setHoveredStat('MATERIAL')}
                             onMouseLeave={() => setHoveredStat(null)}
                             onTouchStart={() => setHoveredStat('MATERIAL')}
                             onTouchEnd={() => setHoveredStat(null)}
-                            className="relative flex items-center gap-1.5 md:gap-2.5 cursor-pointer group shrink-0 pr-1 select-none py-0.5 transition-all duration-300 hover:bg-slate-900/30 px-1.5 rounded-lg border border-transparent hover:border-emerald-500/20"
+                            animate={isLevel14 ? {
+                                scale: [1, 1.05, 1],
+                                borderColor: ['rgba(245,158,11,0.2)', 'rgba(245,158,11,1)', 'rgba(245,158,11,0.2)'],
+                                boxShadow: [
+                                    '0 0 4px rgba(245,158,11,0.1)',
+                                    '0 0 16px rgba(245,158,11,0.5)',
+                                    '0 0 4px rgba(245,158,11,0.1)'
+                                ]
+                            } : {}}
+                            transition={isLevel14 ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : {}}
+                            className={`relative flex items-center gap-1.5 md:gap-2.5 cursor-pointer group shrink-0 pr-1 select-none py-0.5 transition-all duration-300 hover:bg-slate-900/30 px-1.5 rounded-lg border ${
+                                isLevel14 ? 'border-amber-500 bg-amber-500/10' : 'border-transparent hover:border-emerald-500/20'
+                            }`}
                         >
                             <motion.div 
                                 animate={
@@ -182,7 +186,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                 <Box className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-400" />
                             </motion.div>
                             <div className="flex flex-col justify-center">
-                                <span className="text-[7px] md:text-[8px] text-emerald-400 font-black uppercase tracking-wider leading-none mb-0.5 hidden sm:block">{t.MATERIAL}</span>
+                                <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-wider leading-none mb-0.5 hidden sm:block ${isLevel14 ? 'text-amber-400' : 'text-emerald-400'}`}>{t.MATERIAL}</span>
                                 <motion.div 
                                     key={storageAnimKey}
                                     initial={{ scale: 1 }}
@@ -211,7 +215,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                     <span className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-full shadow-[0_0_6px_#34d399] ${player.storage >= player.maxStorage ? 'bg-amber-400' : 'bg-emerald-400'}`} />
                                 </motion.div>
                             </div>
-                        </div>
+                        </motion.div>
 
                         <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0 -mx-[5px]"></div>
                         {/* CREDITS widget */}

@@ -113,10 +113,6 @@ export const createGameplaySlice = (
       engine.startMission();
       set(() => ({ session: engine!.state }));
       audioService.play('UI_CLICK');
-      // safe i18n access
-      const toastConfig = TEXT[get().language]?.TOAST;
-      const msg = toastConfig?.SIMULATION_VICTORY ? "Mission Started" : "Deploying...";
-      get().showToast(msg, "info");
     }
   },
 
@@ -271,7 +267,24 @@ export const createGameplaySlice = (
       return;
     }
     
-    if (dist === 0 && targetHex?.structureType !== 'MONUMENT') return;
+    if (dist === 0) {
+      if (session.portalActive && session.portalHex && session.portalHex.q === tq && session.portalHex.r === tr) {
+        const action: import('../types').ActivatePortalAction = {
+          type: 'ACTIVATE_PORTAL',
+          stateVersion: session.stateVersion
+        };
+        const res = engine.applyAction(session.player.id, action);
+        if (res.ok) {
+          audioService.play('TELEPORT');
+          set(() => ({ session: engine!.state }));
+        } else {
+          audioService.play('ERROR');
+          set(() => ({ toast: { message: res.reason || "Action failed", type: 'error', timestamp: Date.now() } }));
+        }
+        return;
+      }
+      if (targetHex?.structureType !== 'MONUMENT') return;
+    }
 
     if (!targetHex) {
       audioService.play('ERROR');
@@ -286,8 +299,10 @@ export const createGameplaySlice = (
       return;
     }
 
+    const hasVoidCore = (session.player.equipment && Object.values(session.player.equipment).some((item: any) => item && item.baseId === 'void_core')) ||
+                        (session.player.activeStatuses && session.player.activeStatuses.some((s: any) => s.type === 'VOID_CORE' || s.label === 'Void Core'));
     const obstacles = session.bots.map(b => ({ q: b.q, r: b.r }));
-    const pathResult = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles);
+    const pathResult = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles, hasVoidCore);
     const path = pathResult.path;
     
     if (!path) {
@@ -568,7 +583,19 @@ export const createGameplaySlice = (
       set(() => ({ monumentDialogState: { isOpen: false, slots: Array(reqCount).fill(null) } }));
     } else {
       audioService.play('ERROR');
-      get().showToast(res.reason || lConfig?.TOAST?.ACTIVATION_FAILED || "Activation bad", 'error');
+      
+      const updatedInventory = engine.state.player.inventory || [];
+      const newSlots = monumentDialogState.slots.map(slotItem => {
+          if (slotItem === null) return null;
+          const stillExists = updatedInventory.some(i => i.id === slotItem.id);
+          return stillExists ? slotItem : null;
+      });
+      
+      set(() => ({ 
+          session: engine!.state,
+          monumentDialogState: { ...monumentDialogState, slots: newSlots }
+      }));
+      get().showToast(res.reason || lConfig?.TOAST?.ACTIVATION_FAILED || "Activation failed", 'error');
     }
   },
 
@@ -590,36 +617,44 @@ export const createGameplaySlice = (
 
       tickCount++;
       const now = Date.now();
+      
+      const playerId = result.state.player.id;
+      const events = [...result.events];
 
       
       // OPTIMIZED GC - CLEAN EFFECTS IN MAIN STATE
       result.state.effects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
 
       try {
-        if (result.events.some(e => e.type === 'MONUMENT_REACHED')) {
+        if (events.some(e => e.type === 'MONUMENT_REACHED')) {
           get().openMonumentDialog();
         }
 
-        const miniEvent = result.events.find(e => e.type === 'MINI_MONUMENT_REACHED');
+        const miniEvent = events.find(e => e.type === 'MINI_MONUMENT_REACHED');
         if (miniEvent) {
-            const shapes = get().session?.activeLevelConfig?.requiredShapes || [];
-            if (shapes.length > 0) {
-                const hintText = shapes.map(s => s.hint).join('\n\n');
-                get().openMiniMonumentDialog(hintText);
+            const customClue = (miniEvent as any).payload?.clueText;
+            if (customClue) {
+                get().openMiniMonumentDialog(customClue);
             } else {
-                get().openMiniMonumentDialog("Фигур не требуется. Восстанавливайте гексы.");
+                const shapes = get().session?.activeLevelConfig?.requiredShapes || [];
+                if (shapes.length > 0) {
+                    const hintText = shapes.map(s => s.hint).join('\n\n');
+                    get().openMiniMonumentDialog(hintText);
+                } else {
+                    get().openMiniMonumentDialog(get().language === 'RU' ? "Фигур не требуется. Ищите капсулы в шахтах." : "No shapes required. Dig for hidden capsules.");
+                }
             }
         }
       } catch (e) {
         console.warn("Error processing events, likely proxy revocation:", e);
       }
 
-      if (result.events.length > 0) {
+      if (events.length > 0) {
         const lang = get().language;
         const newEffectsData: Omit<FloatingText, 'id' | 'startTime'>[] = [];
 
-        result.events.forEach(event => {
-          const isPlayer = event.entityId === result.state.player.id;
+        events.forEach(event => {
+          const isPlayer = event.entityId === playerId;
           
           if (isPlayer || !event.entityId) {
             const sound = EVENT_SOUND_MAP[event.type];
@@ -635,6 +670,20 @@ export const createGameplaySlice = (
             if (currentId) {
               const mode = get().campaignMode;
               
+              let earnedKeys = 3;
+              try {
+                const pState = engine?.state?.player;
+                const curTurn = engine?.state?.currentTurn || 0;
+                const bScore = 15000;
+                const tPenalty = curTurn * 10;
+                const aPenalty = (pState?.actionsTaken || 0) * 50;
+                const rBonus = (pState?.playerLevel || 0) * 500 + (pState?.totalCoinsEarned || 0) * 2;
+                const fScore = Math.max(0, bScore - tPenalty - aPenalty + rBonus);
+                earnedKeys = Math.max(2, Math.floor(fScore / 2500));
+              } catch (err) {
+                earnedKeys = 3;
+              }
+
               if (mode === 'STORY') {
                 const idx = CAMPAIGN_LEVELS.findIndex(l => l.id === currentId);
                 if (idx !== -1 && idx >= get().campaignProgress) {
@@ -642,6 +691,7 @@ export const createGameplaySlice = (
                   if (nextP > get().campaignProgress) {
                     set((curr) => ({ 
                       skillPoints: curr.skillPoints + 1,
+                      hexActivationPoints: (curr.hexActivationPoints || 0) + earnedKeys,
                       campaignProgress: nextP 
                     }));
                   }
@@ -655,6 +705,7 @@ export const createGameplaySlice = (
                   if (nextP > get().levelsModeProgress) {
                     set((curr) => ({ 
                       skillPoints: curr.skillPoints + 1,
+                      hexActivationPoints: (curr.hexActivationPoints || 0) + earnedKeys,
                       levelsModeProgress: nextP 
                     }));
                   }

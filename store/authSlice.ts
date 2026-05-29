@@ -26,7 +26,46 @@ export const createAuthSlice = (
 ) => ({
   loginAsGuest: (nickname: string, avatarColor: string, headIndex: number, bodyIndex: number) => {
     audioService.play('UI_CLICK');
-    set(() => ({ user: { isAuthenticated: true, isGuest: true, nickname, avatarColor, headIndex, bodyIndex } }));
+    // Ensure active session is ended cleanly
+    try {
+      get().abandonSession();
+    } catch (e) {
+      console.warn("abandonSession failed during guest login: ", e);
+    }
+    
+    set(() => ({ 
+      user: { isAuthenticated: true, isGuest: true, nickname, avatarColor, headIndex, bodyIndex },
+      campaignProgress: 0,
+      levelsModeProgress: 0,
+      skillPoints: 0,
+      collectedHexes: {},
+      minedInSessionHexes: {},
+      totalMinedMaterial: 0,
+      storyMap: {},
+      storyMilestone: 0,
+      session: null,
+      hasActiveSession: false,
+      campaignUpgrades: {
+        inventorySlots: 3,
+        startingEnergy: 0,
+        startingMoves: 0,
+        startingGold: 0,
+        startingMaterials: 0,
+        maxMaterials: 3,
+        fuelEfficiency: 0,
+        scanRadius: 0,
+        fatigueResistance: 0,
+        growthAccelerator: 0,
+        foundationStrength: 0,
+        economicMultiplier: 0,
+        diggerLuck: 0,
+        doubleDigChance: 0,
+        reserveCapacitor: 0,
+        turboRecharge: 0,
+        entropyResistance: 0,
+        restorationMaster: 0,
+      }
+    }));
   },
   
   registerUser: (nickname: string, password: string, avatarColor: string, headIndex: number, bodyIndex: number) => {

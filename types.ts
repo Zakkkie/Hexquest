@@ -339,6 +339,14 @@ export interface ScenarioHooks {
   onAfterAction?: (state: SessionState, index: WorldIndex) => void;
 }
 
+export interface SecretLootHex {
+  q: number;
+  r: number;
+  itemBaseId: string;
+  level: number;
+  found?: boolean;
+}
+
 // --- НОВЫЕ МЕХАНИКИ КАМПАНИИ (ЧЕРТЕЖИ И РЕЦЕПТЫ) ---
 
 export interface Blueprint {
@@ -430,6 +438,7 @@ export interface LevelConfig {
   requiredShapes?: import('./services/shapeUtils').RequiredShape[];
 
   aiMode: 'none' | 'dummy' | 'basic';
+  getTutorialHint?: (state: SessionState) => string | null;
   hooks: ScenarioHooks;
 }
 
@@ -450,6 +459,8 @@ export interface SessionState {
   monumentRequirements?: string[];
   monumentAlternatives?: string[];          // baseIds for ONE_OF slot (level 2.5)
   monumentRevealedSlots?: boolean[];        // which monument slots have been revealed by visiting obelisks
+  activatedMiniMonuments?: string[];        // list of keys of activated mini monuments (obelisks)
+  secretLootHexes?: SecretLootHex[];        // pre-determined exact coordinates/levels for key items
   activeLootPings?: Record<string, number>; // Для Мини-монументов
   minedHexes?: Record<number, number>;
   restoredHexesCount?: number;
@@ -472,6 +483,8 @@ export interface SessionState {
   language: Language; 
   
   totalMinedMaterial?: number;
+  portalActive?: boolean;
+  portalHex?: HexCoord | null;
 
   entropy: EntropyState;
   activePoi: string | null;
@@ -491,6 +504,8 @@ export interface GameState {
   campaignProgress: number; 
   levelsModeProgress: number;
   skillPoints: number;
+  hexActivationPoints: number;
+  activatedHexes: Record<string, boolean>;
   campaignUpgrades: CampaignUpgrades;
   campaignMode: 'STORY' | 'LEVELS';
   
@@ -534,9 +549,10 @@ export type ActivateMonumentAction = { type: 'ACTIVATE_MONUMENT'; itemIds: strin
 export type ActivateMiniMonumentAction = { type: 'ACTIVATE_MINI_MONUMENT'; entityId: string; miniMonumentHexKey: string; stateVersion?: number }; // НОВОЕ ДЕЙСТВИЕ
 export type EquipItemAction = { type: 'EQUIP_ITEM'; itemId: string; stateVersion?: number };
 export type UnequipItemAction = { type: 'UNEQUIP_ITEM'; slot: string; stateVersion?: number };
+export type ActivatePortalAction = { type: 'ACTIVATE_PORTAL'; stateVersion?: number };
 
 export type BotAction = MoveAction | UpgradeAction | DigAction | WaitAction | RechargeAction;
-export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction | ActivateMonumentAction | ActivateMiniMonumentAction | EquipItemAction | UnequipItemAction;
+export type GameAction = BotAction | RechargeAction | DestroyItemAction | RestoreHexAction | ActivateMonumentAction | ActivateMiniMonumentAction | EquipItemAction | UnequipItemAction | ActivatePortalAction;
 
 export interface PathResult {
     path: HexCoord[] | null;

@@ -1,329 +1,601 @@
 import { LevelConfig } from '../types';
-import { getHexKey, getNeighbors } from '../services/hexUtils';
 import { isStranded } from './utils';
 
-const generateSymmetricLayout = (radius: number) => {
-  const layout = [];
-  for (let q = -radius; q <= radius; q++) {
-    for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
-      const d = Math.round((Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2);
-      const level = d % 3;
-      const hex: any = { q, r, currentLevel: level, maxLevel: level, revealed: true };
-      if (q === 1 && r === 0) hex.ownerId = 'player-1';
-      if (q === -1 && r === 0) hex.ownerId = 'bot-1';
-      layout.push(hex);
-    }
-  }
-  return layout;
-};
-
 export const series1Levels: LevelConfig[] = [
+  // 1.1: Протокол Движения / Movement & Staircase Rule
   {
     id: '1.1',
-    title: 'Sim 1.1: Протокол Инициации',
-    description: 'Цель: Улучшите 3 отмеченных гекса вокруг вас. Не тратьте материалы на другие гексы. Если вы потратите материал не на цель, вы проиграете.',
-    goalText: 'Улучшите 3 отмеченных гекса',
+    title: 'Sim 1.1: Пределы Высоты',
+    description: 'Ограничение по времени: 2 минуты. Шаг за шагом поднимитесь по волнообразному хребту и успейте по указателям дойти вверх до портала!',
+    goalText: 'Успей по указателям дойти вверх до портала',
     mapConfig: {
-      size: 1, type: 'fixed', generateWalls: false,
+      size: 4,
+      type: 'fixed',
       customLayout: [
-        // Центр (Игрок)
-        { q: 0, r: 0, maxLevel: 0, currentLevel: 0, revealed: true, ownerId: 'player-1' },
-        // Радиус 1 (7 гексов уровня 0)
-        { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 0, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, ownerId: 'player-1' },
+        { q: 1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: 2, r: -1, currentLevel: 2, maxLevel: 2, revealed: true },
+        { q: 2, r: 0, currentLevel: 3, maxLevel: 3, revealed: true },
+        { q: 1, r: 1, currentLevel: 4, maxLevel: 4, revealed: true },
+        { q: 0, r: 2, currentLevel: 5, maxLevel: 5, revealed: true },
+        { q: -1, r: 2, currentLevel: 6, maxLevel: 6, revealed: true },
+        { q: -2, r: 2, currentLevel: 7, maxLevel: 7, revealed: true },
+        { q: -3, r: 2, currentLevel: 8, maxLevel: 8, revealed: true },
+        { q: -3, r: 1, currentLevel: 9, maxLevel: 9, revealed: true },
+        { q: -2, r: 0, currentLevel: 10, maxLevel: 10, revealed: true, structureType: 'CAPITAL' }
       ]
     },
     objectiveHexes: [
-      { q: 1, r: 0, targetLevel: 1, label: '↑', color: 'amber' },
-      { q: -1, r: 1, targetLevel: 1, label: '↑', color: 'amber' },
-      { q: 0, r: -1, targetLevel: 1, label: '↑', color: 'amber' },
+      { q: 2, r: 0, targetLevel: 3, label: 'L3', color: 'amber' },
+      { q: -1, r: 2, targetLevel: 6, label: 'L6', color: 'amber' },
+      { q: -2, r: 0, targetLevel: 10, label: 'Portal', color: 'emerald' }
     ],
-    startState: { credits: 10, moves: 5, rank: 1, materials: 3, initialEntropy: 100 },
+    startState: { credits: 0, moves: 120, rank: 10, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const player = state.player;
+      const q = player.q;
+      const r = player.r;
+      
+      const wavePath = [
+        { q: 0, r: 0, lvl: 0 },
+        { q: 1, r: -1, lvl: 1 },
+        { q: 2, r: -1, lvl: 2 },
+        { q: 2, r: 0, lvl: 3 },
+        { q: 1, r: 1, lvl: 4 },
+        { q: 0, r: 2, lvl: 5 },
+        { q: -1, r: 2, lvl: 6 },
+        { q: -2, r: 2, lvl: 7 },
+        { q: -3, r: 2, lvl: 8 },
+        { q: -3, r: 1, lvl: 9 },
+        { q: -2, r: 0, lvl: 10 }
+      ];
+      
+      const playerIdx = wavePath.findIndex(p => p.q === q && p.r === r);
+      if (playerIdx === -1) {
+        return isRu 
+          ? "Вернитесь на волнообразную лесенку!"
+          : "Return to the wave staircase!";
+      }
+      if (playerIdx === wavePath.length - 1) {
+        return isRu
+          ? "Поздравляем! Вы покорили вершину L10!"
+          : "Congratulations! You reached the peak at L10!";
+      }
+      
+      return isRu
+        ? `Успей по указателям дойти вверх до портала!`
+        : `Hurry, follow the pointers up to the portal!`;
+    },
     hooks: {
       checkWinCondition: (state) => {
-        const targets = [getHexKey(1, 0), getHexKey(-1, 1), getHexKey(0, -1)];
-        return targets.every(key => (state.grid[key]?.maxLevel ?? 0) >= 1);
+        return state.player.q === -2 && state.player.r === 0;
       },
       checkLossCondition: (state) => {
-        const targets = [getHexKey(1, 0), getHexKey(-1, 1), getHexKey(0, -1)];
-        const upgradedTargets = targets.filter(key => (state.grid[key]?.maxLevel ?? 0) >= 1).length;
-        const remainingTargets = 3 - upgradedTargets;
-        
-        if ((state.player.storage ?? 0) < remainingTargets) return true;
-        
+        const elapsedS = (Date.now() - (state.sessionStartTime || 0)) / 1000;
+        if (elapsedS >= 120) return true;
         return isStranded(state);
-      },
-      onBeforeAction: (_state, action) => {
-        if (action.type === 'UPGRADE') {
-          const key = getHexKey(action.coord.q, action.coord.r);
-          const targets = [getHexKey(1, 0), getHexKey(-1, 1), getHexKey(0, -1)];
-          if (!targets.includes(key)) {
-            return { ok: true }; 
-          }
-        }
-        return { ok: true };
       }
     }
   },
+
+  // 1.2: Раскопки и Материалы / Excavation & Materials
   {
     id: '1.2',
-    title: 'Sim 1.2: Твердая Почва',
-    description: 'Цель: Достигните Столицы.\n\nСКАНЕР: Обнаружен безопасный путь (Прочность 3). Следуйте по нему через пустоту.\n\nОПАСНОСТЬ: Окружающая среда НЕСТАБИЛЬНА (Прочность 1). Сход с пути вызывает немедленное обрушение и потерю Ранга.\n\nПРОВАЛ: Ранг падает до 1.',
-    mapConfig: { size: 8, type: 'fixed', generateWalls: false },
-    startState: { credits: 12, moves: 8, rank: 5, materials: 0, initialEntropy: 15 },
-    goalText: 'Достигните Столицы',
-    aiMode: 'none',
-    hooks: {
-      checkWinCondition: (state) => !!(state.grid[getHexKey(state.player.q, state.player.r)]?.structureType === 'CAPITAL'),
-      checkLossCondition: (state) => state.player.playerLevel <= 1 || isStranded(state)
-    }
-  },
-  {
-    id: '1.3',
-    title: 'Sim 1.3: Структурные Опоры',
-    description: 'Протокол: Вертикальное Строительство.\n\nЦель: Улучшите Центр до 2-го уровня.\n\nПравило: Нельзя строить выше без фундамента. Гексу нужно как минимум 2 соседа ТАКОГО ЖЕ уровня для улучшения.',
+    title: 'Sim 1.2: Сбор Материалов',
+    description: 'Изучите экономику раскопок и выберите свой маршрут. Доступно 3 пути к Столице:\n1. Южная безопасная дорога (долгий обход без риска).\n2. Северная горная тропа (пики L2 и L3 — копайте их кнопкой «РАСКОПКА» под собой, чтобы понизить высоту и получить Материалы!).\n3. Короткий прямой путь (хрупкая почва обрушивается за вашей спиной!).',
+    goalText: 'Достичь Столицы (-8,0)',
     mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
-      customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true, durability: 6 },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 0, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-      ]
+      size: 2,
+      type: 'fixed',
+      customLayout: []
     },
-    startState: { credits: 15, moves: 10, rank: 2, materials: 3, initialEntropy: 15 },
-    goalText: 'Улучшите Центр до 2-го уровня',
+    objectiveHexes: [
+      { q: -3, r: -1, targetLevel: 3, label: 'L3 Ridge', color: 'amber' },
+      { q: -8, r: 0, targetLevel: 1, label: 'Capital', color: 'emerald' },
+    ],
+    startState: { credits: 0, moves: 40, rank: 10, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
-    hooks: {
-      checkWinCondition: (state) => (state.grid[getHexKey(0,0)]?.maxLevel >= 2),
-      checkLossCondition: (state) => (state.player.storage <= 0 && state.grid[getHexKey(0,0)]?.maxLevel < 2) || isStranded(state),
-      onBeforeAction: (state, action) => {
-          if (action.type === 'UPGRADE') {
-              const hex = state.grid[getHexKey(action.coord.q, action.coord.r)];
-              if (hex && hex.maxLevel === 1 && action.intent !== 'RECOVER') {
-                  const validSupports = getNeighbors(hex.q, hex.r).filter(n => {
-                      const h = state.grid[getHexKey(n.q, n.r)];
-                      return h && h.maxLevel >= 1 && h.structureType !== 'VOID';
-                  });
-                  if (validSupports.length < 2) return { ok: false, reason: "НЕСТАБИЛЬНО! Сначала улучшите 2 соседей до 1-го уровня." };
-              }
-          }
-          return { ok: true };
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const player = state.player;
+      const finished = player.q === -8 && player.r === 0;
+      if (finished) {
+        return isRu ? "Вы у цели!" : "You reached the objective!";
       }
-    }
-  },
-  {
-    id: '1.4',
-    title: 'Sim 1.4: Раскопки',
-    description: 'Протокол: Цикл Ресурсов.\n\nЦель: Улучшите Центр до 3-го уровня.\n\nПроблема: У вас 0 Материалов. Строительство невозможно.\n\nРешение: КОПАЙТЕ (Красная кнопка). Раскапывайте окружающие насыпи (Ур. 2), чтобы добыть +1 Материал.',
-    mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
-      customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 0, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-      ]
-    },
-    startState: { credits: 15, moves: 12, rank: 3, materials: 0, initialEntropy: 15 },
-    goalText: 'Улучшите Центр до 3-го уровня',
-    aiMode: 'none',
-    hooks: {
-      checkWinCondition: (state) => (state.grid[getHexKey(0,0)]?.maxLevel >= 3),
-      checkLossCondition: (state) => isStranded(state) && state.grid[getHexKey(0,0)]?.maxLevel < 3,
-      onBeforeAction: (state, action) => {
-          if (action.type === 'UPGRADE' && state.player.storage === 0 && action.intent !== 'RECOVER') {
-             return { ok: false, reason: "НЕТ МАТЕРИАЛОВ! Раскапывайте насыпи (Ур. 2)." };
-          }
-          return { ok: true };
+      const hex = state.grid[`${player.q},${player.r}`];
+      
+      if (hex && hex.durability === 1) {
+        return isRu 
+          ? "Опасно! Плита хрупкая и обрушится, когда вы сойдете с неё. Быстро двигайтесь вперед без остановок и backtracking!"
+          : "Danger! This tile is fragile and will collapse when you leave. Move forward swiftly with no stops or backtracking!";
       }
-    }
-  },
-  {
-    id: '1.5',
-    title: 'Sim 1.5: Кислородный Марш',
-    description: 'Протокол: Экстренное Восстановление.\n\nЦель: Соберите 150 Кредитов за 75 секунд.\n\nПравило: Стандартное Восстановление одноразовое. Вы должны ПЕРЕМЕСТИТЬСЯ, чтобы сбросить инструмент.\n\nМетод: Используйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на высоких секторах.',
-    mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
-      customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
-          { q: -2, r: 0, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
-          { q: 0, r: 2, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
-          { q: 0, r: -2, maxLevel: 5, currentLevel: 5, ownerId: 'player-1', revealed: true },
-          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: -1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-      ]
+      
+      if (player.r === -1) {
+        return isRu
+          ? "Вы на горной тропе! Наступая на пики L2-L3, вы тратите больше ходов. Нажмите РАСКОПКА под собой, чтобы срезать вершину до L1 и собрать материалы!"
+          : "You are on the mountain trail! Climbing L2-L3 peaks consumes extra moves. Use DIG under your feet to level them down to L1 and gather materials!";
+      }
+
+      const hasReachedFork = player.q === -1 && player.r === 0;
+      if (hasReachedFork) {
+        return isRu
+          ? "Развилка перед вами! Идите прямо на (-2,0) по хрупкому обрушающемуся пути, или поднимитесь на север (-1,-1) на горный хребет (копайте его для материалов)!"
+          : "You are at the fork! Go straight to (-2,0) for the fragile collapsing shortcut, or climb north to (-1,-1) to traverse high peaks (DIG them for materials)!";
+      }
+
+      return isRu
+        ? "Выберите путь! На выбор: безопасная длинная южная дорога (r>0), авантюрный хрупкий центр, или северный хребет с добычей ресурсов."
+        : "Choose your path! Your choices: safe long southern loop (r>0), direct fragile direct middle road, or northern ridge to mine resources.";
     },
-    startState: { credits: 10, moves: 6, rank: 5, materials: 0, initialEntropy: 15 },
-    goalText: 'Соберите 150 Кредитов',
-    aiMode: 'none',
     hooks: {
-      checkWinCondition: (state) => state.player.coins >= 150,
-      checkLossCondition: (state) => (Date.now() - state.sessionStartTime > 75000) || isStranded(state)
-    }
-  },
-  {
-    id: '1.6',
-    title: 'Sim 1.6: Вертикальный Предел',
-    description: 'Цель: Достигните 4-го уровня быстрее бота.\n\nПоле радиусом 5 гексов с симметричным рельефом (уровни 0-2). Игрок и бот начинают на равных условиях на 1-м уровне.',
-    goalText: 'Достигните 4-го уровня быстрее бота',
-    mapConfig: {
-      size: 5, type: 'fixed', generateWalls: false,
-      customLayout: generateSymmetricLayout(5)
-    },
-    startState: { credits: 20, moves: 15, rank: 1, materials: 5, initialEntropy: 100 },
-    botSpawnPoints: [{ q: -1, r: 0 }],
-    botObjective: 'COMPETE_RANK',
-    aiMode: 'basic',
-    hooks: {
-      checkWinCondition: (state) => state.player.playerLevel >= 4,
+      checkWinCondition: (state) => {
+        return state.player.q === -8 && state.player.r === 0;
+      },
       checkLossCondition: (state) => {
-        // Бот побеждает если достиг Rank 4 раньше игрока
-        const bot = state.bots[0];
-        if (bot && bot.playerLevel >= 4) return true;
         return isStranded(state);
       }
     }
   },
+
+  // 1.3: Замок Градиента / High Ground Gradient Lock
   {
-    id: '1.7',
-    title: 'Sim 1.7: Восстановите Пустоту',
-    description: 'Цель: Восстановите 5 пустотных гексов.\n\nЭнтропия разрушила сектора, образовав разломы Пустоты. Вам выданы аварийные припасы: подойдите к Пустоте и пожертвуйте предметом из рюкзака, чтобы материализовать спасительный грунт.\n\nПодсказка: чтобы использовать предмет, встаньте рядом с Пустотой и кликните на нее.',
-    goalText: 'Восстановите 5 гексов Пустоты',
+    id: '1.3',
+    title: 'Sim 1.3: Замок Градиента',
+    description: 'Правило стабильности ландшафта: вы не можете раскопать гекс ниже уровня самого низкого его соседа. Сначала сравняйте соседа!',
+    goalText: 'Срежьте Центр (0,0) до L0',
     mapConfig: {
-      size: 3, type: 'fixed', generateWalls: false,
+      size: 2,
+      type: 'fixed',
       customLayout: [
-        // Center (Starting hex)
-        { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-        
-        // Ring 1 (Radius 1)
-        { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: -1, r: 1, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: 1, r: -1, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
-        
-        // Ring 2 (Radius 2)
-        { q: 2, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-        { q: 1, r: 1, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: 0, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: -1, r: 2, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: -2, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: -2, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-        { q: -2, r: 0, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: -1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-        { q: 0, r: -2, structureType: 'VOID', maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: 1, r: -2, maxLevel: 0, currentLevel: 0, revealed: true },
-        { q: 2, r: -2, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: 2, r: -1, maxLevel: 2, currentLevel: 2, revealed: true }
+        { q: 0, r: 0, currentLevel: 2, maxLevel: 2, revealed: true }, // Центр L2 (Цель)
+        { q: 1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Соседи L1, игрок стартует здесь
+        { q: 1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: 0, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: -1, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: -1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: 0, r: -1, currentLevel: 1, maxLevel: 1, revealed: true }
       ]
     },
-    startState: { 
-      credits: 30, 
-      moves: 20, 
-      rank: 2, 
-      materials: 0, 
-      initialEntropy: 30,
-      items: [
-        { baseId: 'fuel_cell', rarity: 'COMMON' },
-        { baseId: 'fuel_cell', rarity: 'COMMON' },
-        { baseId: 'data_disc', rarity: 'COMMON' },
-        { baseId: 'raw_container', rarity: 'UNCOMMON' },
-        { baseId: 'reality_patch', rarity: 'RARE' },
-        { baseId: 'reality_patch', rarity: 'LEGENDARY' },
-        { baseId: 'emerald_necklace', rarity: 'RARE' },
-        { baseId: 'shoes_leather', rarity: 'COMMON' },
-        { baseId: 'plasma_drill', rarity: 'RARE' }
-      ]
-    },
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 0, label: 'Goal', color: 'emerald' },
+    ],
+    startState: { credits: 0, moves: 30, rank: 2, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const h00 = state.grid['0,0']?.currentLevel ?? 2;
+      const neighbors = ['1,-1', '1,0', '0,1', '-1,1', '-1,0', '0,-1'];
+      const neighborLevels = neighbors.map(key => state.grid[key]?.currentLevel ?? 1);
+      const minNeighbor = Math.min(...neighborLevels);
+      
+      const player = state.player;
+      const isAtCenter = player.q === 0 && player.r === 0;
+      const isAtStartingHex = player.q === 1 && player.r === -1;
+      const h11 = state.grid['1,-1']?.currentLevel ?? 1;
+
+      if (h00 <= 0) {
+        return isRu
+          ? "Отлично! Центр успешно опущен до уровня L0."
+          : "Excellent! Center is successfully lowered to level L0.";
+      }
+      
+      if (isAtStartingHex && h11 === 1) {
+        return isRu
+          ? "Вы начали на гексе (1,-1). Вы можете сразу раскопать его под собой (кнопка РАСКОПКА) до уровня L0, чтобы открыть путь к понижению Центра!"
+          : "You started on the hex (1,-1). You can DIG it right now under your feet (DIG button) down to level L0 to open the path for lowering the Center!";
+      }
+
+      if (h00 === 2) {
+        if (isAtCenter) {
+          return isRu
+            ? "Вы в Центре! Раскопайте его сначала до уровня L1."
+            : "You are in the Center! DIG it down to level L1 first.";
+        } else {
+          return isRu
+            ? "Перейдите в Центр (0,0) и раскопайте его до уровня L1, либо сначала раскопайте ваш текущий гекс до L0!"
+            : "Move to the Center (0,0) and dig it down to level L1, or dig your current hex down to L0 first!";
+        }
+      }
+
+      if (minNeighbor >= 1) {
+        if (isAtCenter) {
+          return isRu
+            ? "Замок градиента активен! Все соседи Центра равны L1 или выше, так что вы не можете копать Центр ниже L1. Сделайте шаг на соседнюю клетку и прокопайте её до L0!"
+            : "Gradient lock active! All neighboring tiles of the Center are L1 or higher, so you cannot DIG Center below L1. Move to a neighbor and DIG it to L0!";
+        } else {
+          return isRu
+            ? "Прокопайте ваш текущий гекс до уровня L0, чтобы снять замок градиента с Центра."
+            : "DIG your current hex down to level L0 to break the gradient lock on the Center.";
+        }
+      }
+
+      if (isAtCenter) {
+        return isRu
+          ? "Замок градиента спал! Вы в Центре, раскопайте его до уровня L0 для победы!"
+          : "Gradient lock is broken! You are in the Center, DIG it down to level L0 to win!";
+      } else {
+        return isRu
+          ? "Замок градиента спал! Теперь перейдите в Центр (0,0) и раскопайте его до уровня L0."
+          : "Gradient lock is broken! Now move to the Center (0,0) and dig it down to level L0.";
+      }
+    },
     hooks: {
       checkWinCondition: (state) => {
-        return (state.restoredHexesCount || 0) >= 5;
+        return (state.grid['0,0']?.currentLevel ?? 2) <= 0;
       },
       checkLossCondition: (state) => {
-        return isStranded(state) && (state.restoredHexesCount || 0) < 5;
+        return isStranded(state);
       }
     }
   },
+
+  // 1.4: Строительство и Фундамент / Upgrading & Support
   {
-    id: '1.8',
-    title: 'Sim 1.8: Энтропийный Щит',
-    description: 'Цель: Стабилизируйте сектор.\n\nЭнтропия растет. Вы должны удерживать уровень Энтропии ниже 50% в течение 30 секунд, используя Восстановление и Артефакты Стабилизации.',
-    goalText: 'Стабилизируйте Энтропию ниже 50% на 30 сек',
+    id: '1.4',
+    title: 'Sim 1.4: Фундамент Опор',
+    description: 'Чтобы повысить гекс до уровня L2 и выше, ему ТРЕБУЕТСЯ прочная основа: как минимум 2 соседних гекса должны иметь высоту не ниже текущего уровня этого гекса.',
+    goalText: 'Возведите башню L2 в центре',
     mapConfig: {
-      size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
+      size: 2,
+      type: 'fixed',
       customLayout: [
-         { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-         { q: 1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-         { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-         { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-         { q: -1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-         { q: 0, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-         { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
+        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Центр L1
+        { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true }, // Опора 1
+        { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true }, // Опора 2
       ]
     },
-    startState: { credits: 25, moves: 15, rank: 2, materials: 2, initialEntropy: 60 },
+    objectiveHexes: [
+      { q: 1, r: 0, targetLevel: 1, label: 'UP', color: 'amber' },
+      { q: 0, r: 1, targetLevel: 1, label: 'UP', color: 'amber' },
+      { q: 0, r: 0, targetLevel: 2, label: 'Goal', color: 'emerald' },
+    ],
+    startState: { credits: 0, moves: 15, rank: 2, materials: 3, initialEntropy: 100 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const h00 = state.grid['0,0']?.currentLevel;
+      
+      if (h00 >= 2) {
+        return isRu ? "Изумительно! Центр поднят на высоту 2!" : "Superb! Center raised to height level 2!";
+      }
+      
+      const okNeighbors = [state.grid['1,0'], state.grid['0,1']].filter(h => h && h.currentLevel >= 1).length;
+      if (okNeighbors < 2) {
+        return isRu
+          ? `Фундамент не готов. Постройте (Оранжевая кнопка «УЛУЧШИТЬ») опоры рядом до уровня L1. Выстроено: ${okNeighbors}/2`
+          : `We need support. Upgrade (Orange button «UPGRADE») adjacent neighbors to level L1. Active: ${okNeighbors}/2`;
+      }
+      
+      return isRu
+        ? "Опоры готовы! Шагайте в Центр и улучшайте его до уровня L2."
+        : "Pillars are ready! Stand in the Center and upgrade it to Level L2.";
+    },
     hooks: {
       checkWinCondition: (state) => {
-        if (state.entropy.current < 50) {
-            if (!state.stableStartTime) state.stableStartTime = Date.now();
-            return (Date.now() - state.stableStartTime) > 30000;
-        }
-        state.stableStartTime = undefined;
-        return false;
+        return (state.grid['0,0']?.currentLevel ?? 1) >= 2;
       },
-      checkLossCondition: (state) => isStranded(state) || state.entropy.current >= 100
+      checkLossCondition: (state) => {
+        return isStranded(state);
+      }
     }
   },
+
+  // 1.5: Регенерация ландшафта / Exception: Regrowth & Valley
   {
-    id: '1.9',
-    title: 'Sim 1.9: Обелиски Создателей',
-    description: 'Вам стали доступны подсказки Обелисков. Подойдите к минимонументу, чтобы узнать требуемую форму и собрать фигуру на карте.',
+    id: '1.5',
+    title: 'Sim 1.5: Жесткие Опоры',
+    description: 'Внимание: В этой симуляции у вас нет внешних опорных конструкций. Вы не сможете возвысить изолированный гекс выше уровня L1 без создания опорного плато!',
+    goalText: 'Улучшите Центр до уровня L1',
     mapConfig: {
-      size: 3, type: 'fixed', generateWalls: false,
+      size: 2,
+      type: 'fixed',
       customLayout: [
-        { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-        { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-        { q: 1, r: -1, structureType: 'MINI_MONUMENT', maxLevel: 0, currentLevel: 0, revealed: true },
+        { q: 0, r: 0, currentLevel: 0, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Лимит L1
       ]
     },
-    startState: { credits: 50, moves: 15, rank: 3, materials: 5, initialEntropy: 10 },
-    goalText: 'Выполните требование Обелиска',
-    aiMode: 'none',
-    requiredShapes: [
-      {
-        type: 'LINE_3',
-        level: 1,
-        hint: 'Постройте прямую Линию из 3-х гексов уровня 1 или выше. Они должны принадлежать вам.'
-      }
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 1, label: 'L1 Peak', color: 'emerald' },
     ],
+    startState: { credits: 0, moves: 10, rank: 3, materials: 3, initialEntropy: 100 },
+    aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const h00 = state.grid['0,0']?.currentLevel ?? 0;
+      if (h00 >= 1) {
+        return isRu
+          ? "Отлично! Вы подняли гекс до уровня L1. Выше подняться нельзя без соседних опорных плит."
+          : "Great! You raised the hex to Level L1. You cannot go higher without supporting adjacent tiles.";
+      }
+      return isRu
+        ? "Попробуйте улучшить Центр до уровня L1."
+        : "Try to upgrade the Center to level L1.";
+    },
     hooks: {
-      checkWinCondition: () => false, // Handled automatically by requiredShapes Check inside VictorySystem
-      checkLossCondition: (state) => isStranded(state)
+      checkWinCondition: (state) => {
+        return (state.grid['0,0']?.currentLevel ?? 0) >= 1;
+      },
+      checkLossCondition: (state) => {
+        return isStranded(state);
+      }
+    }
+  },
+
+  // 1.6: Съем энергии и Реакторы / Recovery Energy & Reactors
+  {
+    id: '1.6',
+    title: 'Sim 1.6: Потоки Энергии',
+    description: 'Изучите восстановление (Синяя кнопка). Плиты L0-L3 дают одноразовую конверсию Кредитов и Ходов. Выдающиеся плиты L4+ являются термореакторами на 3 заряда, позволяя проводить подряд 3 откачки!',
+    goalText: 'Накопите 100 Кредитов',
+    mapConfig: {
+      size: 3,
+      type: 'fixed',
+      customLayout: [
+        { q: 0, r: 0, currentLevel: 4, maxLevel: 4, revealed: true, ownerId: 'player-1' }, // Реактор L4
+        { q: 1, r: -1, currentLevel: 3, maxLevel: 3, revealed: true }, // Буферная L3
+        { q: -1, r: 1, currentLevel: 3, maxLevel: 3, revealed: true }, // Буферная L3
+        { q: 2, r: -2, currentLevel: 2, maxLevel: 2, revealed: true }, // Спуск L2
+        { q: -2, r: 2, currentLevel: 2, maxLevel: 2, revealed: true }, // Спуск L2
+      ]
+    },
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 4, label: 'Reactor', color: 'blue' },
+      { q: 1, r: -1, targetLevel: 3, label: 'L3', color: 'blue' },
+      { q: -1, r: 1, targetLevel: 3, label: 'L3', color: 'blue' },
+      { q: 2, r: -2, targetLevel: 2, label: 'L2', color: 'blue' },
+      { q: -2, r: 2, targetLevel: 2, label: 'L2', color: 'blue' },
+    ],
+    startState: { credits: 0, moves: 12, rank: 4, materials: 0, initialEntropy: 100 },
+    aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const credits = state.player.coins;
+      const reactor = state.grid['0,0'];
+      
+      if (credits >= 100) {
+        return isRu ? "Лимит набран! Стабилизатор готов." : "Quota satisfied! Stabilizer pre-charged.";
+      }
+      
+      if (state.player.q === 0 && state.player.r === 0) {
+        if (reactor?.recoveryCharges && reactor.recoveryCharges > 0) {
+          return isRu
+            ? `Вы на реакторе L4. Сделайте 3 съема энергии кнопкой ВОССТАНОВЛЕНИЕ (Синяя кнопка). Заряды: ${reactor.recoveryCharges}/3`
+            : `You are on the L4 Reactor. Use RECOVER (Blue button) 3 times. Charges remaining: ${reactor.recoveryCharges}/3`;
+        }
+        return isRu
+          ? "Реактор остывает! Спуститесь на плиты вокруг, снимите там энергию!"
+          : "Reactor on cooldown! Descend to buffer plates for recovery!";
+      }
+      
+      const onL3 = Math.abs(state.player.q) === 1 && Math.abs(state.player.r) === 1;
+      return isRu
+        ? (onL3 
+            ? "Вы на промежуточной плите. Нажмите ВОССТАНОВЛЕНИЕ (Синяя кнопка), затем спуститесь ниже!"
+            : "Нажмите ВОССТАНОВЛЕНИЕ (Синяя кнопка), затем перебегайте на другую сторону!")
+        : (onL3 
+            ? "You are on the buffer step. Click RECOVER (Blue button), then step down!"
+            : "Click RECOVER (Blue button), then head to the alternate slope!");
+    },
+    hooks: {
+      checkWinCondition: (state) => {
+        return state.player.coins >= 100;
+      },
+      checkLossCondition: (state) => {
+        return isStranded(state);
+      }
+    }
+  },
+
+  // 1.7: Усталость и Логика Шагов / Energy, Fatigue & Emergency conversion
+  {
+    id: '1.7',
+    title: 'Sim 1.7: Усталость и Телепорт',
+    description: 'Энтропийный статус «УСТАЛОСТЬ» удваивает стоимость ходов под ногами. При Move=0 шаг автоматически спишет 5 Кредитов! Используйте артефакт Void Core в инвентаре для перехода в невесомость.',
+    goalText: 'Перейдите в Столицу (3,-1)',
+    mapConfig: {
+      size: 4,
+      type: 'fixed',
+      customLayout: [
+        { q: 0, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, ownerId: 'player-1' },
+        { q: 1, r: -1, currentLevel: 2, maxLevel: 2, revealed: true }, // Ступенька L2
+        { q: 2, r: -1, currentLevel: 3, maxLevel: 3, revealed: true }, // Ступенька L3
+        { q: 3, r: -1, currentLevel: 0, maxLevel: 0, revealed: true, structureType: 'CAPITAL' }, // Столица L0
+      ]
+    },
+    objectiveHexes: [
+      { q: 3, r: -1, targetLevel: 0, label: 'Capital', color: 'emerald' },
+    ],
+    startState: {
+      credits: 60,
+      moves: 0,
+      rank: 3,
+      materials: 0,
+      initialEntropy: 100,
+      startInventory: ['void_core']
+    },
+    aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const hasVoidCore = state.player.inventory.some(i => i.baseId === 'void_core');
+      
+      if (state.player.q === 3 && state.player.r === -1) {
+        return isRu ? "Отличная работа! Цель достигнута." : "Excellent work! Destination reached.";
+      }
+      
+      if (hasVoidCore) {
+        return isRu
+          ? "Откройте ИНВЕНТАРЬ (кнопка с рюкзаком внизу) и примените Ядро Пустоты (Void Core), чтобы пролетать любые высоты за 1 ход!"
+          : "Open the INVENTORY (bag icon below) and use the Void Core to ignore heights, fatigue, and move over rifts safely!";
+      }
+      
+      return isRu
+        ? "Ядро активировано. Теперь спокойно кликайте на Столицу для перемещения!"
+        : "Void form active. Just click the Capital to teleport!";
+    },
+    hooks: {
+      checkWinCondition: (state) => {
+        return state.player.q === 3 && state.player.r === -1;
+      },
+      checkLossCondition: (state) => {
+        return isStranded(state);
+      }
+    }
+  },
+
+  // 1.8: Глубинное Бурение / Deep Mines & Negative Levels
+  {
+    id: '1.8',
+    title: 'Sim 1.8: Глубинная Добыча',
+    description: 'Углубление в шахты ниже L0 восстанавливает драгоценные Ходы: Moves += |L_Target|. Но бурить глубокий колодец на -2 и ниже можно только при помощи 2 углубленных соседей!',
+    goalText: 'Выкопайте шахту -2 в центре',
+    mapConfig: {
+      size: 2,
+      type: 'fixed',
+      customLayout: [
+        { q: 0, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, ownerId: 'player-1' }, // Центр
+        { q: 1, r: -1, currentLevel: 0, maxLevel: 0, revealed: true }, // Ствол 1
+        { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true }, // Ствол 2
+      ]
+    },
+    objectiveHexes: [
+      { q: 1, r: -1, targetLevel: -1, label: '-1', color: 'amber' },
+      { q: 0, r: 1, targetLevel: -1, label: '-1', color: 'amber' },
+      { q: 0, r: 0, targetLevel: -2, label: 'Goal -2', color: 'emerald' },
+    ],
+    startState: { credits: 0, moves: 8, rank: 2, materials: 0, initialEntropy: 100 },
+    aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const h00 = state.grid['0,0']?.currentLevel;
+      
+      if (h00 <= -2) {
+        return isRu ? "Невероятно глубоко! Протокол шахтной вентиляции сдам!" : "Incredible. Shaft stability protocol validated.";
+      }
+      
+      const minedNeighbors = [state.grid['1,-1'], state.grid['0,1']].filter(h => h && h.currentLevel <= -1).length;
+      if (minedNeighbors < 2) {
+        return isRu
+          ? `Для прокопки центра глубоко, углубите соседей на уровень -1. Готово: ${minedNeighbors}/2`
+          : `To drill the center deeply, lower surrounding gate neighbors to level -1. Completed: ${minedNeighbors}/2`;
+      }
+      
+      return isRu
+        ? "Соседи укреплены! Возвращайтесь в Центр и дважды копайте до самого глубокого уровня для быстрой победы."
+        : "Arches set! Return to the Center and dig down twice to the deepest level.";
+    },
+    hooks: {
+      checkWinCondition: (state) => {
+        return (state.grid['0,0']?.currentLevel ?? 0) <= -2;
+      },
+      checkLossCondition: (state) => {
+        return isStranded(state);
+      }
+    }
+  },
+
+  // 1.9: Заживление Пустот / Sealing Spacetime Voids
+  {
+    id: '1.9',
+    title: 'Sim 1.9: Заживление Пустоты',
+    description: 'Разломы космической пустоты (VOID) перекрывают движение. Но вы можете запечатать их: встаньте рядом, кликните по черному гексу VOID, и используйте Reality Patch из рюкзака!',
+    goalText: 'Запечатайте Пробой на (1,-1)',
+    mapConfig: {
+      size: 2,
+      type: 'fixed',
+      customLayout: [
+        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' },
+        { q: 1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true, structureType: 'VOID' }, // Место ремонта
+      ]
+    },
+    objectiveHexes: [
+      { q: 1, r: -1, targetLevel: 0, label: 'Rift', color: 'rose' },
+    ],
+    startState: {
+      credits: 0,
+      moves: 5,
+      rank: 1,
+      materials: 0,
+      initialEntropy: 100,
+      startInventory: ['reality_patch']
+    },
+    aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const voidHex = state.grid['1,-1'];
+      
+      if (voidHex && voidHex.structureType !== 'VOID') {
+        return isRu ? "Отлично! Пространство восстановлено." : "Superb! Spacetime fracture successfully healed.";
+      }
+      
+      return isRu
+        ? "Кликните на черную ячейку под стрелкой и пожертвуйте Лоскут Реальности (Reality Patch)!"
+        : "Click on the dark Void tile under the arrow and consume your Reality Patch!";
+    },
+    hooks: {
+      checkWinCondition: (state) => {
+        return state.grid['1,-1']?.structureType !== 'VOID';
+      },
+      checkLossCondition: (state) => {
+        return isStranded(state);
+      }
+    }
+  },
+
+  // 1.10: Секторный Монумент / Monument Blueprint Sequences
+  {
+    id: '1.10',
+    title: 'Sim 1.10: Финал: Линия Суши',
+    description: 'Итоговый зачет обучения. Используя все знания добычи и регенерации опор, выстройте идеальную прямую линию высоты 2 по вертикальной оси q=0.',
+    goalText: 'Постройте 3 гекса высотой L2 на q=0',
+    mapConfig: {
+      size: 2,
+      type: 'fixed',
+      customLayout: [
+        { q: 0, r: -1, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Точка старта L1
+        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true }, // Центр L1
+        { q: 0, r: 1, currentLevel: 1, maxLevel: 1, revealed: true }, // Ступень L1
+        // Вспомогательные боковые плиты для быстрого наращивания опор!
+        { q: 1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: -1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: 1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true }, // Опора для (0,1)
+      ]
+    },
+    objectiveHexes: [
+      { q: 0, r: -1, targetLevel: 2, label: 'L2', color: 'emerald' },
+      { q: 0, r: 0, targetLevel: 2, label: 'L2', color: 'emerald' },
+      { q: 0, r: 1, targetLevel: 2, label: 'L2', color: 'emerald' },
+    ],
+    startState: { credits: 0, moves: 30, rank: 2, materials: 6, initialEntropy: 100 },
+    aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const key1 = '0,-1';
+      const key2 = '0,0';
+      const key3 = '0,1';
+      const l1 = state.grid[key1]?.currentLevel ?? 0;
+      const l2 = state.grid[key2]?.currentLevel ?? 0;
+      const l3 = state.grid[key3]?.currentLevel ?? 0;
+      
+      const ready = (l1 >= 2 && l2 >= 2 && l3 >= 2);
+      if (ready) {
+        return isRu ? "Чертеж готов! Нажмите Завершить сессию на боковой панели." : "Perfect straight cascade sequence complete! Victory achieved.";
+      }
+      
+      return isRu
+        ? `Поднимите целевые плиты до высоты 2, задействуя боковые плиты для бесплатных опор. Статус: ${l1}/2, ${l2}/2, ${l3}/2`
+        : `Raise target blocks to level L2. Current: ${l1}/2, ${l2}/2, ${l3}/2`;
+    },
+    hooks: {
+      checkWinCondition: (state) => {
+        const l1 = state.grid['0,-1']?.currentLevel ?? 0;
+        const l2 = state.grid['0,0']?.currentLevel ?? 0;
+        const l3 = state.grid['0,1']?.currentLevel ?? 0;
+        return l1 >= 2 && l2 >= 2 && l3 >= 2;
+      },
+      checkLossCondition: (state) => {
+        return isStranded(state);
+      }
     }
   }
 ];

@@ -7,6 +7,26 @@ import { getHexKey } from '../../services/hexUtils';
 import { checkShapeExists } from '../../services/shapeUtils';
 
 export class VictorySystem implements System {
+  private triggerPortal(state: SessionState, msg: string): void {
+    if (state.portalActive) return;
+    
+    state.portalActive = true;
+    state.portalHex = { q: state.player.q, r: state.player.r };
+    
+    const isRu = state.language === 'RU';
+    const alertText = isRu
+      ? `🏆 ДОСТИГНУТЫ УСЛОВИЯ ПОБЕДЫ (${msg})! Сверху над вашим текущим гексом ({q: ${state.player.q}, r: ${state.player.r}}) открылся анимированный портал. Войдите в него и кликните на него для завершения миссии!`
+      : `🏆 VICTORY CONDITIONS MET (${msg})! An animated portal has opened above your current hex ({q: ${state.player.q}, r: ${state.player.r}}). Stand in it and click the portal to complete the mission!`;
+      
+    state.messageLog.unshift({
+        id: `portal-spawn-${Date.now()}`,
+        text: alertText,
+        type: 'SUCCESS',
+        source: 'NEBULA_AI',
+        timestamp: Date.now()
+    });
+  }
+
   update(state: SessionState, _index: WorldIndex, events: GameEvent[]): void {
     if (state.gameStatus === 'VICTORY' || state.gameStatus === 'DEFEAT') {
         return;
@@ -16,17 +36,7 @@ export class VictorySystem implements System {
     if (state.activeLevelConfig && state.activeLevelConfig.requiredShapes && state.activeLevelConfig.requiredShapes.length > 0) {
         const allShapesBuilt = state.activeLevelConfig.requiredShapes.every(req => checkShapeExists(state, req));
         if (allShapesBuilt) {
-            state.gameStatus = 'VICTORY';
-            const msg = 'Shapes Completed!';
-            state.messageLog.unshift({
-                id: `win-shapes-${Date.now()}`,
-                text: msg,
-                type: 'SUCCESS',
-                source: 'SYSTEM',
-                timestamp: Date.now()
-            });
-            events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
-            this.generateLeaderboardEvent(state, events);
+            this.triggerPortal(state, 'Shapes Completed!');
             return;
         }
     }
@@ -37,17 +47,7 @@ export class VictorySystem implements System {
         if (state.activeLevelConfig.hooks.checkWinCondition) {
             const isCampaignWin = state.activeLevelConfig.hooks.checkWinCondition(state, _index);
             if (isCampaignWin) {
-                 state.gameStatus = 'VICTORY';
-                 const msg = 'Campaign Objective Achieved';
-                 state.messageLog.unshift({
-                    id: `win-camp-${Date.now()}`,
-                    text: msg,
-                    type: 'SUCCESS',
-                    source: 'SYSTEM',
-                    timestamp: Date.now()
-                 });
-                 events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
-                 this.generateLeaderboardEvent(state, events);
+                 this.triggerPortal(state, 'Campaign Objective Achieved');
                  return;
             }
         }
@@ -121,19 +121,7 @@ export class VictorySystem implements System {
     }
     
     if (isVictory) {
-        state.gameStatus = 'VICTORY';
-        const msg = 'Mission Accomplished';
-        
-        state.messageLog.unshift({
-            id: `win-${Date.now()}`,
-            text: msg,
-            type: 'SUCCESS',
-            source: 'SYSTEM',
-            timestamp: Date.now()
-        });
-
-        events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
-        this.generateLeaderboardEvent(state, events);
+        this.triggerPortal(state, 'Mission Accomplished');
         return;
     }
 
@@ -165,7 +153,7 @@ export class VictorySystem implements System {
     }
   }
 
-  private generateLeaderboardEvent(state: SessionState, events: GameEvent[]): void {
+  public generateLeaderboardEvent(state: SessionState, events: GameEvent[]): void {
     const baseScore = 15000;
     const timePenalty = state.currentTurn * 10;
     const actionsPenalty = (state.player.actionsTaken || 0) * 50;

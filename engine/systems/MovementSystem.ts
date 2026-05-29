@@ -36,6 +36,8 @@ export class MovementSystem implements System {
              if (hex && hex.structureType === 'MONUMENT') {
                  // Verify height requirement logic if needed, but if they are ON it, they climbed it.
                  events.push(GameEventFactory.create('MONUMENT_REACHED', 'Monument Connection Established', entity.id));
+             } else if (hex && hex.structureType === 'MINI_MONUMENT') {
+                 events.push(GameEventFactory.create('MINI_MONUMENT_REACHED', undefined, entity.id));
              }
          }
       }
@@ -213,6 +215,8 @@ export class MovementSystem implements System {
              const hex = fullState.grid[key];
              if (hex && hex.structureType === 'MONUMENT') {
                  events.push(GameEventFactory.create('MONUMENT_REACHED', undefined, entity.id));
+             } else if (hex && hex.structureType === 'MINI_MONUMENT') {
+                 events.push(GameEventFactory.create('MINI_MONUMENT_REACHED', undefined, entity.id));
              }
         }
     } else {

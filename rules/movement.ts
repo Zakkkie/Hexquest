@@ -36,6 +36,9 @@ export const calculateMovementCost = (
     let currentQ = entity.q;
     let currentR = entity.r;
 
+    const hasVoidCore = (entity.equipment && Object.values(entity.equipment).some(item => item && item.baseId === 'void_core')) ||
+                        (entity.activeStatuses && entity.activeStatuses.some(s => (s.type as string) === 'VOID_CORE' || s.label === 'Void Core'));
+
     for (const step of path) {
         const currentKey = getHexKey(currentQ, currentR);
         const nextKey = getHexKey(step.q, step.r);
@@ -60,7 +63,7 @@ export const calculateMovementCost = (
 
         // 2. Staircase Rule (Global Enforcement)
         // Cannot step up OR down more than 1 level at a time.
-        if (Math.abs(currentLevel - nextLevel) > 1) {
+        if (!hasVoidCore && Math.abs(currentLevel - nextLevel) > 1) {
              return { 
                  totalPoints: 0, 
                  deductMoves: 0, 
@@ -75,7 +78,7 @@ export const calculateMovementCost = (
         // Terrain Cost Logic
         // Positive High Ground (>1): Costs height.
         // Flat (0, 1) or Negative (<0): Costs 1.
-        const stepCost = (nextHex?.currentLevel ?? 0) > 1 ? (nextHex?.currentLevel ?? 0) : 1;
+        const stepCost = hasVoidCore ? 1 : ((nextHex?.currentLevel ?? 0) > 1 ? (nextHex?.currentLevel ?? 0) : 1);
         
         totalPoints += stepCost;
         

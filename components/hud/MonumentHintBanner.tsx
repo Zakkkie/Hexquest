@@ -6,7 +6,16 @@ import { Hex } from '../../types';
 
 const MonumentHintBanner: React.FC = () => {
     const grid = useGameStore(state => state.session?.grid);
-    const player = useGameStore(state => state.session?.player);
+    const playerExists = useGameStore(state => !!state.session?.player);
+    const playerQ = useGameStore(state => state.session?.player?.q);
+    const playerR = useGameStore(state => state.session?.player?.r);
+    const playerInventory = useGameStore(state => state.session?.player?.inventory);
+
+    const player = useMemo(() => {
+        if (!playerExists || playerQ === undefined || playerR === undefined) return null;
+        return { q: playerQ, r: playerR, inventory: playerInventory ?? [] };
+    }, [playerExists, playerQ, playerR, playerInventory]);
+
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
     const monumentRequirements = useGameStore(state => state.session?.monumentRequirements);
@@ -165,4 +174,4 @@ const MonumentHintBanner: React.FC = () => {
     );
 };
 
-export default MonumentHintBanner;
+export default React.memo(MonumentHintBanner);

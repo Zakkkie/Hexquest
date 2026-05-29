@@ -8,6 +8,7 @@ import InventoryModal from './InventoryModal.tsx';
 import MonumentHintBanner from './hud/MonumentHintBanner.tsx';
 import SkirmishHintBanner from './hud/SkirmishHintBanner.tsx';
 import CampaignHintBanner from './hud/CampaignHintBanner.tsx';
+import CentralTutorialBanner from './hud/CentralTutorialBanner.tsx';
 import { Item } from '../types.ts';
 import { XCircle, CheckCircle, Info } from 'lucide-react';
 
@@ -50,6 +51,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                     onOpenModal={(modal) => setActiveModal(modal)} 
                     setHelpTopic={setHelpTopic}
                 />
+                
+                <CentralTutorialBanner />
                 
                 {(gameStatus === 'PLAYING' || toast) && (
                     <div className="absolute top-[calc(74px+env(safe-area-inset-top))] md:top-[96px] left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2.5">

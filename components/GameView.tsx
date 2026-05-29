@@ -73,6 +73,7 @@ const GameView: React.FC = () => {
   const winCondition = useGameStore(state => state.session?.winCondition);
   const deviceType = useGameStore(state => state.deviceType);
   const lastVisualEvent = useGameStore(state => state.lastVisualEvent);
+  const portalActive = useGameStore(state => state.session?.portalActive);
   
   const movePlayer = useGameStore(state => state.movePlayer);
   const hideToast = useGameStore(state => state.hideToast);
@@ -141,6 +142,18 @@ const GameView: React.FC = () => {
       audioService.startMusic();
       return () => { audioService.stopMusic(); };
   }, []);
+
+  // --- PORTAL HUMMING LOOP ---
+  useEffect(() => {
+      if (portalActive) {
+          audioService.startPortalHum();
+      } else {
+          audioService.stopPortalHum();
+      }
+      return () => {
+          audioService.stopPortalHum();
+      };
+  }, [portalActive]);
 
   // --- AUDIO DYNAMICS ---
   useEffect(() => {

@@ -1,7 +1,7 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store';
-import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Info, Mountain, Target } from 'lucide-react';
+import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Info, Mountain, Target, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import HexButton from '../HexButton';
 import { getHexKey, getNeighbors, getSecondsToGrow } from '../../services/hexUtils';
@@ -135,8 +135,57 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const isCampaignHintCollapsed = useGameStore(state => state.isCampaignHintCollapsed);
     const toggleCampaignHintCollapse = useGameStore(state => state.toggleCampaignHintCollapse);
     
+    const sessionStartTime = useGameStore(state => state.session?.sessionStartTime);
+    const gameStatus = useGameStore(state => state.session?.gameStatus);
+    
+    const [timeLeft, setTimeLeft] = useState(75);
+    const isLevel1_1 = activeLevelConfig?.id === '1.1';
+    const isLevel1_5 = activeLevelConfig?.id === '1.5';
+    const isLevel3_2 = activeLevelConfig?.id === '3.2';
+    const isTimedLevel = isLevel1_1 || isLevel1_5 || isLevel3_2;
+
+    useEffect(() => {
+        if (isTimedLevel && gameStatus === 'PLAYING') {
+            const timeLimit = isLevel1_1 ? 120 : (isLevel3_2 ? 180 : 75);
+            const interval = setInterval(() => {
+                const elapsed = Date.now() - (sessionStartTime || 0);
+                const remaining = Math.max(0, timeLimit - Math.floor(elapsed / 1000));
+                setTimeLeft(remaining);
+            }, 250);
+            return () => clearInterval(interval);
+        }
+    }, [isLevel1_1, isLevel1_5, isLevel3_2, gameStatus, sessionStartTime, isTimedLevel]);
+
     const [isMobile, setIsMobile] = useState(false);
     const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+    // Tutorial dimming & locks overrides
+    const isTutorialLevel1 = activeLevelConfig?.id ? activeLevelConfig.id.startsWith('1.') : false;
+    const levelId = activeLevelConfig?.id;
+
+    const digDimmed = useMemo(() => {
+        if (!isTutorialLevel1 || !levelId) return false;
+        if (levelId === '1.1') return true;
+        if (['1.4', '1.5', '1.6', '1.7'].includes(levelId)) return true;
+        return false;
+    }, [isTutorialLevel1, levelId]);
+
+    const upgradeDimmed = useMemo(() => {
+        if (!isTutorialLevel1 || !levelId) return false;
+        if (['1.1', '1.2', '1.3', '1.6', '1.7', '1.8'].includes(levelId)) return true;
+        return false;
+    }, [isTutorialLevel1, levelId]);
+
+    const recoverDimmed = useMemo(() => {
+        if (!isTutorialLevel1 || !levelId) return false;
+        if (['1.1', '1.2', '1.3', '1.4', '1.5', '1.8'].includes(levelId)) return true;
+        return false;
+    }, [isTutorialLevel1, levelId]);
+
+    const handleDimmedClick = useCallback(() => {
+        playUiSound('WARNING');
+        showToast(language === 'RU' ? "Действие заблокировано протоколом обучения" : "Action restricted by training protocol", 'error');
+    }, [language, playUiSound, showToast]);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -172,7 +221,23 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         const ownedByLevel = (minLvl: number) =>
             Object.values(grid).filter((h: Hex) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
 
-        if (levelId === '1.1') return { current: Math.max(0, ownedByLevel(1) - 1), target: 3, label: TEXT[language].HUD.TUT_1_1_COUNTER };
+        if (levelId === '1.1') {
+            const wavePath = [
+                { q: 0, r: 0 },
+                { q: 1, r: -1 },
+                { q: 2, r: -1 },
+                { q: 2, r: 0 },
+                { q: 1, r: 1 },
+                { q: 0, r: 2 },
+                { q: -1, r: 2 },
+                { q: -2, r: 2 },
+                { q: -3, r: 2 },
+                { q: -3, r: 1 },
+                { q: -2, r: 0 }
+            ];
+            const idx = wavePath.findIndex(p => p.q === player.q && p.r === player.r);
+            return { current: idx !== -1 ? idx : 0, target: 10, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
+        }
         if (levelId === '1.3') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 2, label: 'LEVEL' };
         if (levelId === '1.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
         if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
@@ -482,29 +547,40 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                     {/* CORE BUTTONS + QUICK SLOTS (Bottom Row) */}
                     <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800/90 rounded-[1.5rem] shadow-[0_16px_40px_rgba(0,0,0,0.85)] p-2 px-3 flex items-center justify-between gap-3 relative overflow-visible">
                         
-                        {/* ITEM SHORTCUT TRAY (Render up to 3 items on the left to save space, clicking triggers inspection or can be scrolled) */}
-                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[140px] pr-2 border-r border-slate-800/50 shrink-0">
-                            {inventoryList.map(index => {
-                                const item = player.inventory[index];
-                                return (
-                                    <div 
-                                        key={index}
-                                        onClick={() => { if (item) { onInspectItem(item); playUiSound('CLICK'); } }}
-                                        className={`w-10 h-10 rounded-lg border flex items-center justify-center cursor-pointer transition-all active:scale-95 shrink-0 ${
-                                            item 
-                                                ? `bg-slate-900 bg-opacity-80 ${getRarityBorder(item.rarity)} shadow-md` 
-                                                : 'bg-slate-950/45 border-slate-800/40 border-dashed'
-                                        }`}
-                                    >
-                                        {item ? (
-                                            <ItemIcon item={item} size="w-10 h-10" />
-                                        ) : (
-                                            <div className="w-1 h-1 rounded-full bg-slate-800/30" />
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                        {/* ITEM SHORTCUT TRAY OR TIMER */}
+                        {isTimedLevel && gameStatus === 'PLAYING' ? (
+                            <div className="flex items-center gap-2 pr-2 border-r border-slate-800/50 shrink-0 select-none">
+                                <div className={`flex items-center gap-2 px-3 py-1 bg-slate-950/80 border rounded-xl h-10 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)] ${timeLeft < 15 ? 'border-red-500 animate-pulse' : 'border-slate-800'}`}>
+                                    <Clock className={`w-4 h-4 ${timeLeft < 15 ? 'text-red-500 animate-bounce' : 'text-amber-400'}`} />
+                                    <span className={`text-base font-black font-mono leading-none tracking-tight ${timeLeft < 15 ? 'text-red-400' : 'text-slate-100'}`}>
+                                        {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                                    </span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[140px] pr-2 border-r border-slate-800/50 shrink-0">
+                                {inventoryList.map(index => {
+                                    const item = player.inventory[index];
+                                    return (
+                                        <div 
+                                            key={index}
+                                            onClick={() => { if (item) { onInspectItem(item); playUiSound('CLICK'); } }}
+                                            className={`w-10 h-10 rounded-lg border flex items-center justify-center cursor-pointer transition-all active:scale-95 shrink-0 ${
+                                                item 
+                                                    ? `bg-slate-900 bg-opacity-80 ${getRarityBorder(item.rarity)} shadow-md` 
+                                                    : 'bg-slate-950/45 border-slate-800/40 border-dashed'
+                                            }`}
+                                        >
+                                            {item ? (
+                                                <ItemIcon item={item} size="w-10 h-10" />
+                                            ) : (
+                                                <div className="w-1 h-1 rounded-full bg-slate-800/30" />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         {/* CORE ACTION BUTTONS: DIG, UPGRADE, RECOVER (with w-12 h-12 = 48px ideal touch targets!) */}
                         <div className="flex items-center gap-2.5 flex-1 justify-end shrink-0">
@@ -512,72 +588,83 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                             {/* DIG Action */}
                             <div 
                                 className="relative shrink-0"
-                                onClick={() => handleActionClick('DIG')}
+                                onClick={digDimmed ? handleDimmedClick : () => handleActionClick('DIG')}
                             >
                                 <HexButton 
                                     variant="red" 
                                     size="md" 
-                                    onDisabledClick={() => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }}
+                                    onDisabledClick={digDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }}
                                     active={isPlayerGrowing && playerGrowthIntent === 'DIG'}
                                     disabled={!canDig}
+                                    dimmed={digDimmed}
+                                    pulsate={levelId === '1.2' || levelId === '1.3' || levelId === '1.8'}
                                     progress={timeData.mode === 'DIG' ? timeData.percent : 0}
-                                    className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''}
-                                    title={digTooltip}
+                                    className={`${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''} !p-0 !m-0`}
+                                    title={digDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : digTooltip}
                                 >
-                                    <Pickaxe className={`w-5 h-5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12 text-white' : 'text-red-400'}`} />
+                                    <div className="flex items-center justify-center p-3">
+                                        <Pickaxe className={`w-5 h-5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12 text-white' : 'text-red-400'}`} />
+                                    </div>
                                 </HexButton>
                             </div>
 
                             {/* UPGRADE Action */}
                             <div 
                                 className="relative shrink-0"
-                                onClick={() => handleActionClick('UPGRADE')}
+                                onClick={upgradeDimmed ? handleDimmedClick : () => handleActionClick('UPGRADE')}
                             >
                                 <HexButton 
                                     variant="amber" 
                                     size="md" 
-                                    onDisabledClick={() => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }}
+                                    onDisabledClick={upgradeDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }}
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
                                     disabled={!canUpgrade}
-                                    pulsate={canUpgrade && !isPlayerGrowing}
+                                    dimmed={upgradeDimmed}
+                                    pulsate={levelId === '1.4' || levelId === '1.5' || (canUpgrade && !isPlayerGrowing)}
                                     progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0}
-                                    className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'ring-2 ring-amber-500/30' : ''}
-                                    title={upgradeTooltip}
+                                    className={`${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'ring-2 ring-amber-500/30' : ''} !p-0 !m-0`}
+                                    title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}
                                 >
-                                    <ChevronsUp className={`w-5.5 h-5.5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-115 -translate-y-0.5 text-white' : 'text-amber-400'}`} />
+                                    <div className="flex items-center justify-center p-3">
+                                        <ChevronsUp className={`w-5.5 h-5.5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-115 -translate-y-0.5 text-white' : 'text-amber-400'}`} />
+                                    </div>
                                 </HexButton>
                             </div>
 
                             {/* RECOVER Action */}
                             <div 
                                 className="relative shrink-0"
-                                onClick={() => handleActionClick('RECOVER')}
+                                onClick={recoverDimmed ? handleDimmedClick : () => handleActionClick('RECOVER')}
                             >
                                 <HexButton 
                                     variant="blue" 
                                     size="md" 
-                                    onDisabledClick={() => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }}
+                                    onDisabledClick={recoverDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }}
                                     active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'}
                                     disabled={!recoveryState.canRecover}
+                                    dimmed={recoverDimmed}
+                                    pulsate={levelId === '1.6' || levelId === '1.7'}
                                     progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0}
-                                    className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''}
-                                    title={recoverTooltip}
+                                    className={`${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''} !p-0 !m-0`}
+                                    title={recoverDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : recoverTooltip}
                                 >
-                                    {recoveryState.cooling ? (
-                                        <div className="flex flex-col items-center justify-center leading-none">
-                                            <Hourglass className="w-5 h-5 animate-spin-slow text-blue-300" />
-                                            <span className="text-[7.5px] font-mono mt-0.5 text-slate-400">{recoveryState.label}</span>
-                                        </div>
-                                    ) : (
-                                        <div className="relative flex flex-col items-center justify-center">
-                                            <RefreshCw className={`w-5 h-5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 text-white font-bold' : 'text-blue-400'}`} />
-                                            {recoveryState.label && (
-                                                <span className="absolute -bottom-1 bg-slate-950 px-1 rounded-full text-[6.5px] font-black text-emerald-400 border border-emerald-950 border-opacity-40 font-mono">
-                                                    {recoveryState.label}
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
+                                    <div className="flex items-center justify-center p-3">
+                                        {recoveryState.cooling ? (
+                                            <div className="flex flex-col items-center justify-center leading-none">
+                                                <Hourglass className="w-5 h-5 animate-spin-slow text-blue-300" />
+                                                <span className="text-[7.5px] font-mono mt-0.5 text-slate-400">{recoveryState.label}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="relative flex flex-col items-center justify-center">
+                                                <RefreshCw className={`w-5 h-5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 text-white font-bold' : 'text-blue-400'}`} />
+                                                {recoveryState.label && (
+                                                    <span className="absolute -bottom-1 bg-slate-950 px-1 rounded-full text-[6.5px] font-black text-emerald-400 border border-emerald-950 border-opacity-40 font-mono">
+                                                        {recoveryState.label}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </HexButton>
                             </div>
 
@@ -587,7 +674,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                 </div>
             ) : (
                 /* DESKTOP VIEW: High-definition controls panel with maximum clarity and organization */
-                <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl md:rounded-3xl shadow-[0_15px_45px_black] p-1.5 md:p-3 pointer-events-auto flex flex-col gap-1.5 md:gap-2.5 w-full md:w-auto max-w-7xl mx-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl md:rounded-3xl shadow-[0_15px_45px_black] p-1.5 md:p-3 pointer-events-auto flex flex-col gap-1.5 md:gap-2.5 w-full md:w-auto max-w-7xl mx-auto overflow-visible animate-in fade-in zoom-in-95 duration-200">
                     
                     <div className="flex items-center gap-1.5 w-full">
                         {/* Inventory Toggle */}
@@ -610,6 +697,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 visible={hoveredId === 'inventory'} 
                                 {...inventoryTooltipData} 
                                 language={language}
+                                align="left"
                             />
                         </div>
 
@@ -635,6 +723,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     visible={hoveredId === 'goal_toggle'} 
                                     {...goalTooltipData} 
                                     language={language}
+                                    align="left"
                                 />
                             </div>
                         )}
@@ -658,6 +747,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 visible={hoveredId === 'goal'} 
                                 {...goalTooltipData} 
                                 language={language}
+                                align="left"
                             />
                         </div>
                     </div>
@@ -665,30 +755,51 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                     {/* ROW 2: SIDE-BY-SIDE SLOTS & TRIGGERS */}
                     <div className="flex items-center justify-between gap-6 md:flex-row flex-row">
                         
-                        {/* LEFT PART: Inventory Slots tray (Flexible fill) */}
+                        {/* LEFT PART: Inventory Slots tray OR TIMER */}
                         <div className="flex-1 min-w-0 pointer-events-auto">
-                            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-linear-fade-right">
-                                {inventoryList.map(index => {
-                                    const item = player.inventory[index];
-                                    const slotSize = "w-10 h-10"; 
-                                    return (
-                                        <div 
-                                            key={index} 
-                                            onClick={() => { if(item) { onInspectItem(item); playUiSound('CLICK'); } }}
-                                            draggable={!!item}
-                                            onDragStart={(e) => { if(item) e.dataTransfer.setData("itemId", item.id); }}
-                                            className={`
-                                                ${slotSize} rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all shrink-0 touch-manipulation active:scale-95
-                                                ${item 
-                                                    ? `bg-slate-800/90 ${getRarityBorder(item.rarity)} shadow-md hover:scale-105` 
-                                                    : 'bg-slate-950/45 border-slate-800/40 border-dashed'}
-                                            `}
-                                        >
-                                            {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-800/40" />}
+                            {isTimedLevel && gameStatus === 'PLAYING' ? (
+                                <div className="flex items-center gap-2 select-none h-11">
+                                    <div className={`flex items-center gap-3 px-4 py-2 bg-slate-950/80 border rounded-xl shadow-[inset_0_1px_3px_rgba(255,255,255,0.01)] ${timeLeft < 20 ? 'border-red-500/80 animate-pulse' : 'border-slate-800'}`}>
+                                        <div className="relative flex items-center justify-center">
+                                            <Clock className={`w-5 h-5 ${timeLeft < 20 ? 'text-red-500 animate-pulse' : 'text-amber-400'}`} />
+                                            {timeLeft < 20 && (
+                                                <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-25 animate-ping" />
+                                            )}
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[7.5px] font-bold font-mono tracking-wider text-slate-500 uppercase leading-none mb-0.5">
+                                                {language === 'RU' ? 'ПОДГРУЗКА ЯДРА (ТАЙМЕР)' : 'TIME LIMIT REMAINING'}
+                                            </span>
+                                            <span className={`text-xl font-black font-mono leading-none ${timeLeft < 20 ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.45)]' : 'text-slate-100'}`}>
+                                                {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-linear-fade-right">
+                                    {inventoryList.map(index => {
+                                        const item = player.inventory[index];
+                                        const slotSize = "w-10 h-10"; 
+                                        return (
+                                            <div 
+                                                key={index} 
+                                                onClick={() => { if(item) { onInspectItem(item); playUiSound('CLICK'); } }}
+                                                draggable={!!item}
+                                                onDragStart={(e) => { if(item) e.dataTransfer.setData("itemId", item.id); }}
+                                                className={`
+                                                    ${slotSize} rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all shrink-0 touch-manipulation active:scale-95
+                                                    ${item 
+                                                        ? `bg-slate-800/90 ${getRarityBorder(item.rarity)} shadow-md hover:scale-105` 
+                                                        : 'bg-slate-950/45 border-slate-800/40 border-dashed'}
+                                                `}
+                                            >
+                                                {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-800/40" />}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
 
                         {/* SLIGHT DIVIDER */}
@@ -705,13 +816,15 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 <HexButton 
                                     variant="red" 
                                     size={mainButtonSize} 
-                                    onClick={() => handleActionClick('DIG')} 
-                                    onDisabledClick={() => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }} 
+                                    onClick={digDimmed ? handleDimmedClick : () => handleActionClick('DIG')} 
+                                    onDisabledClick={digDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }} 
                                     active={isPlayerGrowing && playerGrowthIntent === 'DIG'} 
                                     disabled={!canDig} 
+                                    dimmed={digDimmed}
+                                    pulsate={levelId === '1.2' || levelId === '1.3' || levelId === '1.8'}
                                     progress={timeData.mode === 'DIG' ? timeData.percent : 0} 
                                     className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''} 
-                                    title={digTooltip}
+                                    title={digDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : digTooltip}
                                 >
                                     <Pickaxe className={`w-6 h-6 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12 text-white font-bold' : 'text-red-400'}`} />
                                 </HexButton>
@@ -719,6 +832,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     visible={hoveredId === 'dig'} 
                                     {...digTooltipData} 
                                     language={language}
+                                    align="right"
                                 />
                             </div>
 
@@ -731,14 +845,15 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 <HexButton 
                                     variant="amber" 
                                     size={mainButtonSize} 
-                                    onClick={() => handleActionClick('UPGRADE')} 
-                                    onDisabledClick={() => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }} 
+                                    onClick={upgradeDimmed ? handleDimmedClick : () => handleActionClick('UPGRADE')} 
+                                    onDisabledClick={upgradeDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }} 
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} 
                                     disabled={!canUpgrade} 
-                                    pulsate={canUpgrade && !isPlayerGrowing} 
+                                    dimmed={upgradeDimmed}
+                                    pulsate={levelId === '1.4' || levelId === '1.5' || (canUpgrade && !isPlayerGrowing)} 
                                     progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} 
                                     className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-0.5 ring-2 ring-amber-500/30 font-bold' : ''} 
-                                    title={upgradeTooltip}
+                                    title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}
                                 >
                                     <ChevronsUp className={`w-7 h-7 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-115 -translate-y-0.5 text-white' : 'text-amber-400'}`} />
                                 </HexButton>
@@ -746,6 +861,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     visible={hoveredId === 'upgrade'} 
                                     {...upgradeTooltipData} 
                                     language={language}
+                                    align="right"
                                 />
                             </div>
 
@@ -758,13 +874,15 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 <HexButton 
                                     variant="blue" 
                                     size={mainButtonSize} 
-                                    onClick={() => handleActionClick('RECOVER')} 
-                                    onDisabledClick={() => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }} 
+                                    onClick={recoverDimmed ? handleDimmedClick : () => handleActionClick('RECOVER')} 
+                                    onDisabledClick={recoverDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }} 
                                     active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} 
                                     disabled={!recoveryState.canRecover} 
+                                    dimmed={recoverDimmed}
+                                    pulsate={levelId === '1.6' || levelId === '1.7'}
                                     progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} 
                                     className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''} 
-                                    title={recoverTooltip}
+                                    title={recoverDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : recoverTooltip}
                                 >
                                     {recoveryState.cooling ? (
                                         <div className="flex flex-col items-center">
@@ -774,7 +892,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     ) : (
                                         <div className="relative flex flex-col items-center justify-center">
                                             <RefreshCw className={`w-6 h-6 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 rotate-180 text-white font-bold' : 'text-blue-400'}`} />
-                                            {recoveryState.label && <span className="absolute -bottom-1 bg-slate-950 px-1 rounded-full text-[8.5px] font-black text-emerald-400 border border-emerald-900 border-opacity-30 shadow-sm font-mono leading-none">{recoveryState.label}</span>}
+                                            {recoveryState.label && <span className="absolute -bottom-1 bg-slate-950 px-1 rounded-full text-[8.5px] font-black text-emerald-400 border border-emerald-940 border-opacity-30 shadow-sm font-mono leading-none">{recoveryState.label}</span>}
                                         </div>
                                     )}
                                 </HexButton>
@@ -782,6 +900,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     visible={hoveredId === 'recover'} 
                                     {...recoverTooltipData} 
                                     language={language}
+                                    align="right"
                                 />
                             </div>
                         </div>

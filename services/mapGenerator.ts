@@ -225,19 +225,41 @@ export const ensureMonumentAccessibility = (
 
 export const generateLevel12Map = (_levelConfig: LevelConfig): Record<string, Hex> => {
     const grid: Record<string, Hex> = {};
-    const path: HexCoord[] = [
-        { q: 0, r: 0 }, { q: 1, r: -1 }, { q: 2, r: -2 }, { q: 3, r: -3 },
-        { q: 3, r: -2 }, { q: 3, r: -1 }, { q: 4, r: -1 }, { q: 5, r: -1 },
-        { q: 5, r: 0 }, { q: 5, r: 1 }, { q: 4, r: 2 }, { q: 3, r: 3 },
-        { q: 2, r: 3 }, { q: 1, r: 3 }, { q: 0, r: 3 }, { q: -1, r: 3 },
-        { q: -2, r: 3 }, { q: -3, r: 3 }, { q: -3, r: 2 }, { q: -3, r: 1 },
-        { q: -4, r: 1 }, { q: -5, r: 1 }, { q: -5, r: 0 }
+    
+    // 1. Safe Southern Winding bypass road (level 1, durability 3, fully paved ROAD)
+    const pathSouth: HexCoord[] = [
+        { q: 0, r: 1 }, { q: 0, r: 2 }, { q: -1, r: 3 }, 
+        { q: -2, r: 3 }, { q: -3, r: 3 }, { q: -4, r: 3 },
+        { q: -5, r: 3 }, { q: -6, r: 3 }, { q: -7, r: 3 },
+        { q: -8, r: 3 }, { q: -8, r: 2 }, { q: -8, r: 1 }
     ];
-    const pathKeys = new Set(path.map(p => getHexKey(p.q, p.r)));
 
-    // Core hexes: path + 1-ring neighbors (unstable environment)
+    // 2. High-Altitude Northern Shortcut (stable peaks of L2 and L3, ROAD)
+    const pathNorth: HexCoord[] = [
+        { q: 0, r: -1 }, { q: -1, r: -1 }, { q: -2, r: -1 }, 
+        { q: -3, r: -1 }, { q: -4, r: -1 }, { q: -5, r: -1 },
+        { q: -6, r: -1 }, { q: -7, r: -1 }
+    ];
+
+    // 3. Ultra-direct Middle Shortcut (fragile cracked terrain L1, durability 1, PLAINS)
+    const pathMiddle: HexCoord[] = [
+        { q: -1, r: 0 }, { q: -2, r: 0 }, { q: -3, r: 0 }, 
+        { q: -4, r: 0 }, { q: -5, r: 0 }, { q: -6, r: 0 },
+        { q: -7, r: 0 }
+    ];
+
+    const startCoord = { q: 0, r: 0 };
+    const finishCoord = { q: -8, r: 0 };
+
+    const southKeys = new Set(pathSouth.map(p => getHexKey(p.q, p.r)));
+    const northKeys = new Set(pathNorth.map(p => getHexKey(p.q, p.r)));
+    const middleKeys = new Set(pathMiddle.map(p => getHexKey(p.q, p.r)));
+    
+    const allPaths = [startCoord, finishCoord, ...pathSouth, ...pathNorth, ...pathMiddle];
+
+    // Core keys includes all path hexes and their immediate 1-ring neighbors to create the grid shape
     const coreKeys = new Set<string>();
-    for (const p of path) {
+    for (const p of allPaths) {
         coreKeys.add(getHexKey(p.q, p.r));
         for (const n of getNeighbors(p.q, p.r)) {
             coreKeys.add(getHexKey(n.q, n.r));
@@ -246,16 +268,67 @@ export const generateLevel12Map = (_levelConfig: LevelConfig): Record<string, He
 
     for (const key of coreKeys) {
         const [q, r] = key.split(',').map(Number);
-        const isPath = pathKeys.has(key);
-        const isFinish = q === -5 && r === 0;
+        const isFinish = q === -8 && r === 0;
+        const isStart = q === 0 && r === 0;
+        
+        // Setup levels, durability, and biome variables based on which path they reside in
+        let currentLevel = 1;
+        let maxLevel = 1;
+        let durability: number | undefined = undefined;
+        let biome: 'CITY' | 'ROAD' | 'PLAINS' | 'WATER' | 'RUINS' = 'PLAINS';
+        let isPassable = true;
+        
+        if (isStart) {
+            currentLevel = 1;
+            maxLevel = 1;
+            durability = 3;
+            biome = 'ROAD';
+        } else if (isFinish) {
+            currentLevel = 1;
+            maxLevel = 1;
+            durability = 3;
+            biome = 'CITY';
+        } else if (southKeys.has(key)) {
+            currentLevel = 1;
+            maxLevel = 1;
+            durability = 3; // Fully stable detour
+            biome = 'ROAD';
+        } else if (northKeys.has(key)) {
+            // Mountain peak elevations
+            if (q === 0 && r === -1) { currentLevel = 2; maxLevel = 2; }
+            else if (q === -1 && r === -1) { currentLevel = 2; maxLevel = 2; }
+            else if (q === -2 && r === -1) { currentLevel = 3; maxLevel = 3; }
+            else if (q === -3 && r === -1) { currentLevel = 3; maxLevel = 3; }
+            else if (q === -4 && r === -1) { currentLevel = 3; maxLevel = 3; }
+            else if (q === -5 && r === -1) { currentLevel = 2; maxLevel = 2; }
+            else if (q === -6 && r === -1) { currentLevel = 2; maxLevel = 2; }
+            else if (q === -7 && r === -1) { currentLevel = 1; maxLevel = 1; }
+            durability = 3; // Mountain structure is solid
+            biome = 'ROAD';
+        } else if (middleKeys.has(key)) {
+            currentLevel = 1;
+            maxLevel = 1;
+            durability = 1; // High risk of direct collapsing path
+            biome = 'PLAINS';
+        } else {
+            // Non-path landscape hexes: replace void with -2 to -5 randomly
+            const noise = getPseudoNoise(q, r);
+            const possibleLevels = [-2, -3, -4, -5];
+            const chosenLevel = possibleLevels[Math.floor(noise * possibleLevels.length)];
+            currentLevel = chosenLevel;
+            maxLevel = chosenLevel;
+            biome = 'RUINS'; // Visual styling for deep excavations/chasms
+            isPassable = true;
+        }
+
         grid[key] = {
             id: key, q, r,
-            currentLevel: 1, maxLevel: 1, progress: 0, revealed: true,
-            durability: isPath ? 3 : 1,
-            biome: isFinish ? 'CITY' : (isPath ? 'ROAD' : 'PLAINS'),
+            currentLevel, maxLevel, progress: 0, revealed: true,
+            durability,
+            biome,
             structureType: isFinish ? 'CAPITAL' : undefined,
-            isPassable: true,
-            ownerId: (q === 0 && r === 0) ? 'player-1' : undefined
+            isPassable,
+            ownerId: isStart ? 'player-1' : undefined
         };
     }
 

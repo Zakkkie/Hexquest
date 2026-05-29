@@ -74,6 +74,7 @@ export class GameEngine {
       if (!this._state) return;
       const nextState = createDraft(this._state);
       nextState.gameStatus = 'PLAYING';
+      nextState.sessionStartTime = Date.now();
       nextState.stateVersion++;
       this._state = finishDraft(nextState) as SessionState;
   }
@@ -172,9 +173,12 @@ export class GameEngine {
         
         this._state = finalState;
 
+        // Strip any remaining Immer proxy references inside events to prevent "proxy revoked" errors
+        const cleanEvents: GameEvent[] = JSON.parse(JSON.stringify(tickEvents));
+
         return {
             state: this._state,
-            events: tickEvents
+            events: cleanEvents
         };
     } catch (error) {
         console.error('GameEngine: processTick failed', error);

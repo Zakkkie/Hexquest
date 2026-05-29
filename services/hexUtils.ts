@@ -310,7 +310,8 @@ export const findPath = (
   end: HexCoord, 
   grid: Record<string, Hex>, 
   rank: number, 
-  obstacles: HexCoord[]
+  obstacles: HexCoord[],
+  hasVoidCore?: boolean
 ): PathResult => {
   const startKey = getHexKey(start.q, start.r);
   const endKey = getHexKey(end.q, end.r);
@@ -392,7 +393,7 @@ export const findPath = (
       
       // 2. Height/Jump Check: Cannot jump more than 1 level difference
       const nextLevel = neighborHex ? neighborHex.currentLevel : 0;
-      if (Math.abs(currentLevel - nextLevel) > 1) {
+      if (!hasVoidCore && Math.abs(currentLevel - nextLevel) > 1) {
         blockedByHeight = true;
         continue;
       }
@@ -400,7 +401,7 @@ export const findPath = (
       // -- Cost Calculation --
       // Update logic: Positive (>1) costs level. Negative/Flat (<2) costs 1.
       const level = neighborHex ? neighborHex.currentLevel : 0;
-      const moveCost = level > 1 ? level : 1;
+      const moveCost = hasVoidCore ? 1 : (level > 1 ? level : 1);
       
       const tentativeG = (gScore.get(currentKey) ?? Infinity) + moveCost;
 

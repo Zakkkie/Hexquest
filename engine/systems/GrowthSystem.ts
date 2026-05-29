@@ -7,6 +7,7 @@ import { GameEventFactory } from '../events';
 import { checkGrowthCondition, checkDigCondition, checkRecoveryCooldown, applyRecovery, getRecoveryReward } from '../../rules/growth';
 import { getLevelConfig, GAME_CONFIG, ENTROPY_CONFIG } from '../../rules/config';
 import { rollForLoot } from '../../rules/loot';
+import { createSpecificItem } from '../../rules/items';
 
 export class GrowthSystem implements System {
   update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
@@ -289,7 +290,16 @@ export class GrowthSystem implements System {
                      // Mark this level as Depleted for this hex immediately to prevent farming
                      nextLootedLevels.push(newLevel);
 
-                     const loot = rollForLoot(newLevel - diggerLuck, state.language);
+                     // Check for secret loot hex match first!
+                     const secretMatch = state.secretLootHexes?.find(s => s.q === hex.q && s.r === hex.r && s.level === newLevel && !s.found);
+                     let loot: any = { type: 'NONE' };
+                     if (secretMatch) {
+                         secretMatch.found = true;
+                         const questItem = createSpecificItem(secretMatch.itemBaseId, state.language);
+                         loot = { type: 'ITEM', item: questItem };
+                     } else {
+                         loot = rollForLoot(newLevel - diggerLuck, state.language);
+                     }
                      if (loot.type !== 'NONE') {
                          
                          if (loot.type === 'COIN') {

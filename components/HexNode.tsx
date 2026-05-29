@@ -65,6 +65,7 @@ export interface HexNodeProps {
   playerGrowthIntent?: string | null;
   growthAccelerator?: number;
   renderMode?: { detailLevel: string; showTexture: boolean; showGlow: boolean; showDetails: boolean };
+  portalActive?: boolean;
 }
 
 // Precompute the base (unsquashed) hexagon path centered at 0,0
@@ -142,7 +143,9 @@ const HexNodeComponent = (props: HexNodeProps) => {
       playerR,
       playerGrowthIntent,
       growthAccelerator = 0,
-      renderMode
+      renderMode,
+      portalActive,
+      isHovered
   } = props;
 
   const isPlayerAction = !!(isGrowing && playerQ === q && playerR === r);
@@ -163,11 +166,30 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   const isRealVoid = structureType === 'VOID';
   const isMonument = structureType === 'MONUMENT';
+  const isMiniMonument = structureType === 'MINI_MONUMENT';
   const isNegative = level < 0;
+
+  // Boost speed & hover refs for Portal responsiveness
+  const boostSpeedRef = useRef<number>(0);
+  const isHoveredRef = useRef<boolean>(false);
+  const isPlayerInsideRef = useRef<boolean>(false);
+
+  const isPlayerInside = !!(portalActive && playerQ === q && playerR === r);
+  useEffect(() => {
+      isPlayerInsideRef.current = isPlayerInside;
+  }, [isPlayerInside]);
+
+  useEffect(() => {
+      isHoveredRef.current = !!isHovered;
+  }, [isHovered]);
 
   const handleClick = (e: any) => {
       if (e.evt && e.evt.button !== undefined && e.evt.button !== 0) return;
       e.cancelBubble = true;
+      if (portalActive) {
+          // Instantly kickstart/accelerate portal on click with high kinetic energy
+          boostSpeedRef.current = 45.0;
+      }
       onHexClick(q, r);
   };
   
@@ -260,6 +282,82 @@ const HexNodeComponent = (props: HexNodeProps) => {
           if (growthRequestRef.current) cancelAnimationFrame(growthRequestRef.current);
       };
   }, [isGrowing]);
+
+  const portalRef = useRef<Konva.Group>(null);
+  const portalInnerRef = useRef<Konva.Group>(null);
+  const lightningPathRef1 = useRef<Konva.Line>(null);
+  const lightningPathRef2 = useRef<Konva.Line>(null);
+  const portalAnimRequestRef = useRef<number | null>(null);
+
+  useEffect(() => {
+      let active = true;
+      if (!portalActive) {
+          if (portalAnimRequestRef.current) cancelAnimationFrame(portalAnimRequestRef.current);
+          portalAnimRequestRef.current = null;
+          return;
+      }
+
+      let angle = 0;
+      let currentSpinSpeed = isPlayerInsideRef.current ? 3.0 : 0.3; // base speed
+      const animatePortal = () => {
+          if (!active) return;
+
+          // Target speed is much faster if hovered or clicked (boosted), active/player-inside is normal speed (3.0), calm state is extremely slow (0.3)
+          const basePortalSpeed = isPlayerInsideRef.current ? 3.0 : 0.3;
+          const targetSpeed = isHoveredRef.current ? 18.0 : basePortalSpeed;
+          currentSpinSpeed += (targetSpeed - currentSpinSpeed) * 0.1; // Smooth interpolate
+
+          boostSpeedRef.current *= 0.94; // Decay boost speed exponentially
+          const activeSpeed = currentSpinSpeed + boostSpeedRef.current;
+
+          angle = (angle + activeSpeed) % 360;
+
+          if (portalRef.current) {
+              portalRef.current.rotation(angle);
+          }
+          if (portalInnerRef.current) {
+              portalInnerRef.current.rotation(-angle * 1.6);
+              // Pulsation frequency and scale adapts to our speed
+              const safeActiveSpeed = Math.max(0.1, activeSpeed);
+              const pulseFreq = 120 / (safeActiveSpeed / 3.0);
+              const pulse = 1.0 + Math.sin(Date.now() / pulseFreq) * 0.08 * Math.min(2.5, safeActiveSpeed / 3.0);
+              portalInnerRef.current.scale({ x: pulse, y: pulse });
+          }
+
+          if (lightningPathRef1.current) {
+              const points: number[] = [0, -32];
+              for (let i = 1; i < 5; i++) {
+                  const y = -31 + i * 12.4;
+                  // Chaos scales up with current speed as well
+                  const x = (Math.random() - 0.5) * (14 + activeSpeed * 0.5);
+                  points.push(x, y);
+              }
+              points.push(0, 31);
+              lightningPathRef1.current.points(points);
+          }
+
+          if (lightningPathRef2.current) {
+               const points: number[] = [-31, 0];
+               for (let i = 1; i < 5; i++) {
+                   const x = -31 + i * 12.4;
+                   const y = (Math.random() - 0.5) * (14 + activeSpeed * 0.5);
+                   points.push(x, y);
+               }
+               points.push(31, 0);
+               lightningPathRef2.current.points(points);
+          }
+
+          portalAnimRequestRef.current = requestAnimationFrame(animatePortal);
+      };
+
+      portalAnimRequestRef.current = requestAnimationFrame(animatePortal);
+
+      return () => {
+          active = false;
+          if (portalAnimRequestRef.current) cancelAnimationFrame(portalAnimRequestRef.current);
+      };
+  }, [portalActive]);
+
   const wallGroupRefs = useRef<(Konva.Group | null)[]>([]);
   const wallPathRefs = useRef<(Konva.Path | null)[]>([]);
   const wallShadeRefs = useRef<(Konva.Path | null)[]>([]);
@@ -806,6 +904,19 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     />
                 )}
 
+                {isMiniMonument && (
+                    <Star 
+                        numPoints={5}
+                        innerRadius={4}
+                        outerRadius={8}
+                        fill="#f59e0b"
+                        stroke="#92400e"
+                        strokeWidth={1}
+                        listening={false}
+                        perfectDrawEnabled={false}
+                    />
+                )}
+
                 {damageLevel > 0 && (
                     <Group listening={false} perfectDrawEnabled={false}>
                         {CRACK_PATHS.slice(0, damageLevel).map((path, idx) => (
@@ -1060,9 +1171,9 @@ const HexNodeComponent = (props: HexNodeProps) => {
             </Group>
         </Group>
         {/* 3. FLOATING OVERLAYS (Wrapped inside an animated overlays group container) */}
-        <Group ref={overlaysContainerRef} y={offsetY} listening={false} perfectDrawEnabled={false}>
+        <Group ref={overlaysContainerRef} y={offsetY} listening={true} perfectDrawEnabled={false}>
             {isTargetArrow && (
-                <Group ref={arrowRef} y={-40} listening={false} perfectDrawEnabled={false}>
+                <Group ref={arrowRef} y={-40} listening={true} perfectDrawEnabled={false}>
                     {/* Shadow/Depth Layer */}
                     <Path 
                         data={ARROW_SIDE_PATH} 
@@ -1081,16 +1192,101 @@ const HexNodeComponent = (props: HexNodeProps) => {
             )}
 
             {artifactType && !isRealVoid && (
-                <Group y={-12} listening={false} perfectDrawEnabled={false}>
+                <Group y={-12} listening={true} perfectDrawEnabled={false}>
                     <Circle radius={9} fill={artifactType.includes('RELIC') ? '#f59e0b' : '#3b82f6'} perfectDrawEnabled={false} />
                     <Text text={artifactType.includes('RELIC') ? '★' : '?'} fontSize={13} fontStyle="bold" fill="white" offsetX={4.5} offsetY={6.5} perfectDrawEnabled={false} />
                 </Group>
             )}
 
             {isPending && (
-                <Group y={-38} listening={false} perfectDrawEnabled={false}>
+                <Group y={-38} listening={true} perfectDrawEnabled={false}>
                     <Circle radius={15} fill="#fbbf24" stroke="#92400e" strokeWidth={2} perfectDrawEnabled={false} />
                     <Text text={`${pendingCost}`} y={-6} fontSize={13} fontStyle="bold" fill="#78350f" align="center" width={30} offsetX={15} perfectDrawEnabled={false} />
+                </Group>
+            )}
+
+            {portalActive && (
+                <Group y={-65} listening={true} perfectDrawEnabled={false}>
+                    {/* Outer glowing ring */}
+                    <Group ref={portalRef}>
+                        <Line
+                            points={[
+                                0, -30,
+                                26, -15,
+                                26, 15,
+                                0, 30,
+                                -26, 15,
+                                -26, -15,
+                                0, -30
+                            ]}
+                            stroke="#06b6d4"
+                            strokeWidth={3}
+                            closed={true}
+                            shadowColor="#22d3ee"
+                            shadowBlur={12}
+                            shadowOpacity={1}
+                        />
+                        {[
+                            {x: 0, y: -30}, {x: 26, y: -15}, {x: 26, y: 15},
+                            {x: 0, y: 30}, {x: -26, y: 15}, {x: -26, y: -15}
+                        ].map((pt, idx) => (
+                            <Circle
+                                key={`vnode-${idx}`}
+                                x={pt.x}
+                                y={pt.y}
+                                radius={4.5}
+                                fill="#e0f7fa"
+                                stroke="#00bcd4"
+                                strokeWidth={1.5}
+                            />
+                        ))}
+                    </Group>
+
+                    {/* Inner counter-spinning portal vortex */}
+                    <Group ref={portalInnerRef}>
+                        <Line
+                            points={[
+                                0, -20,
+                                17, -10,
+                                17, 10,
+                                0, 20,
+                                -17, 10,
+                                -17, -10,
+                                0, -20
+                            ]}
+                            stroke="#6366f1"
+                            strokeWidth={2}
+                            closed={true}
+                            shadowColor="#818cf8"
+                            shadowBlur={8}
+                        />
+                        <Circle
+                            radius={11}
+                            fill="rgba(6, 182, 212, 0.45)"
+                            stroke="#22d3ee"
+                            strokeWidth={1.5}
+                            shadowColor="#22d3ee"
+                            shadowBlur={16}
+                        />
+                    </Group>
+
+                    {/* Crackling electric lightning lines */}
+                    <Line
+                        ref={lightningPathRef1}
+                        points={[0, -30, 0, 30]}
+                        stroke="#e0f2fe"
+                        strokeWidth={2}
+                        shadowColor="#38bdf8"
+                        shadowBlur={8}
+                    />
+                    <Line
+                        ref={lightningPathRef2}
+                        points={[-30, 0, 30, 0]}
+                        stroke="#f5f3ff"
+                        strokeWidth={2}
+                        shadowColor="#818cf8"
+                        shadowBlur={8}
+                    />
                 </Group>
             )}
         </Group>
@@ -1132,6 +1328,7 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.playerR !== next.playerR) return false;
     if (prev.playerGrowthIntent !== next.playerGrowthIntent) return false;
     if (prev.growthAccelerator !== next.growthAccelerator) return false;
+    if (prev.portalActive !== next.portalActive) return false;
     
     for (let i = 0; i < 6; i++) {
         if (prev.neighborLevels[i] !== next.neighborLevels[i]) return false;

@@ -1,5 +1,6 @@
 
 import { GameAction, EntityState, ValidationResult, SessionState, Entity, MoveAction, Item } from '../types';
+import { VictorySystem } from './systems/VictorySystem';
 import { WorldIndex } from './WorldIndex';
 import { getHexKey, cubeDistance, getStatusModifiers } from '../services/hexUtils';
 import { ENTROPY_CONFIG } from '../rules/config';
@@ -77,6 +78,8 @@ export class ActionProcessor {
               result = this.handleActivateMonument(state, index, actor, action); break;
           case 'ACTIVATE_MINI_MONUMENT':
               result = this.handleActivateMiniMonument(state, index, actor, action as any); break;
+          case 'ACTIVATE_PORTAL':
+              result = this.handleActivatePortal(state, index, actor, action); break;
           case 'WAIT':
               result = { ok: true }; break;
           default:
@@ -385,7 +388,7 @@ export class ActionProcessor {
       // Actor must be standing on a Monument hex to activate it
       const currentHex = state.grid[getHexKey(actor.q, actor.r)];
       if (!currentHex || currentHex.structureType !== 'MONUMENT') {
-          return { ok: false, reason: 'Must be standing on the Monument to activate it' };
+          return { ok: false, reason: state.language === 'RU' ? 'Для активации вы должны стоять на Монументе' : 'Must be standing on the Monument to activate it' };
       }
 
       const requirements = state.monumentRequirements ?? [];
@@ -393,12 +396,15 @@ export class ActionProcessor {
       // Validate item count matches requirements
       if (!action.itemIds) action.itemIds = [];
       if (action.itemIds.length !== requirements.length) {
-          return { ok: false, reason: `Requires ${requirements.length} items, got ${action.itemIds.length}` };
+          return { ok: false, reason: state.language === 'RU' ? `Требуется ${requirements.length} предметов` : `Requires ${requirements.length} items, got ${action.itemIds.length}` };
       }
 
-      // Validate each item exists, is unique, and matches requirement
+      // Validate each item exists, is unique
       const items: Item[] = [];
       const usedIds = new Set<string>();
+      let allPassed = true;
+      const failedSlots: number[] = [];
+
       for (let i = 0; i < action.itemIds.length; i++) {
           const id = action.itemIds[i];
           if (usedIds.has(id)) return { ok: false, reason: `Duplicate item id: ${id}` };
@@ -406,30 +412,119 @@ export class ActionProcessor {
           const item = actor.inventory.find(inv => inv.id === id);
           if (!item) return { ok: false, reason: `Item ${id} not in inventory` };
 
-          // Check if item matches requirement: ANY wildcard, rarity wildcard, ONE_OF, or specific baseId
+          // Check if item matches requirement
           const req = requirements[i];
           const isRarityWild = req === 'COMMON' || req === 'UNCOMMON' || req === 'RARE' || req === 'LEGENDARY';
           const isOneOf = req === 'ONE_OF';
+          let matches = true;
+          
           if (req !== 'ANY') {
               if (isOneOf) {
                   const alts = state.monumentAlternatives ?? [];
-                  if (!alts.includes(item.baseId)) {
-                      return { ok: false, reason: `Slot ${i+1}: item not in the required set` };
-                  }
+                  if (!alts.includes(item.baseId)) matches = false;
               } else if (isRarityWild && item.rarity !== req) {
-                  return { ok: false, reason: `Slot ${i+1}: need ${req} item, got ${item.rarity}` };
+                  matches = false;
               } else if (!isRarityWild && item.baseId !== req) {
-                  return { ok: false, reason: `Slot ${i+1}: need ${req}, got ${item.baseId}` };
+                  matches = false;
               }
           }
+          
           items.push(item);
+          if (!matches) {
+              allPassed = false;
+              failedSlots.push(i);
+          }
       }
 
-      // Remove used items from inventory
+      const isRu = state.language === 'RU';
+
+      if (!allPassed) {
+          // Process failures and roll 50% destruction chance!
+          for (const idx of failedSlots) {
+              const item = items[idx];
+              const isDestroyed = Math.random() < 0.5;
+              
+              if (isDestroyed) {
+                  // Remove from actor's inventory permanently
+                  actor.inventory = actor.inventory.filter(i => i.id !== item.id);
+                  // Subtract 10% entropy stability
+                  state.entropy.current = Math.max(0, state.entropy.current - 10);
+                  
+                  state.messageLog.unshift({
+                      id: `monument-destr-${Date.now()}-${idx}`,
+                      text: isRu 
+                        ? `АННИГИЛЯЦИЯ СЛОТА ${idx+1}: Неверный предмет [${item.name}] распался в Void-поле! Стабильность ядра -10%!`
+                        : `SLOT ${idx+1} ANNIHILATION: Incorrect item [${item.name}] disintegrated in Void field! Stability dropped -10%!`,
+                      type: 'WARN',
+                      source: 'SYSTEM',
+                      timestamp: Date.now()
+                  });
+              } else {
+                  // Survived but rejected
+                  state.messageLog.unshift({
+                      id: `monument-reject-${Date.now()}-${idx}`,
+                      text: isRu
+                        ? `СЛОТ ${idx+1} ОТВЕРГНУТ: Предмет [${item.name}] не подошел, но защитное поле удержало его от распада.`
+                        : `SLOT ${idx+1} REJECTED: Slot rejected [${item.name}]. Support barrier saved it from destruction.`,
+                      type: 'INFO',
+                      source: 'SYSTEM',
+                      timestamp: Date.now()
+                  });
+              }
+          }
+          
+          return { 
+              ok: false, 
+              reason: isRu 
+                  ? 'ОШИБКА АКТИВАЦИИ: Неверные ключи! Проверьте Обелиски. Часть предметов распалась.' 
+                  : 'ACTIVATION ERROR: Incorrect slot keys! Mismatching items have a 50% chance to disintegrate.' 
+          };
+      }
+
+      // Success! Remove used items from inventory
       actor.inventory = actor.inventory.filter(i => !action.itemIds.includes(i.id));
 
-      // Victory!
+      // Success! Open Portal
+      state.portalActive = true;
+      state.portalHex = { q: actor.q, r: actor.r };
+      
+      state.messageLog.unshift({
+          id: `monument-portal-${Date.now()}`,
+          text: isRu
+            ? '🚀 МОНУМЕНТ УСПЕШНО АКТИВИРОВАН! Сверхсветовые передатчики развернуты! Сверху открылся Портал Победы.'
+            : '🚀 MONUMENT ACTIVATED SUCCESSFULLY! Nebula hyper-beacons online! Victory Portal opened above.',
+          type: 'SUCCESS',
+          source: 'NEBULA_AI',
+          timestamp: Date.now()
+      });
+
+      return { ok: true };
+  }
+
+  private handleActivatePortal(state: SessionState, _index: WorldIndex, actor: Entity, _action: any): ValidationResult {
+      const isRu = state.language === 'RU';
+      if (!state.portalActive || !state.portalHex) {
+          return { ok: false, reason: isRu ? 'Портал еще не активирован!' : 'Portal is not active yet!' };
+      }
+      if (actor.q !== state.portalHex.q || actor.r !== state.portalHex.r) {
+          return { ok: false, reason: isRu ? 'Вы должны войти в гекс портала!' : 'You must be inside the portal hex!' };
+      }
+
       state.gameStatus = 'VICTORY';
+      const msg = isRu ? '🏆 ПОРТАЛ УСПЕШНО АКТИВИРОВАН! Симуляция пройдена!' : '🏆 PORTAL ACTIVATED SUCCESSFULLY! Simulation complete!';
+      state.messageLog.unshift({
+          id: `portal-won-${Date.now()}`,
+          text: msg,
+          type: 'SUCCESS',
+          source: 'NEBULA_AI',
+          timestamp: Date.now()
+      });
+
+      const events = state.outgoingEvents;
+      events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
+      
+      const vicSystem = new VictorySystem();
+      vicSystem.generateLeaderboardEvent(state, events);
 
       return { ok: true };
   }
@@ -439,12 +534,94 @@ export class ActionProcessor {
           return { ok: false, reason: 'Mini monument hex not found' };
       }
       
+      const key = action.miniMonumentHexKey;
+      if (!state.activatedMiniMonuments) {
+          state.activatedMiniMonuments = [];
+      }
+      
+      if (!state.activatedMiniMonuments.includes(key)) {
+          state.activatedMiniMonuments.push(key);
+      }
+      
+      const count = state.activatedMiniMonuments.length;
+      const isRu = state.language === 'RU';
+      
+      let clueText = '';
+      const secret = state.secretLootHexes?.find(s => !s.found);
+      
+      if (count === 1) {
+          if (secret) {
+              const hexKey = `${secret.q},${secret.r}`;
+              const hex = state.grid[hexKey];
+              if (hex) {
+                  hex.lootHighlighted = true;
+              }
+              clueText = isRu
+                  ? `ОБЕЛИСК 1 АКТИВИРОВАН: СЕЙСМИЧЕСКИЙ СИГНАЛ\n\nОбнаружена сейсмическая аномалия скрытого грунта на координатах:\nQ: ${secret.q}, R: ${secret.r}.\n\nПодсвеченный сектор содержит один из утерянных ключей Монумента. Начните раскопки в этой зоне!`
+                  : `OBELISK 1 ACTIVATED: SEISMIC SIGNAL\n\nSeismic anomaly detected inside buried ground at coordinates:\nQ: ${secret.q}, R: ${secret.r}.\n\nThe highlighted sector contains one of the lost Monument keys. Start excavation in this zone!`;
+          } else {
+              clueText = isRu
+                  ? `ОБЕЛИСК 1 АКТИВИРОВАН: СЕТЬ СТАБИЛЬНА\n\nВсе квестовые предметы уже найдены. Восстанавливайте гексы!`
+                  : `OBELISK 1 ACTIVATED: NETWORK STABLE\n\nAll quest items have already been found. Keep restoring the hexes!`;
+          }
+      } else if (count === 2) {
+          if (secret) {
+              const hexKey = `${secret.q},${secret.r}`;
+              const hex = state.grid[hexKey];
+              if (hex) {
+                  hex.lootHighlighted = true;
+              }
+              clueText = isRu
+                  ? `ОБЕЛИСК 2 АКТИВИРОВАН: РЕНТГЕНОВСКИЙ СКАНИР\n\nПроведен структурный анализ породы на гексе Q: ${secret.q}, R: ${secret.r}.\n\nКапсула с ключом засыпана ровно на глубине Уровня ${secret.level} (отметка: ${secret.level}).\n\nБурите строго до указанной высоты, чтобы получить квестовый артефакт!`
+                  : `OBELISK 2 ACTIVATED: X-RAY SCANNER\n\nStructural soil analysis completed at hex Q: ${secret.q}, R: ${secret.r}.\n\nThe key capsule is buried exactly at Level depth ${secret.level} (mark: ${secret.level}).\n\nExcavate precisely to this level to retrieve the quest artifact!`;
+          } else {
+              clueText = isRu
+                  ? `ОБЕЛИСК 2 АКТИВИРОВАН: КАНАЛЫ ЧИСТЫ\n\nВсе ключи собраны. Двигайтесь к Вершине!`
+                  : `OBELISK 2 ACTIVATED: CHANNELS CLEAR\n\nAll key items have been gathered. Ascend to the summit!`;
+          }
+      } else {
+          const monumentHex = Object.values(state.grid).find(h => h.structureType === 'MONUMENT');
+          const reqs = state.monumentRequirements || [];
+          if (state.monumentRequirements) {
+              state.monumentRevealedSlots = Array(state.monumentRequirements.length).fill(true);
+          }
+          const itemsText = reqs.map((r, idx) => {
+              const level = idx + 1;
+              if (r === 'ANY') return isRu ? `Слот ${level}: Любой предмет` : `Slot ${level}: Any Item`;
+              if (['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'].includes(r)) {
+                  return isRu ? `Слот ${level}: Класс качества ${r}` : `Slot ${level}: Quality Class ${r}`;
+              }
+              if (r === 'ONE_OF') {
+                  const itemsList = (state.monumentAlternatives || []).map(alt => {
+                      const d = getItemDef(alt);
+                      return d ? d.name[state.language] : alt;
+                  }).join(' / ');
+                  return isRu ? `Слот ${level}: Один из [ ${itemsList} ]` : `Slot ${level}: One of [ ${itemsList} ]`;
+              }
+              const d = getItemDef(r);
+              const nameText = d ? d.name[state.language] : r;
+              return isRu ? `Слот ${level}: ${nameText}` : `Slot ${level}: ${nameText}`;
+          }).join('\n');
+          
+          clueText = isRu
+              ? `ОБЕЛИСК 3 АКТИВИРОВАН: ТЕРМАЛЬНЫЙ ВЗЛОМ\n\nЗащитные контуры Монумента полностью взломаны.\n\nКоординаты Вершины Источника: Q: ${monumentHex?.q}, R: ${monumentHex?.r}.\n\nСлужебная спецификация ключей:\n${itemsText}`
+              : `OBELISK 3 ACTIVATED: POWER GRID BREACH\n\nFirewall subroutines of the Monument are fully bypassed.\n\nSource summit coordinates: Q: ${monumentHex?.q}, R: ${monumentHex?.r}.\n\nSequence specification of the slots:\n${itemsText}`;
+      }
+      
+      state.messageLog.unshift({
+          id: `mini-clue-${Date.now()}`,
+          text: clueText.split('\n\n')[0] + ' - ' + (isRu ? 'ИНТЕРФЕЙС ОБНОВЛЕН' : 'HINT CONSTRUCTED'),
+          type: 'SUCCESS',
+          source: 'NEBULA_AI',
+          timestamp: Date.now()
+      });
+
       if (state.outgoingEvents) {
           state.outgoingEvents.push(GameEventFactory.create(
               'MINI_MONUMENT_REACHED',
-              'Mini Monument Activated!',
+              clueText,
               actor.id,
-              { hexKey: action.miniMonumentHexKey }
+              { hexKey: action.miniMonumentHexKey, clueText }
           ));
       }
 

@@ -24,6 +24,13 @@ export class TextureCache {
         if (this.cache.size >= this.maxCacheSize) {
             const firstKey = this.cache.keys().next().value;
             if (firstKey !== undefined) {
+                const canvasToEvict = this.cache.get(firstKey);
+                // Принудительно сбрасываем размеры Canvas перед удалением.
+                // Это заставляет браузер мгновенно высвободить память GPU (VRAM).
+                if (canvasToEvict && canvasToEvict instanceof HTMLCanvasElement) {
+                    canvasToEvict.width = 0;
+                    canvasToEvict.height = 0;
+                }
                 this.cache.delete(firstKey);
             }
         }
@@ -36,6 +43,12 @@ export class TextureCache {
     }
 
     clear(): void {
+        this.cache.forEach((item) => {
+            if (item instanceof HTMLCanvasElement) {
+                item.width = 0;
+                item.height = 0;
+            }
+        });
         this.cache.clear();
     }
 

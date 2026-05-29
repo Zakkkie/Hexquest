@@ -81,8 +81,46 @@ const getHexTutorialStatus = (hex: Hex, player: Entity, _grid: Record<string, He
     // Check objectiveHexes for arrows
     if (activeLevelConfig?.objectiveHexes) {
         const obj = activeLevelConfig.objectiveHexes.find((o: any) => o.q === hex.q && o.r === hex.r);
-        if (obj && hex.maxLevel < obj.targetLevel) {
-            return { isTutorial: true, isArrow: true, tutColor: obj.color || 'amber' };
+        if (obj) {
+            let satisfied = false;
+            const lid = activeLevelConfig.id;
+            if (lid === '1.1') {
+                const wavePath = [
+                    { q: 0, r: 0 },
+                    { q: 1, r: -1 },
+                    { q: 2, r: -1 },
+                    { q: 2, r: 0 },
+                    { q: 1, r: 1 },
+                    { q: 0, r: 2 },
+                    { q: -1, r: 2 },
+                    { q: -2, r: 2 },
+                    { q: -3, r: 2 },
+                    { q: -3, r: 1 },
+                    { q: -2, r: 0 }
+                ];
+                const playerIdx = wavePath.findIndex(p => p.q === player.q && p.r === player.r);
+                const hexIdx = wavePath.findIndex(p => p.q === hex.q && p.r === hex.r);
+                if (playerIdx !== -1 && hexIdx !== -1) {
+                    satisfied = playerIdx >= hexIdx;
+                } else {
+                    satisfied = hex.q === player.q && hex.r === player.r;
+                }
+            } else if (lid === '1.6') {
+                satisfied = (player.coins ?? 0) >= 100;
+            } else if (lid === '1.7') {
+                satisfied = player.q === 3 && player.r === -1;
+            } else if (lid === '1.8') {
+                satisfied = hex.currentLevel <= obj.targetLevel;
+            } else if (lid === '1.9') {
+                satisfied = hex.structureType !== 'VOID';
+            } else if (lid === '1.10') {
+                satisfied = hex.currentLevel >= obj.targetLevel;
+            } else {
+                satisfied = hex.currentLevel === obj.targetLevel;
+            }
+            if (!satisfied) {
+                return { isTutorial: true, isArrow: true, tutColor: obj.color || 'amber' };
+            }
         }
     }
 
@@ -351,6 +389,8 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
     const campaignUpgrades = useGameStore(state => state.campaignUpgrades);
     const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
+    const portalActive = useGameStore(state => state.session?.portalActive);
+    const portalHex = useGameStore(state => state.session?.portalHex);
     const playerQ = player?.q ?? 0;
     const playerR = player?.r ?? 0;
     const playerStorage = player?.storage ?? 0;
@@ -573,7 +613,13 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     const renderList = useMemo(() => {
         if (!grid || !player || !workerData.renderItems.length) return { items: [] };
 
-        const tempPlayer = { q: playerQ, r: playerR, storage: playerStorage } as any;
+        const tempPlayer = { 
+            q: playerQ, 
+            r: playerR, 
+            storage: playerStorage,
+            coins: player.coins ?? 0,
+            playerLevel: player.playerLevel ?? 0
+        } as any;
 
         const items = workerData.renderItems.map(item => {
             if (item.type === 'HEX') {
@@ -614,7 +660,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         }).filter(Boolean);
 
         return { items };
-    }, [grid, playerQ, playerR, playerStorage, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems, isLiteMode, camera, dimensions, rotation]);
+    }, [grid, playerQ, playerR, playerStorage, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems, isLiteMode, camera, dimensions, rotation, portalActive, portalHex]);
 
     return (
         <>
@@ -632,6 +678,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                                 playerR={playerR}
                                 playerGrowthIntent={playerGrowthIntent}
                                 growthAccelerator={campaignUpgrades?.growthAccelerator || 0}
+                                portalActive={!!(portalActive && portalHex && portalHex.q === item.props.q && portalHex.r === item.props.r)}
                             />
                         );
                     } else {

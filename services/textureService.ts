@@ -4,6 +4,9 @@ import { textureCache } from './textureCache';
 export class TextureService {
   private static instance: TextureService;
 
+  // 1. Добавляем статическое свойство класса в самый верх (после private static instance)
+  private static readonly noiseTable: number[] = Array.from({ length: 4096 }, () => (Math.random() - 0.5) * 10);
+
   private constructor() {}
 
   public static getInstance(): TextureService {
@@ -120,13 +123,17 @@ export class TextureService {
   private applyNoise(ctx: CanvasRenderingContext2D, size: number) {
       const imgData = ctx.getImageData(0, 0, size, size);
       const data = imgData.data;
+      const table = TextureService.noiseTable;
+      const tableLength = table.length;
+      
+      // Шаг цикла 4, оптимизируем обращение к индексам шума
       for (let i = 0; i < data.length; i += 4) {
-          const noise = (Math.random() - 0.5) * 10; // +/- 5 value shift
-          data[i] = Math.max(0, Math.min(255, data[i] + noise));
-          data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
-          data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
-          // CRITICAL: Force Alpha to 255 (Solid) to prevent walls from being transparent
-          data[i+3] = 255; 
+          const noise = table[(i >> 2) % tableLength]; 
+          
+          data[i]     = Math.max(0, Math.min(255, data[i] + noise));
+          data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
+          data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
+          data[i + 3] = 255; // Оставляем полностью непрозрачным
       }
       ctx.putImageData(imgData, 0, 0);
   }

@@ -267,28 +267,38 @@ self.onmessage = (e) => {
     }
 
     // 4. Sort by depth with ID tie-breaker for perfect stability
-    items.sort((a, b) => (a.depth - b.depth) || (a.id.localeCompare(b.id)));
+    items.sort((a, b) => {
+        const depthDiff = a.depth - b.depth;
+        if (depthDiff !== 0) return depthDiff;
+        // Прямое посимвольное сравнение строк работает до 20 раз быстрее, чем localeCompare
+        if (a.id < b.id) return -1;
+        if (a.id > b.id) return 1;
+        return 0;
+    });
 
     // 5. Build a signature of sorted IDs and rendering-critical properties to prevent stale visual updates on selection/pending states
-    let sigParts = [];
+    let hash = 2166136261; // FNV-1a offset basis
+
     for (let i = 0; i < items.length; i++) {
         const it = items[i];
+        let valStr = '';
         if (it.type === 'HEX') {
-            sigParts.push(
-                `${it.id}:${it.depth.toFixed(1)}:${it.props.level}:${it.props.isSelected ? 1 : 0}:${it.props.isPending ? 1 : 0}:` +
-                `${it.props.isOccupied ? 1 : 0}:${it.props.durability}:${it.props.isRevealed ? 1 : 0}:${it.props.opacity.toFixed(2)}`
-            );
+            valStr = `${it.id}${it.depth.toFixed(1)}${it.props.level}${it.props.isSelected ? 1 : 0}${it.props.isPending ? 1 : 0}${it.props.isOccupied ? 1 : 0}${it.props.durability}${it.props.isRevealed ? 1 : 0}${it.props.opacity.toFixed(2)}`;
         } else {
-            sigParts.push(`${it.id}:${it.depth.toFixed(1)}:${it.props.opacity.toFixed(2)}:UNIT`);
+            valStr = `${it.id}${it.depth.toFixed(1)}${it.props.opacity.toFixed(2)}U`;
+        }
+        
+        // Посимвольный хэш-инжиниринг вместо создания тяжелых массивов строк
+        for (let j = 0; j < valStr.length; j++) {
+            hash ^= valStr.charCodeAt(j);
+            hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
         }
     }
-    const signature = sigParts.join('|');
-    const shouldUpdate = 
-        signature !== (self as any).lastSignature ||
-        gridChanged;
+
+    const shouldUpdate = hash !== (self as any).lastSignatureHash || gridChanged;
 
     if (shouldUpdate) {
-        (self as any).lastSignature = signature;
+        (self as any).lastSignatureHash = hash;
         self.postMessage({ renderItems: items });
     }
 };

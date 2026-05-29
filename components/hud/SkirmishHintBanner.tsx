@@ -6,7 +6,15 @@ import { Trophy, Swords, X, HelpCircle } from 'lucide-react';
 const SkirmishHintBanner: React.FC = () => {
     const winCondition = useGameStore(state => state.session?.winCondition);
     const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
-    const player = useGameStore(state => state.session?.player);
+    const playerExists = useGameStore(state => !!state.session?.player);
+    const playerLevel = useGameStore(state => state.session?.player?.playerLevel ?? 0);
+    const playerCoins = useGameStore(state => state.session?.player?.coins ?? 0);
+
+    const player = useMemo(() => {
+        if (!playerExists) return null;
+        return { playerLevel, coins: playerCoins };
+    }, [playerExists, playerLevel, playerCoins]);
+
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
 
@@ -147,4 +155,4 @@ const SkirmishHintBanner: React.FC = () => {
     );
 };
 
-export default SkirmishHintBanner;
+export default React.memo(SkirmishHintBanner);

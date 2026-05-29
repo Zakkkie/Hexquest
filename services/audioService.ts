@@ -17,7 +17,8 @@ type SoundType =
   | 'COLLAPSE' 
   | 'CRACK' 
   | 'WARNING'
-  | 'FIREWORK';
+  | 'FIREWORK'
+  | 'TELEPORT';
 
 // --- MUSIC THEORY CONSTANTS ---
 
@@ -77,6 +78,7 @@ class AudioService {
   private delayFeedback: GainNode | null = null;
   
   // State
+  private portalHumNode: { osc: OscillatorNode; lfo: OscillatorNode; filter: BiquadFilterNode; lfoGain: GainNode; gain: GainNode } | null = null;
   private isMusicMuted: boolean = false;
   private isSfxMuted: boolean = false;
   private musicRunning: boolean = false;
@@ -761,7 +763,131 @@ class AudioService {
           }
           break;
       }
+      case 'TELEPORT': {
+         const oscBeam = this.ctx.createOscillator();
+         const gainBeam = this.ctx.createGain();
+         
+         oscBeam.type = 'triangle';
+         oscBeam.frequency.setValueAtTime(150, t);
+         oscBeam.frequency.exponentialRampToValueAtTime(1800, t + 0.7);
+         
+         gainBeam.gain.setValueAtTime(0, t);
+         gainBeam.gain.linearRampToValueAtTime(0.2, t + 0.15);
+         gainBeam.gain.exponentialRampToValueAtTime(0.001, t + 0.82);
+         
+         const mod = this.ctx.createOscillator();
+         mod.frequency.value = 50;
+         const modGain = this.ctx.createGain();
+         modGain.gain.value = 80;
+         mod.connect(modGain);
+         modGain.connect(oscBeam.frequency);
+         
+         oscBeam.connect(gainBeam);
+         gainBeam.connect(this.sfxBus);
+         
+         oscBeam.start(t);
+         mod.start(t);
+         oscBeam.stop(t + 0.82);
+         mod.stop(t + 0.82);
+         oscBeam.onended = () => { oscBeam.disconnect(); mod.disconnect(); modGain.disconnect(); gainBeam.disconnect(); };
+         
+         const chimes = [1046.50, 1318.51, 1567.98, 2093.00];
+         chimes.forEach((freq, index) => {
+             const chimTime = t + 0.2 + (index * 0.1);
+             const oscC = this.ctx!.createOscillator();
+             const gainC = this.ctx!.createGain();
+             oscC.type = 'sine';
+             oscC.frequency.setValueAtTime(freq, chimTime);
+             
+             gainC.gain.setValueAtTime(0, chimTime);
+             gainC.gain.linearRampToValueAtTime(0.12, chimTime + 0.02);
+             gainC.gain.exponentialRampToValueAtTime(0.001, chimTime + 0.45);
+             
+             oscC.connect(gainC);
+             if (this.reverbNode) {
+                 gainC.connect(this.reverbNode);
+             } else {
+                 gainC.connect(this.sfxBus!);
+             }
+             
+             oscC.start(chimTime);
+             oscC.stop(chimTime + 0.5);
+             oscC.onended = () => { oscC.disconnect(); gainC.disconnect(); };
+         });
+         break;
+      }
     }
+  }
+
+  public startPortalHum() {
+      if (this.isSfxMuted) return;
+      this.init();
+      if (!this.ctx || !this.sfxBus) return;
+      
+      this.stopPortalHum();
+      
+      const t = this.ctx.currentTime;
+      
+      const osc1 = this.ctx.createOscillator();
+      osc1.type = 'sawtooth';
+      osc1.frequency.value = 65.41;
+      
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 180;
+      
+      const lfo = this.ctx.createOscillator();
+      lfo.frequency.value = 4;
+      const lfoGain = this.ctx.createGain();
+      lfoGain.gain.value = 60;
+      
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+      
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.35, t + 1.2);
+      
+      osc1.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxBus);
+      
+      osc1.start(t);
+      lfo.start(t);
+      
+      this.portalHumNode = { osc: osc1, lfo: lfo, filter, lfoGain, gain };
+  }
+  
+  public stopPortalHum() {
+      if (this.portalHumNode) {
+          try {
+              const { osc, lfo, gain } = this.portalHumNode;
+              if (this.ctx) {
+                  const t = this.ctx.currentTime;
+                  gain.gain.cancelScheduledValues(t);
+                  gain.gain.setValueAtTime(gain.gain.value, t);
+                  gain.gain.linearRampToValueAtTime(0, t + 0.3);
+                  setTimeout(() => {
+                      try {
+                          osc.stop();
+                          lfo.stop();
+                          osc.disconnect();
+                          lfo.disconnect();
+                          gain.disconnect();
+                      } catch (e) {}
+                  }, 400);
+              } else {
+                  osc.stop();
+                  lfo.stop();
+                  osc.disconnect();
+                  lfo.disconnect();
+                  gain.disconnect();
+              }
+          } catch (e) {
+              console.error("Error stopping portal hum", e);
+          }
+          this.portalHumNode = null;
+      }
   }
 }
 

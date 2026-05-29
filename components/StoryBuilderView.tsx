@@ -5,7 +5,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { textureService } from '../services/textureService.ts';
-import { ArrowLeft, BookOpen, Crown, ChevronRight, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, Sparkles, Eye, EyeOff, ZoomIn, ZoomOut, Compass, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { ArrowLeft, Crown, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Konva from 'konva';
 
@@ -18,22 +18,362 @@ for (let i = 0; i < 6; i++) {
     BASE_POINTS.push({ x: Math.cos(angle) * GAME_CONFIG.HEX_SIZE, y: Math.sin(angle) * GAME_CONFIG.HEX_SIZE });
 }
 
-const TARGET_SHAPE = [
-    {q: 0, r: 0},
-    // Ring 1 (6 cells)
-    {q: 1, r: -1}, {q: 1, r: 0}, {q: 0, r: 1}, {q: -1, r: 1}, {q: -1, r: 0}, {q: 0, r: -1},
-    // Ring 2 (12 cells)
-    {q: 2, r: -2}, {q: 2, r: -1}, {q: 2, r: 0}, {q: 1, r: 1}, {q: 0, r: 2}, {q: -1, r: 2},
-    {q: -2, r: 2}, {q: -2, r: 1}, {q: -2, r: 0}, {q: -1, r: -1}, {q: 0, r: -2}, {q: 1, r: -2}
-];
+interface Figure {
+    id: string;
+    nameRU: string;
+    nameEN: string;
+    descRU: string;
+    descEN: string;
+    shape: { q: number, r: number, lvl?: number }[];
+    rewardSP: number;
+}
 
-const TARGET_KEYS = new Set(TARGET_SHAPE.map(c => getHexKey(c.q, c.r)));
+const FIGURES_COLLECTION: Figure[] = [
+    // --- CHAPTER I: NEXUS CORE (1-10) ---
+    {
+        id: 'c1_f1',
+        nameRU: 'Шаг 1: Опорный Анкер (1 гекс L0)',
+        nameEN: 'Step 1: Anchor Node (1 Hex L0)',
+        descRU: 'Установите базовый гекс 0-го уровня в центре поля для начала постройки Ядра Нексуса.',
+        descEN: 'Place the central starting level 0 hex on the field to begin anchoring the Nexus Core network.',
+        shape: [{ q: 0, r: 0, lvl: 0 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c1_f2',
+        nameRU: 'Шаг 2: Векторная Связь (2 гекса L0)',
+        nameEN: 'Step 2: Vector Link (2 Hexes L0)',
+        descRU: 'Объедините два смежных гекса L0. Это создаст первичный направленный энергетический канал.',
+        descEN: 'Deploy two adjacent L0 hexes side by side to establish a primary energy link vector.',
+        shape: [{ q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 0 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c1_f3',
+        nameRU: 'Шаг 3: Искровой Треугольник (3 гекса L0)',
+        nameEN: 'Step 3: Spark Triangle (3 Hexes L0)',
+        descRU: 'Составьте базовый треугольник из 3-х смежных гексов 0-го уровня вокруг опорной зоны.',
+        descEN: 'Form a compact triangle layout using 3 adjacent level 0 hexes.',
+        shape: [{ q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c1_f4',
+        nameRU: 'Шаг 4: Ячейка Ромба (4 гекса L0)',
+        nameEN: 'Step 4: Rhombus Cell (4 Hexes L0)',
+        descRU: 'Расширьте треугольник в ромб из 4-х гексов L0. Это усилит стабильность структуры ядра.',
+        descEN: 'Expand the configuration to a rhombus shape using 4 adjacent level 0 hexes.',
+        shape: [{ q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 }, { q: 2, r: -1, lvl: 0 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c1_f5',
+        nameRU: 'Шаг 5: Стрела Нексуса (5 гексов L0)',
+        nameEN: 'Step 5: Nexus Arrow (5 Hexes L0)',
+        descRU: 'Сформируйте направленную стрелу из 5 гексов L0 для фокусирования энергетических полей.',
+        descEN: 'Construct an arrow-shaped formation with 5 level 0 hexes to channel the core focus.',
+        shape: [{ q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 }, { q: 2, r: -1, lvl: 0 }, { q: 2, r: 0, lvl: 0 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c1_f6',
+        nameRU: 'Шаг 6: Малое Кольцо (6 гексов L0)',
+        nameEN: 'Step 6: Small Hex-Ring (6 Hexes L0)',
+        descRU: 'Соберите защитный барьер из 6 гексов L0 кольцом вокруг пустой центральной точки.',
+        descEN: 'Assemble a protective perimeter of 6 level 0 hexes forming a ring around an empty coordinate.',
+        shape: [
+            { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 }, { q: 0, r: 1, lvl: 0 },
+            { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 0 }, { q: 0, r: -1, lvl: 0 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c1_f7',
+        nameRU: 'Шаг 7: Звездный Хаб (7 гексов L0)',
+        nameEN: 'Step 7: Star Hub (7 Hexes L0)',
+        descRU: 'Заполните пустоту в кольце, выложив цветок из 7-ми гексов L0 с центральным узлом.',
+        descEN: 'Fill the center of the ring, completing a solid flower blossom of 7 level 0 hexes.',
+        shape: [
+            { q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 },
+            { q: 0, r: 1, lvl: 0 }, { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 0 }, { q: 0, r: -1, lvl: 0 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c1_f8',
+        nameRU: 'Шаг 8: Внешний Кристалл (8 гексов L0)',
+        nameEN: 'Step 8: Outer Crystal (8 Hexes L0)',
+        descRU: 'Добавьте длинный фокусный луч ко все еще растущей матрице Ядра из 8-ми гексов L0.',
+        descEN: 'Extend the growing floral matrix with an additional outer node using 8 level 0 hexes.',
+        shape: [
+            { q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 }, { q: 0, r: 1, lvl: 0 },
+            { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 0 }, { q: 0, r: -1, lvl: 0 }, { q: 2, r: -2, lvl: 0 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c1_f9',
+        nameRU: 'Шаг 9: Сигнальная Рама (9 гексов L0)',
+        nameEN: 'Step 9: Signaling Frame (9 Hexes L0)',
+        descRU: 'Укрепите внешний контур, собрав систему передатчиков из 9-ти гексов L0.',
+        descEN: 'Reinforce the signal array structure by forming a 9-hex level 0 frame.',
+        shape: [
+            { q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 }, { q: 0, r: 1, lvl: 0 },
+            { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 0 }, { q: 0, r: -1, lvl: 0 },
+            { q: 2, r: -2, lvl: 0 }, { q: 2, r: -1, lvl: 0 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c1_f10',
+        nameRU: 'Шаг 10: Завершенное Ядро Нексуса (10 гексов L0)',
+        nameEN: 'Step 10: Completed Nexus Core (10 Hexes L0)',
+        descRU: 'Завершите Первую Главу! Создайте великое энергетическое ядро Нексуса из 10 гексов L0.',
+        descEN: 'Finish Chapter One! Create the magnificent finished core matrix utilizing 10 level 0 hexes.',
+        shape: [
+            { q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 }, { q: 0, r: 1, lvl: 0 },
+            { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 0 }, { q: 0, r: -1, lvl: 0 },
+            { q: 2, r: -2, lvl: 0 }, { q: 2, r: -1, lvl: 0 }, { q: 1, r: 1, lvl: 0 }
+        ],
+        rewardSP: 2
+    },
 
-const STORY_STEPS = [
-    { reqLevel: 0, reqCount: 10, title: "Пробуждение Архитектора", text: "Вы стоите перед пустой бездной. Чтобы восстановить этот мир, вам необходимо заложить фундамент. Выложите 10 гексов 0 уровня. Фигура скрыта во тьме воображения, нащупайте ее форму." },
-    { reqLevel: 1, reqCount: 10, altReqLevel: -1, title: "Структуры Власти", text: "Фундамент заложен. Теперь вам нужно расти ввысь, либо копать вглубь. Возведите 10 гексов 1-го (или минус 1-го) уровня на существующем фундаменте." },
-    { reqLevel: 2, reqCount: 10, altReqLevel: -2, title: "Резонанс", text: "Реальность начинает обретать форму. Необходимо закрепить этот успех. Поднимите 10 гексов до 2-го (или минус 2-го) уровня." },
-    { reqLevel: 3, reqCount: 5, altReqLevel: -3, title: "Апекс-Синтез", text: "Мир почти собран. Осталось внести последние мощные элементы. Выложите 5 гексов 3-го (или минус 3-го) уровня для завершения сборки." }
+    // --- CHAPTER II: RADIANT TOWER (11-20) ---
+    {
+        id: 'c2_f1',
+        nameRU: 'Шаг 11: Колонна Лифта (L0 и L1)',
+        nameEN: 'Step 11: Lift Pillar (L0 & L1)',
+        descRU: 'Установите платформу L0 и поднимите над ней колонну лифта уровня L1 для транзита энергии.',
+        descEN: 'Lay a level 0 base and elevate a level 1 transit pillar on top of it.',
+        shape: [{ q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 1 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c2_f2',
+        nameRU: 'Шаг 12: Опорная Арка (L0 и L1)',
+        nameEN: 'Step 12: Base Archway (L0 & L1)',
+        descRU: 'Соберите арочную конструкцию из 2-х гексов L0 и 1-й высоты L1.',
+        descEN: 'Build an elegant support arch consisting of 2 level 0 bases and 1 level 1 cap.',
+        shape: [{ q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 1 }, { q: 1, r: 0, lvl: 0 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c2_f3',
+        nameRU: 'Шаг 13: Башни-Близнецы (L0 и L1)',
+        nameEN: 'Step 13: Twin Pillars (L0 & L1)',
+        descRU: 'Постройте два симметричных вертикальных пилона L1 на прочной опоре L0.',
+        descEN: 'Erect two symmetrical level 1 spires side-by-side on stable level 0 foundations.',
+        shape: [{ q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 1 }, { q: 1, r: 0, lvl: 0 }, { q: 2, r: -1, lvl: 1 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c2_f4',
+        nameRU: 'Шаг 14: Виадук Сияния (L0 и L1)',
+        nameEN: 'Step 14: Radiant Overpass (L0 & L1)',
+        descRU: 'Создайте протяженный мост из чередующихся уровней 0 и 1.',
+        descEN: 'Develop an overlapping bridgeway utilizing alternating L0 and L1 heights.',
+        shape: [
+            { q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 1 }, { q: 1, r: 0, lvl: 0 },
+            { q: 2, r: -1, lvl: 1 }, { q: 2, r: 0, lvl: 0 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c2_f5',
+        nameRU: 'Шаг 15: Крестовые Ворота (L0 и L1)',
+        nameEN: 'Step 15: Cross Gateway (L0 & L1)',
+        descRU: 'Соорудите проход из 6 гексов, усиленный 2-мя поднятыми шпилями уровня L1.',
+        descEN: 'Establish a crossroads tunnel using a layout of 4 level 0 bases and 2 level 1 columns.',
+        shape: [
+            { q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 1 }, { q: 1, r: 0, lvl: 0 },
+            { q: 2, r: -1, lvl: 0 }, { q: 0, r: 1, lvl: 1 }, { q: -1, r: 1, lvl: 0 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c2_f6',
+        nameRU: 'Шаг 16: Обитель Шпиля (L0 и L1)',
+        nameEN: 'Step 16: Spire Sanctuary (L0 & L1)',
+        descRU: 'Постройте святилище с одной возвышающейся центральной колонной L1 посреди кольца L0.',
+        descEN: 'Erect a temple with a single high level 1 heart encircled by 6 level 0 blocks.',
+        shape: [
+            { q: 0, r: 0, lvl: 1 }, { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 }, { q: 0, r: 1, lvl: 0 },
+            { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 0 }, { q: 0, r: -1, lvl: 0 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c2_f7',
+        nameRU: 'Шаг 17: Форт Гребня (L0 и L1)',
+        nameEN: 'Step 17: Crest Bastion (L0 & L1)',
+        descRU: 'Расширьте обитель, добавив внешний сигнальный маяк уровня L1 в общую сеть.',
+        descEN: 'Upgrade the hub network by introducing a secondary level 1 tower on the rim.',
+        shape: [
+            { q: 0, r: 0, lvl: 1 }, { q: 1, r: -1, lvl: 0 }, { q: 1, r: 0, lvl: 0 }, { q: 0, r: 1, lvl: 0 },
+            { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 0 }, { q: 0, r: -1, lvl: 0 }, { q: 2, r: -2, lvl: 1 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c2_f8',
+        nameRU: 'Шаг 18: Корона Бастиона (L0 и L1)',
+        nameEN: 'Step 18: Bastion Crown (L0 & L1)',
+        descRU: 'Создайте кольцо с 3-мя чередующимися высокими пилонами L1 вокруг центра L0.',
+        descEN: 'Erect a crown-like enclosure with exactly 3 alternating high L1 blocks and L0 links.',
+        shape: [
+            { q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 1 }, { q: 1, r: 0, lvl: 0 }, { q: 0, r: 1, lvl: 1 },
+            { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 1 }, { q: 0, r: -1, lvl: 0 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c2_f9',
+        nameRU: 'Шаг 19: Крыло Обелиска (L0 и L1)',
+        nameEN: 'Step 19: Obelisk Wing (L0 & L1)',
+        descRU: 'Преобразите корону в крылатую асимметричную матрицу передатчиков из 9-ти элементов.',
+        descEN: 'Sculpture the crown further into an asymmetric cybernetic wing pattern of 9 plates.',
+        shape: [
+            { q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 1 }, { q: 1, r: 0, lvl: 0 }, { q: 0, r: 1, lvl: 1 },
+            { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 1 }, { q: 0, r: -1, lvl: 0 },
+            { q: 2, r: -2, lvl: 1 }, { q: 2, r: -1, lvl: 0 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c2_f10',
+        nameRU: 'Шаг 20: Завершенная Сияющая Башня (L0 и L1)',
+        nameEN: 'Step 20: Completed Radiant Tower (L0 & L1)',
+        descRU: 'Завершите Вторую Главу! Возведите финальную Сияющую Высотную Башню из 10-ти гексов.',
+        descEN: 'Finish Chapter Two! Complete the monumental Radiant Tower assembly of 10 hybrid elements.',
+        shape: [
+            { q: 0, r: 0, lvl: 0 }, { q: 1, r: -1, lvl: 1 }, { q: 1, r: 0, lvl: 0 }, { q: 0, r: 1, lvl: 1 },
+            { q: -1, r: 1, lvl: 0 }, { q: -1, r: 0, lvl: 1 }, { q: 0, r: -1, lvl: 0 },
+            { q: 2, r: -2, lvl: 1 }, { q: 2, r: -1, lvl: 0 }, { q: 1, r: 1, lvl: 1 }
+        ],
+        rewardSP: 2
+    },
+
+    // --- CHAPTER III: CELESTIAL ZIGGURAT (21-30) ---
+    {
+        id: 'c3_f1',
+        nameRU: 'Шаг 21: Ступени Набора (L1, L2 и L3)',
+        nameEN: 'Step 21: Stair Cascade (L1, L2 & L3)',
+        descRU: 'Постройте трехступенчатую восходящую лестницу высот L1 -> L2 -> L3.',
+        descEN: 'Construct a precise ascending staircase of high tiers: L1 -> L2 -> L3.',
+        shape: [{ q: 0, r: 0, lvl: 1 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 3 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c3_f2',
+        nameRU: 'Шаг 22: База Террасы (L1, L2 и L3)',
+        nameEN: 'Step 22: Terrace Bed (L1, L2 & L3)',
+        descRU: 'Укрепите лестницу, пристроив дополнительный опорный фланг L2 к шпилю L3.',
+        descEN: 'Secure the steps layout by adding an extra level 2 backing plate to the level 3 spike.',
+        shape: [{ q: 0, r: 0, lvl: 1 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 3 }, { q: 2, r: -1, lvl: 2 }],
+        rewardSP: 1
+    },
+    {
+        id: 'c3_f3',
+        nameRU: 'Шаг 23: Два Гребня Зиккурата (L1, L2 и L3)',
+        nameEN: 'Step 23: Twin Spires (L1, L2 & L3)',
+        descRU: 'Соберите монумент с двумя возвышающимися вершинами уровня L3 и мостом L2.',
+        descEN: 'Assemble a balanced layout with two level 3 peaks separated by level 2 supports.',
+        shape: [
+            { q: 0, r: 0, lvl: 1 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 3 },
+            { q: 2, r: -1, lvl: 2 }, { q: 2, r: 0, lvl: 3 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c3_f4',
+        nameRU: 'Шаг 24: Высотные Врата (L1, L2 и L3)',
+        nameEN: 'Step 24: High Gateways (L1, L2 & L3)',
+        descRU: 'Достройте проходной спуск уровня L1 с противоположного конца двух вершин.',
+        descEN: 'Integrate an opposite ramp level 1 outflow flanking the peaks of the high temple.',
+        shape: [
+            { q: 0, r: 0, lvl: 1 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 3 },
+            { q: 2, r: -1, lvl: 2 }, { q: 2, r: 0, lvl: 3 }, { q: 3, r: -1, lvl: 1 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c3_f5',
+        nameRU: 'Шаг 25: Круг Собора (L1, L2 и L3)',
+        nameEN: 'Step 25: Sanctuary Ring (L1, L2 & L3)',
+        descRU: 'Сформируйте величественную купольную чашу с ядром L3 посреди стен L2 и L1.',
+        descEN: 'Establish a dome template with a high level 3 core surrounded by L2 and L1 rings.',
+        shape: [
+            { q: 0, r: 0, lvl: 3 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 2 }, { q: 0, r: 1, lvl: 1 },
+            { q: -1, r: 1, lvl: 1 }, { q: -1, r: 0, lvl: 1 }, { q: 0, r: -1, lvl: 2 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c3_f6',
+        nameRU: 'Шаг 26: Портал Алтаря (L1, L2 и L3)',
+        nameEN: 'Step 26: Scribe Altar (L1, L2 & L3)',
+        descRU: 'Установите высотную фокусную пристройку L3 к северному сектору круга собора.',
+        descEN: 'Position a high level 3 transmitter onto the northern flank of the sanctuary.',
+        shape: [
+            { q: 0, r: 0, lvl: 3 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 2 }, { q: 0, r: 1, lvl: 1 },
+            { q: -1, r: 1, lvl: 1 }, { q: -1, r: 0, lvl: 1 }, { q: 0, r: -1, lvl: 2 }, { q: 2, r: -2, lvl: 3 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c3_f7',
+        nameRU: 'Шаг 27: Подиум Палаты (L1, L2 и L3)',
+        nameEN: 'Step 27: Podium Chamber (L1, L2 & L3)',
+        descRU: 'Создайте симметричный спуск, добавив переходную площадку уровня L2 перед маяком L3.',
+        descEN: 'Construct a visual step transition by laying a level 2 block in front of the L3 altar.',
+        shape: [
+            { q: 0, r: 0, lvl: 3 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 2 }, { q: 0, r: 1, lvl: 1 },
+            { q: -1, r: 1, lvl: 1 }, { q: -1, r: 0, lvl: 1 }, { q: 0, r: -1, lvl: 2 },
+            { q: 2, r: -2, lvl: 3 }, { q: 2, r: -1, lvl: 2 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c3_f8',
+        nameRU: 'Шаг 28: Венец Силы (L1, L2 и L3)',
+        nameEN: 'Step 28: Crown of Power (L1, L2 & L3)',
+        descRU: 'Заложите каркас короны, добавив второй южный пилон L3 к общему ансамблю.',
+        descEN: 'Unify the high skyline by elevating a second level 3 peak in the southern sector.',
+        shape: [
+            { q: 0, r: 0, lvl: 3 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 2 }, { q: 0, r: 1, lvl: 1 },
+            { q: -1, r: 1, lvl: 1 }, { q: -1, r: 0, lvl: 1 }, { q: 0, r: -1, lvl: 2 },
+            { q: 2, r: -2, lvl: 3 }, { q: 2, r: -1, lvl: 2 }, { q: 1, r: 1, lvl: 3 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c3_f9',
+        nameRU: 'Шаг 29: Храмовые Леса (L1, L2 и L3)',
+        nameEN: 'Step 29: Temple Scaffold (L1, L2 & L3)',
+        descRU: 'Расширьте крылья собора, добавив боковой опорный блок L1 для устойчивости.',
+        descEN: 'Extend the temple outposts with an additional side level 1 platform support.',
+        shape: [
+            { q: 0, r: 0, lvl: 3 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 2 }, { q: 0, r: 1, lvl: 1 },
+            { q: -1, r: 1, lvl: 1 }, { q: -1, r: 0, lvl: 1 }, { q: 0, r: -1, lvl: 2 },
+            { q: 2, r: -2, lvl: 3 }, { q: 2, r: -1, lvl: 2 }, { q: 1, r: 1, lvl: 3 },
+            { q: -2, r: 1, lvl: 1 }
+        ],
+        rewardSP: 1
+    },
+    {
+        id: 'c3_f10',
+        nameRU: 'Шаг 30: Преславный Небесный Зиккурат (L1, L2 и L3)',
+        nameEN: 'Step 30: Grand Celestial Ziggurat (L1, L2 & L3)',
+        descRU: 'Постройте величайший 3D Зиккурат из 12-ти модулей! Триумфально закройте Третью Главу!',
+        descEN: 'Erect the ultimate 12-element 3D Ziggurat temple! Triumpantly complete Chapter Three!',
+        shape: [
+            { q: 0, r: 0, lvl: 3 }, { q: 1, r: -1, lvl: 2 }, { q: 1, r: 0, lvl: 2 }, { q: 0, r: 1, lvl: 1 },
+            { q: -1, r: 1, lvl: 1 }, { q: -1, r: 0, lvl: 1 }, { q: 0, r: -1, lvl: 2 },
+            { q: 2, r: -2, lvl: 3 }, { q: 2, r: -1, lvl: 2 }, { q: 1, r: 1, lvl: 3 },
+            { q: -2, r: 1, lvl: 1 }, { q: -2, r: 2, lvl: 1 }
+        ],
+        rewardSP: 3
+    }
 ];
 
 const getBasePathD = () => {
@@ -100,21 +440,96 @@ const NebulaBackground: React.FC<{ width: number; height: number }> = ({ width, 
     );
 };
 
+const MiniFigureBlueprint: React.FC<{ shape: { q: number, r: number, lvl?: number }[] }> = ({ shape }) => {
+    const size = 6;
+    const hexToPixelSmall = (q: number, r: number) => {
+        const x = size * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+        const y = size * (1.5 * r);
+        return { x, y };
+    };
+
+    const pixels = shape.map(pt => hexToPixelSmall(pt.q, pt.r));
+    
+    const xs = pixels.map(p => p.x);
+    const ys = pixels.map(p => p.y);
+    const minX = Math.min(...xs) - size - 2;
+    const maxX = Math.max(...xs) + size + 2;
+    const minY = Math.min(...ys) - size - 2;
+    const maxY = Math.max(...ys) + size + 2;
+    
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    const getHexPoints = (cx: number, cy: number) => {
+        const points = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = (60 * i + 30) * Math.PI / 180;
+            points.push(`${cx + Math.cos(angle) * size},${cy + Math.sin(angle) * size}`);
+        }
+        return points.join(' ');
+    };
+
+    return (
+        <svg 
+            viewBox={`${minX} ${minY} ${width} ${height}`} 
+            className="w-16 h-16 bg-slate-950/80 border border-indigo-500/20 rounded-xl p-1 shrink-0 drop-shadow-[0_0_10px_rgba(99,102,241,0.25)] flex items-center justify-center self-center"
+        >
+            {pixels.map((p, index) => {
+                const pt = shape[index];
+                const activeLvl = pt?.lvl !== undefined ? pt.lvl : 0;
+                // Elegant theme palette colors matching the tier palette to make 3D height logical
+                const themeColors: Record<string, string> = {
+                    '0': '#06b6d4', // cyan-500
+                    '1': '#a855f7', // purple-500
+                    '2': '#eab308', // yellow-500 / amber-500
+                    '3': '#3b82f6'  // blue-500 / indigo-500
+                };
+                const strokeColor = themeColors[String(activeLvl)] || '#06b6d4';
+                return (
+                    <g key={index}>
+                        <polygon 
+                            points={getHexPoints(p.x, p.y)}
+                            fill={`${strokeColor}33`}
+                            stroke={strokeColor}
+                            strokeWidth="1.2"
+                        />
+                        <text 
+                            x={p.x} 
+                            y={p.y + 1} 
+                            textAnchor="middle" 
+                            dominantBaseline="middle"
+                            fill="white" 
+                            fontSize="5" 
+                            fontWeight="900"
+                        >
+                            {activeLvl}
+                        </text>
+                    </g>
+                );
+            })}
+        </svg>
+    );
+};
+
 const StoryHex: React.FC<{ 
     q: number, 
     r: number, 
     level: number | undefined, 
     isSelected: boolean,
-    isTarget: boolean,
+    isBlueprint: boolean,
+    blueprintLevel?: number,
     isEligible: boolean,
+    isCenterInitially: boolean,
     isNew?: boolean,
-    onClick: (q: number, r: number) => void 
-}> = React.memo(({ q, r, level, isSelected, isTarget, isEligible, isNew, onClick }) => {
+    canPlace: boolean,
+    onClick: (q: number, r: number) => void,
+    onDblClick?: (q: number, r: number) => void
+}> = React.memo(({ q, r, level, isSelected, isBlueprint, blueprintLevel = 0, isEligible, isCenterInitially, isNew, canPlace, onClick, onDblClick }) => {
     const px = useMemo(() => hexToPixel(q, r), [q, r]);
-    const isBuilt = level !== undefined;
+    const isBuilt = level !== undefined && level >= 0;
     
     const colors = useMemo(() => {
-        if (level === undefined) return null;
+        if (level === undefined || level < 0) return null;
         const theme = THEME_PALETTE[String(level)] || THEME_PALETTE['0'];
         return { 
             side: theme.dark, 
@@ -188,15 +603,21 @@ const StoryHex: React.FC<{
         return 0.85; // id === 5
     }, []);
 
+    // Draw conditions: Cover the entire game space with a wireframe grid as requested!
+
     return (
         <Group 
             ref={groupRef} 
             x={px.x} 
             y={px.y} 
             onClick={() => onClick(q, r)} 
-            onTouchStart={() => onClick(q, r)}
+            onTap={() => onClick(q, r)}
+            onDblClick={() => onDblClick && onDblClick(q, r)}
+            onDblTap={() => onDblClick && onDblClick(q, r)}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onTouchStart={() => setIsHovered(true)}
+            onTouchEnd={() => setIsHovered(false)}
             perfectDrawEnabled={false}
             transformsEnabled="position"
         >
@@ -227,22 +648,56 @@ const StoryHex: React.FC<{
                 </Group>
             )}
 
-            {/* Top Face inside a scaled Group for pixel-perfect non-crooked isometric scaling */}
+            {/* Top Face */}
             <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                 <Path
                     data={BASE_PATH_D}
                     fillPatternImage={topTexture as any}
-                    fill={topTexture ? undefined : (isBuilt ? colors?.top : (isHovered ? 'rgba(99, 102, 241, 0.35)' : (isTarget ? 'rgba(99, 102, 241, 0.08)' : 'rgba(255,255,255,0.01)')))}
+                    fill={topTexture ? undefined : (isBuilt ? colors?.top : (isCenterInitially ? 'rgba(6, 182, 212, 0.08)' : (isEligible ? 'rgba(34, 211, 238, 0.04)' : 'rgba(255,255,255,0.01)')))}
                     fillPatternScale={{ x: GAME_CONFIG.HEX_SIZE / 32, y: GAME_CONFIG.HEX_SIZE / 32 }}
                     fillPatternOffset={{ x: 32, y: 32 }}
                     fillPatternRepeat="repeat"
-                    stroke={isBuilt ? colors?.stroke : (isHovered ? 'rgba(34, 211, 238, 0.8)' : (isTarget ? 'rgba(99, 102, 241, 0.35)' : 'rgba(255,255,255,0.06)'))}
-                    strokeWidth={isBuilt ? 2 : (isHovered ? 2 : 1)}
+                    stroke={isBuilt ? '#06b6d4' : (isCenterInitially ? '#06b6d4' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)'))}
+                    strokeWidth={isBuilt ? 2.5 : (isCenterInitially ? 2 : (isEligible ? 1.5 : 0.8))}
                     perfectDrawEnabled={false}
                     shadowForStrokeEnabled={false}
+                    dash={isEligible || isBlueprint ? [4, 4] : undefined}
                 />
+                
+                {/* Visual plus (+) for center initially and eligible targets, requested by user */}
+                {!isBuilt && (isCenterInitially || isEligible) && (
+                    <Group listening={false}>
+                        <Path 
+                            data="M -6 0 L 6 0"
+                            stroke={isCenterInitially ? "#22d3ee" : "rgba(34, 211, 238, 0.95)"}
+                            strokeWidth={2}
+                            shadowColor="#22d3ee"
+                            shadowBlur={6}
+                            shadowOpacity={0.8}
+                            listening={false}
+                        />
+                        <Path 
+                            data="M 0 -6 L 0 6"
+                            stroke={isCenterInitially ? "#22d3ee" : "rgba(34, 211, 238, 0.95)"}
+                            strokeWidth={2}
+                            shadowColor="#22d3ee"
+                            shadowBlur={6}
+                            shadowOpacity={0.8}
+                            listening={false}
+                        />
+                    </Group>
+                )}
+                
                 {isBuilt && colors && (
                     <>
+                        {/* Always outline built hex with cyan glow */}
+                        <Path 
+                            data={BASE_PATH_D}
+                            stroke="#22d3ee"
+                            strokeWidth={1.2}
+                            opacity={0.8}
+                            listening={false}
+                        />
                         {/* Top/Light Bevel */}
                         <Path 
                             data={`M ${BASE_POINTS[2].x} ${BASE_POINTS[2].y} L ${BASE_POINTS[3].x} ${BASE_POINTS[3].y} L ${BASE_POINTS[4].x} ${BASE_POINTS[4].y} L ${BASE_POINTS[5].x} ${BASE_POINTS[5].y}`}
@@ -263,48 +718,75 @@ const StoryHex: React.FC<{
                 )}
             </Group>
 
-            {/* Empty Holographic blueprint decoration inside targets */}
-            {!isBuilt && isTarget && (
+            {/* Empty Holographic blueprint decoration inside blueprint ghost targets */}
+            {!isBuilt && isBlueprint && !isCenterInitially && (
                 <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                     <Path
                         data={BASE_PATH_D}
-                        scaleX={0.75}
-                        scaleY={0.75}
-                        stroke={isHovered ? 'rgba(34, 211, 238, 0.5)' : 'rgba(99, 102, 241, 0.22)'}
-                        strokeWidth={1.2}
-                        dash={[3, 4]}
+                        scaleX={0.9}
+                        scaleY={0.9}
+                        stroke={isHovered ? 'rgba(168, 85, 247, 0.85)' : 'rgba(168, 85, 247, 0.5)'}
+                        strokeWidth={1.5}
+                        dash={[4, 3]}
                         listening={false}
                     />
-                    <Circle x={0} y={0} r={2} fill={isHovered ? 'rgb(34, 211, 238)' : 'rgba(99, 102, 241, 0.4)'} listening={false} />
-                    <Circle x={-14} y={0} r={1.2} fill="rgba(99, 102, 241, 0.2)" listening={false} />
-                    <Circle x={14} y={0} r={1.2} fill="rgba(99, 102, 241, 0.2)" listening={false} />
+                    {blueprintLevel > 0 && (
+                        <Path
+                            data={BASE_PATH_D}
+                            scaleX={0.7}
+                            scaleY={0.7}
+                            stroke="rgba(168, 85, 247, 0.3)"
+                            strokeWidth={1}
+                            dash={[2, 2]}
+                            listening={false}
+                        />
+                    )}
+                    {/* Visual color dot representing the target level palette for the ghost block */}
+                    <Circle 
+                        x={0} 
+                        y={0} 
+                        r={4} 
+                        fill={THEME_PALETTE[String(blueprintLevel)]?.main || 'rgba(168, 85, 247, 0.6)'} 
+                        stroke="#fff"
+                        strokeWidth={1}
+                        listening={false} 
+                    />
                 </Group>
             )}
 
-            {/* Pulse Build Indicator for Eligible Placement Cells */}
-            {isEligible && (
+            {/* Initial Center Beacon Highlight */}
+            {!isBuilt && isCenterInitially && (
+                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
+                    <Path
+                        data={BASE_PATH_D}
+                        scaleX={0.94}
+                        scaleY={0.94}
+                        stroke="#22d3ee"
+                        strokeWidth={2}
+                        shadowColor="#22d3ee"
+                        shadowBlur={12}
+                        shadowOpacity={0.6}
+                        listening={false}
+                    />
+                    <Circle x={0} y={0} r={4} fill="#22d3ee" opacity={0.8} listening={false} className="animate-pulse" />
+                </Group>
+            )}
+
+            {/* Pulse Placement Helper Outline for Neighbors */}
+            {!isBuilt && isEligible && !isCenterInitially && (
                 <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                     <Path
                         data={BASE_PATH_D}
                         scaleX={0.96}
                         scaleY={0.96}
-                        stroke={isHovered ? '#ec4899' : '#22d3ee'}
-                        strokeWidth={2}
+                        stroke={'rgba(34, 211, 238, 0.65)'}
+                        strokeWidth={2.2}
                         dash={[5, 4]}
                         opacity={0.9}
-                        shadowColor={isHovered ? '#ec4899' : '#22d3ee'}
-                        shadowBlur={isHovered ? 12 : 8}
-                        shadowOpacity={0.5}
+                        shadowColor="#22d3ee"
+                        shadowBlur={6}
                         listening={false}
                     />
-                    <Group scaleX={0.65} scaleY={0.65} y={-1} listening={false}>
-                        <Path 
-                            data="M -8 0 L 8 0 M 0 -8 L 0 8" 
-                            stroke="#22d3ee" 
-                            strokeWidth={2} 
-                            opacity={0.8} 
-                        />
-                    </Group>
                 </Group>
             )}
 
@@ -313,26 +795,25 @@ const StoryHex: React.FC<{
                 <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                     <Path
                         data={BASE_PATH_D}
-                        scaleX={0.92}
-                        scaleY={0.92}
+                        scaleX={0.9}
+                        scaleY={0.9}
                         stroke="#a855f7"
-                        strokeWidth={2.5}
+                        strokeWidth={3}
                         dash={[4, 4]}
-                        opacity={0.8}
+                        opacity={0.94}
                         shadowColor="#a855f7"
-                        shadowBlur={10}
+                        shadowBlur={14}
                         listening={false}
-                        perfectDrawEnabled={false}
                     />
                 </Group>
             )}
 
-            {/* Place Block Isometric Ripple Particle Effect */}
+            {/* Place Block isometric ripple effect */}
             {isNew && (
                 <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                     <Circle
                         r={GAME_CONFIG.HEX_SIZE * 0.8}
-                        stroke="#ffffff"
+                        stroke="#22d3ee"
                         strokeWidth={3}
                         opacity={0.9}
                         listening={false}
@@ -352,19 +833,62 @@ const StoryHex: React.FC<{
                     />
                 </Group>
             )}
+
+            {/* Placement / Hover Overlay Feedback */}
+            {isHovered && !isBlueprint && (
+                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false} listening={false}>
+                    <Path
+                        data={BASE_PATH_D}
+                        fill={canPlace ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}
+                        stroke={canPlace ? '#10b981' : '#ef4444'}
+                        strokeWidth={4}
+                        opacity={1}
+                        shadowColor={canPlace ? '#10b981' : '#ef4444'}
+                        shadowBlur={16}
+                        shadowOpacity={0.9}
+                        listening={false}
+                    />
+                </Group>
+            )}
         </Group>
     );
 });
 
+const drawInventoryHex = (lvl: number, theme: any) => {
+    return (
+        <svg viewBox="0 0 40 46" className="w-7 h-8 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] select-none pointer-events-none transition-all duration-300">
+            {/* 3D Bottom/Side extrusion */}
+            <polygon points="20,0 38,10 38,36 20,46 2,36 2,10" fill={theme.dark} />
+            {/* Top plate */}
+            <polygon points="20,0 38,10 38,30 20,40 2,30 2,10" fill={theme.main} stroke={theme.stroke} strokeWidth="2" />
+            
+            {/* Soft top bevel line */}
+            <polyline points="2,10 20,20 38,10" stroke="rgba(255,255,255,0.25)" strokeWidth="1" fill="none" />
+            
+            <text 
+                x="20" 
+                y="20" 
+                textAnchor="middle" 
+                fill={theme.light} 
+                className="text-[14px] font-[900]"
+                dominantBaseline="central"
+            >
+                {lvl}
+            </text>
+        </svg>
+    );
+};
+
 const StoryBuilderView: React.FC = () => {
-    const setCampaignMode = useGameStore(state => state.setCampaignMode);
     const setUIState = useGameStore(state => state.setUIState);
     const playUiSound = useGameStore(state => state.playUiSound);
     const minedInSessionHexes = useGameStore(state => state.minedInSessionHexes);
     const storyMap = useGameStore(state => state.storyMap);
     const placeStoryHex = useGameStore(state => state.placeStoryHex);
-    const storyMilestone = useGameStore(state => state.storyMilestone);
-    const setStoryMilestone = useGameStore(state => state.setStoryMilestone);
+    const addMinedHexes = useGameStore(state => state.addMinedHexes);
+    const clearStoryMap = useGameStore(state => state.clearStoryMap);
+    const skillPoints = useGameStore(state => state.skillPoints);
+    const setSkillPoints = useGameStore(state => state.setSkillPoints);
     const language = useGameStore(state => state.language);
     const setLanguage = useGameStore(state => state.setLanguage);
     const isMusicMuted = useGameStore(state => state.isMusicMuted);
@@ -372,18 +896,84 @@ const StoryBuilderView: React.FC = () => {
     const toggleMusic = useGameStore(state => state.toggleMusic);
     const toggleSfx = useGameStore(state => state.toggleSfx);
 
+    // Active unlocked state index
+    const [unlockedFigureIndex, setUnlockedFigureIndex] = useState(() => {
+        try {
+            return Number(localStorage.getItem('hexopol_figure_index') || '0');
+        } catch {
+            return 0;
+        }
+    });
+
+    const activeFigure = useMemo(() => {
+        return FIGURES_COLLECTION[unlockedFigureIndex] || FIGURES_COLLECTION[0];
+    }, [unlockedFigureIndex]);
+
     const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
     const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 30 });
     const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 0.75 : 1.1);
-    const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(window.innerWidth < 768);
-    const [isUiHidden, setIsUiHidden] = useState(false);
-    const [isInitialHintDismissed, setIsInitialHintDismissed] = useState(false);
+    const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
+    const isUiHidden = false;
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [popupCell, setPopupCell] = useState<{ q: number, r: number } | null>(null);
+    const [selectedBuildLevel, setSelectedBuildLevel] = useState<number>(0); // 0-9 for building higher levels, or -999 for demolish/снос
+    const [errorMessage, setErrorMessage] = useState<string | null>(null); // Visual feedback warning toast
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const carouselRef = useRef<HTMLDivElement>(null);
+
+    const handleResetCamera = useCallback(() => {
+        const w = containerRef.current?.clientWidth || window.innerWidth;
+        const h = containerRef.current?.clientHeight || window.innerHeight;
+        setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
+        setZoomScale(w < 768 ? 0.75 : 1.1);
+        playUiSound('CLICK');
+    }, [playUiSound]);
+
+    const handleScrollLeft = useCallback(() => {
+        if (carouselRef.current) {
+            carouselRef.current.scrollBy({ left: -140, behavior: 'smooth' });
+            playUiSound('CLICK');
+        }
+    }, [playUiSound]);
+
+    const handleScrollRight = useCallback(() => {
+        if (carouselRef.current) {
+            carouselRef.current.scrollBy({ left: 140, behavior: 'smooth' });
+            playUiSound('CLICK');
+        }
+    }, [playUiSound]);
+
+    // Give player initially a gorgeous set of tiles across all levels to let them enjoy high construction immediately!
+    useEffect(() => {
+        const initialSeed: Record<number, number> = {
+            0: 30,
+            1: 15,
+            2: 15,
+            3: 10,
+            4: 10,
+            5: 8,
+            6: 8,
+            7: 6,
+            8: 5,
+            9: 5
+        };
+        const updates: Record<number, number> = {};
+        let needsSeed = false;
+        for (const [lvlStr, qty] of Object.entries(initialSeed)) {
+            const lvl = Number(lvlStr);
+            const currentVal = minedInSessionHexes[lvl] || 0;
+            if (currentVal < qty) {
+                updates[lvl] = qty - currentVal;
+                needsSeed = true;
+            }
+        }
+        if (needsSeed) {
+            addMinedHexes(updates);
+        }
+    }, [minedInSessionHexes, addMinedHexes]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -399,23 +989,102 @@ const StoryBuilderView: React.FC = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Check Milestones
-    useEffect(() => {
-        const currentStep = STORY_STEPS[storyMilestone];
-        if (!currentStep) return;
+    // Shape completeness check - checks if the placed level 0 or higher hexes match the active figure's coordinates
+    // under any translation offset (allows random placement anywhere on the board!)
+    const targetCompleted = useMemo(() => {
+        const shape = activeFigure.shape;
+        const activeHexKeys = Object.entries(storyMap)
+            .filter(([_, lvl]) => lvl !== undefined && lvl >= 0)
+            .map(([key, lvl]) => {
+                const [q, r] = key.split(',').map(Number);
+                return { q, r, lvl };
+            });
+        
+        if (activeHexKeys.length < shape.length) return false;
 
-        let count = 0;
-        for (const lvl of Object.values(storyMap)) {
-            if (lvl === currentStep.reqLevel || lvl === currentStep.altReqLevel) count++;
+        for (const anchor of activeHexKeys) {
+            let matchesAll = true;
+            for (const pt of shape) {
+                // Determine layout coordinates relative to anchor offset
+                const targetKey = getHexKey(anchor.q + pt.q, anchor.r + pt.r);
+                const targetLvl = storyMap[targetKey];
+                if (targetLvl === undefined || targetLvl < 0) {
+                    matchesAll = false;
+                    break;
+                }
+                const reqLvl = pt.lvl !== undefined ? pt.lvl : 0;
+                if (targetLvl !== reqLvl) {
+                    matchesAll = false;
+                    break;
+                }
+            }
+            if (matchesAll) return true;
+        }
+        return false;
+    }, [storyMap, activeFigure]);
+
+    const hasAnyHex = useMemo(() => {
+        return Object.values(storyMap).some(lvl => lvl !== undefined && lvl >= 0);
+    }, [storyMap]);
+
+    const isEligibleForPlacement = useCallback((q: number, r: number, forceLevel?: number) => {
+        const lvlToBuild = forceLevel !== undefined ? forceLevel : selectedBuildLevel;
+        if (lvlToBuild === -999) return false; // Demolish is not a placement
+
+        const currentLvl = storyMap[getHexKey(q, r)];
+        const currentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
+
+        if (!hasAnyHex) {
+            // На пустой гекс нельзя размещать никакой гекс кроме 1 (или 0 / -1) уровня
+            if (q === 0 && r === 0) {
+                return lvlToBuild === 0 || lvlToBuild === 1 || lvlToBuild === -1;
+            }
+            return false;
         }
 
-        if (count >= currentStep.reqCount) {
-            setStoryMilestone(storyMilestone + 1);
-            playUiSound('SUCCESS');
+        if (currentlyBuilt) {
+            // "возможно размещение гексов выше уровня"
+            if (lvlToBuild <= currentLvl) return false;
+        } else {
+            // Placing on a brand new empty tile
+            if (lvlToBuild > 1 || lvlToBuild < -1) return false;
         }
-    }, [storyMap, storyMilestone, setStoryMilestone, playUiSound]);
+        
+        const neighbors = [
+            { dq: 1, dr: -1 }, { dq: 1, dr: 0 }, { dq: 0, dr: 1 },
+            { dq: -1, dr: 1 }, { dq: -1, dr: 0 }, { dq: 0, dr: -1 }
+        ];
 
-    // Generate grid points for building (-7 to 7 for buffer)
+        let hasValidNeighbor = false;
+        let supportCount = 0;
+
+        for (const n of neighbors) {
+            const nLvl = storyMap[getHexKey(q + n.dq, r + n.dr)];
+            if (nLvl !== undefined && nLvl >= 0) {
+                hasValidNeighbor = true;
+                
+                // Staircase rule: Difference no more than 1
+                if (Math.abs(lvlToBuild - nLvl) > 1) {
+                    return false;
+                }
+
+                if (nLvl >= lvlToBuild - 1) {
+                    supportCount++;
+                }
+            }
+        }
+
+        if (!currentlyBuilt && !hasValidNeighbor) {
+            return false;
+        }
+
+        if (lvlToBuild >= 2 && supportCount < 2) {
+            return false;
+        }
+
+        return true;
+    }, [hasAnyHex, storyMap, selectedBuildLevel]);
+
     const gridPoints = useMemo(() => {
         const points = [];
         const RADIUS = 6;
@@ -428,58 +1097,204 @@ const StoryBuilderView: React.FC = () => {
             }
         }
         
-        // Depth Sort: primarily by Y coordinate (px.y) for perfect isometric stacking
-        // and incorporating level for z-index effect
         return points.sort((a, b) => {
-            // Core coordinate-based depth
             const depthA = (a.y * 10) + (a.x * 0.1);
             const depthB = (b.y * 10) + (b.x * 0.1);
-            
-            // Adjust depth if one is much higher than the other and they are close
-            // This prevents tall hexes from being drawn UNDER things that should be behind them but are obscured
             return depthA - depthB;
         });
-    }, [storyMap]);
+    }, []);
 
-    const stateRef = useRef({ storyMap, minedInSessionHexes });
-    useEffect(() => {
-        stateRef.current = { storyMap, minedInSessionHexes };
-    }, [storyMap, minedInSessionHexes]);
+    const isPanning = useRef(false);
 
     const handleCellClick = useCallback((q: number, r: number) => {
         if (isPanning.current) return;
+        
         const key = getHexKey(q, r);
-        if (!TARGET_KEYS.has(key)) {
+        const currentLvl = storyMap[key];
+        const isCurrentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
+
+        const eligible = isEligibleForPlacement(q, r);
+        
+        if (isCurrentlyBuilt) {
+            if (eligible && selectedBuildLevel !== -999) {
+                // If it's an existing tile, and the current selected level is valid for upgrading
+                // (It will fall through to execute placement)
+            } else {
+                // Demolish popup
+                playUiSound('CLICK');
+                setPopupCell({ q, r });
+                return;
+            }
+        } else if (!eligible) {
             playUiSound('ERROR');
             return;
         }
-        playUiSound('CLICK');
-        setPopupCell({ q, r });
-    }, [playUiSound]);
 
-    const isPanning = useRef(false);
+        // Ensure player has the selected block in inventory
+        const availableCount = minedInSessionHexes[selectedBuildLevel] || 0;
+        if (availableCount <= 0) {
+            playUiSound('WARNING');
+            return;
+        }
+
+        // Rule: To place a level 1 hex, there must be support of at least 3 adjacent built hexes (lvl >= 0).
+        // (if not placing on an empty map completely center)
+        if (selectedBuildLevel === 1 && hasAnyHex) {
+            const neighborsList = [
+                { dq: 1, dr: -1 }, { dq: 1, dr: 0 }, { dq: 0, dr: 1 },
+                { dq: -1, dr: 1 }, { dq: -1, dr: 0 }, { dq: 0, dr: -1 }
+            ];
+            let builtNeighborsCount = 0;
+            // Also count the cell ITSELF as base if we are UPGRADING it (because it already provides support!)
+            if (isCurrentlyBuilt) {
+                builtNeighborsCount += 3; // Intrinsic support from the base itself!
+            } else {
+                for (const n of neighborsList) {
+                    const nKey = getHexKey(q + n.dq, r + n.dr);
+                    const nLvl = storyMap[nKey];
+                    if (nLvl !== undefined && nLvl >= 0) {
+                        builtNeighborsCount++;
+                    }
+                }
+            }
+            if (builtNeighborsCount < 3) {
+                playUiSound('ERROR');
+                setErrorMessage(
+                    language === 'RU' 
+                        ? 'Нестабильно! Для установки гекса L1 требуется опора из 3-х соседних гексов' 
+                        : 'Unstable! Supporting base of level L1 requires at least 3 adjacent hexes'
+                );
+                setTimeout(() => setErrorMessage(p => p), 4000); 
+                return;
+            }
+        }
+
+        // Place new block!
+        placeStoryHex(q, r, selectedBuildLevel);
+        playUiSound('SUCCESS');
+        setLastPlacedKey(key);
+        setErrorMessage(null); // clear any previous warning
+    }, [isPanning, storyMap, selectedBuildLevel, isEligibleForPlacement, minedInSessionHexes, placeStoryHex, addMinedHexes, playUiSound, setErrorMessage, language, hasAnyHex]);
+
+    const handleCellDblClick = useCallback((q: number, r: number) => {
+        const key = getHexKey(q, r);
+        const currentLvl = storyMap[key];
+        const isCurrentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
+        
+        if (!isCurrentlyBuilt) {
+            handleResetCamera();
+        }
+    }, [storyMap, handleResetCamera]);
+
     const handleDragStart = () => { isPanning.current = true; };
     const handleDragEnd = (e: any) => { 
         setCameraPos({ x: e.target.x(), y: e.target.y() });
         setTimeout(() => { isPanning.current = false; }, 50); 
     };
 
-    const handleZoomIn = () => {
-        setZoomScale(prev => Math.min(2.0, prev + 0.15));
-        playUiSound('CLICK');
+    const lastDist = useRef<number | null>(null);
+
+    const handleWheel = (e: any) => {
+        e.evt.preventDefault();
+        const stage = e.target.getStage();
+        if (!stage) return;
+        
+        const scaleBy = 1.05;
+        const oldScale = zoomScale;
+        
+        const pointer = stage.getPointerPosition();
+        if (!pointer) return;
+
+        const mousePointTo = {
+            x: (pointer.x - cameraPos.x) / oldScale,
+            y: (pointer.y - cameraPos.y) / oldScale,
+        };
+
+        const newScale = e.evt.deltaY < 0 ? oldScale / scaleBy : oldScale * scaleBy;
+        const clampedScale = Math.max(0.4, Math.min(2.0, newScale));
+        
+        setZoomScale(clampedScale);
+        setCameraPos({
+            x: pointer.x - mousePointTo.x * clampedScale,
+            y: pointer.y - mousePointTo.y * clampedScale,
+        });
     };
 
-    const handleZoomOut = () => {
-        setZoomScale(prev => Math.max(0.4, prev - 0.15));
-        playUiSound('CLICK');
+    const handleTouchMove = (e: any) => {
+        e.evt.preventDefault();
+        const touch1 = e.evt.touches[0];
+        const touch2 = e.evt.touches[1];
+
+        if (touch1 && touch2) {
+            isPanning.current = true;
+            const dist = Math.sqrt(
+                Math.pow(touch2.clientX - touch1.clientX, 2) +
+                Math.pow(touch2.clientY - touch1.clientY, 2)
+            );
+
+            if (lastDist.current !== null) {
+                const center = {
+                    x: (touch1.clientX + touch2.clientX) / 2,
+                    y: (touch1.clientY + touch2.clientY) / 2,
+                };
+
+                const oldScale = zoomScale;
+                const pointTo = {
+                    x: (center.x - cameraPos.x) / oldScale,
+                    y: (center.y - cameraPos.y) / oldScale,
+                };
+
+                const newScale = Math.max(0.4, Math.min(2.0, oldScale * Math.max(0.9, Math.min(1.1, dist / lastDist.current))));
+                setZoomScale(newScale);
+
+                setCameraPos({
+                    x: center.x - pointTo.x * newScale,
+                    y: center.y - pointTo.y * newScale,
+                });
+            }
+            lastDist.current = dist;
+        } else {
+            lastDist.current = null;
+        }
     };
 
-    const handleResetCamera = () => {
-        const w = containerRef.current?.clientWidth || window.innerWidth;
-        const h = containerRef.current?.clientHeight || window.innerHeight;
-        setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
-        setZoomScale(w < 768 ? 0.75 : 1.1);
-        playUiSound('CLICK');
+    const handleTouchEnd = () => { 
+        lastDist.current = null; 
+        setTimeout(() => { isPanning.current = false; }, 50);
+    };
+
+    // Advances to next figure when completed
+    const handleClaimReward = () => {
+        playUiSound('SUCCESS');
+        // Grant 1 SP (Skill Point) to the store
+        setSkillPoints(skillPoints + 1);
+        
+        const nextIndex = unlockedFigureIndex + 1;
+        if (nextIndex < FIGURES_COLLECTION.length) {
+            setUnlockedFigureIndex(nextIndex);
+            try {
+                localStorage.setItem('hexopol_figure_index', String(nextIndex));
+            } catch (e) {
+                console.warn(e);
+            }
+        } else {
+            // Completed all figures! Wrap around or reset
+            setUnlockedFigureIndex(0);
+            try {
+                localStorage.setItem('hexopol_figure_index', '0');
+            } catch {}
+        }
+        
+        setPopupCell(null);
+    };
+
+    // Clear board reset
+    const handleClearBoard = () => {
+        if (window.confirm(language === 'RU' ? 'Вы уверены, что хотите очистить поле?' : 'Are you sure you want to clear the hexopl?')) {
+            playUiSound('CLICK');
+            clearStoryMap();
+            setPopupCell(null);
+        }
     };
 
     return (
@@ -489,10 +1304,12 @@ const StoryBuilderView: React.FC = () => {
                 <Stage 
                     width={stageSize.width} 
                     height={stageSize.height}
+                    onWheel={handleWheel}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                 >
                     <Layer listening={false}>
                         <NebulaBackground width={stageSize.width} height={stageSize.height} />
-                        {/* Vignette Effect */}
                         <Rect
                             x={0}
                             y={0}
@@ -515,7 +1332,6 @@ const StoryBuilderView: React.FC = () => {
                         onDragStart={handleDragStart} 
                         onDragEnd={handleDragEnd}
                         dragBoundFunc={(pos) => {
-                            // Boundary logic adjusted for zoom scale
                             const BOUND_X = stageSize.width * 0.7 * Math.max(1, zoomScale);
                             const BOUND_Y = stageSize.height * 0.7 * Math.max(1, zoomScale);
                             const centerX = stageSize.width / 2;
@@ -530,19 +1346,31 @@ const StoryBuilderView: React.FC = () => {
                             {gridPoints.map(coord => {
                                 const key = getHexKey(coord.q, coord.r);
                                 const lvl = storyMap[key];
-                                const isTarget = TARGET_KEYS.has(key);
+                                const blueprintPt = activeFigure.shape.find(pt => pt.q === coord.q && pt.r === coord.r);
+                                const isBlueprint = !!blueprintPt && (lvl === undefined || lvl < 0);
+                                const blueprintLvl = blueprintPt?.lvl !== undefined ? blueprintPt.lvl : 0;
                                 
+                                const isEligible = isEligibleForPlacement(coord.q, coord.r);
+                                const isCenterInitially = coord.q === 0 && coord.r === 0 && !hasAnyHex;
+                                const isDemolishMode = selectedBuildLevel === -999;
+                                const availableCount = minedInSessionHexes[selectedBuildLevel] || 0;
+                                const canPlaceHex = isDemolishMode ? (lvl !== undefined && lvl >= 0) : (isEligible && availableCount > 0);
+
                                 return (
                                     <StoryHex
                                         key={key}
                                         q={coord.q}
                                         r={coord.r}
                                         level={lvl}
-                                        isTarget={isTarget}
-                                        isEligible={isTarget && lvl === undefined}
+                                        isBlueprint={isBlueprint}
+                                        blueprintLevel={blueprintLvl}
+                                        isEligible={isEligible}
+                                        isCenterInitially={isCenterInitially}
                                         isSelected={popupCell !== null && popupCell.q === coord.q && popupCell.r === coord.r}
                                         isNew={lastPlacedKey === key}
+                                        canPlace={canPlaceHex}
                                         onClick={handleCellClick}
+                                        onDblClick={handleCellDblClick}
                                     />
                                 );
                             })}
@@ -550,48 +1378,66 @@ const StoryBuilderView: React.FC = () => {
                     </Layer>
                 </Stage>
             </div>
+            
             <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between overflow-hidden p-4 md:p-8">
+                
+                {/* FLOATING LIGHTWEIGHT ERROR MESSAGE */}
+                <AnimatePresence>
+                    {errorMessage && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                            className="absolute top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-auto w-[calc(100%-2rem)] max-w-sm"
+                        >
+                            <div className="bg-[#1e0712]/90 border border-red-500/30 text-red-200 px-4 py-3 rounded-2xl shadow-[0_4px_24px_rgba(239,68,68,0.15)] flex items-center gap-3 backdrop-blur-md">
+                                <Info className="w-5 h-5 text-red-400 shrink-0" />
+                                <div className="flex flex-col text-left">
+                                    <span className="text-[8px] font-black uppercase text-red-400 tracking-widest leading-none">
+                                        {language === 'RU' ? 'КРИТЕРИЙ СТАБИЛЬНОСТИ' : 'STABILITY RULES'}
+                                    </span>
+                                    <span className="text-[10px] md:text-xs font-semibold leading-snug mt-1">
+                                        {errorMessage}
+                                    </span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
                 
                 {/* TOP HEADER STATUS */}
                 <motion.div 
                     animate={{ y: isUiHidden ? -100 : 0, opacity: isUiHidden ? 0 : 1 }}
                     transition={{ duration: 0.3 }}
-                    className="flex justify-between items-center w-full pointer-events-auto"
+                    className="flex justify-between items-center w-full pointer-events-auto h-10"
                 >
-                    <div className="flex items-center gap-2 md:gap-3">
+                    <div className="flex items-center gap-2 h-full">
                         <button 
                             onClick={() => { playUiSound('CLICK'); setUIState('MENU'); }}
-                            className="flex items-center justify-center w-10 h-10 bg-slate-900/90 border border-white/10 rounded-2xl hover:bg-slate-800 text-white transition-all shadow-[0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-md hover:border-indigo-500/50"
+                            className="flex items-center justify-center w-10 h-10 bg-slate-900/95 border border-white/10 rounded-xl hover:bg-slate-800 text-white transition-all shadow-md backdrop-blur-md hover:border-indigo-500/50 cursor-pointer"
                         >
                             <ArrowLeft className="w-5 h-5" /> 
                         </button>
-
-                        <div className="bg-slate-900/95 border border-white/10 rounded-2xl px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 backdrop-blur-md shadow-2xl">
-                            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
-                            <div className="flex flex-col">
-                                <span className="text-[8px] text-slate-400 tracking-wider font-bold leading-none mb-0.5">
-                                    {language === 'RU' ? 'РЕЖИМ СИНХРОНИЗАЦИИ' : 'SYNCHRONIZER MATRIX'}
-                                </span>
-                                <span className="text-white font-black uppercase text-[10px] md:text-xs">
-                                    {language === 'RU' ? 'ГЛАВА' : 'CHAPTER'} {storyMilestone + 1}
-                                </span>
-                            </div>
-                        </div>
                     </div>
 
-                    <div className="flex items-center gap-2 relative">
-                        {/* Settings Button & Popover */}
-                        <div className="relative">
+                    <div className="flex items-center gap-2 h-full">
+                        {/* Skill Points Scoreboard */}
+                        <div className="bg-slate-900/95 border border-indigo-500/35 rounded-xl px-2.5 h-10 flex items-center gap-1.5 backdrop-blur-md shadow-md text-indigo-200 cursor-default">
+                            <Trophy className="w-4 h-4 text-indigo-400 shrink-0" />
+                            <span className="text-white font-black text-[12px] md:text-[13px]">{skillPoints} SP</span>
+                        </div>
+
+                        {/* Settings Button */}
+                        <div className="relative h-full">
                             <button 
                                 onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
-                                className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ml-0 px-0 pt-0 ${
+                                className={`w-10 h-10 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-md active:scale-95 cursor-pointer ${
                                     isSettingsOpen 
                                         ? 'bg-slate-800 border-indigo-500/50 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
                                         : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'
                                 }`}
-                                title={language === 'RU' ? 'Настройки и Правила' : 'Settings & Rules'}
                             >
-                                <Settings className={`w-5 h-5 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-500`} />
+                                <Settings className={`w-4.5 h-4.5 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-500`} />
                             </button>
 
                             <AnimatePresence>
@@ -600,15 +1446,22 @@ const StoryBuilderView: React.FC = () => {
                                         initial={{ opacity: 0, scale: 0.9, y: -10 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                                        className="absolute top-full right-0 mt-2 p-3 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2 min-w-[180px] z-[60] origin-top-right font-sans"
-                                    >
-                                        {/* Unified Vector Rules Button inside Settings Popover */}
+                                        className="absolute top-full right-0 mt-2 p-3 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2 min-w-[200px] z-[60] origin-top-right"
+                                    > 
                                         <button 
                                             onClick={() => { playUiSound('CLICK'); setIsHelpOpen(true); setIsSettingsOpen(false); }}
-                                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all w-full text-left font-black uppercase text-[10px] tracking-[0.15em] shadow-sm active:scale-95"
+                                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all w-full text-left font-black uppercase text-[9px] tracking-[0.1em]"
                                         >
                                             <HelpCircle className="w-4 h-4 shrink-0" />
-                                            <span>{language === 'RU' ? 'Физика Векторов' : 'Vector Rules'}</span>
+                                            <span>{language === 'RU' ? 'Справка Гексополя' : 'Hexopol Guide'}</span>
+                                        </button>
+
+                                        <button 
+                                            onClick={handleClearBoard}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-655/15 border border-red-550/20 text-red-400 hover:bg-red-900/40 hover:text-white transition-all w-full text-left font-black uppercase text-[9px] tracking-[0.1em]"
+                                        >
+                                            <RefreshCw className="w-4 h-4 shrink-0 transition-transform hover:rotate-180" />
+                                            <span>{language === 'RU' ? 'Очистить карту' : 'Clear Board'}</span>
                                         </button>
 
                                         <div className="h-px bg-white/5 my-0.5" />
@@ -617,14 +1470,12 @@ const StoryBuilderView: React.FC = () => {
                                             <button 
                                                 onClick={() => { playUiSound('CLICK'); toggleMusic(); }}
                                                 className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isMusicMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-indigo-900/40 border-indigo-500/50 text-indigo-400'}`}
-                                                title={language === 'RU' ? 'Музыка' : 'Music'}
                                             >
                                                 {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
                                             </button>
                                             <button 
                                                 onClick={() => { playUiSound('CLICK'); toggleSfx(); }}
                                                 className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isSfxMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-emerald-900/40 border-emerald-500/50 text-emerald-400'}`}
-                                                title={language === 'RU' ? 'Звуки' : 'Sounds'}
                                             >
                                                 {isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                                             </button>
@@ -632,7 +1483,7 @@ const StoryBuilderView: React.FC = () => {
 
                                         <div className="h-px bg-white/5 my-0.5" />
 
-                                        <div className="px-1 py-1 flex flex-col gap-1.5">
+                                        <div className="px-1 py-1 flex flex-col gap-1">
                                             <div className="flex items-center gap-2 text-[8px] font-black uppercase text-slate-500 tracking-widest pl-1">
                                                 <Languages className="w-3 h-3" />
                                                 {language === 'RU' ? 'Язык' : 'Language'}
@@ -656,205 +1507,110 @@ const StoryBuilderView: React.FC = () => {
                                 )}
                             </AnimatePresence>
                         </div>
-
-                        <div className="bg-slate-950/50 text-[10px] text-indigo-400 font-mono tracking-widest hidden lg:block overflow-hidden p-0 text-[0px] leading-[0px] w-0 h-0">
-                            COORD: [Q, R] ISOMETRIC_Z
-                        </div>
                     </div>
                 </motion.div>
 
-                {/* HELPER MATRIX STATUS AND BLOCK SELECTOR DOCK */}
+                {/* TOP INSTRUCTIONS PANEL (MOVED UP) */}
                 <motion.div 
-                    animate={{ y: isUiHidden ? -180 : 0, opacity: isUiHidden ? 0 : 1 }}
+                    initial={{ y: -50, opacity: 0 }}
+                    animate={{ 
+                        y: isUiHidden ? -100 : 0, 
+                        opacity: isUiHidden ? 0 : 1,
+                        pointerEvents: isUiHidden ? 'none' : 'auto'
+                    }}
                     transition={{ duration: 0.3 }}
-                    className="w-full flex flex-col items-center gap-2 mt-2 pointer-events-auto max-w-xl mx-auto md:max-w-2xl"
+                    className="w-full max-w-sm md:max-w-md mx-auto mt-3 pointer-events-none flex justify-center z-[45]"
                 >
-                    {/* Cyber Dock (Fluid and scrollable horizontally for any amount of blocks) */}
-                    <div className="w-full bg-slate-900/90 border border-white/10 rounded-2xl md:rounded-3xl p-2.5 backdrop-blur-xl shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-indigo-500/20 to-transparent" />
-                        
-                        <div className="flex sm:flex-row flex-col justify-between items-stretch sm:items-center gap-2 md:gap-4">
-                            <div className="flex flex-col">
-                                <span className="text-[7.5px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1 leading-none mb-1">
-                                    <Sparkles className="w-3 h-3 text-indigo-400 animate-pulse" />
-                                    {language === 'RU' ? 'СКЛАД ФРАГМЕНТОВ РЕАЛЬНОСТИ' : 'REALITY FRAGMENTS STORAGE'}
-                                </span>
-                                <span className="text-[9px] text-slate-400 font-medium font-sans">
-                                    {language === 'RU' ? 'Кликните по гексу на поле, чтобы открыть меню размещения' : 'Click any hex on the grid to deploy materials'}
-                                </span>
-                            </div>
-
-                            {/* Dock Items */}
-                            {Object.keys(minedInSessionHexes).length === 0 ? (
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic animate-pulse py-1">
-                                    {language === 'RU' ? 'Склад пуст (проходите уровни на карте)' : 'Warehouse blank (complete levels)'}
-                                </span>
-                            ) : (
-                                <div className="flex gap-2 overflow-x-auto no-scrollbar max-w-full py-0.5">
-                                    {Object.entries(minedInSessionHexes).sort((a,b) => Number(a[0]) - Number(b[0])).map(([level, count]) => {
-                                        const lvl = Number(level);
-                                        const hexCol = lvl < 0 ? '#4338ca' : (lvl === 0 ? '#475569' : (lvl === 1 ? '#059669' : (lvl === 2 ? '#d97706' : '#dc2626')));
-                                        if (count <= 0) return null;
-
-                                        return (
-                                            <div
-                                                key={lvl}
-                                                className="shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-slate-950/40 border-white/5"
-                                            >
-                                                <div className="w-3.5 h-3.5 rotate-12 relative flex items-center justify-center rounded-sm" style={{ backgroundColor: hexCol }}>
-                                                    <span className="text-[7px] text-white/90 font-black absolute">{lvl >= 0 ? `+${lvl}` : lvl}</span>
-                                                </div>
-                                                <div className="flex flex-col items-start leading-none gap-0.5 font-sans">
-                                                    <span className="text-[7px] text-slate-500 uppercase font-bold tracking-wider">
-                                                        {lvl === 0 ? (language === 'RU' ? 'Почва' : 'Ground') : (lvl < 0 ? (language === 'RU' ? 'Шахта' : 'Depth') : (language === 'RU' ? 'Пик' : 'Peak'))}
-                                                    </span>
-                                                    <span className="text-[10.5px] font-black text-slate-200">x{count}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                    <div className="bg-[#020617]/85 border border-white/5 rounded-2xl w-full shadow-2xl backdrop-blur-md flex flex-col overflow-hidden pointer-events-auto p-3.5 relative">
+                        {/* Sleek Top Edge Progress Line */}
+                        <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-slate-900/60 overflow-hidden">
+                            <div 
+                                className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 transition-all duration-500"
+                                style={{ width: `${((unlockedFigureIndex + 1) / FIGURES_COLLECTION.length) * 100}%` }}
+                            />
                         </div>
-                    </div>
-                </motion.div>
 
-                {/* IMMERSIVE COMPASS & ZOOM DECK CONTROLS */}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 pointer-events-auto flex flex-col gap-2 bg-slate-900/90 border border-white/10 rounded-2xl p-2 backdrop-blur-md shadow-2xl animate-fade-in">
-                    <button 
-                        onClick={handleZoomIn}
-                        title={language === 'RU' ? 'Приблизить' : 'Zoom In'}
-                        className="w-9 h-9 bg-slate-950/40 border border-white/5 hover:bg-indigo-600 hover:text-white rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-sm"
-                    >
-                        <ZoomIn className="w-4.5 h-4.5" />
-                    </button>
-                    <button 
-                        onClick={handleZoomOut}
-                        title={language === 'RU' ? 'Отдалить' : 'Zoom Out'}
-                        className="w-9 h-9 bg-slate-950/40 border border-white/5 hover:bg-indigo-600 hover:text-white rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-sm"
-                    >
-                        <ZoomOut className="w-4.5 h-4.5" />
-                    </button>
-                    <button 
-                        onClick={handleResetCamera}
-                        title={language === 'RU' ? 'Сбросить обзор' : 'Reset Focus'}
-                        className="w-9 h-9 bg-slate-950/40 border border-white/5 hover:bg-indigo-600 hover:text-white rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-sm"
-                    >
-                        <Compass className="w-4.5 h-4.5" />
-                    </button>
-                    <div className="h-px bg-white/10 mx-1" />
-                    <button 
-                        onClick={() => { playUiSound('CLICK'); setIsUiHidden(!isUiHidden); }}
-                        title={isUiHidden ? (language === 'RU' ? 'Показать интерфейс' : 'Show UI') : (language === 'RU' ? 'Скрыть интерфейс' : 'Hide UI')}
-                        className={`w-9 h-9 border rounded-xl flex items-center justify-center transition-all ${isUiHidden ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]' : 'bg-slate-950/40 border-white/5 hover:bg-indigo-600 hover:text-white text-slate-300'}`}
-                    >
-                        {isUiHidden ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-                    </button>
-                </div>
-
-                {/* BOTTOM CONTENT - Narrative & Settings Container */}
-                <div className="mt-auto flex md:flex-row flex-col items-stretch md:items-end justify-between gap-4 pointer-events-none pt-4 w-full">
-                    
-                    {/* NARRATIVE CONSTRUCT PANEL */}
-                    <motion.div 
-                        initial={{ y: 50, opacity: 0 }}
-                        animate={{ 
-                            y: isUiHidden ? 100 : 0, 
-                            opacity: isUiHidden ? 0 : 1,
-                            pointerEvents: isUiHidden ? 'none' : 'auto'
-                        }}
-                        transition={{ duration: 0.3 }}
-                        className="bg-slate-950/95 border border-white/10 rounded-2xl w-full max-w-[calc(100vw-32px)] md:max-w-sm lg:max-w-md shadow-2xl backdrop-blur-3xl flex flex-col overflow-hidden pointer-events-auto p-4 md:p-5 relative"
-                    >
-                        {/* Dots Chapter Indicator */}
-                        <div className="absolute top-4 right-4 flex gap-1">
-                            {STORY_STEPS.map((_, i) => (
-                                <div key={i} className={`w-1 h-1 rounded-full transition-all duration-500 ${i < storyMilestone ? 'bg-indigo-500' : (i === storyMilestone ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 w-3' : 'bg-slate-800')}`} />
-                            ))}
+                        {/* Compact progress text replacing the overflowing horizontal dots */}
+                        <div className="absolute top-3 right-4.5 bg-indigo-950/55 px-2 py-0.5 rounded-md border border-indigo-500/20 shadow-sm leading-none flex items-center">
+                            <span className="text-[8px] font-black text-indigo-300 tracking-wider">
+                                {unlockedFigureIndex + 1}/{FIGURES_COLLECTION.length}
+                            </span>
                         </div>
 
                         <AnimatePresence mode="wait">
                         {!isNarrativeCollapsed ? (
                             <motion.div
-                                key={`expanded-${storyMilestone}`}
+                                key={`expanded-${unlockedFigureIndex}`}
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -6 }}
                                 transition={{ duration: 0.2 }}
                                 className="flex flex-col"
                             >
-                                <div className="flex justify-between items-start mb-1 pr-12">
-                                    <span className="text-[7.5px] font-black text-indigo-400 uppercase tracking-widest">
-                                        {language === 'RU' ? 'ЗАДАЧА НА ГЛАВУ' : 'CHAPTER OBJECTIVE'}
+                                <div className="flex justify-between items-start mb-2 pr-12 border-b border-white/5 pb-1">
+                                    <span className="text-[7px] font-black text-cyan-400 uppercase tracking-widest leading-none">
+                                        {language === 'RU' ? 'АКТИВНЫЙ ЧЕРТЕЖ' : 'ACTIVE BLUEPRINT'}
                                     </span>
                                     <button 
                                         onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(true); }}
-                                        className="text-[8px] font-black text-cyan-400 hover:text-cyan-300 uppercase underline pointer-events-auto flex items-center gap-0.5 animate-pulse"
+                                        className="text-[7.5px] font-black text-cyan-400 hover:text-cyan-300 uppercase underline pointer-events-auto flex items-center gap-0.5"
                                     >
-                                        <ChevronDown className="w-3.5 h-3.5" />
+                                        <ChevronUp className="w-3 h-3" />
                                         <span>{language === 'RU' ? 'СВЕРНУТЬ' : 'COLLAPSE'}</span>
                                     </button>
                                 </div>
 
-                                {STORY_STEPS[storyMilestone] ? (
-                                    <>
-                                        <h3 className="text-xs md:text-sm font-black text-white uppercase tracking-tight mb-1 pr-12 leading-tight">
-                                            {STORY_STEPS[storyMilestone].title}
+                                <div className="flex gap-3.5 mb-2.5">
+                                    {/* Mini SVG representation showing where to build it */}
+                                    <MiniFigureBlueprint shape={activeFigure.shape} />
+                                    
+                                    <div className="flex flex-col justify-center">
+                                        <h3 className="text-[11px] md:text-xs font-black text-white uppercase tracking-tight leading-tight mb-0.5">
+                                            {language === 'RU' ? activeFigure.nameRU : activeFigure.nameEN}
                                         </h3>
-                                        
-                                        <p className="text-slate-400 text-[10px] md:text-xs leading-relaxed mb-3 font-medium italic opacity-95">
-                                            "{STORY_STEPS[storyMilestone].text}"
+                                        <p className="text-slate-400 text-[9.5px] leading-snug font-sans font-medium">
+                                            {language === 'RU' ? activeFigure.descRU : activeFigure.descEN}
                                         </p>
-                                        
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex-1 font-sans">
-                                                <div className="flex justify-between text-[8px] md:text-[9px] font-black font-mono text-cyan-400 mb-1 uppercase tracking-widest">
-                                                    <span>{language === 'RU' ? 'ДИСПЕРСИЯ СЕТКИ' : 'MATRIX ALIGNMENT'}</span>
-                                                    <span className="bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-500/20">
-                                                        {Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length} / {STORY_STEPS[storyMilestone].reqCount}
-                                                    </span>
-                                                </div>
-                                                <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5">
-                                                    <motion.div 
-                                                        className="h-full bg-gradient-to-r from-indigo-500 via-indigo-400 to-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.6)]"
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${Math.min(100, Math.floor((Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length / STORY_STEPS[storyMilestone].reqCount) * 100))}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Action Button */}
-                                            <button 
-                                                onClick={() => { 
-                                                    playUiSound('CLICK'); 
-                                                    if (Object.keys(minedInSessionHexes).length === 0) {
-                                                        setCampaignMode('LEVELS');
-                                                        setUIState('CAMPAIGN_MAP');
-                                                    }
-                                                }}
-                                                className="w-10 h-10 bg-indigo-600 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-indigo-400/50 grow-0 shrink-0 hover:border-indigo-500"
-                                            >
-                                                <ChevronRight className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="py-2 flex items-center gap-3 block w-full">
-                                        <Crown className="w-6 h-6 text-amber-400 animate-bounce" />
-                                        <div className="flex flex-col font-sans">
-                                            <h3 className="text-xs md:text-sm font-black text-amber-400 uppercase tracking-tight">
-                                                {language === 'RU' ? 'ПРОСТРАНСТВО СТАБИЛИЗИРОВАНО' : 'CHRONOS SYNCHRONIZED'}
-                                            </h3>
-                                            <p className="text-[9px] text-amber-200/50 italic font-medium">
-                                                {language === 'RU' ? 'Сектор Небула полностью спроектирован.' : 'Nebula sector successfully aligned.'}
-                                            </p>
-                                        </div>
                                     </div>
-                                )}
+                                </div>
+
+                                <div className="p-2 bg-slate-950/40 border border-white/5 rounded-lg mb-2.5 flex flex-col gap-1 text-[8px] text-slate-450 font-sans leading-tight font-medium">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+                                        <span>{language === 'RU' ? '1. Почва L0 выделена голубым при клике' : '1. Deploy Level 0 (Ground) cells'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
+                                        <span>{language === 'RU' ? '2. Составляйте фигуру по чертежу или в любом месте' : '2. Match coordinates or build anywhere'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
+                                        <span>{language === 'RU' ? '3. Вы получите +1 SP за правильную фигуру!' : '3. Claim 1 SP on completion!'}</span>
+                                    </div>
+                                </div>
+
+                                {/* Claim & Completion Button */}
+                                <div className="flex items-center gap-2">
+                                    {targetCompleted ? (
+                                        <motion.button
+                                            onClick={handleClaimReward}
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            className="w-full py-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-black uppercase text-[9px] tracking-widest rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.35)] flex items-center justify-center gap-2 border border-purple-400"
+                                        >
+                                            <Crown className="w-3.5 h-3.5" />
+                                            <span>{language === 'RU' ? 'ПРИНЯТЬ: +1 SP // СЛЕД. ФИГУРА' : 'COLLECT: +1 SP // NEXT'}</span>
+                                        </motion.button>
+                                    ) : (
+                                        <div className="w-full py-2 bg-slate-950/50 border border-white/5 text-slate-500 font-black uppercase text-[8.5px] tracking-widest rounded-xl text-center italic">
+                                            {language === 'RU' ? 'ФИГУРА ЕЩЕ НЕ СОБРАНА' : 'FIGURE NOT YET COMPLETED'}
+                                        </div>
+                                    )}
+                                </div>
                             </motion.div>
                         ) : (
                             <motion.div
-                                key={`collapsed-${storyMilestone}`}
+                                key={`collapsed-${unlockedFigureIndex}`}
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -6 }}
@@ -863,34 +1619,114 @@ const StoryBuilderView: React.FC = () => {
                             >
                                 <div className="flex flex-col">
                                     <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">
-                                        {language === 'RU' ? 'ЗАДАЧА' : 'OBJECTIVE'}
+                                        {language === 'RU' ? 'СТРОИТЕЛЬНАЯ ЗАДАЧА' : 'CONSTRUCT OBJECTIVE'}
                                     </span>
-                                    <h3 className="text-[10px] md:text-xs font-black text-white uppercase tracking-tight line-clamp-1 pr-4">
-                                        {STORY_STEPS[storyMilestone] ? STORY_STEPS[storyMilestone].title : (language === 'RU' ? 'СТАБИЛИЗИРОВАНО' : 'ALIGNED')}
+                                    <h3 className="text-[10px] md:text-xs font-black text-white uppercase tracking-tight line-clamp-1 pr-2">
+                                        {language === 'RU' ? activeFigure.nameRU : activeFigure.nameEN}
                                     </h3>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    {STORY_STEPS[storyMilestone] && (
-                                        <span className="bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-500/30 text-[9px] font-black font-mono text-cyan-400">
-                                            {Object.values(storyMap).filter(l => l === STORY_STEPS[storyMilestone].reqLevel || l === STORY_STEPS[storyMilestone].altReqLevel).length}/{STORY_STEPS[storyMilestone].reqCount}
-                                        </span>
+                                    {targetCompleted && (
+                                        <span className="bg-emerald-950 border border-emerald-500/30 text-emerald-400 text-[7px] font-black px-1.5 py-0.5 rounded leading-none">DONE!</span>
                                     )}
                                     <button 
                                         onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(false); }}
-                                        className="text-[8px] font-black text-cyan-400 hover:text-cyan-300 uppercase underline flex items-center gap-0.5 animate-pulse"
+                                        className="text-[7.5px] font-black text-cyan-400 hover:text-cyan-300 uppercase underline flex items-center gap-0.5 animate-pulse"
                                     >
-                                        <ChevronUp className="w-3.5 h-3.5" />
-                                        <span>{language === 'RU' ? 'ОБЗОР' : 'EXPAND'}</span>
+                                        <ChevronDown className="w-3 h-3" />
+                                        <span>{language === 'RU' ? 'ИНФО' : 'INFO'}</span>
                                     </button>
                                 </div>
                             </motion.div>
                         )}
                         </AnimatePresence>
+                    </div>
+                </motion.div>
+
+                {/* BOTTOM CONTENT - Compact Inventory Carousel */}
+                <div className="mt-auto flex justify-center pointer-events-none pt-4 w-full max-w-5xl mx-auto px-4 md:px-0 select-none pb-2">
+                    
+                    {/* COMPACT CAROUSEL - relocated elegantly to the center (cells made smaller, L0 to L9, eraser) */}
+                    <motion.div
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ 
+                            y: isUiHidden ? 100 : 0, 
+                            opacity: isUiHidden ? 0 : 1,
+                            pointerEvents: isUiHidden ? 'none' : 'auto'
+                        }}
+                        transition={{ duration: 0.3 }}
+                        className="w-full md:max-w-md lg:max-w-xl flex flex-col items-stretch pointer-events-auto"
+                    >
+                        <div className="w-full bg-[#090d1f]/85 border border-white/5 rounded-2xl p-2 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500/20 to-transparent" />
+                            
+                            {/* Carousel Wrapper */}
+                            <div className="relative flex items-center w-full px-5">
+                                
+                                {/* Left Scroll Command */}
+                                <button
+                                    onClick={handleScrollLeft}
+                                    className="absolute left-0 z-20 w-6 h-6 rounded-lg bg-[#0c132c]/90 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-indigo-600 transition-all shadow-md active:scale-95 cursor-pointer"
+                                    title={language === 'RU' ? 'Назад' : 'Prev'}
+                                >
+                                    <ChevronLeft className="w-3 h-3" />
+                                </button>
+
+                                {/* Scrolling container */}
+                                <div 
+                                    ref={carouselRef}
+                                    className="w-full flex flex-row gap-1.5 overflow-x-auto pb-0.5 scrollbar-none flex-nowrap scroll-smooth"
+                                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                >
+                                    
+                                {/* Levels L0 to L9 */}
+                                    {Array.from({ length: 10 }).map((_, lvl) => {
+                                        const qty = minedInSessionHexes[lvl] || 0;
+                                        const isSelected = selectedBuildLevel === lvl;
+                                        const theme = THEME_PALETTE[String(lvl)] || THEME_PALETTE['0'];
+                                        return (
+                                            <button
+                                                key={lvl}
+                                                onClick={() => { playUiSound('CLICK'); setSelectedBuildLevel(lvl); }}
+                                                className={`flex-shrink-0 flex flex-col items-center justify-between p-1 rounded-lg border text-center transition-all w-11 h-15 relative cursor-pointer outline-none group ${
+                                                    isSelected
+                                                        ? 'bg-indigo-950/40 border-cyan-400/50 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102'
+                                                        : qty > 0 
+                                                            ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
+                                                            : 'bg-slate-950/20 border-white/5 opacity-50 text-slate-500 hover:opacity-70'
+                                                }`}
+                                            >
+                                                <span className="text-[6.5px] font-black tracking-widest uppercase leading-none text-slate-400">
+                                                    L{lvl}
+                                                </span>
+                                                
+                                                <div className="w-7 h-8 flex items-center justify-center">
+                                                    {drawInventoryHex(lvl, theme)}
+                                                </div>
+
+                                                <span className={`text-[7px] font-mono font-bold leading-none ${qty > 0 ? 'text-indigo-400' : 'text-slate-600'}`}>
+                                                    x{qty}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Right Scroll Command */}
+                                <button
+                                    onClick={handleScrollRight}
+                                    className="absolute right-0 z-20 w-6 h-6 rounded-lg bg-[#0c132c]/90 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-indigo-600 transition-all shadow-md active:scale-95 cursor-pointer"
+                                    title={language === 'RU' ? 'Вперед' : 'Next'}
+                                >
+                                    <ChevronRight className="w-3 h-3" />
+                                </button>
+                            </div>
+                        </div>
                     </motion.div>
                 </div>
             </div>
 
-            {/* HIGH TECH INTERACTIVE VECTOR GUIDELINES MANUAL (Rulebook Modal) */}
+            {/* HIGH TECH INTENSIVE PHYSICAL RULES */}
             <AnimatePresence>
                 {isHelpOpen && (
                     <motion.div 
@@ -905,15 +1741,12 @@ const StoryBuilderView: React.FC = () => {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.95, y: 20 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-[0_0_50px_rgba(79,70,229,0.25)] relative overflow-hidden text-left group"
+                            className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-[0_0_50px_rgba(79,70,229,0.25)] relative overflow-hidden text-left"
                         >
-                            {/* Cyber Corner Brackets */}
                             <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
                             <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
                             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
                             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
-
-                            {/* Scanlines */}
                             <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
 
                             <div className="flex justify-between items-start mb-6 z-20 relative">
@@ -922,9 +1755,9 @@ const StoryBuilderView: React.FC = () => {
                                         <Info className="w-5 h-5 text-cyan-400 shrink-0" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none mb-1">SYSTEM_MANUAL</span>
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none mb-1">SYSTEM_GUIDE</span>
                                         <h2 className="text-base md:text-lg font-black text-white uppercase tracking-wider leading-none">
-                                            {language === 'RU' ? 'Конструкция Сектора' : 'Sector Blueprint Specs'}
+                                            {language === 'RU' ? 'Правила Гексополя' : 'Hexopol Guide rules'}
                                         </h2>
                                     </div>
                                 </div>
@@ -935,44 +1768,44 @@ const StoryBuilderView: React.FC = () => {
 
                             <p className="text-slate-400 text-xs md:text-sm mb-6 leading-relaxed relative z-20">
                                 {language === 'RU' 
-                                    ? 'Векторная сетка сектора подчиняется строгим законам стабильности пространства. Чтобы успешно синхронизировать элементы, соблюдайте следующие правила:' 
-                                    : 'The sectors vector grid obeys strict spatial stability equations. To successfully align and persist templates, adhere to the mechanics below:'}
+                                    ? 'Гексополь — это творческое логическое пространство, где вы собираете древние фигуры из гексов. Накапливайте Очки Умений для развития вашей Кампании:' 
+                                    : 'The Hexopol is a sanctuary of spatial construction where you shape hex figures. Use your analytical wits to claim Skill Points and power your global campaign Upgrades:'}
                             </p>
 
-                            <div className="space-y-4 mb-6 relative z-20 max-h-[40vh] overflow-y-auto no-scrollbar pr-1">
+                            <div className="space-y-4 mb-6 relative z-20 max-h-[45vh] overflow-y-auto no-scrollbar pr-1">
                                 <div className="p-3 bg-slate-900/40 rounded-xl border border-white/5">
                                     <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
-                                        {language === 'RU' ? 'Правило Нулевой Базы (Фундамент)' : 'Ground Foundations (Level 0)'}
+                                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+                                        {language === 'RU' ? '1. Подача ресурсов (Плитки 0 уровня)' : '1. Supply Level 0 Tiles'}
                                     </h4>
                                     <p className="text-[11px] text-slate-400 leading-normal">
                                         {language === 'RU'
-                                            ? 'Гексы 0 уровня формируют базовую энерго-опору. Их можно беспрепятственно выкладывать на любые свободные чертежные ячейки (мишени).'
-                                            : 'Level 0 blocks serve as the vital base ground state. They can be freely placed onto any empty design templates.'}
+                                            ? 'Вам изначально дается 10 плиток почвы 0-го уровня. При размещении новых плиток баланс автоматически пополняется до 10 штук, так что у вас всегда есть материал!'
+                                            : 'You receive 10 level 0 tiles initially. Placement consumes a block, though the matrix maintains your backup buffer at 10 tiles, ensuring you never run out!'}
                                     </p>
                                 </div>
 
                                 <div className="p-3 bg-slate-900/40 rounded-xl border border-white/5">
                                     <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" />
-                                        {language === 'RU' ? 'Правило Лестницы (Перепад высот)' : 'Staircase Rule (Step Heights)'}
+                                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" />
+                                        {language === 'RU' ? '2. Очерёдность и Обводка' : '2. Adjacency Outline'}
                                     </h4>
                                     <p className="text-[11px] text-slate-400 leading-normal">
                                         {language === 'RU'
-                                            ? 'Конструкция остальных уровней требует опоры. Вы можете поставить гекс только тогда, когда перепад высоты с соседней ячейкой составляет ровно 1 шаг по модулю (|ΔH| = 1).'
-                                            : 'Other tiers require physical support. You can only deploy a block if the height delta to an adjacent structured cell is exactly 1 step (|ΔH| = 1).'}
+                                            ? 'Первая плитка выкладывается в самый центр (0,0), который упруго мигает синим вектором. Каждая последующая должна соприкасаться с уже уложенными гексами. Все доступные для укладки клетки обводятся синим пунктиром.'
+                                            : 'The first cell sits exactly at the anchor center (0,0), which glows with energetic cyan. All subsequent hexes must attach adjacent to built ones. Valid placement borders dynamically outline in dashed line.'}
                                     </p>
                                 </div>
 
                                 <div className="p-3 bg-slate-900/40 rounded-xl border border-white/5">
                                     <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.5)]" />
-                                        {language === 'RU' ? 'Целевая Подсветка диапазонов' : 'Holographic Range Indicators'}
+                                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.5)]" />
+                                        {language === 'RU' ? '3. Выкладывание по чертежам или случайно' : '3. Blueprint or Organic Shape'}
                                     </h4>
                                     <p className="text-[11px] text-slate-400 leading-normal">
                                         {language === 'RU'
-                                            ? 'При выборе любого блока из Хранилища, все доступные для строительства ячейки замигают бирюзовыми кольцами!'
-                                            : 'When selecting any block from your Storage, all valid constructive targets instantly pulse with cyan indicators.'}
+                                            ? 'Каждая фигура имеет фиолетовый призрак-чертёж на поле. Вы можете собрать её строго по чертежу вокруг центра, а можете случайно разместить где угодно в стороне. Как только нужная форма совпадёт — она будет засчитана!'
+                                            : 'Each figure renders as a faint purple holographic ghost blueprint at the center. You can shape it on coordinates or organically assemble it anywhere offset. Once the form structure matches, the system validates it!'}
                                     </p>
                                 </div>
                             </div>
@@ -981,24 +1814,20 @@ const StoryBuilderView: React.FC = () => {
                                 onClick={() => { playUiSound('CLICK'); setIsHelpOpen(false); }}
                                 className="w-full bg-indigo-600/25 border border-indigo-500 text-indigo-400 hover:bg-indigo-600 hover:text-white font-black py-3 rounded-xl transition-all uppercase tracking-[0.25em] text-xs shadow-xl active:scale-98 cursor-pointer relative z-20"
                             >
-                                {language === 'RU' ? 'Запустить Синхронизатор' : 'Resume Matrix'}
+                                {language === 'RU' ? 'Вернуться в игру' : 'Resume Hexopl'}
                             </button>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* INTERACTIVE PLACEMENT POPUP MODAL */}
+            {/* INTERACTIVE DEMOLITION CONFIRMATION MODAL */}
             <AnimatePresence>
                 {popupCell && (() => {
                     const key = getHexKey(popupCell.q, popupCell.r);
-                    const currentLevel = storyMap[key]; // undefined if empty
+                    const currentLevel = storyMap[key];
+                    if (currentLevel === undefined) return null;
                     
-                    // Options that are VALID to build on this cell
-                    const validOptions = currentLevel === undefined 
-                        ? [0] 
-                        : [currentLevel - 1, currentLevel + 1].filter(l => l >= -3 && l <= 3);
-
                     return (
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -1012,136 +1841,47 @@ const StoryBuilderView: React.FC = () => {
                                 animate={{ scale: 1, y: 0 }}
                                 exit={{ scale: 0.95, y: 15 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl p-5 md:p-6 max-w-sm w-full shadow-[0_0_50px_rgba(79,70,229,0.25)] relative text-left group"
+                                className="bg-slate-950 border-2 border-red-500/30 rounded-2xl p-6 max-w-sm w-full shadow-[0_0_50px_rgba(239,68,68,0.2)] relative text-left"
                             >
-                                {/* Cyber Corner Brackets */}
-                                <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-                                <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
-                                <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-                                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
-
-                                {/* Scanlines */}
+                                <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-red-500/40 z-30 pointer-events-none" />
+                                <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-red-500/40 z-30 pointer-events-none" />
+                                <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-red-500/40 z-30 pointer-events-none" />
+                                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-red-500/40 z-30 pointer-events-none" />
                                 <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
                                 
-                                <div className="flex justify-between items-center mb-4 z-20 relative">
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-[8px] font-black tracking-widest text-indigo-400 uppercase font-mono">
-                                            {language === 'RU' ? 'ИНЖЕНЕРНЫЙ МОДУЛЬ' : 'CONSTRUCTION CELL'}
-                                        </span>
-                                        <h3 className="text-sm font-black text-white uppercase tracking-tight">
-                                            {language === 'RU' ? 'Гекс' : 'Hex'} [{popupCell.q}, {popupCell.r}]
-                                        </h3>
+                                <div className="text-center p-2 z-20 relative">
+                                    <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+                                        <X className="w-7 h-7 font-black" />
                                     </div>
-                                    <button 
-                                        onClick={() => { playUiSound('CLICK'); setPopupCell(null); }}
-                                        className="text-slate-500 hover:text-white transition-all transform hover:scale-110 active:scale-95 bg-white/5 w-7 h-7 rounded-full flex items-center justify-center border border-white/5 cursor-pointer z-30"
-                                    >
-                                        &times;
-                                    </button>
-                                </div>
-
-                                <div className="p-3 bg-slate-950/50 border border-white/5 rounded-2xl flex items-center gap-3 mb-5">
-                                    <div className="shrink-0">
-                                        {currentLevel === undefined ? (
-                                            <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex flex-col items-center justify-center text-slate-600 font-mono text-[10px]">
-                                                <span>Ø</span>
-                                            </div>
-                                        ) : (
-                                            <div 
-                                                className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-mono font-black border"
-                                                style={{ 
-                                                    backgroundColor: currentLevel < 0 ? '#4338ca' : (currentLevel === 0 ? '#4a5568' : (currentLevel === 1 ? '#059669' : (currentLevel === 2 ? '#d97706' : '#dc2626'))),
-                                                    borderColor: currentLevel < 0 ? '#4f46e5' : (currentLevel === 0 ? '#718096' : (currentLevel === 1 ? '#10b981' : (currentLevel === 2 ? '#f59e0b' : '#ef4444')))
-                                                }}
-                                            >
-                                                {currentLevel >= 0 ? `+${currentLevel}` : currentLevel}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col leading-tight">
-                                        <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-widest">
-                                            {language === 'RU' ? 'Текущий Статус' : 'Current Status'}
-                                        </span>
-                                        <span className="text-xs font-black text-slate-200">
-                                            {currentLevel === undefined 
-                                                ? (language === 'RU' ? 'Пустая Бездна' : 'Empty Void') 
-                                                : currentLevel === 0 
-                                                    ? (language === 'RU' ? 'Почва L0' : 'Ground L0') 
-                                                    : currentLevel < 0 
-                                                        ? `${language === 'RU' ? 'Глубинная Шахта' : 'Extrapolated Depth'} L${currentLevel}` 
-                                                        : `${language === 'RU' ? 'Возвышенный Пик' : 'Elevated Peak'} L${currentLevel}`
-                                            }
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Header for available materials */}
-                                <h4 className="text-[8.5px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">
-                                    {language === 'RU' ? 'ДОСТУПНЫЕ ИЗМЕНЕНИЯ' : 'AVAILABLE TRANSFORMATIONS'}
-                                </h4>
-
-                                <div className="flex flex-col gap-2">
-                                    {validOptions.map(lvl => {
-                                        const count = minedInSessionHexes[lvl] || 0;
-                                        const canPlace = count > 0;
-                                        const hexCol = lvl < 0 ? '#4338ca' : (lvl === 0 ? '#475569' : (lvl === 1 ? '#059669' : (lvl === 2 ? '#d97706' : '#dc2626')));
-                                        
-                                        return (
-                                            <div 
-                                                key={lvl}
-                                                className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
-                                                    canPlace 
-                                                        ? 'bg-slate-900/60 border-indigo-500/10 hover:border-indigo-500/30' 
-                                                        : 'bg-slate-950/20 border-white/5 opacity-40'
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div 
-                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black text-white font-mono shrink-0"
-                                                        style={{ backgroundColor: hexCol }}
-                                                    >
-                                                        {lvl >= 0 ? `+${lvl}` : lvl}
-                                                    </div>
-                                                    <div className="flex flex-col leading-tight">
-                                                        <span className="text-[10px] font-black text-white">
-                                                            {lvl === 0 
-                                                                ? (language === 'RU' ? 'Почва L0' : 'Ground L0') 
-                                                                : lvl < 0 
-                                                                    ? `${language === 'RU' ? 'Шахта' : 'Depth'} L${lvl}` 
-                                                                    : `${language === 'RU' ? 'Пик' : 'Peak'} L${lvl}`
-                                                            }
-                                                        </span>
-                                                        <span className={`text-[8.5px] font-bold ${count > 0 ? 'text-indigo-400' : 'text-slate-500'}`}>
-                                                            {language === 'RU' ? `В наличии: ${count}` : `Available: ${count}`}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    disabled={!canPlace}
-                                                    onClick={() => {
-                                                        playUiSound('CLICK');
-                                                        placeStoryHex(popupCell.q, popupCell.r, lvl);
-                                                        setLastPlacedKey(key);
-                                                        setPopupCell(null);
-                                                    }}
-                                                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 ${
-                                                        canPlace 
-                                                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20' 
-                                                            : 'bg-slate-800 text-slate-600 border border-slate-700/50 cursor-not-allowed'
-                                                    }`}
-                                                >
-                                                    {language === 'RU' ? 'Разместить' : 'Deploy'}
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
+                                    <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1.5 text-center">
+                                        {language === 'RU' ? 'ПОДТВЕРДИТЬ СНОС?' : 'CONFIRM DEMOLITION?'}
+                                    </h4>
+                                    <p className="text-slate-400 text-[10px] mb-6 text-center leading-relaxed">
+                                        {language === 'RU' 
+                                            ? `Вы уверены, что хотите демонтировать и убрать этот гекс уровня L${currentLevel}? Плитка будет перенесена обратно на ваш склад.`
+                                            : `Are you sure you want to demolish and remove this L${currentLevel} hex? The tile will be reclaimed and placed back inside your depository.`}
+                                    </p>
                                     
-                                    {validOptions.length === 0 && (
-                                        <span className="text-[10px] text-slate-500 italic text-center py-2">
-                                            {language === 'RU' ? 'Нет доступных уровней для перехода' : 'No available heights to transition'}
-                                        </span>
-                                    )}
+                                    <div className="flex gap-2.5">
+                                        <button
+                                            onClick={() => { playUiSound('CLICK'); setPopupCell(null); }}
+                                            className="flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-900 border border-white/5 text-slate-400 hover:text-white transition-all cursor-pointer"
+                                        >
+                                            {language === 'RU' ? 'ОТМЕНА' : 'CANCEL'}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                playUiSound('SUCCESS');
+                                                placeStoryHex(popupCell.q, popupCell.r, -999);
+                                                addMinedHexes({ [currentLevel]: 1 });
+                                                setPopupCell(null);
+                                            }}
+                                            className="flex-1 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-red-650 text-white hover:bg-red-700 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-1 cursor-pointer border border-red-500"
+                                        >
+                                            <span className="text-[11px] leading-none">✖</span>
+                                            <span>{language === 'RU' ? 'СНЕСТИ' : 'DEMOLISH'}</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </motion.div>
                         </motion.div>
@@ -1149,52 +1889,7 @@ const StoryBuilderView: React.FC = () => {
                 })()}
             </AnimatePresence>
 
-            {/* INITIAL HINT OVERLAY */}
-            <AnimatePresence>
-                {Object.values(minedInSessionHexes).reduce((a, b) => a + b, 0) === 0 && !isInitialHintDismissed && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 text-center pointer-events-auto"
-                    >
-                        <div className="max-w-md bg-slate-950 border-2 border-indigo-500/40 rounded-2xl p-8 shadow-[0_0_50px_rgba(79,70,229,0.25)] relative overflow-hidden group">
-                            {/* Cyber Corner Brackets */}
-                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
-                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
 
-                            {/* Scanline Effect */}
-                            <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
-
-                            <BookOpen className="w-16 h-16 text-indigo-400 mx-auto mb-6 z-20 relative animate-pulse" />
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-4 italic z-20 relative">
-                                {language === 'RU' ? 'Хранилище фрагментов пусто' : 'Fragment storage is empty'}
-                            </h2>
-                            <p className="text-slate-400 text-sm mb-8 leading-relaxed z-20 relative font-sans">
-                                {language === 'RU' 
-                                    ? 'Для строительства собственной карты вам нужны добытые гексы. Проходите симуляции на Карте Уровней и забирайте трофейные фрагменты ландшафта по завершении миссии.'
-                                    : 'To build your own map, you need extracted hexes. Complete simulations on the Levels Map and extract landscape fragments upon mission completion.'}
-                            </p>
-                            <div className="flex gap-4 z-20 relative">
-                                <button 
-                                    onClick={() => { playUiSound('CLICK'); setCampaignMode('LEVELS'); setUIState('CAMPAIGN_MAP'); }}
-                                    className="flex-1 bg-indigo-600/25 border border-indigo-500 text-indigo-400 hover:bg-indigo-600 hover:text-white font-black py-4 rounded-xl transition-all shadow-xl uppercase tracking-widest text-xs cursor-pointer active:scale-98"
-                                >
-                                    {language === 'RU' ? 'Карта Уровней' : 'Levels Map'}
-                                </button>
-                                <button 
-                                    onClick={() => { playUiSound('CLICK'); setIsInitialHintDismissed(true); }}
-                                    className="px-6 border border-white/10 hover:bg-white/5 text-slate-400 font-bold rounded-xl transition-all text-xs cursor-pointer"
-                                >
-                                    {language === 'RU' ? 'Позже' : 'Later'}
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };

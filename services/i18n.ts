@@ -321,6 +321,12 @@ export interface Dictionary {
         LEVEL_1_6_DESC: string;
         LEVEL_1_7_TITLE: string;
         LEVEL_1_7_DESC: string;
+        LEVEL_1_8_TITLE: string;
+        LEVEL_1_8_DESC: string;
+        LEVEL_1_9_TITLE: string;
+        LEVEL_1_9_DESC: string;
+        LEVEL_1_10_TITLE: string;
+        LEVEL_1_10_DESC: string;
         LEVEL_2_1_TITLE: string;
         LEVEL_2_1_DESC: string;
         LEVEL_2_2_TITLE: string;
@@ -333,6 +339,14 @@ export interface Dictionary {
         LEVEL_2_5_DESC: string;
         LEVEL_2_6_TITLE: string;
         LEVEL_2_6_DESC: string;
+        LEVEL_2_7_TITLE: string;
+        LEVEL_2_7_DESC: string;
+        LEVEL_2_8_TITLE: string;
+        LEVEL_2_8_DESC: string;
+        LEVEL_2_9_TITLE: string;
+        LEVEL_2_9_DESC: string;
+        LEVEL_2_10_TITLE: string;
+        LEVEL_2_10_DESC: string;
         LEVEL_3_1_TITLE: string;
         LEVEL_3_1_DESC: string;
         LEVEL_3_2_TITLE: string;
@@ -494,8 +508,8 @@ export const TEXT: Record<Language, Dictionary> = {
             BOT_LABEL_SKIRMISH: "SKIRMISH",
             BOT_LABEL_WAR: "WAR",
             BOT_LABEL_CHAOS: "CHAOS",
-            MODE_STORY: "Story Mode",
-            MODE_STORY_SUB: "Plot & Cities",
+            MODE_STORY: "Hexopol",
+            MODE_STORY_SUB: "Figure Blueprints",
             MODE_LEVELS: "Ranked Missions",
             MODE_LEVELS_SUB: "Sequence 1.1 - 4.8"
         },
@@ -720,32 +734,46 @@ export const TEXT: Record<Language, Dictionary> = {
             INVALID_HEX: "Invalid hex",
         },
         CAMPAIGN: {
-            LEVEL_1_1_TITLE: 'Sim 1.1: Expansion Protocol',
-            LEVEL_1_1_DESC: 'Capture 3 NEW sectors.\n\nThe unit requires a foothold. Capture 3 adjacent Neutral Sectors (Lvl 0) to establish a perimeter.\n\nMove to a neutral hex and use UPGRADE (Amber Button) to build Level 1 (Cost: 1 Mat).\n\nMaterials are limited. Use them to expand.',
-            LEVEL_1_2_TITLE: 'Sim 1.2: Solid Ground',
-            LEVEL_1_2_DESC: 'Reach the Capital.\n\nA safe path (Durability 3) detected. Follow it through the void.\n\nEnvironment UNSTABLE (Durability 1). Stepping off the path causes immediate collapse and Rank loss.\n\nFail: Rank drops to 1.',
-            LEVEL_1_3_TITLE: 'Sim 1.3: Structural Supports',
-            LEVEL_1_3_DESC: 'Upgrade Center to Lvl 2.\n\nCannot build higher without foundation. A hex needs at least 2 neighbors of the SAME level to upgrade.\n\nBuild 2 Lvl 1 neighbors using provided materials, then upgrade center.',
-            LEVEL_1_4_TITLE: 'Sim 1.4: Excavation',
-            LEVEL_1_4_DESC: 'Upgrade Center to Lvl 3.\n\nYou have 0 Materials. Construction is impossible.\n\nDIG (Red Button). Excavate surrounding mounds (Lvl 2) to harvest +1 Mat. Use them to upgrade center.',
-            LEVEL_1_5_TITLE: 'Sim 1.5: Oxygen March',
-            LEVEL_1_5_DESC: 'Collect 150 Credits in 75s.\n\nStandard Recovery is single-use. You must MOVE to reset the tool.\n\nUse RECOVERY (Blue Button) on high sectors. Height yields more Credits.\n\nHigh (Lvl 4+) sectors overheat (Cooldown 15s). Rotate between peaks.',
-            LEVEL_1_6_TITLE: 'Sim 1.6: Vertical Limit',
-            LEVEL_1_6_DESC: 'Reach Level 4.\n\nSpace is extremely limited. A rival is competing for the same peak. Manage your footprint carefully.',
-            LEVEL_1_7_TITLE: 'Sim 1.7: Energy Crisis',
-            LEVEL_1_7_DESC: 'Excavate 10 hexes. Dig deep, but watch your moves. Every step is expensive. Use credit-to-move exchange if you get stuck.',
+            LEVEL_1_1_TITLE: 'Sim 1.1: Height Limits',
+            LEVEL_1_1_DESC: 'MOVEMENT RULES:\n\nObjective: Learn to move across the terrain. You can only step onto neighboring tiles that are not too high or too deep.\n\nGuide: Moving on high plates consumes more energy. Walk step-by-step up the ridge and reach the glowing Portal!',
+            LEVEL_1_2_TITLE: 'Sim 1.2: Harvesting Materials',
+            LEVEL_1_2_DESC: 'EXCAVATION ECONOMY:\n\nObjective: Lower tiles using the red "DIG" button to harvest materials. Walk safely to the Capital.\n\nDetails: Drilling grants +1 Material. Be careful: stepping off the stable path onto fragile tiles will cause them to collapse immediately!',
+            LEVEL_1_3_TITLE: 'Sim 1.3: Gradient Lock',
+            LEVEL_1_3_DESC: 'GRADIENT LOCK:\n\nObjective: Lower the center tile down to Level L0.\n\nRule: You cannot dig a tile below its neighbors. To lower the Center, first dig down at least one of its surrounding neighboring tiles!',
+            LEVEL_1_4_TITLE: 'Sim 1.4: Support Foundation',
+            LEVEL_1_4_DESC: 'CONSTRUCTION FOOTHOLD:\n\nObjective: Elevate the center tile to Level L2.\n\nSupport Rule: Upgrading to Level L2+ requires a stable foundation: at least 2 adjacent neighbor tiles must equal its height. Upgrade neighboring support tiles to L1 first, then raise the center!',
+            LEVEL_1_5_TITLE: 'Sim 1.5: Rigid Supports',
+            LEVEL_1_5_DESC: 'RIGID SUPPORTS:\n\nObjective: Raise the Center to Level L1.\n\nWarning: In this simulation you have no external supporting structures. You cannot elevate an isolated hex higher than level L1 without creating a support plateau!',
+            LEVEL_1_6_TITLE: 'Sim 1.6: Energy Streams',
+            LEVEL_1_6_DESC: 'RECOVERY CHANNELS:\n\nObjective: Direct energy and accumulate 100 Credits.\n\nMechanic: Use the RECOVERY (Blue) button. Level 0-3 tiles give one-time currency. High L4+ tiles are advanced reactors with 3 charges but can overheat. Move around to reset recovery blocks and milk the reactors.',
+            LEVEL_1_7_TITLE: 'Sim 1.7: Fatigue & Teleport',
+            LEVEL_1_7_DESC: 'FATIGUE & CONVERSION:\n\nObjective: Reach the Capital under conditions of extreme fatigue.\n\nMechanics: Fatigue doubles energy costs. If you run out of energy (Moves = 0), steps automatically consume Credits! Open your Inventory and activate the Void Core for weightless movement.',
+            LEVEL_1_8_TITLE: 'Sim 1.8: Deep Mining',
+            LEVEL_1_8_DESC: 'DEEP MINING:\n\nObjective: Drill the center shaft down to Level -2.\n\nRules: Digging below level 0 recovers energy. To dig a deep shaft (level -2), you must first excavate at least 2 adjacent neighbor shafts to level -1 for safety!',
+            LEVEL_1_9_TITLE: 'Sim 1.9: Sealing Spacetime Voids',
+            LEVEL_1_9_DESC: 'COSMIC REPAIR:\n\nObjective: Seal the dimensional Rift.\n\nHelp: Black Void tiles block movement entirely. Select the black Void tile next to you and use the Reality Patch from your inventory to repair it.',
+            LEVEL_1_10_TITLE: 'Sim 1.10: Land Line Final',
+            LEVEL_1_10_DESC: 'LAND LINE FINAL:\n\nObjective: Build a continuous straight row of 3 tiles at height Level L2.\n\nTip: Build side support platforms to lay a strong foundation.',
             LEVEL_2_1_TITLE: 'Sim 2.1: The Monolith',
             LEVEL_2_1_DESC: 'Reach the Monolith (Center, L3). It requires NO items to activate. Just step on it and press ACTIVATE in the interface.\n\nDirect path blocked by L4 wall. Find the staircase along the left ridge.\n\nAlmost no fuel. Use RECOVERY (Blue) on your start hex, then MOVE away and back to reset it. Repeat to stockpile fuel.',
             LEVEL_2_2_TITLE: 'Sim 2.2: Buried Secrets',
             LEVEL_2_2_DESC: 'Activation Keys detected underground.\n\nCollect 3 ANY ITEMS. Step onto the Monolith, insert them into the slots, and press ACTIVATE.\n\nDIG (Red) below L0. Each new negative depth has a loot chance. Deeper = better odds (20% at -1, 30% at -2, 40% at -3...).\n\nDigging gives +Moves and +Material. You earn fuel by exploring.',
             LEVEL_2_3_TITLE: 'Sim 2.3: Entropy Rising',
             LEVEL_2_3_DESC: 'ALERT: Sector highly unstable.\n\nObjective: Reach the Monolith (L4) and ACTIVATE it.\n\nConstraint: You start at Rank 3. The Monolith is L4. You CANNOT step on it yet. You must use your starting Materials to BUILD a supporting L4 hex nearby to gain Rank 4!\n\nMechanic: Every action costs Entropy (Starts at 15). At 0 → catastrophic shift.',
-            LEVEL_2_4_TITLE: 'Sim 2.4: The Rivalry',
-            LEVEL_2_4_DESC: 'Threat: Hostile unit approaching.\n\nObjective: Find 2 ITEMS and activate the Monolith BEFORE the Rival.\n\nStart: Nearly empty. DIG sites along your path for fuel and artifacts. The Rival approaches from the north.\n\nDEFEAT: The Bot reaches the Monument first OR you become Stranded.',
-            LEVEL_2_5_TITLE: 'Sim 2.5: The Singularity',
-            LEVEL_2_5_DESC: 'FINAL TEST: Two hostiles converge.\n\nObjective: Collect 3 ITEMS and activate the Core (L5) first.\n\nStart: Near-empty. DIG deep along your spiral for fuel + artifacts. Two rivals approach from the North and East.\n\nTip: Deeper digs give more Moves AND better loot odds.',
-            LEVEL_2_6_TITLE: 'Sim 2.6: Deep Echo',
-            LEVEL_2_6_DESC: 'Objective: Descend to depth -5. Use reinforcements to avoid collapse. Deep layers are unstable but hold ancient artifacts.',
+            LEVEL_2_4_TITLE: 'Sim 2.4: The First Signal',
+            LEVEL_2_4_DESC: 'OBELISKS INTRODUCED:\n\nObjective: Grab the activation key from the Obelisk (1,2) and use it to activate the central Monolith.\n\nGuide: Obelisks are ancient transmitters. Activate the one at (1,2) to breach firewall defenses and highlight the secret deep cache. Dig at (-1,3) to fetch the spent fuel cell key!',
+            LEVEL_2_5_TITLE: 'Sim 2.5: Linear Matrix',
+            LEVEL_2_5_DESC: 'SHAPE CONSTRUCTION:\n\nObjective: Construct a solid Line of 3 adjacent Level 2+ tiles (LINE_3).\n\nDetails: Building geometric shapes opens a high-energy vector portal automatically. Harvest material by DIGGING and use them to BUILD (Orange) adjacent Level 2 tiles.',
+            LEVEL_2_6_TITLE: 'Sim 2.6: Resonant Triangle',
+            LEVEL_2_6_DESC: 'SHAPES UNDER BOT PRESSURE:\n\nObjective: Construct a Triangle of 3 adjacent Level 2+ tiles (TRIANGLE_3).\n\nThreat: Scout-Drone approaches from (2,-2) to capture and demolish your structures! Build rapidly or block its path by digging trenches!',
+            LEVEL_2_7_TITLE: 'Sim 2.7: Aether Diamond',
+            LEVEL_2_7_DESC: 'HIGH LEVEL ALIGNMENT:\n\nObjective: Build a Diamond of 4 adjacent Level 3+ tiles (DIAMOND_4).\n\nHint: Level 3+ tiles require Engineering Rank 3. Remember, they need 2 adjacent support tiles at Level 2+ to build successfully!',
+            LEVEL_2_8_TITLE: 'Sim 2.8: Void Ring',
+            LEVEL_2_8_DESC: 'CONTAINMENT PROTOCOL:\n\nObjective: Form a Ring of 6 Level 3+ tiles (RING_6) surrounding the central black hole at (0,0).\n\nCrisis: Singularity micro-gravity drains 1% extra Entropy per move. Align your lines with zero waste.',
+            LEVEL_2_9_TITLE: 'Sim 2.9: Double Confluence',
+            LEVEL_2_9_DESC: 'MULTISHAPE & SABOTAGE:\n\nObjective: Construct BOTH a LINE_3 and a TRIANGLE_3 shape at Level 3+.\n\nHazard: Hostile Scout-Destroyer drone has landed. It will seek and dismantle your high-level structures. Create deep trenches to contain it.',
+            LEVEL_2_10_TITLE: 'Sim 2.10: Cosmic Alignment',
+            LEVEL_2_10_DESC: 'FINAL CHRONICLES:\n\nInstructions:\n1. Active the 3 outer Obelisks at (3,-3), (-3,3), (0,-3).\n2. Build a structural RING_6 around (0,0) at Level 3+ to focus energy.\n3. Dig up the secret marked caches for two ancient keys.\n4. Step onto the Monolith at (0,0), insert keys, and ACTIVATE!',
             LEVEL_3_1_TITLE: 'Sim 3.1: First Inscription',
             LEVEL_3_1_DESC: 'An ancient transmission carved into stone.\n\nObjective: Activate the Monument at the summit.\n\nMechanic: Obelisks (L3 pillars) inscribe the required item silhouette into the Monument interface. Visit one to learn what it needs — or guess.\n\nEntropic Warning: Two stability events will occur. The second ends the mission.',
             LEVEL_3_2_TITLE: 'Sim 3.2: Twin Beacons',
@@ -905,8 +933,8 @@ export const TEXT: Record<Language, Dictionary> = {
             BOT_LABEL_SKIRMISH: "СТЫЧКА",
             BOT_LABEL_WAR: "ВОЙНА",
             BOT_LABEL_CHAOS: "ХАОС",
-            MODE_STORY: "История",
-            MODE_STORY_SUB: "Сюжет и города",
+            MODE_STORY: "Гексополь",
+            MODE_STORY_SUB: "Чертежи фигур",
             MODE_LEVELS: "Уровни",
             MODE_LEVELS_SUB: "Прогрессия 1.1 - 4.8"
         },
@@ -1131,32 +1159,46 @@ export const TEXT: Record<Language, Dictionary> = {
             INVALID_HEX: "Неверный гекс",
         },
         CAMPAIGN: {
-            LEVEL_1_1_TITLE: 'Сим 1.1: Протокол Экспансии',
-            LEVEL_1_1_DESC: 'Захватить 3 НОВЫХ сектора.\n\nЗахватите 3 соседних Нейтральных Сектора (Ур.0), чтобы создать периметр.\n\nПерейдите на нейтральный гекс и используйте УЛУЧШЕНИЕ (Желтая кнопка), чтобы построить Уровень 1 (Цена: 1 Мат.).',
-            LEVEL_1_2_TITLE: 'Сим 1.2: Твердая Почва',
-            LEVEL_1_2_DESC: 'Достичь Столицы.\n\nОбнаружен безопасный путь (Прочность 3). Следуйте ему через пустоту.\n\nОкружение НЕСТАБИЛЬНО (Прочность 1). Сход с пути вызывает мгновенный обвал и потерю Ранга.\n\nКоллапс при падении Ранга до 1.',
-            LEVEL_1_3_TITLE: 'Сим 1.3: Опорные Конструкции',
-            LEVEL_1_3_DESC: 'Улучшить Центр до Ур. 2.\n\nНельзя строить выше без фундамента. Гексу нужно минимум 2 соседа того же уровня для улучшения.\n\nПостройте 2 соседа Ур. 1 используя выданные материалы, затем улучшите центр.',
-            LEVEL_1_4_TITLE: 'Сим 1.4: Раскопки',
-            LEVEL_1_4_DESC: 'Улучшить Центр до Ур. 3.\n\nУ вас 0 Материалов. Стройка невозможна.\n\nРАСКОПКИ (Красная кнопка). Копайте окружающие холмы (Ур. 2), чтобы добыть +1 Мат. Используйте их для улучшения центра.',
-            LEVEL_1_5_TITLE: 'Сим 1.5: Кислородный Марш',
-            LEVEL_1_5_DESC: 'Собрать 150 Кред. за 75с.\n\nВосстановление доступно 1 раз за визит. Вы должны СДВИНУТЬСЯ, чтобы сбросить инструмент.\n\nИспользуйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на высоких секторах. Высота дает больше Кредитов.\n\nВысокие (Ур. 4+) сектора перегреваются (КД 15с). Перемещайтесь между пиками.',
-            LEVEL_1_6_TITLE: 'Сим 1.6: Вертикальный Предел',
-            LEVEL_1_6_DESC: 'Достичь Уровня 4.\n\nПространство крайне ограничено. Соперник претендует на тот же пик. Тщательно планируйте свои действия.',
-            LEVEL_1_7_TITLE: 'Сим 1.7: Энергетический Кризис',
-            LEVEL_1_7_DESC: 'Вскопайте 10 гексов. Копайте глубоко, но следите за ходами. Каждый шаг стоит дорого. Используйте обмен кредитов на ходы, если застрянете.',
+            LEVEL_1_1_TITLE: 'Сим 1.1: Пределы Высоты',
+            LEVEL_1_1_DESC: 'ПРАВИЛА ДВИЖЕНИЯ:\n\nЗадача: Научитесь передвигаться по ландшафту. Вы можете переходить только на соседние плиты, которые не слишком высокие или глубокие.\n\nПомощь: Перемещение на возвышенности требует больше энергии. Шаг за шагом поднимитесь по хребту и доберитесь до светящегося Портала!',
+            LEVEL_1_2_TITLE: 'Сим 1.2: Сбор Материалов',
+            LEVEL_1_2_DESC: 'РАСКОПКИ И ДОБЫЧА:\n\nЗадача: Срежьте высоту плит с помощью красной кнопки "РАСКОПКА" для сбора материалов. Проследуйте по безопасному пути до Столицы.\n\nДетали: Бурение дает +1 Материал. Будьте осторожны: сход с надежного пути на хрупкие плиты приведет к их немедленному обрушению в Пустоту!',
+            LEVEL_1_3_TITLE: 'Сим 1.3: Замок Градиента',
+            LEVEL_1_3_DESC: 'ГЕОЛОГИЧЕСКИЙ ЗАМОК:\n\nЗадача: Срежьте центральный гекс до уровня L0.\n\nПравило: Нельзя копать плиту ниже её соседей (Замок градиента). Чтобы раскопать Центр, сначала прокопайте хотя бы один соседний сектор вокруг!',
+            LEVEL_1_4_TITLE: 'Сим 1.4: Фундамент Опор',
+            LEVEL_1_4_DESC: 'СТРОИТЕЛЬНАЯ ОПОРА:\n\nЗадача: Поднимите высоту центрального гекса до уровня L2.\n\nПравило поддержки: Строительство плит уровня L2+ требует прочную основу: как минимум 2 соседние плиты должны быть равны ему по высоте. Сначала улучшите соседние опоры до L1, затем поднимите Центр!',
+            LEVEL_1_5_TITLE: 'Сим 1.5: Жесткие Опоры',
+            LEVEL_1_5_DESC: 'ЖЕСТКИЕ ОПОРЫ:\n\nЗадача: Попробуйте поднять центральный гекс до уровня L1.\n\nВнимание: В этой симуляции у вас нет внешних опорных конструкций. Вы не сможете возвысить изолированный гекс выше уровня L1 без создания опорного плато!',
+            LEVEL_1_6_TITLE: 'Сим 1.6: Потоки Энергии',
+            LEVEL_1_6_DESC: 'ЭНЕРГОРЕАКТОРЫ:\n\nЗадача: Направьте потоки энергии и накопите 100 Кредитов.\n\nМеханика: Используйте кнопку ВОССТАНОВЛЕНИЕ (Синяя). Обычные гексы Ур.0-3 отдают энергию однократно при посещении. Высокие плиты L4+ - это реакторы на 3 заряда, но они могут перегреться. Перемещайтесь по плитам для сброса и выкачивайте реакторы!',
+            LEVEL_1_7_TITLE: 'Сим 1.7: Усталость и Телепорт',
+            LEVEL_1_7_DESC: 'УСТАЛОСТЬ И КОНВЕРСИЯ:\n\nЗадача: Доберитесь до Столицы в условиях высокой усталости.\n\nМеханика: Усталость удваивает энергозатраты. Если у вас закончатся Ходы, передвижение автоматически начнет списывать Кредиты за каждый шаг! Откройте Инвентарь и примените Ядро Пустоты для невесомого перемещения.',
+            LEVEL_1_8_TITLE: 'Сим 1.8: Глубинная Добыча',
+            LEVEL_1_8_DESC: 'ГЛУБИННАЯ ДОБЫЧА:\n\nЗадача: Выкопайте глубокую шахту уровня -2 в центре.\n\nПравило прочности: Бурение глубже L0 восстанавливает драгоценные ходы. Чтобы вырыть глубокую шахту (уровень -2), сначала прокопайте как минимум 2 соседние шахты до уровня -1 для безопасности!',
+            LEVEL_1_9_TITLE: 'Сим 1.9: Заживление Пустоты',
+            LEVEL_1_9_DESC: 'СПАСАТЕЛЬНЫЙ ЛОСКУТ:\n\nЗадача: Перекройте пространственный разрыв Пустоты.\n\nПомощь: Черные ячейки Пустоты (VOID) абсолютно непроходимы. Выберите черную ячейку рядом с вами и используйте Лоскут Реальности (Reality Patch) из рюкзака для её полной регенерации.',
+            LEVEL_1_10_TITLE: 'Сим 1.10: Финал: Линия Суши',
+            LEVEL_1_10_DESC: 'ЛИНИЯ СУШИ:\n\nЗадача: Постройте сплошную прямую полосу из 3 плит высотой L2.\n\nСовет: Используйте боковые опорные платформы для создания прочной основы.',
             LEVEL_2_1_TITLE: 'Сим 2.1: Монолит',
             LEVEL_2_1_DESC: 'Встать на Монолит (Центр, Ур.3). Для активации НЕ нужны предметы. Просто встаньте на него и нажмите АКТИВИРОВАТЬ в интерфейсе.\n\nДоступ заблокирован стеной Ур.4. Найдите лестницу вдоль левого хребта.\n\nИспользуйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на старте, затем СДВИНЬТЕСЬ для сброса. Повторяйте для накопления топлива.',
             LEVEL_2_2_TITLE: 'Сим 2.2: Тайны Недр',
             LEVEL_2_2_DESC: 'Ключи под землей.\n\nСобрать 3 ПРЕДМЕТА. Встаньте на Монолит, вставьте их в слоты и нажмите АКТИВИРОВАТЬ.\n\nКОПАЙТЕ (Красная) ниже Ур.0. Каждый уровень глубины — шанс на лут (20% на -1, 30% на -2, 40% на -3...).\n\nКопка дает +Топливо и +Материалы. Вы получаете энергию, исследуя недра.',
             LEVEL_2_3_TITLE: 'Сим 2.3: Рост Энтропии',
             LEVEL_2_3_DESC: 'ВНИМАНИЕ: Сектор крайне нестабилен.\n\nЦЕЛЬ: Достичь Монолита (Ур.4) и АКТИВИРОВАТЬ его.\n\nОграничение: Вы начинаете с Рангом 3. Монолит — Ур.4. Вы НЕ МОЖЕТЕ на него зайти. Используйте материалы, чтобы ПОСТРОИТЬ соседний гекс Ур.4 и получить Ранг 4!\n\nМеханика: Каждое действие тратит Энтропию (старт: 15). При 0 → катастрофа.',
-            LEVEL_2_4_TITLE: 'Сим 2.4: Противостояние',
-            LEVEL_2_4_DESC: 'УГРОЗА: Враждебный юнит.\n\nЦЕЛЬ: Найти 2 ПРЕДМЕТА и активировать Монолит РАНЬШЕ Соперника.\n\nСтарт: Почти пусто. КОПАЙТЕ участки на пути за топливо и артефакты. Соперник приближается с севера.\n\nПОРАЖЕНИЕ: Бот достигает Монумента первым ИЛИ у вас кончается топливо.',
-            LEVEL_2_5_TITLE: 'Сим 2.5: Сингулярность',
-            LEVEL_2_5_DESC: 'ФИНАЛЬНЫЙ ТЕСТ: Двое врагов.\n\nЦЕЛЬ: Собрать 3 ПРЕДМЕТА и активировать Ядро (Ур. 5) первым.\n\nСтарт: Почти пусто. КОПАЙТЕ глубоко по спирали за топливо и артефакты. Два соперника приближаются с севера и востока.\n\nПодсказка: Глубокие раскопки дают больше Топлива И лучшие шансы на лут.',
-            LEVEL_2_6_TITLE: 'Сим 2.6: Глубинное Эхо',
-            LEVEL_2_6_DESC: 'Цель: Опуститесь на глубину -5. Используйте укрепления, чтобы избежать обвала. Глубокие слои нестабильны, но хранят древние артефакты.',
+            LEVEL_2_4_TITLE: 'Сим 2.4: Первый Сигнал',
+            LEVEL_2_4_DESC: 'КОНЦЕПТ ОБЕЛИСКОВ:\n\nЗадача: Получите ключ от Обелиска и используйте его для активации центрального Монолита.\n\nПомощь: Обелиски — древние передатчики. Активируйте светящийся Обелиск, чтобы подсветить секретный тайник. Затем раскопайте подсвеченный тайник до уровня -1 для извлечения Топливной Ячейки!',
+            LEVEL_2_5_TITLE: 'Сим 2.5: Линейная Матрица',
+            LEVEL_2_5_DESC: 'ГЕОМЕТРИЯ ПЛИТ:\n\nЗадача: Постройте сплошную Линию из 3-х смежных гексов Уровня 2+ (LINE_3).\n\nЗачем: Построение фигур автоматически открывает портал победы. Получайте материалы РАСКОПКАМИ (Красная кнопка) и СТРОЙТЕ (Оранжевая) три гекса в одну линию.',
+            LEVEL_2_6_TITLE: 'Сим 2.6: Резонансный Треугольник',
+            LEVEL_2_6_DESC: 'ФИГУРЫ ПОД ДАВЛЕНИЕМ ИИ:\n\nЗадача: Сформируйте Треугольник из 3-х смежных гексов Уровня 2+ (TRIANGLE_3).\n\nУгроза: С северо-востока (2,-2) наступает Бот-Разведчик. Он будет захватывать и срывать ваши плиты! Стройте быстрее или копайте рвы на его пути.',
+            LEVEL_2_7_TITLE: 'Сим 2.7: Ромб Эфира',
+            LEVEL_2_7_DESC: 'УРОВЕНЬ 3 И СВЯЗЬ:\n\nЗадача: Постройте Ромб из 4-х смежных гексов Уровня 3+ (DIAMOND_4).\n\nСовет: Уровень 3 требует Ранга 3. Помните, что для подъема плиты до Уровня 3 требуется обеспечить фундамент поддержки из смежных гексов Ур.2+!',
+            LEVEL_2_8_TITLE: 'Сим 2.8: Кольцо Пустоты',
+            LEVEL_2_8_DESC: 'ГЕРМЕТИЗАЦИЯ СИНГУЛЯРНОСТИ:\n\nЗадача: Постройте Кольцо из 6 гексов Уровня 3 (RING_6) вокруг центральной Пустоты (0,0).\n\nОграничение: Черная дыра пожирает 1% дополнительной Энтропии за каждый шаг. Действуйте экономно и выверенно.',
+            LEVEL_2_9_TITLE: 'Сим 2.9: Двойная Динамика',
+            LEVEL_2_9_DESC: 'МАТРИЦА ФИГУР И САБОТАЖ:\n\nЗадача: Постройте одновременно Линию (LINE_3) и Треугольник (TRIANGLE_3) Уровня 3+.\n\nОпасность: Опасный Бот-Саботажник десантировался на юге. Он целенаправленно идет крушить ваши высокие плиты Ур.3.',
+            LEVEL_2_10_TITLE: 'Сим 2.10: Космическое Выравнивание',
+            LEVEL_2_10_DESC: 'ТРИУМФ НЕБУЛЫ:\n\nИнструкции:\n1. Активируйте 3 Обелиска по краям (3,-3), (-3,3), (0,-3).\n2. Постройте Кольцо Уровня 3 (RING_6) вокруг центрального Монолита (0,0) для фокусировки векторов.\n3. Раскопайте тайники за ключами (Spent Fuel Cell и Reality Patch).\n4. Зайдите на (0,0) и АКТИВИРУЙТЕ Монолит!',
             LEVEL_3_1_TITLE: 'Сим 3.1: Первая Надпись',
             LEVEL_3_1_DESC: 'Древняя передача, высеченная в камне.\n\nЦЕЛЬ: Активировать Монумент на вершине.\n\nМеханика: Обелиски (колонны Ур.3) наносят силуэт нужного предмета в интерфейс Монумента. Посетите один, чтобы узнать, что нужно — или гадайте.\n\nВнимание: Произойдет два события стабильности. Второе завершит миссию.',
             LEVEL_3_2_TITLE: 'Сим 3.2: Близнецы-Маяки',

@@ -55,7 +55,9 @@ export interface GameStore extends GameState {
   // Story Mode Actions
   addCollectedHexes: (hexes: Record<number, number>) => void;
   placeStoryHex: (q: number, r: number, level: number) => void;
+  clearStoryMap: () => void;
   setStoryMilestone: (milestone: number) => void;
+  activateHexBonus: (q: number, r: number) => void;
 
   // Interactions
   openVoidDialog: (q: number, r: number) => void;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '../store.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
-import { Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers, Cpu, BatteryCharging, Coins } from 'lucide-react';
+import { Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers, Cpu, BatteryCharging, Coins, Sparkles, Key } from 'lucide-react';
 import HexButton from './HexButton.tsx';
 import { TEXT } from '../services/i18n.ts';
 import { UpgradesTree } from './UpgradesTree.tsx';
@@ -67,6 +67,13 @@ const CampaignMap: React.FC = () => {
   const deviceType = useGameStore(state => state.deviceType);
   const language = useGameStore(state => state.language);
   const skillPoints = useGameStore(state => state.skillPoints);
+  
+  // Bonus Grid Integration
+  const hexActivationPoints = useGameStore(state => state.hexActivationPoints || 0);
+  const activatedHexes = useGameStore(state => state.activatedHexes || {});
+  const activateHexBonus = useGameStore(state => state.activateHexBonus);
+  const [activeTab, setActiveTab] = useState<'MAP' | 'BONUS_GRID'>('MAP');
+  const [hoveredHex, setHoveredHex] = useState<{q: number, r: number} | null>(null);
 
   const currentProgress = campaignMode === 'STORY' ? campaignProgress : levelsModeProgress;
 
@@ -78,6 +85,201 @@ const CampaignMap: React.FC = () => {
   const currentLevelRef = useRef<HTMLDivElement>(null);
 
   const t = TEXT[language].CAMPAIGN_MAP;
+
+  // Concentric Radius 2 Hexes for the bonus activations board (19 total cells)
+  const BONUS_HEX_COORDINATES = useMemo(() => [
+    { q: 0, r: 0 },
+    { q: 1, r: -1 }, { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 }, { q: -1, r: 0 }, { q: 0, r: -1 },
+    { q: 2, r: -2 }, { q: 2, r: -1 }, { q: 2, r: 0 }, { q: 1, r: 1 }, { q: 0, r: 2 }, { q: -1, r: 2 },
+    { q: -2, r: 2 }, { q: -2, r: 1 }, { q: -2, r: 0 }, { q: -1, r: -1 }, { q: 0, r: -2 }, { q: 1, r: -2 }
+  ], []);
+
+  // Map each coordinate to a fixed reward preview for hover/visual status
+  const getHexRewardPreview = (q: number, r: number) => {
+    const hash = Math.abs((q * 17 + r * 31) % 4);
+    if (hash === 0) return { icon: "⚙️", title: language === "RU" ? "+1 Очко Инженерии" : "+1 Engineering Upgrade", desc: language === "RU" ? "Сервер Информации" : "Datastructure Database Core" };
+    if (hash === 1) return { icon: "📦", title: language === "RU" ? "+12 L1, +4 L2 Блока" : "+12 L1, +4 L2 Blocks", desc: language === "RU" ? "Склад Снабжения" : "Materials Supply Drop Store" };
+    if (hash === 2) return { icon: "⚡", title: language === "RU" ? "+1 Тех, +6 L1 Блока" : "+1 Eng, +6 L1 Blocks", desc: language === "RU" ? "Инфо-Хаб Энергии" : "Grid Node Feed Energizer" };
+    return { icon: "💎", title: language === "RU" ? "+10 L2 Блоков" : "+10 L2 Blocks", desc: language === "RU" ? "Глубокая Металл-Жила" : "Rich Metallic Solder Core" };
+  };
+
+  const getHexPoints = (cx: number, cy: number, r: number) => {
+    const points: string[] = [];
+    for (let i = 0; i < 6; i++) {
+        const angle_rad_pointy = (Math.PI / 180) * (60 * i - 30);
+        points.push(`${cx + r * Math.cos(angle_rad_pointy)},${cy + r * Math.sin(angle_rad_pointy)}`);
+    }
+    return points.join(' ');
+  };
+
+  const renderEnergyGrid = () => {
+    const size = isMobile ? 38 : 52;
+    const spacing = 1.05; // gap width
+    const width = 640;
+    const height = 480;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    const totalClaimed = Object.keys(activatedHexes).length;
+
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -15 }}
+        className="flex-1 flex flex-col lg:flex-row p-4 md:p-8 overflow-y-auto no-scrollbar relative max-w-7xl mx-auto w-full gap-6 lg:gap-8 items-center"
+      >
+        {/* Left Side: Instructions, Key Balance & Status */}
+        <div className="flex flex-col w-full lg:w-[320px] bg-slate-900/60 backdrop-blur-xl border border-indigo-500/20 p-5 md:p-6 rounded-2xl md:rounded-[1.5rem] shrink-0 gap-4 shadow-xl text-left">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 rounded-xl">
+              <Sparkles className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-wider text-indigo-300">
+                {language === 'RU' ? 'Развертывание Энерго-Сетки' : 'Energy Grid Restoration'}
+              </h3>
+              <p className="text-[10px] text-slate-400 font-mono tracking-wider italic leading-none mt-1">
+                SECTOR ARCHIVE RECOVERY
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-b border-indigo-500/15 py-3.5 my-1 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-[11px] font-bold text-slate-400">
+                {language === 'RU' ? 'Ключи Активации:' : 'Activation Keys:'}
+              </span>
+              <div className="flex items-center gap-1">
+                <span className={`text-xl font-black font-mono tracking-tight ${hexActivationPoints > 0 ? 'text-amber-400 animate-pulse' : 'text-slate-500'}`}>
+                  {hexActivationPoints}
+                </span>
+                <Key className="w-4 h-4 text-amber-400 animate-pulse" />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-[11px] font-bold text-slate-400">
+                {language === 'RU' ? 'Заряжено Узлов:' : 'Nodes Activated:'}
+              </span>
+              <span className="text-xs font-black text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                {totalClaimed} / 19
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive instruction message */}
+          <div className="text-xs text-slate-300 font-mono leading-relaxed p-3 bg-black/40 rounded-xl border border-white/5 shadow-inner">
+            {language === 'RU' 
+              ? '💡 Каждое прохождение уровня кампании начисляет +3 Ключа. Выберите любую неактивную ячейку на панели справа, чтобы реактивировать её в постоянный ресурс!' 
+              : '💡 Completing a Campaign level awards +3 Activation Keys. Select any inactive offline node on the grid board to reactivate its permanent cargo!'}
+          </div>
+
+          {/* Hover Details Panel */}
+          <div className="mt-auto pt-2 min-h-[90px] border-t border-slate-800 flex flex-col justify-center">
+            {hoveredHex ? (() => {
+              const info = getHexRewardPreview(hoveredHex.q, hoveredHex.r);
+              const active = activatedHexes[`${hoveredHex.q},${hoveredHex.r}`];
+              return (
+                <div className="flex flex-col gap-1 font-mono text-[11px]">
+                  <div className="flex items-center gap-1.5 text-indigo-400 uppercase font-black tracking-wider">
+                    <span>{info.icon} {info.desc}</span>
+                  </div>
+                  <div className="text-xs font-black text-white">{info.title}</div>
+                  <div className={`text-[10px] mt-1 italic font-semibold ${active ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    {active 
+                      ? (language === 'RU' ? '● УЗЕЛ УСПЕШНО АКТИВИРОВАН' : '● STATUS: ONLINE') 
+                      : (language === 'RU' ? '○ ВОЗМОЖНО ВОССТАНОВЛЕНИЕ' : '○ STATUS: OFFLINE')}
+                  </div>
+                </div>
+              );
+            })() : (
+              <div className="text-[10px] text-slate-500 italic font-mono text-center">
+                {language === 'RU' ? 'Наведите на гекс для сканирования' : 'Hover a node to analyze metadata'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side: Centered Hexagonal Grid SVG */}
+        <div className="flex-1 flex items-center justify-center bg-slate-900/25 border border-indigo-500/10 rounded-3xl p-4 min-h-[400px] w-full relative shadow-inner overflow-hidden">
+          <div className="absolute inset-0 bg-[#020617] scale-105"
+               style={{ 
+                   backgroundImage: 'radial-gradient(circle_at_center, rgba(99,102,241,0.05) 0%, transparent 70%)',
+               }} 
+          />
+          
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full max-w-[550px] aspect-video relative z-10 overflow-visible select-none">
+            <g>
+              {BONUS_HEX_COORDINATES.map((coord, idx) => {
+                const { q, r } = coord;
+                const active = activatedHexes[`${q},${r}`];
+                const info = getHexRewardPreview(q, r);
+
+                const cx = centerX + size * Math.sqrt(3) * (q + r / 2) * spacing;
+                const cy = centerY + size * 1.5 * r * spacing;
+                
+                const pointsStr = getHexPoints(cx, cy, size - 2);
+                const isHovered = hoveredHex?.q === q && hoveredHex?.r === r;
+
+                return (
+                  <g 
+                    key={`bhex-${idx}`}
+                    className="cursor-pointer transition-all duration-300"
+                    onMouseEnter={() => setHoveredHex({ q, r })}
+                    onMouseLeave={() => setHoveredHex(null)}
+                    onClick={() => {
+                        activateHexBonus(q, r);
+                    }}
+                  >
+                    {(active || isHovered) && (
+                      <polygon 
+                        points={pointsStr}
+                        fill="none"
+                        stroke={active ? "#10b981" : "#6366f1"}
+                        strokeWidth={isHovered ? "8" : "4"}
+                        className="opacity-25 blur-sm transition-all duration-300"
+                      />
+                    )}
+
+                    <polygon 
+                      points={pointsStr}
+                      fill={active ? "rgba(16, 185, 129, 0.08)" : (isHovered ? "rgba(99, 102, 241, 0.15)" : "rgba(30, 41, 59, 0.45)")}
+                      stroke={active ? "#10b981" : (isHovered ? "#38bdf8" : "#334155")}
+                      strokeWidth={isHovered ? "2.5" : "1.5"}
+                      style={{ 
+                          filter: active ? 'drop-shadow(0 0 6px rgba(16, 185, 129, 0.2))' : 'none',
+                          transition: 'all 200ms ease-out'
+                      }}
+                    />
+
+                    <text 
+                      x={cx}
+                      y={cy + 5}
+                      textAnchor="middle" 
+                      className={`text-base select-none pointer-events-none transition-transform duration-300 ${isHovered ? 'scale-110' : ''}`}
+                      style={{ fontStyle: 'normal' }}
+                    >
+                      {active ? info.icon : "🔑"}
+                    </text>
+
+                    {isHovered && (
+                      <g className="pointer-events-none">
+                        <circle cx={cx} cy={cy + size - 8} r="8" fill="#1e293b" stroke="#38bdf8" strokeWidth="1" />
+                        <text x={cx} y={cy + size - 5} textAnchor="middle" className="text-[8px] font-black text-sky-400 font-mono">
+                          {q},{r}
+                        </text>
+                      </g>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
+          </svg>
+        </div>
+      </motion.div>
+    );
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -117,7 +319,7 @@ const CampaignMap: React.FC = () => {
             lastSeries = series;
         }
         const isLeft = index % 2 === 0;
-        const x = isMobile ? 60 : (isLeft ? containerWidth * 0.35 : containerWidth * 0.65);
+        const x = isMobile ? 48 : (isLeft ? containerWidth * 0.35 : containerWidth * 0.65);
         positions.push({ x, y: currentY, hasHeader, seriesId: series, level, index });
         currentY += ITEM_HEIGHT;
     });
@@ -219,7 +421,7 @@ const CampaignMap: React.FC = () => {
                                         {isCurrent ? t.BADGE_CURRENT : (isCompleted ? t.BADGE_DONE : t.BADGE_LOCKED)}
                                     </div>
                                 </motion.div>
-                                <div className={`absolute flex flex-col bg-slate-900/80 backdrop-blur-xl border p-4 rounded-2xl md:rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.7)] w-[260px] md:w-[280px] transition-all duration-300 z-10 hover:border-indigo-400 group-hover:bg-slate-900/90
+                                <div className={`absolute flex flex-col bg-slate-900/80 backdrop-blur-xl border p-4 rounded-2xl md:rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.7)] w-[calc(100vw-110px)] max-w-[260px] md:w-[280px] transition-all duration-300 z-10 hover:border-indigo-400 group-hover:bg-slate-900/90
                                     ${isCompleted ? 'border-emerald-500/30' : (isCurrent ? 'border-amber-500/50' : 'border-indigo-500/20')}
                                     ${isMobile ? 'left-full ml-4 text-left' : (i % 2 === 0 ? 'left-full ml-8 text-left' : 'right-full mr-8 text-right items-end')}
                                 `}>
@@ -407,9 +609,9 @@ const CampaignMap: React.FC = () => {
           initial={{ opacity: 0, scale: 0.98, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="relative z-10 w-full h-full lg:h-[94vh] lg:w-[96vw] max-w-[1600px] flex flex-col md:bg-slate-900/60 md:backdrop-blur-2xl md:border md:border-indigo-500/30 md:rounded-[2.5rem] md:shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(99,102,241,0.1)] overflow-hidden box-border"
+          className="relative z-10 w-full h-full lg:h-[94vh] lg:w-[96vw] max-w-[1600px] flex flex-col md:bg-slate-900/60 md:backdrop-blur-2xl md:border md:border-indigo-500/30 md:rounded-3xl md:shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(99,102,241,0.1)] overflow-hidden box-border"
       >
-        <div className="px-3 md:px-5 py-2.5 md:py-4 border-b border-indigo-500/20 flex flex-wrap md:flex-nowrap items-center justify-between bg-slate-900/40 shrink-0 z-20 backdrop-blur-xl gap-3 md:gap-4">
+        <div className="px-4 md:px-8 pt-4 pb-3 md:pt-6 md:pb-5 border-b border-indigo-500/20 flex flex-wrap md:flex-nowrap items-center justify-between bg-slate-900/40 shrink-0 z-20 backdrop-blur-xl gap-3 md:gap-4">
           <div className="flex items-center gap-3 md:gap-4">
              <div className={`p-2 md:p-3 rounded-lg md:rounded-xl shadow-inner transition-all duration-500 ${campaignMode === 'STORY' ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 shadow-[inset_0_0_15px_rgba(99,102,241,0.1)]' : 'bg-purple-500/10 border border-purple-500/30 text-purple-400 shadow-[inset_0_0_15px_rgba(168,85,247,0.1)]'}`}>
                {campaignMode === 'STORY' ? <MapPin className="w-5 h-5 md:w-6 md:h-6" /> : <Layers className="w-5 h-5 md:w-6 md:h-6" />}
@@ -465,8 +667,38 @@ const CampaignMap: React.FC = () => {
               </motion.button>
           </div>
         </div>
+        {/* SUBTAB BAR */}
+        <div className="flex justify-center border-b border-indigo-500/10 bg-slate-900/40 px-4 py-2 shrink-0 z-20 select-none">
+            <div className="flex gap-1.5 bg-black/40 border border-indigo-500/15 p-1 rounded-xl max-w-sm w-full shadow-inner">
+                <button 
+                    onClick={() => { setActiveTab('MAP'); playUiSound('CLICK'); }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'MAP' ? 'bg-indigo-600/90 text-white shadow-md border border-indigo-400/20' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                    <MapPin className="w-3 h-3" />
+                    {language === 'RU' ? 'Карта Секторов' : 'Sectors Map'}
+                </button>
+                
+                <button 
+                    onClick={() => { setActiveTab('BONUS_GRID'); playUiSound('CLICK'); }}
+                    className={`relative flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'BONUS_GRID' ? 'bg-indigo-600/90 text-white shadow-md border border-indigo-400/20' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                    <Sparkles className="w-3 h-3" />
+                    {language === 'RU' ? 'Энерго-Сетка' : 'Energy Grid'}
+                    {hexActivationPoints > 0 && (
+                        <span className="absolute -top-1.5 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[8px] font-black font-mono text-white animate-bounce shadow-[0_0_8px_rgba(239,68,68,0.8)] border border-white/20">
+                            {hexActivationPoints}
+                        </span>
+                    )}
+                </button>
+            </div>
+        </div>
+
         <AnimatePresence mode="wait">
-            {campaignMode === 'STORY' ? renderStoryTimeline() : renderLevelGrid()}
+            {activeTab === 'BONUS_GRID' ? (
+                renderEnergyGrid()
+            ) : (
+                campaignMode === 'STORY' ? renderStoryTimeline() : renderLevelGrid()
+            )}
         </AnimatePresence>
         <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none select-none text-[80px] font-black italic tracking-tighter text-white overflow-hidden whitespace-nowrap">MISSION CONTROL DATA TERMINAL</div>
         <AnimatePresence>

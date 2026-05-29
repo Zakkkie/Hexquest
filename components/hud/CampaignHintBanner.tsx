@@ -6,7 +6,32 @@ import { TEXT } from '../../services/i18n';
 
 const CampaignHintBanner: React.FC = () => {
     const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
-    const player = useGameStore(state => state.session?.player);
+    const playerExists = useGameStore(state => !!state.session?.player);
+    const playerId = useGameStore(state => state.session?.player?.id);
+    const playerQ = useGameStore(state => state.session?.player?.q ?? 0);
+    const playerR = useGameStore(state => state.session?.player?.r ?? 0);
+    const playerCoins = useGameStore(state => state.session?.player?.coins ?? 0);
+    const playerLevel = useGameStore(state => state.session?.player?.playerLevel ?? 0);
+    const playerInventory = useGameStore(state => state.session?.player?.inventory);
+    const playerStorage = useGameStore(state => state.session?.player?.storage ?? 0);
+    const playerMoves = useGameStore(state => state.session?.player?.moves ?? 0);
+    const playerRecoveredCurrentHex = useGameStore(state => state.session?.player?.recoveredCurrentHex ?? false);
+
+    const player = useMemo(() => {
+        if (!playerExists) return null;
+        return {
+            id: playerId,
+            q: playerQ,
+            r: playerR,
+            coins: playerCoins,
+            playerLevel,
+            inventory: playerInventory ?? [],
+            storage: playerStorage,
+            moves: playerMoves,
+            recoveredCurrentHex: playerRecoveredCurrentHex
+        };
+    }, [playerExists, playerId, playerQ, playerR, playerCoins, playerLevel, playerInventory, playerStorage, playerMoves, playerRecoveredCurrentHex]);
+
     const grid = useGameStore(state => state.session?.grid);
     const minedHexes = useGameStore(state => state.session?.minedHexes);
     const language = useGameStore(state => state.language);
@@ -30,7 +55,23 @@ const CampaignHintBanner: React.FC = () => {
         const ownedByLevel = (minLvl: number) =>
             Object.values(grid).filter((h: any) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
 
-        if (levelId === '1.1') return { current: Math.max(0, ownedByLevel(1) - 1), target: 3, label: TEXT[language].HUD.TUT_1_1_COUNTER };
+        if (levelId === '1.1') {
+            const wavePath = [
+                { q: 0, r: 0 },
+                { q: 1, r: -1 },
+                { q: 2, r: -1 },
+                { q: 2, r: 0 },
+                { q: 1, r: 1 },
+                { q: 0, r: 2 },
+                { q: -1, r: 2 },
+                { q: -2, r: 2 },
+                { q: -3, r: 2 },
+                { q: -3, r: 1 },
+                { q: -2, r: 0 }
+            ];
+            const idx = wavePath.findIndex(p => p.q === player.q && p.r === player.r);
+            return { current: idx !== -1 ? idx : 0, target: 10, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
+        }
         if (levelId === '1.3') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 2, label: 'LEVEL' };
         if (levelId === '1.4') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
         if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
@@ -74,6 +115,13 @@ const CampaignHintBanner: React.FC = () => {
 
     const tutorialHint = useMemo(() => {
         if (!grid || !player || !activeLevelConfig) return null;
+        if (activeLevelConfig.getTutorialHint) {
+            const session = useGameStore.getState().session;
+            if (session) {
+                const h = activeLevelConfig.getTutorialHint(session);
+                if (h) return h;
+            }
+        }
         const levelId = activeLevelConfig.id;
         const langRu = language === 'RU';
         const pKey = `${player.q},${player.r}`;
@@ -188,6 +236,17 @@ const CampaignHintBanner: React.FC = () => {
         return null; // fallback
     }, [grid, player, activeLevelConfig, language]);
 
+    const isMiniMonumentWithinRadius = useMemo(() => {
+        if (!grid || !player) return false;
+        return Object.values(grid).some((h: any) => {
+            if (h && h.structureType === 'MINI_MONUMENT') {
+                const distance = (Math.abs(player.q - h.q) + Math.abs(player.q + player.r - h.q - h.r) + Math.abs(player.r - h.r)) / 2;
+                return distance <= 3;
+            }
+            return false;
+        });
+    }, [grid, player]);
+
     if (!activeLevelConfig || !metrics) return null;
 
     const isCompleted = metrics.current >= metrics.target;
@@ -198,13 +257,43 @@ const CampaignHintBanner: React.FC = () => {
             {!isCampaignHintCollapsed && (
                 <motion.div
                     initial={{ opacity: 0, y: isMobile ? 20 : -20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    animate={isMiniMonumentWithinRadius ? {
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        borderColor: ["rgba(129, 140, 248, 0.2)", "rgba(129, 140, 248, 0.9)", "rgba(129, 140, 248, 0.2)"],
+                        boxShadow: [
+                            "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0px rgba(129, 140, 248, 0)",
+                            "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 15px rgba(129, 140, 248, 0.6)",
+                            "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0px rgba(129, 140, 248, 0)"
+                        ]
+                    } : {
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        borderColor: "rgba(30, 41, 59, 1)", // slate-800
+                        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
+                    }}
+                    transition={isMiniMonumentWithinRadius ? {
+                        opacity: { duration: 0.3 },
+                        y: { duration: 0.3 },
+                        scale: { duration: 0.3 },
+                        borderColor: {
+                            duration: 2.0,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        },
+                        boxShadow: {
+                            duration: 2.0,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        }
+                    } : { duration: 0.3 }}
                     exit={{ opacity: 0, y: isMobile ? 20 : -20, scale: 0.95 }}
-                    className="pointer-events-auto w-full"
+                    className="pointer-events-auto w-full p-3 md:p-4 rounded-xl md:rounded-2xl border bg-slate-950/85 backdrop-blur-md shadow-2xl flex flex-col gap-2"
                     id="campaign-hint-banner"
                 >
-                    <div className="p-3 md:p-4 rounded-xl md:rounded-2xl border bg-slate-950/85 backdrop-blur-md shadow-2xl flex flex-col gap-2 transition-all duration-300">
-                        <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                              <div className="p-2 rounded-lg bg-indigo-900/40 border border-indigo-500/30">
                                 {isCompleted ? <CheckCircle className="w-5 h-5 text-emerald-400" /> : <Target className="w-5 h-5 text-indigo-400" />}
                              </div>
@@ -251,11 +340,10 @@ const CampaignHintBanner: React.FC = () => {
                                 </p>
                             </div>
                         )}
-                    </div>
                 </motion.div>
             )}
         </AnimatePresence>
     );
 };
 
-export default CampaignHintBanner;
+export default React.memo(CampaignHintBanner);

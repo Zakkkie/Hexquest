@@ -788,6 +788,22 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectDuration: 300000, // 5 minutes
         negativeEffectLabel: { EN: 'Gold Curse (5m)', RU: 'Проклятие (5м)' }
     },
+    {
+        idPrefix: 'void_core',
+        rarity: 'LEGENDARY',
+        name: { EN: 'Void Core', RU: 'Ядро Пустоты' },
+        description: { EN: 'Bypasses high ground requirements and staircase check completely + sets step cost to 1.', RU: 'Игнорирует проверку лестницы и устанавливает стоимость шага в 1.' },
+        visualType: 'CORE',
+        visualColor: '#8b5cf6',
+        iconUrl: 'I_Core01.png',
+        effectType: 'ADD_MOVES',
+        effectValue: 0,
+        effectLabel: { EN: 'Gravity Shunt', RU: 'Гравитационное шунтирование' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 0,
+        negativeEffectLabel: { EN: '', RU: '' },
+        equipSlot: 'artifact'
+    },
 
     // --- WEAPONS (Оружие) ---
     
@@ -1381,6 +1397,34 @@ export const getRandomItem = (rarity: ItemRarity, language: Language): Item => {
     return {
         id: `${def.idPrefix}-${Date.now()}-${Math.floor(Math.random() * 9999)}`,
         baseId: def.idPrefix, // NEW: Type identifier
+        rarity: def.rarity,
+        name: def.name[language],
+        description: def.description[language],
+        timestamp: Date.now(),
+        visualType: def.visualType,
+        iconUrl: def.iconUrl,
+        effectType: def.effectType,
+        effectValue: def.effectValue,
+        effectDescription: def.effectLabel[language],
+        effectDuration: def.effectDuration,
+        maxHpBonus: def.maxHpBonus,
+        maxEnergyBonus: def.maxEnergyBonus,
+        equipSlot: def.equipSlot,
+        negativeEffectType: def.negativeEffectType,
+        negativeEffectValue: def.negativeEffectValue,
+        negativeEffectLabel: def.negativeEffectLabel[language],
+        negativeEffectDuration: def.negativeEffectDuration
+    };
+};
+
+export const createSpecificItem = (baseId: string, language: Language = 'EN'): Item => {
+    const def = ITEM_REGISTRY.find(i => i.idPrefix === baseId);
+    if (!def) {
+        return getRandomItem('COMMON', language);
+    }
+    return {
+        id: `${def.idPrefix}-${Date.now()}-${Math.floor(Math.random() * 9999)}`,
+        baseId: def.idPrefix,
         rarity: def.rarity,
         name: def.name[language],
         description: def.description[language],
