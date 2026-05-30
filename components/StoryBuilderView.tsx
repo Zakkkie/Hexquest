@@ -920,6 +920,7 @@ const StoryBuilderView: React.FC = () => {
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [popupCell, setPopupCell] = useState<{ q: number, r: number } | null>(null);
     const [selectedBuildLevel, setSelectedBuildLevel] = useState<number>(0); // 0-9 for building higher levels, or -999 for demolish/снос
     const [errorMessage, setErrorMessage] = useState<string | null>(null); // Visual feedback warning toast
@@ -1388,11 +1389,16 @@ const StoryBuilderView: React.FC = () => {
 
     // Clear board reset
     const handleClearBoard = () => {
-        if (window.confirm(language === 'RU' ? 'Вы уверены, что хотите очистить поле?' : 'Are you sure you want to clear the hexopl?')) {
-            playUiSound('CLICK');
-            clearStoryMap();
-            setPopupCell(null);
-        }
+        playUiSound('CLICK');
+        setIsSettingsOpen(false);
+        setShowClearConfirm(true);
+    };
+
+    const confirmClearBoard = () => {
+        playUiSound('CLICK');
+        clearStoryMap();
+        setPopupCell(null);
+        setShowClearConfirm(false);
     };
 
     return (
@@ -1872,6 +1878,52 @@ const StoryBuilderView: React.FC = () => {
                     </motion.div>
                 </div>
             </div>
+
+            {/* CLEAR CONFIRMATION DIALOG */}
+            <AnimatePresence>
+                {showClearConfirm && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto"
+                        onClick={() => setShowClearConfirm(false)}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 10 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative text-center"
+                        >
+                            <RefreshCw className="w-12 h-12 text-red-500 mx-auto mb-4 animate-pulse opacity-80" />
+                            <h3 className="text-xl md:text-2xl font-black font-mono text-white mb-2 tracking-tight uppercase">
+                                {language === 'RU' ? 'Сброс поля' : 'Wipe Board'}
+                            </h3>
+                            <p className="text-slate-300 mb-6 text-sm md:text-base px-2">
+                                {language === 'RU' 
+                                    ? 'Вы уверены, что хотите полностью очистить игровое поле? Это действие необратимо.' 
+                                    : 'Are you sure you want to completely clear the game board? This action cannot be undone.'}
+                            </p>
+                            
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={() => setShowClearConfirm(false)}
+                                    className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider text-xs md:text-sm rounded-xl transition-all border border-slate-700 active:scale-95 touch-manipulation"
+                                >
+                                    {language === 'RU' ? 'Отмена' : 'Cancel'}
+                                </button>
+                                <button 
+                                    onClick={confirmClearBoard}
+                                    className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-bold uppercase tracking-wider text-xs md:text-sm rounded-xl transition-all border border-red-500/50 shadow-[0_4px_15px_rgba(239,68,68,0.4)] active:scale-95 touch-manipulation"
+                                >
+                                    {language === 'RU' ? 'Очистить' : 'Clear'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* HIGH TECH INTENSIVE PHYSICAL RULES */}
             <AnimatePresence>

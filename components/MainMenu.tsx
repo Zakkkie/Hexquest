@@ -273,6 +273,7 @@ const MainMenu: React.FC = () => {
   
   const [showCampaignModes, setShowCampaignModes] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{type: 'ABANDON_CAMPAIGN' | 'ABANDON_NEW_GAME' | 'LOGOUT', payload?: any} | null>(null);
   
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -327,24 +328,17 @@ const MainMenu: React.FC = () => {
     playUiSound('CLICK');
     setCampaignMode(mode);
     if (hasActiveSession) {
-        if (window.confirm(t.ABANDON_CONFIRM)) {
-            abandonSession();
-            setUIState(mode === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
-        }
+        setConfirmAction({ type: 'ABANDON_CAMPAIGN', payload: mode });
     } else {
         setUIState(mode === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
+        setShowCampaignModes(false);
     }
-    setShowCampaignModes(false);
   };
 
   const handleNewGameClick = () => {
     playUiSound('CLICK');
     if (hasActiveSession) {
-      if (window.confirm(t.ABANDON_CONFIRM)) {
-        setShowMissionConfig(true);
-        setSelectedTier(1);
-        setDifficulty('EASY');
-      }
+      setConfirmAction({ type: 'ABANDON_NEW_GAME' });
     } else {
       setShowMissionConfig(true);
       setSelectedTier(1);
@@ -397,12 +391,33 @@ const MainMenu: React.FC = () => {
   const handleLogout = () => {
     playUiSound('CLICK');
     if (hasActiveSession) {
-      if (window.confirm(t.LOGOUT_CONFIRM)) {
-        logout();
-      }
+      setConfirmAction({ type: 'LOGOUT' });
     } else {
       logout();
     }
+  };
+
+  const executeConfirmAction = () => {
+    playUiSound('CLICK');
+    if (!confirmAction) return;
+
+    if (confirmAction.type === 'ABANDON_CAMPAIGN') {
+      abandonSession();
+      setUIState(confirmAction.payload === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
+      setShowCampaignModes(false);
+    } else if (confirmAction.type === 'ABANDON_NEW_GAME') {
+      setShowMissionConfig(true);
+      setSelectedTier(1);
+      setDifficulty('EASY');
+    } else if (confirmAction.type === 'LOGOUT') {
+      logout();
+    }
+    setConfirmAction(null);
+  };
+
+  const cancelConfirmAction = () => {
+    playUiSound('CLICK');
+    setConfirmAction(null);
   };
 
   const handleAuthSubmit = () => {
@@ -879,6 +894,53 @@ const MainMenu: React.FC = () => {
           </motion.div>
         </motion.div>
       
+      )}
+      </AnimatePresence>
+
+      {/* CONFIRM ACTION MODAL */}
+      <AnimatePresence>
+      {confirmAction && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 pointer-events-auto"
+            onClick={cancelConfirmAction}
+          >
+            <motion.div 
+                initial={{ scale: 0.95, y: 10 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 10 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative text-center"
+            >
+                <div className="w-12 h-12 rounded-full border-2 border-amber-500/30 flex items-center justify-center mx-auto mb-4 bg-amber-500/10">
+                    <span className="text-amber-500 text-xl font-bold">!</span>
+                </div>
+                <h3 className="text-xl md:text-2xl font-black font-mono text-white mb-2 tracking-tight uppercase">
+                    {language === 'RU' ? 'ВНИМАНИЕ' : 'WARNING'}
+                </h3>
+                <p className="text-slate-300 mb-6 text-sm md:text-base px-2">
+                    {confirmAction.type === 'LOGOUT' 
+                        ? (language === 'RU' ? t.LOGOUT_CONFIRM : t.LOGOUT_CONFIRM)
+                        : (language === 'RU' ? t.ABANDON_CONFIRM : t.ABANDON_CONFIRM)}
+                </p>
+                <div className="flex gap-3">
+                    <button 
+                        onClick={cancelConfirmAction}
+                        className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider text-xs md:text-sm rounded-xl transition-all border border-slate-700 active:scale-95 touch-manipulation"
+                    >
+                        {language === 'RU' ? 'Отмена' : 'Cancel'}
+                    </button>
+                    <button 
+                        onClick={executeConfirmAction}
+                        className="flex-1 px-4 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase tracking-wider text-xs md:text-sm rounded-xl transition-all border border-amber-500/50 shadow-[0_4px_15px_rgba(245,158,11,0.4)] active:scale-95 touch-manipulation"
+                    >
+                        {language === 'RU' ? 'Продолжить' : 'Proceed'}
+                    </button>
+                </div>
+            </motion.div>
+          </motion.div>
       )}
       </AnimatePresence>
 

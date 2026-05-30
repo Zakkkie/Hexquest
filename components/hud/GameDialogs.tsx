@@ -75,6 +75,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const [selectedRewardItem, setSelectedRewardItem] = useState<import('../../types.ts').Item | null>(null);
     const [selectedHexes, setSelectedHexes] = useState<Record<number, number>>({});
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const minedHexes = useGameStore(state => state.session?.minedHexes);
 
@@ -90,9 +91,13 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const handleNewGame = () => {
         playUiSound('CLICK');
-        if (window.confirm(language === 'RU' ? 'Начать новую игру? Весь текущий прогресс будет сброшен.' : 'Start a new game? All current progress will be reset.')) {
-            resetProgress();
-        }
+        setShowResetConfirm(true);
+    };
+
+    const executeNewGame = () => {
+        playUiSound('CLICK');
+        resetProgress();
+        setShowResetConfirm(false);
     };
 
     const handleNextLevel = () => {
@@ -1506,6 +1511,51 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                 </div>
             )}
             <MiniMonumentDialog isOpen={miniMonumentDialogState.isOpen} hint={miniMonumentDialogState.hint} onClose={closeMiniMonumentDialog} />
+
+            {/* CONFIRM RESET ACTION MODAL */}
+            <AnimatePresence>
+            {showResetConfirm && (
+                <div className="absolute inset-0 z-[200] flex items-center justify-center p-4 pointer-events-auto">
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                        onClick={() => setShowResetConfirm(false)}
+                    />
+                    <motion.div 
+                        initial={{ scale: 0.95, y: 10 }}
+                        animate={{ scale: 1, y: 0 }}
+                        exit={{ scale: 0.95, y: 10 }}
+                        className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative text-center z-10"
+                    >
+                        <div className="w-12 h-12 rounded-full border-2 border-red-500/30 flex items-center justify-center mx-auto mb-4 bg-red-500/10">
+                            <AlertTriangle className="text-red-500 w-6 h-6" />
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-black font-mono text-white mb-2 tracking-tight uppercase">
+                            {language === 'RU' ? 'ВНИМАНИЕ' : 'WARNING'}
+                        </h3>
+                        <p className="text-slate-300 mb-6 text-sm md:text-base px-2">
+                            {language === 'RU' ? 'Начать новую игру? Весь текущий прогресс будет сброшен.' : 'Start a new game? All current progress will be reset.'}
+                        </p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setShowResetConfirm(false)}
+                                className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider text-xs md:text-sm rounded-xl transition-all border border-slate-700 active:scale-95 touch-manipulation"
+                            >
+                                {language === 'RU' ? 'Отмена' : 'Cancel'}
+                            </button>
+                            <button 
+                                onClick={executeNewGame}
+                                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-bold uppercase tracking-wider text-xs md:text-sm rounded-xl transition-all border border-red-500/50 shadow-[0_4px_15px_rgba(239,68,68,0.4)] active:scale-95 touch-manipulation"
+                            >
+                                {language === 'RU' ? 'Сброс' : 'Reset'}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+            </AnimatePresence>
         </>
     );
 };
