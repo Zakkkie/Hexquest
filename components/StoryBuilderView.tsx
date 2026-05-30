@@ -967,35 +967,6 @@ const StoryBuilderView: React.FC = () => {
         }
     }, [playUiSound]);
 
-    // Give player initially a gorgeous set of tiles across all levels to let them enjoy high construction immediately!
-    useEffect(() => {
-        const initialSeed: Record<number, number> = {
-            0: 30,
-            1: 15,
-            2: 15,
-            3: 10,
-            4: 10,
-            5: 8,
-            6: 8,
-            7: 6,
-            8: 5,
-            9: 5
-        };
-        const updates: Record<number, number> = {};
-        let needsSeed = false;
-        for (const [lvlStr, qty] of Object.entries(initialSeed)) {
-            const lvl = Number(lvlStr);
-            const currentVal = minedInSessionHexes[lvl] || 0;
-            if (currentVal < qty) {
-                updates[lvl] = qty - currentVal;
-                needsSeed = true;
-            }
-        }
-        if (needsSeed) {
-            addMinedHexes(updates);
-        }
-    }, [minedInSessionHexes, addMinedHexes]);
-
     useEffect(() => {
         const container = containerRef.current;
         if (!container) {

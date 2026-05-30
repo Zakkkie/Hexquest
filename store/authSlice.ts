@@ -1,4 +1,4 @@
-import { GameStore } from './types.ts';
+import { GameStore, INITIAL_PLAYGROUND_SEED } from './types.ts';
 import { audioService } from '../services/audioService.ts';
 
 // Synchronous salted cryptographic hash function (cyrb53-based)
@@ -39,7 +39,7 @@ export const createAuthSlice = (
       levelsModeProgress: 0,
       skillPoints: 0,
       collectedHexes: {},
-      minedInSessionHexes: {},
+      minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
       totalMinedMaterial: 0,
       storyMap: {},
       storyMilestone: 0,

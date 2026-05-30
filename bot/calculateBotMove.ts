@@ -879,9 +879,21 @@ const parachuteAction = (bot: Entity, grid: Record<string, Hex>, navObstacles: H
     return yieldMove(bot, grid, navObstacles, monument, stateVersion, rm, 'Stuck');
 };
 
+const isProd = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') || 
+               (typeof window !== 'undefined' && ((window as any).process?.env?.NODE_ENV === 'production' || (import.meta as any).env?.PROD));
+
 const finalize = (result: AiResult, mem: BotMemory): AiResult => {
     result.memory.waitStreak = result.action?.type === 'WAIT' ? (mem.waitStreak ?? 0) + 1 : 0;
     result.memory.lastActionType = result.action?.type ?? null; 
+    if (isProd) {
+        result.debug = '';
+        if (result.memory.plan) {
+            result.memory.plan.label = '';
+        }
+        if (mem.plan) {
+            mem.plan.label = '';
+        }
+    }
     return result;
 };
 
@@ -898,7 +910,7 @@ export const calculateBotMove = (
     allBots?: Entity[],
     activeLevelConfig?: any // Changed from string to any to match AiSystem
 ): AiResult => {
-    if (!bot) return { action: null, debug: 'ERR', memory: { lastPlayerPos: null, stuckCounter: 0 } };
+    if (!bot) return { action: null, debug: isProd ? '' : 'ERR', memory: { lastPlayerPos: null, stuckCounter: 0 } };
 
     const mem = initMemory(bot);
     mem.isCampaign = !!activeLevelConfig;

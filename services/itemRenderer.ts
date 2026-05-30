@@ -1,6 +1,6 @@
 
 import { ItemRarity } from '../types';
-import { textureCache } from './textureCache';
+import { resourceService } from './resourceService';
 
 class ItemRenderer {
   private static instance: ItemRenderer;
@@ -20,7 +20,7 @@ class ItemRenderer {
   public getItemImage(visualType: string, color: string, rarity: ItemRarity, _iconUrl?: string, itemId?: string): HTMLCanvasElement | HTMLImageElement {
     const key = `ITEM_${visualType}_${color}_${rarity}_${itemId || 'none'}_v4`; 
     
-    return textureCache.getOrCreate(key, () => {
+    return resourceService.getOrCreate(key, () => {
         const canvas = document.createElement('canvas');
         canvas.width = this.SIZE;
         canvas.height = this.SIZE;

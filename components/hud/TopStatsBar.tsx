@@ -52,6 +52,8 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const playUiSound = useGameStore(state => state.playUiSound);
     const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
     const systemMenuRef = useRef<HTMLDivElement>(null);
+    const statsBarRef = useRef<HTMLDivElement>(null);
+    const [isPinned, setIsPinned] = useState(false);
 
     // Tracking Material changes
     const [prevStorage, setPrevStorage] = useState(playerStorage);
@@ -85,6 +87,45 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const curLang = language === 'RU' ? 'RU' : 'EN';
     const activeStatTooltip = hoveredStat ? STAT_INFOS[curLang][hoveredStat] : null;
 
+    const getTooltipPositionClass = (stat: 'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | 'ENTROPY') => {
+        // Safe left-alignment on mobile to prevent any screen overflow
+        switch (stat) {
+            case 'RANK':
+                return 'left-0 sm:left-2 md:left-4 origin-top-left';
+            case 'MATERIAL':
+                return 'left-0 sm:left-2 md:left-[15%] origin-top-left';
+            case 'COINS':
+                return 'left-0 sm:left-1/2 sm:-translate-x-1/2 origin-top-left sm:origin-top';
+            case 'MOVES':
+                return 'right-0 sm:right-2 md:left-[50%] md:-translate-x-1/2 origin-top-right';
+            case 'ENTROPY':
+                return 'right-0 sm:right-2 md:right-4 origin-top-right';
+            default:
+                return 'left-0 sm:left-1/2 sm:-translate-x-1/2 origin-top-left';
+        }
+    };
+
+    const handleInteraction = (stat: 'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | 'ENTROPY', action: 'enter' | 'leave' | 'click') => {
+        if (action === 'enter') {
+            if (!isPinned) {
+                setHoveredStat(stat);
+            }
+        } else if (action === 'leave') {
+            if (!isPinned) {
+                setHoveredStat(null);
+            }
+        } else if (action === 'click') {
+            playUiSound('CLICK');
+            if (hoveredStat === stat && isPinned) {
+                setHoveredStat(null);
+                setIsPinned(false);
+            } else {
+                setHoveredStat(stat);
+                setIsPinned(true);
+            }
+        }
+    };
+
     useEffect(() => {
         if (player) {
             if (player.storage !== prevStorage) {
@@ -108,11 +149,15 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const t = TEXT[language].HUD;
     const isMoving = player?.state === 'MOVING';
 
-    // Click Outside for System Menu
+    // Click Outside for System Menu and Stats Tooltips
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (systemMenuRef.current && !systemMenuRef.current.contains(event.target as Node)) {
                 setIsSystemMenuOpen(false);
+            }
+            if (statsBarRef.current && !statsBarRef.current.contains(event.target as Node)) {
+                setHoveredStat(null);
+                setIsPinned(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -122,20 +167,20 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     if (!player) return null;
 
     return (
-        <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-30 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in">
+        <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-[60] pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in">
             <div className="w-full flex justify-between items-start gap-2 md:gap-4 max-w-7xl mx-auto relative pointer-events-none">
                 
-                {/* STATS STRIP */}
-                <div className="flex flex-col gap-1 flex-1 min-w-0">
-                    <div className="pointer-events-auto flex items-center justify-between md:justify-start bg-slate-950/85 backdrop-blur-xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-0 py-1 pt-1 md:pt-1 md:px-4 md:py-2 gap-1 md:gap-4 transition-all duration-300 hover:border-slate-700/60 overflow-hidden w-[313.2px] h-[38.2px] md:w-fit md:h-auto md:shrink-0 relative">
+                {/* STATS STRIP wrapper with relative bounding to prevent tooltip overflow */}
+                <div className="flex flex-col gap-1 w-[313.2px] md:w-fit relative pointer-events-auto" ref={statsBarRef}>
+                    <div className="flex items-center justify-between md:justify-start bg-slate-950/85 backdrop-blur-xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-0 py-1 pt-1 md:pt-1 md:px-4 md:py-2 gap-1 md:gap-4 transition-all duration-300 hover:border-slate-700/60 overflow-hidden w-full md:w-fit h-[38.2px] md:h-auto md:shrink-0 relative">
                         
                         {/* RANK widget */}
                         <div 
-                            onClick={() => { setHelpTopic('RANK'); playUiSound('CLICK'); }}
-                            onMouseEnter={() => setHoveredStat('RANK')}
-                            onMouseLeave={() => setHoveredStat(null)}
-                            onTouchStart={() => setHoveredStat('RANK')}
-                            onTouchEnd={() => setHoveredStat(null)}
+                            onClick={() => handleInteraction('RANK', 'click')}
+                            onMouseEnter={() => handleInteraction('RANK', 'enter')}
+                            onMouseLeave={() => handleInteraction('RANK', 'leave')}
+                            onTouchStart={() => handleInteraction('RANK', 'enter')}
+                            onTouchEnd={() => handleInteraction('RANK', 'leave')}
                             className="relative flex items-center gap-1.5 md:gap-2.5 cursor-pointer group shrink-0 pr-1 select-none py-0.5 transition-all duration-300 hover:bg-slate-900/30 px-1.5 rounded-lg border border-transparent hover:border-indigo-500/20"
                         >
                             <div className="w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg bg-indigo-600 flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.3)] group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] transition-all">
@@ -153,11 +198,11 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                         <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0 -mx-[5px]"></div>
                         {/* MATERIAL widget */}
                         <motion.div 
-                            onClick={() => { setHelpTopic('MATERIAL'); playUiSound('CLICK'); }}
-                            onMouseEnter={() => setHoveredStat('MATERIAL')}
-                            onMouseLeave={() => setHoveredStat(null)}
-                            onTouchStart={() => setHoveredStat('MATERIAL')}
-                            onTouchEnd={() => setHoveredStat(null)}
+                            onClick={() => handleInteraction('MATERIAL', 'click')}
+                            onMouseEnter={() => handleInteraction('MATERIAL', 'enter')}
+                            onMouseLeave={() => handleInteraction('MATERIAL', 'leave')}
+                            onTouchStart={() => handleInteraction('MATERIAL', 'enter')}
+                            onTouchEnd={() => handleInteraction('MATERIAL', 'leave')}
                             animate={isLevel14 ? {
                                 scale: [1, 1.05, 1],
                                 borderColor: ['rgba(245,158,11,0.2)', 'rgba(245,158,11,1)', 'rgba(245,158,11,0.2)'],
@@ -220,11 +265,11 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                         <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0 -mx-[5px]"></div>
                         {/* CREDITS widget */}
                         <div 
-                            onClick={() => { setHelpTopic('COINS'); playUiSound('CLICK'); }}
-                            onMouseEnter={() => setHoveredStat('COINS')}
-                            onMouseLeave={() => setHoveredStat(null)}
-                            onTouchStart={() => setHoveredStat('COINS')}
-                            onTouchEnd={() => setHoveredStat(null)}
+                            onClick={() => handleInteraction('COINS', 'click')}
+                            onMouseEnter={() => handleInteraction('COINS', 'enter')}
+                            onMouseLeave={() => handleInteraction('COINS', 'leave')}
+                            onTouchStart={() => handleInteraction('COINS', 'enter')}
+                            onTouchEnd={() => handleInteraction('COINS', 'leave')}
                             className="relative flex items-center gap-1.5 md:gap-2.5 cursor-pointer group shrink-0 pr-1 select-none py-0.5 transition-all duration-300 hover:bg-slate-900/30 px-1.5 rounded-lg border border-transparent hover:border-amber-500/20"
                         >
                             <motion.div 
@@ -288,11 +333,11 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                         <div className="w-px h-5 md:h-7 bg-slate-800/80 shrink-0 -mx-[5px]"></div>
                         {/* MOVES widget */}
                         <div 
-                            onClick={() => { setHelpTopic('MOVES'); playUiSound('CLICK'); }}
-                            onMouseEnter={() => setHoveredStat('MOVES')}
-                            onMouseLeave={() => setHoveredStat(null)}
-                            onTouchStart={() => setHoveredStat('MOVES')}
-                            onTouchEnd={() => setHoveredStat(null)}
+                            onClick={() => handleInteraction('MOVES', 'click')}
+                            onMouseEnter={() => handleInteraction('MOVES', 'enter')}
+                            onMouseLeave={() => handleInteraction('MOVES', 'leave')}
+                            onTouchStart={() => handleInteraction('MOVES', 'enter')}
+                            onTouchEnd={() => handleInteraction('MOVES', 'leave')}
                             className="relative flex items-center gap-1.5 md:gap-2.5 cursor-pointer group shrink-0 pr-1 select-none py-0.5 transition-all duration-300 hover:bg-slate-900/30 px-1.5 rounded-lg border border-transparent hover:border-blue-500/20"
                         >
                             <div className={`w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg flex items-center justify-center border transition-all duration-300 group-hover:scale-110 ${isMoving ? 'bg-blue-600 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.5)]' : 'bg-blue-500/10 border-blue-500/20 group-hover:shadow-[0_0_12px_rgba(59,130,246,0.2)]'}`}>
@@ -311,11 +356,11 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                         
                         {/* ENTROPY widget */}
                         <div 
-                            onClick={() => { setHelpTopic('ENTROPY'); playUiSound('CLICK'); }}
-                            onMouseEnter={() => setHoveredStat('ENTROPY')}
-                            onMouseLeave={() => setHoveredStat(null)}
-                            onTouchStart={() => setHoveredStat('ENTROPY')}
-                            onTouchEnd={() => setHoveredStat(null)}
+                            onClick={() => handleInteraction('ENTROPY', 'click')}
+                            onMouseEnter={() => handleInteraction('ENTROPY', 'enter')}
+                            onMouseLeave={() => handleInteraction('ENTROPY', 'leave')}
+                            onTouchStart={() => handleInteraction('ENTROPY', 'enter')}
+                            onTouchEnd={() => handleInteraction('ENTROPY', 'leave')}
                             className="relative flex items-center gap-1.5 md:gap-2.5 cursor-pointer group shrink-0 pr-1 select-none py-0.5 transition-all duration-300 hover:bg-slate-900/30 px-1.5 rounded-lg border border-transparent hover:border-slate-500/25"
                         >
                             <div className="w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg bg-slate-900 flex items-center justify-center border border-slate-800 shadow-inner group-hover:scale-110 group-hover:border-slate-500 transition-all font-mono">
@@ -348,25 +393,131 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                     </div>
 
                     {/* DYNAMIC INFORMATION SUB-CARD */}
-                    <div className="relative w-full md:w-fit pointer-events-none h-0">
-                        {activeStatTooltip && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: -4, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 3, scale: 1 }}
-                                exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                                transition={{ duration: 0.15 }}
-                                className={`absolute left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 mt-1 max-w-[280px] w-64 p-2 bg-slate-950/95 backdrop-blur border rounded-lg shadow-xl z-50 pointer-events-auto flex flex-col gap-0.5 border-slate-800 ${activeStatTooltip.theme}`}
-                            >
-                                <div className="text-[9px] font-black tracking-widest uppercase flex items-center justify-between border-b border-white/5 pb-0.5">
-                                    <span>{activeStatTooltip.title}</span>
-                                    <span className="text-[7.5px] opacity-60 font-medium tracking-tight">CLICK FOR HELP</span>
+                    {activeStatTooltip && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 3, scale: 1 }}
+                            exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                            transition={{ duration: 0.15 }}
+                            className={`absolute top-[102%] mt-1 max-w-[calc(100vw-24px)] w-[260px] p-3 bg-slate-950/95 backdrop-blur-md rounded-xl border shadow-2xl z-50 pointer-events-auto flex flex-col gap-2 border-slate-700/80 ${activeStatTooltip.theme} ${getTooltipPositionClass(hoveredStat!)}`}
+                        >
+                            <div className="text-[10px] font-black tracking-wider uppercase flex items-center justify-between border-b border-white/5 pb-1.5">
+                                <span>{activeStatTooltip.title}</span>
+                                {isPinned ? (
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setHoveredStat(null); 
+                                            setIsPinned(false); 
+                                            playUiSound('CLICK'); 
+                                        }} 
+                                        className="text-[8px] text-[red-400] hover:text-white px-1.5 py-0.5 rounded bg-red-950/40 border border-red-900/30 hover:bg-red-900/40 uppercase tracking-tight"
+                                    >
+                                        {language === 'RU' ? 'ЗАКРЫТЬ' : 'CLOSE'}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setHelpTopic(hoveredStat!);
+                                            playUiSound('CLICK');
+                                        }}
+                                        className="text-[7.5px] text-slate-400 hover:text-white underline font-bold tracking-normal uppercase"
+                                    >
+                                        {language === 'RU' ? 'ИНФО-ГЛАВА ↗' : 'GUIDE ↗'}
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="text-[10.5px] text-slate-300 leading-relaxed font-sans mb-1 break-words whitespace-pre-wrap">
+                                {activeStatTooltip.desc}
+                            </div>
+
+                            {/* Cell-based representation and numeric fallback display */}
+                            {hoveredStat === 'RANK' && (
+                                <div className="border-t border-indigo-500/20 pt-1.5 mt-0.5">
+                                    <div className="grid grid-cols-8 gap-1 mt-1 mb-1.5">
+                                        {Array.from({ length: 8 }).map((_, idx) => {
+                                            const isFilled = idx < player.playerLevel;
+                                            return (
+                                                <div 
+                                                    key={idx}
+                                                    className={`h-3 rounded-[3px] border ${
+                                                        isFilled 
+                                                            ? 'bg-indigo-500 border-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.7)]' 
+                                                            : 'bg-indigo-950/60 border-indigo-900/30'
+                                                    } transition-all duration-300`}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex justify-between items-center text-[10px] text-indigo-300 font-mono font-bold mt-1">
+                                        <span>{language === 'RU' ? 'РАНГ ИНЖЕНЕРА' : 'ENGINEER RANK'}:</span>
+                                        <span className="text-white text-xs font-black font-mono">{player.playerLevel} / 8</span>
+                                    </div>
                                 </div>
-                                <div className="text-[10px] text-slate-300 leading-snug font-sans">
-                                    {activeStatTooltip.desc}
+                            )}
+
+                            {hoveredStat === 'MATERIAL' && (
+                                <div className="border-t border-emerald-500/20 pt-1.5 mt-0.5">
+                                    <div className="grid gap-1 mt-1 mb-1.5" style={{ gridTemplateColumns: `repeat(${player.maxStorage}, minmax(0, 1fr))` }}>
+                                        {Array.from({ length: player.maxStorage }).map((_, idx) => {
+                                            const isFilled = idx < player.storage;
+                                            return (
+                                                <div 
+                                                    key={idx}
+                                                    className={`h-3 rounded-[3px] border ${
+                                                        isFilled 
+                                                            ? 'bg-emerald-400 border-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.7)]' 
+                                                            : 'bg-emerald-950/60 border-emerald-950/30'
+                                                    } transition-all duration-300`}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex justify-between items-center text-[10px] text-emerald-400 font-mono font-bold mt-1">
+                                        <span>{language === 'RU' ? 'МАТЕРИАЛЫ' : 'STORAGE CELLS'}:</span>
+                                        <span className="text-white text-xs font-black font-mono">{player.storage} / {player.maxStorage}</span>
+                                    </div>
                                 </div>
-                            </motion.div>
-                        )}
-                    </div>
+                            )}
+
+                            {hoveredStat === 'COINS' && (
+                                <div className="border-t border-amber-500/20 pt-1.5 mt-0.5 flex flex-col gap-1">
+                                    <div className="flex justify-between items-center text-[10.5px] text-amber-400 font-mono font-bold">
+                                        <span>{language === 'RU' ? 'КРЕДИТЫ' : 'ENERGY CREDITS'}:</span>
+                                        <span className="text-white text-sm font-black font-mono flex items-center gap-1">
+                                            <Coins className="w-3.5 h-3.5 text-amber-400" />
+                                            {player.coins}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {hoveredStat === 'MOVES' && (
+                                <div className="border-t border-blue-500/20 pt-1.5 mt-0.5 flex flex-col gap-1">
+                                    <div className="flex justify-between items-center text-[10.5px] text-blue-400 font-mono font-bold">
+                                        <span>{language === 'RU' ? 'ХОДЫ' : 'MOVEMENT TURNS'}:</span>
+                                        <span className="text-white text-sm font-black font-mono flex items-center gap-1">
+                                            <Footprints className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                                            {player.moves}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {hoveredStat === 'ENTROPY' && (
+                                <div className="border-t border-rose-500/20 pt-1.5 mt-0.5 flex flex-col gap-1">
+                                    <div className="flex justify-between items-center text-[10.5px] text-rose-400 font-mono font-bold">
+                                        <span>{language === 'RU' ? 'СТАБИЛЬНОСТЬ' : 'CORE STABILITY'}:</span>
+                                        <span className="text-white text-sm font-black font-mono">
+                                            {entropy ? `${Math.floor((entropy.current / entropy.max) * 100)}%` : '--'}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
                 </div>
 
                 {/* SYSTEM MENU */}

@@ -1,5 +1,5 @@
 
-import { textureCache } from './textureCache';
+import { resourceService } from './resourceService';
 
 export class TextureService {
   private static instance: TextureService;
@@ -24,7 +24,7 @@ export class TextureService {
     // Unique Key for Shared Cache
     const key = `HEX_TOP_${clampedLevel}_${variationIndex}_${terrainType || 'NONE'}_${poiId || 'NONE'}`;
 
-    return textureCache.getOrCreate(key, () => 
+    return resourceService.getOrCreate(key, () => 
         this.generateTexture(clampedLevel, 'TOP', variationIndex, terrainType, poiId)
     );
   }
@@ -33,7 +33,7 @@ export class TextureService {
     const clampedLevel = Math.max(-10, Math.min(10, level));
     const key = `HEX_SIDE_${clampedLevel}_${terrainType || 'NONE'}_${poiId || 'NONE'}`;
     
-    return textureCache.getOrCreate(key, () => 
+    return resourceService.getOrCreate(key, () => 
         this.generateTexture(clampedLevel, 'SIDE', 0, terrainType, poiId)
     );
   }

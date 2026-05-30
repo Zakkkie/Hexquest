@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { DeviceType } from './types.ts';
-import { GameStore } from './store/types.ts';
+import { GameStore, INITIAL_PLAYGROUND_SEED } from './store/types.ts';
 
 // Import our new state slices
 import { createAuthSlice } from './store/authSlice.ts';
@@ -38,7 +38,7 @@ export const useGameStore = create<GameStore>()(
       activatedHexes: {},
       
       collectedHexes: {},
-      minedInSessionHexes: {},
+      minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
       totalMinedMaterial: 0,
       storyMap: {},
       storyMilestone: 0,

@@ -6,7 +6,7 @@ import { useGameStore } from '../store.ts';
 import { hexToPixel } from '../services/hexUtils.ts';
 import { EntityType } from '../types.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
-import { unitRenderer } from '../services/unitRenderer.ts';
+import { resourceService } from '../services/resourceService.ts';
 import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
 
 interface UnitProps {
@@ -54,7 +54,7 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, hexLevel, hea
 
   // Get Cached Sprite
   const spriteImage = useMemo(() => {
-      return unitRenderer.getUnitImage(finalHead, finalBody, finalColor, type);
+      return resourceService.getUnitImage(finalHead, finalBody, finalColor, type);
   }, [finalHead, finalBody, finalColor, type]);
 
   // Animation State Ref

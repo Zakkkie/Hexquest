@@ -7,7 +7,7 @@ import { generateMonumentRecipe } from '../rules/items.ts';
 import { effectPool } from '../services/effectPool.ts';
 import { historyService } from '../services/historyService.ts';
 import { createInitialSessionData } from '../services/sessionFactory.ts';
-import { textureCache } from '../services/textureCache.ts';
+import { resourceService } from '../services/resourceService.ts';
 import { TEXT } from '../services/i18n.ts';
 import { getHexKey, findPath, cubeDistance } from '../services/hexUtils.ts';
 import { 
@@ -48,7 +48,7 @@ export const createGameplaySlice = (
     get().abandonSession();
     
     // Clear the rendering canvas/texture cache to free precious RAM/GPU memory on level transitions
-    textureCache.clear();
+    resourceService.clear();
     
     let effectiveWin = winCondition;
 
@@ -122,7 +122,7 @@ export const createGameplaySlice = (
       engine = null;
     }
     historyService.clear();
-    textureCache.clear();
+    resourceService.clear();
     set(() => ({ 
       session: null, 
       hasActiveSession: false, 

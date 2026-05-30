@@ -1,5 +1,18 @@
 import { GameState, UIState, WinCondition, SessionState, DeviceType, Item } from '../types.ts';
 
+export const INITIAL_PLAYGROUND_SEED: Record<number, number> = {
+  0: 30,
+  1: 15,
+  2: 15,
+  3: 10,
+  4: 10,
+  5: 8,
+  6: 8,
+  7: 6,
+  8: 5,
+  9: 5
+};
+
 export interface AuthResponse {
   success: boolean;
   message?: string;
