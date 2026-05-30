@@ -199,17 +199,45 @@ const GameView: React.FC = () => {
     }
   }, [toast, hideToast]);
 
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
   // --- OPTIMIZED RESIZE HANDLER ---
   useEffect(() => {
-    let resizeFrame: number;
-    const handleResize = () => {
+    const container = canvasContainerRef.current;
+    if (!container) {
+      // Fallback to window resize if ref not populated
+      let resizeFrame: number;
+      const handleResizeObj = () => {
         cancelAnimationFrame(resizeFrame);
         resizeFrame = requestAnimationFrame(() => {
-            setDimensions({ width: window.innerWidth, height: window.innerHeight });
+          setDimensions({ width: window.innerWidth, height: window.innerHeight });
         });
+      };
+      window.addEventListener('resize', handleResizeObj);
+      return () => {
+        window.removeEventListener('resize', handleResizeObj);
+        cancelAnimationFrame(resizeFrame);
+      };
+    }
+
+    let resizeFrame: number;
+    const observer = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return;
+      const { width, height } = entries[0].contentRect;
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        setDimensions({
+          width: Math.max(100, Math.floor(width)),
+          height: Math.max(100, Math.floor(height))
+        });
+      });
+    });
+
+    observer.observe(container);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(resizeFrame);
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const centerOnPlayer = useCallback(() => {
@@ -511,7 +539,7 @@ const GameView: React.FC = () => {
       </div>
 
       {/* CANVAS */}
-      <div className="absolute inset-0 z-10">
+      <div ref={canvasContainerRef} className="absolute inset-0 z-10">
         <Stage 
           ref={stageRef}
           width={dimensions.width} 

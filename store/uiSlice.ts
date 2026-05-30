@@ -49,6 +49,10 @@ export const createUiSlice = (
   toggleCampaignHintCollapse: () => {
     set((state) => ({ isCampaignHintCollapsed: !state.isCampaignHintCollapsed }));
   },
+
+  setCampaignHintCollapsed: (val: boolean) => {
+    set(() => ({ isCampaignHintCollapsed: val }));
+  },
   
   playUiSound: (type: UiSoundType) => {
     const map: Record<UiSoundType, string> = {

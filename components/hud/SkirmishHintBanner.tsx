@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Swords, X, HelpCircle } from 'lucide-react';
+import { Trophy, Swords, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
 
 const SkirmishHintBanner: React.FC = () => {
     const winCondition = useGameStore(state => state.session?.winCondition);
@@ -24,7 +24,7 @@ const SkirmishHintBanner: React.FC = () => {
     }, [activeLevelConfig, winCondition]);
 
     const title = useMemo(() => {
-        return language === 'RU' ? 'Задача Битвы' : 'Skirmish Objective';
+        return language === 'RU' ? 'ЗАДАЧА БИТВЫ' : 'SKIRMISH OBJECTIVE';
     }, [language]);
 
     const badge = useMemo(() => {
@@ -76,81 +76,185 @@ const SkirmishHintBanner: React.FC = () => {
         return rankDone || coinsDone;
     }, [winCondition, player]);
 
+    // Calculate progression percentage for the progress trackers
+    const { progressPercent, rankPercent, coinsPercent } = useMemo(() => {
+        if (!winCondition || !player) return { progressPercent: 0, rankPercent: 0, coinsPercent: 0 };
+        const rp = Math.min(100, (player.playerLevel / winCondition.targetLevel) * 100);
+        const cp = winCondition.targetCoins > 0 ? Math.min(100, (player.coins / winCondition.targetCoins) * 100) : 100;
+        
+        let avgPercent = rp;
+        if (winCondition.winType === 'AND') {
+            avgPercent = (rp + cp) / 2;
+        } else if (winCondition.winType === 'OR') {
+            avgPercent = Math.max(rp, cp);
+        }
+        return { progressPercent: avgPercent, rankPercent: rp, coinsPercent: cp };
+    }, [winCondition, player]);
+
     // Background gradient states depending on status
     const themeColor = useMemo(() => {
         if (isAccomplished) {
-            return 'from-emerald-500/25 to-teal-500/10 border-emerald-500/40 shadow-emerald-950/10 text-emerald-300';
+            return 'from-emerald-500/15 to-teal-500/5 hover:border-emerald-500/40 border-slate-800 text-emerald-300';
         }
-        return 'from-indigo-500/20 to-purple-500/10 border-indigo-500/40 shadow-indigo-900/10 text-indigo-300';
+        return 'from-indigo-500/10 to-purple-500/5 hover:border-indigo-500/40 border-slate-800 text-indigo-300';
     }, [isAccomplished]);
 
-    const [dismissedText, setDismissedText] = useState<string | null>(null);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
-    // Dynamic reset to auto-remind the player when values update
+    // Auto-expand whenever values update
+    const lastValueRef = useRef<string>('');
     useEffect(() => {
-        if (progressText && dismissedText && dismissedText !== progressText) {
-            setDismissedText(null);
+        if (progressText && lastValueRef.current && lastValueRef.current !== progressText) {
+            setIsCollapsed(false);
         }
-    }, [progressText, dismissedText]);
+        lastValueRef.current = progressText;
+    }, [progressText]);
 
     if (!isSkirmish || !winCondition || !player) return null;
     
     // Hide for SUMMIT since MonumentHintBanner handles its multi-step logic
     if (winCondition.winType === 'SUMMIT') return null;
-    
-    if (dismissedText === progressText) return null;
 
-    const handleDismiss = (e: React.MouseEvent) => {
+    const handleToggleCollapse = (e: React.MouseEvent) => {
         e.stopPropagation();
         playUiSound('CLICK');
-        setDismissedText(progressText);
+        setIsCollapsed(p => !p);
     };
 
     return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                className="pointer-events-auto cursor-pointer w-full"
-                onClick={handleDismiss}
-                title={language === 'RU' ? 'Нажмите, чтобы скрыть уведомление' : 'Click to dismiss notification'}
-                id="skirmish-hint-banner"
-            >
-                <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl border bg-slate-950/85 backdrop-blur-md shadow-2xl flex items-start gap-3 transition-all duration-300 hover:bg-slate-900/90 active:scale-98 group bg-gradient-to-br ${themeColor}`}>
-                    <div className="p-2 md:p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 shrink-0">
-                        {isAccomplished ? (
-                            <Trophy className="w-5 h-5 md:w-6 md:h-6 text-emerald-400 animate-bounce" />
-                        ) : (
-                            <Swords className="w-5 h-5 md:w-6 md:h-6 text-indigo-400 animate-pulse" />
-                        )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0 flex flex-col">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] md:text-[11px] font-black uppercase tracking-wider text-slate-400 font-sans group-hover:text-white transition-colors">
-                                {title}
-                            </span>
-                            <span className="text-[7.5px] md:text-[8.5px] px-1.5 py-0.5 rounded bg-slate-900/60 font-semibold border border-slate-800 uppercase tracking-wider">
-                                {badge}
-                            </span>
+        <AnimatePresence mode="wait">
+            {isCollapsed ? (
+                <motion.div
+                    key="collapsed-skirmish"
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={handleToggleCollapse}
+                    className={`pointer-events-auto cursor-pointer w-full p-2.5 rounded-xl border bg-slate-950/90 backdrop-blur-md shadow-lg flex items-center justify-between gap-3 text-white transition-all select-none group bg-gradient-to-r ${themeColor}`}
+                    title={language === 'RU' ? 'Развернуть' : 'Expand'}
+                >
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className="p-1.5 rounded-lg bg-slate-900/95 border border-slate-800 shrink-0">
+                            {isAccomplished ? (
+                                <Trophy className="w-4 h-4 text-emerald-400 animate-bounce" />
+                            ) : (
+                                <Swords className="w-4 h-4 text-indigo-400 animate-pulse" />
+                            )}
                         </div>
-                        <p className="text-xs text-white/90 font-medium leading-relaxed mt-1 tracking-tight pr-2">
+                        <div className="flex-1 min-w-0 pr-1 flex flex-col justify-center">
+                            <div className="flex items-center justify-between gap-2.5 leading-none">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 truncate">
+                                    {title}
+                                </span>
+                                <span className={`text-[10px] font-mono font-bold whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800/60 leading-none ${isAccomplished ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                    {isAccomplished ? (language === 'RU' ? 'ВЫПОЛНЕНО' : 'COMPLETE') : `${Math.floor(progressPercent)}%`}
+                                </span>
+                            </div>
+                            
+                            {/* Horizontal progress bar */}
+                            <div className="w-full bg-slate-950 h-1.5 rounded-full mt-2 overflow-hidden border border-slate-800/65">
+                                <div 
+                                    className={`h-full rounded-full transition-all duration-500 ${isAccomplished ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                    style={{ width: `${progressPercent}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    {/* Expand indicator */}
+                    <div className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-400 group-hover:text-white transition-colors shrink-0 flex items-center justify-center">
+                        <ChevronDown className="w-3.5 h-3.5" />
+                    </div>
+                </motion.div>
+            ) : (
+                <motion.div
+                    key="expanded-skirmish"
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.2 }}
+                    className="pointer-events-auto w-full"
+                >
+                    <div className={`p-4 rounded-xl border bg-slate-950/92 backdrop-blur-md shadow-2xl flex flex-col gap-3 transition-all duration-300 relative overflow-hidden group border-slate-800/70`}>
+                        {/* Header container */}
+                        <div className="flex items-center justify-between gap-2.5 border-b border-slate-900 pb-2.5">
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                <div className="p-1.5 rounded-lg bg-slate-900/95 border border-slate-800 shrink-0">
+                                    {isAccomplished ? (
+                                        <Trophy className="w-5 h-5 text-emerald-400 animate-bounce" />
+                                    ) : (
+                                        <Swords className="w-5 h-5 text-indigo-400 animate-pulse" />
+                                    )}
+                                </div>
+                                <div className="flex flex-col min-w-0 justify-center">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400 leading-none mb-1">
+                                        {title}
+                                    </span>
+                                    <span className="text-[8.5px] text-slate-500 uppercase font-bold tracking-widest leading-none">
+                                        {badge}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {/* Collapse Button */}
+                            <button 
+                                onClick={handleToggleCollapse}
+                                className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
+                                title={language === 'RU' ? 'Свернуть' : 'Collapse'}
+                            >
+                                <ChevronUp className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        {/* Text explanation */}
+                        <p className="text-xs text-slate-200 font-medium leading-relaxed font-mono">
                             {progressText}
                         </p>
-                        <span className="text-[8px] md:text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1.5 font-mono select-none flex items-center gap-1 group-hover:text-slate-400 transition-colors">
-                            <HelpCircle className="w-2.5 h-2.5 inline" /> {language === 'RU' ? 'Скрыть нажатием в любое место' : 'Click anywhere to dismiss'}
+
+                        {/* Rich Split Progress bar for Rank & Credits if WinType is and/or */}
+                        <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-slate-900/50 border border-slate-800/80 mt-0.5">
+                            {/* Rank Tracker */}
+                            <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-[10px] font-mono font-bold leading-none">
+                                    <span className="text-slate-400 uppercase">{language === 'RU' ? 'ИНЖЕНЕРНЫЙ РАНГ' : 'ENGINEERING RANK'}</span>
+                                    <span className={player.playerLevel >= winCondition.targetLevel ? 'text-emerald-400' : 'text-indigo-400'}>
+                                        {player.playerLevel} / {winCondition.targetLevel}
+                                    </span>
+                                </div>
+                                <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-900/70">
+                                    <div 
+                                        className={`h-full rounded-full transition-all duration-500 ${player.playerLevel >= winCondition.targetLevel ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                        style={{ width: `${rankPercent}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Coin/Credits Tracker */}
+                            {winCondition.targetCoins > 0 && (
+                                <div className="flex flex-col gap-1 border-t border-slate-950/20 pt-1.5">
+                                    <div className="flex items-center justify-between text-[10px] font-mono font-bold leading-none">
+                                        <span className="text-slate-400 uppercase">{language === 'RU' ? 'КРЕДИТНЫЙ БАЛАНС' : 'CREDIT BALANCE'}</span>
+                                        <span className={player.coins >= winCondition.targetCoins ? 'text-emerald-400' : 'text-amber-450'}>
+                                            {player.coins} / {winCondition.targetCoins}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-900/70">
+                                        <div 
+                                            className={`h-full rounded-full transition-all duration-500 ${player.coins >= winCondition.targetCoins ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                                            style={{ width: `${coinsPercent}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <span className="text-[8.5px] text-slate-500 font-bold uppercase tracking-wider font-mono select-none flex items-center gap-1.5">
+                            <HelpCircle className="w-3 h-3 text-slate-600" /> 
+                            {language === 'RU' ? 'Выполните требования для активации выхода' : 'Meet the parameters to establish exit portal trace'}
                         </span>
                     </div>
-
-                    <button 
-                        onClick={handleDismiss}
-                        className="p-1 rounded-md text-slate-500 hover:text-white hover:bg-slate-800/40 transition-all active:scale-90"
-                    >
-                        <X className="w-3.5 h-3.5" />
-                    </button>
-                </div>
-            </motion.div>
+                </motion.div>
+            )}
         </AnimatePresence>
     );
 };

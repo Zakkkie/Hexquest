@@ -610,15 +610,17 @@ const StoryHex: React.FC<{
             ref={groupRef} 
             x={px.x} 
             y={px.y} 
-            onClick={(e) => { e.cancelBubble = true; onClick(q, r); }} 
-            onTap={(e) => { e.cancelBubble = true; onClick(q, r); }}
+            onClick={(e) => { e.cancelBubble = true; setIsHovered(false); onClick(q, r); }} 
+            onTap={(e) => { e.cancelBubble = true; setIsHovered(false); onClick(q, r); }}
             onDblClick={() => onDblClick && onDblClick(q, r)}
             onDblTap={() => onDblClick && onDblClick(q, r)}
             onMouseEnter={(e) => {
-                if (e.evt && ((e.evt as any).pointerType === 'touch' || ('ontouchstart' in window && window.matchMedia('(pointer: coarse)').matches))) return;
+                // Prevent hover sticking on pure touch devices, but allow if using a mouse
+                if (e.evt && e.evt.type && e.evt.type.includes('touch')) return;
                 setIsHovered(true);
             }}
             onMouseLeave={() => setIsHovered(false)}
+            onTouchEnd={() => setIsHovered(false)}
             perfectDrawEnabled={false}
             transformsEnabled="position"
         >
@@ -923,6 +925,23 @@ const StoryBuilderView: React.FC = () => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null); // Visual feedback warning toast
     const [destroyButtonCell, setDestroyButtonCell] = useState<{ q: number, r: number } | null>(null);
     
+    // Auto-dismiss destroyButtonCell when clicking anywhere else on the document
+    useEffect(() => {
+        if (!destroyButtonCell) return;
+        const autoDismiss = () => {
+            setDestroyButtonCell(null);
+        };
+        const timer = setTimeout(() => {
+            window.addEventListener('click', autoDismiss);
+            window.addEventListener('touchstart', autoDismiss);
+        }, 10);
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('click', autoDismiss);
+            window.removeEventListener('touchstart', autoDismiss);
+        };
+    }, [destroyButtonCell]);
+    
     const containerRef = useRef<HTMLDivElement>(null);
     const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -978,17 +997,31 @@ const StoryBuilderView: React.FC = () => {
     }, [minedInSessionHexes, addMinedHexes]);
 
     useEffect(() => {
-        const handleResize = () => {
-            if (containerRef.current) {
-                const w = containerRef.current.clientWidth;
-                const h = containerRef.current.clientHeight;
+        const container = containerRef.current;
+        if (!container) {
+            // Fallback
+            const handleResize = () => {
+                const w = window.innerWidth;
+                const h = window.innerHeight;
                 setStageSize({ width: w, height: h });
                 setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
-            }
-        };
-        window.addEventListener('resize', handleResize);
-        handleResize();
-        return () => window.removeEventListener('resize', handleResize);
+            };
+            window.addEventListener('resize', handleResize);
+            handleResize();
+            return () => window.removeEventListener('resize', handleResize);
+        }
+
+        const observer = new ResizeObserver((entries) => {
+            if (!entries || entries.length === 0) return;
+            const { width, height } = entries[0].contentRect;
+            const w = Math.max(100, Math.floor(width));
+            const h = Math.max(100, Math.floor(height));
+            setStageSize({ width: w, height: h });
+            setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
+        });
+
+        observer.observe(container);
+        return () => observer.disconnect();
     }, []);
 
     // Shape completeness check - checks if the placed level 0 or higher hexes match the active figure's coordinates
@@ -1029,11 +1062,13 @@ const StoryBuilderView: React.FC = () => {
         return Object.values(storyMap).some(lvl => lvl !== undefined && lvl >= 0);
     }, [storyMap]);
 
+    // Direct placement eligibility calculation
     const isEligibleForPlacement = useCallback((q: number, r: number, forceLevel?: number) => {
         const lvlToBuild = forceLevel !== undefined ? forceLevel : selectedBuildLevel;
+        const currentMap = storyMap;
         if (lvlToBuild === -999) return false; // Demolish is not a placement
 
-        const currentLvl = storyMap[getHexKey(q, r)];
+        const currentLvl = currentMap[getHexKey(q, r)];
         const currentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
 
         if (!currentlyBuilt && lvlToBuild !== 0) {
@@ -1048,10 +1083,8 @@ const StoryBuilderView: React.FC = () => {
         }
 
         if (currentlyBuilt) {
-            // "возможно размещение гексов выше уровня"
             if (lvlToBuild <= currentLvl) return false;
         } else {
-            // Placing on a brand new empty tile
             if (lvlToBuild !== 0) return false;
         }
         
@@ -1064,16 +1097,17 @@ const StoryBuilderView: React.FC = () => {
         let supportCount = 0;
 
         for (const n of neighbors) {
-            const nLvl = storyMap[getHexKey(q + n.dq, r + n.dr)];
+            let nLvl = currentMap[getHexKey(q + n.dq, r + n.dr)];
+            
             if (nLvl !== undefined && nLvl >= 0) {
                 hasValidNeighbor = true;
                 
-                // Staircase rule: Difference no more than 1
+                // Staircase rule between occupied cells: absolute height difference can be at most 1
                 if (Math.abs(lvlToBuild - nLvl) > 1) {
                     return false;
                 }
-
-                if (nLvl >= lvlToBuild - 1) {
+                
+                if (nLvl === lvlToBuild - 1) {
                     supportCount++;
                 }
             }
@@ -1087,8 +1121,27 @@ const StoryBuilderView: React.FC = () => {
             return false;
         }
 
+        // Rule: To place a level 1 hex, there must be support of at least 3 adjacent built hexes (lvl >= 0).
+        if (lvlToBuild === 1 && hasAnyHex) {
+            let builtNeighborsCount = 0;
+            if (currentlyBuilt) {
+                builtNeighborsCount += 3; // Intrinsic support from the base itself!
+            } else {
+                for (const n of neighbors) {
+                    const nKey = getHexKey(q + n.dq, r + n.dr);
+                    const nLvl = currentMap[nKey];
+                    if (nLvl !== undefined && nLvl >= 0) {
+                        builtNeighborsCount++;
+                    }
+                }
+            }
+            if (builtNeighborsCount < 3) {
+                return false;
+            }
+        }
+
         return true;
-    }, [hasAnyHex, storyMap, selectedBuildLevel]);
+    }, [storyMap, selectedBuildLevel, hasAnyHex]);
 
     const gridPoints = useMemo(() => {
         const points = [];
@@ -1114,23 +1167,28 @@ const StoryBuilderView: React.FC = () => {
     const handleCellClick = useCallback((q: number, r: number) => {
         if (isPanning.current) return;
         
+        const map = storyMap;
+        const buildLevel = selectedBuildLevel;
+        const anyHex = hasAnyHex;
         const key = getHexKey(q, r);
-        const currentLvl = storyMap[key];
+        const currentLvl = map[key];
         const isCurrentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
 
         const eligible = isEligibleForPlacement(q, r);
         
         if (isCurrentlyBuilt) {
-            if (currentLvl === selectedBuildLevel && selectedBuildLevel !== -999) {
+            if (currentLvl === buildLevel && buildLevel !== -999) {
                 playUiSound('CLICK');
-                setDestroyButtonCell({ q, r });
+                setDestroyButtonCell(prev => (prev && prev.q === q && prev.r === r) ? null : { q, r });
                 return;
             }
-            if (eligible && selectedBuildLevel !== -999) {
+            // Dismiss destroy button cell on other cell interactions
+            setDestroyButtonCell(null);
+            if (eligible && buildLevel !== -999) {
                 // If it's an existing tile, and the current selected level is valid for upgrading
                 // (It will fall through to execute placement)
             } else {
-                if (selectedBuildLevel === -999) {
+                if (buildLevel === -999) {
                     // Demolish popup
                     playUiSound('CLICK');
                     setPopupCell({ q, r });
@@ -1150,8 +1208,9 @@ const StoryBuilderView: React.FC = () => {
                 }
             }
         } else if (!eligible) {
+            setDestroyButtonCell(null);
             playUiSound('ERROR');
-            if (selectedBuildLevel !== 0) {
+            if (buildLevel !== 0) {
                 setErrorMessage(
                     language === 'RU'
                         ? 'Размещение запрещено! На пустой гекс допускается только установка плитки 0 уровня.'
@@ -1171,7 +1230,7 @@ const StoryBuilderView: React.FC = () => {
         }
 
         // Ensure player has the selected block in inventory
-        const availableCount = minedInSessionHexes[selectedBuildLevel] || 0;
+        const availableCount = minedInSessionHexes[buildLevel] || 0;
         if (availableCount <= 0) {
             playUiSound('WARNING');
             return;
@@ -1179,7 +1238,7 @@ const StoryBuilderView: React.FC = () => {
 
         // Rule: To place a level 1 hex, there must be support of at least 3 adjacent built hexes (lvl >= 0).
         // (if not placing on an empty map completely center)
-        if (selectedBuildLevel === 1 && hasAnyHex) {
+        if (buildLevel === 1 && anyHex) {
             const neighborsList = [
                 { dq: 1, dr: -1 }, { dq: 1, dr: 0 }, { dq: 0, dr: 1 },
                 { dq: -1, dr: 1 }, { dq: -1, dr: 0 }, { dq: 0, dr: -1 }
@@ -1191,7 +1250,7 @@ const StoryBuilderView: React.FC = () => {
             } else {
                 for (const n of neighborsList) {
                     const nKey = getHexKey(q + n.dq, r + n.dr);
-                    const nLvl = storyMap[nKey];
+                    const nLvl = map[nKey];
                     if (nLvl !== undefined && nLvl >= 0) {
                         builtNeighborsCount++;
                     }
@@ -1210,11 +1269,11 @@ const StoryBuilderView: React.FC = () => {
         }
 
         // Place new block!
-        placeStoryHex(q, r, selectedBuildLevel);
+        placeStoryHex(q, r, buildLevel);
         playUiSound('SUCCESS');
         setLastPlacedKey(key);
         setErrorMessage(null); // clear any previous warning
-    }, [isPanning, storyMap, selectedBuildLevel, isEligibleForPlacement, minedInSessionHexes, placeStoryHex, addMinedHexes, playUiSound, setErrorMessage, language, hasAnyHex, setDestroyButtonCell]);
+    }, [isPanning, isEligibleForPlacement, minedInSessionHexes, placeStoryHex, addMinedHexes, playUiSound, setErrorMessage, language, setDestroyButtonCell, storyMap, selectedBuildLevel, hasAnyHex]);
 
     const handleCellDblClick = useCallback((q: number, r: number) => {
         const key = getHexKey(q, r);
@@ -1370,14 +1429,14 @@ const StoryBuilderView: React.FC = () => {
             {/* CANVAS */}
             <div 
                 className="absolute inset-0 z-0"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
             >
                 <Stage 
                     width={stageSize.width} 
                     height={stageSize.height}
                     onWheel={handleWheel}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                     onClick={() => setDestroyButtonCell(null)}
                     onTap={() => setDestroyButtonCell(null)}
                 >
@@ -1465,17 +1524,9 @@ const StoryBuilderView: React.FC = () => {
                         >
                             <div 
                                 onClick={() => { playUiSound('CLICK'); setErrorMessage(null); }}
-                                className="bg-slate-950/98 border-2 border-red-500/50 text-red-200 px-4 py-3.5 rounded-2xl shadow-[0_10px_40px_rgba(239,68,68,0.25)] flex items-center gap-3 backdrop-blur-xl w-full cursor-pointer hover:bg-slate-900/98 hover:border-red-500/80 transition-all select-none"
+                                className="bg-slate-950/98 border border-slate-800 text-red-400 font-mono font-black uppercase text-xs tracking-wider px-4 py-3 rounded-lg shadow-xl w-full cursor-pointer hover:bg-slate-900 transition-all select-none text-center"
                             >
-                                <Info className="w-5 h-5 text-red-400 shrink-0" />
-                                <div className="flex flex-col text-left">
-                                    <span className="text-[8px] font-black uppercase text-red-400 tracking-widest leading-none">
-                                        {language === 'RU' ? 'ИНФОРМАЦИОННОЕ СООБЩЕНИЕ' : 'SYSTEM NOTIFICATION'}
-                                    </span>
-                                    <span className="text-[10.5px] md:text-xs font-semibold leading-relaxed mt-1 text-slate-100">
-                                        {errorMessage}
-                                    </span>
-                                </div>
+                                {errorMessage}
                             </div>
                         </motion.div>
                     )}

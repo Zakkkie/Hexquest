@@ -491,8 +491,8 @@ export class ActionProcessor {
       state.messageLog.unshift({
           id: `monument-portal-${Date.now()}`,
           text: isRu
-            ? '🚀 МОНУМЕНТ УСПЕШНО АКТИВИРОВАН! Сверхсветовые передатчики развернуты! Сверху открылся Портал Победы.'
-            : '🚀 MONUMENT ACTIVATED SUCCESSFULLY! Nebula hyper-beacons online! Victory Portal opened above.',
+            ? '🌀 МОНУМЕНТ УСПЕШНО АКТИВИРОВАН! ПОРТАЛ АКТИВИРОВАН! ВОЙДИТЕ В НЕГО И НАЖМИТЕ НА НЕГО ДЛЯ ЗАВЕРШЕНИЯ МИССИИ!'
+            : '🌀 MONUMENT ACTIVATED SUCCESSFULLY! PORTAL ACTIVATED! ENTER IT AND CLICK ON IT TO COMPLETE THE MISSION!',
           type: 'SUCCESS',
           source: 'NEBULA_AI',
           timestamp: Date.now()

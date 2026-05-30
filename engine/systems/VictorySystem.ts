@@ -15,8 +15,8 @@ export class VictorySystem implements System {
     
     const isRu = state.language === 'RU';
     const alertText = isRu
-      ? `🏆 ДОСТИГНУТЫ УСЛОВИЯ ПОБЕДЫ (${msg})! Сверху над вашим текущим гексом ({q: ${state.player.q}, r: ${state.player.r}}) открылся анимированный портал. Войдите в него и кликните на него для завершения миссии!`
-      : `🏆 VICTORY CONDITIONS MET (${msg})! An animated portal has opened above your current hex ({q: ${state.player.q}, r: ${state.player.r}}). Stand in it and click the portal to complete the mission!`;
+      ? `🌀 ПОРТАЛ АКТИВИРОВАН! ВОЙДИТЕ В НЕГО И НАЖМИТЕ НА НЕГО ДЛЯ ЗАВЕРШЕНИЯ МИССИИ! (${msg})`
+      : `🌀 PORTAL ACTIVATED! ENTER IT AND CLICK ON IT TO COMPLETE THE MISSION! (${msg})`;
       
     state.messageLog.unshift({
         id: `portal-spawn-${Date.now()}`,

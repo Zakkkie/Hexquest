@@ -282,14 +282,24 @@ const CampaignMap: React.FC = () => {
   };
 
   useEffect(() => {
-    const handleResize = () => {
-        if (containerRef.current) {
-            setContainerWidth(containerRef.current.clientWidth);
-        }
-    };
-    window.addEventListener('resize', handleResize);
-    setTimeout(handleResize, 0);
-    return () => window.removeEventListener('resize', handleResize);
+    const container = containerRef.current;
+    if (!container) {
+        const handleResize = () => {
+            setContainerWidth(window.innerWidth);
+        };
+        window.addEventListener('resize', handleResize);
+        handleResize();
+        return () => window.removeEventListener('resize', handleResize);
+    }
+
+    const observer = new ResizeObserver((entries) => {
+        if (!entries || entries.length === 0) return;
+        const width = entries[0].contentRect.width;
+        setContainerWidth(Math.max(100, Math.floor(width)));
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   // Scroll to current level on mount (Story only)

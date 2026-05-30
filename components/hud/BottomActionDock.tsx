@@ -1,21 +1,19 @@
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store';
-import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Info, Mountain, Target, Clock } from 'lucide-react';
+import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import HexButton from '../HexButton';
 import { getHexKey, getNeighbors, getSecondsToGrow } from '../../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
-import { Item, Hex } from '../../types';
+import { Item } from '../../types';
 import { ItemIcon, StatusIcon, getRarityBorder } from './HudShared';
 import { GAME_CONFIG, getLevelConfig } from '../../rules/config';
-import { TEXT } from '../../services/i18n';
 
 interface BottomActionDockProps {
     onCenterPlayer: () => void;
     onInspectItem: (item: Item) => void;
     onOpenInventory: () => void;
-    onOpenMission: () => void;
 }
 
 interface ActionTooltipProps {
@@ -114,7 +112,7 @@ const ActionTooltip: React.FC<ActionTooltipProps> = ({
     );
 };
 
-const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onInspectItem, onOpenInventory, onOpenMission }) => {
+const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onInspectItem, onOpenInventory }) => {
     const player = useGameStore(state => state.session?.player);
     const grid = useGameStore(state => state.session?.grid);
     const bots = useGameStore(state => state.session?.bots);
@@ -123,17 +121,12 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
     const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
     const currentTurn = useGameStore(state => state.session?.currentTurn);
-    const entropy = useGameStore(state => state.session?.entropy);
-    const totalMinedMaterial = useGameStore(state => state.session?.totalMinedMaterial || 0);
-    const minedHexes = useGameStore(state => state.session?.minedHexes);
+    
     
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
     const togglePlayerGrowth = useGameStore(state => state.togglePlayerGrowth);
     const showToast = useGameStore(state => state.showToast);
-    
-    const isCampaignHintCollapsed = useGameStore(state => state.isCampaignHintCollapsed);
-    const toggleCampaignHintCollapse = useGameStore(state => state.toggleCampaignHintCollapse);
     
     const sessionStartTime = useGameStore(state => state.session?.sessionStartTime);
     const gameStatus = useGameStore(state => state.session?.gameStatus);
@@ -204,117 +197,11 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 
     // --- COMPUTED STATE ---
     
-    const totalDigs = useMemo(() => {
-        return Object.values(minedHexes || {}).reduce((sum, val) => sum + val, 0);
-    }, [minedHexes]);
-    
     const currentHex = (grid && player) ? grid[getHexKey(player.q, player.r)] : undefined;
     const neighbors = player ? getNeighbors(player.q, player.r) : [];
     const botPositions = useMemo(() => (bots || []).map(b => ({ q: b.q, r: b.r })), [bots]);
     const isMoving = player?.state === 'MOVING';
     const queueSize = winCondition?.queueSize || 3;
-
-    // Campaign Metrics
-    const campaignMetrics = useMemo(() => {
-        if (!grid || !player || !activeLevelConfig) return null;
-        const levelId = activeLevelConfig.id;
-        const ownedByLevel = (minLvl: number) =>
-            Object.values(grid).filter((h: Hex) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
-
-        if (levelId === '1.1') {
-            const wavePath = [
-                { q: 0, r: 0 },
-                { q: 1, r: -1 },
-                { q: 2, r: -1 },
-                { q: 2, r: 0 },
-                { q: 1, r: 1 },
-                { q: 0, r: 2 },
-                { q: -1, r: 2 },
-                { q: -2, r: 2 },
-                { q: -3, r: 2 },
-                { q: -3, r: 1 },
-                { q: -2, r: 0 }
-            ];
-            const idx = wavePath.findIndex(p => p.q === player.q && p.r === player.r);
-            return { current: idx !== -1 ? idx : 0, target: 10, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
-        }
-        if (levelId === '1.3') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 2, label: 'LEVEL' };
-        if (levelId === '1.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
-        if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
-        if (levelId === '1.6') return { current: player.playerLevel, target: 4, label: 'RANK' };
-        if (levelId === '1.7') return { current: totalDigs, target: 10, label: TEXT[language].HUD.TUT_1_7_COUNTER || 'DIGS' };
-        
-        if (levelId === '2.2') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
-        if (levelId === '2.3') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
-        if (levelId === '2.4') return { current: player.inventory?.length ?? 0, target: 2, label: 'ITEMS' };
-        if (levelId === '2.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
-        
-        if (levelId === '2.6') {
-            const playerHex = grid[getHexKey(player.q, player.r)];
-            const depth = playerHex ? -playerHex.currentLevel : 0;
-            return { current: Math.max(0, depth), target: 5, label: 'DEPTH' };
-        }
-
-        if (levelId === '3.1') return { current: player.inventory?.filter(i => i.id === 'key_fragment').length || 0, target: 3, label: 'KEYS' };
-        if (levelId === '3.2') return { current: player.coins, target: 200, label: 'CREDITS' };
-        if (levelId === '3.3') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
-        if (levelId === '3.4') return { current: player.coins, target: 100, label: 'CREDITS' };
-        if (levelId === '3.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
-
-        if (levelId === '4.1') return { current: ownedByLevel(2), target: 3, label: 'L2 HEXES' };
-        if (levelId === '4.3') return { current: ownedByLevel(3), target: 2, label: 'L3 HEXES' };
-        if (levelId === '4.4') return { current: grid[getHexKey(0, 0)]?.maxLevel ?? 0, target: 4, label: 'LEVEL' };
-        if (levelId === '4.5') return { current: ownedByLevel(2), target: 6, label: 'L2 HEXES' };
-        if (levelId === '4.6') return { current: ownedByLevel(3), target: 8, label: 'L3 HEXES' };
-        if (levelId === '4.7') return { current: ownedByLevel(4), target: 2, label: 'L4 HEXES' };
-
-        if (levelId === '4.8') {
-             const onMon = grid[getHexKey(player.q, player.r)]?.structureType === 'MONUMENT';
-             const isDone = onMon && ownedByLevel(3) >= 3 && player.coins >= 300 && player.inventory.length >= 2 && (entropy?.current ?? 0) < 60;
-             return { current: isDone ? 1 : 0, target: 1, label: 'ASCEND' };
-        }
-
-        return null;
-    }, [grid, player, activeLevelConfig, language, currentTurn, entropy, totalMinedMaterial, totalDigs]);
-
-    const renderMissionStatus = () => {
-        if (campaignMetrics) {
-            const isDone = campaignMetrics.current >= campaignMetrics.target;
-            return (
-                <div className="flex items-center gap-2">
-                    <span className="text-slate-400 uppercase tracking-tighter">{campaignMetrics.label}:</span>
-                    <span className={isDone ? "text-emerald-400" : "text-white"}>
-                        {campaignMetrics.current}/{campaignMetrics.target}
-                    </span>
-                </div>
-            );
-        }
-        if (activeLevelConfig?.goalText) {
-            return (
-                <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="text-slate-400 shrink-0 tracking-tighter">GOAL:</span>
-                    <span className="text-amber-300 truncate min-w-0">{activeLevelConfig.goalText}</span>
-                </div>
-            );
-        }
-        if (winCondition?.winType === 'SUMMIT') {
-            return (
-                <div className="flex items-center gap-2">
-                    <span className="text-slate-400 tracking-tighter">SUMMIT:</span>
-                    <span className="text-amber-400">L{winCondition?.targetLevel}</span>
-                    <Mountain className="w-3 h-3 text-amber-500" />
-                </div>
-            );
-        }
-        return (
-            <div className="flex items-center gap-2">
-                <span className="text-slate-400 tracking-tighter">GOAL:</span>
-                <span className="text-white">L{winCondition?.targetLevel}</span>
-                <span className="text-slate-600">·</span>
-                <span className="text-amber-400">{winCondition?.targetCoins}cr</span>
-            </div>
-        );
-    };
 
     // Conditions
     const upgradeCondition = useMemo(() => {
@@ -461,17 +348,6 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         };
     }, [player?.inventory, language]);
 
-    const goalTooltipData = useMemo(() => {
-        return {
-            title: language === 'RU' ? 'ДИРЕКТИВА АНОМАЛИИ' : 'SECTOR DIRECTIVE',
-            costText: undefined,
-            rewardText: activeLevelConfig?.description || (language === 'RU' ? 'Основное пошаговое задание в данной симуляции.' : 'Primary turn-by-turn objective in the current simulation.'),
-            statusText: campaignMetrics 
-                ? `${campaignMetrics.label}: ${campaignMetrics.current} / ${campaignMetrics.target}` 
-                : (language === 'RU' ? '🎯 В процессе' : '🎯 In Progress'),
-            statusType: 'info' as any,
-        };
-    }, [activeLevelConfig, campaignMetrics, language]);
 
     const renderActiveStatuses = () => {
         if (!player?.activeStatuses || player.activeStatuses.length === 0) return null;
@@ -507,32 +383,15 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                 /* REFINED MOBILE VIEW: Stacked elegant layout for comfortable touch targets and clarity */
                 <div className="w-full max-w-sm sm:max-w-md mx-auto pointer-events-auto flex flex-col gap-2 relative">
                     
-                    {/* SUB-DOCK (Top Row): Inventory tray + Level Goal details */}
-                    <div className="flex items-center justify-between gap-2 px-1">
+                    {/* SUB-DOCK (Top Row): Inventory tray */}
+                    <div className="flex items-center justify-end gap-2 px-1">
                         
-                        {/* Goal display with elegant icon and proper proportions */}
-                        <div 
-                            className="relative flex-1 min-w-0"
-                            onClick={() => { onOpenMission(); playUiSound('CLICK'); }}
-                        >
-                            <div className="flex items-center gap-2 h-10 px-3 bg-slate-900/80 backdrop-blur-lg border border-slate-800/80 rounded-xl cursor-pointer hover:bg-slate-800/90 active:scale-98 transition-all overflow-hidden shadow-lg select-none">
-                                {activeLevelConfig ? (
-                                    <Target className="w-4 h-4 text-amber-500/90 shrink-0" />
-                                ) : (
-                                    <Mountain className="w-4 h-4 text-emerald-400 shrink-0" />
-                                )}
-                                <div className="text-[10px] font-bold font-mono text-slate-200 leading-none truncate min-w-0">
-                                    {renderMissionStatus()}
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Backpack Toggle with count badge */}
                         <div 
                             className="relative shrink-0"
                             onClick={() => { onOpenInventory(); playUiSound('CLICK'); }}
                         >
-                            <div className="flex items-center justify-center w-10 h-10 bg-slate-900/80 backdrop-blur-lg rounded-xl border border-slate-800/80 cursor-pointer hover:bg-slate-800/90 active:scale-95 transition-all text-slate-400 hover:text-white shadow-lg relative">
+                            <div className="flex items-center justify-center w-10 h-10 bg-slate-900/80 backdrop-blur-lg rounded-xl border border-slate-800/80 cursor-pointer hover:bg-slate-800/90 active:scale-95 transition-all text-slate-400 hover:text-white shadow-lg relative" id="mobile-backpack-btn">
                                 <Backpack className="w-5 h-5 text-slate-300" />
                                 {hasAnyItems && (
                                     <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[8px] font-black font-mono text-white ring-1 ring-slate-950 animate-pulse">
@@ -701,55 +560,6 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                             />
                         </div>
 
-                        {/* Campaign Hint Toggle Button next to Inventory */}
-                        {activeLevelConfig && (
-                            <div 
-                                className="relative shrink-0"
-                                onMouseEnter={() => setHoveredId('goal_toggle')}
-                                onMouseLeave={() => setHoveredId(null)}
-                            >
-                                <div 
-                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-950/60 rounded-xl border cursor-pointer group hover:bg-slate-800/80 transition-all shrink-0 touch-manipulation active:scale-95 [content-visibility:auto] ${isCampaignHintCollapsed ? 'border-amber-500/50 text-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.25)]' : 'border-slate-800 text-slate-400'}`} 
-                                    onClick={() => { toggleCampaignHintCollapse(); playUiSound('CLICK'); }}
-                                    title={language === 'RU' ? 'Показать/Скрыть Цель' : 'Show/Hide Objective'}
-                                    id="campaign-hint-dock-toggle"
-                                >
-                                    <Target className={`w-3.5 h-3.5 transition-colors ${isCampaignHintCollapsed ? 'text-amber-400' : 'text-slate-400 group-hover:text-amber-400'}`} />
-                                    <span className={`text-[10px] font-bold font-mono tracking-wider uppercase inline ${isCampaignHintCollapsed ? 'text-amber-400' : 'text-slate-400 group-hover:text-white'}`}>
-                                        {language === 'RU' ? 'ЦЕЛЬ' : 'GOAL'}
-                                    </span>
-                                </div>
-                                <ActionTooltip 
-                                    visible={hoveredId === 'goal_toggle'} 
-                                    {...goalTooltipData} 
-                                    language={language}
-                                    align="left"
-                                />
-                            </div>
-                        )}
-
-                        {/* Mission Goal / Mini-Window */}
-                        <div 
-                            className="relative flex-1"
-                            onMouseEnter={() => setHoveredId('goal')}
-                            onMouseLeave={() => setHoveredId(null)}
-                        >
-                            <div 
-                                className="w-full flex items-center justify-between gap-1.5 px-3 py-1.5 bg-slate-950/50 rounded-xl border border-slate-800/60 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)] cursor-pointer group hover:bg-slate-800/50 transition-all overflow-hidden"
-                                onClick={() => { onOpenMission(); playUiSound('CLICK'); }}
-                            >
-                                <div className="text-[11px] font-bold font-mono leading-none tracking-tight truncate">
-                                    {renderMissionStatus()}
-                                </div>
-                                <Info className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors shrink-0" />
-                            </div>
-                            <ActionTooltip 
-                                visible={hoveredId === 'goal'} 
-                                {...goalTooltipData} 
-                                language={language}
-                                align="left"
-                            />
-                        </div>
                     </div>
 
                     {/* ROW 2: SIDE-BY-SIDE SLOTS & TRIGGERS */}

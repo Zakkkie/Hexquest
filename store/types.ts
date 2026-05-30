@@ -25,6 +25,7 @@ export interface GameStore extends GameState {
   toggleSfx: () => void;
   toggleLiteMode: () => void;
   toggleCampaignHintCollapse: () => void;
+  setCampaignHintCollapsed: (val: boolean) => void;
   playUiSound: (type: UiSoundType) => void;
   showToast: (msg: string, type: 'error' | 'success' | 'info') => void;
   hideToast: () => void;

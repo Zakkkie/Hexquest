@@ -1,26 +1,68 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useGameStore } from '../../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Compass, Sparkles, Navigation } from 'lucide-react';
+import { Compass, Sparkles, Navigation, ChevronUp, ChevronDown } from 'lucide-react';
+import { TEXT } from '../../services/i18n';
 
 const CentralTutorialBanner: React.FC = () => {
     const session = useGameStore(state => state.session);
     const activeLevelConfig = session?.activeLevelConfig;
-    const player = session?.player;
+    const playerExists = useGameStore(state => !!state.session?.player);
+    const playerId = useGameStore(state => state.session?.player?.id);
+    const playerQ = useGameStore(state => state.session?.player?.q ?? 0);
+    const playerR = useGameStore(state => state.session?.player?.r ?? 0);
+    const playerCoins = useGameStore(state => state.session?.player?.coins ?? 0);
+    const playerLevel = useGameStore(state => state.session?.player?.playerLevel ?? 0);
+    const playerInventory = useGameStore(state => state.session?.player?.inventory);
+    const playerStorage = useGameStore(state => state.session?.player?.storage ?? 0);
+    const playerMoves = useGameStore(state => state.session?.player?.moves ?? 0);
+    const playerRecoveredCurrentHex = useGameStore(state => state.session?.player?.recoveredCurrentHex ?? false);
+
+    const player = useMemo(() => {
+        if (!playerExists) return null;
+        return {
+            id: playerId,
+            q: playerQ,
+            r: playerR,
+            coins: playerCoins,
+            playerLevel,
+            inventory: playerInventory ?? [],
+            storage: playerStorage,
+            moves: playerMoves,
+            recoveredCurrentHex: playerRecoveredCurrentHex
+        };
+    }, [playerExists, playerId, playerQ, playerR, playerCoins, playerLevel, playerInventory, playerStorage, playerMoves, playerRecoveredCurrentHex]);
+
     const grid = session?.grid;
+    const minedHexes = session?.minedHexes;
+    const restoredHexesCount = session?.restoredHexesCount || 0;
+    const entropy = session?.entropy;
     const language = useGameStore(state => state.language);
+    const playUiSound = useGameStore(state => state.playUiSound);
+
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const [prevHint, setPrevHint] = useState<string | null>(null);
     const [isPulsing, setIsPulsing] = useState(false);
 
-    const isTutorialLevel = useMemo(() => {
-        return activeLevelConfig?.id ? activeLevelConfig.id.startsWith('1.') : false;
+    const totalDigs = useMemo(() => {
+        return Object.values(minedHexes || {}).reduce((sum, val) => sum + val, 0);
+    }, [minedHexes]);
+
+    const isCampaignLevel = useMemo(() => {
+        return activeLevelConfig?.id ? (
+            activeLevelConfig.id.startsWith('1.') || 
+            activeLevelConfig.id.startsWith('2.') || 
+            activeLevelConfig.id.startsWith('3.') || 
+            activeLevelConfig.id.startsWith('4.')
+        ) : false;
     }, [activeLevelConfig?.id]);
 
     const tutorialHint = useMemo(() => {
         if (!grid || !player || !activeLevelConfig) return null;
         if (activeLevelConfig.getTutorialHint && session) {
             try {
-                return activeLevelConfig.getTutorialHint(session);
+                const hint = activeLevelConfig.getTutorialHint(session);
+                if (hint) return hint;
             } catch (e) {
                 console.error("Error evaluating getTutorialHint", e);
             }
@@ -28,10 +70,76 @@ const CentralTutorialBanner: React.FC = () => {
         return activeLevelConfig.goalText;
     }, [grid, player, activeLevelConfig, session]);
 
-    // Flashing effect on step transition
+    // Metrics computation matching the old CampaignHintBanner precisely
+    const metrics = useMemo(() => {
+        if (!grid || !player || !activeLevelConfig) return null;
+        const levelId = activeLevelConfig.id;
+        const ownedByLevel = (minLvl: number) =>
+            Object.values(grid).filter((h: any) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
+
+        if (levelId === '1.1') {
+            const wavePath = [
+                { q: 0, r: 0 },
+                { q: 1, r: -1 },
+                { q: 2, r: -1 },
+                { q: 2, r: 0 },
+                { q: 1, r: 1 },
+                { q: 0, r: 2 },
+                { q: -1, r: 2 },
+                { q: -2, r: 2 },
+                { q: -3, r: 2 },
+                { q: -3, r: 1 },
+                { q: -2, r: 0 }
+            ];
+            const idx = wavePath.findIndex(p => p.q === player.q && p.r === player.r);
+            return { current: idx !== -1 ? idx : 0, target: 10, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
+        }
+        if (levelId === '1.3') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 2, label: 'LEVEL' };
+        if (levelId === '1.4') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
+        if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
+        if (levelId === '1.6') return { current: player.playerLevel, target: 4, label: 'RANK' };
+        if (levelId === '1.7') {
+           return { current: restoredHexesCount, target: 5, label: TEXT[language].HUD.TUT_1_7_COUNTER || 'RESTORED' };
+        }
+        
+        if (levelId === '2.2') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+        if (levelId === '2.3') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+        if (levelId === '2.4') return { current: player.inventory?.length ?? 0, target: 2, label: 'ITEMS' };
+        if (levelId === '2.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+        
+        if (levelId === '2.6') {
+            const playerHex = grid[`${player.q},${player.r}`];
+            const depth = playerHex ? -playerHex.currentLevel : 0;
+            return { current: Math.max(0, depth), target: 5, label: 'DEPTH' };
+        }
+
+        if (levelId === '3.1') return { current: player.inventory?.filter(i => i.id === 'key_fragment').length || 0, target: 3, label: 'KEYS' };
+        if (levelId === '3.2') return { current: player.coins, target: 200, label: 'CREDITS' };
+        if (levelId === '3.3') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
+        if (levelId === '3.4') return { current: player.coins, target: 100, label: 'CREDITS' };
+        if (levelId === '3.5') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };
+
+        if (levelId === '4.1') return { current: ownedByLevel(2), target: 3, label: 'L2 HEXES' };
+        if (levelId === '4.3') return { current: ownedByLevel(3), target: 2, label: 'L3 HEXES' };
+        if (levelId === '4.4') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 4, label: 'LEVEL' };
+        if (levelId === '4.5') return { current: ownedByLevel(2), target: 6, label: 'L2 HEXES' };
+        if (levelId === '4.6') return { current: ownedByLevel(3), target: 8, label: 'L3 HEXES' };
+        if (levelId === '4.7') return { current: ownedByLevel(4), target: 2, label: 'L4 HEXES' };
+
+        if (levelId === '4.8') {
+             const onMon = grid[`${player.q},${player.r}`]?.structureType === 'MONUMENT';
+             const isDone = onMon && ownedByLevel(3) >= 3 && player.coins >= 300 && player.inventory.length >= 2 && (entropy?.current ?? 0) < 60;
+             return { current: isDone ? 1 : 0, target: 1, label: 'ASCEND' };
+        }
+
+        return null;
+    }, [grid, player, activeLevelConfig, language, entropy, totalDigs, restoredHexesCount]);
+
+    // Flashing effect and Auto-expand on step/hint transition
     useEffect(() => {
         if (tutorialHint && tutorialHint !== prevHint) {
             setIsPulsing(true);
+            setIsCollapsed(false); // Auto-expand when a new instruction appears
             const t = setTimeout(() => setIsPulsing(false), 1500);
             setPrevHint(tutorialHint);
             return () => clearTimeout(t);
@@ -83,82 +191,157 @@ const CentralTutorialBanner: React.FC = () => {
         return null;
     }, [player, grid, activeLevelConfig]);
 
-    if (!isTutorialLevel || !tutorialHint || session?.gameStatus !== 'PLAYING') return null;
+    if (!isCampaignLevel || !tutorialHint || session?.gameStatus !== 'PLAYING') return null;
 
     const isRu = language === 'RU';
 
-    return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: -20, x: '-50%' }}
-                animate={{ 
-                    opacity: 1, 
-                    scale: 1, 
-                    y: 0,
-                    x: '-50%',
-                    borderColor: isPulsing ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.25)',
-                    boxShadow: isPulsing 
-                        ? '0 10px 30px -5px rgba(239, 68, 68, 0.15), 0 0 15px rgba(239, 68, 68, 0.1)' 
-                        : '0 4px 20px -5px rgba(0, 0, 0, 0.2)'
-                }}
-                exit={{ opacity: 0, scale: 0.95, y: -25, x: '-50%' }}
-                transition={{ duration: 0.3 }}
-                style={{
-                    paddingLeft: '12px',
-                    paddingRight: '12px',
-                    paddingBottom: '8px',
-                    marginLeft: '0px',
-                    marginRight: '0px',
-                    marginTop: '-80px',
-                }}
-                className="fixed top-[138px] md:top-[103px] left-1/2 z-40 w-[95%] max-w-lg bg-slate-950/20 border border-slate-800/45 rounded-2xl backdrop-blur-md flex flex-col gap-2 pointer-events-auto"
-                id="central-tutorial-banner"
-            >
-                {/* Scanner/Grid lines details overlay */}
-                <div className="absolute inset-0 rounded-2xl bg-scanlines opacity-10 pointer-events-none" />
-                <div className="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/20 animate-pulse" />
+    const handleToggleCollapse = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        playUiSound('CLICK');
+        setIsCollapsed(p => !p);
+    };
 
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                        <span className="relative flex h-2 w-2">
+    return (
+        <AnimatePresence mode="wait">
+            {isCollapsed ? (
+                <motion.div
+                    key="collapsed"
+                    initial={{ opacity: 0, scale: 0.98, y: -5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.98, y: -5 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={handleToggleCollapse}
+                    className="w-full bg-slate-950/92 border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl backdrop-blur-md flex items-center justify-between px-3.5 py-2.5 pointer-events-auto cursor-pointer relative shadow-xl bg-gradient-to-r from-emerald-950/10 to-teal-950/5 select-none"
+                    id="central-tutorial-banner-collapsed"
+                >
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <span className="relative flex h-2 w-2 shrink-0">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
-                        <span className="text-[9px] font-black tracking-[0.2em] font-mono text-emerald-400 uppercase">
-                            {isRu ? 'ИНСТРУКТАЖ СИСТЕМЫ' : 'SYSTEM TUTORIAL PROTOCOL'}
-                        </span>
-                    </div>
-                    {targetDistanceData && !targetDistanceData.reached && (
-                        <div className="flex items-center gap-1 text-[9.5px] font-mono font-bold text-amber-400 bg-amber-950/40 border border-amber-500/20 px-1.5 py-0.5 rounded-md">
-                            <Navigation className="w-2.5 h-2.5 rotate-45 animate-pulse" />
-                            <span>
-                                {isRu ? 'ДИСТАНЦИЯ:' : 'DISTANCE:'} {targetDistanceData.distance} {isRu ? 'шаг.' : 'steps'}
+                        
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="text-[10px] font-black tracking-widest font-mono text-emerald-400 uppercase shrink-0">
+                                {isRu ? 'ИНСТРУКТАЖ' : 'TUTORIAL'}
+                            </span>
+                            <span className="text-[11px] text-slate-300 font-semibold truncate">
+                                {tutorialHint}
                             </span>
                         </div>
-                    )}
-                </div>
-
-                <div className="flex items-start gap-2.5 mt-0.5">
-                    <div className="p-2 bg-emerald-950/30 border border-emerald-500/20 rounded-xl text-emerald-400 flex items-center justify-center shrink-0">
-                        <Compass className="w-5 h-5 animate-spin-slow" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="text-[10px] uppercase font-black tracking-widest text-slate-400 font-mono mb-0.5">
-                            {isRu ? 'ТЕКУЩИЙ ШАГ' : 'CURRENT OBJECTIVE STEP'}
+
+                    <div className="flex items-center gap-2.5 shrink-0">
+                        {/* Inline current progress metrics in collapsed state */}
+                        {metrics && (
+                            <span className="text-[10px] font-mono font-bold text-amber-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                {metrics.current} / {metrics.target} {metrics.label}
+                            </span>
+                        )}
+
+                        <div className="p-0.5 rounded bg-slate-900/60 border border-slate-800 text-slate-400">
+                            <ChevronDown className="w-3.5 h-3.5" />
                         </div>
-                        <p className="text-xs md:text-sm font-black text-slate-100 font-sans tracking-tight leading-normal uppercase">
-                            {tutorialHint}
-                        </p>
                     </div>
-                </div>
+                </motion.div>
+            ) : (
+                <motion.div
+                    key="expanded"
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ 
+                        opacity: 1, 
+                        scale: 1, 
+                        y: 0,
+                        borderColor: isPulsing ? 'rgba(239, 68, 68, 0.5)' : 'rgba(16, 185, 129, 0.4)',
+                        boxShadow: isPulsing 
+                            ? '0 10px 30px -5px rgba(239, 68, 68, 0.2), 0 0 15px rgba(239, 68, 68, 0.15)' 
+                            : '0 10px 30px -5px rgba(0, 0, 0, 0.5)'
+                    }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-full bg-slate-950/92 border rounded-xl md:rounded-2xl backdrop-blur-md flex flex-col gap-2.5 p-3 md:p-3.5 pointer-events-auto relative shadow-2xl bg-gradient-to-br from-emerald-950/15 to-teal-950/10 cursor-pointer select-none"
+                    onClick={handleToggleCollapse}
+                    id="central-tutorial-banner-expanded"
+                >
+                    {/* Scanner/Grid lines details overlay */}
+                    <div className="absolute inset-0 rounded-2xl bg-scanlines opacity-10 pointer-events-none" />
+                    <div className="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/20 animate-pulse" />
 
-                {isPulsing && (
-                    <div className="absolute top-1 right-2 flex items-center gap-1 text-[8px] font-mono text-emerald-300 uppercase select-none pointer-events-none">
-                        <Sparkles className="w-3 h-3 animate-pulse" />
-                        <span>Updated</span>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span className="text-[9px] font-black tracking-[0.2em] font-mono text-emerald-400 uppercase">
+                                {isRu ? 'ИНСТРУКТАЖ СИСТЕМЫ' : 'SYSTEM TUTORIAL PROTOCOL'}
+                            </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            {targetDistanceData && !targetDistanceData.reached && (
+                                <div className="flex items-center gap-1 text-[9.5px] font-mono font-bold text-amber-400 bg-amber-950/40 border border-amber-500/20 px-1.5 py-0.5 rounded-md leading-none">
+                                    <Navigation className="w-2.5 h-2.5 rotate-45 animate-pulse" />
+                                    <span>
+                                        {isRu ? 'ДИСТАНЦИЯ:' : 'DISTANCE:'} {targetDistanceData.distance} {isRu ? 'шаг.' : 'steps'}
+                                    </span>
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={handleToggleCollapse}
+                                className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
+                            >
+                                <ChevronUp className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
                     </div>
-                )}
-            </motion.div>
+
+                    <div className="flex items-start gap-2.5 mt-0.5">
+                        <div className="p-2 bg-emerald-950/30 border border-emerald-500/20 rounded-xl text-emerald-400 flex items-center justify-center shrink-0">
+                            <Compass className="w-5 h-5 animate-spin-slow" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[10px] uppercase font-black tracking-widest text-slate-400 font-mono mb-0.5">
+                                {isRu ? 'ТЕКУЩИЙ ШАГ' : 'CURRENT OBJECTIVE STEP'}
+                            </div>
+                            <p className="text-xs md:text-sm font-black text-slate-100 font-sans tracking-tight leading-normal uppercase">
+                                {tutorialHint}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Unified campaign goal progress indicator */}
+                    {metrics && (
+                        <div 
+                            className="mt-1.5 p-2 rounded-lg bg-slate-900/50 border border-slate-800/80 flex flex-col gap-1.5"
+                            onClick={(e) => e.stopPropagation()} /* Do not collapse when clicking individual metrics area */
+                        >
+                            <div className="flex items-center justify-between text-[10px] font-mono font-bold leading-none">
+                                <span className="text-slate-400 uppercase">
+                                    {isRu ? 'ТЕКУЩАЯ ЗАДАЧА' : 'CURRENT GOAL'}
+                                </span>
+                                <span className="text-amber-400 font-bold font-mono">
+                                    {metrics.current} / {metrics.target} <span className="text-slate-400 uppercase text-[9px] ml-0.5">{metrics.label}</span>
+                                </span>
+                            </div>
+                            
+                            <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-900/60">
+                                <div 
+                                    className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-500"
+                                    style={{ width: `${Math.min(100, (metrics.current / metrics.target) * 100)}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {isPulsing && (
+                        <div className="absolute top-1 right-2 flex items-center gap-1 text-[8px] font-mono text-emerald-300 uppercase select-none pointer-events-none">
+                            <Sparkles className="w-3 h-3 animate-pulse" />
+                            <span>Updated</span>
+                        </div>
+                    )}
+                </motion.div>
+            )}
         </AnimatePresence>
     );
 };

@@ -422,9 +422,9 @@ export const createInitialSessionData = async (
     }
   }
 
-  // Immediate portal activation for Level 1.1
+  // Portal starts inactive for Level 1.1, opens only after reaching the goal
   if (levelConfig?.id === '1.1') {
-    session.portalActive = true;
+    session.portalActive = false;
     session.portalHex = { q: -2, r: 0 };
   }
 

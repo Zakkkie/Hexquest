@@ -757,7 +757,6 @@ const MainMenu: React.FC = () => {
 
           <MenuButton onClick={handleNewGameClick} variant="battle" icon={<Swords className="w-5 h-5" />} label={t.SKIRMISH} subLabel={t.SKIRMISH_SUB} />
           {hasActiveSession && <MenuButton onClick={() => { setUIState('GAME'); playUiSound('CLICK'); }} icon={<ArrowRight className="w-5 h-5" />} label={t.RESUME} subLabel={t.RESUME_SUB} />}
-          <MenuButton onClick={() => { setUIState('LEADERBOARD'); playUiSound('CLICK'); }} icon={<Trophy className="w-5 h-5" />} label={t.LEADERBOARD} subLabel={t.LEADERBOARD_SUB} />
         </div>
 
       </div>
@@ -807,9 +806,9 @@ const MainMenu: React.FC = () => {
                       initial={{ opacity: 0, y: -10 }} 
                       animate={{ opacity: 1, y: 0 }} 
                       exit={{ opacity: 0, y: -10 }} 
-                      className="p-2.5 md:p-3 bg-red-950/80 backdrop-blur-md border border-red-500/50 rounded-xl flex items-center gap-2 text-red-400 text-[10px] md:text-xs font-bold shadow-[0_0_15px_rgba(220,38,38,0.2)] break-words whitespace-pre-wrap"
+                      className="p-3 bg-slate-950 border border-slate-800 rounded-lg flex items-center justify-center text-red-400 text-xs font-mono font-black uppercase tracking-wider text-center"
                   >
-                      <Shield className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" /> {errorMessage}
+                      {errorMessage}
                   </motion.div>
               )}
               </AnimatePresence>

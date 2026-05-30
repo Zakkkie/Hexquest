@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Compass, ChevronsUp, Key, Zap, X, HelpCircle } from 'lucide-react';
+import { Compass, ChevronsUp, Key, Zap, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { Hex } from '../../types';
 
 const MonumentHintBanner: React.FC = () => {
@@ -109,67 +109,211 @@ const MonumentHintBanner: React.FC = () => {
         }
     }, [currentPhase, language]);
 
-    // Track dismissed text to persist cross-render unless text actually changes
-    const [dismissedText, setDismissedText] = useState<string | null>(null);
+    // Local state for collapse/expand
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
-    // Auto-reset hide state if stage text changes for organic reminder
-    useEffect(() => {
-        if (info && dismissedText && dismissedText !== info.text) {
-            setDismissedText(null);
+    // Compute progress metric percentage and textual value
+    const currentProgressPercent = useMemo(() => {
+        if (!monument) return 0;
+        if (currentPhase === 'FIND') {
+            return isMonumentFound ? 100 : 0;
         }
-    }, [info, dismissedText]);
+        if (currentPhase === 'REACH') {
+            const playerLevel = useGameStore.getState().session?.player?.playerLevel ?? 0;
+            const targetLevel = monument.maxLevel;
+            return targetLevel > 0 ? Math.min(100, (playerLevel / targetLevel) * 100) : 100;
+        }
+        if (currentPhase === 'FIND_KEYS') {
+            if (!monumentRequirements || monumentRequirements.length === 0) return 100;
+            const total = monumentRequirements.length;
+            if (!player?.inventory) return 0;
+            
+            let matches = 0;
+            const tempInventory = [...player.inventory];
+            for (const req of monumentRequirements) {
+                const matchIdx = tempInventory.findIndex(item => {
+                    if (req === 'ANY') return true;
+                    if (req === 'COMMON' || req === 'UNCOMMON' || req === 'RARE' || req === 'LEGENDARY') {
+                        return item.rarity === req;
+                    }
+                    if (req === 'ONE_OF') {
+                        return (monumentAlternatives ?? []).includes(item.baseId);
+                    }
+                    return item.baseId === req;
+                });
+                if (matchIdx !== -1) {
+                    matches++;
+                    tempInventory.splice(matchIdx, 1);
+                }
+            }
+            return Math.min(100, (matches / total) * 100);
+        }
+        return 100;
+    }, [currentPhase, isMonumentFound, monument, player?.inventory, monumentRequirements, monumentAlternatives]);
+
+    const progressValueText = useMemo(() => {
+        if (!monument) return '';
+        if (currentPhase === 'FIND') {
+            return isMonumentFound ? '1 / 1' : '0 / 1';
+        }
+        if (currentPhase === 'REACH') {
+            const playerLevel = useGameStore.getState().session?.player?.playerLevel ?? 0;
+            return `${playerLevel} / ${monument.maxLevel} Lvl`;
+        }
+        if (currentPhase === 'FIND_KEYS') {
+            if (!monumentRequirements || monumentRequirements.length === 0) return '0 / 0';
+            const total = monumentRequirements.length;
+            if (!player?.inventory) return `0 / ${total}`;
+            
+            let matches = 0;
+            const tempInventory = [...player.inventory];
+            for (const req of monumentRequirements) {
+                const matchIdx = tempInventory.findIndex(item => {
+                    if (req === 'ANY') return true;
+                    if (req === 'COMMON' || req === 'UNCOMMON' || req === 'RARE' || req === 'LEGENDARY') {
+                        return item.rarity === req;
+                    }
+                    if (req === 'ONE_OF') {
+                        return (monumentAlternatives ?? []).includes(item.baseId);
+                    }
+                    return item.baseId === req;
+                });
+                if (matchIdx !== -1) {
+                    matches++;
+                    tempInventory.splice(matchIdx, 1);
+                }
+            }
+            return `${matches} / ${total} Keys`;
+        }
+        return language === 'RU' ? 'Готов к запуску' : 'Ready to launch';
+    }, [currentPhase, isMonumentFound, monument, player?.inventory, monumentRequirements, monumentAlternatives, language]);
+
+    // Auto-expand on phase/text change for visibility
+    const lastValueRef = useRef<string>('');
+    const currentPhaseWithText = `${currentPhase || ''}_${info?.text || ''}`;
+    useEffect(() => {
+        if (!info) return;
+        if (lastValueRef.current && lastValueRef.current !== currentPhaseWithText) {
+            setIsCollapsed(false);
+        }
+        lastValueRef.current = currentPhaseWithText;
+    }, [currentPhase, info, currentPhaseWithText]);
 
     if (!monument || !info) return null;
-    if (dismissedText === info.text) return null;
 
     const IconComponent = info.icon;
 
-    const handleDismiss = (e: React.MouseEvent) => {
+    const handleToggleCollapse = (e: React.MouseEvent) => {
         e.stopPropagation();
         playUiSound('CLICK');
-        setDismissedText(info.text);
+        setIsCollapsed(prev => !prev);
     };
 
     return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                className="pointer-events-auto cursor-pointer w-full"
-                onClick={handleDismiss}
-                title={language === 'RU' ? 'Нажмите, чтобы скрыть уведомление' : 'Click to dismiss notification'}
-            >
-                <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl border bg-slate-950/85 backdrop-blur-md shadow-2xl flex items-start gap-3 transition-all duration-300 hover:bg-slate-900/90 active:scale-98 group bg-gradient-to-br ${info.color}`}>
-                    <div className="p-2 md:p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 shrink-0">
-                        <IconComponent className="w-5 h-5 md:w-6 md:h-6 text-current animate-pulse" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0 flex flex-col">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] md:text-[11px] font-black uppercase tracking-wider text-slate-400 font-sans group-hover:text-white transition-colors">
-                                {info.title}
-                            </span>
-                            <span className="text-[7.5px] md:text-[8.5px] px-1.5 py-0.5 rounded bg-slate-900/60 font-semibold border border-slate-800 uppercase tracking-wider">
-                                {info.badge}
-                            </span>
+        <AnimatePresence mode="wait">
+            {isCollapsed ? (
+                <motion.div
+                    key="collapsed-monument"
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={handleToggleCollapse}
+                    className={`pointer-events-auto cursor-pointer w-full p-2.5 rounded-xl border bg-slate-950/90 backdrop-blur-md shadow-lg flex items-center justify-between gap-3 text-white transition-all hover:bg-slate-900/95 hover:border-amber-500/40 select-none group bg-gradient-to-r ${info.color.includes('from-') ? info.color : ''}`}
+                    title={language === 'RU' ? 'Развернуть' : 'Expand'}
+                >
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className="p-1.5 rounded-lg bg-slate-900/90 border border-slate-800 shrink-0 text-amber-400">
+                            <IconComponent className="w-4 h-4 text-current animate-pulse" />
                         </div>
-                        <p className="text-xs text-white/90 font-medium leading-relaxed mt-1 tracking-tight pr-2">
+                        <div className="flex-1 min-w-0 pr-1 flex flex-col justify-center">
+                            <div className="flex items-center justify-between gap-2.5 leading-none">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 truncate">
+                                    {info.title}
+                                </span>
+                                <span className="text-[10px] font-mono font-bold text-amber-400 whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-900/80 border border-slate-800/60 leading-none">
+                                    {progressValueText}
+                                </span>
+                            </div>
+                            
+                            {/* Horizontal progress representation */}
+                            <div className="w-full bg-slate-950 h-1.5 rounded-full mt-2 overflow-hidden border border-slate-800/55">
+                                <div 
+                                    className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                                    style={{ width: `${currentProgressPercent}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    {/* Expand icon */}
+                    <div className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-400 group-hover:text-white transition-colors shrink-0 flex items-center justify-center">
+                        <ChevronDown className="w-3.5 h-3.5" />
+                    </div>
+                </motion.div>
+            ) : (
+                <motion.div
+                    key="expanded-monument"
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.2 }}
+                    className="pointer-events-auto w-full"
+                >
+                    <div className={`p-4 rounded-xl border bg-slate-950/92 backdrop-blur-md shadow-2xl flex flex-col gap-3 transition-all duration-300 relative overflow-hidden group border-amber-500/30`}>
+                        {/* Header container */}
+                        <div className="flex items-center justify-between gap-2.5 border-b border-slate-900 pb-2.5">
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                <div className="p-1.5 rounded-lg bg-slate-900/95 border border-slate-800 shrink-0 text-amber-400">
+                                    <IconComponent className="w-5 h-5 text-current animate-pulse" />
+                                </div>
+                                <div className="flex flex-col min-w-0 justify-center">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 leading-none mb-1">
+                                        {info.title}
+                                    </span>
+                                    <span className="text-[8.5px] text-slate-500 uppercase font-bold tracking-widest leading-none">
+                                        {language === 'RU' ? 'ДРЕВНИЙ МОНУМЕНТ' : 'ANCIENT MONUMENT'}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {/* Collapse Button */}
+                            <button 
+                                onClick={handleToggleCollapse}
+                                className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
+                                title={language === 'RU' ? 'Свернуть' : 'Collapse'}
+                            >
+                                <ChevronUp className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        {/* Text explanation */}
+                        <p className="text-xs text-slate-200 font-medium leading-relaxed font-mono">
                             {info.text}
                         </p>
-                        <span className="text-[8px] md:text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1.5 font-mono select-none flex items-center gap-1 group-hover:text-slate-400 transition-colors">
-                            <HelpCircle className="w-2.5 h-2.5 inline" /> {language === 'RU' ? 'Нажмите в любое место, чтобы скрыть' : 'Click anywhere to dismiss'}
+
+                        {/* Rich Progress indicator box */}
+                        <div className="flex flex-col gap-1.5 p-2.5 rounded-lg bg-slate-900/50 border border-slate-800/80 mt-0.5">
+                            <div className="flex items-center justify-between text-[11px] font-bold font-mono">
+                                <span className="text-slate-400 uppercase tracking-wide text-[9px]">{language === 'RU' ? 'ПРОГРЕСС МОНУМЕНТА' : 'MONUMENT PROGRESS'}</span>
+                                <span className="text-amber-400 uppercase font-mono px-2 py-0.5 rounded bg-slate-950 border border-slate-850">
+                                    {progressValueText}
+                                </span>
+                            </div>
+                            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-850">
+                                <div 
+                                    className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
+                                    style={{ width: `${currentProgressPercent}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        <span className="text-[8.5px] text-slate-500 font-bold uppercase tracking-wider font-mono select-none flex items-center gap-1.5">
+                            <HelpCircle className="w-3 h-3 text-slate-600" /> 
+                            {language === 'RU' ? 'Активируйте монумент для завершения' : 'Activate the monument to complete the loop'}
                         </span>
                     </div>
-
-                    <button 
-                        onClick={handleDismiss}
-                        className="p-1 rounded-md text-slate-500 hover:text-white hover:bg-slate-800/40 transition-all active:scale-90"
-                    >
-                        <X className="w-3.5 h-3.5" />
-                    </button>
-                </div>
-            </motion.div>
+                </motion.div>
+            )}
         </AnimatePresence>
     );
 };

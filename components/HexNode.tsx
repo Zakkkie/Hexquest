@@ -1207,37 +1207,81 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
             {portalActive && (
                 <Group y={-65} listening={true} perfectDrawEnabled={false}>
-                    {/* Outer glowing ring */}
+                    {/* Footprint Ring on the floor (isometric ellipse at y=65 relative to portal group) */}
+                    <Group y={65} scaleY={0.5} listening={false}>
+                        <Circle
+                            radius={24}
+                            stroke="#10b981"
+                            strokeWidth={3}
+                            fill="rgba(16, 185, 129, 0.12)"
+                            shadowColor="#10b981"
+                            shadowBlur={10}
+                        />
+                        <Circle
+                            radius={14}
+                            stroke="#06b6d4"
+                            strokeWidth={1.5}
+                            fill="rgba(6, 182, 212, 0.2)"
+                            shadowColor="#22d3ee"
+                            shadowBlur={6}
+                        />
+                        <Circle
+                            radius={6}
+                            fill="#ffffff"
+                        />
+                    </Group>
+
+                    {/* Vertical Energy Beacon Beam (upwards from floor y=65 to portal center y=0) */}
+                    <Line
+                        points={[
+                            -16, 65,  // bottom left
+                            -10, 0,   // top left
+                            10, 0,    // top right
+                            16, 65,   // bottom right
+                            -16, 65
+                        ]}
+                        fillLinearGradientStartPoint={{ x: 0, y: 65 }}
+                        fillLinearGradientEndPoint={{ x: 0, y: 0 }}
+                        fillLinearGradientColorStops={[
+                            0, 'rgba(16, 185, 129, 0.05)',
+                            0.5, 'rgba(6, 182, 212, 0.25)',
+                            1, 'rgba(99, 102, 241, 0.5)'
+                        ]}
+                        closed={true}
+                        listening={false}
+                    />
+
+                    {/* Outer glowing ring (Cyan/Emerald theme fitting cosmic economy) */}
                     <Group ref={portalRef}>
                         <Line
                             points={[
-                                0, -30,
-                                26, -15,
-                                26, 15,
-                                0, 30,
-                                -26, 15,
-                                -26, -15,
-                                0, -30
+                                0, -32,
+                                28, -16,
+                                28, 16,
+                                0, 32,
+                                -28, 16,
+                                -28, -16,
+                                0, -32
                             ]}
                             stroke="#06b6d4"
-                            strokeWidth={3}
+                            strokeWidth={3.5}
                             closed={true}
-                            shadowColor="#22d3ee"
-                            shadowBlur={12}
+                            shadowColor="#10b981"
+                            shadowBlur={14}
                             shadowOpacity={1}
                         />
                         {[
-                            {x: 0, y: -30}, {x: 26, y: -15}, {x: 26, y: 15},
-                            {x: 0, y: 30}, {x: -26, y: 15}, {x: -26, y: -15}
+                            {x: 0, y: -32}, {x: 28, y: -16}, {x: 28, y: 16},
+                            {x: 0, y: 32}, {x: -28, y: 16}, {x: -28, y: -16}
                         ].map((pt, idx) => (
                             <Circle
                                 key={`vnode-${idx}`}
                                 x={pt.x}
                                 y={pt.y}
-                                radius={4.5}
-                                fill="#e0f7fa"
-                                stroke="#00bcd4"
-                                strokeWidth={1.5}
+                                radius={5}
+                                fill="#ffffff"
+                                stroke="#10b981"
+                                strokeWidth={2}
                             />
                         ))}
                     </Group>
@@ -1246,13 +1290,13 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     <Group ref={portalInnerRef}>
                         <Line
                             points={[
-                                0, -20,
-                                17, -10,
-                                17, 10,
-                                0, 20,
-                                -17, 10,
-                                -17, -10,
-                                0, -20
+                                0, -22,
+                                19, -11,
+                                19, 11,
+                                0, 22,
+                                -19, 11,
+                                -19, -11,
+                                0, -22
                             ]}
                             stroke="#6366f1"
                             strokeWidth={2}
@@ -1261,12 +1305,12 @@ const HexNodeComponent = (props: HexNodeProps) => {
                             shadowBlur={8}
                         />
                         <Circle
-                            radius={11}
-                            fill="rgba(6, 182, 212, 0.45)"
-                            stroke="#22d3ee"
+                            radius={12}
+                            fill="rgba(6, 182, 212, 0.55)"
+                            stroke="#a7f3d0"
                             strokeWidth={1.5}
                             shadowColor="#22d3ee"
-                            shadowBlur={16}
+                            shadowBlur={18}
                         />
                     </Group>
 
@@ -1274,18 +1318,18 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     <Line
                         ref={lightningPathRef1}
                         points={[0, -30, 0, 30]}
-                        stroke="#e0f2fe"
-                        strokeWidth={2}
+                        stroke="#e2f1ff"
+                        strokeWidth={2.5}
                         shadowColor="#38bdf8"
-                        shadowBlur={8}
+                        shadowBlur={10}
                     />
                     <Line
                         ref={lightningPathRef2}
                         points={[-30, 0, 30, 0]}
                         stroke="#f5f3ff"
-                        strokeWidth={2}
-                        shadowColor="#818cf8"
-                        shadowBlur={8}
+                        strokeWidth={2.5}
+                        shadowColor="#a78bfa"
+                        shadowBlur={10}
                     />
                 </Group>
             )}
