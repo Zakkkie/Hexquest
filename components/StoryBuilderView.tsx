@@ -610,14 +610,15 @@ const StoryHex: React.FC<{
             ref={groupRef} 
             x={px.x} 
             y={px.y} 
-            onClick={() => onClick(q, r)} 
-            onTap={() => onClick(q, r)}
+            onClick={(e) => { e.cancelBubble = true; onClick(q, r); }} 
+            onTap={(e) => { e.cancelBubble = true; onClick(q, r); }}
             onDblClick={() => onDblClick && onDblClick(q, r)}
             onDblTap={() => onDblClick && onDblClick(q, r)}
-            onMouseEnter={() => setIsHovered(true)}
+            onMouseEnter={(e) => {
+                if (e.evt && ((e.evt as any).pointerType === 'touch' || ('ontouchstart' in window && window.matchMedia('(pointer: coarse)').matches))) return;
+                setIsHovered(true);
+            }}
             onMouseLeave={() => setIsHovered(false)}
-            onTouchStart={() => setIsHovered(true)}
-            onTouchEnd={() => setIsHovered(false)}
             perfectDrawEnabled={false}
             transformsEnabled="position"
         >
@@ -911,7 +912,7 @@ const StoryBuilderView: React.FC = () => {
 
     const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
     const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 30 });
-    const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 0.75 : 1.1);
+    const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 0.45 : 0.7);
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
     const isUiHidden = false;
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
@@ -920,7 +921,8 @@ const StoryBuilderView: React.FC = () => {
     const [popupCell, setPopupCell] = useState<{ q: number, r: number } | null>(null);
     const [selectedBuildLevel, setSelectedBuildLevel] = useState<number>(0); // 0-9 for building higher levels, or -999 for demolish/снос
     const [errorMessage, setErrorMessage] = useState<string | null>(null); // Visual feedback warning toast
-
+    const [destroyButtonCell, setDestroyButtonCell] = useState<{ q: number, r: number } | null>(null);
+    
     const containerRef = useRef<HTMLDivElement>(null);
     const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -928,7 +930,7 @@ const StoryBuilderView: React.FC = () => {
         const w = containerRef.current?.clientWidth || window.innerWidth;
         const h = containerRef.current?.clientHeight || window.innerHeight;
         setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
-        setZoomScale(w < 768 ? 0.75 : 1.1);
+        setZoomScale(w < 768 ? 0.45 : 0.7);
         playUiSound('CLICK');
     }, [playUiSound]);
 
@@ -1034,10 +1036,13 @@ const StoryBuilderView: React.FC = () => {
         const currentLvl = storyMap[getHexKey(q, r)];
         const currentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
 
+        if (!currentlyBuilt && lvlToBuild !== 0) {
+            return false;
+        }
+
         if (!hasAnyHex) {
-            // На пустой гекс нельзя размещать никакой гекс кроме 1 (или 0 / -1) уровня
             if (q === 0 && r === 0) {
-                return lvlToBuild === 0 || lvlToBuild === 1 || lvlToBuild === -1;
+                return lvlToBuild === 0;
             }
             return false;
         }
@@ -1047,7 +1052,7 @@ const StoryBuilderView: React.FC = () => {
             if (lvlToBuild <= currentLvl) return false;
         } else {
             // Placing on a brand new empty tile
-            if (lvlToBuild > 1 || lvlToBuild < -1) return false;
+            if (lvlToBuild !== 0) return false;
         }
         
         const neighbors = [
@@ -1078,7 +1083,7 @@ const StoryBuilderView: React.FC = () => {
             return false;
         }
 
-        if (lvlToBuild >= 2 && supportCount < 2) {
+        if (lvlToBuild >= 1 && supportCount < 2) {
             return false;
         }
 
@@ -1087,7 +1092,7 @@ const StoryBuilderView: React.FC = () => {
 
     const gridPoints = useMemo(() => {
         const points = [];
-        const RADIUS = 6;
+        const RADIUS = 12;
         for (let q = -RADIUS; q <= RADIUS; q++) {
             for (let r = -RADIUS; r <= RADIUS; r++) {
                 if (Math.abs(q + r) <= RADIUS) {
@@ -1116,17 +1121,52 @@ const StoryBuilderView: React.FC = () => {
         const eligible = isEligibleForPlacement(q, r);
         
         if (isCurrentlyBuilt) {
+            if (currentLvl === selectedBuildLevel && selectedBuildLevel !== -999) {
+                playUiSound('CLICK');
+                setDestroyButtonCell({ q, r });
+                return;
+            }
             if (eligible && selectedBuildLevel !== -999) {
                 // If it's an existing tile, and the current selected level is valid for upgrading
                 // (It will fall through to execute placement)
             } else {
-                // Demolish popup
-                playUiSound('CLICK');
-                setPopupCell({ q, r });
-                return;
+                if (selectedBuildLevel === -999) {
+                    // Demolish popup
+                    playUiSound('CLICK');
+                    setPopupCell({ q, r });
+                    return;
+                } else {
+                    // Trying to place a forbidden upgraded hex (support or height-step violation)
+                    playUiSound('ERROR');
+                    setErrorMessage(
+                        language === 'RU'
+                            ? 'Размещение здесь запрещено! Разместите гекс 0 уровня (или другого соответствующего уровня в соответствии с опорами).'
+                            : 'Placement is forbidden here! Place a level 0 hex (or other corresponding level matching supports).'
+                    );
+                    setTimeout(() => {
+                        setErrorMessage(curr => curr?.includes('соответствующего уровня') || curr?.includes('corresponding level') ? null : curr);
+                    }, 5000);
+                    return;
+                }
             }
         } else if (!eligible) {
             playUiSound('ERROR');
+            if (selectedBuildLevel !== 0) {
+                setErrorMessage(
+                    language === 'RU'
+                        ? 'Размещение запрещено! На пустой гекс допускается только установка плитки 0 уровня.'
+                        : 'Placement is forbidden! On empty hexes, only a level 0 tile can be placed.'
+                );
+            } else {
+                setErrorMessage(
+                    language === 'RU'
+                        ? 'Этот гекс недоступен! Разместите гекс 0 уровня на стартовой позиции или рядом с существующими гексами.'
+                        : 'This hex is unavailable! Place a level 0 hex on starting coordinates or next to existing hexes.'
+                );
+            }
+            setTimeout(() => {
+                setErrorMessage(curr => curr?.includes('допускается только') || curr?.includes('недоступен') || curr?.includes('unavailable') || curr?.includes('only a level 0') ? null : curr);
+            }, 5000);
             return;
         }
 
@@ -1174,7 +1214,7 @@ const StoryBuilderView: React.FC = () => {
         playUiSound('SUCCESS');
         setLastPlacedKey(key);
         setErrorMessage(null); // clear any previous warning
-    }, [isPanning, storyMap, selectedBuildLevel, isEligibleForPlacement, minedInSessionHexes, placeStoryHex, addMinedHexes, playUiSound, setErrorMessage, language, hasAnyHex]);
+    }, [isPanning, storyMap, selectedBuildLevel, isEligibleForPlacement, minedInSessionHexes, placeStoryHex, addMinedHexes, playUiSound, setErrorMessage, language, hasAnyHex, setDestroyButtonCell]);
 
     const handleCellDblClick = useCallback((q: number, r: number) => {
         const key = getHexKey(q, r);
@@ -1186,7 +1226,10 @@ const StoryBuilderView: React.FC = () => {
         }
     }, [storyMap, handleResetCamera]);
 
-    const handleDragStart = () => { isPanning.current = true; };
+    const handleDragStart = () => { 
+        isPanning.current = true; 
+        setDestroyButtonCell(null);
+    };
     const handleDragEnd = (e: any) => { 
         setCameraPos({ x: e.target.x(), y: e.target.y() });
         setTimeout(() => { isPanning.current = false; }, 50); 
@@ -1195,7 +1238,10 @@ const StoryBuilderView: React.FC = () => {
     const lastDist = useRef<number | null>(null);
 
     const handleWheel = (e: any) => {
-        e.evt.preventDefault();
+        if (e.evt && typeof e.evt.preventDefault === 'function') {
+            e.evt.preventDefault();
+        }
+        setDestroyButtonCell(null);
         const stage = e.target.getStage();
         if (!stage) return;
         
@@ -1220,19 +1266,40 @@ const StoryBuilderView: React.FC = () => {
         });
     };
 
+    const handleTouchStart = (e: any) => {
+        setDestroyButtonCell(null);
+        const touches = e.evt?.touches || e.touches || [];
+        const touch1 = touches[0];
+        const touch2 = touches[1];
+        if (touch1 && touch2) {
+            const dist = Math.sqrt(
+                Math.pow(touch2.clientX - touch1.clientX, 2) +
+                Math.pow(touch2.clientY - touch1.clientY, 2)
+            );
+            lastDist.current = dist;
+        } else {
+            lastDist.current = null;
+        }
+    };
+
     const handleTouchMove = (e: any) => {
-        e.evt.preventDefault();
-        const touch1 = e.evt.touches[0];
-        const touch2 = e.evt.touches[1];
+        const touches = e.evt?.touches || e.touches || [];
+        const touch1 = touches[0];
+        const touch2 = touches[1];
 
         if (touch1 && touch2) {
+            const rawEvt = e.evt || e;
+            if (rawEvt && typeof rawEvt.preventDefault === 'function') {
+                rawEvt.preventDefault();
+            }
             isPanning.current = true;
+            setDestroyButtonCell(null);
             const dist = Math.sqrt(
                 Math.pow(touch2.clientX - touch1.clientX, 2) +
                 Math.pow(touch2.clientY - touch1.clientY, 2)
             );
 
-            if (lastDist.current !== null) {
+            if (lastDist.current !== null && lastDist.current > 0) {
                 const center = {
                     x: (touch1.clientX + touch2.clientX) / 2,
                     y: (touch1.clientY + touch2.clientY) / 2,
@@ -1244,7 +1311,8 @@ const StoryBuilderView: React.FC = () => {
                     y: (center.y - cameraPos.y) / oldScale,
                 };
 
-                const newScale = Math.max(0.4, Math.min(2.0, oldScale * Math.max(0.9, Math.min(1.1, dist / lastDist.current))));
+                const scaleFactor = dist / lastDist.current;
+                const newScale = Math.max(0.4, Math.min(2.0, oldScale * scaleFactor));
                 setZoomScale(newScale);
 
                 setCameraPos({
@@ -1300,13 +1368,18 @@ const StoryBuilderView: React.FC = () => {
     return (
         <div ref={containerRef} className="absolute inset-0 bg-[#020617] flex flex-col font-sans overflow-hidden">
             {/* CANVAS */}
-            <div className="absolute inset-0 z-0">
+            <div 
+                className="absolute inset-0 z-0"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
                 <Stage 
                     width={stageSize.width} 
                     height={stageSize.height}
                     onWheel={handleWheel}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
+                    onClick={() => setDestroyButtonCell(null)}
+                    onTap={() => setDestroyButtonCell(null)}
                 >
                     <Layer listening={false}>
                         <NebulaBackground width={stageSize.width} height={stageSize.height} />
@@ -1332,8 +1405,8 @@ const StoryBuilderView: React.FC = () => {
                         onDragStart={handleDragStart} 
                         onDragEnd={handleDragEnd}
                         dragBoundFunc={(pos) => {
-                            const BOUND_X = stageSize.width * 0.7 * Math.max(1, zoomScale);
-                            const BOUND_Y = stageSize.height * 0.7 * Math.max(1, zoomScale);
+                            const BOUND_X = stageSize.width * 2.2 * Math.max(1, zoomScale);
+                            const BOUND_Y = stageSize.height * 2.2 * Math.max(1, zoomScale);
                             const centerX = stageSize.width / 2;
                             const centerY = stageSize.height / 2 - (stageSize.width < 768 ? 20 : 50);
                             return {
@@ -1381,28 +1454,80 @@ const StoryBuilderView: React.FC = () => {
             
             <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between overflow-hidden p-4 md:p-8">
                 
-                {/* FLOATING LIGHTWEIGHT ERROR MESSAGE */}
+                {/* FLOATING LIGHTWEIGHT ERROR MESSAGE (Moved ergonomically to perfectly centered bottom position, avoiding overflow) */}
                 <AnimatePresence>
                     {errorMessage && (
                         <motion.div
-                            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                            initial={{ opacity: 0, y: 30, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                            className="absolute top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-auto w-[calc(100%-2rem)] max-w-sm"
+                            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+                            className="absolute bottom-36 md:bottom-28 left-0 right-0 mx-auto z-[100] pointer-events-auto w-[calc(100%-3rem)] max-w-sm flex justify-center"
                         >
-                            <div className="bg-[#1e0712]/90 border border-red-500/30 text-red-200 px-4 py-3 rounded-2xl shadow-[0_4px_24px_rgba(239,68,68,0.15)] flex items-center gap-3 backdrop-blur-md">
+                            <div 
+                                onClick={() => { playUiSound('CLICK'); setErrorMessage(null); }}
+                                className="bg-slate-950/98 border-2 border-red-500/50 text-red-200 px-4 py-3.5 rounded-2xl shadow-[0_10px_40px_rgba(239,68,68,0.25)] flex items-center gap-3 backdrop-blur-xl w-full cursor-pointer hover:bg-slate-900/98 hover:border-red-500/80 transition-all select-none"
+                            >
                                 <Info className="w-5 h-5 text-red-400 shrink-0" />
                                 <div className="flex flex-col text-left">
                                     <span className="text-[8px] font-black uppercase text-red-400 tracking-widest leading-none">
-                                        {language === 'RU' ? 'КРИТЕРИЙ СТАБИЛЬНОСТИ' : 'STABILITY RULES'}
+                                        {language === 'RU' ? 'ИНФОРМАЦИОННОЕ СООБЩЕНИЕ' : 'SYSTEM NOTIFICATION'}
                                     </span>
-                                    <span className="text-[10px] md:text-xs font-semibold leading-snug mt-1">
+                                    <span className="text-[10.5px] md:text-xs font-semibold leading-relaxed mt-1 text-slate-100">
                                         {errorMessage}
                                     </span>
                                 </div>
                             </div>
                         </motion.div>
                     )}
+                </AnimatePresence>
+                
+                {/* FLOATING ACTION TOOLTIP FOR SAME-LEVEL HEX DEMOLISHING */}
+                <AnimatePresence>
+                    {destroyButtonCell && (() => {
+                        const { q, r } = destroyButtonCell;
+                        const key = getHexKey(q, r);
+                        const lvl = storyMap[key];
+                        if (lvl === undefined || lvl < 0) return null;
+                        
+                        const px = hexToPixel(q, r);
+                        const heightVal = 12 + lvl * 12;
+                        const yOffsetOffset = -heightVal;
+                        const topFaceY = px.y + yOffsetOffset;
+                        
+                        // Calculate screen position
+                        const leftPos = cameraPos.x + px.x * zoomScale;
+                        const topPos = cameraPos.y + topFaceY * zoomScale - 46 * zoomScale; // place it 46px above the hex top face
+                        
+                        return (
+                            <motion.div 
+                                initial={{ scale: 0, opacity: 0, y: 10 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0, opacity: 0, y: 10 }}
+                                style={{
+                                    position: 'absolute',
+                                    left: `${leftPos}px`,
+                                    top: `${topPos}px`,
+                                    transform: `translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.25, zoomScale))})`,
+                                    zIndex: 120,
+                                }}
+                                className="pointer-events-auto"
+                            >
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        playUiSound('SUCCESS');
+                                        placeStoryHex(q, r, -999);
+                                        addMinedHexes({ [lvl]: 1 });
+                                        setDestroyButtonCell(null);
+                                    }}
+                                    className="bg-red-650 hover:bg-red-700 text-white font-black uppercase text-[8px] md:text-[9.5px] tracking-wider px-2.5 py-1.5 rounded-lg shadow-[0_5px_15px_rgba(239,68,68,0.4)] border border-red-500 flex items-center gap-1 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+                                >
+                                    <span>✖</span>
+                                    <span>{language === 'RU' ? 'УНИЧТОЖИТЬ' : 'DESTROY'}</span>
+                                </button>
+                            </motion.div>
+                        );
+                    })()}
                 </AnimatePresence>
                 
                 {/* TOP HEADER STATUS */}
@@ -1453,7 +1578,7 @@ const StoryBuilderView: React.FC = () => {
                                             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all w-full text-left font-black uppercase text-[9px] tracking-[0.1em]"
                                         >
                                             <HelpCircle className="w-4 h-4 shrink-0" />
-                                            <span>{language === 'RU' ? 'Справка Гексополя' : 'Hexopol Guide'}</span>
+                                            <span>{language === 'RU' ? 'Справка Гексагона' : 'Hexagon Guide'}</span>
                                         </button>
 
                                         <button 
@@ -1521,20 +1646,16 @@ const StoryBuilderView: React.FC = () => {
                     transition={{ duration: 0.3 }}
                     className="w-full max-w-sm md:max-w-md mx-auto mt-3 pointer-events-none flex justify-center z-[45]"
                 >
-                    <div className="bg-[#020617]/85 border border-white/5 rounded-2xl w-full shadow-2xl backdrop-blur-md flex flex-col overflow-hidden pointer-events-auto p-3.5 relative">
+                    <div 
+                        onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(!isNarrativeCollapsed); }}
+                        className="bg-[#020617]/90 border border-white/10 rounded-2xl w-full shadow-2xl backdrop-blur-md flex flex-col overflow-hidden pointer-events-auto p-3.5 relative cursor-pointer hover:border-indigo-500/40 hover:bg-[#020617]/95 transition-all select-none"
+                    >
                         {/* Sleek Top Edge Progress Line */}
                         <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-slate-900/60 overflow-hidden">
                             <div 
                                 className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 transition-all duration-500"
                                 style={{ width: `${((unlockedFigureIndex + 1) / FIGURES_COLLECTION.length) * 100}%` }}
                             />
-                        </div>
-
-                        {/* Compact progress text replacing the overflowing horizontal dots */}
-                        <div className="absolute top-3 right-4.5 bg-indigo-950/55 px-2 py-0.5 rounded-md border border-indigo-500/20 shadow-sm leading-none flex items-center">
-                            <span className="text-[8px] font-black text-indigo-300 tracking-wider">
-                                {unlockedFigureIndex + 1}/{FIGURES_COLLECTION.length}
-                            </span>
                         </div>
 
                         <AnimatePresence mode="wait">
@@ -1547,17 +1668,19 @@ const StoryBuilderView: React.FC = () => {
                                 transition={{ duration: 0.2 }}
                                 className="flex flex-col"
                             >
-                                <div className="flex justify-between items-start mb-2 pr-12 border-b border-white/5 pb-1">
-                                    <span className="text-[7px] font-black text-cyan-400 uppercase tracking-widest leading-none">
-                                        {language === 'RU' ? 'АКТИВНЫЙ ЧЕРТЕЖ' : 'ACTIVE BLUEPRINT'}
-                                    </span>
-                                    <button 
-                                        onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(true); }}
-                                        className="text-[7.5px] font-black text-cyan-400 hover:text-cyan-300 uppercase underline pointer-events-auto flex items-center gap-0.5"
-                                    >
+                                <div className="flex justify-between items-center mb-2 border-b border-white/5 pb-1">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="text-[7.5px] font-black text-cyan-400 uppercase tracking-widest leading-none shrink-0">
+                                            {language === 'RU' ? 'АКТИВНЫЙ ЧЕРТЕЖ' : 'ACTIVE BLUEPRINT'}
+                                        </span>
+                                        <span className="bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-500/20 text-[7px] font-mono font-black text-indigo-300 leading-none">
+                                            {unlockedFigureIndex + 1}/{FIGURES_COLLECTION.length}
+                                        </span>
+                                    </div>
+                                    <div className="text-[7.5px] font-black text-cyan-400 hover:text-cyan-300 uppercase flex items-center gap-0.5 shrink-0">
                                         <ChevronUp className="w-3 h-3" />
                                         <span>{language === 'RU' ? 'СВЕРНУТЬ' : 'COLLAPSE'}</span>
-                                    </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-3.5 mb-2.5">
@@ -1574,7 +1697,7 @@ const StoryBuilderView: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="p-2 bg-slate-950/40 border border-white/5 rounded-lg mb-2.5 flex flex-col gap-1 text-[8px] text-slate-450 font-sans leading-tight font-medium">
+                                <div className="p-2 bg-slate-950/40 border border-white/5 rounded-lg mb-2.5 flex flex-col gap-1 text-[8px] text-slate-400 font-sans leading-tight font-medium">
                                     <div className="flex items-center gap-1.5">
                                         <span className="w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
                                         <span>{language === 'RU' ? '1. Почва L0 выделена голубым при клике' : '1. Deploy Level 0 (Ground) cells'}</span>
@@ -1590,10 +1713,10 @@ const StoryBuilderView: React.FC = () => {
                                 </div>
 
                                 {/* Claim & Completion Button */}
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                     {targetCompleted ? (
                                         <motion.button
-                                            onClick={handleClaimReward}
+                                            onClick={(e) => { e.stopPropagation(); handleClaimReward(); }}
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
                                             className="w-full py-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-black uppercase text-[9px] tracking-widest rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.35)] flex items-center justify-center gap-2 border border-purple-400"
@@ -1615,27 +1738,29 @@ const StoryBuilderView: React.FC = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -6 }}
                                 transition={{ duration: 0.2 }}
-                                className="flex justify-between items-center pr-12 w-full font-sans pointer-events-auto"
+                                className="flex justify-between items-center w-full font-sans"
                             >
-                                <div className="flex flex-col">
-                                    <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">
-                                        {language === 'RU' ? 'СТРОИТЕЛЬНАЯ ЗАДАЧА' : 'CONSTRUCT OBJECTIVE'}
-                                    </span>
-                                    <h3 className="text-[10px] md:text-xs font-black text-white uppercase tracking-tight line-clamp-1 pr-2">
+                                <div className="flex flex-col gap-1 min-w-0 pr-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[7.5px] font-black text-indigo-400 uppercase tracking-widest leading-none shrink-0">
+                                            {language === 'RU' ? 'СТРОИТЕЛЬНАЯ ЗАДАЧА' : 'CONSTRUCT OBJECTIVE'}
+                                        </span>
+                                        <span className="bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-500/20 text-[7px] font-mono font-black text-indigo-300 leading-none">
+                                            {unlockedFigureIndex + 1}/{FIGURES_COLLECTION.length}
+                                        </span>
+                                    </div>
+                                    <h3 className="text-[11px] md:text-xs font-black text-white uppercase tracking-tight leading-tight line-clamp-1">
                                         {language === 'RU' ? activeFigure.nameRU : activeFigure.nameEN}
                                     </h3>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                     {targetCompleted && (
-                                        <span className="bg-emerald-950 border border-emerald-500/30 text-emerald-400 text-[7px] font-black px-1.5 py-0.5 rounded leading-none">DONE!</span>
+                                        <span className="bg-emerald-950 border border-emerald-500/30 text-emerald-400 text-[6.5px] font-black px-1.5 py-0.5 rounded leading-none shrink-0">DONE!</span>
                                     )}
-                                    <button 
-                                        onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(false); }}
-                                        className="text-[7.5px] font-black text-cyan-400 hover:text-cyan-300 uppercase underline flex items-center gap-0.5 animate-pulse"
-                                    >
-                                        <ChevronDown className="w-3 h-3" />
+                                    <div className="text-[7.5px] font-black text-cyan-400 hover:text-cyan-300 uppercase flex items-center gap-0.5 shrink-0">
+                                        <ChevronDown className="w-3 h-3 animate-pulse" />
                                         <span>{language === 'RU' ? 'ИНФО' : 'INFO'}</span>
-                                    </button>
+                                    </div>
                                 </div>
                             </motion.div>
                         )}
@@ -1757,7 +1882,7 @@ const StoryBuilderView: React.FC = () => {
                                     <div className="flex flex-col">
                                         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none mb-1">SYSTEM_GUIDE</span>
                                         <h2 className="text-base md:text-lg font-black text-white uppercase tracking-wider leading-none">
-                                            {language === 'RU' ? 'Правила Гексополя' : 'Hexopol Guide rules'}
+                                            {language === 'RU' ? 'Правила Гексагона' : 'Hexagon Guide rules'}
                                         </h2>
                                     </div>
                                 </div>
@@ -1768,8 +1893,8 @@ const StoryBuilderView: React.FC = () => {
 
                             <p className="text-slate-400 text-xs md:text-sm mb-6 leading-relaxed relative z-20">
                                 {language === 'RU' 
-                                    ? 'Гексополь — это творческое логическое пространство, где вы собираете древние фигуры из гексов. Накапливайте Очки Умений для развития вашей Кампании:' 
-                                    : 'The Hexopol is a sanctuary of spatial construction where you shape hex figures. Use your analytical wits to claim Skill Points and power your global campaign Upgrades:'}
+                                    ? 'Гексагон — это творческое логическое пространство, где вы собираете древние фигуры из гексов. Накапливайте Очки Умений для развития вашей Кампании:' 
+                                    : 'The Hexagon is a sanctuary of spatial construction where you shape hex figures. Use your analytical wits to claim Skill Points and power your global campaign Upgrades:'}
                             </p>
 
                             <div className="space-y-4 mb-6 relative z-20 max-h-[45vh] overflow-y-auto no-scrollbar pr-1">

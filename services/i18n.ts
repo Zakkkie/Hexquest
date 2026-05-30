@@ -508,7 +508,7 @@ export const TEXT: Record<Language, Dictionary> = {
             BOT_LABEL_SKIRMISH: "SKIRMISH",
             BOT_LABEL_WAR: "WAR",
             BOT_LABEL_CHAOS: "CHAOS",
-            MODE_STORY: "Hexopol",
+            MODE_STORY: "Hexagon",
             MODE_STORY_SUB: "Figure Blueprints",
             MODE_LEVELS: "Ranked Missions",
             MODE_LEVELS_SUB: "Sequence 1.1 - 4.8"
@@ -933,7 +933,7 @@ export const TEXT: Record<Language, Dictionary> = {
             BOT_LABEL_SKIRMISH: "СТЫЧКА",
             BOT_LABEL_WAR: "ВОЙНА",
             BOT_LABEL_CHAOS: "ХАОС",
-            MODE_STORY: "Гексополь",
+            MODE_STORY: "Гексагон",
             MODE_STORY_SUB: "Чертежи фигур",
             MODE_LEVELS: "Уровни",
             MODE_LEVELS_SUB: "Прогрессия 1.1 - 4.8"

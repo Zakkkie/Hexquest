@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, LogOut, Ghost, ArrowRight, Shield, X, LogIn, Lock, Target, Gem, Crown, Bot, Activity, Volume2, VolumeX, BookOpen, Globe, Music, ChevronLeft, ChevronRight, Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, Mountain, Crosshair, Flame, Shuffle } from 'lucide-react';
+import { Trophy, LogOut, Ghost, ArrowRight, Shield, X, LogIn, Lock, Target, Gem, Crown, Bot, Activity, Volume2, VolumeX, BookOpen, Globe, Music, ChevronLeft, ChevronRight, Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, Mountain, Crosshair, Flame, Shuffle, Settings } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -274,8 +274,9 @@ const MainMenu: React.FC = () => {
   const [showCampaignModes, setShowCampaignModes] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const [showSoundMenu, setShowSoundMenu] = useState(false);
-  const soundMenuRef = useRef<HTMLDivElement>(null);
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsMenuRef = useRef<HTMLDivElement>(null);
 
   // Animation State
   const [logoVisible, setLogoVisible] = useState(false);
@@ -309,8 +310,8 @@ const MainMenu: React.FC = () => {
 
   useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
-          if (soundMenuRef.current && !soundMenuRef.current.contains(event.target as Node)) {
-              setShowSoundMenu(false);
+          if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target as Node)) {
+              setIsSettingsOpen(false);
           }
       };
       document.addEventListener("mousedown", handleClickOutside);
@@ -484,62 +485,115 @@ const MainMenu: React.FC = () => {
     <div className="relative w-full h-full flex items-center justify-center pointer-events-auto">
       
       {/* HEADER BAR */}
-      <div className="absolute top-0 left-0 w-full p-4 md:p-6 flex flex-col md:flex-row justify-between items-center md:items-start z-50 pointer-events-auto">
-        <div className="w-full flex justify-between items-start">
-            <div 
-              className="flex gap-2 relative"
-              style={{
-                paddingTop: '0px',
-                marginTop: '0px',
-                paddingLeft: '0px',
-                paddingRight: '0px'
-              }}
+      <div className="absolute top-0 left-0 w-full p-4 md:p-6 flex justify-between items-start z-50 pointer-events-auto">
+        {/* LEFT UP CORNER: ACCESS/AUTH OR PROFILE */}
+        <div className="flex items-center gap-2">
+            {!user ? (
+              <button 
+                onClick={() => { setAuthMode('LOGIN'); setInputName(''); setInputPassword(''); setErrorMessage(null); playUiSound('CLICK'); }} 
+                className="flex items-center gap-2 px-4 py-2.5 md:py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 hover:text-white rounded-full border border-indigo-500/30 hover:border-indigo-400/60 transition-all shadow-[0_4px_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] backdrop-blur-xl group cursor-pointer"
+              >
+                 <Fingerprint className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 drop-shadow-[0_0_8px_currentColor]" />
+                 <span className="text-[10px] md:text-xs font-black uppercase tracking-widest drop-shadow-md">{t.MODAL_LOGIN_TITLE}</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-3 bg-slate-900/40 backdrop-blur-xl p-1.5 pl-4 md:pl-6 rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] group hover:border-white/20 hover:bg-slate-800/60 transition-all">
+                <div className="hidden md:flex flex-col items-end">
+                  <span className="text-xs font-black text-white leading-tight max-w-[100px] truncate break-words whitespace-pre-wrap drop-shadow-md">{user.nickname}</span>
+                  <span className="text-[9px] md:text-[10px] text-indigo-300/80 font-mono uppercase tracking-[0.2em] break-words whitespace-pre-wrap">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span>
+                </div>
+                {renderAvatar(user.avatarColor, user.headIndex, user.bodyIndex, 'sm')}
+                <button onClick={handleLogout} className="p-2 md:p-2.5 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-all bg-black/20 border border-transparent hover:border-red-500/30 cursor-pointer"><LogOut className="w-4 h-4 md:w-5 md:h-5" /></button>
+              </div>
+            )}
+        </div>
+
+        {/* RIGHT UP CORNER: SETTINGS WITH GEAR ICON */}
+        <div className="relative" ref={settingsMenuRef}>
+            <button 
+              onClick={() => { setIsSettingsOpen(!isSettingsOpen); playUiSound('CLICK'); }}
+              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl rounded-full transition-all border border-indigo-500/30 bg-slate-900/40 text-indigo-300 hover:text-white hover:border-indigo-400/80 hover:bg-indigo-900/50 hover:shadow-[0_0_15px_rgba(99,102,241,0.4)] shadow-[0_4px_20px_rgba(0,0,0,0.3)] cursor-pointer"
             >
-                <button 
-                  onClick={() => { setShowSoundMenu(!showSoundMenu); playUiSound('CLICK'); }}
-                  className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl rounded-full transition-all border border-white/10 bg-slate-900/40 text-slate-300 hover:text-white hover:border-white/20 hover:bg-slate-800/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+              <Settings className="w-5 h-5 animate-[spin_20s_linear_infinite_paused] hover:animate-[spin_4s_linear_infinite]" />
+            </button>
+
+            <AnimatePresence>
+            {isSettingsOpen && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ type: "spring", damping: 20, stiffness: 200 }}
+                    className="absolute top-full right-0 mt-3 bg-slate-900/95 backdrop-blur-xl border-2 border-indigo-500/40 p-4 md:p-5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-3.5 min-w-[240px] md:min-w-[280px] z-[60]"
                 >
-                  <Volume2 className="w-5 h-5" />
-                </button>
+                    {/* Header in the dropdown */}
+                    <div className="flex flex-col border-b border-indigo-500/20 pb-2 mb-1">
+                        <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest leading-none">SYSTEM CONTROL</span>
+                        <span className="text-xs md:text-sm font-black text-white uppercase tracking-wider mt-1">{language === 'RU' ? 'Панель управления' : 'Control Desk'}</span>
+                    </div>
 
-                {showSoundMenu && (
-                    <div ref={soundMenuRef} className="absolute top-full left-0 mt-2 bg-slate-900/95 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex flex-col gap-2 min-w-[200px] z-[60]">
-                        <button onClick={() => { toggleMusic(); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isMusicMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-indigo-400 bg-indigo-900/20 hover:bg-indigo-900/30'}`}>
-                            {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
-                            <span className="text-xs font-bold uppercase">Music</span>
-                        </button>
-                        <button onClick={() => { toggleSfx(); playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${isSfxMuted ? 'text-slate-500 hover:bg-slate-800' : 'text-emerald-400 bg-emerald-900/20 hover:bg-emerald-900/30'}`}>
-                            {isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                            <span className="text-xs font-bold uppercase">SFX</span>
+                    {/* Language Settings */}
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">{language === 'RU' ? 'Язык Интерфейса' : 'Interface Language'}</span>
+                        <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-slate-950/80 rounded-xl border border-white/5">
+                            <button 
+                                onClick={() => { setLanguage('EN'); playUiSound('CLICK'); }}
+                                className={`py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${language === 'EN' ? 'bg-indigo-600/30 text-white border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                English
+                            </button>
+                            <button 
+                                onClick={() => { setLanguage('RU'); playUiSound('CLICK'); }}
+                                className={`py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${language === 'RU' ? 'bg-indigo-600/30 text-white border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                Русский
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Sounds Settings */}
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">{language === 'RU' ? 'Параметры Звука' : 'Audio Modulators'}</span>
+                        <div className="flex flex-col gap-1.5">
+                            {/* Music Toggle */}
+                            <button 
+                                onClick={() => { toggleMusic(); playUiSound('CLICK'); }} 
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all text-left cursor-pointer ${isMusicMuted ? 'border-slate-800 bg-slate-950/40 text-slate-500 hover:bg-slate-850' : 'border-indigo-500/30 bg-indigo-950/20 text-indigo-300 hover:bg-indigo-950/30 hover:border-indigo-400'}`}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4 text-indigo-400" />}
+                                    <span className="text-xs font-black uppercase tracking-wider">{language === 'RU' ? 'Музыка' : 'Music'}</span>
+                                </div>
+                                <span className="text-[10px] font-mono leading-none">{isMusicMuted ? 'OFF' : 'ON'}</span>
+                            </button>
+                            {/* SFX Toggle */}
+                            <button 
+                                onClick={() => { toggleSfx(); playUiSound('CLICK'); }} 
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all text-left cursor-pointer ${isSfxMuted ? 'border-slate-800 bg-slate-950/40 text-slate-500 hover:bg-slate-850' : 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-950/30 hover:border-emerald-400'}`}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    {isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                                    <span className="text-xs font-black uppercase tracking-wider">{language === 'RU' ? 'Эффекты' : 'SFX'}</span>
+                                </div>
+                                <span className="text-[10px] font-mono leading-none">{isSfxMuted ? 'OFF' : 'ON'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Leaderboard Link inside Dropdown */}
+                    <div className="flex flex-col gap-1.5 border-t border-indigo-500/20 pt-3 mt-1">
+                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">{language === 'RU' ? 'Таблица достижений' : 'Social Core'}</span>
+                        <button 
+                            onClick={() => { setIsSettingsOpen(false); setUIState('LEADERBOARD'); playUiSound('CLICK'); }}
+                            className="flex items-center gap-2.5 w-full p-2.5 bg-gradient-to-r from-indigo-950/40 to-indigo-900/10 border border-indigo-500/20 hover:border-indigo-400/60 rounded-xl hover:bg-indigo-900/30 hover:text-white transition-all text-left text-indigo-300 text-xs font-black uppercase tracking-widest cursor-pointer"
+                        >
+                            <Trophy className="w-4 h-4 text-amber-400 drop-shadow-[0_0_8px_currentColor]" />
+                            <span>{language === 'RU' ? 'Открыть Рейтинг' : 'Open Rankings'}</span>
                         </button>
                     </div>
-                )}
-                
-                <button onClick={() => setLanguage(language === 'EN' ? 'RU' : 'EN')} className="h-10 md:h-12 px-3 md:px-4 bg-slate-900/40 hover:bg-slate-800/60 backdrop-blur-xl rounded-full text-slate-300 hover:text-white transition-all border border-white/10 hover:border-white/20 flex items-center justify-center gap-1.5 font-black uppercase tracking-widest text-[10px] md:text-xs shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                  <Globe className="w-4 h-4" /> {language}
-                </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-                {!user ? (
-                  <button 
-                    onClick={() => { setAuthMode('LOGIN'); setInputName(''); setInputPassword(''); setErrorMessage(null); playUiSound('CLICK'); }} 
-                    className="flex items-center gap-2 px-4 py-2.5 md:py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 hover:text-white rounded-full border border-indigo-500/30 hover:border-indigo-400/60 transition-all shadow-[0_4px_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] backdrop-blur-xl group"
-                  >
-                     <Fingerprint className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 drop-shadow-[0_0_8px_currentColor]" />
-                     <span className="text-[10px] md:text-xs font-black uppercase tracking-widest drop-shadow-md">{t.MODAL_LOGIN_TITLE}</span>
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-3 bg-slate-900/40 backdrop-blur-xl p-1.5 pl-5 md:pl-6 rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] group hover:border-white/20 hover:bg-slate-800/60 transition-all">
-                    <div className="hidden md:flex flex-col items-end">
-                      <span className="text-xs font-black text-white leading-tight max-w-[100px] truncate break-words whitespace-pre-wrap drop-shadow-md">{user.nickname}</span>
-                      <span className="text-[9px] md:text-[10px] text-indigo-300/80 font-mono uppercase tracking-[0.2em] break-words whitespace-pre-wrap">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span>
-                    </div>
-                    {renderAvatar(user.avatarColor, user.headIndex, user.bodyIndex, 'sm')}
-                    <button onClick={handleLogout} className="p-2 md:p-2.5 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-all bg-black/20 border border-transparent hover:border-red-500/30"><LogOut className="w-4 h-4 md:w-5 md:h-5" /></button>
-                  </div>
-                )}
-            </div>
+                </motion.div>
+            )}
+            </AnimatePresence>
         </div>
       </div>
 
@@ -669,7 +723,7 @@ const MainMenu: React.FC = () => {
                     initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
                     animate={{ opacity: 1, height: 'auto', overflow: 'hidden' }}
                     exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 180 }}
                     className="flex flex-col gap-2 pl-4 border-l-2 border-indigo-500/30"
                 >
                     <button 
