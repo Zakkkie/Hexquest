@@ -1043,8 +1043,8 @@ const StoryBuilderView: React.FC = () => {
         const currentLvl = currentMap[getHexKey(q, r)];
         const currentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
 
-        if (!currentlyBuilt && lvlToBuild !== 0) {
-            return false;
+        if (!currentlyBuilt) {
+            if (lvlToBuild !== 0) return false;
         }
 
         if (!hasAnyHex) {
@@ -1056,8 +1056,8 @@ const StoryBuilderView: React.FC = () => {
 
         if (currentlyBuilt) {
             if (lvlToBuild <= currentLvl) return false;
-        } else {
-            if (lvlToBuild !== 0) return false;
+            // Upgrade rule from battle: must upgrade step-by-step
+            if (lvlToBuild !== currentLvl + 1) return false;
         }
         
         const neighbors = [
@@ -1066,22 +1066,14 @@ const StoryBuilderView: React.FC = () => {
         ];
 
         let hasValidNeighbor = false;
-        let supportCount = 0;
+        const neighborLevels: number[] = [];
 
         for (const n of neighbors) {
-            let nLvl = currentMap[getHexKey(q + n.dq, r + n.dr)];
+            const nLvl = currentMap[getHexKey(q + n.dq, r + n.dr)];
             
             if (nLvl !== undefined && nLvl >= 0) {
                 hasValidNeighbor = true;
-                
-                // Staircase rule between occupied cells: absolute height difference can be at most 1
-                if (Math.abs(lvlToBuild - nLvl) > 1) {
-                    return false;
-                }
-                
-                if (nLvl === lvlToBuild - 1) {
-                    supportCount++;
-                }
+                neighborLevels.push(nLvl);
             }
         }
 
@@ -1089,26 +1081,18 @@ const StoryBuilderView: React.FC = () => {
             return false;
         }
 
-        if (lvlToBuild >= 1 && supportCount < 2) {
-            return false;
-        }
+        // STABILITY CHECK (Strict Equal Level Rule for L1+)
+        const currentLevel = currentlyBuilt ? currentLvl : 0;
+        if (currentLevel >= 1) {
+            // Check if there are at least 5 neighbors strictly higher than currentLevel (Depression rule)
+            const higherNeighborsCount = neighborLevels.filter(lvl => lvl > currentLevel).length;
+            const isDepressionRule = higherNeighborsCount >= 5;
 
-        // Rule: To place a level 1 hex, there must be support of at least 3 adjacent built hexes (lvl >= 0).
-        if (lvlToBuild === 1 && hasAnyHex) {
-            let builtNeighborsCount = 0;
-            if (currentlyBuilt) {
-                builtNeighborsCount += 3; // Intrinsic support from the base itself!
-            } else {
-                for (const n of neighbors) {
-                    const nKey = getHexKey(q + n.dq, r + n.dr);
-                    const nLvl = currentMap[nKey];
-                    if (nLvl !== undefined && nLvl >= 0) {
-                        builtNeighborsCount++;
-                    }
+            if (!isDepressionRule) {
+                const supportNeighborsCount = neighborLevels.filter(lvl => lvl === currentLevel).length;
+                if (supportNeighborsCount < 2) {
+                    return false;
                 }
-            }
-            if (builtNeighborsCount < 3) {
-                return false;
             }
         }
 
@@ -1141,7 +1125,6 @@ const StoryBuilderView: React.FC = () => {
         
         const map = storyMap;
         const buildLevel = selectedBuildLevel;
-        const anyHex = hasAnyHex;
         const key = getHexKey(q, r);
         const currentLvl = map[key];
         const isCurrentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
@@ -1206,38 +1189,6 @@ const StoryBuilderView: React.FC = () => {
         if (availableCount <= 0) {
             playUiSound('WARNING');
             return;
-        }
-
-        // Rule: To place a level 1 hex, there must be support of at least 3 adjacent built hexes (lvl >= 0).
-        // (if not placing on an empty map completely center)
-        if (buildLevel === 1 && anyHex) {
-            const neighborsList = [
-                { dq: 1, dr: -1 }, { dq: 1, dr: 0 }, { dq: 0, dr: 1 },
-                { dq: -1, dr: 1 }, { dq: -1, dr: 0 }, { dq: 0, dr: -1 }
-            ];
-            let builtNeighborsCount = 0;
-            // Also count the cell ITSELF as base if we are UPGRADING it (because it already provides support!)
-            if (isCurrentlyBuilt) {
-                builtNeighborsCount += 3; // Intrinsic support from the base itself!
-            } else {
-                for (const n of neighborsList) {
-                    const nKey = getHexKey(q + n.dq, r + n.dr);
-                    const nLvl = map[nKey];
-                    if (nLvl !== undefined && nLvl >= 0) {
-                        builtNeighborsCount++;
-                    }
-                }
-            }
-            if (builtNeighborsCount < 3) {
-                playUiSound('ERROR');
-                setErrorMessage(
-                    language === 'RU' 
-                        ? 'Нестабильно! Для установки гекса L1 требуется опора из 3-х соседних гексов' 
-                        : 'Unstable! Supporting base of level L1 requires at least 3 adjacent hexes'
-                );
-                setTimeout(() => setErrorMessage(p => p), 4000); 
-                return;
-            }
         }
 
         // Place new block!
