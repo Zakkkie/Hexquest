@@ -698,7 +698,7 @@ export const createGameplaySlice = (
                 }
               } else {
                 // LEVELS mode
-                const missionLevels = CAMPAIGN_LEVELS.filter(l => !l.isCityLevel);
+                const missionLevels = CAMPAIGN_LEVELS;
                 const idx = missionLevels.findIndex(l => l.id === currentId);
                 if (idx !== -1 && idx >= get().levelsModeProgress) {
                   const nextP = Math.min(missionLevels.length, idx + 1);

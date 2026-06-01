@@ -67,6 +67,7 @@ const CampaignMap: React.FC = () => {
   const deviceType = useGameStore(state => state.deviceType);
   const language = useGameStore(state => state.language);
   const skillPoints = useGameStore(state => state.skillPoints);
+  const user = useGameStore(state => state.user);
   
   // Bonus Grid Integration
   const hexActivationPoints = useGameStore(state => state.hexActivationPoints || 0);
@@ -336,7 +337,7 @@ const CampaignMap: React.FC = () => {
     return { positions, totalHeight: currentY + (isMobile ? 100 : 200) };
   }, [containerWidth, isMobile, campaignMode]);
 
-  const levelsToDisplay = useMemo(() => CAMPAIGN_LEVELS.filter(l => !l.isCityLevel), []);
+  const levelsToDisplay = CAMPAIGN_LEVELS;
 
   const renderStoryTimeline = () => (
     <motion.div 
@@ -630,7 +631,17 @@ const CampaignMap: React.FC = () => {
                <h2 className="text-lg md:text-3xl font-black text-white uppercase tracking-wider italic leading-none drop-shadow-md">
                  {campaignMode === 'STORY' ? TEXT[language].MENU.MODE_STORY : TEXT[language].MENU.MODE_LEVELS}
                </h2>
-               <p className="text-indigo-400/50 text-[7px] md:text-[9px] font-mono tracking-[0.3em] uppercase pl-1 font-bold">{t.HEADER_SUBTITLE}</p>
+               <div className="flex items-center gap-2 flex-wrap">
+                 <p className="text-indigo-400/50 text-[7px] md:text-[9px] font-mono tracking-[0.3em] uppercase pl-1 font-bold leading-none">{t.HEADER_SUBTITLE}</p>
+                 <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-400/20 rounded-full px-2 py-0.5 text-[8.5px] font-mono text-indigo-300 select-none shadow-[0_0_10px_rgba(99,102,241,0.1)] leading-none inline-flex">
+                   <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_6px_#10b981]" />
+                   <span>
+                     {language === 'RU' 
+                       ? `Синхронизировано: ${user ? user.nickname : 'Гость'} ${user?.isGuest ? '(Гость)' : '(Аккаунт)'}`
+                       : `Synced with: ${user ? user.nickname : 'Guest'} ${user?.isGuest ? '(Guest)' : '(Account)'}`}
+                   </span>
+                 </div>
+               </div>
              </div>
           </div>
 

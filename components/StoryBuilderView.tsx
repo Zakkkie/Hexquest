@@ -440,7 +440,13 @@ const NebulaBackground: React.FC<{ width: number; height: number }> = ({ width, 
     );
 };
 
-const MiniFigureBlueprint: React.FC<{ shape: { q: number, r: number, lvl?: number }[], cellSize?: number, className?: string }> = ({ shape, cellSize = 6, className }) => {
+const MiniFigureBlueprint: React.FC<{ 
+    shape: { q: number, r: number, lvl?: number }[], 
+    cellSize?: number, 
+    className?: string,
+    onCellClick?: (index: number) => void,
+    selectedCellIndex?: number | null
+}> = ({ shape, cellSize = 6, className, onCellClick, selectedCellIndex }) => {
     const size = cellSize;
     const hexToPixelSmall = (q: number, r: number) => {
         const x = size * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
@@ -481,25 +487,46 @@ const MiniFigureBlueprint: React.FC<{ shape: { q: number, r: number, lvl?: numbe
                 const themeColors: Record<string, string> = {
                     '0': '#06b6d4', // cyan-500
                     '1': '#a855f7', // purple-500
-                    '2': '#eab308', // yellow-500 / amber-500
-                    '3': '#3b82f6', // blue-500 / indigo-500
-                    '4': '#6366f1'  // Indigo-500 for L4
+                    '2': '#eab308', // amber-500
+                    '3': '#3b82f6', // blue-500
+                    '4': '#6366f1', // indigo-500
+                    '5': '#ec4899', // pink-500
+                    '6': '#f43f5e', // rose-500
+                    '7': '#10b981', // emerald-500
+                    '8': '#f97316', // orange-500
+                    '9': '#ef4444'  // red-500
                 };
                 const strokeColor = themeColors[String(activeLvl)] || '#06b6d4';
+                const isSelected = selectedCellIndex === index;
+                
                 return (
-                    <g key={index}>
+                    <g 
+                        key={index} 
+                        className={`transition-all duration-200 ${onCellClick ? 'cursor-pointer select-none hover:opacity-95' : ''}`}
+                        onClick={() => { if (onCellClick) onCellClick(index); }}
+                    >
+                        {/* Glow back-highlight for selected cell */}
+                        {isSelected && (
+                            <polygon 
+                                points={getHexPoints(p.x, p.y)}
+                                fill={`${strokeColor}55`}
+                                stroke="#ffffff"
+                                strokeWidth={size * 0.3}
+                                className="animate-pulse"
+                            />
+                        )}
                         <polygon 
                             points={getHexPoints(p.x, p.y)}
-                            fill={`${strokeColor}33`}
-                            stroke={strokeColor}
-                            strokeWidth={size * 0.15}
+                            fill={isSelected ? `${strokeColor}44` : `${strokeColor}22`}
+                            stroke={isSelected ? "#ffffff" : strokeColor}
+                            strokeWidth={isSelected ? size * 0.2 : size * 0.12}
                         />
                         <text 
                             x={p.x} 
                             y={p.y + (size * 0.05)} 
                             textAnchor="middle" 
                             dominantBaseline="middle"
-                            fill="white" 
+                            fill={isSelected ? "#ffffff" : "white"} 
                             fontSize={size * 0.72} 
                             fontWeight="900"
                         >
@@ -913,10 +940,38 @@ const StoryBuilderView: React.FC = () => {
         return FIGURES_COLLECTION[unlockedFigureIndex] || FIGURES_COLLECTION[0];
     }, [unlockedFigureIndex]);
 
+    const getLevelStyle = (lvl: number) => {
+        const levelStyles: Record<number, { bg: string, border: string, text: string, glow: string }> = {
+            0: { bg: 'bg-cyan-500/15', border: 'border-cyan-500/35', text: 'text-cyan-400', glow: 'rgba(6,182,212,0.1)' },
+            1: { bg: 'bg-purple-500/15', border: 'border-purple-500/35', text: 'text-purple-300', glow: 'rgba(168,85,247,0.1)' },
+            2: { bg: 'bg-amber-500/15', border: 'border-amber-500/35', text: 'text-amber-300', glow: 'rgba(234,179,8,0.1)' },
+            3: { bg: 'bg-blue-500/15', border: 'border-blue-500/35', text: 'text-blue-300', glow: 'rgba(59,130,246,0.1)' },
+            4: { bg: 'bg-indigo-500/15', border: 'border-indigo-500/35', text: 'text-indigo-300', glow: 'rgba(99,102,241,0.1)' },
+            5: { bg: 'bg-pink-500/15', border: 'border-pink-500/35', text: 'text-pink-300', glow: 'rgba(236,72,153,0.1)' },
+            6: { bg: 'bg-rose-500/15', border: 'border-rose-500/35', text: 'text-rose-300', glow: 'rgba(244,63,94,0.1)' },
+            7: { bg: 'bg-emerald-500/15', border: 'border-emerald-500/35', text: 'text-emerald-300', glow: 'rgba(16,185,129,0.1)' },
+            8: { bg: 'bg-orange-500/15', border: 'border-orange-500/35', text: 'text-orange-300', glow: 'rgba(249,115,22,0.1)' },
+            9: { bg: 'bg-red-500/15', border: 'border-red-500/35', text: 'text-red-300', glow: 'rgba(239,68,68,0.1)' }
+        };
+        return levelStyles[lvl] || { bg: 'bg-slate-500/15', border: 'border-slate-500/35', text: 'text-slate-300', glow: 'rgba(100,116,139,0.1)' };
+    };
+
+    const uniqueActiveLevels = useMemo(() => {
+        const s = new Set<number>();
+        if (activeFigure && activeFigure.shape) {
+            activeFigure.shape.forEach(pt => {
+                s.add(pt.lvl !== undefined ? pt.lvl : 0);
+            });
+        }
+        return Array.from(s).sort((a, b) => a - b);
+    }, [activeFigure]);
+
     const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
     const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 30 });
     const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 0.45 : 0.7);
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
+    const [tabletTab, setTabletTab] = useState<'blueprint' | 'diagnostics' | 'rules'>('blueprint');
+    const [tabletInspectIndex, setTabletInspectIndex] = useState<number | null>(null);
     const isUiHidden = false;
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -1648,7 +1703,7 @@ const StoryBuilderView: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* FLOATING DROPDOWN FOR EXPANDED TASK DETAILS (Fits elegantly right beneath the top capsule) */}
+                {/* FLOATING DROPDOWN FOR EXPANDED TASK DETAILS (Interactive Engineering Tablet) */}
                 <AnimatePresence>
                     {!isNarrativeCollapsed && (
                         <motion.div
@@ -1667,48 +1722,308 @@ const StoryBuilderView: React.FC = () => {
                                 />
                             </div>
 
-                            <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-1.5 mt-1">
-                                <span className="text-[7.5px] font-black text-cyan-400 uppercase tracking-widest leading-none shrink-0">
-                                    {language === 'RU' ? 'АКТИВНЫЙ ЧЕРТЕЖ' : 'ACTIVE BLUEPRINT'}
-                                </span>
+                            {/* Tablet Header */}
+                            <div className="flex justify-between items-center mb-2 border-b border-white/5 pb-2 mt-1">
+                                <div className="flex flex-col text-left">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[7.5px] font-black text-cyan-400 uppercase tracking-widest leading-none">
+                                            {language === 'RU' ? 'ИНЖЕНЕРНЫЙ ПЛАНШЕТ СБОРКИ' : 'ENGINEERING TABLET'}
+                                        </span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    </div>
+                                    <span className="text-[6px] font-mono text-slate-500 uppercase tracking-wider">
+                                        {language === 'RU' ? `ЧЕРТЕЖ: ${unlockedFigureIndex + 1} ИЗ ${FIGURES_COLLECTION.length}` : `BLUEPRINT: ${unlockedFigureIndex + 1} OF ${FIGURES_COLLECTION.length}`}
+                                    </span>
+                                </div>
                                 <button 
                                     onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(true); }}
-                                    className="text-[7.5px] font-black text-slate-400 hover:text-white uppercase shrink-0 rounded hover:bg-white/5 px-1.5 py-0.5 transition-colors"
+                                    className="text-[7.5px] font-black text-slate-400 hover:text-white uppercase shrink-0 rounded hover:bg-white/5 px-2 py-1 transition-colors flex items-center gap-1 border border-white/5"
                                 >
-                                    {language === 'RU' ? 'ЗАКРЫТЬ' : 'CLOSE'}
+                                    <X className="w-2.5 h-2.5" />
+                                    <span>{language === 'RU' ? 'СВЕРНУТЬ' : 'CLOSE'}</span>
                                 </button>
                             </div>
 
-                            {/* Centerpiece Large Blueprint Area - expanded to fill the workspace perfectly on screen */}
-                            <div className="w-full h-64 sm:h-72 bg-slate-900/20 border border-indigo-500/20 rounded-xl mb-3.5 flex items-center justify-center p-4 relative overflow-hidden backdrop-blur-md shadow-[inset_0_0_24px_rgba(99,102,241,0.15)]">
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_80%)] pointer-events-none" />
-                                <div className="absolute top-2.5 left-3 text-[7px] font-mono tracking-wider text-indigo-400/40 uppercase">HOLOGRAPHIC BLUEPRINT PROJECTION</div>
-                                <div className="absolute bottom-2.5 right-3 flex gap-1.5 items-center">
-                                    <span className="w-1 h-1 rounded-full bg-cyan-400 animate-ping" />
-                                    <span className="text-[7px] font-mono text-cyan-400/60 uppercase font-bold">ONLINE SHAPE ANALYSIS</span>
-                                </div>
-                                <MiniFigureBlueprint 
-                                    shape={activeFigure.shape} 
-                                    cellSize={24} 
-                                    className="w-full h-full max-w-[280px] max-h-[220px] bg-transparent p-0 drop-shadow-[0_0_30px_rgba(99,102,241,0.4)]"
-                                />
+                            {/* Tablet Tabs */}
+                            <div className="grid grid-cols-3 gap-1 mb-3 bg-slate-900/50 p-0.5 rounded-lg border border-white/5">
+                                {[
+                                    { id: 'blueprint', labelRU: 'СХЕМА ВЫСОТ', labelEN: 'HEIGHT DIAGRAM' },
+                                    { id: 'diagnostics', labelRU: 'АНАЛИЗ ПОЛЯ', labelEN: 'FIELD CHECK' },
+                                    { id: 'rules', labelRU: 'ИНСТРУКЦИЯ', labelEN: 'INSTRUCTION' }
+                                ].map((tab) => {
+                                    const isActive = tabletTab === tab.id;
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => { playUiSound('CLICK'); setTabletTab(tab.id as any); }}
+                                            className={`py-1.5 px-2 rounded-md font-black text-[8px] md:text-[9.5px] tracking-wider uppercase transition-all ${isActive ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                                        >
+                                            {language === 'RU' ? tab.labelRU : tab.labelEN}
+                                        </button>
+                                    );
+                                })}
                             </div>
 
-                            {/* Claim & Completion Button */}
+                            {/* Centerpiece Container Panel */}
+                            {tabletTab === 'blueprint' && (
+                                <div className="flex flex-col">
+                                    {/* Holographic Projection viewport */}
+                                    <div className="w-full h-56 bg-slate-900/20 border border-indigo-500/20 rounded-xl mb-3 flex items-center justify-center p-4 relative overflow-hidden backdrop-blur-md shadow-[inset_0_0_24px_rgba(99,102,241,0.15)]">
+                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_80%)] pointer-events-none" />
+                                        
+                                        {/* Science fiction corner reticles */}
+                                        <div className="absolute top-2.5 left-2.5 w-3 h-3 border-t-2 border-l-2 border-indigo-500/50 rounded-tl" />
+                                        <div className="absolute top-2.5 right-2.5 w-3 h-3 border-t-2 border-r-2 border-indigo-500/50 rounded-tr" />
+                                        <div className="absolute bottom-2.5 left-2.5 w-3 h-3 border-b-2 border-l-2 border-indigo-500/50 rounded-bl" />
+                                        <div className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50 rounded-br" />
+
+                                        <div className="absolute top-2.5 left-7 text-[7px] font-mono tracking-wider text-indigo-400/40 uppercase">
+                                            {language === 'RU' ? 'ПРОЕКЦИЯ ЦЕЛЕВОЙ СТРУКТУРЫ' : 'TARGET BLUEPRINT PROJECTION'}
+                                        </div>
+                                        <div className="absolute bottom-2.5 right-3 flex gap-1.5 items-center">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                                            <span className="text-[7px] font-mono text-cyan-400/60 uppercase font-bold">
+                                                {language === 'RU' ? 'АНАЛИЗ СОВПАДЕНИЙ' : 'MATCH ANALYSIS'}
+                                            </span>
+                                        </div>
+
+                                        {/* Animated Laser Scanning Line */}
+                                        <motion.div 
+                                            animate={{ y: ['0%', '100%'] }} 
+                                            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }} 
+                                            className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/35 to-transparent shadow-[0_0_8px_rgba(34,211,238,0.5)] pointer-events-none z-10"
+                                            style={{ top: 0 }}
+                                        />
+
+                                        <MiniFigureBlueprint 
+                                            shape={activeFigure.shape} 
+                                            cellSize={24} 
+                                            onCellClick={(idx: number) => { playUiSound('CLICK'); setTabletInspectIndex(idx); }}
+                                            selectedCellIndex={tabletInspectIndex}
+                                            className="w-full h-full max-w-[280px] max-h-[200px] bg-transparent p-0 drop-shadow-[0_0_30px_rgba(99,102,241,0.4)]"
+                                        />
+                                    </div>
+
+                                    {/* Tactile Cell Inspector Status Console below the graph */}
+                                    <div className="bg-slate-900/40 border border-white/5 rounded-xl p-2.5 mb-3 text-left">
+                                        {tabletInspectIndex !== null && activeFigure.shape[tabletInspectIndex] ? (
+                                            (() => {
+                                                const pt = activeFigure.shape[tabletInspectIndex];
+                                                const lvl = pt.lvl !== undefined ? pt.lvl : 0;
+                                                return (
+                                                    <div className="flex flex-col font-sans">
+                                                        <div className="flex justify-between items-center border-b border-white/5 pb-1 mb-1">
+                                                            <span className="text-[8px] font-black tracking-wider text-indigo-400 uppercase">
+                                                                {language === 'RU' ? 'ИНСПЕКТОР ЯЧЕЙКИ ЧЕРТЕЖА' : 'BLUEPRINT NODE INSPECTOR'}
+                                                            </span>
+                                                            <span className="text-[7px] font-mono text-cyan-400">INDEX #{tabletInspectIndex}</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 text-[8.5px]">
+                                                            <div>
+                                                                <span className="text-slate-500 font-bold block">{language === 'RU' ? 'КООРДИНАТЫ НА СЕТКЕ:' : 'GRID COORDINATES (q, r):'}</span>
+                                                                <span className="text-white font-mono font-black">q: {pt.q > 0 ? `+${pt.q}` : pt.q}, r: {pt.r > 0 ? `+${pt.r}` : pt.r}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-slate-500 font-bold block">{language === 'RU' ? 'ТРЕБУЕМАЯ ВЫСОТА:' : 'REQUIRED ALTITUDE:'}</span>
+                                                                <span className="text-yellow-400 font-black">L{lvl}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()
+                                        ) : (
+                                            <div className="text-center text-[8.5px] text-slate-500 font-bold py-1 italic">
+                                                {language === 'RU' ? '👉 Нажмите на любой гекс на чертеже выше, чтобы узнать его координаты и высоту' : '👉 Tap any hex on the blueprint above to see its coordinate requirements'}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {tabletTab === 'diagnostics' && (
+                                <div className="flex flex-col text-left mb-3 gap-2.5">
+                                    {/* Calculated Diagnostics Math Object info */}
+                                    {(() => {
+                                        const shape = activeFigure.shape;
+                                        const activeHexKeys = Object.entries(storyMap)
+                                            .filter(([_, lvl]) => lvl !== undefined && lvl >= 0)
+                                            .map(([key, lvl]) => {
+                                                const [q, r] = key.split(',').map(Number);
+                                                return { q, r, lvl };
+                                            });
+                                        
+                                        let bestMatchCount = 0;
+                                        for (const anchor of activeHexKeys) {
+                                            let matchedCount = 0;
+                                            for (const pt of shape) {
+                                                const targetKey = getHexKey(anchor.q + pt.q, anchor.r + pt.r);
+                                                const targetLvl = storyMap[targetKey];
+                                                const reqLvl = pt.lvl !== undefined ? pt.lvl : 0;
+                                                if (targetLvl !== undefined && targetLvl >= 0 && targetLvl === reqLvl) {
+                                                    matchedCount++;
+                                                }
+                                            }
+                                            if (matchedCount > bestMatchCount) {
+                                                bestMatchCount = matchedCount;
+                                            }
+                                        }
+                                        
+                                        const percentage = shape.length > 0 ? Math.round((bestMatchCount / shape.length) * 100) : 0;
+                                        
+                                        return (
+                                            <div className="flex flex-col gap-2.5">
+                                                {/* Live telemetry progress status */}
+                                                <div className="bg-slate-900/60 border border-white/5 rounded-xl p-3 flex flex-col relative overflow-hidden">
+                                                    <div className="flex justify-between items-center mb-1.5">
+                                                        <span className="text-[8.5px] font-black text-cyan-400 uppercase tracking-widest">
+                                                            {language === 'RU' ? 'ТОЧНОСТЬ СБОРКИ НА ПОЛЕ' : 'PATTERN ASSEMBLY PROGRESS'}
+                                                        </span>
+                                                        <span className="text-white font-mono font-black text-[10px]">{percentage}%</span>
+                                                    </div>
+                                                    
+                                                    {/* Progress bar container */}
+                                                    <div className="w-full h-2 bg-slate-950/80 rounded-full overflow-hidden p-0.5 border border-white/5 mb-2">
+                                                        <motion.div 
+                                                            className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 rounded-full"
+                                                            animate={{ width: `${percentage}%` }}
+                                                            transition={{ duration: 0.5 }}
+                                                        />
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-2 text-[8px] font-mono border-t border-white/5 pt-2">
+                                                        <div>
+                                                            <span className="text-slate-500 font-bold block">{language === 'RU' ? 'ГЕКСОВ НА ИГРОВОМ ПОЛЕ:' : 'HEXES CURRENTLY ON BOARD:'}</span>
+                                                            <span className="text-white font-black">{activeHexKeys.length}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-slate-500 font-bold block">{language === 'RU' ? 'СОВПАЛО С ЧЕРТЕЖОМ:' : 'SUCCESSFULLY ALIGNED:'}</span>
+                                                            <span className="text-cyan-400 font-black">{bestMatchCount} / {shape.length}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Diagnostic Log Report based on current match accuracy */}
+                                                <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-2.5 text-[8.5px] font-sans flex flex-col gap-1.5">
+                                                    <div className="text-[7.5px] font-black text-slate-500 tracking-wider uppercase">
+                                                        {language === 'RU' ? 'ДИАГНОСТИКА СТРУКТУРЫ' : 'ASSEMBLY DIAGNOSTIC'}
+                                                    </div>
+                                                    {percentage === 100 ? (
+                                                        <div className="flex items-center gap-2 text-emerald-400 font-black">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                                                            <span>
+                                                                {language === 'RU' ? 'СТРУКТУРА СОБРАНА! Все гексы соответствуют чертежу. Можете завершить сборку!' : 'ASSEMBLY PERFECT! Position and heights match the pattern. Click below to complete!'}
+                                                            </span>
+                                                        </div>
+                                                    ) : percentage > 0 ? (
+                                                        <div className="flex items-center gap-2 text-indigo-400 font-medium">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                                                            <span>
+                                                                {language === 'RU' ? `Группировка (${bestMatchCount}/${shape.length}): Достройте недостающие гексы или измените их высоту по чертежу.` : `Aligned (${bestMatchCount}/${shape.length}): Place remaining hexes or upgrade heights to match colors.`}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 text-slate-500 italic font-medium">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0" />
+                                                            <span>
+                                                                {language === 'RU' ? 'Ожидание: Разместите хотя бы один гекс L0 на поле внизу, чтобы начать сравнение.' : 'Idle: Place at least one L0 hex on the field to begin checking alignment mechanics.'}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
+                            {tabletTab === 'rules' && (
+                                <div className="flex flex-col text-left mb-3.5">
+                                    {/* Header Info */}
+                                    <div className="mb-2.5">
+                                        <h3 className="text-[12px] font-black text-white uppercase tracking-tight leading-tight mb-0.5">
+                                            {language === 'RU' ? activeFigure.nameRU : activeFigure.nameEN}
+                                        </h3>
+                                        <p className="text-slate-400 text-[9.5px] leading-relaxed font-sans font-medium line-clamp-2">
+                                            {language === 'RU' ? activeFigure.descRU : activeFigure.descEN}
+                                        </p>
+                                    </div>
+
+                                    {/* Step Guidelines Panel */}
+                                    <div className="p-2.5 bg-slate-950/40 border border-white/5 rounded-xl flex flex-col gap-2 text-[8px] text-slate-400 font-sans leading-relaxed font-medium">
+                                        <div className="text-[7px] font-black text-indigo-400 tracking-wider uppercase mb-0.5">
+                                            {language === 'RU' ? 'РУКОВОДСТВО ПО СТРОИТЕЛЬСТВУ' : 'CONSTRUCTION GUIDE RULES'}
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <span className="w-4 h-4 rounded-full bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-[7px] font-black text-cyan-400 shrink-0">1</span>
+                                            <div>
+                                                <span className="text-slate-200 font-bold block">
+                                                    {language === 'RU' ? 'Шаг 1. Запуск основы' : '1. Anchor Base'}
+                                                </span>
+                                                <span>
+                                                    {language === 'RU' ? 'Размещайте гексы 0-го уровня (L0 — голубой цвет) кликом на пустые ячейки.' : 'Place level 0 hexes (L0 — cyan color) by clicking on empty gray cells on the field.'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <span className="w-4 h-4 rounded-full bg-purple-950 border border-purple-500/30 flex items-center justify-center text-[7px] font-black text-purple-400 shrink-0">2</span>
+                                            <div>
+                                                <span className="text-slate-200 font-bold block">
+                                                    {language === 'RU' ? 'Шаг 2. Подъем высоты' : '2. Elevate Heights'}
+                                                </span>
+                                                <span>
+                                                    {language === 'RU' ? 'Повышайте высоту добавленных гексов кнопкой "Upgrade" за материалы, проверяя нужный цвет уровня.' : 'Use "Upgrade" with material to raise the hex to the target height level matching the blueprint.'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <span className="w-4 h-4 rounded-full bg-amber-950 border border-amber-500/30 flex items-center justify-center text-[7px] font-black text-amber-400 shrink-0">3</span>
+                                            <div>
+                                                <span className="text-slate-200 font-bold block">
+                                                    {language === 'RU' ? 'Шаг 3. Соседняя поддержка L2+' : '3. Neighbor Support Scaffold'}
+                                                </span>
+                                                <span>
+                                                    {language === 'RU' ? 'Помните, для подъема гекса до уровня L2 и выше требуется, чтобы рядом было не менее 2-х гексов такой же высоты!' : 'Structures at L2 and above need at least 2 adjacent neighbor hexes of that height to be stable!'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* COLOR-TO-HEIGHT LEGEND CODEBOOK - Dynamic and adaptive */}
+                            <div className="flex flex-wrap gap-1.5 mb-4 justify-center">
+                                {uniqueActiveLevels.map((lvl) => {
+                                    const style = getLevelStyle(lvl);
+                                    return (
+                                        <div 
+                                            key={lvl} 
+                                            style={{ boxShadow: `0 0 10px ${style.glow}` }}
+                                            className={`flex-1 min-w-[55px] max-w-[85px] flex flex-col items-center justify-center py-1 rounded-xl border text-center ${style.bg} ${style.border} ${style.text} select-none backdrop-blur-sm transition-all hover:bg-white/5`}
+                                        >
+                                            <div className="text-[11px] font-black leading-none mb-0.5">L{lvl}</div>
+                                            <div className="text-[6.5px] font-bold tracking-wider uppercase leading-none opacity-80">
+                                                {language === 'RU' ? `Высота` : `Height`}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Claim & Completion Action Button */}
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                 {targetCompleted ? (
                                     <motion.button
                                         onClick={(e) => { e.stopPropagation(); handleClaimReward(); }}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
-                                        className="w-full py-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-black uppercase text-[9px] tracking-widest rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.35)] flex items-center justify-center gap-2 border border-purple-400 cursor-pointer"
+                                        className="w-full py-2.5 bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 text-white font-black uppercase text-[9.5px] tracking-widest rounded-xl shadow-[0_0_24px_rgba(99,102,241,0.45)] flex items-center justify-center gap-2 border border-cyan-400 cursor-pointer"
                                     >
-                                        <Crown className="w-3.5 h-3.5" />
-                                        <span>{language === 'RU' ? 'ПРИНЯТЬ: +1 SP // СЛЕД. ФИГУРА' : 'COLLECT: +1 SP // NEXT'}</span>
+                                        <Crown className="w-3.5 h-3.5 animate-bounce" />
+                                        <span>{language === 'RU' ? 'ЗАВЕРШИТЬ СБОРКУ (+1 SP)' : 'COMPLETE ASSEMBLY (+1 SP)'}</span>
                                     </motion.button>
                                 ) : (
-                                    <div className="w-full py-2 bg-slate-950/30 border border-white/5 text-slate-500 font-black uppercase text-[8.5px] tracking-widest rounded-xl text-center italic select-none">
-                                        {language === 'RU' ? 'ФИГУРА ЕЩЕ НЕ СОБРАНА' : 'FIGURE NOT YET COMPLETED'}
+                                    <div className="w-full py-2.5 bg-slate-950/40 border border-white/5 text-slate-500 font-extrabold uppercase text-[8.5px] tracking-widest rounded-xl text-center italic select-none">
+                                        {language === 'RU' ? 'Ожидание правильной сборки...' : 'Awaiting correct layout pattern...'}
                                     </div>
                                 )}
                             </div>

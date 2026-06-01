@@ -18,7 +18,98 @@ export function hashPassword(nickname: string, passcode: string): string {
   return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0');
 }
 
-const MOCK_USER_DB: Record<string, { passwordHash: string; avatarColor: string; headIndex: number; bodyIndex: number }> = {};
+let MOCK_USER_DB: Record<string, { passwordHash: string; avatarColor: string; headIndex: number; bodyIndex: number }> = {};
+try {
+  if (typeof window !== 'undefined') {
+    const storedDb = localStorage.getItem('hexquest_user_db');
+    if (storedDb) {
+      MOCK_USER_DB = JSON.parse(storedDb);
+    }
+  }
+} catch (e) {
+  console.error("Failed to load mock user db from localStorage:", e);
+}
+
+export const DEFAULT_PROGRESS = {
+  campaignProgress: 0,
+  levelsModeProgress: 0,
+  skillPoints: 0,
+  hexActivationPoints: 0,
+  activatedHexes: {},
+  collectedHexes: {},
+  minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
+  totalMinedMaterial: 0,
+  storyMap: {},
+  storyMilestone: 0,
+  campaignUpgrades: {
+    inventorySlots: 3,
+    startingEnergy: 0,
+    startingMoves: 0,
+    startingGold: 0,
+    startingMaterials: 0,
+    maxMaterials: 3,
+    fuelEfficiency: 0,
+    scanRadius: 0,
+    fatigueResistance: 0,
+    growthAccelerator: 0,
+    foundationStrength: 0,
+    economicMultiplier: 0,
+    diggerLuck: 0,
+    doubleDigChance: 0,
+    reserveCapacitor: 0,
+    turboRecharge: 0,
+    entropyResistance: 0,
+    restorationMaster: 0,
+  }
+};
+
+export function saveProfileProgress(nickname: string, state: any) {
+  if (!nickname) return;
+  const progress = {
+    campaignProgress: state.campaignProgress,
+    levelsModeProgress: state.levelsModeProgress,
+    skillPoints: state.skillPoints,
+    hexActivationPoints: state.hexActivationPoints,
+    activatedHexes: state.activatedHexes,
+    collectedHexes: state.collectedHexes,
+    minedInSessionHexes: state.minedInSessionHexes,
+    totalMinedMaterial: state.totalMinedMaterial,
+    storyMap: state.storyMap,
+    storyMilestone: state.storyMilestone,
+    campaignUpgrades: state.campaignUpgrades
+  };
+  try {
+    localStorage.setItem(`hexquest_progress_${nickname.toLowerCase()}`, JSON.stringify(progress));
+  } catch (e) {
+    console.error("Failed to save progress in localStorage:", e);
+  }
+}
+
+export function loadProfileProgress(nickname: string) {
+  if (!nickname) return null;
+  try {
+    const data = localStorage.getItem(`hexquest_progress_${nickname.toLowerCase()}`);
+    if (data) {
+      const parsed = JSON.parse(data);
+      return {
+        campaignProgress: typeof parsed.campaignProgress === 'number' ? parsed.campaignProgress : 0,
+        levelsModeProgress: typeof parsed.levelsModeProgress === 'number' ? parsed.levelsModeProgress : 0,
+        skillPoints: typeof parsed.skillPoints === 'number' ? parsed.skillPoints : 0,
+        hexActivationPoints: typeof parsed.hexActivationPoints === 'number' ? parsed.hexActivationPoints : 0,
+        activatedHexes: parsed.activatedHexes || {},
+        collectedHexes: parsed.collectedHexes || {},
+        minedInSessionHexes: parsed.minedInSessionHexes || { ...INITIAL_PLAYGROUND_SEED },
+        totalMinedMaterial: typeof parsed.totalMinedMaterial === 'number' ? parsed.totalMinedMaterial : 0,
+        storyMap: parsed.storyMap || {},
+        storyMilestone: typeof parsed.storyMilestone === 'number' ? parsed.storyMilestone : 0,
+        campaignUpgrades: { ...DEFAULT_PROGRESS.campaignUpgrades, ...parsed.campaignUpgrades }
+      };
+    }
+  } catch (e) {
+    console.error("Failed to load progress for " + nickname, e);
+  }
+  return null;
+}
 
 export const createAuthSlice = (
   set: (fn: (state: GameStore) => Partial<GameStore>) => void,
@@ -26,73 +117,110 @@ export const createAuthSlice = (
 ) => ({
   loginAsGuest: (nickname: string, avatarColor: string, headIndex: number, bodyIndex: number) => {
     audioService.play('UI_CLICK');
-    // Ensure active session is ended cleanly
+    
+    // Save previous active user's progress first
+    const currentUser = get().user;
+    if (currentUser && currentUser.nickname) {
+      saveProfileProgress(currentUser.nickname, get());
+    }
+
     try {
       get().abandonSession();
     } catch (e) {
       console.warn("abandonSession failed during guest login: ", e);
     }
     
+    const cleanedNickname = nickname.trim().slice(0, 32);
+    const loaded = loadProfileProgress(cleanedNickname) || DEFAULT_PROGRESS;
+
     set(() => ({ 
-      user: { isAuthenticated: true, isGuest: true, nickname, avatarColor, headIndex, bodyIndex },
-      campaignProgress: 0,
-      levelsModeProgress: 0,
-      skillPoints: 0,
-      collectedHexes: {},
-      minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
-      totalMinedMaterial: 0,
-      storyMap: {},
-      storyMilestone: 0,
+      user: { isAuthenticated: true, isGuest: true, nickname: cleanedNickname, avatarColor, headIndex, bodyIndex },
       session: null,
       hasActiveSession: false,
-      campaignUpgrades: {
-        inventorySlots: 3,
-        startingEnergy: 0,
-        startingMoves: 0,
-        startingGold: 0,
-        startingMaterials: 0,
-        maxMaterials: 3,
-        fuelEfficiency: 0,
-        scanRadius: 0,
-        fatigueResistance: 0,
-        growthAccelerator: 0,
-        foundationStrength: 0,
-        economicMultiplier: 0,
-        diggerLuck: 0,
-        doubleDigChance: 0,
-        reserveCapacitor: 0,
-        turboRecharge: 0,
-        entropyResistance: 0,
-        restorationMaster: 0,
-      }
+      ...loaded
     }));
   },
   
   registerUser: (nickname: string, password: string, avatarColor: string, headIndex: number, bodyIndex: number) => {
     audioService.play('UI_CLICK');
-    const cleanedNickname = nickname.trim().slice(0, 32); // sanitize user input length
+    
+    const cleanedNickname = nickname.trim().slice(0, 32);
+    const key = cleanedNickname.toLowerCase();
+    
+    if (MOCK_USER_DB[key]) {
+      audioService.play('ERROR');
+      return { success: false, message: "User already exists" };
+    }
+
+    // Save previous active user's progress first
+    const currentUser = get().user;
+    if (currentUser && currentUser.nickname) {
+      saveProfileProgress(currentUser.nickname, get());
+    }
+
     const passwordHash = hashPassword(cleanedNickname, password);
-    MOCK_USER_DB[cleanedNickname] = { passwordHash, avatarColor, headIndex, bodyIndex };
-    set(() => ({ user: { isAuthenticated: true, isGuest: false, nickname: cleanedNickname, avatarColor, headIndex, bodyIndex } }));
+    MOCK_USER_DB[key] = { passwordHash, avatarColor, headIndex, bodyIndex };
+    try {
+      localStorage.setItem('hexquest_user_db', JSON.stringify(MOCK_USER_DB));
+    } catch (e) {
+      console.error("Failed to persist user db in localStorage:", e);
+    }
+
+    const loaded = loadProfileProgress(cleanedNickname) || DEFAULT_PROGRESS;
+
+    set(() => ({ 
+      user: { isAuthenticated: true, isGuest: false, nickname: cleanedNickname, avatarColor, headIndex, bodyIndex },
+      session: null,
+      hasActiveSession: false,
+      ...loaded
+    }));
     return { success: true };
   },
   
   loginUser: (nickname: string, password: string) => {
     audioService.play('UI_CLICK');
     const cleanedNickname = nickname.trim();
-    const r = MOCK_USER_DB[cleanedNickname];
+    const key = cleanedNickname.toLowerCase();
+    
+    const r = MOCK_USER_DB[key];
     const passwordHash = hashPassword(cleanedNickname, password);
     if (!r || r.passwordHash !== passwordHash) {
       audioService.play('ERROR');
       return { success: false, message: "Invalid credentials" };
     }
-    set(() => ({ user: { isAuthenticated: true, isGuest: false, nickname: cleanedNickname, avatarColor: r.avatarColor, headIndex: r.headIndex, bodyIndex: r.bodyIndex } }));
+
+    // Save previous active user's progress first
+    const currentUser = get().user;
+    if (currentUser && currentUser.nickname) {
+      saveProfileProgress(currentUser.nickname, get());
+    }
+
+    const loaded = loadProfileProgress(cleanedNickname) || DEFAULT_PROGRESS;
+
+    set(() => ({ 
+      user: { isAuthenticated: true, isGuest: false, nickname: cleanedNickname, avatarColor: r.avatarColor, headIndex: r.headIndex, bodyIndex: r.bodyIndex },
+      session: null,
+      hasActiveSession: false,
+      ...loaded
+    }));
     return { success: true };
   },
   
   logout: () => {
     audioService.play('UI_CLICK');
+    
+    // Save current active user's progress first
+    const currentUser = get().user;
+    if (currentUser && currentUser.nickname) {
+      saveProfileProgress(currentUser.nickname, get());
+    }
+
     get().abandonSession();
-    set(() => ({ user: null }));
+    set(() => ({ 
+      user: null,
+      session: null,
+      hasActiveSession: false,
+      ...DEFAULT_PROGRESS
+    }));
   }
 });

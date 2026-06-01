@@ -254,8 +254,6 @@ export interface Dictionary {
         MONUMENT_UPDATED: string;
         LOG_DOWNLOADED: string;
         STORAGE_FULL: string;
-        DEATH_OVERWORLD: string;
-        STARVED_OVERWORLD: string;
         TRAP_HIT: string;
         RIFT_DEFEAT: string;
         RIFT_VICTORY: string;
@@ -266,8 +264,6 @@ export interface Dictionary {
         FOUND_SCRAP: string;
         NOTHING_HERE: string;
         WORLD_INIT_FAILED: string;
-        CITY_EXIT_SUCCESS: string;
-        CITY_EXIT_DENIED: string;
         CANNOT_DIG: string;
         GRADIENT_LOCK: string;
         UNSTABLE_DIG: string;
@@ -276,7 +272,6 @@ export interface Dictionary {
         CANNOT_BUILD: string;
         UNSTABLE_BUILD: string;
         RAISED_TERRAIN: string;
-        REST_CITY: string;
         REST_SUPPLIES: string;
         REST_STARVING: string;
         RIFT_LOCKED: string;
@@ -682,10 +677,6 @@ export const TEXT: Record<Language, Dictionary> = {
             NO_HISTORY: "No history.",
             LOG_DOWNLOADED: "Log Saved",
             STORAGE_FULL: "Storage Full!",
-            DEATH_OVERWORLD: "You died in the overworld... Respawned in the city. Lost half credits.",
-            CITY_EXIT_SUCCESS: "The path is open. Welcome to the wasteland.",
-            CITY_EXIT_DENIED: "The checkpoint is closed. You need 6 tutorial marks to leave the city.",
-            STARVED_OVERWORLD: "You starved to death... Respawned in the city. Lost half credits.",
             TRAP_HIT: "Triggered a trap! -{0} HP",
             RIFT_DEFEAT: "Defeated in the Rift! -{0} HP",
             RIFT_VICTORY: "Rift cleared! +{0} Credits",
@@ -704,7 +695,6 @@ export const TEXT: Record<Language, Dictionary> = {
             CANNOT_BUILD: "Cannot build here!",
             UNSTABLE_BUILD: "UNSTABLE! Need 2 neighbors at Level {0} to build higher.",
             RAISED_TERRAIN: "Raised the terrain.",
-            REST_CITY: "Rested safely in the city (-5 Credits)",
             REST_SUPPLIES: "Rested using Supplies",
             REST_STARVING: "Rested without supplies... Starving! (-10 HP)",
             RIFT_LOCKED: "Rift is locked. Complete previous series.",
@@ -1107,10 +1097,6 @@ export const TEXT: Record<Language, Dictionary> = {
             NO_HISTORY: "Нет записи истории.",
             LOG_DOWNLOADED: "Лог Скачан",
             STORAGE_FULL: "Склад Полон!",
-            DEATH_OVERWORLD: "Вы погибли в пустошах... Возрождение в городе. Потеряна половина кредитов.",
-            CITY_EXIT_SUCCESS: "Путь открыт. Добро пожаловать в пустоши.",
-            CITY_EXIT_DENIED: "Блокпост закрыт. Вам нужно 6 меток обучения, чтобы покинуть город.",
-            STARVED_OVERWORLD: "Вы умерли от голода... Возрождение в городе. Потеряна половина кредитов.",
             TRAP_HIT: "Попали в ловушку! -{0} ОЗ",
             RIFT_DEFEAT: "Поражение в Разломе! -{0} ОЗ",
             RIFT_VICTORY: "Разлом зачищен! +{0} Кред.",
@@ -1129,7 +1115,6 @@ export const TEXT: Record<Language, Dictionary> = {
             CANNOT_BUILD: "Здесь нельзя строить!",
             UNSTABLE_BUILD: "НЕСТАБИЛЬНО! Нужно 2 соседние клетки уровня {0}, чтобы строить выше.",
             RAISED_TERRAIN: "Терраса поднята.",
-            REST_CITY: "Безопасный отдых в городе (-5 Кредитов)",
             REST_SUPPLIES: "Отдых с использованием припасов",
             REST_STARVING: "Отдых без припасов... Голодание! (-10 ОЗ)",
             RIFT_LOCKED: "Разлом заблокирован. Завершите предыдущие серии.",

@@ -264,7 +264,7 @@ export interface ToastMessage {
   timestamp: number;
 }
 
-export type TerrainType = 'PLAINS' | 'FOREST' | 'SWAMP' | 'WATER' | 'MOUNTAINS' | 'ROAD' | 'CITY' | 'RUINS' | 'OUTPOST' | 'MERCHANT_CAMP' | 'WALL' | 'BUILDING' | 'SETTLEMENT' | 'MONUMENT_AREA' | 'RIFT_ZONE' | 'WASTELAND' | 'CANYON';
+export type TerrainType = 'PLAINS' | 'FOREST' | 'SWAMP' | 'WATER' | 'MOUNTAINS' | 'ROAD' | 'CITY' | 'RUINS' | 'MONUMENT_AREA' | 'RIFT_ZONE';
 
 export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'INTRO' | 'CAMPAIGN_LOADING' | 'STORY_BUILDER';
 export type DeviceType = 'MOBILE' | 'TABLET' | 'DESKTOP';
@@ -422,13 +422,6 @@ export interface LevelConfig {
 
   /** Короткий текст цели миссии (≤35 символов), отображается в нижнем тулбаре */
   goalText?: string;
-
-  /** City mode: player moves freely without spending move points */
-  freeMovement?: boolean;
-  /** Marks this level as a city interior — enables city HUD */
-  isCityLevel?: boolean;
-  /** Building type for mini-levels inside city (links to BuildingPanel) */
-  buildingType?: string;
 
   objectiveHexes?: ObjectiveHex[];
   blueprints?: Blueprint[];

@@ -4,7 +4,7 @@ import { DeviceType } from './types.ts';
 import { GameStore, INITIAL_PLAYGROUND_SEED } from './store/types.ts';
 
 // Import our new state slices
-import { createAuthSlice } from './store/authSlice.ts';
+import { createAuthSlice, saveProfileProgress } from './store/authSlice.ts';
 import { createUiSlice } from './store/uiSlice.ts';
 import { createCampaignSlice } from './store/campaignSlice.ts';
 import { createGameplaySlice } from './store/gameplaySlice.ts';
@@ -108,6 +108,8 @@ export const useGameStore = create<GameStore>()(
         storyMilestone: state.storyMilestone,
         hexActivationPoints: state.hexActivationPoints,
         activatedHexes: state.activatedHexes,
+        campaignUpgrades: state.campaignUpgrades,
+        skillPoints: state.skillPoints,
         isMusicMuted: state.isMusicMuted,
         isSfxMuted: state.isSfxMuted,
         isLiteMode: state.isLiteMode,
@@ -116,3 +118,10 @@ export const useGameStore = create<GameStore>()(
     }
   )
 );
+
+// Subscribe to state updates to automatically back up progress to the user's dedicated save slot
+useGameStore.subscribe((state) => {
+  if (state.user && state.user.nickname) {
+    saveProfileProgress(state.user.nickname, state);
+  }
+});
