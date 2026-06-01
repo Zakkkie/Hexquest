@@ -681,15 +681,29 @@ const StoryHex: React.FC<{
 
             {/* Top Face */}
             <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
+                {isCenterInitially && (
+                    <Circle 
+                        x={0}
+                        y={0}
+                        radius={25}
+                        stroke="#10b981"
+                        strokeWidth={3}
+                        shadowColor="#10b981"
+                        shadowBlur={20}
+                        shadowOpacity={1.0}
+                        opacity={0.9}
+                        listening={false}
+                    />
+                )}
                 <Path
                     data={BASE_PATH_D}
                     fillPatternImage={topTexture as any}
-                    fill={topTexture ? undefined : (isBuilt ? colors?.top : (isCenterInitially ? 'rgba(6, 182, 212, 0.08)' : (isEligible ? 'rgba(34, 211, 238, 0.04)' : 'rgba(255,255,255,0.01)')))}
+                    fill={topTexture ? undefined : (isBuilt ? colors?.top : (isCenterInitially ? 'rgba(16, 185, 129, 0.18)' : (isEligible ? 'rgba(34, 211, 238, 0.04)' : 'rgba(255,255,255,0.01)')))}
                     fillPatternScale={{ x: GAME_CONFIG.HEX_SIZE / 32, y: GAME_CONFIG.HEX_SIZE / 32 }}
                     fillPatternOffset={{ x: 32, y: 32 }}
                     fillPatternRepeat="repeat"
-                    stroke={isBuilt ? '#06b6d4' : (isCenterInitially ? '#06b6d4' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)'))}
-                    strokeWidth={isBuilt ? 2.5 : (isCenterInitially ? 2 : (isEligible ? 1.5 : 0.8))}
+                    stroke={isBuilt ? '#06b6d4' : (isCenterInitially ? '#10b981' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)'))}
+                    strokeWidth={isBuilt ? 2.5 : (isCenterInitially ? 3.5 : (isEligible ? 1.5 : 0.8))}
                     perfectDrawEnabled={false}
                     shadowForStrokeEnabled={false}
                     dash={isEligible || isBlueprint ? [4, 4] : undefined}
@@ -700,18 +714,18 @@ const StoryHex: React.FC<{
                     <Group listening={false}>
                         <Path 
                             data="M -6 0 L 6 0"
-                            stroke={isCenterInitially ? "#22d3ee" : "rgba(34, 211, 238, 0.95)"}
+                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.95)"}
                             strokeWidth={2}
-                            shadowColor="#22d3ee"
+                            shadowColor={isCenterInitially ? "#10b981" : "#22d3ee"}
                             shadowBlur={6}
                             shadowOpacity={0.8}
                             listening={false}
                         />
                         <Path 
                             data="M 0 -6 L 0 6"
-                            stroke={isCenterInitially ? "#22d3ee" : "rgba(34, 211, 238, 0.95)"}
+                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.95)"}
                             strokeWidth={2}
-                            shadowColor="#22d3ee"
+                            shadowColor={isCenterInitially ? "#10b981" : "#22d3ee"}
                             shadowBlur={6}
                             shadowOpacity={0.8}
                             listening={false}
@@ -968,8 +982,15 @@ const StoryBuilderView: React.FC = () => {
 
     const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
     const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 30 });
-    const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 0.45 : 0.7);
+    const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 1.3 : 1.8);
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
+    const [isDimmedTutorialActive, setIsDimmedTutorialActive] = useState(() => {
+        try {
+            return localStorage.getItem('hexopol_tutorial_dismissed_v4') !== 'true';
+        } catch {
+            return true;
+        }
+    });
     const [tabletTab, setTabletTab] = useState<'blueprint' | 'diagnostics' | 'rules'>('blueprint');
     const [tabletInspectIndex, setTabletInspectIndex] = useState<number | null>(null);
     const isUiHidden = false;
@@ -1006,7 +1027,7 @@ const StoryBuilderView: React.FC = () => {
         const w = containerRef.current?.clientWidth || window.innerWidth;
         const h = containerRef.current?.clientHeight || window.innerHeight;
         setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
-        setZoomScale(w < 768 ? 0.45 : 0.7);
+        setZoomScale(w < 768 ? 1.3 : 1.8);
         playUiSound('CLICK');
     }, [playUiSound]);
 
@@ -2336,6 +2357,52 @@ const StoryBuilderView: React.FC = () => {
                         </motion.div>
                     );
                 })()}
+            </AnimatePresence>
+
+            {/* TUTORIAL HIGH-CONTRAST TEMPORARY DIMMING GUIDE (No borders, high-contrast text top of screen) */}
+            <AnimatePresence>
+                {isDimmedTutorialActive && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => {
+                            playUiSound('CLICK');
+                            setIsDimmedTutorialActive(false);
+                            try {
+                                localStorage.setItem('hexopol_tutorial_dismissed_v4', 'true');
+                            } catch {}
+                        }}
+                        className="absolute inset-0 z-[200] bg-black/75 backdrop-blur-[4px] flex flex-col justify-start items-center p-6 text-center cursor-pointer pointer-events-auto animate-fade-in"
+                    >
+                        {/* High-contrast text positioned at the top of the screen */}
+                        <div className="mt-[12vh] max-w-xl flex flex-col gap-4 select-none pointer-events-none px-4">
+                            <span className="text-emerald-400 font-mono text-[9px] uppercase tracking-[0.3em] font-black animate-pulse">
+                                {language === 'RU' ? '● ИНТУИТИВНОЕ РУКОВОДСТВО' : '● INTUITIVE GUIDANCE'}
+                            </span>
+                            
+                            <h2 className="text-xl md:text-3xl font-sans font-black text-white leading-tight tracking-wider uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
+                                {language === 'RU' 
+                                    ? 'НАЖМИТЕ НА СВЕТЯЩИЙСЯ ЗЕЛЕНЫЙ ГЕКСАГОН В ЦЕНТРЕ ПОЛЯ' 
+                                    : 'TAP THE GLOWING GREEN HEXAGON IN THE CENTER OF THE FIELD'}
+                            </h2>
+                            
+                            <p className="text-xs md:text-sm font-mono text-slate-300 font-medium leading-relaxed max-w-lg mx-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                                {language === 'RU'
+                                    ? 'Это ваша базовая точка отсчета. Коснитесь ее, затем выберите элемент уровня L0 на нижней панели и нажмите "УСТАНОВИТЬ" (UPGRADE), либо собирайте конструкцию согласно чертежу.'
+                                    : 'This is your basic origin point. Tap it, then select a level L0 element from the bottom array and click "UPGRADE" to deploy, or build according to the targeted blueprints.'}
+                            </p>
+
+                            <div className="w-12 h-px bg-white/20 mx-auto my-3" />
+
+                            <span className="text-[10px] md:text-xs uppercase font-black tracking-widest text-[#10b981] animate-pulse">
+                                {language === 'RU' 
+                                    ? '[ КОСНИТЕСЬ ЭКРАНА В ЛЮБОМ МЕСТЕ, ЧТОБЫ НАЧАТЬ ИГРАТЬ ]' 
+                                    : '[ TOUCH ANYWHERE ON THE SCREEN TO START PLAYING ]'}
+                            </span>
+                        </div>
+                    </motion.div>
+                )}
             </AnimatePresence>
 
 

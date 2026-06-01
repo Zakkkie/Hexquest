@@ -63,7 +63,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                             </div>
                         )}
                         
-                        <CentralTutorialBanner />
+                        <CentralTutorialBanner onOpenHelpDetail={() => setActiveModal('MISSION')} />
                         
                         {gameStatus === 'PLAYING' && (
                             <>

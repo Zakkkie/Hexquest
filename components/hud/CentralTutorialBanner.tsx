@@ -4,7 +4,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Compass, Sparkles, Navigation, ChevronUp, ChevronDown } from 'lucide-react';
 import { TEXT } from '../../services/i18n';
 
-const CentralTutorialBanner: React.FC = () => {
+interface CentralTutorialBannerProps {
+    onOpenHelpDetail?: () => void;
+}
+
+const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHelpDetail }) => {
     const session = useGameStore(state => state.session);
     const activeLevelConfig = session?.activeLevelConfig;
     const playerExists = useGameStore(state => !!state.session?.player);
@@ -307,6 +311,18 @@ const CentralTutorialBanner: React.FC = () => {
                             <p className="text-xs md:text-sm font-black text-slate-100 font-sans tracking-tight leading-normal uppercase">
                                 {tutorialHint}
                             </p>
+                            {onOpenHelpDetail && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        playUiSound('CLICK');
+                                        onOpenHelpDetail();
+                                    }}
+                                    className="mt-2 text-[10px] md:text-[11px] font-mono font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase cursor-pointer flex items-center gap-1 select-none tracking-wider underline decoration-dotted underline-offset-4"
+                                >
+                                    <span>{isRu ? 'ПОДРОБНЕЕ О ПРАВИЛАХ И ЦЕЛЯХ →' : 'MORE INFO / MISSION BRIEFING →'}</span>
+                                </button>
+                            )}
                         </div>
                     </div>
 

@@ -131,7 +131,16 @@ export const createAuthSlice = (
     }
     
     const cleanedNickname = nickname.trim().slice(0, 32);
-    const loaded = loadProfileProgress(cleanedNickname) || DEFAULT_PROGRESS;
+    
+    // Reset guest's progress and completed figures to 0 for a completely fresh start
+    try {
+      localStorage.removeItem(`hexquest_progress_${cleanedNickname.toLowerCase()}`);
+      localStorage.removeItem('hexopol_figure_index');
+    } catch (e) {
+      console.warn("localStorage clear failed during guest login:", e);
+    }
+
+    const loaded = DEFAULT_PROGRESS;
 
     set(() => ({ 
       user: { isAuthenticated: true, isGuest: true, nickname: cleanedNickname, avatarColor, headIndex, bodyIndex },

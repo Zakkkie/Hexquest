@@ -135,9 +135,42 @@ export const createGameplaySlice = (
 
   resetProgress: () => {
     get().abandonSession();
+    try {
+      localStorage.removeItem('hexopol_figure_index');
+    } catch (e) {
+      console.warn("Failed to reset hexopol_figure_index:", e);
+    }
     set(() => ({ 
       campaignProgress: 0, 
       levelsModeProgress: 0,
+      skillPoints: 0,
+      hexActivationPoints: 0,
+      activatedHexes: {},
+      collectedHexes: {},
+      minedInSessionHexes: { 0: 75, 1: 30, 2: 12, 3: 5, 4: 2 },
+      totalMinedMaterial: 0,
+      storyMap: {},
+      storyMilestone: 0,
+      campaignUpgrades: {
+        inventorySlots: 3,
+        startingEnergy: 0,
+        startingMoves: 0,
+        startingGold: 0,
+        startingMaterials: 0,
+        maxMaterials: 3,
+        fuelEfficiency: 0,
+        scanRadius: 0,
+        fatigueResistance: 0,
+        growthAccelerator: 0,
+        foundationStrength: 0,
+        economicMultiplier: 0,
+        diggerLuck: 0,
+        doubleDigChance: 0,
+        reserveCapacitor: 0,
+        turboRecharge: 0,
+        entropyResistance: 0,
+        restorationMaster: 0,
+      }
     }));
   },
 

@@ -225,7 +225,14 @@ const MenuButton: React.FC<{
         >
           {label}
         </span>
-        {subLabel && <span className={`text-[11px] md:text-[10px] font-mono group-hover:text-slate-300 transition-colors break-words whitespace-pre-wrap ${variant === 'battle' ? 'text-red-200/70' : variant === 'campaign' ? 'text-purple-200/70' : 'text-slate-500'}`}>{subLabel}</span>}
+        {subLabel && (
+          <span className={`font-mono group-hover:text-slate-300 transition-colors break-words whitespace-pre-wrap 
+            ${variant === 'primary' ? 'font-bold text-[13px] md:text-[13px] leading-[17.5px] text-indigo-300' : 'text-[11px] md:text-[10px] text-slate-500'} 
+            ${variant === 'battle' ? 'text-red-200/70' : variant === 'campaign' ? 'text-purple-200/70' : ''}`}
+          >
+            {subLabel}
+          </span>
+        )}
       </div>
       
       {/* Dynamic Hover Glow */}
@@ -257,6 +264,7 @@ const MainMenu: React.FC = () => {
   const loginUser = useGameStore(state => state.loginUser);
   const registerUser = useGameStore(state => state.registerUser);
   const abandonSession = useGameStore(state => state.abandonSession);
+  const resetProgress = useGameStore(state => state.resetProgress);
   const toggleMusic = useGameStore(state => state.toggleMusic);
   const toggleSfx = useGameStore(state => state.toggleSfx);
   const playUiSound = useGameStore(state => state.playUiSound);
@@ -273,7 +281,7 @@ const MainMenu: React.FC = () => {
   
   const [showCampaignModes, setShowCampaignModes] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<{type: 'ABANDON_CAMPAIGN' | 'ABANDON_NEW_GAME' | 'LOGOUT', payload?: any} | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{type: 'ABANDON_CAMPAIGN' | 'ABANDON_NEW_GAME' | 'LOGOUT' | 'RESET_PROGRESS_ALL', payload?: any} | null>(null);
   
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -411,6 +419,8 @@ const MainMenu: React.FC = () => {
       setDifficulty('EASY');
     } else if (confirmAction.type === 'LOGOUT') {
       logout();
+    } else if (confirmAction.type === 'RESET_PROGRESS_ALL') {
+      resetProgress();
     }
     setConfirmAction(null);
   };
@@ -743,14 +753,23 @@ const MainMenu: React.FC = () => {
                 >
                     <button 
                         onClick={() => startCampaignWithMode('STORY')}
-                        className="flex items-center gap-3 p-3 bg-slate-900/40 border border-white/5 rounded-2xl hover:bg-slate-800/80 hover:border-indigo-500/50 transition-all text-left shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.15)] group backdrop-blur-md"
+                        className="relative flex items-center gap-3 p-3 bg-indigo-950/40 border-2 border-indigo-400 rounded-2xl hover:bg-indigo-900/40 hover:border-cyan-400 transition-all text-left shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] group backdrop-blur-md"
                     >
-                        <div className="p-2.5 md:p-3 bg-indigo-500/10 rounded-xl text-indigo-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-200 transition-colors shadow-inner border border-indigo-500/20 group-hover:border-indigo-400/50">
+                        {/* Beautiful recommendation glowing indicator */}
+                        <div className="absolute -top-1.5 -right-1.5 flex h-3 w-3 z-30">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </div>
+                        
+                        <div className="p-2.5 md:p-3 bg-indigo-500/20 rounded-xl text-indigo-300 group-hover:bg-indigo-500/30 group-hover:text-cyan-200 transition-colors shadow-inner border border-indigo-400/40 group-hover:border-cyan-400/50">
                             <Globe className="w-4 h-4 md:w-5 md:h-5 drop-shadow-[0_0_8px_currentColor]" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xs md:text-sm font-black uppercase tracking-widest text-indigo-50 group-hover:text-white transition-colors">{t.MODE_STORY}</span>
-                            <span className="text-[10px] md:text-[11px] font-mono text-slate-500 uppercase group-hover:text-slate-400">{t.MODE_STORY_SUB}</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs md:text-sm font-black uppercase tracking-widest text-indigo-100 group-hover:text-white transition-colors">{t.MODE_STORY}</span>
+                                <span className="text-[8px] font-mono px-1 py-0.2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded font-bold tracking-wider uppercase animate-pulse">START</span>
+                            </div>
+                            <span className="text-[10px] md:text-[11px] font-mono text-indigo-300/80 uppercase group-hover:text-indigo-200">{t.MODE_STORY_SUB}</span>
                         </div>
                     </button>
                     <button 
@@ -923,6 +942,10 @@ const MainMenu: React.FC = () => {
                 <p className="text-slate-300 mb-6 text-sm md:text-base px-2">
                     {confirmAction.type === 'LOGOUT' 
                         ? (language === 'RU' ? t.LOGOUT_CONFIRM : t.LOGOUT_CONFIRM)
+                        : confirmAction.type === 'RESET_PROGRESS_ALL'
+                        ? (language === 'RU' 
+                            ? 'Вы уверены, что хотите сбросить ВЕСЬ прогресс обучения, чертежей и очков в 0? Это действие необратимо.' 
+                            : 'Are you sure you want to reset ALL training progression, blueprints, and points back to 0? This action is irreversible.')
                         : (language === 'RU' ? t.ABANDON_CONFIRM : t.ABANDON_CONFIRM)}
                 </p>
                 <div className="flex gap-3">

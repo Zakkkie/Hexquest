@@ -428,8 +428,8 @@ export const TEXT: Record<Language, Dictionary> = {
         MENU: {
             TITLE: "HexQuest",
             SUBTITLE: "Strategic Expansion Protocol",
-            CAMPAIGN: "Campaign",
-            CAMPAIGN_SUB: "Story & Training",
+            CAMPAIGN: "New Game",
+            CAMPAIGN_SUB: "Develop your space",
             SKIRMISH: "Battle",
             SKIRMISH_SUB: "Custom Conflict",
             RESUME: "Resume",
@@ -848,8 +848,8 @@ export const TEXT: Record<Language, Dictionary> = {
         MENU: {
             TITLE: "HexQuest",
             SUBTITLE: "Протокол Расширения",
-            CAMPAIGN: "Кампания",
-            CAMPAIGN_SUB: "Сюжет и обучение",
+            CAMPAIGN: "Новая игра",
+            CAMPAIGN_SUB: "Развивай свое пространство",
             SKIRMISH: "Битва",
             SKIRMISH_SUB: "Настраиваемое сражение",
             RESUME: "В Игру",
