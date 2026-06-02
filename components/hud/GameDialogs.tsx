@@ -10,6 +10,7 @@ import { Item } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Fireworks from '../Fireworks';
 import { MiniMonumentDialog } from './MiniMonumentDialog';
+import { audioService } from '../../services/audioService';
 
 interface GameDialogsProps {
     activeModal: string | null;
@@ -48,8 +49,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const setUIState = useGameStore(state => state.setUIState);
     const currentTurn = useGameStore(state => state.session?.currentTurn || 0);
     
-    // Monument/Void Specifics
     const monumentDialogState = useGameStore(state => state.monumentDialogState);
+    const [tutorialLoading, setTutorialLoading] = useState(false);
+    
+    // Monument/Void Specifics
     const monumentRequirements = useGameStore(state => state.session?.monumentRequirements);
     const monumentAlternatives = useGameStore(state => state.session?.monumentAlternatives);
     const monumentRevealedSlots = useGameStore(state => state.session?.monumentRevealedSlots);
@@ -603,6 +606,16 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 <button 
                                     onClick={() => {
                                         if (gameStatus === 'BRIEFING') {
+                                            if (activeLevelConfig?.id === '1.0') {
+                                                setTutorialLoading(true);
+                                                audioService.play('UI_CLICK');
+                                                setTimeout(() => {
+                                                    setTutorialLoading(false);
+                                                    startMission();
+                                                }, 1800);
+                                                closeModal();
+                                                return;
+                                            }
                                             startMission();
                                         }
                                         closeModal();
@@ -611,7 +624,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 >
                                     <div className="absolute inset-0 bg-emerald-500/10 opacity-0 transition-opacity group-hover/btn:opacity-100 pointer-events-none" />
                                     <div className="relative z-10 flex items-center justify-center gap-2.5 text-white font-black uppercase tracking-[0.25em] text-xs sm:text-sm">
-                                        {gameStatus === 'BRIEFING' ? t.BRIEFING_BTN_START : t.BTN_READY}
+                                        {gameStatus === 'BRIEFING' ? (activeLevelConfig?.id === '1.0' ? 'START TRAINING' : t.BRIEFING_BTN_START) : t.BTN_READY}
                                         <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 transition-transform group-hover/btn:translate-x-1.5" />
                                     </div>
                                 </button>
@@ -951,7 +964,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* VICTORY / DEFEAT */}
             {(gameStatus === 'DEFEAT' || (gameStatus === 'VICTORY' && victoryStage === 'MODAL')) && (
-                <div className="absolute inset-0 z-[250] flex items-center justify-center bg-black/95 backdrop-blur-3xl animate-in fade-in duration-700 pointer-events-auto p-3 sm:p-6 md:p-8">
+                <div className="absolute inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-700 pointer-events-auto p-3 sm:p-6 md:p-8">
                     {/* Background Grid & Scanlines */}
                     <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none" />
                     <div className={`absolute inset-0 bg-gradient-to-b opacity-25 pointer-events-none ${gameStatus === 'VICTORY' ? 'from-emerald-500/20 to-transparent shadow-[inset_0_0_100px_rgba(16,185,129,0.1)]' : 'from-red-500/20 to-transparent shadow-[inset_0_0_100px_rgba(239,68,68,0.1)]'}`} />
@@ -1063,7 +1076,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                             </div>
                                         </div>
                                         
-                                        {/* COLUMN 2: Acquired Rewards */}
+                                        {/* COLUMN 2: Finalized Simulation Results */}
                                         <div className="md:col-span-5 lg:col-span-5 flex flex-col gap-2.5 md:gap-3.5 h-full justify-between text-left">
                                             {gameStatus === 'VICTORY' ? (
                                                 <div className="flex flex-col gap-2 md:gap-3 flex-1">
@@ -1071,76 +1084,21 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                     <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
                                                         <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
                                                         <span className="text-xs font-black uppercase text-slate-200 tracking-wider font-mono">
-                                                            {language === 'RU' ? 'ПОЛУЧЕННЫЕ НАГРАДЫ' : 'REWARDS ACQUIRED'}
+                                                            {language === 'RU' ? 'РЕЗУЛЬТАТЫ СИМУЛЯЦИИ' : 'SIMULATION RESULTS'}
                                                         </span>
                                                     </div>
 
                                                     <div className="flex flex-col gap-2 mt-1">
-                                                        {/* Skill point */}
-                                                        <div className="flex items-center justify-between p-2.5 bg-slate-900/50 border border-emerald-500/20 rounded-xl">
-                                                            <div className="flex items-center gap-2.5">
-                                                                <span className="text-lg">⚙️</span>
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-xs font-bold text-white leading-none">
-                                                                        {language === 'RU' ? 'Очки Инженерии' : 'Engineering Upgrade Points'}
-                                                                    </span>
-                                                                    <span className="text-[9px] text-slate-400 font-mono mt-0.5">
-                                                                        {language === 'RU' ? 'Гарантированная награда' : 'Guaranteed award'}
-                                                                    </span>
-                                                                </div>
+                                                        <div className="flex items-center justify-between p-4 bg-slate-900/50 border border-emerald-500/20 rounded-xl">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-bold text-white">
+                                                                    {language === 'RU' ? 'Награда за завершение' : 'Completion Reward'}
+                                                                </span>
+                                                                <span className="text-xs text-emerald-400 font-mono mt-1">
+                                                                    {language === 'RU' ? '+10 гексов 0 уровня' : '+10 level 0 hexes'}
+                                                                </span>
                                                             </div>
-                                                            <span className="text-emerald-400 font-extrabold font-mono text-base">+1</span>
-                                                        </div>
-
-                                                        {/* Activation keys */}
-                                                        <div className="flex items-center justify-between p-2.5 bg-slate-900/50 border border-violet-500/20 rounded-xl relative overflow-hidden group">
-                                                            <div className="absolute top-0 right-0 w-16 h-16 bg-violet-500/5 blur-lg rounded-full" />
-                                                            <div className="flex items-center gap-2.5">
-                                                                <span className="text-lg">🔑</span>
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-xs font-bold text-white leading-none">
-                                                                        {language === 'RU' ? 'Ключи Сетки Кампании' : 'Campaign Board Activation Keys'}
-                                                                    </span>
-                                                                    <span className="text-[9px] text-violet-400 font-mono mt-0.5">
-                                                                        {language === 'RU' ? 'Зависит от очков (Очки / 2500)' : 'Based on score (Score / 2500)'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <span className="text-violet-400 font-extrabold font-mono text-base">+{Math.max(2, Math.floor(finalScore / 2500))}</span>
-                                                        </div>
-
-                                                        {/* Materials */}
-                                                        <div className="flex items-center justify-between p-2.5 bg-slate-900/50 border border-cyan-500/20 rounded-xl relative overflow-hidden">
-                                                            <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/5 blur-lg rounded-full" />
-                                                            <div className="flex items-center gap-2.5">
-                                                                <span className="text-lg">📦</span>
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-xs font-bold text-white leading-none">
-                                                                        {language === 'RU' ? 'Строительные материалы' : 'Spectral Construction Blocks'}
-                                                                    </span>
-                                                                    <span className="text-[9px] text-cyan-400 font-mono mt-0.5">
-                                                                        {language === 'RU' ? 'Зависит от очков (Очки / 1800)' : 'Based on score (Score / 1800)'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <span className="text-cyan-400 font-extrabold font-mono text-base">+{Math.max(1, Math.floor(finalScore / 1800))}</span>
-                                                        </div>
-
-                                                        {/* Credits bonus */}
-                                                        <div className="flex items-center justify-between p-2.5 bg-slate-900/50 border border-amber-500/20 rounded-xl relative overflow-hidden">
-                                                            <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 blur-lg rounded-full" />
-                                                            <div className="flex items-center gap-2.5">
-                                                                <span className="text-lg">💰</span>
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-xs font-bold text-white leading-none">
-                                                                        {language === 'RU' ? 'Заряд Синтезатора Кредитов' : 'Simulated Credits Multiplier'}
-                                                                    </span>
-                                                                    <span className="text-[9px] text-amber-500 font-mono mt-0.5">
-                                                                        {language === 'RU' ? 'Начислено (15% от очков)' : 'Accrued value (15% of score)'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <span className="text-amber-400 font-extrabold font-mono text-base">+{Math.round(finalScore * 0.15).toLocaleString()}</span>
+                                                            <span className="text-emerald-400 font-extrabold font-mono text-xl">+10</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1159,7 +1117,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                             )}
                                         </div>
                                     </div>
-                                </>
+                                    </>
                             );
                         })()}
 
@@ -1554,6 +1512,25 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         </div>
                     </motion.div>
                 </div>
+            )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+            {tutorialLoading && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-[1000] bg-slate-950 flex flex-col items-center justify-center p-6 text-center pointer-events-auto"
+                >
+                    <div className="w-16 h-16 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-6" />
+                    <h2 className="text-xl md:text-2xl font-black text-emerald-400 uppercase tracking-widest mb-2 font-mono">
+                        {language === 'RU' ? 'ЗАГРУЗКА ИНСТРУКТАЖА' : 'INITIALIZING TUTORIAL'}
+                    </h2>
+                    <p className="text-sm md:text-base text-emerald-500/70 font-mono italic tracking-wider">
+                        {language === 'RU' ? 'Подготовка изолированной среды...' : 'Preparing safe environment...'}
+                    </p>
+                </motion.div>
             )}
             </AnimatePresence>
         </>

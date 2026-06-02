@@ -95,10 +95,9 @@ const GameView: React.FC = () => {
       }
   };
 
-  // UI OFFSET: Shift center up to avoid Bottom Dock overlap
-  // Increased to account for larger bottom dock with status icons
+  // UI OFFSET: None, center on player
   const getCenterOffset = () => {
-      return deviceType === 'MOBILE' ? 120 : 100;
+      return 0;
   };
   
   // --- UNIFIED CAMERA STATE ---
@@ -137,7 +136,14 @@ const GameView: React.FC = () => {
      targetCameraRef.current = { ...targetCameraRef.current, scale: newScale };
   }, [deviceType]);
 
-  // --- AUDIO LIFECYCLE (Start/Stop) ---
+  // --- FOCUS ON PLAYER INITIALLY ---
+  useEffect(() => {
+      // Small delay ensures dimensions and player are fully populated
+      const timer = setTimeout(() => {
+          centerOnPlayer();
+      }, 100);
+      return () => clearTimeout(timer);
+  }, []);
   useEffect(() => {
       audioService.startMusic();
       return () => { audioService.stopMusic(); };

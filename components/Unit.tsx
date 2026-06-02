@@ -24,6 +24,7 @@ interface UnitProps {
   bodyIndex?: number;
   onMoveComplete?: (x: number, y: number, color: string) => void;
   opacity?: number;
+  evacuationActive?: boolean;
 }
 
 const getHexVisualHeight = (level: number) => {
@@ -35,7 +36,7 @@ const getHexVisualHeight = (level: number) => {
 // Helper for lerp
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, hexLevel, headIndex = 0, bodyIndex = 0, onMoveComplete, opacity = 1 }) => {
+const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, hexLevel, headIndex = 0, bodyIndex = 0, onMoveComplete, opacity = 1, evacuationActive }) => {
   const groupRef = useRef<Konva.Group>(null);
   const visualGroupRef = useRef<Konva.Group>(null);
   const shadowRef = useRef<Konva.Ellipse>(null);
@@ -327,6 +328,49 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, hexLevel, hea
       return () => { anim.stop(); };
 
   }, [q, r, hexLevel, finalColor, onMoveComplete]); 
+
+  useEffect(() => {
+    if (evacuationActive) {
+        if (!visualGroupRef.current) return;
+        
+        // 1. Create Beam
+        const beam = new Konva.Rect({
+            width: 20,
+            height: 1000,
+            x: -10,
+            y: -1000,
+            fillLinearGradientStartPoint: { x: 0, y: 0 },
+            fillLinearGradientEndPoint: { x: 0, y: 1000 },
+            fillLinearGradientColorStops: [0, 'rgba(255,255,255,0.8)', 1, 'rgba(255,255,255,0)'],
+            opacity: 0,
+        });
+        visualGroupRef.current.add(beam);
+        
+        // 2. Twin Beam In
+        const bTween = new Konva.Tween({
+            node: beam,
+            opacity: 1,
+            duration: 0.5,
+        });
+        bTween.play();
+
+        // 3. Move Unit
+        const t = new Konva.Tween({
+            node: visualGroupRef.current,
+            y: -1000,
+            opacity: 0,
+            duration: 3,
+            easing: Konva.Easings.EaseIn,
+        });
+        t.play();
+        
+        return () => {
+            t.destroy();
+            bTween.destroy();
+            beam.destroy();
+        };
+    }
+  }, [evacuationActive]);
 
   return (
     <Group opacity={opacity} perfectDrawEnabled={false} listening={false}>

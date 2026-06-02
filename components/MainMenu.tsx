@@ -549,27 +549,26 @@ const MainMenu: React.FC = () => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ type: "spring", damping: 20, stiffness: 200 }}
-                    className="absolute top-full right-0 mt-3 bg-slate-900/95 backdrop-blur-xl border-2 border-indigo-500/40 p-4 md:p-5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-3.5 min-w-[240px] md:min-w-[280px] z-[60]"
+                    className="absolute top-full right-0 mt-2 bg-slate-900/95 backdrop-blur-xl border-2 border-indigo-500/40 p-3 md:p-3.5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-2 min-w-[240px] md:min-w-[260px] z-[60]"
                 >
                     {/* Header in the dropdown */}
-                    <div className="flex flex-col border-b border-indigo-500/20 pb-2 mb-1">
+                    <div className="flex flex-col border-b border-indigo-500/20 pb-1.5 mb-0.5">
                         <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest leading-none">SYSTEM CONTROL</span>
-                        <span className="text-xs md:text-sm font-black text-white uppercase tracking-wider mt-1">{language === 'RU' ? 'Панель управления' : 'Control Desk'}</span>
+                        <span className="text-xs md:text-sm font-black text-white uppercase tracking-wider mt-0.5">{language === 'RU' ? 'Панель управления' : 'Control Desk'}</span>
                     </div>
 
                     {/* Language Settings */}
-                    <div className="flex flex-col gap-1.5">
-                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">{language === 'RU' ? 'Язык Интерфейса' : 'Interface Language'}</span>
+                    <div className="flex flex-col gap-1">
                         <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-slate-950/80 rounded-xl border border-white/5">
                             <button 
                                 onClick={() => { setLanguage('EN'); playUiSound('CLICK'); }}
-                                className={`py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${language === 'EN' ? 'bg-indigo-600/30 text-white border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                className={`py-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${language === 'EN' ? 'bg-indigo-600/30 text-white border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}`}
                             >
                                 English
                             </button>
                             <button 
                                 onClick={() => { setLanguage('RU'); playUiSound('CLICK'); }}
-                                className={`py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${language === 'RU' ? 'bg-indigo-600/30 text-white border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                className={`py-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${language === 'RU' ? 'bg-indigo-600/30 text-white border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}`}
                             >
                                 Русский
                             </button>
@@ -577,42 +576,40 @@ const MainMenu: React.FC = () => {
                     </div>
 
                     {/* Sounds Settings */}
-                    <div className="flex flex-col gap-1.5">
-                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">{language === 'RU' ? 'Параметры Звука' : 'Audio Modulators'}</span>
-                        <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1">
                             {/* Music Toggle */}
                             <button 
                                 onClick={() => { toggleMusic(); playUiSound('CLICK'); }} 
-                                className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all text-left cursor-pointer ${isMusicMuted ? 'border-slate-800 bg-slate-950/40 text-slate-500 hover:bg-slate-850' : 'border-indigo-500/30 bg-indigo-950/20 text-indigo-300 hover:bg-indigo-950/30 hover:border-indigo-400'}`}
+                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border transition-all text-left cursor-pointer ${isMusicMuted ? 'border-slate-800 bg-slate-950/40 text-slate-500' : 'border-indigo-500/30 bg-indigo-950/20 text-indigo-300 hover:bg-indigo-950/30'}`}
                             >
-                                <div className="flex items-center gap-2.5">
-                                    {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4 text-indigo-400" />}
-                                    <span className="text-xs font-black uppercase tracking-wider">{language === 'RU' ? 'Музыка' : 'Music'}</span>
+                                <div className="flex items-center gap-2">
+                                    {isMusicMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Music className="w-3.5 h-3.5 text-indigo-400" />}
+                                    <span className="text-[11px] font-black uppercase tracking-wider">{language === 'RU' ? 'Музыка' : 'Music'}</span>
                                 </div>
-                                <span className="text-[10px] font-mono leading-none">{isMusicMuted ? 'OFF' : 'ON'}</span>
+                                <span className="text-[9px] font-mono leading-none">{isMusicMuted ? 'OFF' : 'ON'}</span>
                             </button>
                             {/* SFX Toggle */}
                             <button 
                                 onClick={() => { toggleSfx(); playUiSound('CLICK'); }} 
-                                className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all text-left cursor-pointer ${isSfxMuted ? 'border-slate-800 bg-slate-950/40 text-slate-500 hover:bg-slate-850' : 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-950/30 hover:border-emerald-400'}`}
+                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border transition-all text-left cursor-pointer ${isSfxMuted ? 'border-slate-800 bg-slate-950/40 text-slate-500' : 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-950/30'}`}
                             >
-                                <div className="flex items-center gap-2.5">
-                                    {isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
-                                    <span className="text-xs font-black uppercase tracking-wider">{language === 'RU' ? 'Эффекты' : 'SFX'}</span>
+                                <div className="flex items-center gap-2">
+                                    {isSfxMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
+                                    <span className="text-[11px] font-black uppercase tracking-wider">{language === 'RU' ? 'Эффекты' : 'SFX'}</span>
                                 </div>
-                                <span className="text-[10px] font-mono leading-none">{isSfxMuted ? 'OFF' : 'ON'}</span>
+                                <span className="text-[9px] font-mono leading-none">{isSfxMuted ? 'OFF' : 'ON'}</span>
                             </button>
                         </div>
                     </div>
 
                     {/* Leaderboard Link inside Dropdown */}
-                    <div className="flex flex-col gap-1.5 border-t border-indigo-500/20 pt-3 mt-1">
-                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">{language === 'RU' ? 'Таблица достижений' : 'Social Core'}</span>
+                    <div className="flex flex-col border-t border-indigo-500/20 pt-2 mt-0.5">
                         <button 
                             onClick={() => { setIsSettingsOpen(false); setUIState('LEADERBOARD'); playUiSound('CLICK'); }}
-                            className="flex items-center gap-2.5 w-full p-2.5 bg-gradient-to-r from-indigo-950/40 to-indigo-900/10 border border-indigo-500/20 hover:border-indigo-400/60 rounded-xl hover:bg-indigo-900/30 hover:text-white transition-all text-left text-indigo-300 text-xs font-black uppercase tracking-widest cursor-pointer"
+                            className="flex items-center gap-2 w-full p-2 bg-gradient-to-r from-indigo-950/40 to-indigo-900/10 border border-indigo-500/20 hover:border-indigo-400/60 rounded-xl hover:bg-indigo-900/30 hover:text-white transition-all text-left text-indigo-300 text-[10px] font-black uppercase tracking-wider cursor-pointer"
                         >
-                            <Trophy className="w-4 h-4 text-amber-400 drop-shadow-[0_0_8px_currentColor]" />
+                            <Trophy className="w-3.5 h-3.5 text-amber-400" />
                             <span>{language === 'RU' ? 'Открыть Рейтинг' : 'Open Rankings'}</span>
                         </button>
                     </div>

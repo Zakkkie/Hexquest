@@ -8,18 +8,17 @@ import { checkShapeExists } from '../../services/shapeUtils';
 
 export class VictorySystem implements System {
   private triggerPortal(state: SessionState, msg: string): void {
-    if (state.portalActive) return;
+    if (state.evacuationActive) return;
     
-    state.portalActive = true;
-    state.portalHex = { q: state.player.q, r: state.player.r };
+    state.evacuationActive = true;
     
     const isRu = state.language === 'RU';
     const alertText = isRu
-      ? `🌀 ПОРТАЛ АКТИВИРОВАН! ВОЙДИТЕ В НЕГО И НАЖМИТЕ НА НЕГО ДЛЯ ЗАВЕРШЕНИЯ МИССИИ! (${msg})`
-      : `🌀 PORTAL ACTIVATED! ENTER IT AND CLICK ON IT TO COMPLETE THE MISSION! (${msg})`;
+      ? `🚀 ЭВАКУАЦИЯ НАЧАЛАСЬ! ИНИЦИИРОВАН ЛУЧ ПОДЪЕМА! (${msg})`
+      : `🚀 EVACUATION STARTED! BEAM UP INITIATED! (${msg})`;
       
     state.messageLog.unshift({
-        id: `portal-spawn-${Date.now()}`,
+        id: `evacuation-start-${Date.now()}`,
         text: alertText,
         type: 'SUCCESS',
         source: 'NEBULA_AI',
@@ -29,6 +28,31 @@ export class VictorySystem implements System {
 
   update(state: SessionState, _index: WorldIndex, events: GameEvent[]): void {
     if (state.gameStatus === 'VICTORY' || state.gameStatus === 'DEFEAT') {
+        return;
+    }
+
+    // --- CHECK EVACUATION COMPLETION ---
+    if (state.evacuationActive) {
+        if (!state.evacuationCompletionTime) {
+            state.evacuationCompletionTime = Date.now() + 3000;
+        }
+
+        if (Date.now() >= state.evacuationCompletionTime) {
+            // FINALIZE VICTORY
+            state.gameStatus = 'VICTORY';
+            const isRu = state.language === 'RU';
+            const msg = isRu ? '🏆 ЭВАКУАЦИЯ УСПЕШНА! Симуляция пройдена!' : '🏆 EVACUATION SUCCESSFUL! Simulation complete!';
+            state.messageLog.unshift({
+                id: `evacuation-won-${Date.now()}`,
+                text: msg,
+                type: 'SUCCESS',
+                source: 'NEBULA_AI',
+                timestamp: Date.now()
+            });
+
+            events.push(GameEventFactory.create('VICTORY', msg, state.player.id));
+            this.generateLeaderboardEvent(state, events);
+        }
         return;
     }
 

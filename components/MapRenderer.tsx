@@ -126,7 +126,29 @@ const getHexTutorialStatus = (hex: Hex, player: Entity, _grid: Record<string, He
 
     if (!tutorialData) return { isTutorial, isArrow, tutColor };
 
-    if (levelId === '1.1') {
+    if (levelId === '1.0') {
+         if (player.q === 0 && player.r === 0) {
+             if (hex.q === 1 && hex.r === 0) {
+                 isTutorial = true; isArrow = true; tutColor = 'amber';
+             }
+         } else if (player.q === 1 && player.r === 0) {
+             if (hex.q === 1 && hex.r === 0 && hex.currentLevel === 0) {
+                 isTutorial = true; isArrow = true; tutColor = 'amber';
+             } else if (hex.currentLevel >= 1 && hex.q === 2 && hex.r === 0) {
+                 isTutorial = true; isArrow = true; tutColor = 'amber';
+             }
+         } else if (player.q === 3 && player.r === 0) {
+             if (hex.q === 3 && hex.r === 0 && hex.currentLevel === 2) {
+                 isTutorial = true; isArrow = true; tutColor = 'amber';
+             } else if (hex.currentLevel <= 1 && hex.q === 4 && hex.r === 0) {
+                 isTutorial = true; isArrow = true; tutColor = 'amber';
+             }
+         } else if (player.q === 4 && player.r === 0) {
+             if (hex.q === 5 && hex.r === 0) {
+                 isTutorial = true; isArrow = true; tutColor = 'emerald';
+             }
+         }
+    } else if (levelId === '1.1') {
         // Fallback or specific logic for 1.1 if needed, but objectiveHexes should cover it now
     } else if (levelId === '1.2' || levelId === '3.1') {
         if (hex.structureType === 'CAPITAL') {
@@ -389,8 +411,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
     const campaignUpgrades = useGameStore(state => state.campaignUpgrades);
     const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
-    const portalActive = useGameStore(state => state.session?.portalActive);
-    const portalHex = useGameStore(state => state.session?.portalHex);
+    const evacuationActive = useGameStore(state => state.session?.evacuationActive);
     const playerQ = player?.q ?? 0;
     const playerR = player?.r ?? 0;
     const playerStorage = player?.storage ?? 0;
@@ -678,7 +699,6 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                                 playerR={playerR}
                                 playerGrowthIntent={playerGrowthIntent}
                                 growthAccelerator={campaignUpgrades?.growthAccelerator || 0}
-                                portalActive={!!(portalActive && portalHex && portalHex.q === item.props.q && portalHex.r === item.props.r)}
                             />
                         );
                     } else {
@@ -686,6 +706,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                             <Unit 
                                 key={item.props.id} 
                                 {...item.props} 
+                                evacuationActive={item.props.isPlayer && evacuationActive}
                             />
                         );
                     }

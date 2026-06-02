@@ -1,7 +1,70 @@
 import { LevelConfig } from '../types';
-import { isStranded } from './utils';
+import { isStranded, generateBasicLevelGrid } from './utils';
 
 export const series1Levels: LevelConfig[] = [
+  // 1.0: Basic Level
+  {
+    id: '1.0',
+    title: 'Sim 1.0: Basic Level',
+    description: 'A deterministic grid featuring specific height values and entities that test your fundamental understanding.',
+    goalText: 'Reach the Capital (5,0)',
+    mapConfig: {
+      size: 5,
+      type: 'fixed',
+      customLayout: generateBasicLevelGrid()
+    },
+    objectiveHexes: [
+      { q: 5, r: 0, targetLevel: 1, label: 'Capital', color: 'emerald' }
+    ],
+    startState: { credits: 0, moves: 50, rank: 5, materials: 5, initialEntropy: 100 },
+    aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const player = state.player;
+      const grid = state.grid;
+      
+      if (player.q === 5 && player.r === 0) {
+        return isRu ? "Победа! Вы достигли Столицы." : "Victory! You have reached the Capital.";
+      }
+      
+      if (player.q === 0 && player.r === 0) {
+        return isRu ? "ДВИЖЕНИЕ: Нажмите на соседний свободный гекс, чтобы переместиться." : "MOVEMENT: Click an adjacent empty hex to step onto it.";
+      }
+
+      if (player.q === 1 && player.r === 0) {
+          const currentHex = grid['1,0'];
+          if (currentHex && currentHex.currentLevel === 0) {
+              return isRu ? "ПОСТРОЙКА: Следующий гекс слишком высоко. Нажмите СТРОИТЬ, чтобы поднять текущий уровень." : "UPGRADES: The next hex is too high. Click UPGRADE to raise your current height.";
+          }
+          return isRu ? "ДВИЖЕНИЕ: Теперь вы можете сделать шаг на следующий уровень." : "MOVEMENT: You can now step onto the next level.";
+      }
+
+      if (player.q === 2 && player.r === 0) {
+          return isRu ? "ОСМОТР: Используйте свайп или мышь для вращения камеры. Продолжайте путь." : "CAMERA: Swipe or drag to rotate camera. Continue your path.";
+      }
+
+      if (player.q === 3 && player.r === 0) {
+          const currentHex = grid['3,0'];
+          if (currentHex && currentHex.currentLevel === 2) {
+              return isRu ? "РАСКОПКА: Склон слишком крутой. Нажмите КОПАТЬ, чтобы спустить уровень." : "DIGGING: The drop is too steep. Click DIG to lower your current height.";
+          }
+          return isRu ? "ДВИЖЕНИЕ: Идеально. Сделайте шаг вперёд к финишу." : "MOVEMENT: Perfect. Step forward towards the finish.";
+      }
+
+      if (player.q === 4 && player.r === 0) {
+          return isRu ? "ФИНИШ: Сделайте последний шаг в Столицу!" : "FINISH: Take the final step into the Capital!";
+      }
+      
+      return isRu 
+        ? "Двигайтесь по координатам к Столице. Обращайте внимание на высоту!"
+        : "Move along the path to the Capital. Pay attention to height changes!";
+    },
+    hooks: {
+      checkWinCondition: (state) => state.player.q === 5 && state.player.r === 0,
+      checkLossCondition: (state) => isStranded(state)
+    }
+  },
+
   // 1.1: Протокол Движения / Movement & Staircase Rule
   {
     id: '1.1',

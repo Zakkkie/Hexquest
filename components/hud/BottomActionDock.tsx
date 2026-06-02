@@ -158,20 +158,22 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 
     const digDimmed = useMemo(() => {
         if (!isTutorialLevel1 || !levelId) return false;
+        if (levelId === '1.0' && (!player || player.q !== 3 || player.r !== 0)) return true;
         if (levelId === '1.1') return true;
         if (['1.4', '1.5', '1.6', '1.7'].includes(levelId)) return true;
         return false;
-    }, [isTutorialLevel1, levelId]);
+    }, [isTutorialLevel1, levelId, player]);
 
     const upgradeDimmed = useMemo(() => {
         if (!isTutorialLevel1 || !levelId) return false;
+        if (levelId === '1.0' && (!player || player.q !== 1 || player.r !== 0)) return true;
         if (['1.1', '1.2', '1.3', '1.6', '1.7', '1.8'].includes(levelId)) return true;
         return false;
-    }, [isTutorialLevel1, levelId]);
+    }, [isTutorialLevel1, levelId, player]);
 
     const recoverDimmed = useMemo(() => {
         if (!isTutorialLevel1 || !levelId) return false;
-        if (['1.1', '1.2', '1.3', '1.4', '1.5', '1.8'].includes(levelId)) return true;
+        if (['1.0', '1.1', '1.2', '1.3', '1.4', '1.5', '1.8'].includes(levelId)) return true;
         return false;
     }, [isTutorialLevel1, levelId]);
 

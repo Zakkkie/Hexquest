@@ -477,6 +477,8 @@ export interface SessionState {
   
   totalMinedMaterial?: number;
   portalActive?: boolean;
+  evacuationActive?: boolean;
+  evacuationCompletionTime?: number;
   portalHex?: HexCoord | null;
 
   entropy: EntropyState;
