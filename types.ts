@@ -479,6 +479,7 @@ export interface SessionState {
   portalActive?: boolean;
   evacuationActive?: boolean;
   evacuationCompletionTime?: number;
+  completedShapeCoords?: HexCoord[];
   portalHex?: HexCoord | null;
 
   entropy: EntropyState;

@@ -222,6 +222,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const voidOutlineRef = useRef<Konva.Path>(null);
   const monumentGlowRef = useRef<Konva.Path>(null);
   const arrowRef = useRef<Konva.Group>(null);
+  const shapeGlowRef = useRef<Konva.Path>(null);
   
   const groupRef = useRef<Konva.Group>(null);
   const topFaceGroupRef = useRef<Konva.Group>(null);
@@ -563,6 +564,40 @@ const HexNodeComponent = (props: HexNodeProps) => {
           return () => tween.destroy();
       }
   }, [isTargetArrow]);
+
+  const completedShapeCoords = useGameStore(state => state.session?.completedShapeCoords);
+  const isCompletedShapeHex = useMemo(() => {
+      if (!completedShapeCoords) return false;
+      return completedShapeCoords.some(coord => coord.q === q && coord.r === r);
+  }, [completedShapeCoords, q, r]);
+
+  useEffect(() => {
+      if (useGameStore.getState().isLiteMode) return;
+      if (isCompletedShapeHex && shapeGlowRef.current) {
+          const node = shapeGlowRef.current;
+          node.opacity(0);
+          
+          const tweenFocus = new Konva.Tween({
+              node: node,
+              duration: 0.3,
+              opacity: 1,
+              easing: Konva.Easings.EaseIn,
+              onFinish: () => {
+                  const tweenFade = new Konva.Tween({
+                      node: node,
+                      duration: 1.7,
+                      opacity: 0,
+                      easing: Konva.Easings.EaseOut
+                  });
+                  tweenFade.play();
+              }
+          });
+          tweenFocus.play();
+          return () => {
+              tweenFocus.destroy();
+          };
+      }
+  }, [isCompletedShapeHex]);
 
   if (isRealVoid) {
       return (
@@ -1093,6 +1128,20 @@ const HexNodeComponent = (props: HexNodeProps) => {
                         })}
                     </Group>
                 )}
+
+                {/* SHAPE COMPLETION GLOW OVERLAY */}
+                <Path 
+                    ref={shapeGlowRef}
+                    data={BASE_PATH_D} 
+                    fill="white"
+                    opacity={0}
+                    listening={false}
+                    perfectDrawEnabled={false}
+                    shadowForStrokeEnabled={false}
+                    shadowColor="#ffffff"
+                    shadowBlur={20}
+                    shadowOpacity={0.9}
+                />
             </Group>
         </Group>
         {/* 3. FLOATING OVERLAYS (Wrapped inside an animated overlays group container) */}

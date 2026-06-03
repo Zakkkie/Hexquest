@@ -4,7 +4,7 @@ import { GameEvent, LeaderboardEntry, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
 import { GameEventFactory } from '../events';
 import { getHexKey } from '../../services/hexUtils';
-import { checkShapeExists } from '../../services/shapeUtils';
+import { checkShapeExists, getCompletedShapeCoords } from '../../services/shapeUtils';
 
 export class VictorySystem implements System {
   private triggerPortal(state: SessionState, msg: string): void {
@@ -60,6 +60,12 @@ export class VictorySystem implements System {
     if (state.activeLevelConfig && state.activeLevelConfig.requiredShapes && state.activeLevelConfig.requiredShapes.length > 0) {
         const allShapesBuilt = state.activeLevelConfig.requiredShapes.every(req => checkShapeExists(state, req));
         if (allShapesBuilt) {
+            const coords: any[] = [];
+            for (const req of state.activeLevelConfig.requiredShapes) {
+                const shapeCoords = getCompletedShapeCoords(state, req);
+                coords.push(...shapeCoords);
+            }
+            state.completedShapeCoords = coords;
             this.triggerPortal(state, 'Shapes Completed!');
             return;
         }

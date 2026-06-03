@@ -62,3 +62,35 @@ export function checkShapeExists(state: SessionState, req: RequiredShape): boole
     
     return false;
 }
+
+export function getCompletedShapeCoords(state: SessionState, req: RequiredShape): HexCoord[] {
+    const grid = state.grid;
+    const defs = SHAPE_DEFS[req.type];
+    const coords: HexCoord[] = [];
+    
+    for (const key in grid) {
+        const hex = grid[key];
+        if (hex.currentLevel < req.level) continue;
+        if (hex.ownerId !== state.player.id) continue;
+
+        for (const def of defs) {
+            let match = true;
+            const tempCoords: HexCoord[] = [];
+            for (const offset of def) {
+                const targetQ = hex.q + offset.q;
+                const targetR = hex.r + offset.r;
+                const targetHex = grid[getHexKey(targetQ, targetR)];
+                if (!targetHex || targetHex.currentLevel < req.level || targetHex.ownerId !== state.player.id) {
+                    match = false;
+                    break;
+                }
+                tempCoords.push({ q: targetQ, r: targetR });
+            }
+            if (match) {
+                coords.push(...tempCoords);
+            }
+        }
+    }
+    
+    return coords;
+}

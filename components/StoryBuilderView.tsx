@@ -5,7 +5,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { textureService } from '../services/textureService.ts';
-import { ArrowLeft, Crown, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Konva from 'konva';
 
@@ -550,9 +550,10 @@ const StoryHex: React.FC<{
     isCenterInitially: boolean,
     isNew?: boolean,
     canPlace: boolean,
+    isFlaring?: boolean,
     onClick: (q: number, r: number) => void,
     onDblClick?: (q: number, r: number) => void
-}> = React.memo(({ q, r, level, isSelected, isBlueprint, blueprintLevel = 0, isEligible, isCenterInitially, isNew, canPlace, onClick, onDblClick }) => {
+}> = React.memo(({ q, r, level, isSelected, isBlueprint, blueprintLevel = 0, isEligible, isCenterInitially, isNew, canPlace, isFlaring, onClick, onDblClick }) => {
     const px = useMemo(() => hexToPixel(q, r), [q, r]);
     const isBuilt = level !== undefined && level >= 0;
     
@@ -598,6 +599,31 @@ const StoryHex: React.FC<{
             }).play();
         }
     }, [isNew]);
+
+    const flareGlowRef = useRef<Konva.Path>(null);
+    useEffect(() => {
+        if (isFlaring && flareGlowRef.current) {
+            const node = flareGlowRef.current;
+            node.opacity(1.0);
+            node.scale({ x: 1.05, y: 1.05 });
+            
+            const tween = new Konva.Tween({
+                node: node,
+                duration: 1.6,
+                opacity: 0,
+                scaleX: 0.95,
+                scaleY: 0.95,
+                easing: Konva.Easings.EaseOut,
+                onFinish: () => {
+                    tween.destroy();
+                }
+            });
+            tween.play();
+            return () => {
+                tween.destroy();
+            };
+        }
+    }, [isFlaring]);
 
     const [isHovered, setIsHovered] = useState(false);
 
@@ -895,6 +921,23 @@ const StoryHex: React.FC<{
                     />
                 </Group>
             )}
+
+            {/* COMPLETED SHAPE NEON FLARE EFFECT */}
+            {isFlaring && (
+                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
+                    <Path
+                        ref={flareGlowRef}
+                        data={BASE_PATH_D}
+                        fill="#ffffff"
+                        stroke="#ffffff"
+                        strokeWidth={4}
+                        shadowColor="#22d3ee"
+                        shadowBlur={25}
+                        shadowOpacity={1.0}
+                        listening={false}
+                    />
+                </Group>
+            )}
         </Group>
     );
 });
@@ -1002,6 +1045,11 @@ const StoryBuilderView: React.FC = () => {
     const [selectedBuildLevel, setSelectedBuildLevel] = useState<number>(0); // 0-9 for building higher levels, or -999 for demolish/снос
     const [errorMessage, setErrorMessage] = useState<string | null>(null); // Visual feedback warning toast
     const [destroyButtonCell, setDestroyButtonCell] = useState<{ q: number, r: number } | null>(null);
+
+    // Automation & Flare states
+    const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number }[]>([]);
+    const [flareKeys, setFlareKeys] = useState<Set<string>>(new Set());
+    const [isAnimatingCompletion, setIsAnimatingCompletion] = useState(false);
     
     // Auto-dismiss destroyButtonCell when clicking anywhere else on the document
     useEffect(() => {
@@ -1075,7 +1123,7 @@ const StoryBuilderView: React.FC = () => {
 
     // Shape completeness check - checks if the placed level 0 or higher hexes match the active figure's coordinates
     // under any translation offset (allows random placement anywhere on the board!)
-    const targetCompleted = useMemo(() => {
+    const completedHexKeys = useMemo(() => {
         const shape = activeFigure.shape;
         const activeHexKeys = Object.entries(storyMap)
             .filter(([_, lvl]) => lvl !== undefined && lvl >= 0)
@@ -1084,13 +1132,20 @@ const StoryBuilderView: React.FC = () => {
                 return { q, r, lvl };
             });
         
-        if (activeHexKeys.length < shape.length) return false;
+        if (activeHexKeys.length < shape.length) return new Set<string>();
+
+        const pt0 = shape[0];
+        if (!pt0) return new Set<string>();
 
         for (const anchor of activeHexKeys) {
+            const dq = anchor.q - pt0.q;
+            const dr = anchor.r - pt0.r;
+
             let matchesAll = true;
+            const tempKeys = new Set<string>();
             for (const pt of shape) {
                 // Determine layout coordinates relative to anchor offset
-                const targetKey = getHexKey(anchor.q + pt.q, anchor.r + pt.r);
+                const targetKey = getHexKey(pt.q + dq, pt.r + dr);
                 const targetLvl = storyMap[targetKey];
                 if (targetLvl === undefined || targetLvl < 0) {
                     matchesAll = false;
@@ -1101,11 +1156,84 @@ const StoryBuilderView: React.FC = () => {
                     matchesAll = false;
                     break;
                 }
+                tempKeys.add(targetKey);
             }
-            if (matchesAll) return true;
+            if (matchesAll) return tempKeys;
         }
-        return false;
+        return new Set<string>();
     }, [storyMap, activeFigure]);
+
+    const targetCompleted = useMemo(() => {
+        return completedHexKeys.size > 0;
+    }, [completedHexKeys]);
+
+    // Automatic Shape Assembly Completion & Neon Highlight Flare Effect
+    useEffect(() => {
+        if (targetCompleted && !isAnimatingCompletion) {
+            setIsAnimatingCompletion(true);
+            const keysToFlare = new Set(completedHexKeys);
+            setFlareKeys(keysToFlare);
+            
+            // Play success sound
+            playUiSound('SUCCESS');
+            
+            // Calculate center coordinate of completed shape for floating notification position
+            let sumX = 0;
+            let sumY = 0;
+            let count = 0;
+            keysToFlare.forEach(key => {
+                const [q, r] = key.split(',').map(Number);
+                const px = hexToPixel(q, r);
+                const lvl = storyMap[key] || 0;
+                const heightVal = 12 + lvl * 12;
+                sumX += px.x;
+                sumY += px.y - heightVal;
+                count++;
+            });
+
+            const avgX = count > 0 ? (sumX / count) : 0;
+            const avgY = count > 0 ? (sumY / count) : 0;
+
+            // Project 2D game world coordinates to screen coordinate space
+            const screenX = cameraPos.x + avgX * zoomScale;
+            const screenY = cameraPos.y + avgY * zoomScale;
+
+            // Spawn SP floating toast notification at target screen location
+            const toastId = Math.random().toString(36).substring(2, 9);
+            const toastText = language === 'RU' ? '+1 Очко Симуляции (SP)' : '+1 Simulation Point (SP)';
+            setSpToasts(prev => [...prev, { id: toastId, text: toastText, x: screenX, y: screenY }]);
+            setTimeout(() => {
+                setSpToasts(prev => prev.filter(t => t.id !== toastId));
+            }, 3000);
+            
+            // Grant 1 SP to the gameplay store
+            setSkillPoints(skillPoints + 1);
+            
+            // Auto advance next challenge
+            const nextIndex = unlockedFigureIndex + 1;
+            if (nextIndex < FIGURES_COLLECTION.length) {
+                setUnlockedFigureIndex(nextIndex);
+                try {
+                    localStorage.setItem('hexopol_figure_index', String(nextIndex));
+                } catch (e) {
+                    console.warn(e);
+                }
+            } else {
+                setUnlockedFigureIndex(0);
+                try {
+                    localStorage.setItem('hexopol_figure_index', '0');
+                } catch {}
+            }
+            
+            setPopupCell(null);
+            
+            // Complete beautiful neon flare fadeout (do NOT clear map so the user keeps structures intact!)
+            setTimeout(() => {
+                setIsAnimatingCompletion(false);
+                setFlareKeys(new Set());
+            }, 1600);
+        }
+    }, [targetCompleted, completedHexKeys, unlockedFigureIndex, skillPoints, language, playUiSound, setSkillPoints, cameraPos, zoomScale, storyMap]);
 
     const hasAnyHex = useMemo(() => {
         return Object.values(storyMap).some(lvl => lvl !== undefined && lvl >= 0);
@@ -1390,31 +1518,6 @@ const StoryBuilderView: React.FC = () => {
         setTimeout(() => { isPanning.current = false; }, 50);
     };
 
-    // Advances to next figure when completed
-    const handleClaimReward = () => {
-        playUiSound('SUCCESS');
-        // Grant 1 SP (Skill Point) to the store
-        setSkillPoints(skillPoints + 1);
-        
-        const nextIndex = unlockedFigureIndex + 1;
-        if (nextIndex < FIGURES_COLLECTION.length) {
-            setUnlockedFigureIndex(nextIndex);
-            try {
-                localStorage.setItem('hexopol_figure_index', String(nextIndex));
-            } catch (e) {
-                console.warn(e);
-            }
-        } else {
-            // Completed all figures! Wrap around or reset
-            setUnlockedFigureIndex(0);
-            try {
-                localStorage.setItem('hexopol_figure_index', '0');
-            } catch {}
-        }
-        
-        setPopupCell(null);
-    };
-
     // Clear board reset
     const handleClearBoard = () => {
         playUiSound('CLICK');
@@ -1431,6 +1534,49 @@ const StoryBuilderView: React.FC = () => {
 
     return (
         <div ref={containerRef} className="absolute inset-0 bg-[#020617] flex flex-col font-sans overflow-hidden">
+            {/* FLOATING +1 SP NOTIFICATIONS CONTAINER FLOATING OVER THE COMPLETED SHAPE */}
+            <div className="absolute inset-0 pointer-events-none z-[100] select-none overflow-hidden">
+                <AnimatePresence>
+                    {spToasts.map((toast) => (
+                        <div
+                            key={toast.id}
+                            style={{ 
+                                left: toast.x, 
+                                top: toast.y, 
+                                position: 'absolute', 
+                                transform: 'translate(-50%, -50%)',
+                            }}
+                            className="pointer-events-none select-none z-[100]"
+                        >
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.5, y: 30 }}
+                                animate={{ opacity: [0, 1, 1, 0.9, 0], scale: [0.7, 1.25, 1.25, 1.0, 0.5], y: -120 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 2.2, ease: "easeOut" }}
+                                className="pointer-events-none text-center flex flex-col items-center select-none w-max shrink-0"
+                            >
+                                <span 
+                                    className="block text-[10px] md:text-xs font-black tracking-widest text-[#22d3ee] uppercase select-none leading-none mb-1 text-center"
+                                    style={{
+                                        textShadow: '0 0 10px rgba(34, 211, 238, 0.95), 0 0 20px rgba(34, 211, 238, 0.5)'
+                                    }}
+                                >
+                                    {language === 'RU' ? 'ФИГУРА СОБРАНА!' : 'SHAPE COMPLETED!'}
+                                </span>
+                                <span 
+                                    className="block text-2xl md:text-4xl font-black text-white tracking-widest select-none leading-none text-center"
+                                    style={{
+                                        textShadow: '0 0 12px rgba(255, 255, 255, 1.0), 0 0 25px rgba(34, 211, 238, 0.8)'
+                                    }}
+                                >
+                                    +1 SP
+                                </span>
+                            </motion.div>
+                        </div>
+                    ))}
+                </AnimatePresence>
+            </div>
+
             {/* CANVAS */}
             <div 
                 className="absolute inset-0 z-0"
@@ -1493,6 +1639,8 @@ const StoryBuilderView: React.FC = () => {
                                 const availableCount = minedInSessionHexes[selectedBuildLevel] || 0;
                                 const canPlaceHex = isDemolishMode ? (lvl !== undefined && lvl >= 0) : (isEligible && availableCount > 0);
 
+
+
                                 return (
                                     <StoryHex
                                         key={key}
@@ -1506,6 +1654,7 @@ const StoryBuilderView: React.FC = () => {
                                         isSelected={popupCell !== null && popupCell.q === coord.q && popupCell.r === coord.r}
                                         isNew={lastPlacedKey === key}
                                         canPlace={canPlaceHex}
+                                        isFlaring={flareKeys.has(key)}
                                         onClick={handleCellClick}
                                         onDblClick={handleCellDblClick}
                                     />
@@ -2032,16 +2181,11 @@ const StoryBuilderView: React.FC = () => {
 
                             {/* Claim & Completion Action Button */}
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                {targetCompleted ? (
-                                    <motion.button
-                                        onClick={(e) => { e.stopPropagation(); handleClaimReward(); }}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        className="w-full py-2.5 bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 text-white font-black uppercase text-[9.5px] tracking-widest rounded-xl shadow-[0_0_24px_rgba(99,102,241,0.45)] flex items-center justify-center gap-2 border border-cyan-400 cursor-pointer"
-                                    >
-                                        <Crown className="w-3.5 h-3.5 animate-bounce" />
-                                        <span>{language === 'RU' ? 'ЗАВЕРШИТЬ СБОРКУ (+1 SP)' : 'COMPLETE ASSEMBLY (+1 SP)'}</span>
-                                    </motion.button>
+                                {isAnimatingCompletion ? (
+                                    <div className="w-full py-2.5 bg-cyan-950/45 border border-cyan-500/35 text-cyan-400 font-extrabold uppercase text-[8.5px] tracking-widest rounded-xl text-center flex items-center justify-center gap-2 animate-pulse select-none shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+                                        <Trophy className="w-3.5 h-3.5 text-yellow-500" />
+                                        <span>{language === 'RU' ? 'ФИГУРА ВЫПОЛНЕНА! (+1 SP)' : 'STRUCTURE COMPLETED! (+1 SP)'}</span>
+                                    </div>
                                 ) : (
                                     <div className="w-full py-2.5 bg-slate-950/40 border border-white/5 text-slate-500 font-extrabold uppercase text-[8.5px] tracking-widest rounded-xl text-center italic select-none">
                                         {language === 'RU' ? 'Ожидание правильной сборки...' : 'Awaiting correct layout pattern...'}

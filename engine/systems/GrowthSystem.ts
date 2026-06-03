@@ -420,7 +420,7 @@ export class GrowthSystem implements System {
         if (hex.progress + 1 >= needed) {
           // LEVEL UP
           let newMaxLevel = hex.maxLevel;
-          let newOwnerId = hex.ownerId; 
+          let newOwnerId = entity.id; 
           let newDurability = hex.durability;
           let newRecoveryCharges = hex.recoveryCharges;
           let newLastRecoveryTime = hex.lastRecoveryUseTime;
