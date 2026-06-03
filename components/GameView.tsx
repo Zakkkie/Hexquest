@@ -136,11 +136,18 @@ const GameView: React.FC = () => {
      targetCameraRef.current = { ...targetCameraRef.current, scale: newScale };
   }, [deviceType]);
 
-  // --- FOCUS ON PLAYER INITIALLY ---
+  // --- FOCUS ON ORIGIN INITIALLY ---
   useEffect(() => {
-      // Small delay ensures dimensions and player are fully populated
+      // Intentionally intentionally blank: We want the camera to start centered on (0,0) across all levels to maintain consistency with level 1.0. 
+      // The user can press the Recenter button in the HUD to find their character.
       const timer = setTimeout(() => {
-          centerOnPlayer();
+          // ensure initial position is exactly the origin for layout consistency
+          const offset = getCenterOffset();
+          targetCameraRef.current = { 
+            ...targetCameraRef.current, 
+            x: window.innerWidth / 2, 
+            y: (window.innerHeight / 2) - offset 
+          };
       }, 100);
       return () => clearTimeout(timer);
   }, []);
