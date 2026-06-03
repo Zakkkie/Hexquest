@@ -486,9 +486,9 @@ const MainMenu: React.FC = () => {
   };
 
   const getDifficultyDesc = (d: Difficulty) => {
-      if (d === 'EASY') return language === 'RU' ? 'Принимает любые ключи' : 'Accepts ANY Keys';
-      if (d === 'MEDIUM') return language === 'RU' ? 'Ключи: Необычные+' : 'Keys: Uncommon+';
-      return language === 'RU' ? 'Ключи: Редкие+' : 'Keys: Rare+ Only';
+      if (d === 'EASY') return language === 'RU' ? 'Принимает любые предметы' : 'Accepts ANY Item';
+      if (d === 'MEDIUM') return language === 'RU' ? 'Предметы: Необычные+' : 'Items: Uncommon+';
+      return language === 'RU' ? 'Предметы: Редкие+' : 'Items: Rare+ Only';
   };
 
   const getBotLabel = (count: number) => {

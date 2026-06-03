@@ -4,6 +4,7 @@ import { useGameStore } from '../store.ts';
 import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
+import { UpgradesTree } from './UpgradesTree.tsx';
 import { textureService } from '../services/textureService.ts';
 import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -445,8 +446,9 @@ const MiniFigureBlueprint: React.FC<{
     cellSize?: number, 
     className?: string,
     onCellClick?: (index: number) => void,
-    selectedCellIndex?: number | null
-}> = ({ shape, cellSize = 6, className, onCellClick, selectedCellIndex }) => {
+    selectedCellIndex?: number | null,
+    style?: React.CSSProperties
+}> = ({ shape, cellSize = 6, className, onCellClick, selectedCellIndex, style }) => {
     const size = cellSize;
     const hexToPixelSmall = (q: number, r: number) => {
         const x = size * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
@@ -478,25 +480,35 @@ const MiniFigureBlueprint: React.FC<{
     return (
         <svg 
             viewBox={`${minX} ${minY} ${width} ${height}`} 
-            className={className || "w-16 h-16 bg-slate-950/80 border border-indigo-500/20 rounded-xl p-1 shrink-0 drop-shadow-[0_0_10px_rgba(99,102,241,0.25)] flex items-center justify-center self-center"}
+            className={className || "w-16 h-16 bg-transparent shrink-0 flex items-center justify-center self-center overflow-visible"}
+            style={style}
         >
+            <defs>
+                <filter id="neon-glow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="1.5" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
             {pixels.map((p, index) => {
                 const pt = shape[index];
                 const activeLvl = pt?.lvl !== undefined ? pt.lvl : 0;
                 // Elegant theme palette colors matching the tier palette to make 3D height logical
                 const themeColors: Record<string, string> = {
-                    '0': '#06b6d4', // cyan-500
-                    '1': '#a855f7', // purple-500
-                    '2': '#eab308', // amber-500
-                    '3': '#3b82f6', // blue-500
-                    '4': '#6366f1', // indigo-500
-                    '5': '#ec4899', // pink-500
-                    '6': '#f43f5e', // rose-500
-                    '7': '#10b981', // emerald-500
-                    '8': '#f97316', // orange-500
-                    '9': '#ef4444'  // red-500
+                    '0': '#22d3ee', // cyan-400
+                    '1': '#c084fc', // purple-400
+                    '2': '#fbbf24', // amber-400
+                    '3': '#60a5fa', // blue-400
+                    '4': '#818cf8', // indigo-400
+                    '5': '#f472b6', // pink-400
+                    '6': '#fb7185', // rose-400
+                    '7': '#34d399', // emerald-400
+                    '8': '#fb923c', // orange-400
+                    '9': '#f87171'  // red-400
                 };
-                const strokeColor = themeColors[String(activeLvl)] || '#06b6d4';
+                const strokeColor = themeColors[String(activeLvl)] || '#22d3ee';
                 const isSelected = selectedCellIndex === index;
                 
                 return (
@@ -515,12 +527,27 @@ const MiniFigureBlueprint: React.FC<{
                                 className="animate-pulse"
                             />
                         )}
+
+                        {/* Beautiful outer thick neon glow underlay */}
                         <polygon 
                             points={getHexPoints(p.x, p.y)}
-                            fill={isSelected ? `${strokeColor}44` : `${strokeColor}22`}
+                            fill="none"
+                            stroke={strokeColor}
+                            strokeWidth={size * 0.32}
+                            opacity={0.8}
+                            strokeLinejoin="round"
+                            style={{ filter: 'url(#neon-glow)' }}
+                        />
+
+                        {/* Top crisp neon core stroke */}
+                        <polygon 
+                            points={getHexPoints(p.x, p.y)}
+                            fill={isSelected ? `${strokeColor}55` : `${strokeColor}20`}
                             stroke={isSelected ? "#ffffff" : strokeColor}
                             strokeWidth={isSelected ? size * 0.2 : size * 0.12}
+                            strokeLinejoin="round"
                         />
+
                         <text 
                             x={p.x} 
                             y={p.y + (size * 0.05)} 
@@ -529,6 +556,7 @@ const MiniFigureBlueprint: React.FC<{
                             fill={isSelected ? "#ffffff" : "white"} 
                             fontSize={size * 0.72} 
                             fontWeight="900"
+                            style={{ textShadow: `0 0 4px ${strokeColor}` }}
                         >
                             {activeLvl}
                         </text>
@@ -997,35 +1025,11 @@ const StoryBuilderView: React.FC = () => {
         return FIGURES_COLLECTION[unlockedFigureIndex] || FIGURES_COLLECTION[0];
     }, [unlockedFigureIndex]);
 
-    const getLevelStyle = (lvl: number) => {
-        const levelStyles: Record<number, { bg: string, border: string, text: string, glow: string }> = {
-            0: { bg: 'bg-cyan-500/15', border: 'border-cyan-500/35', text: 'text-cyan-400', glow: 'rgba(6,182,212,0.1)' },
-            1: { bg: 'bg-purple-500/15', border: 'border-purple-500/35', text: 'text-purple-300', glow: 'rgba(168,85,247,0.1)' },
-            2: { bg: 'bg-amber-500/15', border: 'border-amber-500/35', text: 'text-amber-300', glow: 'rgba(234,179,8,0.1)' },
-            3: { bg: 'bg-blue-500/15', border: 'border-blue-500/35', text: 'text-blue-300', glow: 'rgba(59,130,246,0.1)' },
-            4: { bg: 'bg-indigo-500/15', border: 'border-indigo-500/35', text: 'text-indigo-300', glow: 'rgba(99,102,241,0.1)' },
-            5: { bg: 'bg-pink-500/15', border: 'border-pink-500/35', text: 'text-pink-300', glow: 'rgba(236,72,153,0.1)' },
-            6: { bg: 'bg-rose-500/15', border: 'border-rose-500/35', text: 'text-rose-300', glow: 'rgba(244,63,94,0.1)' },
-            7: { bg: 'bg-emerald-500/15', border: 'border-emerald-500/35', text: 'text-emerald-300', glow: 'rgba(16,185,129,0.1)' },
-            8: { bg: 'bg-orange-500/15', border: 'border-orange-500/35', text: 'text-orange-300', glow: 'rgba(249,115,22,0.1)' },
-            9: { bg: 'bg-red-500/15', border: 'border-red-500/35', text: 'text-red-300', glow: 'rgba(239,68,68,0.1)' }
-        };
-        return levelStyles[lvl] || { bg: 'bg-slate-500/15', border: 'border-slate-500/35', text: 'text-slate-300', glow: 'rgba(100,116,139,0.1)' };
-    };
 
-    const uniqueActiveLevels = useMemo(() => {
-        const s = new Set<number>();
-        if (activeFigure && activeFigure.shape) {
-            activeFigure.shape.forEach(pt => {
-                s.add(pt.lvl !== undefined ? pt.lvl : 0);
-            });
-        }
-        return Array.from(s).sort((a, b) => a - b);
-    }, [activeFigure]);
 
     const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
     const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 30 });
-    const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 1.3 : 1.8);
+    const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 1.55 : 2.15);
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
     const [isDimmedTutorialActive, setIsDimmedTutorialActive] = useState(() => {
         try {
@@ -1035,10 +1039,10 @@ const StoryBuilderView: React.FC = () => {
         }
     });
     const [tabletTab, setTabletTab] = useState<'blueprint' | 'diagnostics' | 'rules'>('blueprint');
-    const [tabletInspectIndex, setTabletInspectIndex] = useState<number | null>(null);
     const isUiHidden = false;
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [showUpgrades, setShowUpgrades] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [popupCell, setPopupCell] = useState<{ q: number, r: number } | null>(null);
@@ -1075,7 +1079,7 @@ const StoryBuilderView: React.FC = () => {
         const w = containerRef.current?.clientWidth || window.innerWidth;
         const h = containerRef.current?.clientHeight || window.innerHeight;
         setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
-        setZoomScale(w < 768 ? 1.3 : 1.8);
+        setZoomScale(w < 768 ? 1.55 : 2.15);
         playUiSound('CLICK');
     }, [playUiSound]);
 
@@ -1233,7 +1237,7 @@ const StoryBuilderView: React.FC = () => {
                 setFlareKeys(new Set());
             }, 1600);
         }
-    }, [targetCompleted, completedHexKeys, unlockedFigureIndex, skillPoints, language, playUiSound, setSkillPoints, cameraPos, zoomScale, storyMap]);
+    }, [targetCompleted, completedHexKeys, unlockedFigureIndex, skillPoints, language, playUiSound, setSkillPoints, cameraPos, zoomScale, storyMap, isAnimatingCompletion]);
 
     const hasAnyHex = useMemo(() => {
         return Object.values(storyMap).some(lvl => lvl !== undefined && lvl >= 0);
@@ -1739,68 +1743,89 @@ const StoryBuilderView: React.FC = () => {
                 <motion.div 
                     animate={{ y: isUiHidden ? -100 : 0, opacity: isUiHidden ? 0 : 1 }}
                     transition={{ duration: 0.3 }}
-                    className="flex justify-between items-center w-full pointer-events-auto h-10 relative z-[50]"
+                    className="flex justify-between items-center w-full pointer-events-auto h-14 relative z-[50]"
                 >
                     <div className="flex items-center gap-2 h-full">
                         <button 
                             onClick={() => { playUiSound('CLICK'); setUIState('MENU'); }}
-                            className="flex items-center justify-center w-10 h-10 bg-slate-900/95 border border-white/10 rounded-xl hover:bg-slate-800 text-white transition-all shadow-md backdrop-blur-md hover:border-indigo-500/50 cursor-pointer text-slate-400 hover:text-white"
+                            className="flex items-center justify-center w-10 h-10 bg-slate-900/90 border border-slate-800 rounded-xl hover:bg-slate-800/90 hover:border-indigo-500/30 text-slate-400 hover:text-white transition-all duration-250 shadow-md backdrop-blur-md cursor-pointer active:scale-95"
                         >
                             <ArrowLeft className="w-5 h-5" /> 
                         </button>
                     </div>
 
                     {/* INTERACTIVE TASK CAPSULE (Squeezed between back and settings) */}
-                    <div className="flex-1 mx-2 max-w-[280px] sm:max-w-md h-full">
+                    <div className="flex-1 mx-2 max-w-[240px] sm:max-w-xs h-11 py-0.5">
                         <div 
                             onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(!isNarrativeCollapsed); }}
-                            className="bg-slate-900/95 border border-indigo-500/35 hover:border-indigo-500/60 rounded-xl h-full shadow-md backdrop-blur-md flex items-center justify-between px-3 relative cursor-pointer hover:bg-slate-800 transition-all select-none"
+                            className="bg-slate-900/95 border border-indigo-500/30 hover:border-indigo-500/50 rounded-xl h-full shadow-lg backdrop-blur-md flex items-center justify-between pl-1.5 pr-3 relative cursor-pointer hover:bg-slate-800/90 transition-all duration-250 select-none overflow-hidden"
                         >
                             {/* Micro progress line at top of the capsule */}
-                            <div className="absolute top-0 left-0 right-0 h-[2px] bg-slate-950/60 overflow-hidden rounded-t-xl">
+                            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-slate-950/60 overflow-hidden rounded-t-xl">
                                 <div 
                                     className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 transition-all duration-500"
                                     style={{ width: `${((unlockedFigureIndex + 1) / FIGURES_COLLECTION.length) * 100}%` }}
                                 />
                             </div>
 
-                            <div className="flex flex-col justify-center min-w-0 pr-1 text-left">
-                                <div className="flex items-center gap-1">
-                                    <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest leading-none shrink-0">
+                            <div className="flex items-center gap-2 py-0.5 min-w-0 flex-1">
+                                {/* Compact vector thumbnail preview of the shape with correct, standardized, restricted sizes */}
+                                <MiniFigureBlueprint 
+                                    shape={activeFigure.shape} 
+                                    cellSize={6} 
+                                    className="w-[36px] h-[36px] bg-transparent shrink-0 overflow-visible transition-all duration-300"
+                                    style={{ 
+                                        margin: '0 !important', 
+                                        marginLeft: '0px', 
+                                        marginRight: '0px', 
+                                        marginTop: '0px', 
+                                        marginBottom: '0px', 
+                                        padding: '0px' 
+                                    }}
+                                />
+
+                                <div className="flex flex-col justify-center min-w-0 text-left pl-1">
+                                    <span className="text-[7.5px] font-mono font-black text-indigo-400/80 uppercase tracking-widest leading-none">
                                         {language === 'RU' ? 'ЗАДАЧА' : 'CHALLENGE'}
                                     </span>
-                                    <span className="bg-indigo-950/80 px-1 py-0.2 rounded border border-indigo-500/20 text-[6px] font-mono font-black text-indigo-300 leading-none">
-                                        {unlockedFigureIndex + 1}/{FIGURES_COLLECTION.length}
+                                    <span className="text-[12.5px] font-black font-mono text-white tracking-tight leading-none mt-1 shadow-sm">
+                                        {unlockedFigureIndex + 1} <span className="text-slate-500 font-medium text-[9.5px]">/ {FIGURES_COLLECTION.length}</span>
                                     </span>
                                 </div>
-                                <h3 className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-tight leading-tight line-clamp-1">
-                                    {language === 'RU' ? activeFigure.nameRU : activeFigure.nameEN}
-                                </h3>
                             </div>
 
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="flex items-center gap-1.5 shrink-0 ml-1">
                                 {targetCompleted && (
-                                    <span className="bg-emerald-950 border border-emerald-500/30 text-emerald-400 text-[6px] font-black px-1 rounded leading-none shrink-0">DONE!</span>
+                                    <span className="bg-emerald-950/90 border border-emerald-500/40 text-emerald-400 text-[6.5px] font-mono font-black px-1 py-0.5 rounded leading-none shrink-0 tracking-wide">DONE</span>
                                 )}
-                                <div className="text-[7px] font-black text-cyan-400 hover:text-cyan-300 uppercase flex items-center gap-0.5 shrink-0">
-                                    {isNarrativeCollapsed ? <ChevronDown className="w-3 h-3 animate-pulse" /> : <ChevronUp className="w-3 h-3" />}
+                                <div className="text-slate-400 hover:text-white transition-colors duration-200 shrink-0">
+                                    {isNarrativeCollapsed ? <ChevronDown className="w-3.5 h-3.5 animate-pulse" /> : <ChevronUp className="w-3.5 h-3.5" />}
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2 h-full">
+                        {/* Floating SP Island inside top header bar */}
+                        <button 
+                            onClick={() => { playUiSound('CLICK'); setShowUpgrades(true); }}
+                            className="h-10 px-3 bg-slate-900/95 border border-indigo-500/30 hover:border-indigo-400 hover:bg-indigo-950/40 rounded-xl flex items-center gap-1.5 shadow-md text-indigo-300 text-xs font-semibold cursor-pointer select-none backdrop-blur-md transition-all active:scale-95 duration-200"
+                        >
+                            <Trophy className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            <span className="text-white font-black text-[11px] md:text-xs">{skillPoints} SP</span>
+                        </button>
+
                         {/* Settings Button */}
-                        <div className="relative h-full">
+                        <div className="relative h-full flex items-center">
                             <button 
                                 onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
-                                className={`w-10 h-10 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-md active:scale-95 cursor-pointer ${
+                                className={`w-10 h-10 flex items-center justify-center backdrop-blur-md border rounded-xl transition-all duration-200 shadow-md active:scale-95 cursor-pointer ${
                                     isSettingsOpen 
-                                        ? 'bg-slate-800 border-indigo-500/50 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
-                                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'
+                                        ? 'bg-slate-800 border-indigo-500/50 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]' 
+                                        : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-white'
                                 }`}
                             >
-                                <Settings className={`w-4.5 h-4.5 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-500`} />
+                                <Settings className={`w-4.5 h-4.5 ${isSettingsOpen ? 'rotate-90 text-white' : ''} transition-transform duration-500`} />
                             </button>
 
                             <AnimatePresence>
@@ -1881,7 +1906,7 @@ const StoryBuilderView: React.FC = () => {
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -15, scale: 0.95 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute top-16 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-md bg-slate-950/40 border border-white/10 rounded-2xl shadow-2xl p-4 select-none backdrop-blur-xl z-[45] flex flex-col pointer-events-auto"
+                            className="absolute top-[84px] md:top-[112px] left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-md max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-210px)] overflow-y-auto bg-slate-950/80 border border-white/10 hover:border-indigo-500/25 rounded-2xl shadow-2xl p-4 select-none backdrop-blur-xl z-[45] flex flex-col pointer-events-auto transition-all duration-300"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Sleek Top Edge Progress Line */}
@@ -1915,18 +1940,17 @@ const StoryBuilderView: React.FC = () => {
                             </div>
 
                             {/* Tablet Tabs */}
-                            <div className="grid grid-cols-3 gap-1 mb-3 bg-slate-900/50 p-0.5 rounded-lg border border-white/5">
+                            <div className="grid grid-cols-2 gap-1 mb-3 bg-slate-900/50 p-0.5 rounded-lg border border-white/5">
                                 {[
-                                    { id: 'blueprint', labelRU: 'СХЕМА ВЫСОТ', labelEN: 'HEIGHT DIAGRAM' },
-                                    { id: 'diagnostics', labelRU: 'АНАЛИЗ ПОЛЯ', labelEN: 'FIELD CHECK' },
-                                    { id: 'rules', labelRU: 'ИНСТРУКЦИЯ', labelEN: 'INSTRUCTION' }
+                                    { id: 'blueprint', labelRU: 'СХЕМА И АНАЛИЗ', labelEN: 'DIAGRAM & ANALYSIS' },
+                                    { id: 'rules', labelRU: 'ИНСТРУКЦИЯ', labelEN: 'GUIDE' }
                                 ].map((tab) => {
-                                    const isActive = tabletTab === tab.id;
+                                    const isActive = tabletTab === tab.id || (tab.id === 'blueprint' && tabletTab === 'diagnostics');
                                     return (
                                         <button
                                             key={tab.id}
                                             onClick={() => { playUiSound('CLICK'); setTabletTab(tab.id as any); }}
-                                            className={`py-1.5 px-2 rounded-md font-black text-[8px] md:text-[9.5px] tracking-wider uppercase transition-all ${isActive ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                                            className={`py-1.5 px-2 rounded-md font-black text-[8.5px] md:text-[10px] tracking-wider uppercase transition-all ${isActive ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
                                         >
                                             {language === 'RU' ? tab.labelRU : tab.labelEN}
                                         </button>
@@ -1946,7 +1970,7 @@ const StoryBuilderView: React.FC = () => {
                                         <div className="absolute top-2.5 right-2.5 w-3 h-3 border-t-2 border-r-2 border-indigo-500/50 rounded-tr" />
                                         <div className="absolute bottom-2.5 left-2.5 w-3 h-3 border-b-2 border-l-2 border-indigo-500/50 rounded-bl" />
                                         <div className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50 rounded-br" />
-
+ 
                                         <div className="absolute top-2.5 left-7 text-[7px] font-mono tracking-wider text-indigo-400/40 uppercase">
                                             {language === 'RU' ? 'ПРОЕКЦИЯ ЦЕЛЕВОЙ СТРУКТУРЫ' : 'TARGET BLUEPRINT PROJECTION'}
                                         </div>
@@ -1956,7 +1980,7 @@ const StoryBuilderView: React.FC = () => {
                                                 {language === 'RU' ? 'АНАЛИЗ СОВПАДЕНИЙ' : 'MATCH ANALYSIS'}
                                             </span>
                                         </div>
-
+ 
                                         {/* Animated Laser Scanning Line */}
                                         <motion.div 
                                             animate={{ y: ['0%', '100%'] }} 
@@ -1964,55 +1988,15 @@ const StoryBuilderView: React.FC = () => {
                                             className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/35 to-transparent shadow-[0_0_8px_rgba(34,211,238,0.5)] pointer-events-none z-10"
                                             style={{ top: 0 }}
                                         />
-
+ 
                                         <MiniFigureBlueprint 
                                             shape={activeFigure.shape} 
                                             cellSize={24} 
-                                            onCellClick={(idx: number) => { playUiSound('CLICK'); setTabletInspectIndex(idx); }}
-                                            selectedCellIndex={tabletInspectIndex}
                                             className="w-full h-full max-w-[280px] max-h-[200px] bg-transparent p-0 drop-shadow-[0_0_30px_rgba(99,102,241,0.4)]"
                                         />
                                     </div>
 
-                                    {/* Tactile Cell Inspector Status Console below the graph */}
-                                    <div className="bg-slate-900/40 border border-white/5 rounded-xl p-2.5 mb-3 text-left">
-                                        {tabletInspectIndex !== null && activeFigure.shape[tabletInspectIndex] ? (
-                                            (() => {
-                                                const pt = activeFigure.shape[tabletInspectIndex];
-                                                const lvl = pt.lvl !== undefined ? pt.lvl : 0;
-                                                return (
-                                                    <div className="flex flex-col font-sans">
-                                                        <div className="flex justify-between items-center border-b border-white/5 pb-1 mb-1">
-                                                            <span className="text-[8px] font-black tracking-wider text-indigo-400 uppercase">
-                                                                {language === 'RU' ? 'ИНСПЕКТОР ЯЧЕЙКИ ЧЕРТЕЖА' : 'BLUEPRINT NODE INSPECTOR'}
-                                                            </span>
-                                                            <span className="text-[7px] font-mono text-cyan-400">INDEX #{tabletInspectIndex}</span>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-2 text-[8.5px]">
-                                                            <div>
-                                                                <span className="text-slate-500 font-bold block">{language === 'RU' ? 'КООРДИНАТЫ НА СЕТКЕ:' : 'GRID COORDINATES (q, r):'}</span>
-                                                                <span className="text-white font-mono font-black">q: {pt.q > 0 ? `+${pt.q}` : pt.q}, r: {pt.r > 0 ? `+${pt.r}` : pt.r}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-slate-500 font-bold block">{language === 'RU' ? 'ТРЕБУЕМАЯ ВЫСОТА:' : 'REQUIRED ALTITUDE:'}</span>
-                                                                <span className="text-yellow-400 font-black">L{lvl}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()
-                                        ) : (
-                                            <div className="text-center text-[8.5px] text-slate-500 font-bold py-1 italic">
-                                                {language === 'RU' ? '👉 Нажмите на любой гекс на чертеже выше, чтобы узнать его координаты и высоту' : '👉 Tap any hex on the blueprint above to see its coordinate requirements'}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {tabletTab === 'diagnostics' && (
-                                <div className="flex flex-col text-left mb-3 gap-2.5">
-                                    {/* Calculated Diagnostics Math Object info */}
+                                    {/* Live Field Analysis and Diagnostics merged into the same window */}
                                     {(() => {
                                         const shape = activeFigure.shape;
                                         const activeHexKeys = Object.entries(storyMap)
@@ -2041,61 +2025,54 @@ const StoryBuilderView: React.FC = () => {
                                         const percentage = shape.length > 0 ? Math.round((bestMatchCount / shape.length) * 100) : 0;
                                         
                                         return (
-                                            <div className="flex flex-col gap-2.5">
-                                                {/* Live telemetry progress status */}
-                                                <div className="bg-slate-900/60 border border-white/5 rounded-xl p-3 flex flex-col relative overflow-hidden">
-                                                    <div className="flex justify-between items-center mb-1.5">
-                                                        <span className="text-[8.5px] font-black text-cyan-400 uppercase tracking-widest">
-                                                            {language === 'RU' ? 'ТОЧНОСТЬ СБОРКИ НА ПОЛЕ' : 'PATTERN ASSEMBLY PROGRESS'}
-                                                        </span>
-                                                        <span className="text-white font-mono font-black text-[10px]">{percentage}%</span>
-                                                    </div>
-                                                    
-                                                    {/* Progress bar container */}
-                                                    <div className="w-full h-2 bg-slate-950/80 rounded-full overflow-hidden p-0.5 border border-white/5 mb-2">
-                                                        <motion.div 
-                                                            className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 rounded-full"
-                                                            animate={{ width: `${percentage}%` }}
-                                                            transition={{ duration: 0.5 }}
-                                                        />
-                                                    </div>
+                                            <div className="flex flex-col gap-2 bg-slate-900/40 border border-white/5 rounded-xl p-3 mb-3">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-[8.5px] font-black text-cyan-400 uppercase tracking-widest">
+                                                        {language === 'RU' ? 'АНАЛИЗ ПОЛЯ И СОВПАДЕНИЯ' : 'FIELD CHECK & ALIGNMENT'}
+                                                    </span>
+                                                    <span className="text-white font-mono font-black text-[10px]">{percentage}%</span>
+                                                </div>
+                                                
+                                                {/* Progress bar container */}
+                                                <div className="w-full h-1.5 bg-slate-950/80 rounded-full overflow-hidden p-[1px] border border-white/5 mb-1">
+                                                    <motion.div 
+                                                        className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 rounded-full"
+                                                        animate={{ width: `${percentage}%` }}
+                                                        transition={{ duration: 0.5 }}
+                                                    />
+                                                </div>
 
-                                                    <div className="grid grid-cols-2 gap-2 text-[8px] font-mono border-t border-white/5 pt-2">
-                                                        <div>
-                                                            <span className="text-slate-500 font-bold block">{language === 'RU' ? 'ГЕКСОВ НА ИГРОВОМ ПОЛЕ:' : 'HEXES CURRENTLY ON BOARD:'}</span>
-                                                            <span className="text-white font-black">{activeHexKeys.length}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-slate-500 font-bold block">{language === 'RU' ? 'СОВПАЛО С ЧЕРТЕЖОМ:' : 'SUCCESSFULLY ALIGNED:'}</span>
-                                                            <span className="text-cyan-400 font-black">{bestMatchCount} / {shape.length}</span>
-                                                        </div>
+                                                <div className="grid grid-cols-2 gap-2 text-[8px] font-mono border-t border-white/5 pt-1.5">
+                                                    <div>
+                                                        <span className="text-slate-500 font-bold block">{language === 'RU' ? 'ПОСТРОЕНО ГЕКСОВ:' : 'HEXES BUILT:'}</span>
+                                                        <span className="text-white font-black">{activeHexKeys.length}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 font-bold block">{language === 'RU' ? 'СОВПАЛО С ЧЕРТЕЖОМ:' : 'SUCCESSFULLY ALIGNED:'}</span>
+                                                        <span className="text-cyan-400 font-black">{bestMatchCount} / {shape.length}</span>
                                                     </div>
                                                 </div>
 
-                                                {/* Diagnostic Log Report based on current match accuracy */}
-                                                <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-2.5 text-[8.5px] font-sans flex flex-col gap-1.5">
-                                                    <div className="text-[7.5px] font-black text-slate-500 tracking-wider uppercase">
-                                                        {language === 'RU' ? 'ДИАГНОСТИКА СТРУКТУРЫ' : 'ASSEMBLY DIAGNOSTIC'}
-                                                    </div>
+                                                <div className="text-[8px] font-sans border-t border-white/5 pt-1.5 leading-normal">
                                                     {percentage === 100 ? (
-                                                        <div className="flex items-center gap-2 text-emerald-400 font-black">
+                                                        <div className="flex items-center gap-1.5 text-emerald-400 font-black">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
                                                             <span>
-                                                                {language === 'RU' ? 'СТРУКТУРА СОБРАНА! Все гексы соответствуют чертежу. Можете завершить сборку!' : 'ASSEMBLY PERFECT! Position and heights match the pattern. Click below to complete!'}
+                                                                {language === 'RU' ? 'СТРУКТУРА СОВПАДАЕТ!' : 'ALIGNMENT COMPLETE!'}
                                                             </span>
                                                         </div>
                                                     ) : percentage > 0 ? (
-                                                        <div className="flex items-center gap-2 text-indigo-400 font-medium">
+                                                        <div className="flex items-center gap-1.5 text-indigo-400 font-medium">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
                                                             <span>
-                                                                {language === 'RU' ? `Группировка (${bestMatchCount}/${shape.length}): Достройте недостающие гексы или измените их высоту по чертежу.` : `Aligned (${bestMatchCount}/${shape.length}): Place remaining hexes or upgrade heights to match colors.`}
+                                                                {language === 'RU' ? `Достройте элементы до требуемых высот.` : `Place matching height levels.`}
                                                             </span>
                                                         </div>
                                                     ) : (
-                                                        <div className="flex items-center gap-2 text-slate-500 italic font-medium">
+                                                        <div className="flex items-center gap-1.5 text-slate-500 italic font-medium">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0" />
                                                             <span>
-                                                                {language === 'RU' ? 'Ожидание: Разместите хотя бы один гекс L0 на поле внизу, чтобы начать сравнение.' : 'Idle: Place at least one L0 hex on the field to begin checking alignment mechanics.'}
+                                                                {language === 'RU' ? 'Разместите детали на игровом поле.' : 'Begin placing coordinates.'}
                                                             </span>
                                                         </div>
                                                     )}
@@ -2160,38 +2137,15 @@ const StoryBuilderView: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* COLOR-TO-HEIGHT LEGEND CODEBOOK - Dynamic and adaptive */}
-                            <div className="flex flex-wrap gap-1.5 mb-4 justify-center">
-                                {uniqueActiveLevels.map((lvl) => {
-                                    const style = getLevelStyle(lvl);
-                                    return (
-                                        <div 
-                                            key={lvl} 
-                                            style={{ boxShadow: `0 0 10px ${style.glow}` }}
-                                            className={`flex-1 min-w-[55px] max-w-[85px] flex flex-col items-center justify-center py-1 rounded-xl border text-center ${style.bg} ${style.border} ${style.text} select-none backdrop-blur-sm transition-all hover:bg-white/5`}
-                                        >
-                                            <div className="text-[11px] font-black leading-none mb-0.5">L{lvl}</div>
-                                            <div className="text-[6.5px] font-bold tracking-wider uppercase leading-none opacity-80">
-                                                {language === 'RU' ? `Высота` : `Height`}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Claim & Completion Action Button */}
-                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                {isAnimatingCompletion ? (
+                            {/* Claim & Completion Action Button (Appeared only during final complete phase) */}
+                            {isAnimatingCompletion && (
+                                <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                                     <div className="w-full py-2.5 bg-cyan-950/45 border border-cyan-500/35 text-cyan-400 font-extrabold uppercase text-[8.5px] tracking-widest rounded-xl text-center flex items-center justify-center gap-2 animate-pulse select-none shadow-[0_0_20px_rgba(34,211,238,0.2)]">
                                         <Trophy className="w-3.5 h-3.5 text-yellow-500" />
                                         <span>{language === 'RU' ? 'ФИГУРА ВЫПОЛНЕНА! (+1 SP)' : 'STRUCTURE COMPLETED! (+1 SP)'}</span>
                                     </div>
-                                ) : (
-                                    <div className="w-full py-2.5 bg-slate-950/40 border border-white/5 text-slate-500 font-extrabold uppercase text-[8.5px] tracking-widest rounded-xl text-center italic select-none">
-                                        {language === 'RU' ? 'Ожидание правильной сборки...' : 'Awaiting correct layout pattern...'}
-                                    </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -2199,21 +2153,6 @@ const StoryBuilderView: React.FC = () => {
                 {/* BOTTOM CONTENT - Compact Inventory Carousel with floating SP island */}
                 <div className="mt-auto flex flex-col items-center justify-end pointer-events-none pt-4 w-full max-w-5xl mx-auto px-4 md:px-0 select-none pb-2">
                     
-                    {/* FLOATING SP ISLAND (Островок SP) */}
-                    <AnimatePresence>
-                        {!isUiHidden && (
-                            <motion.div
-                                initial={{ y: 15, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                exit={{ y: 15, opacity: 0 }}
-                                className="mb-2 bg-slate-900/95 border border-indigo-500/35 rounded-full px-3.5 py-1 flex items-center gap-1.5 shadow-lg shadow-indigo-500/10 text-indigo-200 text-xs font-semibold cursor-default pointer-events-auto select-none"
-                            >
-                                <Trophy className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                                <span className="text-white font-black text-[11px] md:text-xs">{skillPoints} SP</span>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
                     {/* COMPACT CAROUSEL - relocated elegantly to the center (cells made smaller, L0 to L9, eraser) */}
                     <motion.div
                         initial={{ y: 50, opacity: 0 }}
@@ -2337,6 +2276,13 @@ const StoryBuilderView: React.FC = () => {
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+            
+            {/* GLOBAL RECOVERY / CAMPAIGN UPGRADES TREE */}
+            <AnimatePresence>
+                {showUpgrades && (
+                    <UpgradesTree onClose={() => setShowUpgrades(false)} key="upgrades-tree" />
                 )}
             </AnimatePresence>
 

@@ -92,7 +92,7 @@ const MonumentHintBanner: React.FC = () => {
                 };
             case 'FIND_KEYS':
                 return {
-                    text: langRu ? 'Найдите нужные артефакты для активации в шахтах или обелисках' : 'Find the required artifact keys in mines or obelisks',
+                    text: langRu ? 'Найдите нужные артефакты для активации в шахтах или обелисках' : 'Find the required artifacts in mines or obelisks',
                     title: langRu ? 'Задача: Найти Предмет' : 'Objective: Find Items',
                     icon: Key,
                     color: 'from-rose-500/20 to-purple-500/10 border-rose-500/40 shadow-rose-900/10 text-rose-300',
@@ -183,7 +183,7 @@ const MonumentHintBanner: React.FC = () => {
                     tempInventory.splice(matchIdx, 1);
                 }
             }
-            return `${matches} / ${total} Keys`;
+            return `${matches} / ${total} Items`;
         }
         return language === 'RU' ? 'Готов к запуску' : 'Ready to launch';
     }, [currentPhase, isMonumentFound, monument, player?.inventory, monumentRequirements, monumentAlternatives, language]);

@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
@@ -77,18 +77,49 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const addMinedHexes = useGameStore(state => state.addMinedHexes);
 
     const [selectedRewardItem, setSelectedRewardItem] = useState<import('../../types.ts').Item | null>(null);
-    const [selectedHexes, setSelectedHexes] = useState<Record<number, number>>({});
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const minedHexes = useGameStore(state => state.session?.minedHexes);
 
-    const availableHexes = useMemo(() => {
-        if (!grid || !player || gameStatus !== 'VICTORY') return {};
-        // Use minedHexes from the session instead of scanning the grid.
-        return minedHexes || {};
-    }, [grid, player, gameStatus, minedHexes]);
+    const [rewardHexCells, setRewardHexCells] = useState<{id: number, revealedLevel: number | null, isClaimed: boolean}[]>([
+        {id: 0, revealedLevel: null, isClaimed: false},
+        {id: 1, revealedLevel: null, isClaimed: false},
+        {id: 2, revealedLevel: null, isClaimed: false}
+    ]);
 
-    const totalSelectedHexesCount = Object.values(selectedHexes).reduce((a,b) => a+b, 0);
+    useEffect(() => {
+        if (gameStatus === 'BRIEFING') {
+            setRewardHexCells([
+                {id: 0, revealedLevel: null, isClaimed: false},
+                {id: 1, revealedLevel: null, isClaimed: false},
+                {id: 2, revealedLevel: null, isClaimed: false}
+            ]);
+        }
+    }, [gameStatus]);
+
+    const handleRevealHex = (id: number) => {
+        if (rewardHexCells.find(c => c.id === id)?.revealedLevel !== null) return;
+        
+        if (playUiSound) playUiSound('CLICK');
+        const r = Math.random();
+        let level = 10;
+        if (r < 0.3) level = 0;
+        else if (r < 0.5) level = 1;
+        else if (r < 0.65) level = 2;
+        else if (r < 0.77) level = 3;
+        else if (r < 0.86) level = 4;
+        else if (r < 0.92) level = 5;
+        else if (r < 0.96) level = 6;
+        else if (r < 0.985) level = 7;
+        else if (r < 0.995) level = 8;
+        else if (r < 0.999) level = 9;
+
+        setRewardHexCells(prev => prev.map(c => c.id === id ? { ...c, revealedLevel: level, isClaimed: true } : c));
+        
+        // Instantly add block to global collected hexes to be used in StoryBuilderView
+        addCollectedHexes({ [level]: 1 });
+        addMinedHexes({ [level]: 1 });
+    };
 
     // --- LOGIC ---
 
@@ -105,10 +136,6 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const handleNextLevel = () => {
         playUiSound('CLICK');
-        if (campaignMode === 'LEVELS' && gameStatus === 'VICTORY') {
-            addCollectedHexes(selectedHexes);
-            addMinedHexes(selectedHexes);
-        }
         
         const levelsToUse = CAMPAIGN_LEVELS;
 
@@ -144,13 +171,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const handleMenu = () => {
         playUiSound('CLICK');
-        if (gameStatus === 'VICTORY') {
-            addMinedHexes(selectedHexes);
-        }
         
-        if (campaignMode === 'LEVELS' && gameStatus === 'VICTORY') {
-            addCollectedHexes(selectedHexes);
-        }
         abandonSession();
         if (campaignMode === 'LEVELS' && activeLevelConfig) {
             setUIState('CAMPAIGN_MAP');
@@ -458,42 +479,33 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         {language === 'RU' ? 'НАГРАДА ЗА ПРОХОЖДЕНИЕ' : 'GUARANTEED REWARDS'}
                                     </span>
 
-                                    <div className="grid grid-cols-2 gap-2 mt-0.5">
-                                        {/* Skill Point Award */}
-                                        <div className="flex items-center gap-1.5 sm:gap-2.5 bg-black/40 border border-emerald-500/20 p-2 rounded-lg hover:border-emerald-500/40 transition-colors">
-                                            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xs sm:text-sm shrink-0">
-                                                ⚙️
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-0.5">
+                                        {rewardHexCells.map(cell => (
+                                            <div key={cell.id} className="flex items-center gap-1.5 sm:gap-2 bg-black/40 border border-cyan-500/20 p-2 sm:p-2.5 rounded-lg">
+                                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-xs sm:text-sm shrink-0 text-cyan-400">
+                                                    ?
+                                                </div>
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-[7px] sm:text-[8px] font-black uppercase text-cyan-400 font-mono tracking-wider leading-none mb-0.5">
+                                                        {language === 'RU' ? 'СЛУЧАЙНЫЙ' : 'RANDOM'}
+                                                    </span>
+                                                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-100 truncate">
+                                                        {language === 'RU' ? 'Гекс-Блок' : 'Hex Tile'}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col min-w-0">
-                                                <span className="text-[7.5px] sm:text-[9px] font-black uppercase text-emerald-400 font-mono tracking-wider leading-none mb-0.5">
-                                                    {language === 'RU' ? '+1 ОЧКО' : '+1 POINT'}
-                                                </span>
-                                                <span className="text-[9.5px] sm:text-[11px] font-bold text-slate-100 truncate">
-                                                    {language === 'RU' ? 'Инженерия' : 'Engineering'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Activation Keys Award */}
-                                        <div className="flex items-center gap-1.5 sm:gap-2.5 bg-black/40 border border-violet-500/20 p-2 rounded-lg hover:border-violet-500/40 transition-colors">
-                                            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded bg-violet-500/10 border border-violet-500/30 flex items-center justify-center text-xs sm:text-sm shrink-0">
-                                                🔑
-                                            </div>
-                                            <div className="flex flex-col min-w-0">
-                                                <span className="text-[7.5px] sm:text-[9px] font-black uppercase text-violet-400 font-mono tracking-wider leading-none mb-0.5">
-                                                    {language === 'RU' ? '+3 КЛЮЧА' : '+3 KEYS'}
-                                                </span>
-                                                <span className="text-[9.5px] sm:text-[11px] font-bold text-slate-100 truncate">
-                                                    {language === 'RU' ? 'Сетка' : 'Board'}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        ))}
                                     </div>
                                     
-                                    <div className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-mono bg-black/20 p-1.5 rounded border border-white/5 select-none">
-                                        💡 {language === 'RU' 
-                                            ? 'Ключи используются для разблокировки ячеек на бонусной энерго-сетке.' 
-                                            : 'Keys unlock items on the bonus Campaign grid.'}
+                                    <div className="text-[8.5px] sm:text-[9.5px] text-slate-300 font-sans bg-emerald-950/20 p-2.5 rounded border border-emerald-500/25 select-none space-y-1.5">
+                                        <div className="flex items-start gap-1.5 font-bold text-cyan-400">
+                                            <span className="text-cyan-400">⬢</span>
+                                            <span>
+                                                {language === 'RU' 
+                                                    ? 'Награда за победу: получите случайные блоки гексов для их использования в режиме свободного строительства (Гексагон).' 
+                                                    : 'Victory Reward: obtain random hex blocks and use them in the free build mode (Hexagon)!'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1147,66 +1159,41 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                     </div>
                                 )}
 
-                                {/* Hex extraction extraction container */}
-                                {campaignMode === 'LEVELS' && Object.keys(availableHexes).length > 0 && (
+                                {campaignMode === 'LEVELS' && (
                                     <div className="bg-slate-900/20 border border-slate-905 p-2 rounded-xl mb-1.5 md:mb-4 shrink-0 mt-0.5">
                                         <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-slate-900/80">
                                             <h3 className="text-emerald-400 font-extrabold uppercase tracking-wider text-[9px] md:text-xs">
-                                                {language === 'RU' ? 'Протокол Извлечения Гексов' : 'Hex Extraction Protocol'}
+                                                {language === 'RU' ? 'Получены новые гексы' : 'New Hexes Acquired'}
                                             </h3>
-                                            <div className="text-[8px] font-mono tracking-widest px-1.5 py-0.5 bg-slate-950 rounded text-amber-500 border border-amber-900/30">
-                                                {language === 'RU' ? 'ВМЕСТИМОСТЬ' : 'CAPACITY'}: {totalSelectedHexesCount} / {Math.max(5, player?.maxInventorySize || 5)} 
-                                            </div>
                                         </div>
-                                        <div className="flex flex-col gap-1 max-h-[100px] overflow-y-auto no-scrollbar">
-                                            {Object.entries(availableHexes).map(([level, count]) => {
-                                                const lvl = Number(level);
-                                                const selected = selectedHexes[lvl] || 0;
-                                                const capacityFull = totalSelectedHexesCount >= Math.max(5, player?.maxInventorySize || 5);
-                                                
-                                                return (
-                                                    <div key={lvl} className="flex items-center justify-between bg-slate-950/60 p-1.5 md:p-2 rounded-lg border border-slate-900">
-                                                        <div className="flex items-center gap-2 md:gap-3">
-                                                            <div className={`w-5 h-5 md:w-6 md:h-6 rounded-md flex items-center justify-center text-[9px] md:text-[10px] font-mono font-bold ${
-                                                                lvl < 0 ? 'bg-indigo-900/50 text-indigo-400' :
-                                                                lvl === 0 ? 'bg-slate-800 text-slate-400' :
-                                                                'bg-emerald-900/50 text-emerald-400'
-                                                            }`}>
-                                                                L{lvl}
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {rewardHexCells.map(cell => (
+                                                <button 
+                                                    key={cell.id} 
+                                                    onClick={() => handleRevealHex(cell.id)}
+                                                    className={`relative flex flex-col items-center justify-center p-3 rounded-lg border transition-all duration-300 ${cell.isClaimed ? 'bg-emerald-950/40 border-emerald-500/50 scale-100' : 'bg-slate-950/60 border-slate-700/50 hover:bg-slate-900/80 hover:scale-[1.02] cursor-pointer'}`}
+                                                >
+                                                    {cell.isClaimed ? (
+                                                        <>
+                                                            <div className="w-10 h-10 rounded bg-emerald-900/50 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-black font-mono text-lg shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                                                                L{cell.revealedLevel}
                                                             </div>
-                                                            <div className="text-[9px] md:text-xs font-bold text-slate-300">
-                                                                {language === 'RU' ? 'Доступно:' : 'Available:'} {count}
+                                                            <span className="text-[8px] sm:text-[9px] font-bold text-emerald-400 mt-2 uppercase tracking-wide">
+                                                                {language === 'RU' ? 'Добавлено!' : 'Added!'}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="w-10 h-10 rounded bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-400 font-black text-xl animate-pulse">
+                                                                ?
                                                             </div>
-                                                        </div>
-                                                        
-                                                        <div className="flex bg-slate-900 rounded-md overflow-hidden shadow-inner border border-slate-800">
-                                                            <button 
-                                                                onClick={() => {
-                                                                    if (selected > 0) {
-                                                                        playUiSound('CLICK');
-                                                                        setSelectedHexes(prev => ({...prev, [lvl]: prev[lvl] - 1}));
-                                                                    }
-                                                                }}
-                                                                disabled={selected <= 0}
-                                                                className="w-5 h-5 md:w-7 md:h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-750 active:bg-slate-700 disabled:opacity-30 transition-colors text-white font-bold text-xs"
-                                                            >-</button>
-                                                            <div className="w-6 h-5 md:w-8 md:h-7 flex items-center justify-center font-mono text-emerald-400 text-[10px] md:text-xs font-bold">
-                                                                {selected}
-                                                            </div>
-                                                            <button 
-                                                                onClick={() => {
-                                                                    if (selected < count && !capacityFull) {
-                                                                        playUiSound('CLICK');
-                                                                        setSelectedHexes(prev => ({...prev, [lvl]: (prev[lvl] || 0) + 1}));
-                                                                    }
-                                                                }}
-                                                                disabled={selected >= count || capacityFull}
-                                                                className="w-5 h-5 md:w-7 md:h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-755 active:bg-slate-700 disabled:opacity-30 transition-colors text-white font-bold text-xs"
-                                                            >+</button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                            <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-wide">
+                                                                {language === 'RU' ? 'Нажмите' : 'Click'}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
                                 )}

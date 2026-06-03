@@ -343,8 +343,8 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
             title: language === 'RU' ? 'ИНВЕНТАРНЫЙ ПОРТ' : 'BACKPACK CONDUIT',
             costText: language === 'RU' ? '5 ячеек максимум' : '5 Slots capacity',
             rewardText: language === 'RU'
-                ? 'Резервуар для сохранения ценных дисков с данными, нано-чипов и древних ключей Обелиска.'
-                : 'Shielded containment for encrypted hard drives, nanite chips, and Monolith keys.',
+                ? 'Резервуар для сохранения добытых ценных артефактов и предметов.'
+                : 'Shielded containment for encrypted hard drives, nanite chips, and Monolith items.',
             statusText: language === 'RU' ? `🎒 Слотов занято: ${occupied} / 5` : `🎒 Slots used: ${occupied} / 5`,
             statusType: 'info' as any,
         };

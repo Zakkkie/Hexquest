@@ -322,8 +322,8 @@ export const series3Levels: LevelConfig[] = [
             state.messageLog.unshift({
               id: `msg-33-obelisk-${Date.now()}`,
               text: isRu
-                ? 'СКАНИРОВАНИЕ ДАННЫХ: Обелиск вещает: Монумент требует НЕОБЫЧНЫЙ (UNCOMMON) предмет в качестве ключа. У вас в кармане есть Cargo Prism.'
-                : 'DATA SCAN: Obelisk reports: Monument requires an UNCOMMON item as activation key. You possess a Cargo Prism which matches.',
+                ? 'СКАНИРОВАНИЕ ДАННЫХ: Обелиск вещает: Монумент требует НЕОБЫЧНЫЙ (UNCOMMON) предмет для активации. У вас в кармане есть Cargo Prism.'
+                : 'DATA SCAN: Obelisk reports: Monument requires an UNCOMMON item for activation. You possess a Cargo Prism which matches.',
               type: 'SUCCESS',
               source: 'SYSTEM',
               timestamp: Date.now()
