@@ -32,6 +32,21 @@ class CampaignLogger {
         if (typeof window !== 'undefined') {
             const originalOnError = window.onerror;
             window.onerror = (message, source, lineno, colno, error) => {
+                const msgStr = String(message || '');
+                const srcStr = String(source || '');
+                if (
+                    msgStr.toLowerCase().includes('metamask') ||
+                    msgStr.toLowerCase().includes('extension') ||
+                    srcStr.toLowerCase().includes('metamask') ||
+                    srcStr.toLowerCase().includes('extension') ||
+                    srcStr.startsWith('chrome-extension:')
+                ) {
+                    if (originalOnError) {
+                        return originalOnError(message, source, lineno, colno, error);
+                    }
+                    return false;
+                }
+
                 this.log({
                     level: 'CRITICAL',
                     category: 'GLOBAL_UNHANDLED_EXCEPTION',
@@ -46,10 +61,28 @@ class CampaignLogger {
 
             const originalOnUnhandledRejection = window.onunhandledrejection;
             window.onunhandledrejection = (event) => {
+                const reason = event.reason;
+                const reasonStr = reason ? String(reason.message || reason.stack || reason) : '';
+                const msgStr = reason?.message || 'Promise rejected without explicit message';
+                
+                const isMetaMaskOrExtension = 
+                    reasonStr.toLowerCase().includes('metamask') || 
+                    reasonStr.toLowerCase().includes('chrome-extension') ||
+                    reasonStr.toLowerCase().includes('extension') ||
+                    msgStr.toLowerCase().includes('metamask') ||
+                    msgStr.toLowerCase().includes('extension');
+
+                if (isMetaMaskOrExtension) {
+                    if (originalOnUnhandledRejection) {
+                        return originalOnUnhandledRejection.call(window, event);
+                    }
+                    return;
+                }
+
                 this.log({
                     level: 'CRITICAL',
                     category: 'UNHANDLED_PROMISE_REJECTION',
-                    message: event.reason?.message || 'Promise rejected without explicit message',
+                    message: msgStr,
                     details: event.reason?.stack || String(event.reason)
                 });
                 if (originalOnUnhandledRejection) {

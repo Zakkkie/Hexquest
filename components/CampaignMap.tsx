@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '../store.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
-import { Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers, Cpu, BatteryCharging, Coins } from 'lucide-react';
-import HexButton from './HexButton.tsx';
+import { Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers, Cpu, BatteryCharging, Coins, ArrowLeft } from 'lucide-react';
 import { TEXT } from '../services/i18n.ts';
 import { UpgradesTree } from './UpgradesTree.tsx';
 import { motion, AnimatePresence } from 'motion/react';
@@ -113,8 +112,8 @@ const CampaignMap: React.FC = () => {
   // --- LAYOUT (STORY) ---
   const timelineLayout = useMemo(() => {
     if (campaignMode !== 'STORY') return { positions: [], totalHeight: 0 };
-    const ITEM_HEIGHT = isMobile ? 140 : 220;
-    const START_OFFSET = 120;
+    const ITEM_HEIGHT = isMobile ? 145 : 205;
+    const START_OFFSET = isMobile ? 60 : 90;
     const positions: any[] = [];
     let currentY = START_OFFSET;
     let lastSeries = '';
@@ -123,16 +122,17 @@ const CampaignMap: React.FC = () => {
         const series = level.id.split('.')[0];
         let hasHeader = false;
         if (series !== lastSeries) {
-            if (index > 0) currentY += (isMobile ? 60 : 80);
+            // Push the level's coordinate down to make elegant room for the header above it
+            currentY += (index > 0 ? (isMobile ? 110 : 160) : (isMobile ? 65 : 100));
             hasHeader = true;
             lastSeries = series;
         }
         const isLeft = index % 2 === 0;
-        const x = isMobile ? 48 : (isLeft ? containerWidth * 0.35 : containerWidth * 0.65);
+        const x = isMobile ? 54 : (isLeft ? containerWidth * 0.32 : containerWidth * 0.68);
         positions.push({ x, y: currentY, hasHeader, seriesId: series, level, index });
         currentY += ITEM_HEIGHT;
     });
-    return { positions, totalHeight: currentY + (isMobile ? 100 : 200) };
+    return { positions, totalHeight: currentY + (isMobile ? 80 : 120) };
   }, [containerWidth, isMobile, campaignMode]);
 
   const levelsToDisplay = CAMPAIGN_LEVELS;
@@ -207,35 +207,50 @@ const CampaignMap: React.FC = () => {
                         key={pos.level.id}
                     >
                         {pos.hasHeader && (
-                            <div className="absolute left-0 right-0 flex items-center justify-center pointer-events-none" style={{ top: pos.y - (isMobile ? 100 : 120) }}>
-                                <div className="flex items-center gap-4 px-6 py-2 bg-slate-900/80 backdrop-blur-md border border-indigo-500/30 rounded-full shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                            <div className="absolute left-0 right-0 flex items-center justify-center pointer-events-none" style={{ top: pos.y - (isMobile ? 70 : 100) }}>
+                                <div className="flex items-center gap-4 px-6 py-2 bg-slate-900/90 backdrop-blur-md border border-indigo-500/30 rounded-full shadow-[0_0_25px_rgba(99,102,241,0.35)]">
                                     <Layers className="w-4 h-4 text-indigo-400" />
-                                    <span className="text-sm font-black uppercase tracking-[0.3em] text-indigo-200">Series {pos.seriesId}</span>
+                                    <span className="text-sm font-black uppercase tracking-[0.3em] text-indigo-200 font-sans">Series {pos.seriesId}</span>
                                 </div>
                             </div>
                         )}
                         <div ref={isCurrent ? currentLevelRef : null} className="absolute flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2" style={{ left: pos.x, top: pos.y }}>
                             <div className={`relative flex items-center justify-center group ${isUnlocked ? 'opacity-100' : 'opacity-40 grayscale-[80%]'}`}>
-                                <motion.div 
-                                    whileHover={isUnlocked ? { scale: 1.05 } : {}}
-                                    whileTap={isUnlocked ? { scale: 0.95 } : {}}
-                                    className="relative z-20"
-                                >
-                                    {isCurrent && <div className="absolute inset-0 bg-amber-500/30 rounded-full blur-xl animate-pulse" />}
-                                    <HexButton size={isMobile ? 'md' : 'lg'} variant={isCompleted ? 'emerald' : (isCurrent ? 'amber' : 'slate')} active={isCurrent} pulsate={isCurrent}
-                                        onClick={() => isUnlocked ? startCampaignLevel(pos.level.id) : playUiSound('ERROR')} disabled={!isUnlocked}>
-                                        {isCompleted ? <Check className="w-6 h-6 md:w-8 md:h-8" /> : (isUnlocked ? <Play className="w-6 h-6 md:w-8 md:h-8 fill-current ml-1" /> : <Lock className="w-5 h-5 md:w-6 md:h-6 opacity-50" />)}
-                                    </HexButton>
-                                    <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border shadow-lg ${isCurrent ? 'bg-amber-500 text-slate-900 border-amber-400 animate-bounce' : 'bg-slate-800 text-slate-400 border-slate-600'}`}>
+                                {/* Timeline Micro Milestone Node */}
+                                <div className="relative z-20 flex items-center justify-center pointer-events-none select-none">
+                                    {isCurrent && <div className="absolute w-8 h-8 bg-amber-500/35 rounded-full blur-md animate-pulse" />}
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all duration-500 shadow-md ${
+                                        isCompleted ? 'bg-emerald-500 border-emerald-400 text-slate-900 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 
+                                        (isCurrent ? 'bg-amber-500 border-amber-400 text-slate-900 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.6)]' : 'bg-slate-800 border-slate-700 text-slate-500')
+                                    }`}>
+                                        {isCompleted ? <Check className="w-3 h-3 text-slate-950 stroke-[3.5px]" /> : (isUnlocked ? <div className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" /> : <Lock className="w-2.5 h-2.5 text-slate-500" />)}
+                                    </div>
+                                    <div className={`absolute -top-6 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-[4px] text-[7.5px] font-black uppercase tracking-wider border shadow-md font-sans whitespace-nowrap leading-none ${
+                                        isCurrent ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-800 text-slate-400 border-slate-700/50'
+                                    }`}>
                                         {isCurrent ? t.BADGE_CURRENT : (isCompleted ? t.BADGE_DONE : t.BADGE_LOCKED)}
                                     </div>
-                                </motion.div>
-                                <div className={`absolute flex flex-col bg-slate-900/80 backdrop-blur-xl border p-4 rounded-2xl md:rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.7)] w-[calc(100vw-110px)] max-w-[260px] md:w-[280px] transition-all duration-300 z-10 hover:border-indigo-400 group-hover:bg-slate-900/90
-                                    ${isCompleted ? 'border-emerald-500/30' : (isCurrent ? 'border-amber-500/50' : 'border-indigo-500/20')}
-                                    ${isMobile ? 'left-full ml-4 text-left' : (i % 2 === 0 ? 'left-full ml-8 text-left' : 'right-full mr-8 text-right items-end')}
-                                `}>
-                                    {/* Glowing accent spot */}
-                                    <div className={`absolute top-0 w-24 h-24 bg-indigo-500/5 blur-[25px] rounded-full pointer-events-none -translate-y-6 ${i % 2 === 0 ? 'left-0' : 'right-0'}`} />
+                                </div>
+
+                                {/* Clickable interactive level card */}
+                                <motion.div 
+                                    whileHover={isUnlocked ? { scale: 1.03, y: -2, borderColor: isCurrent ? 'rgba(245,158,11,0.8)' : 'rgba(99,102,241,0.8)' } : {}}
+                                    whileTap={isUnlocked ? { scale: 0.98 } : {}}
+                                    onClick={() => isUnlocked ? startCampaignLevel(pos.level.id) : playUiSound('ERROR')}
+                                    className={`absolute flex flex-col bg-slate-950/35 backdrop-blur-[18px] border p-4 rounded-2xl md:rounded-[1.5rem] shadow-[0_15px_35px_rgba(0,0,0,0.6)] w-[calc(100vw-110px)] max-w-[260px] md:w-[280px] transition-all duration-300 z-10
+                                        ${isUnlocked ? 'cursor-pointer hover:bg-slate-900/60' : 'cursor-not-allowed opacity-[0.55]'}
+                                        ${isCompleted ? 'border-emerald-500/20' : (isCurrent ? 'border-amber-500/50' : 'border-indigo-500/10')}
+                                        ${isMobile ? 'left-full ml-4 text-left' : (i % 2 === 0 ? 'left-full ml-8 text-left' : 'right-full mr-8 text-right items-end')}
+                                    `}
+                                >
+                                    {/* Glassmorphism blurred glow on background */}
+                                    <div className={`absolute -inset-[2px] rounded-2xl md:rounded-[1.5rem] bg-gradient-to-r ${
+                                        isCompleted ? 'from-emerald-500/20 via-emerald-600/5 to-transparent' : 
+                                        (isCurrent ? 'from-amber-500/30 via-amber-600/10 to-transparent' : 'from-indigo-500/10 via-indigo-600/5 to-transparent')
+                                    } opacity-75 blur-[12px] -z-10 pointer-events-none group-hover:opacity-100 transition-opacity duration-300`} />
+
+                                    {/* Additional ambient subtle circle */}
+                                    <div className={`absolute top-0 w-24 h-24 bg-${isCompleted ? 'emerald' : (isCurrent ? 'amber' : 'indigo')}-500/5 blur-[25px] rounded-full pointer-events-none -translate-y-6 ${i % 2 === 0 ? 'left-0' : 'right-0'}`} />
 
                                     <div className="flex items-center gap-1.5 mb-1.5 shrink-0">
                                         <div className={`w-1.5 h-1.5 rounded-full ${isCompleted ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : (isCurrent ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b]' : 'bg-slate-600')}`} />
@@ -250,26 +265,26 @@ const CampaignMap: React.FC = () => {
                                             
                                             {/* Mission Details matching card grid */}
                                             {pos.level && (
-                                                <div className={`flex flex-wrap items-center gap-2 mt-auto pt-2 border-t border-white/5 w-full ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                                                <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-white/5 w-full">
                                                     {/* Threat Tag */}
                                                     {(() => {
                                                         const threat = pos.level.aiMode === 'none' ? 'NONE' : (pos.level.aiMode === 'basic' ? 'BASIC' : 'HIGH');
                                                         return (
-                                                            <div className="flex items-center gap-1 bg-black/30 px-1.5 py-0.5 rounded border border-white/5 text-[8px] font-bold text-slate-300 font-mono">
-                                                                <ShieldAlert className={`w-2.5 h-2.5 ${threat === 'NONE' ? 'text-emerald-400' : (threat === 'BASIC' ? 'text-amber-400' : 'text-red-400')}`} />
+                                                            <div className="flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 text-[8px] font-bold text-slate-300 font-mono">
+                                                                <ShieldAlert className={`w-3 h-3 ${threat === 'NONE' ? 'text-emerald-400' : (threat === 'BASIC' ? 'text-amber-400' : 'text-red-400')}`} />
                                                                 <span>{(t as any)[`LVL_THREAT_${threat}`]}</span>
                                                             </div>
                                                         );
                                                     })()}
                                                     
-                                                    {/* Goal/Stat Indicators */}
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex items-center gap-0.5 text-[8px] font-mono text-indigo-400 font-bold">
-                                                            <BatteryCharging className="w-2.5 h-2.5 text-indigo-400" />
+                                                    {/* Goal/Stat Indicators - Made larger and placed to right side */}
+                                                    <div className="flex items-center gap-2 ml-auto shrink-0">
+                                                        <div className="flex items-center gap-1 text-[11px] md:text-xs font-mono text-indigo-400 font-bold bg-slate-900/60 p-1 md:p-1.5 rounded-lg border border-indigo-500/15 shadow-inner px-2 leading-none">
+                                                            <BatteryCharging className="w-3 h-3 text-indigo-400 animate-pulse" />
                                                             <span>{pos.level.startState.moves}</span>
                                                         </div>
-                                                        <div className="flex items-center gap-0.5 text-[8px] font-mono text-emerald-400 font-bold">
-                                                            <Coins className="w-2.5 h-2.5 text-emerald-400" />
+                                                        <div className="flex items-center gap-1 text-[11px] md:text-xs font-mono text-emerald-400 font-bold bg-slate-900/60 p-1 md:p-1.5 rounded-lg border border-emerald-500/15 shadow-inner px-2 leading-none">
+                                                            <Coins className="w-3 h-3 text-emerald-400" />
                                                             <span>{pos.level.startState.credits}</span>
                                                         </div>
                                                     </div>
@@ -279,7 +294,7 @@ const CampaignMap: React.FC = () => {
                                     ) : (
                                         <p className={`text-[10px] text-slate-600 font-semibold italic ${i % 2 === 0 ? 'text-left' : 'text-right'}`}>{t.LVL_STATUS_LOCKED}</p>
                                     )}
-                                </div>
+                                </motion.div>
                             </div>
                         </div>
                     </motion.div>
@@ -319,17 +334,19 @@ const CampaignMap: React.FC = () => {
                             `}
                             onClick={() => isUnlocked ? startCampaignLevel(level.id) : playUiSound('ERROR')}
                         >
-                            {/* Card Background */}
-                            <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-lg border border-white/5 transition-all duration-300 rounded-2xl md:rounded-[1.5rem] overflow-hidden
-                                ${isUnlocked ? 'group-hover:bg-slate-800/80 group-hover:border-white/20' : 'bg-slate-900/20'}
-                                ${isCurrent ? 'border-indigo-500/30' : ''}
+                            {/* Card Background - Glassmorphism */}
+                            <div className={`absolute inset-0 bg-slate-950/25 backdrop-blur-[18px] border border-white/5 transition-all duration-300 rounded-2xl md:rounded-[1.5rem] overflow-hidden
+                                ${isUnlocked ? 'group-hover:bg-slate-950/40 group-hover:border-white/15' : 'bg-slate-950/10'}
+                                ${isCurrent ? 'border-indigo-500/20' : ''}
                             `} />
 
-                            {/* Glowing Gradient Accent */}
-                            {isUnlocked && (
-                                <div className={`absolute inset-0 bg-gradient-to-br from-${glowColor}-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl md:rounded-[1.5rem] overflow-hidden`} />
-                            )}
-                            <div className={`absolute -top-4 -right-4 w-24 h-24 bg-${glowColor}-500/10 blur-[30px] rounded-full pointer-events-none group-hover:opacity-100 transition-opacity duration-500`} />
+                            {/* Glassmorphism blurred glow on background (размытое сияние на фоне) */}
+                            <div className={`absolute -inset-[2px] rounded-2xl md:rounded-[1.5rem] bg-gradient-to-r ${
+                                glowColor === 'emerald' ? 'from-emerald-500/15 via-emerald-600/5 to-transparent' : 
+                                (glowColor === 'amber' ? 'from-amber-500/20 via-amber-600/10 to-transparent' : 'from-red-500/20 via-red-600/10 to-transparent')
+                            } opacity-60 blur-[10px] -z-10 pointer-events-none group-hover:opacity-80 transition-opacity duration-300`} />
+
+                            <div className={`absolute -top-4 -right-4 w-24 h-24 bg-${glowColor}-500/5 blur-[25px] rounded-full pointer-events-none group-hover:opacity-100 transition-opacity duration-500`} />
 
                             <div className="relative z-10 flex flex-col h-full gap-2.5">
                                 {/* Header Section: Icon & Title & Status */}
@@ -366,19 +383,20 @@ const CampaignMap: React.FC = () => {
 
                                 {/* Bottom Footer: Threat & Resources */}
                                 <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t border-white/5 group-hover:border-white/10 transition-colors">
-                                    <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-lg border border-white/5">
-                                        <ShieldAlert className={`w-3 h-3 ${threat === 'NONE' ? 'text-emerald-400' : (threat === 'BASIC' ? 'text-amber-400' : 'text-red-400')}`} />
-                                        <span className="text-[9px] font-bold text-slate-300">{(t as any)[`LVL_THREAT_${threat}`]}</span>
+                                    <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-lg border border-white/5">
+                                        <ShieldAlert className={`w-3.5 h-3.5 ${threat === 'NONE' ? 'text-emerald-400' : (threat === 'BASIC' ? 'text-amber-400' : 'text-red-400')}`} />
+                                        <span className="text-[9.5px] font-bold text-slate-300">{(t as any)[`LVL_THREAT_${threat}`]}</span>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-1 text-[10px] font-mono text-indigo-400/80">
-                                            <BatteryCharging className="w-2.5 h-2.5" />
-                                            {level.startState.moves}
+                                    {/* Starting items: larger and positioned right */}
+                                    <div className="flex items-center gap-2 ml-auto shrink-0">
+                                        <div className="flex items-center gap-1 text-[11px] md:text-xs font-mono text-indigo-400 font-bold bg-slate-900/60 p-1 md:p-1.5 rounded-lg border border-indigo-500/15 shadow-inner px-2 leading-none">
+                                            <BatteryCharging className="w-3 h-3 text-indigo-400 animate-pulse" />
+                                            <span>{level.startState.moves}</span>
                                         </div>
-                                        <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400/80">
-                                            <Coins className="w-2.5 h-2.5" />
-                                            {level.startState.credits}
+                                        <div className="flex items-center gap-1 text-[11px] md:text-xs font-mono text-emerald-400 font-bold bg-slate-900/60 p-1 md:p-1.5 rounded-lg border border-emerald-500/15 shadow-inner px-2 leading-none">
+                                            <Coins className="w-3 h-3 text-emerald-400" />
+                                            <span>{level.startState.credits}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -420,24 +438,25 @@ const CampaignMap: React.FC = () => {
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="relative z-10 w-full h-full lg:h-[94vh] lg:w-[96vw] max-w-[1600px] flex flex-col md:bg-slate-900/60 md:backdrop-blur-2xl md:border md:border-indigo-500/30 md:rounded-3xl md:shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(99,102,241,0.1)] overflow-hidden box-border"
       >
-        <div className="px-4 md:px-8 pt-4 pb-3 md:pt-6 md:pb-5 border-b border-indigo-500/20 flex flex-wrap md:flex-nowrap items-center justify-between bg-slate-900/40 shrink-0 z-20 backdrop-blur-xl gap-3 md:gap-4">
-          <div className="flex items-center gap-3 md:gap-4">
-             <div className={`p-2 md:p-3 rounded-lg md:rounded-xl shadow-inner transition-all duration-500 ${campaignMode === 'STORY' ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 shadow-[inset_0_0_15px_rgba(99,102,241,0.1)]' : 'bg-purple-500/10 border border-purple-500/30 text-purple-400 shadow-[inset_0_0_15px_rgba(168,85,247,0.1)]'}`}>
-               {campaignMode === 'STORY' ? <MapPin className="w-5 h-5 md:w-6 md:h-6" /> : <Layers className="w-5 h-5 md:w-6 md:h-6" />}
-             </div>
+        <div className="px-4 md:px-8 py-3 md:py-4 border-b border-indigo-500/20 flex items-center justify-between bg-slate-900/40 shrink-0 z-20 backdrop-blur-xl gap-3">
+          <div className="flex items-center gap-3 md:gap-4 min-w-0">
+             <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => { useGameStore.getState().setUIState('MENU'); playUiSound('CLICK'); }}
+                className="p-2.5 md:p-3 rounded-xl bg-slate-900/60 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-500 text-slate-300 hover:text-white transition-all duration-300 flex items-center justify-center cursor-pointer shadow-md shadow-black/20 shrink-0 active:scale-95"
+             >
+                <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
+             </motion.button>
              <div className="flex flex-col gap-0.5">
-               <h2 className="text-lg md:text-3xl font-black text-white uppercase tracking-wider italic leading-none drop-shadow-md">
+               <h2 className="text-sm md:text-2xl font-black text-white uppercase tracking-wider italic leading-none drop-shadow-md truncate font-sans">
                  {campaignMode === 'STORY' ? TEXT[language].MENU.MODE_STORY : TEXT[language].MENU.MODE_LEVELS}
                </h2>
-               <div className="flex items-center gap-2 flex-wrap">
-                 <p className="text-indigo-400/50 text-[7px] md:text-[9px] font-mono tracking-[0.3em] uppercase pl-1 font-bold leading-none">{t.HEADER_SUBTITLE}</p>
-                 <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-400/20 rounded-full px-2 py-0.5 text-[8.5px] font-mono text-indigo-300 select-none shadow-[0_0_10px_rgba(99,102,241,0.1)] leading-none inline-flex">
+               <div className="flex items-center gap-2">
+                 <p className="text-indigo-400/50 text-[7px] md:text-[9px] font-mono tracking-[0.3em] uppercase pl-1 font-bold leading-none hidden xs:block">{t.HEADER_SUBTITLE}</p>
+                 <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-400/20 rounded-full px-2 py-0.5 text-[8px] md:text-[8.5px] font-mono text-indigo-300 select-none shadow-[0_0_10px_rgba(99,102,241,0.1)] leading-none inline-flex max-w-[124px] xs:max-w-none truncate">
                    <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_6px_#10b981]" />
-                   <span>
-                     {language === 'RU' 
-                       ? `Синхронизировано: ${user ? user.nickname : 'Гость'} ${user?.isGuest ? '(Гость)' : '(Аккаунт)'}`
-                       : `Synced with: ${user ? user.nickname : 'Guest'} ${user?.isGuest ? '(Guest)' : '(Account)'}`}
-                   </span>
+                   <span className="truncate">{user ? user.nickname : 'Guest'}</span>
                  </div>
                </div>
              </div>
@@ -462,27 +481,22 @@ const CampaignMap: React.FC = () => {
               </div>
           )}
 
-          <div className={`flex items-center gap-2 md:gap-3 ${campaignMode === 'STORY' ? 'ml-auto' : ''}`}>
+          <div className="flex items-center gap-2 md:gap-3 ml-auto">
               <motion.button 
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
                  onClick={() => { setShowUpgrades(true); playUiSound('CLICK'); }}
-                 className="group relative flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-indigo-600/10 hover:bg-indigo-600/30 text-indigo-100 rounded-lg md:rounded-xl border border-indigo-500/30 transition-all text-[9px] md:text-[10px] font-black uppercase tracking-widest overflow-hidden shadow-sm"
+                 className="group relative flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-indigo-600/10 hover:bg-indigo-600/25 text-indigo-100 rounded-lg md:rounded-xl border border-indigo-500/35 transition-all text-[9.5px] md:text-[10.5px] font-black uppercase tracking-widest shadow-sm cursor-pointer"
               >
-                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                  <Cpu className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-400 drop-shadow-[0_0_5px_rgba(165,180,252,0.5)]" />
-                 <span className="relative z-10">{TEXT[language].HUD.BTN_UPGRADES || 'Upgrades'}</span>
-                 {skillPoints > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] border border-white/20 text-[9px] md:text-[10px] text-white animate-pulse">{skillPoints}</span>}
-              </motion.button>
-
-              <motion.button 
-                 whileHover={{ scale: 1.05 }}
-                 whileTap={{ scale: 0.95 }}
-                 onClick={() => { useGameStore.getState().setUIState('MENU'); playUiSound('CLICK'); }}
-                 className="group relative px-3 md:px-5 py-2 md:py-2.5 bg-slate-800/30 hover:bg-slate-700/50 text-slate-300 hover:text-white rounded-lg md:rounded-xl border border-slate-700/50 transition-all text-[9px] md:text-[10px] font-black uppercase tracking-widest overflow-hidden shadow-sm active:scale-95"
-              >
-                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                 <span className="relative z-10">{TEXT[language].HUD.BTN_MENU}</span>
+                 <span className="relative z-10 flex items-center gap-1.5 leading-none">
+                    {TEXT[language].HUD.BTN_UPGRADES || 'Upgrades'}
+                    {skillPoints > 0 && (
+                        <span className="flex h-4 px-1.5 items-center justify-center rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] border border-white/20 text-[8px] md:text-[9px] text-white animate-pulse font-mono font-bold leading-none">
+                           {skillPoints}
+                        </span>
+                    )}
+                 </span>
               </motion.button>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
 import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
-import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Timer, Coins, Sparkles, Info } from 'lucide-react';
+import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Timer, Coins, Sparkles, Info, Cpu, ShieldAlert, Layers } from 'lucide-react';
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
 import { Item } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -417,7 +417,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             {/* MISSION BRIEFING / DETAILS */}
             <AnimatePresence>
                 {(activeModal === 'MISSION' || gameStatus === 'BRIEFING') && (
-                    <div className="absolute inset-0 z-[100] flex items-center justify-center p-4 md:p-6 pointer-events-auto">
+                    <div className="absolute inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 pointer-events-auto">
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -425,14 +425,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             onClick={() => {
                                 if (gameStatus !== 'BRIEFING') closeModal();
                             }}
-                            className="absolute inset-0 bg-black/95 backdrop-blur-md"
+                            className="absolute inset-0 bg-black/90 backdrop-blur-md"
                         />
                         <motion.div 
-                            initial={{ scale: 0.95, y: 30, opacity: 0 }}
+                            initial={{ scale: 0.95, y: 25, opacity: 0 }}
                             animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.95, y: 30, opacity: 0 }}
+                            exit={{ scale: 0.95, y: 25, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="relative bg-slate-950/95 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] max-w-lg w-full max-h-[92vh] md:max-h-[85vh] overflow-hidden flex flex-col backdrop-blur-xl group"
+                            className="relative bg-slate-950/98 border border-indigo-500/40 rounded-2xl shadow-[0_0_60px_rgba(79,70,229,0.3)] max-w-2xl w-full max-h-[98vh] md:max-h-[94vh] overflow-hidden flex flex-col backdrop-blur-2xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
@@ -441,190 +441,315 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/60 z-30 pointer-events-none" />
                             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/60 z-30 pointer-events-none" />
 
-                            {/* Scanline effect */}
-                            <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
+                            {/* Scanline & Ambient glow effects */}
+                            <div className="absolute inset-0 bg-scanlines opacity-5 pointer-events-none z-10" />
                             <div className="absolute top-0 left-0 w-full h-1 bg-white/5 animate-scan-slow z-10" />
+                            <div className="absolute -top-32 -left-32 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
                             {/* Technical Header */}
-                            <div className="bg-indigo-950/35 border-b border-indigo-500/30 p-2.5 sm:p-4 flex items-center justify-between z-20 shrink-0">
+                            <div className="bg-slate-900/90 border-b border-indigo-500/30 p-2.5 sm:p-3 flex items-center justify-between z-20 shrink-0">
                                 <div className="flex items-center gap-2">
-                                    <Terminal className="w-4 h-4 text-indigo-400" />
+                                    <div className="p-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
+                                        <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+                                    </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className="text-[7.5px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400/75 leading-none font-mono">MISSION_PROTOCOL_INIT</span>
+                                        <span className="text-[8px] sm:text-[9.5px] font-black uppercase tracking-[0.25em] text-indigo-400 leading-none font-mono">MISSION_PROTOCOL_INIT</span>
                                         <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1">
-                                            <span className="text-[9.5px] sm:text-xs font-black text-white uppercase tracking-wider truncate">
+                                            <span className="text-xs sm:text-xs font-black text-white uppercase tracking-wider truncate">
                                                 {language === 'RU' ? 'БРИФИНГ ОПЕРАЦИИ' : 'OPERATION BRIEFING'}
                                             </span>
-                                            <span className="text-[7.5px] sm:text-[8px] px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded font-bold text-slate-400 uppercase tracking-wider leading-none">
+                                            <span className="text-[7.5px] sm:text-[8px] px-1.5 py-0.5 bg-slate-950 border border-slate-800 rounded-md font-black text-indigo-300 uppercase tracking-widest leading-none shadow-inner">
                                                 {difficulty || 'NORMAL'}
                                             </span>
                                             {bots && bots.length > 0 && (
-                                                <span className="text-[7.5px] sm:text-[8px] px-1.5 py-0.5 bg-red-950/55 border border-red-500/25 rounded font-bold text-red-400 uppercase tracking-wider leading-none">
+                                                <span className="text-[7.5px] sm:text-[8px] px-1.5 py-0.5 bg-red-950/80 border border-red-500/30 rounded-md font-black text-red-400 uppercase tracking-widest leading-none">
                                                     VS {t.BRIEFING_RIVAL}
                                                 </span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 sm:gap-4">
+                                <div className="flex items-center gap-2 sm:gap-3">
                                     <div className="flex gap-0.5 sm:gap-1">
-                                        {[1, 2, 3].map(i => <div key={i} className="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-indigo-500 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}
+                                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}
                                     </div>
-                                    <button onClick={() => {
-                                        if (gameStatus === 'BRIEFING') {
-                                            startMission();
-                                        }
-                                        closeModal();
-                                    }} className="text-slate-500 hover:text-white transition-colors cursor-pointer p-0.5"><X className="w-4 h-4 sm:w-5 sm:h-5"/></button>
+                                    {gameStatus !== 'BRIEFING' && (
+                                        <motion.button 
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
+                                            onClick={() => {
+                                                closeModal();
+                                                if (playUiSound) playUiSound('CLICK');
+                                            }} 
+                                            className="text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors cursor-pointer p-1 rounded-lg border border-slate-800"
+                                        >
+                                            <X className="w-4 h-4"/>
+                                        </motion.button>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto relative z-20 p-3 sm:p-5 flex flex-col gap-2.5 sm:gap-4">
-                                {/* 2. REWARDS SPECIFICATION (НАГРАДА ЗА ПРОХОЖДЕНИЕ) */}
-                                <div className="bg-slate-900/80 border border-emerald-500/30 rounded-xl p-3 sm:p-4.5 flex flex-col gap-2 relative overflow-hidden shadow-[0_4px_20px_rgba(16,185,129,0.1)] text-left">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-2xl rounded-full pointer-events-none" />
-                                    <span className="text-[9px] sm:text-xs uppercase font-black tracking-[0.15em] text-emerald-400 flex items-center gap-1 font-mono">
-                                        <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 animate-pulse" />
-                                        {language === 'RU' ? 'НАГРАДА ЗА ПРОХОЖДЕНИЕ' : 'GUARANTEED REWARDS'}
+                            {/* Scrollable Content */}
+                            <div className="flex-1 overflow-y-auto relative z-20 p-3 sm:p-4.5 flex flex-col gap-3 sm:gap-4 scrollbar-thin scrollbar-thumb-slate-800 select-none">
+                                
+                                {/* 1. Simulation Profile & Decrypted Briefing Description */}
+                                <div className="bg-slate-900/35 border border-slate-800 p-3 rounded-lg flex flex-col gap-1.5 relative overflow-hidden backdrop-blur-sm">
+                                    <div className="absolute top-0 left-0 w-0.5 h-full bg-indigo-500" />
+                                    <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-indigo-400 font-mono flex items-center gap-1">
+                                        <FileText className="w-3.5 h-3.5" />
+                                        {language === 'RU' ? 'ПРОФИЛЬ СИМУЛЯЦИИ' : 'SIMULATION PROFILE'}
                                     </span>
+                                    <h2 className="text-xs sm:text-sm font-black text-slate-100 tracking-tight uppercase font-sans">
+                                        {activeLevelConfig?.title || (language === 'RU' ? 'Свободный Сектор' : 'Custom Sector')}
+                                    </h2>
+                                    <p className="text-[10px] sm:text-[11px] text-slate-300 leading-normal font-sans whitespace-pre-wrap">
+                                        {activeLevelConfig?.description || (language === 'RU' ? 'Пользовательская симуляция с хаотическими условиями.' : 'Standard simulation protocol with customizable variables.')}
+                                    </p>
+                                </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-0.5">
-                                        {rewardHexCells.map(cell => (
-                                            <div key={cell.id} className="flex items-center gap-1.5 sm:gap-2 bg-black/40 border border-cyan-500/20 p-2 sm:p-2.5 rounded-lg">
-                                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-xs sm:text-sm shrink-0 text-cyan-400">
-                                                    ?
+                                {/* Horizontal / Vertical Grid of parameters */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    
+                                    {/* Column A: Starts Allocations and AI threat warnings */}
+                                    <div className="flex flex-col gap-3">
+                                        {/* Starting Allocation */}
+                                        <div className="bg-slate-900/35 border border-slate-800/70 p-3 rounded-lg flex flex-col gap-2">
+                                            <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-indigo-400 font-mono flex items-center gap-1">
+                                                <Zap className="w-3 h-3 text-indigo-400 shrink-0" />
+                                                {language === 'RU' ? 'СТАРТОВАЯ КОМПЛЕКТАЦИЯ' : 'INITIAL SPEED ALLOCATION'}
+                                            </span>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="bg-black/35 border border-slate-800/40 p-2 rounded-lg flex items-center gap-2">
+                                                    <div className="p-1 bg-sky-500/10 rounded border border-sky-500/20 shrink-0">
+                                                        <Timer className="w-3.5 h-3.5 text-sky-400" />
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-[7.5px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'РЕСУРС ХОДОВ' : 'MOVES BUDGET'}</span>
+                                                        <span className="text-[11px] sm:text-xs font-black text-sky-300 font-mono mt-0.5 leading-none">{activeLevelConfig?.startState.moves ?? winCondition?.queueSize ?? 0}</span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col min-w-0">
-                                                    <span className="text-[7px] sm:text-[8px] font-black uppercase text-cyan-400 font-mono tracking-wider leading-none mb-0.5">
-                                                        {language === 'RU' ? 'СЛУЧАЙНЫЙ' : 'RANDOM'}
-                                                    </span>
-                                                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-100 truncate">
-                                                        {language === 'RU' ? 'Гекс-Блок' : 'Hex Tile'}
-                                                    </span>
+                                                <div className="bg-black/35 border border-slate-800/40 p-2 rounded-lg flex items-center gap-2">
+                                                    <div className="p-1 bg-amber-500/10 rounded border border-amber-500/20 shrink-0">
+                                                        <Coins className="w-3.5 h-3.5 text-amber-400" />
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-[7.5px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'НАЧ.КРЕДИТЫ' : 'START CREDITS'}</span>
+                                                        <span className="text-[11px] sm:text-xs font-black text-amber-300 font-mono mt-0.5 leading-none">{activeLevelConfig?.startState.credits ?? 0}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-black/35 border border-slate-800/40 p-2 rounded-lg flex items-center gap-2">
+                                                    <div className="p-1 bg-emerald-500/10 rounded border border-emerald-500/20 shrink-0">
+                                                        <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-[7.5px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'МАТЕРИАЛЫ' : 'RAW MATERIALS'}</span>
+                                                        <span className="text-[11px] sm:text-xs font-black text-emerald-300 font-mono mt-0.5 leading-none">{activeLevelConfig?.startState.materials ?? 5}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-black/35 border border-slate-800/40 p-2 rounded-lg flex items-center gap-2">
+                                                    <div className="p-1 bg-indigo-500/10 rounded border border-indigo-500/20 shrink-0">
+                                                        <Crown className="w-3.5 h-3.5 text-indigo-400" />
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-[7.5px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'ОГРАНИЧ.РАНГА' : 'RANK CAP'}</span>
+                                                        <span className="text-[11px] sm:text-xs font-black text-indigo-300 font-mono mt-0.5 leading-none">{activeLevelConfig?.startState.rank ?? 5}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                    
-                                    <div className="text-[8.5px] sm:text-[9.5px] text-slate-300 font-sans bg-emerald-950/20 p-2.5 rounded border border-emerald-500/25 select-none space-y-1.5">
-                                        <div className="flex items-start gap-1.5 font-bold text-cyan-400">
-                                            <span className="text-cyan-400">⬢</span>
-                                            <span>
-                                                {language === 'RU' 
-                                                    ? 'Награда за победу: получите случайные блоки гексов для их использования в режиме свободного строительства (Гексагон).' 
-                                                    : 'Victory Reward: obtain random hex blocks and use them in the free build mode (Hexagon)!'}
-                                            </span>
                                         </div>
-                                    </div>
-                                </div>
 
-                                {/* 3. WIN CONDITIONS & LIVE GOALS (УСЛОВИЯ ПОБЕДЫ) */}
-                                <div className="bg-slate-900/80 border border-amber-500/30 rounded-xl p-3 sm:p-4.5 flex flex-col gap-2 relative overflow-hidden shadow-[0_4px_20px_rgba(245,158,11,0.1)] text-left">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-2xl rounded-full pointer-events-none" />
-                                    <span className="text-[9px] sm:text-xs uppercase font-black tracking-[0.15em] text-amber-400 flex items-center gap-1 font-mono">
-                                        <Target className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                                        {language === 'RU' ? 'УСЛОВИЯ ПОБЕДЫ И ЦЕЛИ' : 'WIN CONDITIONS & GOALS'}
-                                    </span>
-                                    
-                                    {activeLevelConfig?.goalText ? (
-                                        <h3 className="text-[11.5px] sm:text-xs font-black text-amber-200 uppercase leading-snug tracking-tight font-sans bg-amber-950/20 border border-amber-500/20 px-2 py-1.5 rounded-md mt-0.5">
-                                            {activeLevelConfig.goalText}
-                                        </h3>
-                                    ) : (
-                                        <h3 className="text-[11px] sm:text-xs font-extrabold text-amber-200 uppercase leading-snug tracking-tight font-sans bg-amber-950/20 border border-amber-500/20 px-2 py-1.5 rounded-md mt-0.5">
-                                            {language === 'RU' ? 'Достигнуть установленной высоты или прибыли' : 'Reach target rank or funds'}
-                                        </h3>
-                                    )}
-                                    
-                                    <div className="flex flex-col gap-2 mt-1 font-mono">
-                                        {activeLevelConfig && campaignMetrics ? (() => {
-                                            const progressPercent = Math.min(100, (campaignMetrics.current / campaignMetrics.target) * 100);
-                                            const isCompleted = campaignMetrics.current >= campaignMetrics.target;
-                                            return (
-                                                <div className="flex flex-col gap-1.5 p-2.5 rounded bg-black/40 border border-slate-800">
-                                                    <div className="flex items-center justify-between text-[10px] sm:text-xs font-bold font-mono">
-                                                        <span className="text-slate-300 uppercase shrink truncate">{campaignMetrics.label}</span>
-                                                        <span className={isCompleted ? "text-emerald-400" : "text-amber-400"}>
-                                                            {campaignMetrics.current} / {campaignMetrics.target}
+                                        {/* Bot intelligence analysis */}
+                                        {activeLevelConfig?.aiMode && activeLevelConfig.aiMode !== 'none' && (
+                                            <div className="bg-red-950/15 border border-red-500/20 p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/5 blur-2xl rounded-full pointer-events-none animate-pulse" />
+                                                <span className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest text-red-400 font-mono flex items-center gap-1.5">
+                                                    <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                                    {language === 'RU' ? 'АНАЛИЗ АКТИВНОСТИ ИИ' : 'AI THREAT ANALYSIS'}
+                                                </span>
+                                                <div className="flex items-center gap-3 mt-1.5 bg-black/45 p-2.5 rounded-lg border border-red-950/85">
+                                                    <Cpu className="w-7 h-7 text-red-400 shrink-0 animate-[spin_12s_linear_infinite]" />
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-[8px] font-black text-red-400 uppercase leading-none">
+                                                            {language === 'RU' ? 'СТРАТЕГИЯ ДРОНА:' : 'DRONE PROFILE:'}
+                                                        </span>
+                                                        <span className="text-[10.5px] sm:text-xs font-black text-white uppercase tracking-wider mt-1 font-mono">
+                                                            {activeLevelConfig?.botObjective ? (
+                                                                language === 'RU' ? (
+                                                                    activeLevelConfig.botObjective === 'COMPETE_RANK' ? 'Гонка Рангов (Высота L9+)' :
+                                                                    activeLevelConfig.botObjective === 'MONUMENT_RACE' ? 'Поиск Осколков Монумента' :
+                                                                    activeLevelConfig.botObjective === 'DESTROY_PLAYER' ? 'Саботаж секторов игрока' :
+                                                                    activeLevelConfig.botObjective === 'GUARD_HEXES' ? 'Восстановление Ландшафта' :
+                                                                    activeLevelConfig.botObjective === 'OWN_HEXES' ? 'Захват ячеек карты' : activeLevelConfig.botObjective
+                                                                ) : (
+                                                                    activeLevelConfig.botObjective === 'COMPETE_RANK' ? 'Rank Pace (Summit race)' :
+                                                                    activeLevelConfig.botObjective === 'MONUMENT_RACE' ? 'Collect Monument Pieces' :
+                                                                    activeLevelConfig.botObjective === 'DESTROY_PLAYER' ? 'Target Player Sectors' :
+                                                                    activeLevelConfig.botObjective === 'GUARD_HEXES' ? 'Tile Land Defense' :
+                                                                    activeLevelConfig.botObjective === 'OWN_HEXES' ? 'Aggressive Land Expansion' : activeLevelConfig.botObjective
+                                                                )
+                              ) : (
+                                  language === 'RU' ? 'Базовое бурение' : 'Standard Excavation'
+                              )}
                                                         </span>
                                                     </div>
-                                                    
-                                                    {/* Progress bar */}
-                                                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                                        <div 
-                                                            className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                                                            style={{ width: `${progressPercent}%` }}
-                                                        />
-                                                    </div>
-                                                    
-                                                    <div className="flex items-center gap-1 text-[8.5px] sm:text-[9.5px] mt-0.5 font-bold">
-                                                        {isCompleted ? (
-                                                            <span className="text-emerald-400 flex items-center gap-0.5">
-                                                                <CheckCircle className="w-3" /> {language === 'RU' ? 'ЗАДАЧА ВЫПОЛНЕНА' : 'GOAL REACHED'}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-slate-500 flex items-center gap-0.5">
-                                                                <Timer className="w-3" /> {language === 'RU' ? 'ОЖИДАНИЕ ВЫПОЛНЕНИЯ...' : 'PROCESSING...'}
-                                                            </span>
-                                                        )}
-                                                    </div>
                                                 </div>
-                                            );
-                                        })() : (
-                                            /* If in skirmish battle mode, show rank and/or credits targets depending on winType */
-                                            winCondition && player ? (
-                                                <div className="flex flex-col gap-2">
-                                                    {/* Rank Goal */}
-                                                    <div className="flex flex-col gap-1.5 p-2.5 rounded bg-black/40 border border-slate-800">
-                                                        <div className="flex items-center justify-between text-[10px] sm:text-xs font-bold font-mono">
-                                                            <span className="text-slate-300 uppercase flex items-center gap-1">
-                                                                <Crown className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                                                                {language === 'RU' ? 'ЦЕЛЕВОЙ РЕЙТИНГ РАНГА' : 'TARGET RANK'}
-                                                            </span>
-                                                            <span className={player.playerLevel >= winCondition.targetLevel ? "text-emerald-400" : "text-amber-400"}>
-                                                                {player.playerLevel} / {winCondition.targetLevel}
-                                                            </span>
-                                                        </div>
-                                                        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                                            <div 
-                                                                className={`h-full rounded-full transition-all duration-500 ${player.playerLevel >= winCondition.targetLevel ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                                                                style={{ width: `${Math.min(100, (player.playerLevel / winCondition.targetLevel) * 100)}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Coins Goal */}
-                                                    {winCondition.winType !== 'SUMMIT' && winCondition.targetCoins > 0 && (
-                                                        <div className="flex flex-col gap-1.5 p-2.5 rounded bg-black/40 border border-slate-800">
-                                                            <div className="flex items-center justify-between text-[10px] sm:text-xs font-bold font-mono">
-                                                                <span className="text-slate-300 uppercase flex items-center gap-1">
-                                                                    <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                                                    {language === 'RU' ? 'НЕОБХОДИМЫЕ КРЕДИТЫ' : 'REQUIRED CREDITS'}
-                                                                </span>
-                                                                <span className={player.coins >= winCondition.targetCoins ? "text-emerald-400" : "text-amber-400"}>
-                                                                    {player.coins} / {winCondition.targetCoins}
-                                                                </span>
-                                                            </div>
-                                                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                                                <div 
-                                                                    className={`h-full rounded-full transition-all duration-500 ${player.coins >= winCondition.targetCoins ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                                                                    style={{ width: `${Math.min(100, (player.coins / winCondition.targetCoins) * 100)}%` }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] sm:text-xs text-slate-500 italic">No objectives assigned.</p>
-                                            )
+                                                <p className="text-[10px] sm:text-[11px] text-red-300/80 leading-relaxed font-sans">
+                                                    {language === 'RU' 
+                                                        ? 'Региональная директива противника активирована. Искин будет пытаться заблокировать трафик. Конфликтные транзакции отдают приоритет игроку.' 
+                                                        : 'Rival drone agent is active on this simulation cluster. AI coordinates will target key tiles.'}
+                                                </p>
+                                            </div>
                                         )}
                                     </div>
+
+                                    {/* Column B: Goals & Rewards */}
+                                    <div className="flex flex-col gap-3">
+                                        {/* Goals Card */}
+                                        <div className="bg-slate-900/35 border border-amber-500/15 p-3 rounded-lg flex flex-col gap-2">
+                                            <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-amber-500 font-mono flex items-center gap-1">
+                                                <Target className="w-3 h-3 text-amber-500 shrink-0" />
+                                                {language === 'RU' ? 'УСЛОВИЯ АКТИВАЦИИ' : 'WIN CONDITION MATRIX'}
+                                            </span>
+                                            
+                                            {activeLevelConfig?.goalText ? (
+                                                <h3 className="text-[10.5px] sm:text-xs font-black text-amber-300 uppercase leading-snug tracking-tight font-sans bg-amber-950/15 border border-amber-500/25 px-2.5 py-1.5 rounded-md">
+                                                    {activeLevelConfig.goalText}
+                                                </h3>
+                                            ) : (
+                                                <h3 className="text-[10.5px] sm:text-xs font-black text-amber-300 uppercase leading-snug tracking-tight font-sans bg-amber-950/15 border border-amber-500/25 px-2.5 py-1.5 rounded-md">
+                                                    {language === 'RU' ? 'Достигнуть установленной высоты или прибыли' : 'Reach target rank or funds'}
+                                                </h3>
+                                            )}
+                                            
+                                            <div className="flex flex-col gap-1.5 mt-0.5 font-mono">
+                                                {activeLevelConfig && campaignMetrics ? (() => {
+                                                    const progressPercent = Math.min(100, (campaignMetrics.current / campaignMetrics.target) * 100);
+                                                    const isCompleted = campaignMetrics.current >= campaignMetrics.target;
+                                                    return (
+                                                        <div className="flex flex-col gap-2 p-2 rounded-md bg-black/35 border border-slate-800">
+                                                            <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-black font-mono">
+                                                                <span className="text-slate-400 uppercase shrink truncate">{campaignMetrics.label}</span>
+                                                                <span className={isCompleted ? "text-emerald-400" : "text-amber-500"}>
+                                                                    {campaignMetrics.current} / {campaignMetrics.target}
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            {/* Progress bar */}
+                                                            <div className="w-full bg-slate-850 h-1.5 rounded-full overflow-hidden border border-slate-850/85 shadow-inner">
+                                                                <div 
+                                                                    className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]'}`}
+                                                                    style={{ width: `${progressPercent}%` }}
+                                                                />
+                                                            </div>
+                                                            
+                                                            <div className="flex items-center gap-1 text-[8.5px] sm:text-[9px] font-black">
+                                                                {isCompleted ? (
+                                                                    <span className="text-emerald-400 flex items-center gap-1 leading-none">
+                                                                        <CheckCircle className="w-3" /> {language === 'RU' ? 'УСЛОВИЕ ВЫПОЛНЕНО' : 'GOAL COMPLETED'}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-slate-500 flex items-center gap-1 leading-none">
+                                                                        <Timer className="w-3 h-3 shrink-0 animate-pulse" /> {language === 'RU' ? 'ОЖИДАНИЕ ОБРАБОТКИ...' : 'CLUSTER PROCESSING...'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })() : (
+                                                    /* If in skirmish battle mode */
+                                                    winCondition && player ? (
+                                                        <div className="flex flex-col gap-1.5">
+                                                            {/* Rank Goal */}
+                                                            <div className="flex flex-col gap-1.5 p-2 rounded-md bg-black/35 border border-slate-800/60">
+                                                                <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-black font-mono">
+                                                                    <span className="text-slate-400 uppercase flex items-center gap-1">
+                                                                        <Crown className="w-3 h-3 text-indigo-400 shrink-0" />
+                                                                        {language === 'RU' ? 'ЦЕЛЕВОЙ РАНГ' : 'TARGET RANK'}
+                                                                    </span>
+                                                                    <span className={player.playerLevel >= winCondition.targetLevel ? "text-emerald-400" : "text-amber-500"}>
+                                                                        {player.playerLevel} / {winCondition.targetLevel}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="w-full bg-slate-850 h-1 rounded-full overflow-hidden">
+                                                                    <div 
+                                                                        className={`h-full rounded-full transition-all duration-500 ${player.playerLevel >= winCondition.targetLevel ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]'}`}
+                                                                        style={{ width: `${Math.min(100, (player.playerLevel / winCondition.targetLevel) * 100)}%` }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Coins Goal */}
+                                                            {winCondition.winType !== 'SUMMIT' && winCondition.targetCoins > 0 && (
+                                                                <div className="flex flex-col gap-1.5 p-2 rounded-md bg-black/35 border border-slate-800/60">
+                                                                    <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-black font-mono">
+                                                                        <span className="text-slate-400 uppercase flex items-center gap-1">
+                                                                            <Coins className="w-3 h-3 text-amber-400 shrink-0" />
+                                                                            {language === 'RU' ? 'КРЕДИТЫ' : 'REQUIRED CREDITS'}
+                                                                        </span>
+                                                                        <span className={player.coins >= winCondition.targetCoins ? "text-emerald-400" : "text-amber-500"}>
+                                                                            {player.coins} / {winCondition.targetCoins}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="w-full bg-slate-850 h-1 rounded-full overflow-hidden">
+                                                                        <div 
+                                                                            className={`h-full rounded-full transition-all duration-500 ${player.coins >= winCondition.targetCoins ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]'}`}
+                                                                            style={{ width: `${Math.min(100, (player.coins / winCondition.targetCoins) * 100)}%` }}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-[10px] sm:text-xs text-slate-500 italic">No objectives assigned.</p>
+                                                    )
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Guaranteed Rewards Card */}
+                                        <div className="bg-slate-900/35 border border-emerald-500/15 p-3 rounded-lg flex flex-col gap-2 relative overflow-hidden text-left">
+                                            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 blur-2xl rounded-full pointer-events-none" />
+                                            <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-emerald-400 font-mono flex items-center gap-1">
+                                                <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
+                                                {language === 'RU' ? 'ДОСТУПНЫЕ НАГРАДЫ' : 'POTENTIAL REWARDS'}
+                                            </span>
+
+                                            <div className="grid grid-cols-3 gap-1.5">
+                                                {rewardHexCells.map(cell => (
+                                                    <motion.div 
+                                                        key={cell.id} 
+                                                        whileHover={{ y: -1, scale: 1.01 }}
+                                                        className="flex flex-col items-center justify-center bg-black/35 border border-indigo-500/10 p-1.5 rounded-md select-none cursor-help hover:border-indigo-500/25 hover:bg-slate-900/40 transition-colors"
+                                                    >
+                                                        <div className="w-5.5 h-5.5 rounded bg-indigo-950/20 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-black tracking-wide relative leading-none">
+                                                            ⬢
+                                                        </div>
+                                                        <div className="flex flex-col items-center mt-1">
+                                                            <span className="text-[6.5px] font-black text-indigo-300 font-mono tracking-wider leading-none">
+                                                                {language === 'RU' ? 'ГЕКС-ФОРМА' : 'HEX CORES'}
+                                                            </span>
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                            
+                                            <p className="text-[9px] sm:text-[9.5px] leading-normal text-slate-300 font-sans bg-emerald-950/10 p-2 rounded border border-emerald-500/15">
+                                                {language === 'RU' 
+                                                    ? 'Награда за победу: получите случайные гекс-блоки в ангар свободного конструирования (Гексагон).' 
+                                                    : 'Victory bonus: claim encrypted high-tier blocks to utilize safely inside the sandbox constructor (Hexagon).'}
+                                            </p>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
 
-                            {/* Footer / Action */}
-                            <div className="p-3.5 sm:p-5 bg-slate-900/45 border-t border-indigo-500/20 z-20 shrink-0">
-                                <button 
+                            {/* Footer / Deploy Button */}
+                            <div className="p-3 sm:p-4 bg-slate-900/95 border-t border-indigo-500/20 z-20 shrink-0">
+                                <motion.button 
+                                    whileHover={{ scale: 1.012, filter: "brightness(1.1)" }}
+                                    whileTap={{ scale: 0.988 }}
                                     onClick={() => {
                                         if (gameStatus === 'BRIEFING') {
                                             if (activeLevelConfig?.id === '1.0') {
@@ -641,14 +766,17 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         }
                                         closeModal();
                                     }} 
-                                    className="group/btn relative flex w-full flex-col items-center justify-center gap-1.5 px-1 py-3 bg-emerald-950/30 border border-emerald-500/50 hover:bg-emerald-900/20 hover:border-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:shadow-[0_0_40px_rgba(16,185,129,0.35)] overflow-hidden rounded-md text-emerald-400 hover:text-emerald-300 cursor-pointer active:scale-98"
+                                    className="group/btn relative flex w-full flex-col items-center justify-center py-2.5 sm:py-3 bg-emerald-600 border border-emerald-400 hover:bg-emerald-500 text-white rounded-lg shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:shadow-[0_0_35px_rgba(16,185,129,0.45)] transition-all cursor-pointer overflow-hidden font-mono"
                                 >
-                                    <div className="absolute inset-0 bg-emerald-500/10 opacity-0 transition-opacity group-hover/btn:opacity-100 pointer-events-none" />
-                                    <div className="relative z-10 flex items-center justify-center gap-2.5 text-white font-black uppercase tracking-[0.25em] text-xs sm:text-sm">
-                                        {gameStatus === 'BRIEFING' ? (activeLevelConfig?.id === '1.0' ? 'START TRAINING' : t.BRIEFING_BTN_START) : t.BTN_READY}
-                                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 transition-transform group-hover/btn:translate-x-1.5" />
+                                    {/* Sweeping shimmer effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite] pointer-events-none" />
+                                    <div className="relative z-10 flex items-center justify-center gap-2 text-white font-black uppercase tracking-[0.2em] text-xs sm:text-xs">
+                                        <span>
+                                            {gameStatus === 'BRIEFING' ? (activeLevelConfig?.id === '1.0' ? (language === 'RU' ? 'НАЧАТЬ ТРЕНИРОВКУ' : 'START TRAINING') : t.BRIEFING_BTN_START) : t.BTN_READY}
+                                        </span>
+                                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white transition-transform group-hover/btn:translate-x-1" />
                                     </div>
-                                </button>
+                                </motion.button>
                             </div>
                         </motion.div>
                     </div>

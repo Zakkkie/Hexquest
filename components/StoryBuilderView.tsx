@@ -6,7 +6,7 @@ import { GAME_CONFIG } from '../rules/config.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { UpgradesTree } from './UpgradesTree.tsx';
 import { textureService } from '../services/textureService.ts';
-import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Konva from 'konva';
 
@@ -2267,6 +2267,19 @@ const StoryBuilderView: React.FC = () => {
                 {/* BOTTOM CONTENT - Compact Inventory Carousel with floating SP island */}
                 <div className="mt-auto flex flex-col items-center justify-end pointer-events-none pt-4 w-full max-w-5xl mx-auto px-4 md:px-0 select-none pb-2">
                     
+                    {/* "Levels" (Уровни) button precisely in the empty region specified */}
+                    {!isUiHidden && (
+                        <motion.button
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            onClick={() => { playUiSound('CLICK'); setUIState('CAMPAIGN_MAP'); }}
+                            className="pointer-events-auto mb-3 px-6 py-2.5 bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-indigo-200 hover:text-white rounded-xl shadow-[0_4px_25px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] backdrop-blur-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                        >
+                            <Map className="w-4 h-4 text-indigo-400 animate-pulse" />
+                            <span>{language === 'RU' ? 'Карта уровней' : 'Levels Map'}</span>
+                        </motion.button>
+                    )}
+
                     {/* COMPACT CAROUSEL - relocated elegantly to the center (cells made smaller, L0 to L9, eraser) */}
                     <motion.div
                         initial={{ y: 50, opacity: 0 }}

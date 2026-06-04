@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, LogOut, Ghost, ArrowRight, Shield, X, LogIn, Lock, Target, Gem, Crown, Bot, Activity, Volume2, VolumeX, BookOpen, Globe, Music, ChevronLeft, ChevronRight, Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, Mountain, Crosshair, Flame, Shuffle, Settings } from 'lucide-react';
+import { Trophy, LogOut, Ghost, ArrowRight, Shield, X, LogIn, Lock, Target, Gem, Crown, Bot, Activity, Volume2, VolumeX, BookOpen, Music, ChevronLeft, ChevronRight, Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, Mountain, Crosshair, Flame, Shuffle, Settings } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -279,7 +279,6 @@ const MainMenu: React.FC = () => {
   const [selectedHead, setSelectedHead] = useState(0);
   const [selectedBody, setSelectedBody] = useState(0);
   
-  const [showCampaignModes, setShowCampaignModes] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{type: 'ABANDON_CAMPAIGN' | 'ABANDON_NEW_GAME' | 'LOGOUT' | 'RESET_PROGRESS_ALL', payload?: any} | null>(null);
   
@@ -327,11 +326,6 @@ const MainMenu: React.FC = () => {
       return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleCampaignClick = () => {
-     playUiSound('CLICK');
-     setShowCampaignModes(!showCampaignModes);
-  };
-
   const startCampaignWithMode = (mode: 'STORY' | 'LEVELS') => {
     playUiSound('CLICK');
     setCampaignMode(mode);
@@ -339,7 +333,6 @@ const MainMenu: React.FC = () => {
         setConfirmAction({ type: 'ABANDON_CAMPAIGN', payload: mode });
     } else {
         setUIState(mode === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
-        setShowCampaignModes(false);
     }
   };
 
@@ -412,7 +405,6 @@ const MainMenu: React.FC = () => {
     if (confirmAction.type === 'ABANDON_CAMPAIGN') {
       abandonSession();
       setUIState(confirmAction.payload === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
-      setShowCampaignModes(false);
     } else if (confirmAction.type === 'ABANDON_NEW_GAME') {
       setShowMissionConfig(true);
       setSelectedTier(1);
@@ -731,59 +723,13 @@ const MainMenu: React.FC = () => {
         <div className="md:col-span-6 lg:col-span-5 flex flex-col gap-3.5 w-full max-w-sm shrink-0">
           <div className="flex flex-col gap-2">
             <MenuButton 
-                onClick={handleCampaignClick} 
+                onClick={() => startCampaignWithMode('STORY')} 
                 variant="primary" 
                 icon={<BookOpen className="w-5 h-5 fill-current" />} 
                 label={t.CAMPAIGN} 
                 subLabel={t.CAMPAIGN_SUB} 
                 style={{ marginRight: '0px' }}
             />
-            
-            <AnimatePresence>
-            {showCampaignModes && (
-                <motion.div 
-                    initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                    animate={{ opacity: 1, height: 'auto', overflow: 'hidden' }}
-                    exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                    transition={{ type: "spring", damping: 25, stiffness: 180 }}
-                    className="flex flex-col gap-2 pl-4 border-l-2 border-indigo-500/30"
-                >
-                    <button 
-                        onClick={() => startCampaignWithMode('STORY')}
-                        className="relative flex items-center gap-3 p-3 bg-indigo-950/40 border-2 border-indigo-400 rounded-2xl hover:bg-indigo-900/40 hover:border-cyan-400 transition-all text-left shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] group backdrop-blur-md"
-                    >
-                        {/* Beautiful recommendation glowing indicator */}
-                        <div className="absolute -top-1.5 -right-1.5 flex h-3 w-3 z-30">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                        </div>
-                        
-                        <div className="p-2.5 md:p-3 bg-indigo-500/20 rounded-xl text-indigo-300 group-hover:bg-indigo-500/30 group-hover:text-cyan-200 transition-colors shadow-inner border border-indigo-400/40 group-hover:border-cyan-400/50">
-                            <Globe className="w-4 h-4 md:w-5 md:h-5 drop-shadow-[0_0_8px_currentColor]" />
-                        </div>
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-xs md:text-sm font-black uppercase tracking-widest text-indigo-100 group-hover:text-white transition-colors">{t.MODE_STORY}</span>
-                                <span className="text-[8px] font-mono px-1 py-0.2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded font-bold tracking-wider uppercase animate-pulse">START</span>
-                            </div>
-                            <span className="text-[10px] md:text-[11px] font-mono text-indigo-300/80 uppercase group-hover:text-indigo-200">{t.MODE_STORY_SUB}</span>
-                        </div>
-                    </button>
-                    <button 
-                        onClick={() => startCampaignWithMode('LEVELS')}
-                        className="flex items-center gap-3 p-3 bg-slate-900/40 border border-white/5 rounded-2xl hover:bg-slate-800/80 hover:border-purple-500/50 transition-all text-left shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_30px_rgba(168,85,247,0.15)] group backdrop-blur-md"
-                    >
-                        <div className="p-2.5 md:p-3 bg-purple-500/10 rounded-xl text-purple-400 group-hover:bg-purple-500/20 group-hover:text-purple-200 transition-colors shadow-inner border border-purple-500/20 group-hover:border-purple-400/50">
-                            <Layers className="w-4 h-4" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase tracking-wider text-white">{t.MODE_LEVELS}</span>
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">{t.MODE_LEVELS_SUB}</span>
-                        </div>
-                    </button>
-                </motion.div>
-            )}
-            </AnimatePresence>
           </div>
 
           <MenuButton onClick={handleNewGameClick} variant="battle" icon={<Swords className="w-5 h-5" />} label={t.SKIRMISH} subLabel={t.SKIRMISH_SUB} />
