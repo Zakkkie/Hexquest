@@ -29,7 +29,7 @@ interface Figure {
     rewardSP: number;
 }
 
-const FIGURES_COLLECTION: Figure[] = [
+const STATIC_FIGURES: Figure[] = [
     // --- CHAPTER I: NEXUS CORE (1-10) ---
     {
         id: 'c1_f1',
@@ -375,6 +375,120 @@ const FIGURES_COLLECTION: Figure[] = [
         ],
         rewardSP: 3
     }
+];
+
+const generateAdditionalFigures = (): Figure[] => {
+    const list: Figure[] = [];
+    const dirs = [
+        { q: 1, r: -1 }, { q: 1, r: 0 }, { q: 0, r: 1 },
+        { q: -1, r: 1 }, { q: -1, r: 0 }, { q: 0, r: -1 }
+    ];
+    
+    for (let i = 31; i <= 110; i++) {
+        const id = `c4_f${i}`;
+        const indexInChapter = i - 30;
+        let nameRU = '';
+        let nameEN = '';
+        let descRU = '';
+        let descEN = '';
+        const shape: { q: number, r: number, lvl?: number }[] = [];
+        let rewardSP = 1;
+        
+        const size = 3 + Math.floor((i - 31) / 8); 
+        
+        let minLvl = 1;
+        let maxLvl = 3;
+        let themeNameRU = '';
+        let themeNameEN = '';
+        
+        if (i <= 45) {
+            minLvl = 1; maxLvl = 4;
+            themeNameRU = 'Квантовая Цепь';
+            themeNameEN = 'Quantum Circuit';
+            rewardSP = 1;
+        } else if (i <= 60) {
+            minLvl = 2; maxLvl = 5;
+            themeNameRU = 'Техно-Спираль';
+            themeNameEN = 'Tech Spiral';
+            rewardSP = 2;
+        } else if (i <= 75) {
+            minLvl = 3; maxLvl = 6;
+            themeNameRU = 'Гиперпространственные Врата';
+            themeNameEN = 'Hyper-Gate';
+            rewardSP = 2;
+        } else if (i <= 90) {
+            minLvl = 4; maxLvl = 7;
+            themeNameRU = 'Резонансный Обелиск';
+            themeNameEN = 'Resonance Obelisk';
+            rewardSP = 3;
+        } else if (i <= 100) {
+            minLvl = 5; maxLvl = 8;
+            themeNameRU = 'Сингулярный Импульсник';
+            themeNameEN = 'Singularity Pulser';
+            rewardSP = 3;
+        } else {
+            minLvl = 6; maxLvl = 10;
+            themeNameRU = 'Матрица Омега';
+            themeNameEN = 'Omega Matrix';
+            rewardSP = 4;
+        }
+        
+        nameRU = `Шаг ${i}: ${themeNameRU} #-` + indexInChapter;
+        nameEN = `Step ${i}: ${themeNameEN} #-` + indexInChapter;
+        
+        descRU = `Соберите геометрическую структуру "${themeNameRU}" из ${size} последовательных блоков высотой от L${minLvl} до L${maxLvl}.`;
+        descEN = `Construct the connected "${themeNameEN}" geometry utilizing ${size} sequential blocks spanning levels L${minLvl} to L${maxLvl}.`;
+        
+        let curQ = 0;
+        let r_val = 0;
+        shape.push({ q: curQ, r: r_val, lvl: minLvl });
+        
+        const visited = new Set<string>();
+        visited.add(`${curQ},${r_val}`);
+        
+        for (let j = 1; j < size; j++) {
+            const dirIndex = (i * 17 + j * 29) % 6;
+            const dir = dirs[dirIndex];
+            
+            let nextQ = curQ + dir.q;
+            let nextR = r_val + dir.r;
+            
+            if (visited.has(`${nextQ},${nextR}`)) {
+                for (let k = 1; k < 6; k++) {
+                    const altDir = dirs[(dirIndex + k) % 6];
+                    if (!visited.has(`${curQ + altDir.q},${r_val + altDir.r}`)) {
+                        nextQ = curQ + altDir.q;
+                        nextR = r_val + altDir.r;
+                        break;
+                    }
+                }
+            }
+            
+            curQ = nextQ;
+            r_val = nextR;
+            visited.add(`${curQ},${r_val}`);
+            
+            const relativeLvl = minLvl + (j % (maxLvl - minLvl + 1));
+            shape.push({ q: curQ, r: r_val, lvl: relativeLvl });
+        }
+        
+        list.push({
+            id,
+            nameRU,
+            nameEN,
+            descRU,
+            descEN,
+            shape,
+            rewardSP
+        });
+    }
+    
+    return list;
+};
+
+const FIGURES_COLLECTION: Figure[] = [
+    ...STATIC_FIGURES,
+    ...generateAdditionalFigures()
 ];
 
 const getBasePathD = () => {

@@ -116,9 +116,18 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
         setRewardHexCells(prev => prev.map(c => c.id === id ? { ...c, revealedLevel: level, isClaimed: true } : c));
         
+        // Mathematically optimized counts to ensure players have ample resources for over 100 figures
+        const countToGrant = level === 0 ? 20 
+                           : level === 1 ? 15 
+                           : level === 2 ? 12 
+                           : level === 3 ? 10 
+                           : level === 4 ? 8 
+                           : level === 5 ? 6 
+                           : 5;
+
         // Instantly add block to global collected hexes to be used in StoryBuilderView
-        addCollectedHexes({ [level]: 1 });
-        addMinedHexes({ [level]: 1 });
+        addCollectedHexes({ [level]: countToGrant });
+        addMinedHexes({ [level]: countToGrant });
     };
 
     // --- LOGIC ---
@@ -1179,7 +1188,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                                 L{cell.revealedLevel}
                                                             </div>
                                                             <span className="text-[8px] sm:text-[9px] font-bold text-emerald-400 mt-2 uppercase tracking-wide">
-                                                                {language === 'RU' ? 'Добавлено!' : 'Added!'}
+                                                                +{cell.revealedLevel === 0 ? 20 : cell.revealedLevel === 1 ? 15 : cell.revealedLevel === 2 ? 12 : cell.revealedLevel === 3 ? 10 : cell.revealedLevel === 4 ? 8 : cell.revealedLevel === 5 ? 6 : 5} {language === 'RU' ? 'шт!' : 'qty!'}
                                                             </span>
                                                         </>
                                                     ) : (
