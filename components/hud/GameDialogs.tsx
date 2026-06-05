@@ -268,12 +268,18 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             const idx = wavePath.findIndex(p => p.q === player.q && p.r === player.r);
             return { current: idx !== -1 ? idx : 0, target: 10, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
         }
-        if (levelId === '1.3') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 2, label: 'LEVEL' };
-        if (levelId === '1.4') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 3, label: 'LEVEL' };
-        if (levelId === '1.5') return { current: player.coins, target: 150, label: TEXT[language].HUD.TUT_1_5_COUNTER };
-        if (levelId === '1.6') return { current: player.playerLevel, target: 4, label: 'RANK' };
+        if (levelId === '1.3') return { current: Math.max(0, 2 - (grid[`0,0`]?.currentLevel ?? 2)), target: 2, label: language === 'RU' ? 'СРЕЗАННЫЕ СЛОИ' : 'DIG LAYERS' };
+        if (levelId === '1.4') return { current: grid[`0,0`]?.currentLevel ?? 0, target: 2, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
+        if (levelId === '1.5') return { current: grid[`0,0`]?.currentLevel ?? 0, target: 1, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
+        if (levelId === '1.6') return { current: player.coins, target: 100, label: language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS' };
         if (levelId === '1.7') {
-           return { current: restoredHexesCount, target: 5, label: TEXT[language].HUD.TUT_1_7_COUNTER || 'RESTORED' };
+            return { current: (player.q === 3 && player.r === -1) ? 1 : 0, target: 1, label: language === 'RU' ? 'ПОРТАЛ' : 'PORTAL' };
+        }
+        if (levelId === '1.8') return { current: Math.max(0, -(grid[`0,0`]?.currentLevel ?? 0)), target: 2, label: language === 'RU' ? 'ГЛУБИНА' : 'DEPTH' };
+        if (levelId === '1.9') return { current: grid[`1,-1`]?.structureType !== 'VOID' ? 1 : 0, target: 1, label: language === 'RU' ? 'ЗАПЕЧАТАНО' : 'SEALED' };
+        if (levelId === '1.10') {
+            const count = [grid['0,-1'], grid['0,0'], grid['0,1']].filter(h => (h?.currentLevel ?? 0) >= 2).length;
+            return { current: count, target: 3, label: language === 'RU' ? 'ОПОРЫ' : 'SUPPORTS' };
         }
         
         if (levelId === '2.2') return { current: player.inventory?.length ?? 0, target: 3, label: 'ITEMS' };

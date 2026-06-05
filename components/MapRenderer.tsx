@@ -106,7 +106,18 @@ const getHexTutorialStatus = (hex: Hex, player: Entity, _grid: Record<string, He
                     satisfied = hex.q === player.q && hex.r === player.r;
                 }
             } else if (lid === '1.6') {
-                satisfied = (player.coins ?? 0) >= 100;
+                const isGoalReached = (player.coins ?? 0) >= 100;
+                if (isGoalReached) {
+                    satisfied = true;
+                } else {
+                    const reactor = _grid[`0,0`];
+                    const isReactorOnCooldown = reactor && (reactor.recoveryCharges === 0 || (reactor.cooldownEndTime && Date.now() < reactor.cooldownEndTime));
+                    if (hex.q === 0 && hex.r === 0) {
+                        satisfied = !!isReactorOnCooldown;
+                    } else {
+                        satisfied = !isReactorOnCooldown;
+                    }
+                }
             } else if (lid === '1.7') {
                 satisfied = player.q === 3 && player.r === -1;
             } else if (lid === '1.8') {

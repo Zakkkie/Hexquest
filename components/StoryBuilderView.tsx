@@ -1843,6 +1843,10 @@ const StoryBuilderView: React.FC = () => {
                                         addMinedHexes({ [lvl]: 1 });
                                         setDestroyButtonCell(null);
                                     }}
+                                    onTouchStart={(e) => e.stopPropagation()}
+                                    onTouchEnd={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onMouseUp={(e) => e.stopPropagation()}
                                     className="bg-red-650 hover:bg-red-700 text-white font-black uppercase text-[8px] md:text-[9.5px] tracking-wider px-2.5 py-1.5 rounded-lg shadow-[0_5px_15px_rgba(239,68,68,0.4)] border border-red-500 flex items-center gap-1 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
                                 >
                                     <span>✖</span>
