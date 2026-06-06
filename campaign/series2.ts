@@ -536,7 +536,10 @@ export const series2Levels: LevelConfig[] = [
     startState: { credits: 200, moves: 70, rank: 3, materials: 10, initialEntropy: 80 },
     hooks: {
       checkWinCondition: () => false,
-      checkLossCondition: (state) => isStranded(state),
+      checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
+        return isStranded(state);
+      },
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
@@ -593,7 +596,10 @@ export const series2Levels: LevelConfig[] = [
     aiMode: 'none',
     hooks: {
       checkWinCondition: () => false,
-      checkLossCondition: (state) => isStranded(state),
+      checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
+        return isStranded(state);
+      },
       onBeforeAction: (state, action) => {
         const isRu = state.language === 'RU';
         

@@ -111,6 +111,7 @@ export const series3Levels: LevelConfig[] = [
       },
       checkWinCondition: () => false, // Victory set by ACTIVATE_MONUMENT
       checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
         if (Math.floor((state.currentTurn ?? 0) / 20) >= 2) return true;
         return isStranded(state);
       }
@@ -235,6 +236,7 @@ export const series3Levels: LevelConfig[] = [
       },
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
         if (Math.floor((state.currentTurn ?? 0) / 20) >= 2) return true;
         return isStranded(state);
       }
@@ -333,6 +335,7 @@ export const series3Levels: LevelConfig[] = [
       },
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
         if (Math.floor((state.currentTurn ?? 0) / 18) >= 2) return true;
         return isStranded(state);
       }
@@ -457,6 +460,7 @@ export const series3Levels: LevelConfig[] = [
       },
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
         if (Math.floor((state.currentTurn ?? 0) / 10) >= 2) return true;
         return isStranded(state);
       }
@@ -561,6 +565,7 @@ export const series3Levels: LevelConfig[] = [
       },
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
         if (Math.floor((state.currentTurn ?? 0) / 15) >= 2) return true;
         return isStranded(state);
       }
@@ -666,6 +671,7 @@ export const series3Levels: LevelConfig[] = [
       },
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
         if (Math.floor((state.currentTurn ?? 0) / 20) >= 2) return true;
         return isStranded(state);
       }
@@ -771,6 +777,7 @@ export const series3Levels: LevelConfig[] = [
       },
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
         if (Math.floor((state.currentTurn ?? 0) / 15) >= 2) return true;
         return isStranded(state);
       }
@@ -898,6 +905,7 @@ export const series3Levels: LevelConfig[] = [
       },
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
+        if (state.entropy.current <= 0) return true;
         if (Math.floor((state.currentTurn ?? 0) / 12) >= 2) return true;
         return isStranded(state);
       }

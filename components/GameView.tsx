@@ -118,6 +118,8 @@ const GameView: React.FC = () => {
   // Interaction State
   const isRotating = useRef(false);
   const isDragging = useRef(false);
+  const isTouchActive = useRef(false);
+  const lastClickTimeRef = useRef<number>(0);
   const mouseDownPosRef = useRef({ x: 0, y: 0 }); // Track start position
   const lastPointerPos = useRef({ x: 0, y: 0 });
   const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 }); 
@@ -344,6 +346,7 @@ const GameView: React.FC = () => {
 
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      isTouchActive.current = false;
       // Left Click (0) = Drag, Right Click (2) = Rotate
       const stage = e.target.getStage();
       if (e.evt.button === 0) {
@@ -359,6 +362,10 @@ const GameView: React.FC = () => {
   };
   
   const handleHexClick = useCallback((q: number, r: number) => {
+      const now = Date.now();
+      if (now - lastClickTimeRef.current < 200) return;
+      lastClickTimeRef.current = now;
+
       const stage = stageRef.current;
       const pointer = stage?.getPointerPosition();
       
@@ -408,6 +415,7 @@ const GameView: React.FC = () => {
   };
   
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (isTouchActive.current) return;
       if (isDragging.current) {
           const dx = e.evt.clientX - lastPointerPos.current.x;
           const dy = e.evt.clientY - lastPointerPos.current.y;
@@ -450,20 +458,37 @@ const GameView: React.FC = () => {
   };
   
   const handleMouseUp = () => {
+      if (isTouchActive.current) return;
       isDragging.current = false;
       isRotating.current = false;
       // Do not set setIsInteracting(false) here, let the animation loop detect when velocity settles.
       // This prevents "popping" visual changes.
   };
 
-  // -- Touch Handling --
-  const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
-    const touches = e.evt.touches;
-    const stage = e.target.getStage();
+  // -- Native Touch Handling for responsive Pinch-to-Zoom & Pan on Hex Grid --
+  const handleNativeTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    isTouchActive.current = true;
+    const touches = e.touches;
+    const stage = stageRef.current;
     if (touches.length === 1) {
         isDragging.current = true;
-        const pointer = stage?.getPointerPosition();
-        if (pointer) mouseDownPosRef.current = pointer;
+        isMultitouch.current = false;
+        
+        // Calibrate container-relative coordinates accurately with Konva taps
+        if (stage) {
+            try {
+                const container = stage.container();
+                const rect = container.getBoundingClientRect();
+                mouseDownPosRef.current = {
+                    x: touches[0].clientX - rect.left,
+                    y: touches[0].clientY - rect.top
+                };
+            } catch (err) {
+                mouseDownPosRef.current = { x: touches[0].clientX, y: touches[0].clientY };
+            }
+        } else {
+            mouseDownPosRef.current = { x: touches[0].clientX, y: touches[0].clientY };
+        }
         lastPointerPos.current = { x: touches[0].clientX, y: touches[0].clientY };
     } else if (touches.length === 2) {
       isMultitouch.current = true;
@@ -478,10 +503,13 @@ const GameView: React.FC = () => {
     }
   };
   
-  const handleTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
-      const touches = e.evt.touches;
+  const handleNativeTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+      const touches = e.touches;
       
       if (touches.length === 1 && isDragging.current) {
+          if (e.cancelable) {
+              e.preventDefault();
+          }
           const dx = touches[0].clientX - lastPointerPos.current.x;
           const dy = touches[0].clientY - lastPointerPos.current.y;
           lastPointerPos.current = { x: touches[0].clientX, y: touches[0].clientY };
@@ -494,7 +522,9 @@ const GameView: React.FC = () => {
       }
 
       if (touches.length === 2 && lastCenter.current) {
-          e.evt.preventDefault();
+          if (e.cancelable) {
+              e.preventDefault();
+          }
           
           const p1 = { x: touches[0].clientX, y: touches[0].clientY };
           const p2 = { x: touches[1].clientX, y: touches[1].clientY };
@@ -534,10 +564,18 @@ const GameView: React.FC = () => {
       }
   };
 
-  const handleTouchEnd = () => {
-      isMultitouch.current = false;
-      isDragging.current = false;
-      lastDist.current = 0;
+  const handleNativeTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+      const touches = e.touches;
+      if (touches.length === 0) {
+          isMultitouch.current = false;
+          isDragging.current = false;
+          lastDist.current = 0;
+          lastCenter.current = null;
+      } else if (touches.length === 1) {
+          isMultitouch.current = false;
+          isDragging.current = true;
+          lastPointerPos.current = { x: touches[0].clientX, y: touches[0].clientY };
+      }
   };
 
   if (!hasGrid || !player) return null;
@@ -552,7 +590,13 @@ const GameView: React.FC = () => {
       </div>
 
       {/* CANVAS */}
-      <div ref={canvasContainerRef} className="absolute inset-0 z-10">
+      <div 
+        ref={canvasContainerRef} 
+        className="absolute inset-0 z-10"
+        onTouchStart={handleNativeTouchStart}
+        onTouchMove={handleNativeTouchMove}
+        onTouchEnd={handleNativeTouchEnd}
+      >
         <Stage 
           ref={stageRef}
           width={dimensions.width} 
@@ -564,9 +608,6 @@ const GameView: React.FC = () => {
           onMouseMove={handleMouseMove} 
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
           onClick={handleStageClick} 
           onTap={handleStageClick}
           onDragStart={() => setHoveredHexId(null)}
