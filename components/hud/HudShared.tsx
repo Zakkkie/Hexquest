@@ -156,7 +156,7 @@ export const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity
         }
 
         const itemId = target.baseId || target.idPrefix;
-        const img = itemRenderer.getItemImage(target.visualType, visualColor, target.rarity || 'COMMON', definition?.iconUrl, itemId);
+        const img = itemRenderer.getItemImage(target.visualType, visualColor, target.rarity || 'COMMON', itemId);
         
         const draw = () => {
             ctx.clearRect(0,0,64,64);
@@ -172,7 +172,7 @@ export const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity
             img.addEventListener('load', draw);
             const handleError = () => {
                 console.warn('Failed to load image, falling back to procedural:', img.src);
-                const fallbackImg = itemRenderer.getItemImage(target.visualType, visualColor, target.rarity || 'COMMON', undefined, itemId);
+                const fallbackImg = itemRenderer.getItemImage(target.visualType, visualColor, target.rarity || 'COMMON', itemId);
                 ctx.clearRect(0,0,64,64);
                 ctx.globalAlpha = opacity;
                 if (grayscale) ctx.filter = 'grayscale(100%) brightness(0.7)';

@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, memo, useRef } from 'react';
 import { useGameStore } from '../store.ts';
+import { audioService } from '../services/audioService.ts';
 import TopStatsBar from './hud/TopStatsBar.tsx';
 import BottomActionDock from './hud/BottomActionDock.tsx';
 import GameDialogs from './hud/GameDialogs.tsx';
@@ -36,12 +37,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
         hasTriggeredRef.current = true;
         
         // Play epic audio progression
-        import('../services/audioService').then(({ audioService }) => {
-            audioService.play('TELEPORT');
-            setTimeout(() => {
-                audioService.play('LEVEL_UP');
-            }, 300);
-        });
+        audioService.play('TELEPORT');
+        setTimeout(() => {
+            audioService.play('LEVEL_UP');
+        }, 300);
 
         // Award 1 SP
         const store = useGameStore.getState();

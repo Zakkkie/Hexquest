@@ -280,11 +280,6 @@ class AudioService {
       this.context.intensity = 0.4 + (ratio * 0.6);
   }
   
-  public getCurrentTrackName() { return "Procedural :: Nebula V2"; }
-  public playRandomTrack() { this.regenerateComposition(); }
-  public nextTrack() { this.regenerateComposition(); }
-  public prevTrack() { this.regenerateComposition(); }
-
   // --- COMPOSITION ENGINE ---
 
   private regenerateComposition() {

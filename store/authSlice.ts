@@ -40,7 +40,6 @@ export const DEFAULT_PROGRESS = {
   minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
   totalMinedMaterial: 0,
   storyMap: {},
-  storyMilestone: 0,
   campaignUpgrades: {
     inventorySlots: 3,
     startingEnergy: 0,
@@ -75,7 +74,6 @@ export function saveProfileProgress(nickname: string, state: any) {
     minedInSessionHexes: state.minedInSessionHexes,
     totalMinedMaterial: state.totalMinedMaterial,
     storyMap: state.storyMap,
-    storyMilestone: state.storyMilestone,
     campaignUpgrades: state.campaignUpgrades
   };
   try {
@@ -101,7 +99,6 @@ export function loadProfileProgress(nickname: string) {
         minedInSessionHexes: parsed.minedInSessionHexes || { ...INITIAL_PLAYGROUND_SEED },
         totalMinedMaterial: typeof parsed.totalMinedMaterial === 'number' ? parsed.totalMinedMaterial : 0,
         storyMap: parsed.storyMap || {},
-        storyMilestone: typeof parsed.storyMilestone === 'number' ? parsed.storyMilestone : 0,
         campaignUpgrades: { ...DEFAULT_PROGRESS.campaignUpgrades, ...parsed.campaignUpgrades }
       };
     }

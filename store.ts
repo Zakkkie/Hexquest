@@ -41,7 +41,6 @@ export const useGameStore = create<GameStore>()(
       minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
       totalMinedMaterial: 0,
       storyMap: {},
-      storyMilestone: 0,
 
       campaignUpgrades: {
         inventorySlots: 3,
@@ -82,7 +81,7 @@ export const useGameStore = create<GameStore>()(
       // --- ASSEMBLE COMBINED ACTIONS VIA SLICES ---
       ...createAuthSlice(set as any, get as any),
       ...createUiSlice(set as any, get as any),
-      ...createCampaignSlice(set as any, get as any),
+      ...createCampaignSlice(set as any),
       ...createGameplaySlice(set as any, get as any),
     }),
     {
@@ -105,7 +104,6 @@ export const useGameStore = create<GameStore>()(
         campaignMode: state.campaignMode,
         collectedHexes: state.collectedHexes,
         storyMap: state.storyMap,
-        storyMilestone: state.storyMilestone,
         hexActivationPoints: state.hexActivationPoints,
         activatedHexes: state.activatedHexes,
         campaignUpgrades: state.campaignUpgrades,

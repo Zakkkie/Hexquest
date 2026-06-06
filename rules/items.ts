@@ -19,10 +19,10 @@ interface ItemDefinition {
     negativeEffectDuration?: number; // ms
     negativeEffectLabel: Record<Language, string>;
 
-    iconUrl?: string;
     equipSlot?: 'head' | 'body' | 'feet' | 'necklace' | 'ring' | 'tool' | 'artifact';
     maxHpBonus?: number;
     maxEnergyBonus?: number;
+    [key: string]: any;
 }
 
 export const ITEM_REGISTRY: ItemDefinition[] = [
@@ -1388,7 +1388,6 @@ export const getRandomItem = (rarity: ItemRarity, language: Language): Item => {
         description: def.description[language],
         timestamp: Date.now(),
         visualType: def.visualType,
-        iconUrl: def.iconUrl,
         effectType: def.effectType,
         effectValue: def.effectValue,
         effectDescription: def.effectLabel[language],
@@ -1416,7 +1415,6 @@ export const createSpecificItem = (baseId: string, language: Language = 'EN'): I
         description: def.description[language],
         timestamp: Date.now(),
         visualType: def.visualType,
-        iconUrl: def.iconUrl,
         effectType: def.effectType,
         effectValue: def.effectValue,
         effectDescription: def.effectLabel[language],

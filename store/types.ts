@@ -37,8 +37,6 @@ export interface GameStore extends GameState {
   toggleMusic: () => void;
   toggleSfx: () => void;
   toggleLiteMode: () => void;
-  toggleCampaignHintCollapse: () => void;
-  setCampaignHintCollapsed: (val: boolean) => void;
   playUiSound: (type: UiSoundType) => void;
   showToast: (msg: string, type: 'error' | 'success' | 'info') => void;
   hideToast: () => void;
@@ -55,12 +53,10 @@ export interface GameStore extends GameState {
   startMission: () => void;
   abandonSession: () => void;
   resetProgress: () => void;
-  downloadSessionLog: () => void;
   
   // Gameplay Actions
   tick: () => Promise<void>;
   togglePlayerGrowth: (intent?: 'RECOVER' | 'UPGRADE' | 'DIG') => void;
-  rechargeMove: () => void;
   movePlayer: (q: number, r: number) => void;
   confirmPendingAction: () => void;
   cancelPendingAction: () => void;
@@ -70,8 +66,6 @@ export interface GameStore extends GameState {
   addCollectedHexes: (hexes: Record<number, number>) => void;
   placeStoryHex: (q: number, r: number, level: number) => void;
   clearStoryMap: () => void;
-  setStoryMilestone: (milestone: number) => void;
-  activateHexBonus: (q: number, r: number) => void;
 
   // Interactions
   openVoidDialog: (q: number, r: number) => void;
@@ -85,10 +79,8 @@ export interface GameStore extends GameState {
   closeMonumentDialog: () => void;
   placeItemInMonument: (item: Item, slotIndex: number) => void;
   removeItemFromMonument: (slotIndex: number) => void;
-  rerollMonumentRequirements: () => void;
   rerollSingleMonumentRequirement: (slotIndex: number) => void;
   activateMonument: () => void;
-  checkTutorialCamera: (deltaX: number) => void;
 
   setHasHydrated: (val: boolean) => void;
   

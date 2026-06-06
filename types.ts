@@ -111,7 +111,6 @@ export interface Item {
   timestamp: number;
   
   visualType: string;
-  iconUrl?: string;
   
   effectType: ItemEffectType;
   effectValue: number;
@@ -509,7 +508,6 @@ export interface GameState {
   minedInSessionHexes: Record<number, number>;
   totalMinedMaterial?: number;
   storyMap: Record<string, number>;
-  storyMilestone: number;
 
   hasActiveSession: boolean;
   isMusicMuted: boolean;

@@ -45,14 +45,6 @@ export const createUiSlice = (
       : (get().language === 'RU' ? 'Стандартный режим активирован.' : 'Standard mode activated.');
     get().showToast(msg, 'success');
   },
-
-  toggleCampaignHintCollapse: () => {
-    set((state) => ({ isCampaignHintCollapsed: !state.isCampaignHintCollapsed }));
-  },
-
-  setCampaignHintCollapsed: (val: boolean) => {
-    set(() => ({ isCampaignHintCollapsed: val }));
-  },
   
   playUiSound: (type: UiSoundType) => {
     const map: Record<UiSoundType, string> = {

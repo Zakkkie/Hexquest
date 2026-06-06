@@ -70,10 +70,6 @@ export class ResourceService {
         this.cache.clear();
     }
 
-    public getStats(): { size: number; maxSize: number } {
-        return { size: this.cache.size, maxSize: this.maxCacheSize };
-    }
-
     // --- UNIT VECTOR RENDERERS & RASTERIZERS ---
     public getUnitImage(headIndex: number, bodyIndex: number, color: string, type: EntityType): HTMLCanvasElement {
         // Unique key for cache based on visual parameters

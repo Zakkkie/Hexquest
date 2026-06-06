@@ -17,7 +17,7 @@ class ItemRenderer {
     return ItemRenderer.instance;
   }
 
-  public getItemImage(visualType: string, color: string, rarity: ItemRarity, _iconUrl?: string, itemId?: string): HTMLCanvasElement | HTMLImageElement {
+  public getItemImage(visualType: string, color: string, rarity: ItemRarity, itemId?: string): HTMLCanvasElement | HTMLImageElement {
     const key = `ITEM_${visualType}_${color}_${rarity}_${itemId || 'none'}_v4`; 
     
     return resourceService.getOrCreate(key, () => {

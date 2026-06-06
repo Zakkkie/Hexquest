@@ -174,26 +174,6 @@ export const createGameplaySlice = (
     }));
   },
 
-  downloadSessionLog: () => {
-    const history = historyService.getHistory();
-    const lText = TEXT[get().language]?.TOAST;
-    if (!history || history.length === 0) {
-      get().showToast(lText?.NO_HISTORY || "No action history available", "info");
-      return;
-    }
-    const lines = history.map(e => `${new Date(e.timestamp).toISOString().split('T')[1]} | ${e.botId} | ${e.action} | ${e.target} | ${e.reason}`);
-    const content = `HEXQUEST LOG\n${new Date().toISOString()}\n------------------\n` + lines.join('\n');
-    
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `session_${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    get().showToast(lText?.LOG_DOWNLOADED || "Log downloaded successfully", "success");
-  },
-
   // --- ACTIONS ---
   togglePlayerGrowth: (intent: 'RECOVER' | 'UPGRADE' | 'DIG' = 'RECOVER') => {
     if (!engine || !engine.state) return;
@@ -209,19 +189,6 @@ export const createGameplaySlice = (
 
     engine.setPlayerIntent(shouldGrow, shouldGrow ? intent : null);
     set(() => ({ session: engine!.state }));
-  },
-
-  rechargeMove: () => {
-    if (!engine || !engine.state) return;
-    const res = engine.applyAction(engine.state.player.id, { type: 'RECHARGE_MOVE', stateVersion: engine.state.stateVersion });
-    const tConfig = TEXT[get().language]?.TOAST;
-    if (res.ok) {
-      audioService.play('COIN'); 
-      set(() => ({ session: engine!.state }));
-    } else {
-      audioService.play('ERROR');
-      set(() => ({ toast: { message: res.reason || tConfig?.RECHARGE_FAILED || "Recharge failed", type: 'error', timestamp: Date.now() } }));
-    }
   },
 
   destroyItem: (itemId: string) => {
@@ -515,40 +482,6 @@ export const createGameplaySlice = (
     });
   },
 
-  rerollMonumentRequirements: () => {
-    const state = get();
-    const session = state.session;
-    const lConfig = TEXT[state.language];
-    if (!session || !session.monumentRequirements) {
-      audioService.play('ERROR');
-      return;
-    }
-
-    if (session.player.coins < 100) {
-      audioService.play('ERROR');
-      state.showToast((lConfig?.TOAST?.NEED_CREDITS || "Need {0} credits").replace('{0}', '100'), 'error');
-      return;
-    }
-    
-    audioService.play('SUCCESS');
-    const newRequirements = generateMonumentRecipe(session.difficulty);
-    
-    set((curr) => {
-      if (!curr.session) return {};
-      const player = { ...curr.session.player, coins: curr.session.player.coins - 100 };
-      return { 
-        session: { 
-          ...curr.session, 
-          player,
-          monumentRequirements: newRequirements,
-          monumentRevealedSlots: []
-        } 
-      };
-    });
-    
-    state.showToast(lConfig?.TOAST?.MONUMENT_UPDATED || "Recipe restructured", 'success');
-  },
-
   rerollSingleMonumentRequirement: (slotIndex: number) => {
     const state = get();
     const session = state.session;
@@ -631,8 +564,6 @@ export const createGameplaySlice = (
       get().showToast(res.reason || lConfig?.TOAST?.ACTIVATION_FAILED || "Activation failed", 'error');
     }
   },
-
-  checkTutorialCamera: () => {}, 
 
   // --- GAME TICK LOOP ENCAPSULATION ---
   tick: async () => {

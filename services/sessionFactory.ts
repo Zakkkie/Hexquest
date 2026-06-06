@@ -2,7 +2,7 @@ import { WinCondition, SessionState, Difficulty, Item, Entity, EntityType, Entit
 import { LevelConfig } from '../types';
 import { GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../rules/config.ts';
 import { getHexKey, getNeighbors } from './hexUtils.ts';
-import { generateMap } from './mapGenerator.ts';
+import { generateMap, generateSingleHex } from './mapGenerator.ts';
 import { generateMonumentRecipe, getItemDef, ITEM_REGISTRY } from '../rules/items.ts';
 // @ts-ignore
 import MapWorker from './map.worker?worker';
@@ -75,7 +75,6 @@ export const createInitialSessionData = async (
   } else {
     // SKIRMISH OPTIMIZATION: Start with minimal grid to avoid lag
     // Vision & Chaos rules will be applied below
-    const { generateSingleHex } = await import('./mapGenerator.ts');
     const startHex = generateSingleHex(0, 0, undefined, mapType as any);
     startHex.revealed = true;
     initialGrid[getHexKey(0, 0)] = startHex;
@@ -206,7 +205,6 @@ export const createInitialSessionData = async (
     const key = getHexKey(sp.q, sp.r);
     const botId = `bot-${i+1}`;
     if (!initialGrid[key]) {
-        const { generateSingleHex } = await import('./mapGenerator.ts');
         const bHex = generateSingleHex(sp.q, sp.r, levelConfig, mapType as any);
         bHex.botRevealed = { 'SHARED_BOTS': true };
         initialGrid[key] = bHex;

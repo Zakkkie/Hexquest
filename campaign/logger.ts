@@ -205,15 +205,6 @@ class CampaignLogger {
         });
     }
 
-    public getLogs(): CampaignLogEntry[] {
-        return [...this.logs];
-    }
-
-    public clearLogs() {
-        this.logs = [];
-        this.saveToStorage();
-    }
-
     /**
      * Wrap any campaign execution hook securely to catch uncaught logic errors and log details.
      */
