@@ -466,7 +466,7 @@ const GameView: React.FC = () => {
   };
 
   // -- Native Touch Handling for responsive Pinch-to-Zoom & Pan on Hex Grid --
-  const handleNativeTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+  const handleNativeTouchStart = (e: TouchEvent) => {
     isTouchActive.current = true;
     const touches = e.touches;
     const stage = stageRef.current;
@@ -503,7 +503,7 @@ const GameView: React.FC = () => {
     }
   };
   
-  const handleNativeTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+  const handleNativeTouchMove = (e: TouchEvent) => {
       const touches = e.touches;
       
       if (touches.length === 1 && isDragging.current) {
@@ -564,7 +564,7 @@ const GameView: React.FC = () => {
       }
   };
 
-  const handleNativeTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+  const handleNativeTouchEnd = (e: TouchEvent) => {
       const touches = e.touches;
       if (touches.length === 0) {
           isMultitouch.current = false;
@@ -577,6 +577,23 @@ const GameView: React.FC = () => {
           lastPointerPos.current = { x: touches[0].clientX, y: touches[0].clientY };
       }
   };
+
+  // Attach touch events directly to Konva stage container DOM node for reliable pinch-to-zoom on interactive subcomponents
+  useEffect(() => {
+      const stage = stageRef.current;
+      if (!stage) return;
+      const container = stage.container();
+
+      container.addEventListener('touchstart', handleNativeTouchStart, { passive: false });
+      container.addEventListener('touchmove', handleNativeTouchMove, { passive: false });
+      container.addEventListener('touchend', handleNativeTouchEnd, { passive: false });
+
+      return () => {
+          container.removeEventListener('touchstart', handleNativeTouchStart);
+          container.removeEventListener('touchmove', handleNativeTouchMove);
+          container.removeEventListener('touchend', handleNativeTouchEnd);
+      };
+  }, [hasGrid, player]);
 
   if (!hasGrid || !player) return null;
 
@@ -593,9 +610,6 @@ const GameView: React.FC = () => {
       <div 
         ref={canvasContainerRef} 
         className="absolute inset-0 z-10"
-        onTouchStart={handleNativeTouchStart}
-        onTouchMove={handleNativeTouchMove}
-        onTouchEnd={handleNativeTouchEnd}
       >
         <Stage 
           ref={stageRef}

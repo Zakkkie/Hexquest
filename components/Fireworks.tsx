@@ -169,9 +169,8 @@ const Fireworks: React.FC<FireworksProps> = ({ onComplete }) => {
             }
 
             frameCount++;
-            // Soft clear to leave trail glow
-            ctx.fillStyle = 'rgba(2, 6, 23, 0.15)'; 
-            ctx.fillRect(0, 0, width, height);
+            // Clear the canvas to keep it fully transparent, preventing the underlying game from darkening
+            ctx.clearRect(0, 0, width, height);
 
             // Laser Scanner Sweep
             scannerY += scannerSpeed;

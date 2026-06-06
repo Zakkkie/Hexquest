@@ -60,12 +60,14 @@ export class VictorySystem implements System {
     if (state.activeLevelConfig && state.activeLevelConfig.requiredShapes && state.activeLevelConfig.requiredShapes.length > 0) {
         const allShapesBuilt = state.activeLevelConfig.requiredShapes.every(req => checkShapeExists(state, req));
         if (allShapesBuilt) {
-            const coords: any[] = [];
-            for (const req of state.activeLevelConfig.requiredShapes) {
-                const shapeCoords = getCompletedShapeCoords(state, req);
-                coords.push(...shapeCoords);
+            if (!state.completedShapeCoords || state.completedShapeCoords.length === 0) {
+                const coords: any[] = [];
+                for (const req of state.activeLevelConfig.requiredShapes) {
+                    const shapeCoords = getCompletedShapeCoords(state, req);
+                    coords.push(...shapeCoords);
+                }
+                state.completedShapeCoords = coords;
             }
-            state.completedShapeCoords = coords;
             this.triggerPortal(state, 'Shapes Completed!');
             return;
         }

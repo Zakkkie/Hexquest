@@ -579,15 +579,15 @@ const HexNodeComponent = (props: HexNodeProps) => {
           
           const tweenFocus = new Konva.Tween({
               node: node,
-              duration: 0.3,
+              duration: 0.8,
               opacity: 1,
-              easing: Konva.Easings.EaseIn,
+              easing: Konva.Easings.EaseInOut,
               onFinish: () => {
                   const tweenFade = new Konva.Tween({
                       node: node,
-                      duration: 1.7,
+                      duration: 2.2,
                       opacity: 0,
-                      easing: Konva.Easings.EaseOut
+                      easing: Konva.Easings.EaseInOut
                   });
                   tweenFade.play();
               }
@@ -1133,14 +1133,16 @@ const HexNodeComponent = (props: HexNodeProps) => {
                 <Path 
                     ref={shapeGlowRef}
                     data={BASE_PATH_D} 
-                    fill="white"
+                    fill="rgba(34, 211, 238, 0.25)"
+                    stroke="#ffffff"
+                    strokeWidth={1.5}
                     opacity={0}
                     listening={false}
                     perfectDrawEnabled={false}
-                    shadowForStrokeEnabled={false}
-                    shadowColor="#ffffff"
-                    shadowBlur={20}
-                    shadowOpacity={0.9}
+                    shadowForStrokeEnabled={true}
+                    shadowColor="#22d3ee"
+                    shadowBlur={25}
+                    shadowOpacity={0.95}
                 />
             </Group>
         </Group>
