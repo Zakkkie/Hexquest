@@ -10,26 +10,11 @@ import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, In
 import { motion, AnimatePresence } from 'motion/react';
 import Konva from 'konva';
 
-const DEG_TO_RAD = Math.PI / 180;
+import { FIGURES_COLLECTION, BASE_PATH_D, BASE_POINTS, Figure } from './StoryBuilderData.ts';
+import { NebulaBackground, MiniFigureBlueprint, StoryHex } from './StoryBuilderComponents.tsx';
 
-// Precompute hex vertices for volume drawing
-const BASE_POINTS: { x: number; y: number }[] = [];
-for (let i = 0; i < 6; i++) {
-    const angle = (60 * i + 30) * DEG_TO_RAD;
-    BASE_POINTS.push({ x: Math.cos(angle) * GAME_CONFIG.HEX_SIZE, y: Math.sin(angle) * GAME_CONFIG.HEX_SIZE });
-}
 
-interface Figure {
-    id: string;
-    nameRU: string;
-    nameEN: string;
-    descRU: string;
-    descEN: string;
-    shape: { q: number, r: number, lvl?: number }[];
-    rewardSP: number;
-}
-
-const STATIC_FIGURES: Figure[] = [
+const DUPLICATE_STATIC_FIGURES: any[] = [
     // --- CHAPTER I: NEXUS CORE (1-10) ---
     {
         id: 'c1_f1',
@@ -377,7 +362,7 @@ const STATIC_FIGURES: Figure[] = [
     }
 ];
 
-const generateAdditionalFigures = (): Figure[] => {
+const duplicate_generateAdditionalFigures = (): any[] => {
     const list: Figure[] = [];
     const dirs = [
         { q: 1, r: -1 }, { q: 1, r: 0 }, { q: 0, r: 1 },
@@ -486,19 +471,19 @@ const generateAdditionalFigures = (): Figure[] => {
     return list;
 };
 
-const FIGURES_COLLECTION: Figure[] = [
-    ...STATIC_FIGURES,
-    ...generateAdditionalFigures()
+export const DUPLICATE_FIGURES_COLLECTION: any[] = [
+    ...DUPLICATE_STATIC_FIGURES,
+    ...duplicate_generateAdditionalFigures()
 ];
 
-const getBasePathD = () => {
+const duplicate_getBasePathD = () => {
     let d = `M ${BASE_POINTS[0].x} ${BASE_POINTS[0].y}`;
     for (let i = 1; i < 6; i++) d += ` L ${BASE_POINTS[i].x} ${BASE_POINTS[i].y}`;
     return d + " Z";
 };
-const BASE_PATH_D = getBasePathD();
+export const DUPLICATE_BASE_PATH_D = duplicate_getBasePathD();
 
-const NebulaBackground: React.FC<{ width: number; height: number }> = ({ width, height }) => {
+export const DUPLICATE_NebulaBackground: React.FC<{ width: number; height: number }> = ({ width, height }) => {
     const clouds = useMemo(() => Array.from({ length: 6 }).map((_, i) => ({
         id: i,
         x: Math.random() * width - width / 2,
@@ -555,7 +540,7 @@ const NebulaBackground: React.FC<{ width: number; height: number }> = ({ width, 
     );
 };
 
-const MiniFigureBlueprint: React.FC<{ 
+export const DUPLICATE_MiniFigureBlueprint: React.FC<{ 
     shape: { q: number, r: number, lvl?: number }[], 
     cellSize?: number, 
     className?: string,
@@ -681,7 +666,7 @@ const MiniFigureBlueprint: React.FC<{
     );
 };
 
-const StoryHex: React.FC<{ 
+export const DUPLICATE_StoryHex: React.FC<{ 
     q: number, 
     r: number, 
     level: number | undefined, 

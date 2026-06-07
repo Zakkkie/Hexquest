@@ -150,7 +150,7 @@ export const createGameplaySlice = (
       minedInSessionHexes: { 0: 75, 1: 30, 2: 12, 3: 5, 4: 2 },
       totalMinedMaterial: 0,
       storyMap: {},
-      storyMilestone: 0,
+      storyMilestone: 0, // TODO: reserved for pending story campaign milestone features
       campaignUpgrades: {
         inventorySlots: 3,
         startingEnergy: 0,

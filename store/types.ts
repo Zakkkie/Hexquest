@@ -86,4 +86,10 @@ export interface GameStore extends GameState {
   
   equipItemSkirmish: (itemId: string) => void;
   unequipItemSkirmish: (slot: string) => void;
+
+  // --- REGION: PENDING & DEPRECATED ACTIONS (TODO) ---
+  // TODO: Implement activateHexBonus once the hex passive bonus system is developed
+  activateHexBonus?: (hexKey: string) => void;
+  // TODO: Implement setStoryMilestone for progress checkpoint tracking in Story Mode
+  setStoryMilestone?: (milestone: number) => void;
 }
