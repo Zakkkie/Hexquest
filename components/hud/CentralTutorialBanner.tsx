@@ -1,7 +1,8 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useGameStore } from '../../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Compass, Sparkles, Navigation, ChevronUp, ChevronDown } from 'lucide-react';
+import { Compass, Sparkles, Navigation, ChevronUp, ChevronDown, Crown } from 'lucide-react';
+import { useCollapsibleHint } from './useCollapsibleHint.ts';
 
 interface CentralTutorialBannerProps {
     onOpenHelpDetail?: () => void;
@@ -43,7 +44,6 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
 
-    const [isCollapsed, setIsCollapsed] = useState(false);
     const [prevHint, setPrevHint] = useState<string | null>(null);
     const [isPulsing, setIsPulsing] = useState(false);
 
@@ -202,16 +202,18 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
         return null;
     }, [grid, player, activeLevelConfig, language, entropy, totalDigs, restoredHexesCount, session]);
 
-    // Flashing effect and Auto-expand on step/hint transition
+    // Flashing effect on step/hint transition
     useEffect(() => {
         if (tutorialHint && tutorialHint !== prevHint) {
             setIsPulsing(true);
-            setIsCollapsed(false); // Auto-expand when a new instruction appears
             const t = setTimeout(() => setIsPulsing(false), 1500);
             setPrevHint(tutorialHint);
             return () => clearTimeout(t);
         }
     }, [tutorialHint, prevHint]);
+
+    // Use shared collapsible hook with tutorialHint auto-expansion trigger
+    const { isCollapsed, handleToggleCollapse } = useCollapsibleHint(tutorialHint, playUiSound);
 
     // Calculate distance to target destination if exists (for 1.1, 1.7)
     const targetDistanceData = useMemo(() => {
@@ -262,12 +264,6 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
 
     const isRu = language === 'RU';
 
-    const handleToggleCollapse = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        playUiSound('CLICK');
-        setIsCollapsed(p => !p);
-    };
-
     return (
         <AnimatePresence mode="wait">
             {isCollapsed ? (
@@ -291,9 +287,10 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
                             <span className="text-[10px] font-black tracking-widest font-mono text-emerald-400 uppercase shrink-0">
                                 {isRu ? 'ИНСТРУКТАЖ' : 'TUTORIAL'}
                             </span>
-                            <span className="text-[11px] text-slate-300 font-semibold truncate">
-                                {tutorialHint}
-                            </span>
+                            <div className="text-[11px] text-slate-300 font-semibold truncate flex items-center gap-1">
+                                {tutorialHint.replace(/\(.*\)/, '')}
+                                {tutorialHint.match(/\(.*\)/) && <Crown className="w-3.5 h-3.5 text-amber-400 inline mb-0.5" />}
+                            </div>
                         </div>
                     </div>
 
@@ -371,8 +368,9 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
                             <div className="text-[10px] uppercase font-black tracking-widest text-slate-400 font-mono mb-0.5">
                                 {isRu ? 'ТЕКУЩИЙ ШАГ' : 'CURRENT OBJECTIVE STEP'}
                             </div>
-                            <p className="text-xs md:text-sm font-black text-slate-100 font-sans tracking-tight leading-normal uppercase">
-                                {tutorialHint}
+                            <p className="text-xs md:text-sm font-black text-slate-100 font-sans tracking-tight leading-normal uppercase flex flex-wrap items-center gap-1">
+                                {tutorialHint.replace(/\(.*\)/, '')}
+                                {tutorialHint.match(/\(.*\)/) && <Crown className="w-4 h-4 text-amber-400 inline drop-shadow-md pb-0.5" />}
                             </p>
                             {onOpenHelpDetail && (
                                 <button

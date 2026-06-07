@@ -1,4 +1,4 @@
-import { GameState, UIState, WinCondition, SessionState, DeviceType, Item } from '../types.ts';
+import { GameState, UIState, WinCondition, SessionState, DeviceType, Item, CampaignUpgrades } from '../types.ts';
 
 export const INITIAL_PLAYGROUND_SEED: Record<number, number> = {
   0: 30,
@@ -12,6 +12,38 @@ export const INITIAL_PLAYGROUND_SEED: Record<number, number> = {
   8: 5,
   9: 5
 };
+
+export const DEFAULT_CAMPAIGN_UPGRADES: CampaignUpgrades = {
+  inventorySlots: 3,
+  startingEnergy: 0,
+  startingMoves: 0,
+  startingGold: 0,
+  startingMaterials: 0,
+  maxMaterials: 3,
+  fuelEfficiency: 0,
+  scanRadius: 0,
+  fatigueResistance: 0,
+  growthAccelerator: 0,
+  foundationStrength: 0,
+  economicMultiplier: 0,
+  diggerLuck: 0,
+  doubleDigChance: 0,
+  reserveCapacitor: 0,
+  turboRecharge: 0,
+  entropyResistance: 0,
+  restorationMaster: 0,
+};
+
+export const createDefaultProgress = () => ({
+  campaignProgress: 0,
+  levelsModeProgress: 0,
+  skillPoints: 0,
+  collectedHexes: {},
+  minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
+  totalMinedMaterial: 0,
+  storyMap: {},
+  campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES }
+});
 
 export interface AuthResponse {
   success: boolean;

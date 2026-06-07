@@ -23,6 +23,93 @@ interface GameDialogsProps {
     setVictoryStage: (s: 'HIDDEN' | 'SALUTE' | 'MODAL') => void;
 }
 
+const SlotMachineBox = ({ targetNumber, labelLevel }: { targetNumber: number; labelLevel: number }) => {
+    const [displayNumber, setDisplayNumber] = useState(0);
+    const [displayLevel, setDisplayLevel] = useState(0);
+    const [isSpinning, setIsSpinning] = useState(true);
+
+    useEffect(() => {
+        let startTime: number, animationFrame: number;
+        const duration = 2000;
+        let lastUpdate = 0;
+        
+        const tick = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const progress = timestamp - startTime;
+            
+            if (progress < duration) {
+                if (timestamp - lastUpdate > 100) { // Update frequency for slot machine roll
+                    setDisplayNumber(Math.floor(Math.random() * 30));
+                    setDisplayLevel(Math.floor(Math.random() * 5));
+                    lastUpdate = timestamp;
+                }
+                animationFrame = requestAnimationFrame(tick);
+            } else {
+                setDisplayNumber(targetNumber);
+                setDisplayLevel(labelLevel);
+                setIsSpinning(false);
+            }
+        };
+        animationFrame = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animationFrame);
+    }, [targetNumber, labelLevel]);
+
+    const getColors = (level: number) => {
+        const colors = [
+            { main: '#1e293b', edge: '#0f172a', text: '#94a3b8' }, // 0: Slate
+            { main: '#047857', edge: '#064e3b', text: '#34d399' }, // 1: Emerald
+            { main: '#1d4ed8', edge: '#1e3a8a', text: '#60a5fa' }, // 2: Blue
+            { main: '#b45309', edge: '#78350f', text: '#fbbf24' }, // 3: Amber
+            { main: '#7e22ce', edge: '#581c87', text: '#c084fc' }, // 4: Purple
+        ];
+        return colors[level % colors.length];
+    };
+    
+    const theme = getColors(displayLevel);
+
+    return (
+        <div className="flex flex-col items-center justify-center bg-black/40 border border-emerald-500/20 p-2 sm:p-2.5 rounded-lg overflow-hidden relative">
+            
+            {/* The slot machine hex */}
+            <div className={`relative flex items-center justify-center w-10 h-10 mb-1.5 transition-transform overflow-hidden`}>
+                <AnimatePresence mode="popLayout">
+                    <motion.div
+                        key={`${displayLevel}-${displayNumber}`} // Key forces unmount/mount for animation
+                        initial={{ y: -40, opacity: 0, filter: 'blur(2px)' }}
+                        animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+                        exit={{ y: 40, opacity: 0, filter: 'blur(2px)' }}
+                        transition={{ duration: 0.1, ease: "linear" }}
+                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    >
+                        <svg viewBox="0 0 40 46" className="w-full h-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                            <polygon points="20,0 38,10 38,36 20,46 2,36 2,10" fill={theme.edge} />
+                            <polygon points="20,0 38,10 38,30 20,40 2,30 2,10" fill={theme.main} stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+                            <polyline points="2,10 20,20 38,10" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none" />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center pb-2">
+                            <span 
+                                className="text-sm font-black font-sans tracking-tighter" 
+                                style={{ color: theme.text, filter: "drop-shadow(0px 1px 1px rgba(0,0,0,0.9))" }}
+                            >
+                                L{displayLevel}
+                            </span>
+                        </div>
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+            
+            {/* The Number */}
+            <div className={`flex items-center gap-1 z-10 transition-colors ${isSpinning ? 'text-emerald-500/60' : 'text-emerald-400'}`}>
+                <span className="text-lg sm:text-xl font-extrabold font-mono tabular-nums tracking-tighter mix-blend-screen drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">
+                    +{displayNumber}
+                </span>
+            </div>
+
+            <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 blur-2xl rounded-full pointer-events-none" />
+        </div>
+    );
+};
+
 const GameDialogs: React.FC<GameDialogsProps> = ({ 
     activeModal, closeModal, helpTopic, closeHelp, inspectedItem, closeInspect, victoryStage, setVictoryStage
 }) => {
@@ -31,7 +118,6 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const player = useGameStore(state => state.session?.player);
     const bots = useGameStore(state => state.session?.bots);
     const winCondition = useGameStore(state => state.session?.winCondition);
-    const difficulty = useGameStore(state => state.session?.difficulty);
     const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
     const messageLog = useGameStore(state => state.session?.messageLog);
 
@@ -90,6 +176,19 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         {id: 2, revealedLevel: null, isClaimed: false}
     ]);
 
+    const [victoryRewards, setVictoryRewards] = useState<{l0: number, l1: number, l2: number} | null>(null);
+
+    useEffect(() => {
+        if (gameStatus === 'VICTORY' && !victoryRewards) {
+            const l0 = Math.floor(Math.random() * 11) + 5;
+            const l1 = Math.floor(Math.random() * 6) + 5;
+            const l2 = Math.floor(Math.random() * 5) + 1;
+            setVictoryRewards({ l0, l1, l2 });
+            addCollectedHexes({ 0: l0, 1: l1, 2: l2 });
+            addMinedHexes({ 0: l0, 1: l1, 2: l2 });
+        }
+    }, [gameStatus, victoryRewards, addCollectedHexes, addMinedHexes]);
+
     useEffect(() => {
         if (gameStatus === 'BRIEFING') {
             setRewardHexCells([
@@ -97,6 +196,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                 {id: 1, revealedLevel: null, isClaimed: false},
                 {id: 2, revealedLevel: null, isClaimed: false}
             ]);
+            setVictoryRewards(null);
         }
     }, [gameStatus]);
 
@@ -524,10 +624,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         <span className="text-[8px] sm:text-[9.5px] font-black uppercase tracking-[0.25em] text-indigo-400 leading-none font-mono">MISSION_PROTOCOL_INIT</span>
                                         <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1">
                                             <span className="text-xs sm:text-xs font-black text-white uppercase tracking-wider truncate">
-                                                {language === 'RU' ? 'БРИФИНГ ОПЕРАЦИИ' : 'OPERATION BRIEFING'}
-                                            </span>
-                                            <span className="text-[7.5px] sm:text-[8px] px-1.5 py-0.5 bg-slate-950 border border-slate-800 rounded-md font-black text-indigo-300 uppercase tracking-widest leading-none shadow-inner">
-                                                {difficulty || 'NORMAL'}
+                                                {language === 'RU' ? 'ПРОФИЛЬ СИМУЛЯЦИИ' : 'SIMULATION PROFILE'}
                                             </span>
                                             {bots && bots.length > 0 && (
                                                 <span className="text-[7.5px] sm:text-[8px] px-1.5 py-0.5 bg-red-950/80 border border-red-500/30 rounded-md font-black text-red-400 uppercase tracking-widest leading-none">
@@ -563,14 +660,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 {/* 1. Simulation Profile & Decrypted Briefing Description */}
                                 <div className="bg-slate-900/35 border border-slate-800 p-3 rounded-lg flex flex-col gap-1.5 relative overflow-hidden backdrop-blur-sm">
                                     <div className="absolute top-0 left-0 w-0.5 h-full bg-indigo-500" />
-                                    <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-indigo-400 font-mono flex items-center gap-1">
-                                        <FileText className="w-3.5 h-3.5" />
-                                        {language === 'RU' ? 'ПРОФИЛЬ СИМУЛЯЦИИ' : 'SIMULATION PROFILE'}
-                                    </span>
                                     <h2 className="text-xs sm:text-sm font-black text-slate-100 tracking-tight uppercase font-sans">
                                         {activeLevelConfig?.title || (language === 'RU' ? 'Свободный Сектор' : 'Custom Sector')}
                                     </h2>
-                                    <p className="text-[10px] sm:text-[11px] text-slate-300 leading-normal font-sans whitespace-pre-wrap">
+                                    <p className="text-[10px] sm:text-[11px] text-slate-300 leading-normal font-sans line-clamp-2">
                                         {activeLevelConfig?.description || (language === 'RU' ? 'Пользовательская симуляция с хаотическими условиями.' : 'Standard simulation protocol with customizable variables.')}
                                     </p>
                                 </div>
@@ -680,8 +773,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                             </span>
                                             
                                             {activeLevelConfig?.goalText ? (
-                                                <h3 className="text-[10.5px] sm:text-xs font-black text-amber-300 uppercase leading-snug tracking-tight font-sans bg-amber-950/15 border border-amber-500/25 px-2.5 py-1.5 rounded-md">
-                                                    {activeLevelConfig.goalText}
+                                                <h3 className="text-[10.5px] sm:text-xs font-black text-amber-300 uppercase leading-snug tracking-tight font-sans bg-amber-950/15 border border-amber-500/25 px-2.5 py-1.5 rounded-md flex items-center flex-wrap gap-1">
+                                                    {activeLevelConfig.goalText.replace(/\(.*\)/, '')}
+                                                    {activeLevelConfig.goalText.match(/\(.*\)/) && <Crown className="w-4 h-4 text-amber-400 drop-shadow-md pb-0.5" />}
                                                 </h3>
                                             ) : (
                                                 <h3 className="text-[10.5px] sm:text-xs font-black text-amber-300 uppercase leading-snug tracking-tight font-sans bg-amber-950/15 border border-amber-500/25 px-2.5 py-1.5 rounded-md">
@@ -690,40 +784,61 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                             )}
                                             
                                             <div className="flex flex-col gap-1.5 mt-0.5 font-mono">
-                                                {activeLevelConfig && campaignMetrics ? (() => {
-                                                    const progressPercent = Math.min(100, (campaignMetrics.current / campaignMetrics.target) * 100);
-                                                    const isCompleted = campaignMetrics.current >= campaignMetrics.target;
-                                                    return (
-                                                        <div className="flex flex-col gap-2 p-2 rounded-md bg-black/35 border border-slate-800">
-                                                            <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-black font-mono">
-                                                                <span className="text-slate-400 uppercase shrink truncate">{campaignMetrics.label}</span>
-                                                                <span className={isCompleted ? "text-emerald-400" : "text-amber-500"}>
-                                                                    {campaignMetrics.current} / {campaignMetrics.target}
+                                                {activeLevelConfig ? (
+                                                    campaignMetrics ? (() => {
+                                                        const progressPercent = Math.min(100, (campaignMetrics.current / campaignMetrics.target) * 100);
+                                                        const isCompleted = campaignMetrics.current >= campaignMetrics.target;
+                                                        return (
+                                                            <div className="flex flex-col gap-2 p-2 rounded-md bg-black/35 border border-slate-800">
+                                                                <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-black font-mono">
+                                                                    <span className="text-slate-400 uppercase shrink truncate">{campaignMetrics.label}</span>
+                                                                    <span className={isCompleted ? "text-emerald-400" : "text-amber-500"}>
+                                                                        {campaignMetrics.current} / {campaignMetrics.target}
+                                                                    </span>
+                                                                </div>
+                                                                
+                                                                {/* Progress bar */}
+                                                                <div className="w-full bg-slate-850 h-1.5 rounded-full overflow-hidden border border-slate-850/85 shadow-inner">
+                                                                    <div 
+                                                                        className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]'}`}
+                                                                        style={{ width: `${progressPercent}%` }}
+                                                                    />
+                                                                </div>
+                                                                
+                                                                <div className="flex items-center gap-1 text-[8.5px] sm:text-[9px] font-black">
+                                                                    {isCompleted ? (
+                                                                        <span className="text-emerald-400 flex items-center gap-1 leading-none">
+                                                                            <CheckCircle className="w-3" /> {language === 'RU' ? 'УСЛОВИЕ ВЫПОЛНЕНО' : 'GOAL COMPLETED'}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-slate-500 flex items-center gap-1 leading-none">
+                                                                            <Timer className="w-3 h-3 shrink-0 animate-pulse" /> {language === 'RU' ? 'ОЖИДАНИЕ ОБРАБОТКИ...' : 'CLUSTER PROCESSING...'}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })() : (
+                                                        <div className="flex flex-col gap-1.5">
+                                                            {/* Target Target Rank */}
+                                                            <div className="flex items-center justify-between text-[10px] sm:text-[11px] bg-black/40 p-1.5 rounded border border-white/5 font-mono">
+                                                                <span className="font-black text-slate-400 flex items-center gap-1.5 uppercase tracking-wide">
+                                                                    <Crown className="w-3.5 h-3.5 text-indigo-400" />
+                                                                    {language === 'RU' ? 'ЦЕЛЕВОЙ РАНГ' : 'TARGET RANK'}
                                                                 </span>
+                                                                <span className="font-bold text-slate-500">{language === 'RU' ? 'НЕ УСТАНОВЛЕН' : 'NOT SET'}</span>
                                                             </div>
-                                                            
-                                                            {/* Progress bar */}
-                                                            <div className="w-full bg-slate-850 h-1.5 rounded-full overflow-hidden border border-slate-850/85 shadow-inner">
-                                                                <div 
-                                                                    className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]'}`}
-                                                                    style={{ width: `${progressPercent}%` }}
-                                                                />
-                                                            </div>
-                                                            
-                                                            <div className="flex items-center gap-1 text-[8.5px] sm:text-[9px] font-black">
-                                                                {isCompleted ? (
-                                                                    <span className="text-emerald-400 flex items-center gap-1 leading-none">
-                                                                        <CheckCircle className="w-3" /> {language === 'RU' ? 'УСЛОВИЕ ВЫПОЛНЕНО' : 'GOAL COMPLETED'}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-slate-500 flex items-center gap-1 leading-none">
-                                                                        <Timer className="w-3 h-3 shrink-0 animate-pulse" /> {language === 'RU' ? 'ОЖИДАНИЕ ОБРАБОТКИ...' : 'CLUSTER PROCESSING...'}
-                                                                    </span>
-                                                                )}
+                                                            {/* Required Credits */}
+                                                            <div className="flex items-center justify-between text-[10px] sm:text-[11px] bg-black/40 p-1.5 rounded border border-white/5 font-mono">
+                                                                <span className="font-black text-slate-400 flex items-center gap-1.5 uppercase tracking-wide">
+                                                                    <Coins className="w-3.5 h-3.5 text-amber-400" />
+                                                                    {language === 'RU' ? 'КРЕДИТЫ' : 'REQUIRED CREDITS'}
+                                                                </span>
+                                                                <span className="font-bold text-slate-500">{language === 'RU' ? 'НЕ УСТАНОВЛЕНЫ' : 'NOT SET'}</span>
                                                             </div>
                                                         </div>
-                                                    );
-                                                })() : (
+                                                    )
+                                                ) : (
                                                     /* If in skirmish battle mode */
                                                     winCondition && player ? (
                                                         <div className="flex flex-col gap-1.5">
@@ -803,8 +918,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                             
                                             <p className="text-[9px] sm:text-[9.5px] leading-normal text-slate-300 font-sans bg-emerald-950/10 p-2 rounded border border-emerald-500/15">
                                                 {language === 'RU' 
-                                                    ? 'Награда за победу: получите случайные гекс-блоки в ангар свободного конструирования (Гексагон).' 
-                                                    : 'Victory bonus: claim encrypted high-tier blocks to utilize safely inside the sandbox constructor (Hexagon).'}
+                                                    ? 'Награда за победу: случайным образом гекс-форм: 0 уровня от 5 до 15 штук, 1 уровня от 5 до 10 штук, 2 уровня от 1 до 5 штук.' 
+                                                    : 'Victory Reward: Random hexagon forms: Level 0 (5 to 15 pcs), Level 1 (5 to 10 pcs), Level 2 (1 to 5 pcs).'}
                                             </p>
                                         </div>
                                     </div>
@@ -1304,17 +1419,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                         </span>
                                                     </div>
 
-                                                    <div className="flex flex-col gap-2 mt-1">
-                                                        <div className="flex items-center justify-between p-4 bg-slate-900/50 border border-emerald-500/20 rounded-xl">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-bold text-white">
-                                                                    {language === 'RU' ? 'Награда за завершение' : 'Completion Reward'}
-                                                                </span>
-                                                                <span className="text-xs text-emerald-400 font-mono mt-1">
-                                                                    {language === 'RU' ? '+10 гексов 0 уровня' : '+10 level 0 hexes'}
-                                                                </span>
-                                                            </div>
-                                                            <span className="text-emerald-400 font-extrabold font-mono text-xl">+10</span>
+                                                    <div className="flex flex-col gap-2 mt-1 px-1">
+                                                        <span className="text-xs font-bold text-slate-300">
+                                                            {language === 'RU' ? 'Награда за завершение' : 'Completion Reward'}
+                                                        </span>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            <SlotMachineBox targetNumber={victoryRewards?.l0 || 0} labelLevel={0} />
+                                                            <SlotMachineBox targetNumber={victoryRewards?.l1 || 0} labelLevel={1} />
+                                                            <SlotMachineBox targetNumber={victoryRewards?.l2 || 0} labelLevel={2} />
                                                         </div>
                                                     </div>
                                                 </div>

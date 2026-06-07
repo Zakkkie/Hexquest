@@ -499,8 +499,6 @@ export interface GameState {
   campaignProgress: number; 
   levelsModeProgress: number;
   skillPoints: number;
-  hexActivationPoints: number;
-  activatedHexes: Record<string, boolean>;
   campaignUpgrades: CampaignUpgrades;
   campaignMode: 'STORY' | 'LEVELS';
   
@@ -527,7 +525,6 @@ export interface GameState {
   lastVisualEvent?: { type: string; time: number };
   isCampaignLoading: boolean;
   loadingLevelId: string | null;
-  isCampaignHintCollapsed?: boolean;
   isLiteMode?: boolean;
 }
 

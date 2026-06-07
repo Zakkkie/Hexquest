@@ -3,16 +3,14 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Layer, Group, Line, Circle, Text } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
-import { getHexKey, getNeighbors } from '../services/hexUtils.ts';
 import { HexNode, HexNodeTheme } from './HexNode.tsx';
 import Unit from './Unit.tsx';
 import { EntityType, EntityState, FloatingText, Hex, Entity } from '../types.ts';
 import { HEX_SIZE } from '../rules/config.ts';
-import { getStatusModifiers } from '../services/hexUtils.ts';
+import { getHexKey, getNeighbors, getStatusModifiers } from '../services/hexUtils.ts';
 import { safifyCoord } from '../utils/safeCoordinates.ts';
 
 // Web Worker Import (Vite syntax)
-// @ts-ignore
 import VisualWorker from '../services/visualWorker.ts?worker';
 
 const areGridsEqual = (a: Record<string, Hex> | null, b: Record<string, Hex> | null): boolean => {
@@ -144,19 +142,27 @@ const getHexTutorialStatus = (hex: Hex, player: Entity, _grid: Record<string, He
              }
          } else if (player.q === 1 && player.r === 0) {
              if (hex.q === 1 && hex.r === 0 && hex.currentLevel === 0) {
-                 isTutorial = true; isArrow = true; tutColor = 'amber';
+                 isTutorial = true; isArrow = true; tutColor = 'cyan';
              } else if (hex.currentLevel >= 1 && hex.q === 2 && hex.r === 0) {
+                 isTutorial = true; isArrow = true; tutColor = 'amber';
+             }
+         } else if (player.q === 2 && player.r === 0) {
+             if (hex.q === 3 && hex.r === 0) {
                  isTutorial = true; isArrow = true; tutColor = 'amber';
              }
          } else if (player.q === 3 && player.r === 0) {
              if (hex.q === 3 && hex.r === 0 && hex.currentLevel === 2) {
-                 isTutorial = true; isArrow = true; tutColor = 'amber';
+                 isTutorial = true; isArrow = true; tutColor = 'red';
              } else if (hex.currentLevel <= 1 && hex.q === 4 && hex.r === 0) {
                  isTutorial = true; isArrow = true; tutColor = 'amber';
              }
          } else if (player.q === 4 && player.r === 0) {
              if (hex.q === 5 && hex.r === 0) {
                  isTutorial = true; isArrow = true; tutColor = 'emerald';
+             }
+         } else if (player.q === 5 && player.r === 0) {
+             if (hex.q === 5 && hex.r === 0) {
+                 isTutorial = false; isArrow = false;
              }
          }
     } else if (levelId === '1.1') {

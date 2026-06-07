@@ -2,7 +2,7 @@
 import { FloatingText } from '../types';
 import { GAME_CONFIG } from '../rules/config';
 
-export class EffectPool {
+class EffectPool {
     private maxEffects: number;
 
     constructor(maxEffects: number = GAME_CONFIG.MAX_FLOATING_TEXTS) {

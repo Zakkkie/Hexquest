@@ -14,7 +14,7 @@ import { createDraft, finishDraft, setAutoFreeze } from 'immer';
 
 setAutoFreeze(false);
 
-export interface TickResult {
+interface TickResult {
   state: SessionState;
   events: GameEvent[];
 }

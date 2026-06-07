@@ -41,12 +41,7 @@ export const GAME_CONFIG = {
     7: { cost: 0,    growthTime: 30,  income: 245, reqRank: 6 },   
     8: { cost: 0,    growthTime: 30,  income: 320, reqRank: 7 },   
     9: { cost: 0,    growthTime: 30,  income: 405, reqRank: 8 },   
-  } as Record<number, { cost: number, growthTime: number, income: number, reqRank: number }>,
-
-  STRUCTURES: {
-    BARRIER: { cost: 20, hpPerLevel: 10 },
-    CAPITAL: { cost: 500, defenseBonus: 2 }
-  }
+  } as Record<number, { cost: number, growthTime: number, income: number, reqRank: number }>
 };
 
 export const ENTROPY_CONFIG = {

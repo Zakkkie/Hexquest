@@ -2,15 +2,12 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Stage, Layer, Group, Path, Rect, Circle } from 'react-konva';
 import { useGameStore } from '../store.ts';
 import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
-import { GAME_CONFIG } from '../rules/config.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { UpgradesTree } from './UpgradesTree.tsx';
-import { textureService } from '../services/textureService.ts';
 import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import Konva from 'konva';
 
-import { FIGURES_COLLECTION, BASE_PATH_D, BASE_POINTS, Figure } from './StoryBuilderData.ts';
+import { FIGURES_COLLECTION, BASE_POINTS, Figure } from './StoryBuilderData.ts';
 import { NebulaBackground, MiniFigureBlueprint, StoryHex } from './StoryBuilderComponents.tsx';
 
 
@@ -666,427 +663,30 @@ export const DUPLICATE_MiniFigureBlueprint: React.FC<{
     );
 };
 
-export const DUPLICATE_StoryHex: React.FC<{ 
-    q: number, 
-    r: number, 
-    level: number | undefined, 
-    isSelected: boolean,
-    isBlueprint: boolean,
-    blueprintLevel?: number,
-    isEligible: boolean,
-    isCenterInitially: boolean,
-    isNew?: boolean,
-    canPlace: boolean,
-    isFlaring?: boolean,
-    onClick: (q: number, r: number) => void,
-    onDblClick?: (q: number, r: number) => void
-}> = React.memo(({ q, r, level, isSelected, isBlueprint, blueprintLevel = 0, isEligible, isCenterInitially, isNew, canPlace, isFlaring, onClick, onDblClick }) => {
-    const px = useMemo(() => hexToPixel(q, r), [q, r]);
-    const isBuilt = level !== undefined && level >= 0;
-    
-    const colors = useMemo(() => {
-        if (level === undefined || level < 0) return null;
-        const theme = THEME_PALETTE[String(level)] || THEME_PALETTE['0'];
-        return { 
-            side: theme.dark, 
-            top: theme.main, 
-            stroke: theme.stroke,
-            light: theme.light 
-        };
-    }, [level]);
 
-    const topTexture = useMemo(() => {
-        if (level === undefined) return null;
-        return textureService.getTexture(level, q, r, undefined);
-    }, [level, q, r]);
-
-    const sideTexture = useMemo(() => {
-        if (level === undefined) return null;
-        return textureService.getSideTexture(level, undefined);
-    }, [level]);
-
-    // Height calculation - visual depth
-    const height = level !== undefined ? (level >= 0 ? 12 + level * 12 : 12) : 0;
-    const yOffset = level !== undefined ? (level >= 0 ? -height : (Math.abs(level) - 1) * 12) : 0;
-    const wallHeight = level !== undefined ? (level >= 0 ? height : Math.abs(level) * 12) : 0;
-
-    const groupRef = useRef<Konva.Group>(null);
-    useEffect(() => {
-        if (isNew && groupRef.current) {
-            const node = groupRef.current;
-            const originalY = node.y();
-            node.y(originalY - 60);
-            node.opacity(0);
-            new Konva.Tween({
-                node: node,
-                duration: 0.5,
-                y: originalY,
-                opacity: 1,
-                easing: Konva.Easings.BackEaseOut
-            }).play();
-        }
-    }, [isNew]);
-
-    const flareGlowRef = useRef<Konva.Path>(null);
-    useEffect(() => {
-        if (isFlaring && flareGlowRef.current) {
-            const node = flareGlowRef.current;
-            node.opacity(1.0);
-            node.scale({ x: 1.05, y: 1.05 });
-            
-            const tween = new Konva.Tween({
-                node: node,
-                duration: 1.6,
-                opacity: 0,
-                scaleX: 0.95,
-                scaleY: 0.95,
-                easing: Konva.Easings.EaseOut,
-                onFinish: () => {
-                    tween.destroy();
-                }
-            });
-            tween.play();
-            return () => {
-                tween.destroy();
-            };
-        }
-    }, [isFlaring]);
-
-    const [isHovered, setIsHovered] = useState(false);
-
-    // Front-facing sides for isometric view (0, 1, 5)
-    const visibleSides = useMemo(() => {
-        if (!isBuilt) return null;
-        const squashedPoints = BASE_POINTS.map(p => ({ x: p.x, y: p.y * 0.8 }));
-        
-        // Point-up hex, front facing sides are 0, 1 and 5
-        return [0, 1, 5].map(i => {
-            const next = (i + 1) % 6;
-            const p1 = squashedPoints[i];
-            const p2 = squashedPoints[next];
-            const p3 = { x: p2.x, y: p2.y + wallHeight };
-            const p4 = { x: p1.x, y: p1.y + wallHeight };
-            const minY = Math.min(p1.y, p2.y);
-            const maxY = Math.max(p3.y, p4.y);
-            return { 
-                id: i, 
-                data: `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} Z`,
-                midX: (p1.x + p2.x) / 2,
-                minY,
-                maxY
-            };
-        });
-    }, [isBuilt, wallHeight]);
-
-    const getSideOpacity = useCallback((id: number) => {
-        if (id === 0) return 0.95;
-        if (id === 1) return 0.75;
-        return 0.85; // id === 5
-    }, []);
-
-    // Draw conditions: Cover the entire game space with a wireframe grid as requested!
-
-    return (
-        <Group 
-            ref={groupRef} 
-            x={px.x} 
-            y={px.y} 
-            onClick={(e) => { e.cancelBubble = true; setIsHovered(false); onClick(q, r); }} 
-            onTap={(e) => { e.cancelBubble = true; setIsHovered(false); onClick(q, r); }}
-            onDblClick={() => onDblClick && onDblClick(q, r)}
-            onDblTap={() => onDblClick && onDblClick(q, r)}
-            onMouseEnter={(e) => {
-                // Prevent hover sticking on pure touch devices, but allow if using a mouse
-                if (e.evt && e.evt.type && e.evt.type.includes('touch')) return;
-                setIsHovered(true);
-            }}
-            onMouseLeave={() => setIsHovered(false)}
-            onTouchEnd={() => setIsHovered(false)}
-            perfectDrawEnabled={false}
-            transformsEnabled="position"
-        >
-            {/* 3D Sides / Walls */}
-            {isBuilt && colors && visibleSides && (
-                <Group y={yOffset}>
-                    {visibleSides.map(side => (
-                        <Path
-                            key={side.id}
-                            data={side.data}
-                            fillPatternImage={sideTexture as any}
-                            fillEnabled={!sideTexture}
-                            fillLinearGradientStartPoint={{ x: side.midX, y: side.minY }}
-                            fillLinearGradientEndPoint={{ x: side.midX, y: side.maxY }}
-                            fillLinearGradientColorStops={[
-                                0, colors.top,
-                                0.25, colors.side,
-                                1, 'rgba(11, 17, 32, 0.05)'
-                            ]}
-                            stroke={colors.side}
-                            strokeWidth={1.5}
-                            opacity={getSideOpacity(side.id)}
-                            listening={false}
-                            perfectDrawEnabled={false}
-                            shadowForStrokeEnabled={false}
-                        />
-                    ))}
-                </Group>
-            )}
-
-            {/* Top Face */}
-            <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
-                {isCenterInitially && (
-                    <Circle 
-                        x={0}
-                        y={0}
-                        radius={25}
-                        stroke="#10b981"
-                        strokeWidth={3}
-                        shadowColor="#10b981"
-                        shadowBlur={20}
-                        shadowOpacity={1.0}
-                        opacity={0.9}
-                        listening={false}
-                    />
-                )}
-                <Path
-                    data={BASE_PATH_D}
-                    fillPatternImage={topTexture as any}
-                    fill={topTexture ? undefined : (isBuilt ? colors?.top : (isCenterInitially ? 'rgba(16, 185, 129, 0.18)' : (isEligible ? 'rgba(34, 211, 238, 0.04)' : 'rgba(255,255,255,0.01)')))}
-                    fillPatternScale={{ x: GAME_CONFIG.HEX_SIZE / 32, y: GAME_CONFIG.HEX_SIZE / 32 }}
-                    fillPatternOffset={{ x: 32, y: 32 }}
-                    fillPatternRepeat="repeat"
-                    stroke={isBuilt ? '#06b6d4' : (isCenterInitially ? '#10b981' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)'))}
-                    strokeWidth={isBuilt ? 2.5 : (isCenterInitially ? 3.5 : (isEligible ? 1.5 : 0.8))}
-                    perfectDrawEnabled={false}
-                    shadowForStrokeEnabled={false}
-                    dash={isEligible || isBlueprint ? [4, 4] : undefined}
-                />
-                
-                {/* Visual plus (+) for center initially and eligible targets, requested by user */}
-                {!isBuilt && (isCenterInitially || isEligible) && (
-                    <Group listening={false}>
-                        <Path 
-                            data="M -6 0 L 6 0"
-                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.95)"}
-                            strokeWidth={2}
-                            shadowColor={isCenterInitially ? "#10b981" : "#22d3ee"}
-                            shadowBlur={6}
-                            shadowOpacity={0.8}
-                            listening={false}
-                        />
-                        <Path 
-                            data="M 0 -6 L 0 6"
-                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.95)"}
-                            strokeWidth={2}
-                            shadowColor={isCenterInitially ? "#10b981" : "#22d3ee"}
-                            shadowBlur={6}
-                            shadowOpacity={0.8}
-                            listening={false}
-                        />
-                    </Group>
-                )}
-                
-                {isBuilt && colors && (
-                    <>
-                        {/* Always outline built hex with cyan glow */}
-                        <Path 
-                            data={BASE_PATH_D}
-                            stroke="#22d3ee"
-                            strokeWidth={1.2}
-                            opacity={0.8}
-                            listening={false}
-                        />
-                        {/* Top/Light Bevel */}
-                        <Path 
-                            data={`M ${BASE_POINTS[2].x} ${BASE_POINTS[2].y} L ${BASE_POINTS[3].x} ${BASE_POINTS[3].y} L ${BASE_POINTS[4].x} ${BASE_POINTS[4].y} L ${BASE_POINTS[5].x} ${BASE_POINTS[5].y}`}
-                            stroke="rgba(255,255,255,0.4)"
-                            strokeWidth={2}
-                            listening={false}
-                            perfectDrawEnabled={false}
-                        />
-                        {/* Bottom/Dark Bevel */}
-                        <Path 
-                            data={`M ${BASE_POINTS[5].x} ${BASE_POINTS[5].y} L ${BASE_POINTS[0].x} ${BASE_POINTS[0].y} L ${BASE_POINTS[1].x} ${BASE_POINTS[1].y} L ${BASE_POINTS[2].x} ${BASE_POINTS[2].y}`}
-                            stroke="rgba(0,0,0,0.6)"
-                            strokeWidth={2}
-                            listening={false}
-                            perfectDrawEnabled={false}
-                        />
-                    </>
-                )}
-            </Group>
-
-            {/* Empty Holographic blueprint decoration inside blueprint ghost targets */}
-            {!isBuilt && isBlueprint && !isCenterInitially && (
-                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
-                    <Path
-                        data={BASE_PATH_D}
-                        scaleX={0.9}
-                        scaleY={0.9}
-                        stroke={isHovered ? 'rgba(168, 85, 247, 0.85)' : 'rgba(168, 85, 247, 0.5)'}
-                        strokeWidth={1.5}
-                        dash={[4, 3]}
-                        listening={false}
-                    />
-                    {blueprintLevel > 0 && (
-                        <Path
-                            data={BASE_PATH_D}
-                            scaleX={0.7}
-                            scaleY={0.7}
-                            stroke="rgba(168, 85, 247, 0.3)"
-                            strokeWidth={1}
-                            dash={[2, 2]}
-                            listening={false}
-                        />
-                    )}
-                    {/* Visual color dot representing the target level palette for the ghost block */}
-                    <Circle 
-                        x={0} 
-                        y={0} 
-                        r={4} 
-                        fill={THEME_PALETTE[String(blueprintLevel)]?.main || 'rgba(168, 85, 247, 0.6)'} 
-                        stroke="#fff"
-                        strokeWidth={1}
-                        listening={false} 
-                    />
-                </Group>
-            )}
-
-            {/* Initial Center Beacon Highlight */}
-            {!isBuilt && isCenterInitially && (
-                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
-                    <Path
-                        data={BASE_PATH_D}
-                        scaleX={0.94}
-                        scaleY={0.94}
-                        stroke="#22d3ee"
-                        strokeWidth={2}
-                        shadowColor="#22d3ee"
-                        shadowBlur={12}
-                        shadowOpacity={0.6}
-                        listening={false}
-                    />
-                    <Circle x={0} y={0} r={4} fill="#22d3ee" opacity={0.8} listening={false} className="animate-pulse" />
-                </Group>
-            )}
-
-            {/* Pulse Placement Helper Outline for Neighbors */}
-            {!isBuilt && isEligible && !isCenterInitially && (
-                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
-                    <Path
-                        data={BASE_PATH_D}
-                        scaleX={0.96}
-                        scaleY={0.96}
-                        stroke={'rgba(34, 211, 238, 0.65)'}
-                        strokeWidth={2.2}
-                        dash={[5, 4]}
-                        opacity={0.9}
-                        shadowColor="#22d3ee"
-                        shadowBlur={6}
-                        listening={false}
-                    />
-                </Group>
-            )}
-
-            {/* Selection Outline */}
-            {isSelected && (
-                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
-                    <Path
-                        data={BASE_PATH_D}
-                        scaleX={0.9}
-                        scaleY={0.9}
-                        stroke="#a855f7"
-                        strokeWidth={3}
-                        dash={[4, 4]}
-                        opacity={0.94}
-                        shadowColor="#a855f7"
-                        shadowBlur={14}
-                        listening={false}
-                    />
-                </Group>
-            )}
-
-            {/* Place Block isometric ripple effect */}
-            {isNew && (
-                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
-                    <Circle
-                        r={GAME_CONFIG.HEX_SIZE * 0.8}
-                        stroke="#22d3ee"
-                        strokeWidth={3}
-                        opacity={0.9}
-                        listening={false}
-                        ref={(node) => {
-                            if (node) {
-                                new Konva.Tween({
-                                    node: node,
-                                    duration: 0.65,
-                                    scaleX: 1.85,
-                                    scaleY: 1.85,
-                                    opacity: 0,
-                                    strokeWidth: 0.5,
-                                    easing: Konva.Easings.EaseOut
-                                }).play();
-                            }
-                        }}
-                    />
-                </Group>
-            )}
-
-            {/* Placement / Hover Overlay Feedback */}
-            {isHovered && !isBlueprint && (
-                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false} listening={false}>
-                    <Path
-                        data={BASE_PATH_D}
-                        fill={canPlace ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}
-                        stroke={canPlace ? '#10b981' : '#ef4444'}
-                        strokeWidth={4}
-                        opacity={1}
-                        shadowColor={canPlace ? '#10b981' : '#ef4444'}
-                        shadowBlur={16}
-                        shadowOpacity={0.9}
-                        listening={false}
-                    />
-                </Group>
-            )}
-
-            {/* COMPLETED SHAPE NEON FLARE EFFECT */}
-            {isFlaring && (
-                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
-                    <Path
-                        ref={flareGlowRef}
-                        data={BASE_PATH_D}
-                        fill="#ffffff"
-                        stroke="#ffffff"
-                        strokeWidth={4}
-                        shadowColor="#22d3ee"
-                        shadowBlur={25}
-                        shadowOpacity={1.0}
-                        listening={false}
-                    />
-                </Group>
-            )}
-        </Group>
-    );
-});
 
 const drawInventoryHex = (lvl: number, theme: any) => {
     return (
-        <svg viewBox="0 0 40 46" className="w-7 h-8 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] select-none pointer-events-none transition-all duration-300">
+        <svg viewBox="0 0 40 46" className="w-10 h-11 drop-shadow-[0_2.5px_5px_rgba(0,0,0,0.65)] select-none pointer-events-none transition-all duration-300">
             {/* 3D Bottom/Side extrusion */}
             <polygon points="20,0 38,10 38,36 20,46 2,36 2,10" fill={theme.dark} />
             {/* Top plate */}
-            <polygon points="20,0 38,10 38,30 20,40 2,30 2,10" fill={theme.main} stroke={theme.stroke} strokeWidth="2" />
+            <polygon points="20,0 38,10 38,30 20,40 2,30 2,10" fill={theme.main} stroke={theme.stroke} strokeWidth="2.5" />
             
             {/* Soft top bevel line */}
-            <polyline points="2,10 20,20 38,10" stroke="rgba(255,255,255,0.25)" strokeWidth="1" fill="none" />
+            <polyline points="2,10 20,20 38,10" stroke="rgba(255,255,255,0.35)" strokeWidth="1" fill="none" />
             
             <text 
                 x="20" 
-                y="20" 
+                y="19" 
                 textAnchor="middle" 
-                fill={theme.light} 
-                className="text-[14px] font-[900]"
+                fill={theme.light || '#ffffff'} 
+                stroke="#000000"
+                strokeWidth="1.5"
+                paintOrder="stroke"
+                className="text-[22px] font-[900] tracking-tight font-sans"
                 dominantBaseline="central"
+                style={{ filter: "drop-shadow(0px 1px 1.5px rgba(0,0,0,0.85))" }}
             >
                 {lvl}
             </text>
@@ -2301,8 +1901,6 @@ const StoryBuilderView: React.FC = () => {
                                     className="w-full flex flex-row gap-1.5 overflow-x-auto pb-0.5 scrollbar-none flex-nowrap scroll-smooth"
                                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                                 >
-                                    
-                                {/* Levels L0 to L9 */}
                                     {Array.from({ length: 10 }).map((_, lvl) => {
                                         const qty = minedInSessionHexes[lvl] || 0;
                                         const isSelected = selectedBuildLevel === lvl;
@@ -2311,23 +1909,19 @@ const StoryBuilderView: React.FC = () => {
                                             <button
                                                 key={lvl}
                                                 onClick={() => { playUiSound('CLICK'); setSelectedBuildLevel(lvl); }}
-                                                className={`flex-shrink-0 flex flex-col items-center justify-between p-1 rounded-lg border text-center transition-all w-11 h-15 relative cursor-pointer outline-none group ${
+                                                className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 p-1 rounded-xl border text-center transition-all w-13 h-17 relative cursor-pointer outline-none group ${
                                                     isSelected
-                                                        ? 'bg-indigo-950/40 border-cyan-400/50 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102'
+                                                        ? 'bg-indigo-950/40 border-cyan-400/50 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102 font-bold'
                                                         : qty > 0 
                                                             ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
                                                             : 'bg-slate-950/20 border-white/5 opacity-50 text-slate-500 hover:opacity-70'
                                                 }`}
                                             >
-                                                <span className="text-[6.5px] font-black tracking-widest uppercase leading-none text-slate-400">
-                                                    L{lvl}
-                                                </span>
-                                                
-                                                <div className="w-7 h-8 flex items-center justify-center">
+                                                <div className="w-10 h-11 flex items-center justify-center select-none pointer-events-none">
                                                     {drawInventoryHex(lvl, theme)}
                                                 </div>
 
-                                                <span className={`text-[7px] font-mono font-bold leading-none ${qty > 0 ? 'text-indigo-400' : 'text-slate-600'}`}>
+                                                <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none ${qty > 0 ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'text-slate-500'}`}>
                                                     x{qty}
                                                 </span>
                                             </button>

@@ -1,7 +1,7 @@
 
 import { resourceService } from './resourceService';
 
-export class TextureService {
+class TextureService {
   private static instance: TextureService;
 
   // 1. Добавляем статическое свойство класса в самый верх (после private static instance)

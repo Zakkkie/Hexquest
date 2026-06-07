@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { useGameStore } from '../../store';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Swords, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
+import { useCollapsibleHint } from './useCollapsibleHint.ts';
 
 const SkirmishHintBanner: React.FC = () => {
     const winCondition = useGameStore(state => state.session?.winCondition);
@@ -99,27 +100,12 @@ const SkirmishHintBanner: React.FC = () => {
         return 'from-indigo-500/10 to-purple-500/5 hover:border-indigo-500/40 border-slate-800 text-indigo-300';
     }, [isAccomplished]);
 
-    const [isCollapsed, setIsCollapsed] = useState(false);
-
-    // Auto-expand whenever values update
-    const lastValueRef = useRef<string>('');
-    useEffect(() => {
-        if (progressText && lastValueRef.current && lastValueRef.current !== progressText) {
-            setIsCollapsed(false);
-        }
-        lastValueRef.current = progressText;
-    }, [progressText]);
+    const { isCollapsed, handleToggleCollapse } = useCollapsibleHint(progressText, playUiSound);
 
     if (!isSkirmish || !winCondition || !player) return null;
     
     // Hide for SUMMIT since MonumentHintBanner handles its multi-step logic
     if (winCondition.winType === 'SUMMIT') return null;
-
-    const handleToggleCollapse = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        playUiSound('CLICK');
-        setIsCollapsed(p => !p);
-    };
 
     return (
         <AnimatePresence mode="wait">

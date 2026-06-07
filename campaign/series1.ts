@@ -6,7 +6,7 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.0',
     title: 'Sim 1.0: Basic Level',
-    description: 'Обучающий уровень базовых механик.\nДобро пожаловать в HexQuest Economy. Цель: доберитесь до Столицы (5,0).',
+    description: 'Обучение азам. Цель: доберитесь до Столицы (5,0).',
     goalText: 'Reach the Capital (5,0)',
     mapConfig: {
       size: 5,
@@ -69,7 +69,7 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.1',
     title: 'Sim 1.1: Пределы Высоты',
-    description: 'Ограничение: 2 минуты. Поднимитесь по хребту и дойдите до портала!\nНельзя перемещаться, если разница высот больше 1 уровня.',
+    description: 'Дойти до портала за 2 мин. Разница высот шага не более 1.',
     goalText: 'Успей по указателям дойти вверх до портала',
     mapConfig: {
       size: 4,
@@ -352,10 +352,17 @@ export const series1Levels: LevelConfig[] = [
     description: 'В пустоте возвысить изолированный гекс выше L1 невозможно.\nВсегда стройте опорное плато из смежных блоков!',
     goalText: 'Улучшите Центр до уровня L1',
     mapConfig: {
-      size: 2,
+      size: 3,
       type: 'fixed',
       customLayout: [
         { q: 0, r: 0, currentLevel: 0, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Лимит L1
+        // Symmetric disconnected outposts
+        { q: 2, r: -2, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -2, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: -2, currentLevel: 0, maxLevel: 0, revealed: true },
       ]
     },
     objectiveHexes: [
@@ -400,6 +407,15 @@ export const series1Levels: LevelConfig[] = [
         { q: -1, r: 1, currentLevel: 3, maxLevel: 3, revealed: true }, // Буферная L3
         { q: 2, r: -2, currentLevel: 2, maxLevel: 2, revealed: true }, // Спуск L2
         { q: -2, r: 2, currentLevel: 2, maxLevel: 2, revealed: true }, // Спуск L2
+        // Symmetric wings
+        { q: 1, r: 0, currentLevel: 3, maxLevel: 3, revealed: true },
+        { q: -1, r: 0, currentLevel: 3, maxLevel: 3, revealed: true },
+        { q: 0, r: -1, currentLevel: 3, maxLevel: 3, revealed: true },
+        { q: 0, r: 1, currentLevel: 3, maxLevel: 3, revealed: true },
+        { q: 2, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+        { q: -2, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+        { q: 0, r: -2, currentLevel: 2, maxLevel: 2, revealed: true },
+        { q: 0, r: 2, currentLevel: 2, maxLevel: 2, revealed: true },
       ]
     },
     objectiveHexes: [
@@ -464,6 +480,15 @@ export const series1Levels: LevelConfig[] = [
         { q: 1, r: -1, currentLevel: 2, maxLevel: 2, revealed: true }, // Ступенька L2
         { q: 2, r: -1, currentLevel: 3, maxLevel: 3, revealed: true }, // Ступенька L3
         { q: 3, r: -1, currentLevel: 0, maxLevel: 0, revealed: true, structureType: 'CAPITAL' }, // Столица L0
+        
+        // Asymmetric side hexes of varied height
+        { q: 0, r: -1, currentLevel: 4, maxLevel: 4, revealed: true },
+        { q: 1, r: 0, currentLevel: -2, maxLevel: -2, revealed: true },
+        { q: 2, r: 0, currentLevel: 5, maxLevel: 5, revealed: true },
+        { q: 2, r: -2, currentLevel: -1, maxLevel: -1, revealed: true },
+        { q: 3, r: -2, currentLevel: 6, maxLevel: 6, revealed: true },
+        { q: 1, r: -2, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: -1, r: 0, currentLevel: 3, maxLevel: 3, revealed: true },
       ]
     },
     objectiveHexes: [

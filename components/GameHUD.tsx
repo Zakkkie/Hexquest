@@ -91,6 +91,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                 
                 {(gameStatus === 'PLAYING' || toast) && (
                     <div className="absolute top-[calc(74px+env(safe-area-inset-top))] md:top-[96px] left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2.5">
+                        <CentralTutorialBanner onOpenHelpDetail={() => setActiveModal('MISSION')} />
+                        
                         {toast && (
                             <div className="w-full flex justify-center pointer-events-auto">
                                 <div className="w-full bg-slate-950 px-4 py-3 rounded-lg border border-slate-800 shadow-xl flex items-center justify-center animate-in fade-in zoom-in-95 duration-200">
@@ -103,8 +105,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                                 </div>
                             </div>
                         )}
-                        
-                        <CentralTutorialBanner onOpenHelpDetail={() => setActiveModal('MISSION')} />
                         
                         {gameStatus === 'PLAYING' && (
                             <>

@@ -1,6 +1,5 @@
 
-import { Hex, HexCoord, TerrainType } from '../types';
-import { LevelConfig } from '../types';
+import { Hex, HexCoord, TerrainType, LevelConfig } from '../types';
 import { getHexKey, getNeighbors } from './hexUtils';
 import { GAME_CONFIG } from '../rules/config';
 

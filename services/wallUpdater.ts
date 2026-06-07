@@ -1,4 +1,4 @@
-export type WallUpdater = (cos: number, sin: number, rot: number) => void;
+type WallUpdater = (cos: number, sin: number, rot: number) => void;
 
 class WallUpdaterRegistry {
     private updaters = new Set<WallUpdater>();

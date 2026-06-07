@@ -193,13 +193,14 @@ export const StoryHex: React.FC<{
     const isBuilt = level !== undefined && level >= 0;
     
     const colors = useMemo(() => {
-        if (level === undefined || level < 0) return null;
-        const theme = THEME_PALETTE[String(level)] || THEME_PALETTE['0'];
+        const defaultTheme = { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' };
+        const lvlStr = level !== undefined ? String(level) : '0';
+        const theme = THEME_PALETTE[lvlStr] || THEME_PALETTE['0'] || defaultTheme;
         return { 
-            side: theme.dark, 
-            top: theme.main, 
-            stroke: theme.stroke,
-            light: theme.light 
+            side: theme.dark || '#0f172a', 
+            top: theme.main || '#1e293b', 
+            stroke: theme.stroke || '#475569',
+            light: theme.light || '#334155' 
         };
     }, [level]);
 
@@ -225,13 +226,40 @@ export const StoryHex: React.FC<{
             const originalY = node.y();
             node.y(originalY - 60);
             node.opacity(0);
-            new Konva.Tween({
+            const tween = new Konva.Tween({
                 node: node,
                 duration: 0.5,
                 y: originalY,
                 opacity: 1,
                 easing: Konva.Easings.BackEaseOut
-            }).play();
+            });
+            tween.play();
+            return () => {
+                tween.destroy();
+            };
+        }
+    }, [isNew]);
+
+    const rippleRef = useRef<Konva.Circle>(null);
+    useEffect(() => {
+        if (isNew && rippleRef.current) {
+            const node = rippleRef.current;
+            node.scale({ x: 1, y: 1 });
+            node.opacity(0.9);
+            node.strokeWidth(3);
+            const tween = new Konva.Tween({
+                node: node,
+                duration: 0.65,
+                scaleX: 1.85,
+                scaleY: 1.85,
+                opacity: 0,
+                strokeWidth: 0.5,
+                easing: Konva.Easings.EaseOut
+            });
+            tween.play();
+            return () => {
+                tween.destroy();
+            };
         }
     }, [isNew]);
 
@@ -248,10 +276,7 @@ export const StoryHex: React.FC<{
                 opacity: 0,
                 scaleX: 0.95,
                 scaleY: 0.95,
-                easing: Konva.Easings.EaseOut,
-                onFinish: () => {
-                    tween.destroy();
-                }
+                easing: Konva.Easings.EaseOut
             });
             tween.play();
             return () => {
@@ -264,22 +289,25 @@ export const StoryHex: React.FC<{
 
     // Front-facing sides for isometric view (0, 1, 5)
     const visibleSides = useMemo(() => {
-        if (!isBuilt) return null;
-        const squashedPoints = BASE_POINTS.map(p => ({ x: p.x, y: p.y * 0.8 }));
+        if (!isBuilt) return [];
+        const squashedPoints = (BASE_POINTS || []).map(p => {
+            if (!p) return { x: 0, y: 0 };
+            return { x: p.x ?? 0, y: (p.y ?? 0) * 0.8 };
+        });
         
         // Point-up hex, front facing sides are 0, 1 and 5
         return [0, 1, 5].map(i => {
             const next = (i + 1) % 6;
-            const p1 = squashedPoints[i];
-            const p2 = squashedPoints[next];
-            const p3 = { x: p2.x, y: p2.y + wallHeight };
-            const p4 = { x: p1.x, y: p1.y + wallHeight };
-            const minY = Math.min(p1.y, p2.y);
-            const maxY = Math.max(p3.y, p4.y);
+            const p1 = squashedPoints[i] || { x: 0, y: 0 };
+            const p2 = squashedPoints[next] || { x: 0, y: 0 };
+            const p3 = { x: p2.x ?? 0, y: (p2.y ?? 0) + wallHeight };
+            const p4 = { x: p1.x ?? 0, y: (p1.y ?? 0) + wallHeight };
+            const minY = Math.min(p1.y ?? 0, p2.y ?? 0);
+            const maxY = Math.max(p3.y ?? 0, p4.y ?? 0);
             return { 
                 id: i, 
-                data: `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} Z`,
-                midX: (p1.x + p2.x) / 2,
+                data: `M ${p1.x ?? 0} ${p1.y ?? 0} L ${p2.x ?? 0} ${p2.y ?? 0} L ${p3.x ?? 0} ${p3.y ?? 0} L ${p4.x ?? 0} ${p4.y ?? 0} Z`,
+                midX: ((p1.x ?? 0) + (p2.x ?? 0)) / 2,
                 minY,
                 maxY
             };
@@ -312,7 +340,7 @@ export const StoryHex: React.FC<{
             transformsEnabled="position"
         >
             {/* 3D Sides / Walls */}
-            {isBuilt && colors && visibleSides && (
+            {isBuilt && colors && visibleSides && visibleSides.length > 0 && (
                 <Group y={yOffset}>
                     {visibleSides.map(side => (
                         <Path
@@ -516,24 +544,12 @@ export const StoryHex: React.FC<{
             {isNew && (
                 <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                     <Circle
+                        ref={rippleRef}
                         r={GAME_CONFIG.HEX_SIZE * 0.8}
                         stroke="#22d3ee"
                         strokeWidth={3}
                         opacity={0.9}
                         listening={false}
-                        ref={(node) => {
-                            if (node) {
-                                new Konva.Tween({
-                                    node: node,
-                                    duration: 0.65,
-                                    scaleX: 1.85,
-                                    scaleY: 1.85,
-                                    opacity: 0,
-                                    strokeWidth: 0.5,
-                                    easing: Konva.Easings.EaseOut
-                                }).play();
-                            }
-                        }}
                     />
                 </Group>
             )}

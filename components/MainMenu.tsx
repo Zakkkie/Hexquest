@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, LogOut, Ghost, ArrowRight, Shield, X, LogIn, Lock, Target, Gem, Crown, Bot, Activity, Volume2, VolumeX, BookOpen, Music, ChevronLeft, ChevronRight, Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, Mountain, Crosshair, Flame, Shuffle, Settings } from 'lucide-react';
+import { Trophy, LogOut, Ghost, ArrowRight, Shield, X, LogIn, Lock, Target, Gem, Crown, Bot, Activity, Volume2, VolumeX, BookOpen, Music, ChevronLeft, ChevronRight, Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, Mountain, Crosshair, Flame, Shuffle, Settings, Minus, Plus } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -999,125 +999,248 @@ const MainMenu: React.FC = () => {
                  <div className="h-px bg-slate-800 w-full" />
 
                  {/* 2. CONFIGURATION GRID */}
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5">
                      
                      {/* LEFT: DIFFICULTY & MAP TYPE */}
-                     <div className="flex flex-col gap-2 md:gap-4">
-                        {/* DIFFICULTY */}
-                        <div>
-                            <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-3 break-words whitespace-pre-wrap">
-                                <Shield className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.LBL_DIFFICULTY}
-                            </h3>
-                            <div className="flex bg-slate-900 p-0.5 md:p-1 rounded-xl border border-slate-800 mb-1.5 md:mb-3">
-                                {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => {
-                                    const active = difficulty === d;
-                                    let colorClass = 'text-slate-500 hover:text-slate-300';
-                                    if (active) {
-                                        if (d === 'EASY') colorClass = 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20';
-                                        if (d === 'MEDIUM') colorClass = 'bg-amber-600 text-white shadow-lg shadow-amber-900/20';
-                                        if (d === 'HARD') colorClass = 'bg-red-600 text-white shadow-lg shadow-red-900/20';
-                                    }
-                                    return (
-                                        <button 
-                                            key={d} 
-                                            onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
-                                            className={`flex-1 py-1 md:py-2 rounded-lg text-[7.5px] md:text-[10px] font-black uppercase tracking-wider transition-all break-words whitespace-pre-wrap ${colorClass}`}
-                                        >
-                                            {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
-                                        </button>
-                                    );
-                                })}
+                     <div className="flex flex-col gap-3 md:gap-5">
+                        
+                        {/* DIFFICULTY (STYLISH UNIFIED CARD PANEL) */}
+                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3.5 md:p-4.5 flex flex-col gap-3 md:gap-4 transition-all hover:border-slate-700/60 shadow-lg relative overflow-hidden group">
+                            {/* Accent lighting pattern */}
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/8 transition-all duration-300 pointer-events-none" />
+                            
+                            <div className="flex flex-wrap items-center justify-between gap-3 relative z-10">
+                                <div className="flex flex-col gap-0.5">
+                                    <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.12em] text-slate-300 flex items-center gap-2 leading-none">
+                                        <Shield className="w-3.5 h-3.5 text-indigo-400" /> {t.LBL_DIFFICULTY}
+                                    </h3>
+                                    <span className="text-[8px] md:text-[9px] text-slate-500 font-mono uppercase tracking-wider leading-none mt-1">
+                                        {difficulty === 'EASY' ? t.DIFF_EASY : difficulty === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
+                                    </span>
+                                </div>
+
+                                <div className="flex bg-slate-950 p-0.5 rounded-xl border border-slate-800 shrink-0 w-44 md:w-52">
+                                    {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => {
+                                        const active = difficulty === d;
+                                        let btnColor = 'text-slate-600 hover:text-slate-400';
+                                        if (active) {
+                                            if (d === 'EASY') btnColor = 'bg-emerald-600/90 text-white shadow-md shadow-emerald-950/50 font-bold';
+                                            if (d === 'MEDIUM') btnColor = 'bg-amber-600/90 text-white shadow-md shadow-amber-950/50 font-bold';
+                                            if (d === 'HARD') btnColor = 'bg-red-600/90 text-white shadow-md shadow-red-950/50 font-bold';
+                                        }
+                                        return (
+                                            <button 
+                                                key={d} 
+                                                type="button"
+                                                onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
+                                                className={`flex-1 py-1 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all break-words ${btnColor}`}
+                                            >
+                                                {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                             
-                            <div className={`p-1.5 md:p-3 rounded-xl border flex items-start gap-1.5 md:gap-2 ${getDifficultyColor(difficulty)}`}>
-                                <Activity className="w-2.5 h-2.5 md:w-4 md:h-4 shrink-0 animate-pulse mt-0.5" />
+                            <div className={`p-2 rounded-xl border flex items-start gap-1.5 md:gap-2.5 transition-all duration-300 relative z-10 ${getDifficultyColor(difficulty)}`}>
+                                <Activity className="w-3.5 h-3.5 shrink-0 animate-pulse mt-0.5" />
                                 <div>
-                                    <span className="block text-[7px] md:text-[9px] font-black uppercase tracking-widest opacity-70 break-words whitespace-pre-wrap">{t.RULES_ENGAGEMENT}</span>
-                                    <span className="text-[7.5px] md:text-[10px] font-bold leading-tight block break-words whitespace-pre-wrap">{getDifficultyDesc(difficulty)}</span>
+                                    <span className="block text-[7px] md:text-[8px] font-black uppercase tracking-widest opacity-70 leading-none">{t.RULES_ENGAGEMENT}</span>
+                                    <span className="text-[7.5px] md:text-[9.5px] font-medium leading-tight block mt-1">{getDifficultyDesc(difficulty)}</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* MAP TYPE SELECTOR */}
-                        <div>
-                            <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
-                                <MapIcon className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Ландшафт' : 'Terrain'}
-                            </h3>
-                            <div className="flex bg-slate-900 p-0.5 md:p-1 rounded-xl border border-slate-800">
+                        {/* MAP TYPE SELECTOR (STYLISH COMPACT CARD PANEL) */}
+                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3.5 md:p-4.5 flex items-center justify-between gap-4 transition-all hover:border-slate-700/60 shadow-lg relative overflow-hidden group">
+                            {/* Accent lighting pattern */}
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/3 rounded-full blur-2xl group-hover:bg-cyan-500/5 transition-all duration-300 pointer-events-none" />
+                            
+                            <div className="flex flex-col gap-0.5 relative z-10">
+                                <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.12em] text-slate-300 flex items-center gap-2 leading-none">
+                                    <MapIcon className="w-3.5 h-3.5 text-cyan-400" /> {language === 'RU' ? 'Ландшафт' : 'Terrain'}
+                                </h3>
+                                <span className="text-[8px] md:text-[9.5px] text-slate-500 font-mono uppercase tracking-wider leading-normal mt-1 max-w-[120px] md:max-w-[200px]">
+                                    {mapType === 'FLAT' 
+                                        ? (language === 'RU' ? 'Мягкий плоский сектор' : 'Flat, stable terrain') 
+                                        : (language === 'RU' ? 'Опасные аномальные выступы' : 'High tactical verticality')}
+                                </span>
+                            </div>
+
+                            <div className="flex bg-slate-950 p-0.5 rounded-xl border border-slate-800 shrink-0 w-36 md:w-44 relative z-10">
                                 <button 
+                                    type="button"
                                     onClick={() => { setMapType('FLAT'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 break-words whitespace-pre-wrap ${mapType === 'FLAT' ? 'bg-slate-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                                    className={`flex-1 py-1 md:py-1.5 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${mapType === 'FLAT' ? 'bg-slate-800 text-white shadow-[0_0_8px_rgba(255,255,255,0.1)]' : 'text-slate-600 hover:text-slate-400'}`}
                                 >
                                     <Layers className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Плоский' : 'Flat'}
                                 </button>
                                 <button 
+                                    type="button"
                                     onClick={() => { setMapType('CHAOTIC'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 md:py-2 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 md:gap-2 break-words whitespace-pre-wrap ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                    className={`flex-1 py-1 md:py-1.5 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${mapType === 'CHAOTIC' ? 'bg-indigo-600/90 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-600 hover:text-slate-400'}`}
                                 >
                                     <Activity className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Хаос' : 'Chaos'}
                                 </button>
                             </div>
                         </div>
+
                      </div>
 
                      {/* RIGHT: BOTS & STORAGE */}
-                     <div className="flex flex-col gap-2 md:gap-4">
-                        {/* BOTS */}
-                        <div>
-                            <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
-                                <Bot className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.LBL_RIVALS}
-                            </h3>
-                            <div className="grid grid-cols-6 gap-1 md:gap-1.5">
-                                {[1, 2, 3, 4, 5, 6].map(count => (
-                                    <button 
-                                        key={count} 
-                                        onClick={() => { setBotCount(count); playUiSound('CLICK'); }}
-                                        className={`
-                                            h-6 md:h-9 rounded-lg border flex items-center justify-center transition-all relative overflow-hidden group
-                                            ${botCount === count 
-                                                ? 'border-red-500 bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]' 
-                                                : 'border-slate-800 bg-slate-900 text-slate-600 hover:border-slate-600 hover:text-slate-400'}
-                                        `}
-                                    >
-                                        <span className="text-[9px] md:text-xs font-black">{count}</span>
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="flex justify-between mt-0.5 md:mt-1 px-1">
-                                <span className="text-[7px] md:text-[9px] text-slate-600 font-mono uppercase tracking-wider break-words whitespace-pre-wrap">
+                     <div className="flex flex-col gap-3 md:gap-5">
+                        
+                        {/* BOTS (STYLISH RE-ENGINEERED COMPACT CARD PANEL) */}
+                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3.5 md:p-4.5 flex items-center justify-between gap-4 transition-all hover:border-slate-700/60 shadow-lg relative overflow-hidden group">
+                            {/* Accent lighting pattern */}
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/3 rounded-full blur-2xl group-hover:bg-rose-500/5 transition-all duration-300 pointer-events-none" />
+                            
+                            <div className="flex flex-col gap-0.5 flex-1 relative z-10">
+                                <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.12em] text-slate-300 flex items-center gap-2 leading-none">
+                                    <Bot className="w-3.5 h-3.5 text-rose-500 animate-pulse" /> {t.LBL_RIVALS}
+                                </h3>
+                                <span className="text-[8px] md:text-[9.5px] text-slate-500 font-mono uppercase tracking-wider leading-none mt-1 break-words">
                                     {getBotLabel(botCount)}
                                 </span>
-                                {botCount >= 4 && <span className="text-[7px] md:text-[9px] text-red-500 font-bold font-mono uppercase flex items-center gap-1"><Flame className="w-2 md:w-3 md:h-3" /> {t.HIGH_CPU}</span>}
+                                {botCount >= 4 && (
+                                    <span className="text-[7px] md:text-[8px] text-red-500 font-bold font-mono uppercase flex items-center gap-0.5 animate-pulse mt-1 leading-none">
+                                        <Flame className="w-2 md:w-2.5 md:h-2.5" /> {t.HIGH_CPU}
+                                    </span>
+                                )}
+                                {/* Matrix Grid dot indicator */}
+                                <div className="flex gap-1.5 mt-2.5">
+                                    {Array.from({ length: 6 }).map((_, i) => {
+                                        const active = i < botCount;
+                                        return (
+                                            <div 
+                                                key={i} 
+                                                className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-[1px] transition-all duration-300 ${
+                                                    active 
+                                                        ? 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]' 
+                                                        : 'bg-slate-800/60'
+                                                }`} 
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1 w-24 md:w-28 shrink-0 justify-between relative z-10">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (botCount > 1) {
+                                            setBotCount(botCount - 1);
+                                            playUiSound('CLICK');
+                                        }
+                                    }}
+                                    disabled={botCount <= 1}
+                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all ${
+                                        botCount <= 1
+                                            ? 'text-slate-800 bg-transparent cursor-not-allowed opacity-20'
+                                            : 'text-rose-400 bg-slate-900 border border-slate-800/50 hover:text-rose-300 hover:bg-rose-500/10 hover:border-rose-500/30 active:scale-95'
+                                    }`}
+                                >
+                                    <Minus className="w-3 h-3 md:w-4 md:h-4" />
+                                </button>
+                                
+                                <span className="text-xs md:text-sm font-mono font-black text-rose-500">
+                                    {botCount}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (botCount < 6) {
+                                            setBotCount(botCount + 1);
+                                            playUiSound('CLICK');
+                                        }
+                                    }}
+                                    disabled={botCount >= 6}
+                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all ${
+                                        botCount >= 6
+                                            ? 'text-slate-800 bg-transparent cursor-not-allowed opacity-20'
+                                            : 'text-rose-400 bg-slate-900 border border-slate-800/50 hover:text-rose-300 hover:bg-rose-500/10 hover:border-rose-500/30 active:scale-95'
+                                    }`}
+                                >
+                                    <Plus className="w-3 h-3 md:w-4 md:h-4" />
+                                </button>
                             </div>
                         </div>
 
-                        {/* STORAGE SELECTOR (NEW) */}
-                        <div>
-                            <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-2 break-words whitespace-pre-wrap">
-                                <Box className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.CARGO_CAP}
-                            </h3>
-                            <div className="flex gap-1 md:gap-2">
-                                {[3, 4, 5, 6].map(cap => (
-                                    <button
-                                        key={cap}
-                                        onClick={() => { setStorageCap(cap); playUiSound('CLICK'); }}
-                                        className={`
-                                            flex-1 h-6 md:h-9 rounded-lg border flex items-center justify-center gap-1 transition-all
-                                            ${storageCap === cap 
-                                                ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]' 
-                                                : 'border-slate-800 bg-slate-900 text-slate-600 hover:border-slate-600 hover:text-slate-400'}
-                                        `}
-                                    >
-                                        <span className="text-[9px] md:text-xs font-black">{cap}</span>
-                                        <div className="grid grid-cols-2 gap-0.5">
-                                            {Array.from({length: cap}).map((_,i) => (
-                                                <div key={i} className={`w-0.5 h-0.5 md:w-1 md:h-1 rounded-[1px] ${storageCap===cap ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-                                            ))}
-                                        </div>
-                                    </button>
-                                ))}
+                        {/* STORAGE SELECTOR (STYLISH EMERALD COMPACT CARD PANEL) */}
+                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3.5 md:p-4.5 flex items-center justify-between gap-4 transition-all hover:border-slate-700/60 shadow-lg relative overflow-hidden group">
+                            {/* Accent lighting pattern */}
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/3 rounded-full blur-2xl group-hover:bg-emerald-500/5 transition-all duration-300 pointer-events-none" />
+                            
+                            <div className="flex flex-col gap-0.5 flex-1 relative z-10">
+                                <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.12em] text-slate-300 flex items-center gap-2 leading-none">
+                                    <Box className="w-3.5 h-3.5 text-emerald-500" /> {t.CARGO_CAP}
+                                </h3>
+                                <span className="text-[8px] md:text-[9.5px] text-slate-500 font-mono uppercase tracking-wider leading-none mt-1 break-words">
+                                    {language === 'RU' ? `Объем склада: ${storageCap}` : `Cargo Capacity: ${storageCap}`}
+                                </span>
+                                {/* Slots physical status containers */}
+                                <div className="flex gap-1.5 mt-2.5">
+                                    {Array.from({ length: 6 }).map((_, i) => {
+                                        const active = i < storageCap;
+                                        return (
+                                            <div 
+                                                key={i} 
+                                                className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-[1px] transition-all duration-300 border ${
+                                                    active 
+                                                        ? 'border-emerald-500/50 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' 
+                                                        : 'border-slate-800 bg-slate-850'
+                                                }`} 
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1 w-24 md:w-28 shrink-0 justify-between relative z-10">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (storageCap > 3) {
+                                            setStorageCap(storageCap - 1);
+                                            playUiSound('CLICK');
+                                        }
+                                    }}
+                                    disabled={storageCap <= 3}
+                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all ${
+                                        storageCap <= 3
+                                            ? 'text-slate-800 bg-transparent cursor-not-allowed opacity-20'
+                                            : 'text-emerald-400 bg-slate-900 border border-slate-800/50 hover:text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/30 active:scale-95'
+                                    }`}
+                                >
+                                    <Minus className="w-3 h-3 md:w-4 md:h-4" />
+                                </button>
+                                
+                                <span className="text-xs md:text-sm font-mono font-black text-emerald-400">
+                                    {storageCap}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (storageCap < 6) {
+                                            setStorageCap(storageCap + 1);
+                                            playUiSound('CLICK');
+                                        }
+                                    }}
+                                    disabled={storageCap >= 6}
+                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all ${
+                                        storageCap >= 6
+                                            ? 'text-slate-800 bg-transparent cursor-not-allowed opacity-20'
+                                            : 'text-emerald-400 bg-slate-900 border border-slate-800/50 hover:text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/30 active:scale-95'
+                                    }`}
+                                >
+                                    <Plus className="w-3 h-3 md:w-4 md:h-4" />
+                                </button>
                             </div>
                         </div>
+
                      </div>
 
                  </div>

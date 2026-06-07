@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { useGameStore } from '../../store';
 import { motion, AnimatePresence } from 'motion/react';
 import { Compass, ChevronsUp, Key, Zap, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { Hex } from '../../types';
+import { useCollapsibleHint } from './useCollapsibleHint.ts';
 
 const MonumentHintBanner: React.FC = () => {
     const grid = useGameStore(state => state.session?.grid);
@@ -109,9 +110,6 @@ const MonumentHintBanner: React.FC = () => {
         }
     }, [currentPhase, language]);
 
-    // Local state for collapse/expand
-    const [isCollapsed, setIsCollapsed] = useState(false);
-
     // Compute progress metric percentage and textual value
     const currentProgressPercent = useMemo(() => {
         if (!monument) return 0;
@@ -188,26 +186,13 @@ const MonumentHintBanner: React.FC = () => {
         return language === 'RU' ? 'Готов к запуску' : 'Ready to launch';
     }, [currentPhase, isMonumentFound, monument, player?.inventory, monumentRequirements, monumentAlternatives, language]);
 
-    // Auto-expand on phase/text change for visibility
-    const lastValueRef = useRef<string>('');
+    // Auto-expand on phase/text change for visibility using hook
     const currentPhaseWithText = `${currentPhase || ''}_${info?.text || ''}`;
-    useEffect(() => {
-        if (!info) return;
-        if (lastValueRef.current && lastValueRef.current !== currentPhaseWithText) {
-            setIsCollapsed(false);
-        }
-        lastValueRef.current = currentPhaseWithText;
-    }, [currentPhase, info, currentPhaseWithText]);
+    const { isCollapsed, handleToggleCollapse } = useCollapsibleHint(currentPhaseWithText, playUiSound);
 
     if (!monument || !info) return null;
 
     const IconComponent = info.icon;
-
-    const handleToggleCollapse = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        playUiSound('CLICK');
-        setIsCollapsed(prev => !prev);
-    };
 
     return (
         <AnimatePresence mode="wait">

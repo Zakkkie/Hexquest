@@ -1148,7 +1148,11 @@ const HexNodeComponent = (props: HexNodeProps) => {
         </Group>
         {/* 3. FLOATING OVERLAYS (Wrapped inside an animated overlays group container) */}
         <Group ref={overlaysContainerRef} y={offsetY} listening={true} perfectDrawEnabled={false}>
-            {isTargetArrow && (
+            {isTargetArrow && tutorialColor === 'emerald' ? (
+                <Group ref={arrowRef} y={-40} listening={true} perfectDrawEnabled={false}>
+                    <Text text="👑" fontSize={30} offsetX={15} offsetY={15} perfectDrawEnabled={false} shadowColor="rgba(0,0,0,0.5)" shadowBlur={4} shadowOffsetY={2} />
+                </Group>
+            ) : isTargetArrow && (
                 <Group ref={arrowRef} y={-40} listening={true} perfectDrawEnabled={false}>
                     {/* Shadow/Depth Layer */}
                     <Path 

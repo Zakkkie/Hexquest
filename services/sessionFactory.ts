@@ -4,7 +4,6 @@ import { GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../rules/confi
 import { getHexKey, getNeighbors } from './hexUtils.ts';
 import { generateMap, generateSingleHex } from './mapGenerator.ts';
 import { generateMonumentRecipe, getItemDef, ITEM_REGISTRY } from '../rules/items.ts';
-// @ts-ignore
 import MapWorker from './map.worker?worker';
 
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e'];

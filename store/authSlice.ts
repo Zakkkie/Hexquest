@@ -1,4 +1,4 @@
-import { GameStore, INITIAL_PLAYGROUND_SEED } from './types.ts';
+import { GameStore, INITIAL_PLAYGROUND_SEED, createDefaultProgress, DEFAULT_CAMPAIGN_UPGRADES } from './types.ts';
 import { audioService } from '../services/audioService.ts';
 
 // Synchronous salted cryptographic hash function (cyrb53-based)
@@ -30,37 +30,7 @@ try {
   console.error("Failed to load mock user db from localStorage:", e);
 }
 
-export const DEFAULT_PROGRESS = {
-  campaignProgress: 0,
-  levelsModeProgress: 0,
-  skillPoints: 0,
-  hexActivationPoints: 0,
-  activatedHexes: {},
-  collectedHexes: {},
-  minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
-  totalMinedMaterial: 0,
-  storyMap: {},
-  campaignUpgrades: {
-    inventorySlots: 3,
-    startingEnergy: 0,
-    startingMoves: 0,
-    startingGold: 0,
-    startingMaterials: 0,
-    maxMaterials: 3,
-    fuelEfficiency: 0,
-    scanRadius: 0,
-    fatigueResistance: 0,
-    growthAccelerator: 0,
-    foundationStrength: 0,
-    economicMultiplier: 0,
-    diggerLuck: 0,
-    doubleDigChance: 0,
-    reserveCapacitor: 0,
-    turboRecharge: 0,
-    entropyResistance: 0,
-    restorationMaster: 0,
-  }
-};
+export const DEFAULT_PROGRESS = createDefaultProgress();
 
 export function saveProfileProgress(nickname: string, state: any) {
   if (!nickname) return;
@@ -68,8 +38,6 @@ export function saveProfileProgress(nickname: string, state: any) {
     campaignProgress: state.campaignProgress,
     levelsModeProgress: state.levelsModeProgress,
     skillPoints: state.skillPoints,
-    hexActivationPoints: state.hexActivationPoints,
-    activatedHexes: state.activatedHexes,
     collectedHexes: state.collectedHexes,
     minedInSessionHexes: state.minedInSessionHexes,
     totalMinedMaterial: state.totalMinedMaterial,
@@ -93,13 +61,11 @@ export function loadProfileProgress(nickname: string) {
         campaignProgress: typeof parsed.campaignProgress === 'number' ? parsed.campaignProgress : 0,
         levelsModeProgress: typeof parsed.levelsModeProgress === 'number' ? parsed.levelsModeProgress : 0,
         skillPoints: typeof parsed.skillPoints === 'number' ? parsed.skillPoints : 0,
-        hexActivationPoints: typeof parsed.hexActivationPoints === 'number' ? parsed.hexActivationPoints : 0,
-        activatedHexes: parsed.activatedHexes || {},
         collectedHexes: parsed.collectedHexes || {},
         minedInSessionHexes: parsed.minedInSessionHexes || { ...INITIAL_PLAYGROUND_SEED },
         totalMinedMaterial: typeof parsed.totalMinedMaterial === 'number' ? parsed.totalMinedMaterial : 0,
         storyMap: parsed.storyMap || {},
-        campaignUpgrades: { ...DEFAULT_PROGRESS.campaignUpgrades, ...parsed.campaignUpgrades }
+        campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES, ...parsed.campaignUpgrades }
       };
     }
   } catch (e) {

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { DeviceType } from './types.ts';
-import { GameStore, INITIAL_PLAYGROUND_SEED } from './store/types.ts';
+import { GameStore, INITIAL_PLAYGROUND_SEED, DEFAULT_CAMPAIGN_UPGRADES } from './store/types.ts';
 
 // Import our new state slices
 import { createAuthSlice, saveProfileProgress } from './store/authSlice.ts';
@@ -34,34 +34,13 @@ export const useGameStore = create<GameStore>()(
       campaignProgress: 0, 
       levelsModeProgress: 0,
       skillPoints: 0,
-      hexActivationPoints: 0,
-      activatedHexes: {},
       
       collectedHexes: {},
       minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
       totalMinedMaterial: 0,
       storyMap: {},
 
-      campaignUpgrades: {
-        inventorySlots: 3,
-        startingEnergy: 0,
-        startingMoves: 0,
-        startingGold: 0,
-        startingMaterials: 0,
-        maxMaterials: 3,
-        fuelEfficiency: 0,
-        scanRadius: 0,
-        fatigueResistance: 0,
-        growthAccelerator: 0,
-        foundationStrength: 0,
-        economicMultiplier: 0,
-        diggerLuck: 0,
-        doubleDigChance: 0,
-        reserveCapacitor: 0,
-        turboRecharge: 0,
-        entropyResistance: 0,
-        restorationMaster: 0,
-      },
+      campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES },
       campaignMode: 'STORY',
       hasActiveSession: false,
       hasHydrated: false,
@@ -76,7 +55,6 @@ export const useGameStore = create<GameStore>()(
       lastVisualEvent: undefined,
       isCampaignLoading: false,
       loadingLevelId: null,
-      isCampaignHintCollapsed: false,
 
       // --- ASSEMBLE COMBINED ACTIONS VIA SLICES ---
       ...createAuthSlice(set as any, get as any),
@@ -104,8 +82,6 @@ export const useGameStore = create<GameStore>()(
         campaignMode: state.campaignMode,
         collectedHexes: state.collectedHexes,
         storyMap: state.storyMap,
-        hexActivationPoints: state.hexActivationPoints,
-        activatedHexes: state.activatedHexes,
         campaignUpgrades: state.campaignUpgrades,
         skillPoints: state.skillPoints,
         isMusicMuted: state.isMusicMuted,

@@ -5,7 +5,7 @@ import { EntityType } from '../types.ts';
  * It combines pre-rendering of characters (Units) and arbitrary texture caching (getOrCreate / clear)
  * into a single unified service to optimize memory usage, GPU caching, and simplify file architecture.
  */
-export class ResourceService {
+class ResourceService {
     private static instance: ResourceService;
     private cache = new Map<string, HTMLCanvasElement | HTMLImageElement>();
     private maxCacheSize: number;
@@ -44,12 +44,6 @@ export class ResourceService {
         if (this.cache.size >= this.maxCacheSize) {
             const firstKey = this.cache.keys().next().value;
             if (firstKey !== undefined) {
-                const canvasToEvict = this.cache.get(firstKey);
-                // Evict gracefully by releasing GPU context VRAM memory
-                if (canvasToEvict && canvasToEvict instanceof HTMLCanvasElement) {
-                    canvasToEvict.width = 0;
-                    canvasToEvict.height = 0;
-                }
                 this.cache.delete(firstKey);
             }
         }
@@ -61,12 +55,6 @@ export class ResourceService {
     }
 
     public clear(): void {
-        this.cache.forEach((item) => {
-            if (item instanceof HTMLCanvasElement) {
-                item.width = 0;
-                item.height = 0;
-            }
-        });
         this.cache.clear();
     }
 
