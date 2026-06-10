@@ -213,7 +213,26 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
     }, [tutorialHint, prevHint]);
 
     // Use shared collapsible hook with tutorialHint auto-expansion trigger
-    const { isCollapsed, handleToggleCollapse } = useCollapsibleHint(tutorialHint, playUiSound);
+    const { isCollapsed, setIsCollapsed, handleToggleCollapse } = useCollapsibleHint(tutorialHint, playUiSound);
+
+    // Auto-minimize expanded banner on global click/touch outside
+    useEffect(() => {
+        if (isCollapsed) return;
+        const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+            const target = e.target as HTMLElement;
+            const modal = document.getElementById("central-tutorial-banner-expanded");
+            if (modal && !modal.contains(target)) {
+                setIsCollapsed(true);
+            }
+        };
+
+        document.addEventListener("mousedown", handleOutsideClick);
+        document.addEventListener("touchstart", handleOutsideClick);
+        return () => {
+            document.removeEventListener("mousedown", handleOutsideClick);
+            document.removeEventListener("touchstart", handleOutsideClick);
+        };
+    }, [isCollapsed, setIsCollapsed]);
 
     // Calculate distance to target destination if exists (for 1.1, 1.7)
     const targetDistanceData = useMemo(() => {
@@ -260,6 +279,7 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
         return null;
     }, [player, grid, activeLevelConfig]);
 
+    if ((window as any).isOnboardingActive) return null;
     if (!isCampaignLevel || !tutorialHint || session?.gameStatus !== 'PLAYING') return null;
 
     const isRu = language === 'RU';

@@ -82,8 +82,8 @@ export function checkDigCondition(
           if (!neighborHex || neighborHex.structureType === 'VOID') return false;
           
           const neighborLevel = neighborHex.currentLevel ?? 0;
-          // Strict Rule: Neighbors must have EQUAL level to current level
-          return neighborLevel === currentLevel;
+          // Reverse Staircase Rule: Neighbors must be at or below CurrentLevel
+          return neighborLevel <= currentLevel;
       });
 
       if (deepNeighbors.length < 2) {
@@ -117,7 +117,17 @@ export function checkGrowthCondition(
 
   // 1. MATERIAL CHECK (Still costs material unless free status active)
   if (entity.storage < 1) {
-      return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
+      const hasFreeBuild = entity.activeStatuses?.some(s => s.type === 'STATUS_FREE_BUILD' || s.label === 'Free Build');
+      if (!hasFreeBuild) {
+          return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
+      }
+  }
+
+  // Exception 1: Regrowth Exception
+  // If TargetLevel <= Hex.maxLevel, then all Rank and Neighborhood Support checks are COMPLETELY ignored.
+  const isRegrowth = hex.maxLevel !== undefined && targetLevel <= hex.maxLevel;
+  if (isRegrowth) {
+      return { canGrow: true };
   }
 
   // 2. RANK REQUIREMENT
@@ -131,25 +141,38 @@ export function checkGrowthCondition(
 
   // 4. STABILITY CHECK (Strict Equal Level Rule for L1+)
   if (currentLevel >= 1) {
-    // Check if there are at least 5 neighbors strictly higher than the current hex (Depression rule)
-    const higherNeighbors = neighbors.filter(n => {
+    // Exception 2: Valley Rule Exception
+    // If the cell being upgraded is located in a deep ravine, surrounded by 5 or more neighbors whose heights strictly exceed the historical level of the upgraded hex:
+    // Neighbors with Level > Hex.maxLevel >= 5
+    // The requirement for two support neighbors is waived.
+    const historicalMax = hex.maxLevel ?? currentLevel;
+    const valleyNeighbors = neighbors.filter(n => {
        const h = grid[getHexKey(n.q, n.r)];
-       return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) > currentLevel;
+       return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) > historicalMax;
     });
 
-    const isDepressionRule = higherNeighbors.length >= 5;
+    const isValleyRule = valleyNeighbors.length >= 5;
 
-    if (!isDepressionRule) {
-      const supportNeighbors = neighbors.filter(n => {
+    if (!isValleyRule) {
+      const higherNeighbors = neighbors.filter(n => {
          const h = grid[getHexKey(n.q, n.r)];
-         return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) === currentLevel;
-       });
+         return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) > currentLevel;
+      });
 
-      if (supportNeighbors.length < 2) {
-        return {
-          canGrow: false, 
-          reason: `UNSTABLE! Need 2 neighbors at Level ${currentLevel} to build higher, or 5 higher neighbors (depression rule).`,
-        };
+      const isDepressionRule = higherNeighbors.length >= 5;
+
+      if (!isDepressionRule) {
+        const supportNeighbors = neighbors.filter(n => {
+           const h = grid[getHexKey(n.q, n.r)];
+           return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) === currentLevel;
+         });
+
+        if (supportNeighbors.length < 2) {
+          return {
+            canGrow: false, 
+            reason: `UNSTABLE! Need 2 neighbors at Level ${currentLevel} to build higher, or 5 higher neighbors (depression rule).`,
+          };
+        }
       }
     }
   }

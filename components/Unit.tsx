@@ -1,6 +1,6 @@
 
 import React, { useRef, useLayoutEffect, useMemo, useEffect } from 'react';
-import { Group, Ellipse, Image as KonvaImage } from 'react-konva';
+import { Group, Ellipse, Image as KonvaImage, Path } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { hexToPixel } from '../services/hexUtils.ts';
@@ -41,14 +41,61 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, hexLevel, hea
   const visualGroupRef = useRef<Konva.Group>(null);
   const shadowRef = useRef<Konva.Ellipse>(null);
   const isFirstRender = useRef(true);
+  const entropyArrowRef = useRef<Konva.Path>(null);
   
   // Ref to track rotation inside the animation loop (for active movement)
   const latestRotation = useRef(wallUpdaterRegistry.latestRot);
 
   const user = useGameStore(state => state.user);
+  const session = useGameStore(state => state.session);
   
   // Resolve Appearance
   const isPlayer = type === EntityType.PLAYER;
+
+  // Decide if we should show the entropy-low arrow over the player unit
+  const shouldShowEntropyArrow = useMemo(() => {
+      if (!isPlayer || !session) return false;
+      const currentEntropy = session.entropy?.current ?? 100;
+      if (currentEntropy >= 50) return false;
+
+      // Check if there are any MONUMENT or MINI_MONUMENT hexes in the grid
+      const gridValues = Object.values(session.grid);
+      const hasMonuments = gridValues.some(hex => hex.structureType === 'MONUMENT' || hex.structureType === 'MINI_MONUMENT');
+      if (!hasMonuments) return false;
+
+      // "hasn't found yet" means not a single monument/mini-monument hex is revealed
+      const isAnyRevealed = gridValues.some(hex => 
+          (hex.structureType === 'MONUMENT' || hex.structureType === 'MINI_MONUMENT') && hex.revealed
+      );
+
+      return !isAnyRevealed;
+  }, [isPlayer, session]);
+
+  // Rotate and hover the entropy circular arrow
+  useEffect(() => {
+      if (!shouldShowEntropyArrow) return;
+
+      const node = entropyArrowRef.current;
+      if (!node) return;
+
+      const anim = new Konva.Animation((frame) => {
+          if (!node) return;
+          const time = frame?.time ?? 0;
+          // Rotate slowly: 45 degrees per second
+          const angle = (time / 1000) * 45;
+          node.rotation(angle);
+          
+          // Hover gently: float up and down by 2.5px with sine wave
+          const hover = Math.sin(time / 200) * 2.5;
+          node.y(hover);
+      }, node.getLayer());
+
+      anim.start();
+      return () => {
+          anim.stop();
+      };
+  }, [shouldShowEntropyArrow]);
+
   const finalColor = color || (isPlayer ? (user?.avatarColor || '#3b82f6') : '#ef4444');
   const finalHead = isPlayer ? (user?.headIndex ?? headIndex) : headIndex;
   const finalBody = isPlayer ? (user?.bodyIndex ?? bodyIndex) : bodyIndex;
@@ -409,6 +456,34 @@ const Unit: React.FC<UnitProps> = React.memo(({ q, r, type, color, hexLevel, hea
                 offsetX={32} // Center X
                 offsetY={48} // Pivot near feet (match UnitRenderer logic)
             />
+
+            {shouldShowEntropyArrow && (
+                <Group y={-60}>
+                    {/* Glowing outer drop shadow/glowing outline */}
+                    <Path 
+                        data="M10 0 A 10 10 0 1 1 -5 -8.66 L -5 -12 L -11 -7 L -5 -2 L -5 -5.34 A 7 7 0 1 0 7 0 A 7 7 0 0 0 -5.3 4.5 L -7.3 6 A 10 10 0 0 1 10 0 Z"
+                        fill="#fca5a5"
+                        opacity={0.3}
+                        scaleX={1.25}
+                        scaleY={1.25}
+                        offsetX={0.5}
+                        offsetY={0.5}
+                        perfectDrawEnabled={false}
+                    />
+                    {/* Glowing main arrow */}
+                    <Path 
+                        ref={entropyArrowRef}
+                        data="M10 0 A 10 10 0 1 1 -5 -8.66 L -5 -12 L -11 -7 L -5 -2 L -5 -5.34 A 7 7 0 1 0 7 0 A 7 7 0 0 0 -5.3 4.5 L -7.3 6 A 10 10 0 0 1 10 0 Z"
+                        fill="#ef4444"
+                        stroke="#fca5a5"
+                        strokeWidth={0.5}
+                        shadowColor="#ef4444"
+                        shadowBlur={6}
+                        shadowOpacity={0.8}
+                        perfectDrawEnabled={false}
+                    />
+                </Group>
+            )}
         </Group>
       </Group>
     </Group>

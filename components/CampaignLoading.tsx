@@ -86,6 +86,9 @@ const CampaignLoading: React.FC = () => {
                         
                         if (currentSession && !currentIsLoading) {
                             resolve();
+                        } else if (!currentIsLoading && !currentSession) {
+                            // If loading ceased but no session was created (error state), exit gracefully
+                            resolve();
                         } else {
                             setTimeout(check, 100);
                         }
@@ -124,8 +127,12 @@ const CampaignLoading: React.FC = () => {
         const levelKey = levelConfig.id.replace('.', '_');
         const titleKey = `LEVEL_${levelKey}_TITLE` as keyof typeof TEXT.EN.CAMPAIGN;
         displayTitle = TEXT[language].CAMPAIGN[titleKey] || levelConfig.title;
+    } else if (session?.winCondition?.label) {
+        displayTitle = session.winCondition.label;
     } else if (loadingLevelId) {
         displayTitle = `SECTOR_${loadingLevelId}`;
+    } else {
+        displayTitle = language === 'RU' ? 'БЫСТРЫЙ БОЙ' : 'QUICK SKIRMISH';
     }
 
     return (
@@ -156,7 +163,7 @@ const CampaignLoading: React.FC = () => {
                             Sector
                         </div>
                         <div className="text-xs font-bold text-slate-300">
-                            {levelConfig?.id || loadingLevelId || 'ALPHA-01'}
+                            {levelConfig?.id || loadingLevelId || (session?.winCondition ? 'SKIRMISH' : 'ALPHA-01')}
                         </div>
                     </div>
                 </div>

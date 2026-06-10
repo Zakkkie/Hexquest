@@ -7,6 +7,7 @@ import MainMenu from './components/MainMenu.tsx';
 import Leaderboard from './components/Leaderboard.tsx';
 import CampaignMap from './components/CampaignMap.tsx';
 import StoryBuilderView from './components/StoryBuilderView.tsx';
+import LevelEditorView from './components/LevelEditorView.tsx';
 import IntroSequence from './components/IntroSequence.tsx';
 import CampaignLoading from './components/CampaignLoading.tsx';
 import Background from './components/Background.tsx';
@@ -134,6 +135,18 @@ const App: React.FC = () => {
               className="w-full h-full"
             >
               <StoryBuilderView />
+            </motion.div>
+          )}
+          {uiState === 'LEVEL_EDITOR' && (
+            <motion.div
+              key="LEVEL_EDITOR"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+              className="w-full h-full"
+            >
+              <LevelEditorView />
             </motion.div>
           )}
           {uiState === 'INTRO' && (

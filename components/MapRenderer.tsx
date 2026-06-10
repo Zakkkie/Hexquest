@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { Layer, Group, Line, Circle, Text } from 'react-konva';
+import { Layer, Group, Line, Circle, Text, Shape } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { HexNode, HexNodeTheme } from './HexNode.tsx';
@@ -19,6 +19,7 @@ const areGridsEqual = (a: Record<string, Hex> | null, b: Record<string, Hex> | n
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
     if (keysA.length !== keysB.length) return false;
+    
     for (let i = 0; i < keysA.length; i++) {
         const key = keysA[i];
         const hexA = a[key];
@@ -39,6 +40,117 @@ const areGridsEqual = (a: Record<string, Hex> | null, b: Record<string, Hex> | n
         }
     }
     return true;
+};
+
+// --- MULTI-GRID COORDINATE MATHEMATICS ---
+const getRawCoords = (x: number, y: number, rotation: number) => {
+    const angleRad = -rotation * (Math.PI / 180);
+    const cos = Math.cos(angleRad);
+    const sin = Math.sin(angleRad);
+    
+    const unscaledY = y / 0.8;
+    const rawX = x * cos - unscaledY * sin;
+    const rawY = x * sin + unscaledY * cos;
+    return { rawX, rawY };
+};
+
+const cubeRound = (fracQ: number, fracR: number) => {
+    const fracS = -fracQ - fracR;
+    
+    let q = Math.round(fracQ);
+    let r = Math.round(fracR);
+    let s = Math.round(fracS);
+    
+    const qDiff = Math.abs(q - fracQ);
+    const rDiff = Math.abs(r - fracR);
+    const sDiff = Math.abs(s - fracS);
+    
+    if (qDiff > rDiff && qDiff > sDiff) {
+        q = -r - s;
+    } else if (rDiff > sDiff) {
+        r = -q - s;
+    }
+    return { q, r };
+};
+
+const getRangeNeighbors = (centerQ: number, centerR: number, radius: number) => {
+    const results = [];
+    for (let dq = -radius; dq <= radius; dq++) {
+        const maxDr = Math.min(radius, radius - dq);
+        const minDr = Math.max(-radius, -radius - dq);
+        for (let dr = minDr; dr <= maxDr; dr++) {
+            results.push({ q: centerQ + dq, r: centerR + dr });
+        }
+    }
+    return results;
+};
+
+const getHeightOffset = (level: number) => {
+    if (level <= -99) return 0;
+    if (level >= 0) return -(10 + level * 10);
+    return (Math.abs(level) - 1) * 10;
+};
+
+const getArrowColor = (type: string, part: 'main' | 'shadow'): string => {
+    const isShadow = part === 'shadow';
+    switch(type) {
+        case 'amber': return isShadow ? '#b45309' : '#fbbf24';
+        case 'cyan': return isShadow ? '#0e7490' : '#22d3ee';
+        case 'red': return isShadow ? '#991b1b' : '#ef4444';
+        default: return isShadow ? '#0f766e' : '#34d399'; // emerald
+    }
+};
+
+const blendColor = (color1: string, color2: string, weight: number): string => {
+    // Basic hex color blending helper for wall shadows
+    const c1 = color1.startsWith('#') ? color1.slice(1) : color1;
+    const c2 = color2.startsWith('#') ? color2.slice(1) : color2;
+    
+    const r1 = parseInt(c1.substring(0, 2), 16);
+    const g1 = parseInt(c1.substring(2, 4), 16);
+    const b1 = parseInt(c1.substring(4, 6), 16);
+    
+    const r2 = parseInt(c2.substring(0, 2), 16);
+    const g2 = parseInt(c2.substring(2, 4), 16);
+    const b2 = parseInt(c2.substring(4, 6), 16);
+    
+    const r = Math.round(r1 * (1 - weight) + r2 * weight);
+    const g = Math.round(g1 * (1 - weight) + g2 * weight);
+    const b = Math.round(b1 * (1 - weight) + b2 * weight);
+    
+    const rs = r.toString(16).padStart(2, '0');
+    const gs = g.toString(16).padStart(2, '0');
+    const bs = b.toString(16).padStart(2, '0');
+    
+    return `#${rs}${gs}${bs}`;
+};
+
+const isPointInViewport = (
+    x: number,
+    y: number,
+    offsetY: number,
+    rotation: number,
+    dWidth: number,
+    dHeight: number,
+    cam: { x: number; y: number; scale: number; rotation: number } | undefined,
+    padding = 200
+) => {
+    if (!cam) return true;
+    const angleOffset = rotation * (Math.PI / 180);
+    const cos = Math.cos(angleOffset);
+    const sin = Math.sin(angleOffset);
+    const cx = x * cos - y * sin;
+    const cy = (x * sin + y * cos) * 0.8 + offsetY;
+
+    const screenX = cam.x + cx * cam.scale;
+    const screenY = cam.y + cy * cam.scale;
+
+    return (
+        screenX >= -padding &&
+        screenX <= dWidth + padding &&
+        screenY >= -padding &&
+        screenY <= dHeight + padding
+    );
 };
 
 // Optimized Tutorial Status Check
@@ -225,18 +337,6 @@ const DUST_LIFETIME_MS = 600;
 const DUST_DISPERSION_MIN = 10;
 const DUST_DISPERSION_VARIANCE = 10;
 
-// BASE PATH FOR SELECTION GLOW
-const DEG_TO_RAD = Math.PI / 180;
-const BASE_POINTS = [];
-for (let i = 0; i < 6; i++) {
-    const angle = (60 * i + 30) * DEG_TO_RAD;
-    BASE_POINTS.push({ x: Math.cos(angle) * HEX_SIZE, y: Math.sin(angle) * HEX_SIZE });
-}
-let BASE_PATH_D = `M ${BASE_POINTS[0].x} ${BASE_POINTS[0].y}`;
-for (let i = 1; i < 6; i++) BASE_PATH_D += ` L ${BASE_POINTS[i].x} ${BASE_POINTS[i].y}`;
-BASE_PATH_D += " Z";
-
-
 // THEME CONFIGURATION
 export const THEME_PALETTE: Record<string, HexNodeTheme> = {
     '0': { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' }, 
@@ -419,6 +519,8 @@ interface MapRendererProps {
 }
 
 const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId, camera, dimensions }) => {
+    const dWidth = dimensions?.width ?? 800;
+    const dHeight = dimensions?.height ?? 600;
     const grid = useGameStore(state => state.session?.grid);
     const player = useGameStore(state => state.session?.player);
     const bots = useGameStore(state => state.session?.bots);
@@ -438,6 +540,68 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     , [playerQ, playerR]);
 
     const [particles, setParticles] = useState<VisualParticle[]>([]);
+
+    // Dispatch real-time screen coordinates of key hex elements for the onboarding tutorial
+    useEffect(() => {
+        if (!player || !grid) return;
+
+        const getScreenCoordsOfHex = (q: number, r: number, level: number) => {
+            const SQRT3 = Math.sqrt(3);
+            const SQRT3_2 = SQRT3 / 2;
+            const ONE_POINT_FIVE = 1.5;
+            
+            const rawNX = HEX_SIZE * (SQRT3 * q + SQRT3_2 * r);
+            const rawNY = HEX_SIZE * (ONE_POINT_FIVE * r);
+            
+            const angleOffset = rotation * (Math.PI / 180);
+            const cos = Math.cos(angleOffset);
+            const sin = Math.sin(angleOffset);
+            
+            const cx = rawNX * cos - rawNY * sin;
+            const cy = (rawNX * sin + rawNY * cos) * 0.8 + getHeightOffset(level);
+            
+            const cam = camera || { x: 0, y: 0, scale: 1 };
+            const screenX = cam.x + cx * cam.scale;
+            const screenY = cam.y + cy * cam.scale;
+            
+            return {
+                x: screenX - (HEX_SIZE * cam.scale),
+                y: screenY - (HEX_SIZE * cam.scale * 0.8),
+                w: HEX_SIZE * cam.scale * 2,
+                h: HEX_SIZE * cam.scale * 1.6
+            };
+        };
+
+        const pHex = grid[`${playerQ},${playerR}`];
+        if (!pHex) return;
+
+        const playerScreen = getScreenCoordsOfHex(playerQ, playerR, pHex.currentLevel);
+
+        let mineScreen = null;
+        let voidScreen = null;
+
+        const neighbors = getNeighbors(playerQ, playerR);
+        for (const n of neighbors) {
+            const nHex = grid[`${n.q},${n.r}`];
+            if (nHex) {
+                if (nHex.currentLevel < 0 && !mineScreen) {
+                    mineScreen = getScreenCoordsOfHex(n.q, n.r, nHex.currentLevel);
+                }
+                if (nHex.structureType === 'VOID' && !voidScreen) {
+                    voidScreen = getScreenCoordsOfHex(n.q, n.r, nHex.currentLevel);
+                }
+            }
+        }
+
+        const updateEvent = new CustomEvent('hexquest-coordinates-update', {
+            detail: {
+                player: playerScreen,
+                mine: mineScreen,
+                void: voidScreen
+            }
+        });
+        window.dispatchEvent(updateEvent);
+    }, [player, playerQ, playerR, camera?.x, camera?.y, camera?.scale, rotation, grid]);
     
     // Web Worker for calculating neighbor levels and render list
     const [workerData, setWorkerData] = useState<{
@@ -548,18 +712,28 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                     dimensions,
                     isCampaign: !!activeLevelConfig
                 });
+            } else {
+                // Keep references updated to prevent O(N) areGridsEqual loop on subsequent high-frequency camera-only render frames
+                last.grid = grid;
+                last.player = player;
+                last.bots = bots;
+                last.pendingKey = pendingKey;
+                last.selectedHexId = selectedHexId;
+                last.rotation = rotation;
+                last.camera = camera;
+                last.dimensions = dimensions;
             }
         }
     }, [grid, rotation, player, bots, pendingKey, selectedHexId, activeLevelConfig, camera, dimensions]);
+
+    const removeParticle = useCallback((id: string) => {
+        setParticles(p => p.filter(x => x.id !== id));
+    }, []);
 
     // Explicitly memoize onHexClick to ensure stability for renderList
     const memoizedOnHexClick = useCallback((q: number, r: number) => {
         onHexClick(q, r);
     }, [onHexClick]);
-
-    const removeParticle = useCallback((id: string) => {
-        setParticles(p => p.filter(x => x.id !== id));
-    }, []);
 
     // Explicitly memoize spawnDust
     const spawnDust = useCallback((x: number, y: number, color: string) => {
@@ -567,6 +741,127 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         const id = `dust-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         setParticles(p => [...p, { id, x, y, color }]);
     }, []);
+
+    // --- INTEGRATED SINGLE-SHAPE EVENT HANDLERS ---
+    const handleShapeClick = useCallback((e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+        const stage = e.target.getStage();
+        if (!stage) return;
+        const pointer = stage.getPointerPosition();
+        if (!pointer) return;
+
+        const cam = camera || { x: 0, y: 0, scale: 1 };
+        const rx = (pointer.x - cam.x) / cam.scale;
+        const ry = (pointer.y - cam.y) / cam.scale;
+
+        const { rawX, rawY } = getRawCoords(rx, ry, rotation);
+        const fracR = rawY / (1.5 * HEX_SIZE);
+        const fracQ = rawX / (Math.sqrt(3) * HEX_SIZE) - fracR / 2;
+        const baseCoord = cubeRound(fracQ, fracR);
+
+        let bestHexKey: string | null = null;
+        let bestDist = Infinity;
+
+        const candidates = getRangeNeighbors(baseCoord.q, baseCoord.r, 2);
+        for (const cand of candidates) {
+            const k = getHexKey(cand.q, cand.r);
+            const hex = grid ? grid[k] : null;
+            if (!hex) continue;
+
+            const isRevealed = !!hex.revealed || !!activeLevelConfig;
+            if (!isRevealed) continue;
+
+            // Simple projection accounting for offset
+            const rawXCenter = HEX_SIZE * (Math.sqrt(3) * cand.q + (Math.sqrt(3) / 2) * cand.r);
+            const rawYCenter = HEX_SIZE * (1.5 * cand.r);
+            const angleRad = rotation * (Math.PI / 180);
+            const cos = Math.cos(angleRad);
+            const sin = Math.sin(angleRad);
+            
+            const px = rawXCenter * cos - rawYCenter * sin;
+            const pyBase = (rawXCenter * sin + rawYCenter * cos) * 0.8;
+
+            const isVoid = hex.structureType === 'VOID';
+            const currentLevel = hex.currentLevel ?? 0;
+            const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : currentLevel);
+
+            const py = pyBase + offsetY;
+            const dist = Math.hypot(px - rx, py - ry);
+            if (dist < bestDist && dist < HEX_SIZE * 1.3) {
+                bestDist = dist;
+                bestHexKey = k;
+            }
+        }
+
+        if (bestHexKey && grid && grid[bestHexKey]) {
+            const targetHex = grid[bestHexKey];
+            onHexClick(targetHex.q, targetHex.r);
+        }
+    }, [grid, rotation, camera, activeLevelConfig, onHexClick]);
+
+    const handleShapeMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+        const stage = e.target.getStage();
+        if (!stage) return;
+        const pointer = stage.getPointerPosition();
+        if (!pointer) return;
+
+        const cam = camera || { x: 0, y: 0, scale: 1 };
+        const rx = (pointer.x - cam.x) / cam.scale;
+        const ry = (pointer.y - cam.y) / cam.scale;
+
+        const { rawX, rawY } = getRawCoords(rx, ry, rotation);
+        const fracR = rawY / (1.5 * HEX_SIZE);
+        const fracQ = rawX / (Math.sqrt(3) * HEX_SIZE) - fracR / 2;
+        const baseCoord = cubeRound(fracQ, fracR);
+
+        let bestHexKey: string | null = null;
+        let bestDist = Infinity;
+
+        const candidates = getRangeNeighbors(baseCoord.q, baseCoord.r, 2);
+        for (const cand of candidates) {
+            const k = getHexKey(cand.q, cand.r);
+            const hex = grid ? grid[k] : null;
+            if (!hex) continue;
+
+            const isRevealed = !!hex.revealed || !!activeLevelConfig;
+            if (!isRevealed) continue;
+
+            const rawXCenter = HEX_SIZE * (Math.sqrt(3) * cand.q + (Math.sqrt(3) / 2) * cand.r);
+            const rawYCenter = HEX_SIZE * (1.5 * cand.r);
+            const angleRad = rotation * (Math.PI / 180);
+            const cos = Math.cos(angleRad);
+            const sin = Math.sin(angleRad);
+            
+            const px = rawXCenter * cos - rawYCenter * sin;
+            const pyBase = (rawXCenter * sin + rawYCenter * cos) * 0.8;
+
+            const isVoid = hex.structureType === 'VOID';
+            const currentLevel = hex.currentLevel ?? 0;
+            const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : currentLevel);
+
+            const py = pyBase + offsetY;
+            const dist = Math.hypot(px - rx, py - ry);
+            if (dist < bestDist && dist < HEX_SIZE * 1.3) {
+                bestDist = dist;
+                bestHexKey = k;
+            }
+        }
+
+        if (bestHexKey) {
+            if (hoveredHexId !== bestHexKey) {
+                onHover(bestHexKey);
+            }
+        } else {
+            if (hoveredHexId !== null) {
+                onHover(null);
+            }
+        }
+    }, [grid, rotation, camera, activeLevelConfig, hoveredHexId, onHover]);
+
+    const handleShapeMouseLeave = useCallback(() => {
+        if (hoveredHexId !== null) {
+            onHover(null);
+        }
+    }, [hoveredHexId, onHover]);
 
     const stackedEffects = useMemo(() => {
         if (!effects) return [];
@@ -703,31 +998,274 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     return (
         <>
             <Layer>
-                {renderList.items.map(item => {
-                    if (item.type === 'HEX') {
-                        return (
-                            <HexNode 
-                                key={item.props.id} 
-                                {...item.props} 
-                                onHexClick={memoizedOnHexClick} 
-                                onHover={onHover} 
-                                isHovered={hoveredHexId === item.props.id} 
-                                playerQ={playerQ}
-                                playerR={playerR}
-                                playerGrowthIntent={playerGrowthIntent}
-                                growthAccelerator={campaignUpgrades?.growthAccelerator || 0}
-                            />
-                        );
-                    } else {
-                        return (
-                            <Unit 
-                                key={item.props.id} 
-                                {...item.props} 
-                                evacuationActive={item.props.isPlayer && evacuationActive}
-                            />
-                        );
-                    }
-                })}
+                {/* 1. SINGLE-PASS HIGH PERFORMANCE HEX GRID RENDERING WITH FRUSTUM CULLING */}
+                {isLiteMode ? (
+                    <Shape
+                        perfectDrawEnabled={false}
+                        listening={true}
+                        sceneFunc={(context) => {
+                            const items = renderList.items.filter(item => item.type === 'HEX');
+                            const ctx = context;
+                            
+                            const angleOffset = rotation * (Math.PI / 180);
+                            const cos = Math.cos(angleOffset);
+                            const sin = Math.sin(angleOffset);
+                            const DEG_TO_RAD = Math.PI / 180;
+
+                            for (let k = 0; k < items.length; k++) {
+                                const item = items[k];
+                                const props = item.props;
+                                const { x, y, offsetY, level, theme, isSelected, isPending, isHovered, isTutorialTarget, tutorialColor, isTargetArrow, structureType, neighborLevels, opacity } = props;
+                                
+                                // Frustum Culling
+                                if (!isPointInViewport(x, y, offsetY, rotation, dWidth, dHeight, camera, 150)) {
+                                    continue;
+                                }
+
+                                // Transform coordinates
+                                const cx = x * cos - y * sin;
+                                const cy = (x * sin + y * cos) * 0.8 + offsetY;
+                                
+                                const isRevealed = !!props.isRevealed;
+                                const isVoid = structureType === 'VOID';
+                                
+                                // Generate top face hexagon vertices
+                                const vertices = [];
+                                for (let i = 0; i < 6; i++) {
+                                    const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
+                                    vertices.push({
+                                        x: cx + Math.cos(angle) * HEX_SIZE,
+                                        y: cy + Math.sin(angle) * HEX_SIZE * 0.8
+                                    });
+                                }
+                                
+                                // Apply visibility opacity
+                                ctx.globalAlpha = opacity ?? 1;
+                                
+                                // DRAW WALLS (SIDES)
+                                if (isRevealed && !isVoid) {
+                                    for (let i = 0; i < 6; i++) {
+                                        const next_i = (i + 1) % 6;
+                                        const nLevel = neighborLevels[i];
+                                        
+                                        // Midpoint angle to check front/back facing
+                                        const midAngle = (60 * i + 60) * DEG_TO_RAD + angleOffset;
+                                        const isFrontFacing = Math.sin(midAngle) > 0;
+                                        
+                                        if (isFrontFacing && nLevel !== undefined && level > nLevel) {
+                                            const effectiveNLevel = nLevel === -99 ? -3 : nLevel;
+                                            const drop = Math.max(0, (level - effectiveNLevel) * 10);
+                                            if (drop > 0) {
+                                                // Shaded 3D lighting based on side angle to camera
+                                                const sinVal = Math.sin(midAngle);
+                                                ctx.fillStyle = blendColor(theme.dark, '#000000', 0.25 * (1 - sinVal));
+                                                
+                                                ctx.beginPath();
+                                                ctx.moveTo(vertices[i].x, vertices[i].y);
+                                                ctx.lineTo(vertices[next_i].x, vertices[next_i].y);
+                                                ctx.lineTo(vertices[next_i].x, vertices[next_i].y + drop);
+                                                ctx.lineTo(vertices[i].x, vertices[i].y + drop);
+                                                ctx.closePath();
+                                                ctx.fill();
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // DRAW TOP FACE
+                                if (isVoid) {
+                                    ctx.fillStyle = '#090514'; // Void
+                                } else if (!isRevealed) {
+                                    ctx.fillStyle = '#1e293b'; // Unrevealed slate grey
+                                } else {
+                                    ctx.fillStyle = theme.main;
+                                }
+                                
+                                ctx.beginPath();
+                                ctx.moveTo(vertices[0].x, vertices[0].y);
+                                for (let i = 1; i < 6; i++) {
+                                    ctx.lineTo(vertices[i].x, vertices[i].y);
+                                }
+                                ctx.closePath();
+                                ctx.fill();
+                                
+                                // Top highlights (3D volume sunlight shading)
+                                if (isRevealed && !isVoid) {
+                                    ctx.fillStyle = theme.light;
+                                    ctx.globalAlpha = (opacity ?? 1) * 0.12;
+                                    ctx.beginPath();
+                                    ctx.moveTo(vertices[0].x, vertices[0].y);
+                                    ctx.lineTo(vertices[1].x, vertices[1].y);
+                                    ctx.lineTo(vertices[2].x, vertices[2].y);
+                                    ctx.lineTo(cx, cy);
+                                    ctx.closePath();
+                                    ctx.fill();
+                                    ctx.globalAlpha = opacity ?? 1;
+                                }
+                                
+                                // DRAW TOP OUTLINE
+                                if (isVoid) {
+                                    ctx.strokeStyle = '#3b0764'; // Deep dark violet
+                                } else {
+                                    ctx.strokeStyle = theme.stroke;
+                                }
+                                ctx.lineWidth = 1.3;
+                                ctx.stroke();
+                                
+                                // SPECIAL STRUCTURES: MONUMENTS
+                                if (isRevealed && (structureType === 'MONUMENT' || structureType === 'MINI_MONUMENT')) {
+                                    const isMon = structureType === 'MONUMENT';
+                                    const height = isMon ? 24 : 14;
+                                    const width = isMon ? 14 : 9;
+                                    
+                                    // Draw 3D Tower monument
+                                    ctx.fillStyle = '#b45309'; // warm monument golden brown
+                                    ctx.fillRect(cx - width/2, cy - height, width, height);
+                                    
+                                    // Cap highlight
+                                    ctx.fillStyle = '#fbbf24'; // gleaming active center
+                                    ctx.fillRect(cx - width/2, cy - height - 3, width, 4);
+                                    
+                                    ctx.strokeStyle = '#78350f';
+                                    ctx.lineWidth = 1;
+                                    ctx.strokeRect(cx - width/2, cy - height, width, height);
+                                }
+                                
+                                // RENDER SELECTION & HOVER STATUS RING HIGHLIGHTS
+                                if (isSelected) {
+                                    ctx.strokeStyle = '#38bdf8'; // Sky blue border
+                                    ctx.lineWidth = 3;
+                                    ctx.stroke();
+                                } else if (isPending) {
+                                    ctx.strokeStyle = '#f59e0b'; // Amber cost placement
+                                    ctx.lineWidth = 2.5;
+                                    ctx.stroke();
+                                } else if (isHovered) {
+                                    ctx.strokeStyle = '#ffffff'; // White hovered ring
+                                    ctx.lineWidth = 2;
+                                    ctx.stroke();
+                                }
+                                
+                                if (isTutorialTarget) {
+                                    ctx.strokeStyle = getArrowColor(tutorialColor, 'main');
+                                    ctx.lineWidth = 2.5;
+                                    ctx.stroke();
+                                }
+                                
+                                // Draw bouncing arrow on top
+                                if (isTargetArrow) {
+                                    const bounceY = Math.sin(Date.now() * 0.007) * 4;
+                                    const arrowY = cy - 22 + bounceY;
+                                    
+                                    ctx.fillStyle = getArrowColor(tutorialColor, 'main');
+                                    ctx.beginPath();
+                                    ctx.moveTo(cx, arrowY);
+                                    ctx.lineTo(cx - 5, arrowY - 9);
+                                    ctx.lineTo(cx + 5, arrowY - 9);
+                                    ctx.closePath();
+                                    ctx.fill();
+                                }
+                            }
+                            ctx.globalAlpha = 1;
+                        }}
+                        onClick={handleShapeClick}
+                        onTap={handleShapeClick}
+                        onMouseMove={handleShapeMouseMove}
+                        onMouseLeave={handleShapeMouseLeave}
+                    />
+                ) : (
+                    <>
+                        {/* 1a. UNREVEALED INVISIBLE HEXES DRAWN VIA A SINGLE SHAPE */}
+                        <Shape
+                            perfectDrawEnabled={false}
+                            listening={false}
+                            sceneFunc={(context) => {
+                                const allHexes = renderList.items.filter(item => item.type === 'HEX');
+                                const ctx = context;
+                                
+                                const angleOffset = rotation * (Math.PI / 180);
+                                const cos = Math.cos(angleOffset);
+                                const sin = Math.sin(angleOffset);
+                                const DEG_TO_RAD = Math.PI / 180;
+
+                                for (let k = 0; k < allHexes.length; k++) {
+                                    const item = allHexes[k];
+                                    const props = item.props;
+                                    if (props.isRevealed) continue;
+
+                                    const { x, y, offsetY, theme, opacity } = props;
+                                    
+                                    // Frustum Culling
+                                    if (!isPointInViewport(x, y, offsetY, rotation, dWidth, dHeight, camera, 150)) {
+                                        continue;
+                                    }
+
+                                    // Transform coordinates
+                                    const cx = x * cos - y * sin;
+                                    const cy = (x * sin + y * cos) * 0.8 + offsetY;
+                                    
+                                    // Generate top face hexagon vertices
+                                    const vertices = [];
+                                    for (let i = 0; i < 6; i++) {
+                                        const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
+                                        vertices.push({
+                                            x: cx + Math.cos(angle) * HEX_SIZE,
+                                            y: cy + Math.sin(angle) * HEX_SIZE * 0.8
+                                        });
+                                    }
+                                    
+                                    // Apply visibility opacity
+                                    ctx.globalAlpha = opacity ?? 1;
+                                    
+                                    // DRAW TOP FACE
+                                    ctx.fillStyle = '#1e293b'; // Unrevealed slate grey
+                                    
+                                    ctx.beginPath();
+                                    ctx.moveTo(vertices[0].x, vertices[0].y);
+                                    for (let i = 1; i < 6; i++) {
+                                        ctx.lineTo(vertices[i].x, vertices[i].y);
+                                    }
+                                    ctx.closePath();
+                                    ctx.fill();
+                                    
+                                    // DRAW TOP OUTLINE
+                                    ctx.strokeStyle = theme.stroke;
+                                    ctx.lineWidth = 1.3;
+                                    ctx.stroke();
+                                }
+                                ctx.globalAlpha = 1;
+                            }}
+                        />
+
+                        {/* 1b. REVEALED VISIBLE OPTIMIZED HEXNODES WITH FRUSTUM CULLING */}
+                        {renderList.items
+                            .filter(item => item.type === 'HEX' && !!item.props.isRevealed)
+                            .filter(item => isPointInViewport(item.props.x, item.props.y, item.props.offsetY, rotation, dWidth, dHeight, camera, 150))
+                            .map(item => (
+                                <HexNode 
+                                    key={item.props.id} 
+                                    {...item.props} 
+                                    onHexClick={memoizedOnHexClick} 
+                                    onHover={onHover} 
+                                    isHovered={hoveredHexId === item.props.id} 
+                                    playerQ={playerQ}
+                                    playerR={playerR}
+                                    playerGrowthIntent={playerGrowthIntent}
+                                    growthAccelerator={campaignUpgrades?.growthAccelerator || 0}
+                                />
+                            ))
+                        }
+                    </>
+                )}
+
+                {/* 2. UNIT ENTITIES */}
+                {renderList.items.filter(item => item.type === 'UNIT').map(item => (
+                    <Unit 
+                        key={item.props.id} 
+                        {...item.props} 
+                        evacuationActive={item.props.isPlayer && evacuationActive}
+                    />
+                ))}
 
                 {connections.map((conn, i) => (
                     <Line key={`conn-${i}`} {...conn} strokeWidth={2} listening={false} perfectDrawEnabled={false} />

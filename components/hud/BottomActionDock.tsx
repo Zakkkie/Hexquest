@@ -376,7 +376,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     };
 
     return (
-        <div className="absolute inset-x-0 bottom-0 p-2 md:p-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end z-30">
+        <div id="bottom-action-dock" className="absolute inset-x-0 bottom-0 p-2 md:p-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end z-30">
             <div className="mb-2 pointer-events-auto">
                 {renderActiveStatuses()}
             </div>

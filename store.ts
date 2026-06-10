@@ -8,6 +8,7 @@ import { createAuthSlice, saveProfileProgress } from './store/authSlice.ts';
 import { createUiSlice } from './store/uiSlice.ts';
 import { createCampaignSlice } from './store/campaignSlice.ts';
 import { createGameplaySlice } from './store/gameplaySlice.ts';
+import { audioService } from './services/audioService.ts';
 
 // Export types for background compatibility across components
 export type { UiSoundType, AuthResponse, GameStore } from './store/types.ts';
@@ -71,6 +72,9 @@ export const useGameStore = create<GameStore>()(
             console.error('Hydration error:', error);
           } else if (rehydratedState) {
             rehydratedState.setHasHydrated(true);
+            // Synchronize loaded settings with the local synthesizer
+            audioService.setMusicMuted(!!rehydratedState.isMusicMuted);
+            audioService.setSfxMuted(!!rehydratedState.isSfxMuted);
           }
         };
       },

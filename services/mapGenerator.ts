@@ -50,14 +50,13 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
 
     let level = 0;
     let structureType: 'BARRIER' | 'VOID' | 'MONUMENT' | 'MINE' | undefined = undefined;
-    let biome: TerrainType = 'PLAINS';
+    let biome: TerrainType = 'STANDARD';
     let poiType: string | undefined = undefined;
     let isPassable = true;
     let forceReveal = !!levelConfig;
 
     // --- CITY LOGIC ---
     if (levelConfig && isInsideCity(q, r)) {
-        biome = 'CITY';
         forceReveal = true;
         if (isCityWall(q, r)) {
             level = 4;
@@ -69,7 +68,6 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
                 poiType = poi;
                 level = 1;
             } else if (isCityStreet(q, r)) {
-                biome = 'ROAD';
                 level = 0;
             } else {
                 // Building
@@ -80,45 +78,35 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     } else if (mapType === 'FLAT' && !levelConfig) {
         // SKIRMISH FLAT MODE: Level 0 everywhere
         level = 0;
-        biome = 'PLAINS';
     } else if (mapType === 'CHAOTIC' && !levelConfig) {
         // SKIRMISH CHAOTIC MODE: Use noise but clamp initially (will be refined during movement discovery)
-        biome = noise > 0.6 ? 'MOUNTAINS' : (noise > 0.3 ? 'FOREST' : 'PLAINS');
         level = Math.floor(noise * 7) - 3; // -3 to +3
     } else {
         // --- ZONE LOGIC (CAMPAIGN OR DEFAULT) ---
         if (dist <= 5) {
-            biome = 'PLAINS';
             level = 0;
         } else if (dist <= 15) {
             // Zone 1: Rural Periphery
-            biome = noise > 0.5 ? 'FOREST' : 'SWAMP';
-            level = biome === 'FOREST' ? 1 : -1;
+            const isForestTemp = noise > 0.5;
+            level = isForestTemp ? 1 : -1;
         } else if (dist <= 30) {
             // Zone 2: Wilderness
             if (noise > 0.7) {
-                biome = 'MOUNTAINS';
                 level = 3;
             } else if (noise > 0.4) {
-                biome = 'FOREST'; // Deep Forest
                 level = 2;
             } else if (noise > 0.2) {
-                biome = 'PLAINS'; // Wasteland
                 level = 0;
             } else {
-                biome = 'WATER'; // Canyon
                 level = -2;
             }
         } else {
             // Zone 3: Desolation
             if (noise > 0.8) {
-                biome = 'RUINS';
                 level = 1;
             } else if (noise > 0.4) {
-                biome = 'PLAINS'; // Wasteland
                 level = 0;
             } else {
-                biome = 'WATER'; // Canyon
                 level = -3;
             }
         }
@@ -141,7 +129,6 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     // Default center always safe
     if (q === 0 && r === 0) {
         level = 0;
-        biome = 'PLAINS';
         isPassable = true;
     }
 
@@ -274,24 +261,21 @@ export const generateLevel12Map = (_levelConfig: LevelConfig): Record<string, He
         let currentLevel = 1;
         let maxLevel = 1;
         let durability: number | undefined = undefined;
-        let biome: 'CITY' | 'ROAD' | 'PLAINS' | 'WATER' | 'RUINS' = 'PLAINS';
+        let biome: TerrainType = 'STANDARD';
         let isPassable = true;
         
         if (isStart) {
             currentLevel = 1;
             maxLevel = 1;
             durability = 3;
-            biome = 'ROAD';
         } else if (isFinish) {
             currentLevel = 1;
             maxLevel = 1;
             durability = 3;
-            biome = 'CITY';
         } else if (southKeys.has(key)) {
             currentLevel = 1;
             maxLevel = 1;
             durability = 3; // Fully stable detour
-            biome = 'ROAD';
         } else if (northKeys.has(key)) {
             // Mountain peak elevations
             if (q === 0 && r === -1) { currentLevel = 2; maxLevel = 2; }
@@ -303,12 +287,10 @@ export const generateLevel12Map = (_levelConfig: LevelConfig): Record<string, He
             else if (q === -6 && r === -1) { currentLevel = 2; maxLevel = 2; }
             else if (q === -7 && r === -1) { currentLevel = 1; maxLevel = 1; }
             durability = 3; // Mountain structure is solid
-            biome = 'ROAD';
         } else if (middleKeys.has(key)) {
             currentLevel = 1;
             maxLevel = 1;
             durability = 1; // High risk of direct collapsing path
-            biome = 'PLAINS';
         } else {
             // Non-path landscape hexes: replace void with -2 to -5 randomly
             const noise = getPseudoNoise(q, r);
@@ -316,7 +298,6 @@ export const generateLevel12Map = (_levelConfig: LevelConfig): Record<string, He
             const chosenLevel = possibleLevels[Math.floor(noise * possibleLevels.length)];
             currentLevel = chosenLevel;
             maxLevel = chosenLevel;
-            biome = 'RUINS'; // Visual styling for deep excavations/chasms
             isPassable = true;
         }
 
@@ -417,7 +398,7 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
               initialGrid[nKey] = {
                   id: nKey, q: n.q, r: n.r,
                   currentLevel: level, maxLevel: level, progress: 0, revealed: !!levelConfig,
-                  biome: 'WATER',
+                  biome: 'STANDARD',
                   isPassable: true
               };
               queue.push({ ...n, d: d + 1 });

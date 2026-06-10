@@ -269,7 +269,11 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         playUiSound('CLICK');
         if (activeLevelConfig) {
             abandonSession();
-            startCampaignLevel(activeLevelConfig.id);
+            if (activeLevelConfig.id === 'custom_editor_level') {
+                startNewGame(undefined, activeLevelConfig);
+            } else {
+                startCampaignLevel(activeLevelConfig.id);
+            }
             return;
         }
         if (winCondition) {

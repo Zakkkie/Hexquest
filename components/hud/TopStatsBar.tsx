@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
-import { Crown, Box, Wallet, Coins, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, RotateCcw, Zap } from 'lucide-react';
+import { Crown, Box, Wallet, Coins, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, RotateCcw, Zap, HelpCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import EntropyGauge from '../EntropyGauge';
 import { StorageBlocks } from './HudShared';
@@ -175,7 +175,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
             <div className="w-full flex justify-between items-start gap-2 md:gap-4 max-w-7xl mx-auto relative pointer-events-none">
                 
                 {/* STATS STRIP wrapper with relative bounding to prevent tooltip overflow */}
-                <div className="flex flex-col gap-1 flex-1 min-w-0 md:flex-none md:w-fit relative pointer-events-auto" ref={statsBarRef}>
+                <div className="flex flex-col gap-1 flex-1 min-w-0 md:flex-none md:w-fit relative pointer-events-auto" ref={statsBarRef} id="top-stats-bar">
                     <div className="flex items-center justify-between md:justify-start bg-slate-950/85 backdrop-blur-xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-1.5 py-1 pt-1 md:pt-1 md:px-4 md:py-2 gap-1 md:gap-4 transition-all duration-300 hover:border-slate-700/60 overflow-x-auto overflow-y-hidden stats-scroll-hide w-full h-[38.2px] md:h-auto md:shrink-0 relative">
                         
                         {/* RANK widget */}
@@ -360,6 +360,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                         
                         {/* ENTROPY widget */}
                         <div 
+                            id="entropy-gauge"
                             onClick={() => handleInteraction('ENTROPY', 'click')}
                             onMouseEnter={() => handleInteraction('ENTROPY', 'enter')}
                             onMouseLeave={() => handleInteraction('ENTROPY', 'leave')}
@@ -561,7 +562,11 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                     </span>
                                 </button>
                                 <div className="h-px bg-slate-700/50 my-1"></div>
-                                <button onClick={() => { onOpenModal('RESTART'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-900/10 hover:bg-amber-900/30 text-amber-400 hover:text-amber-200 border border-amber-900/30 hover:border-amber-500/50 transition-colors w-full text-left">
+                                <button onClick={() => { window.dispatchEvent(new CustomEvent('hexquest-show-onboarding')); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/10 hover:bg-indigo-900/30 text-indigo-400 hover:text-indigo-200 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left mb-1">
+                                     <HelpCircle className="w-4 h-4 text-indigo-400" />
+                                     <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{language === 'RU' ? 'Обучение' : 'Tutorial'}</span>
+                                 </button>
+                                 <button onClick={() => { onOpenModal('RESTART'); setIsSystemMenuOpen(false); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-900/10 hover:bg-amber-900/30 text-amber-400 hover:text-amber-200 border border-amber-900/30 hover:border-amber-500/50 transition-colors w-full text-left">
                                     <RotateCcw className="w-4 h-4" />
                                     <span className="text-xs font-bold uppercase break-words whitespace-pre-wrap">{t.BTN_RETRY}</span>
                                 </button>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useGameStore } from '../../store';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Swords, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
@@ -100,8 +100,28 @@ const SkirmishHintBanner: React.FC = () => {
         return 'from-indigo-500/10 to-purple-500/5 hover:border-indigo-500/40 border-slate-800 text-indigo-300';
     }, [isAccomplished]);
 
-    const { isCollapsed, handleToggleCollapse } = useCollapsibleHint(progressText, playUiSound);
+    const { isCollapsed, setIsCollapsed, handleToggleCollapse } = useCollapsibleHint(progressText, playUiSound);
 
+    // Auto-minimize expanded banner on global click/touch outside
+    useEffect(() => {
+        if (isCollapsed) return;
+        const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+            const target = e.target as HTMLElement;
+            const modal = document.getElementById("skirmish-hint-banner-expanded");
+            if (modal && !modal.contains(target)) {
+                setIsCollapsed(true);
+            }
+        };
+
+        document.addEventListener("mousedown", handleOutsideClick);
+        document.addEventListener("touchstart", handleOutsideClick);
+        return () => {
+            document.removeEventListener("mousedown", handleOutsideClick);
+            document.removeEventListener("touchstart", handleOutsideClick);
+        };
+    }, [isCollapsed, setIsCollapsed]);
+
+    if ((window as any).isOnboardingActive) return null;
     if (!isSkirmish || !winCondition || !player) return null;
     
     // Hide for SUMMIT since MonumentHintBanner handles its multi-step logic
@@ -160,6 +180,7 @@ const SkirmishHintBanner: React.FC = () => {
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.2 }}
                     className="pointer-events-auto w-full"
+                    id="skirmish-hint-banner-expanded"
                 >
                     <div className={`p-4 rounded-xl border bg-slate-950/92 backdrop-blur-md shadow-2xl flex flex-col gap-3 transition-all duration-300 relative overflow-hidden group border-slate-800/70`}>
                         {/* Header container */}

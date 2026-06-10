@@ -31,7 +31,7 @@ export class WorldIndex {
   public syncState(state: { grid: Record<string, Hex>; player: Entity; bots: Entity[] }) {
       if (!state) return;
       
-      // Update Grid reference
+      const gridChanged = this.grid !== state.grid;
       this.grid = state.grid;
       
       // Update Entity Map with NEW object references
@@ -43,12 +43,22 @@ export class WorldIndex {
           }
       }
       
-      // Full rebuild of indices to ensure all derived maps point to the objects in this state
-      this.build();
+      // If the grid object is a new reference (mutated inside draft), did we modify structures?
+      // Otherwise, only rebuild occupied entities index (very fast!)
+      if (gridChanged) {
+          this.build();
+      } else {
+          this.occupiedHexes.clear();
+          for (const ent of this.entities.values()) {
+              this.occupiedHexes.set(getHexKey(ent.q, ent.r), ent.id);
+          }
+      }
   }
 
   public syncGrid(grid: Record<string, Hex>) {
       if (!grid) return;
+      if (this.grid === grid) return; // Skip if grid is already indexed and is same reference
+      
       this.grid = grid;
       
       // Re-index hex-based caches

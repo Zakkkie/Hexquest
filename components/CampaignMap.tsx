@@ -346,12 +346,18 @@ const CampaignMap: React.FC = () => {
                                 (glowColor === 'amber' ? 'from-amber-500/20 via-amber-600/10 to-transparent' : 'from-red-500/20 via-red-600/10 to-transparent')
                             } opacity-60 blur-[10px] -z-10 pointer-events-none group-hover:opacity-80 transition-opacity duration-300`} />
 
-                            <div className={`absolute -top-4 -right-4 w-24 h-24 bg-${glowColor}-500/5 blur-[25px] rounded-full pointer-events-none group-hover:opacity-100 transition-opacity duration-500`} />
+                            <div className={`absolute -top-4 -right-4 w-24 h-24 blur-[25px] rounded-full pointer-events-none group-hover:opacity-100 transition-opacity duration-500 ${
+                                glowColor === 'emerald' ? 'bg-emerald-500/5' : (glowColor === 'amber' ? 'bg-amber-500/5' : 'bg-red-500/5')
+                            }`} />
 
                             <div className="relative z-10 flex flex-col h-full gap-2.5">
                                 {/* Header Section: Icon & Title & Status */}
                                 <div className="flex items-start gap-3">
-                                    <div className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-950 border border-slate-700/40 shadow-inner group-hover:border-${glowColor}-400/30 transition-all duration-300 shrink-0 ${isUnlocked ? (threat === 'NONE' ? 'text-emerald-400' : (threat === 'BASIC' ? 'text-amber-400' : 'text-red-400')) : 'text-slate-600'}`}>
+                                    <div className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-950 border border-slate-700/40 shadow-inner transition-all duration-300 shrink-0 ${
+                                        isUnlocked ? (threat === 'NONE' ? 'text-emerald-400' : (threat === 'BASIC' ? 'text-amber-400' : 'text-red-400')) : 'text-slate-600'
+                                    } ${
+                                        glowColor === 'emerald' ? 'group-hover:border-emerald-400/30' : (glowColor === 'amber' ? 'group-hover:border-amber-400/30' : 'group-hover:border-red-400/30')
+                                    }`}>
                                         <MapPin className="w-5 h-5 md:w-6 md:h-6" />
                                     </div>
                                     <div className="min-w-0 flex-1">

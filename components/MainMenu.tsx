@@ -1255,6 +1255,19 @@ const MainMenu: React.FC = () => {
                         {selectedTier === 3 ? t.REWARD_HIGH : (selectedTier === 2 ? t.REWARD_MED : t.REWARD_STD)}
                      </span>
                  </div>
+
+                 <button
+                    onClick={() => {
+                      playUiSound('CLICK');
+                      setShowMissionConfig(false);
+                      setUIState('LEVEL_EDITOR');
+                    }}
+                    className="px-4 py-3 bg-slate-950 border border-indigo-500/30 hover:border-indigo-400 text-indigo-300 hover:text-white font-bold rounded-xl text-[10px] md:text-xs uppercase tracking-wider transition-all flex items-center gap-2 font-mono shrink-0"
+                 >
+                    <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                    {language === 'RU' ? 'Конструктор' : 'Level Editor'}
+                 </button>
+
                  <motion.button 
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}

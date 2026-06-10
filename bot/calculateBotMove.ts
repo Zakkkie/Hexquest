@@ -70,7 +70,14 @@ const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObstacles:
     const reachable = new Set<string>();
     const startKey = hexKey(bot.q, bot.r);
     const queue: { q: number, r: number, dist: number }[] = [{ q: bot.q, r: bot.r, dist: 0 }];
-    const obsKeys = new Set(navObstacles.map(o => hexKey(o.q, o.r)));
+    
+    const obsKeys = new Set<string>();
+    for (const o of navObstacles) {
+        obsKeys.add(hexKey(o.q, o.r));
+    }
+    
+    const hasVoidCore = (bot.equipment && Object.values(bot.equipment).some(item => item && item.baseId === 'void_core')) ||
+                        (bot.activeStatuses && bot.activeStatuses.some(s => (s.type as string) === 'VOID_CORE' || s.label === 'Void Core'));
     
     reachable.add(startKey);
     
@@ -90,7 +97,7 @@ const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObstacles:
             const nHex = grid[nKey];
             if (!nHex || nHex.structureType === 'VOID') continue;
             if (nHex.currentLevel > bot.playerLevel) continue;
-            if (Math.abs(currentLevel - nHex.currentLevel) > 1) continue;
+            if (!hasVoidCore && Math.abs(currentLevel - nHex.currentLevel) > 1) continue;
             
             reachable.add(nKey);
             queue.push({ q: n.q, r: n.r, dist: current.dist + 1 });
@@ -100,10 +107,11 @@ const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObstacles:
 };
 
 const yieldMove = (bot: Entity, grid: Record<string, Hex>, obstacles: HexCoord[], monument: Hex | null, stateVersion: number, mem: BotMemory, reason: string): AiResult | null => {
+    const obsKeys = new Set(obstacles.map(o => hexKey(o.q, o.r)));
     const nbs = getNeighbors(bot.q, bot.r).filter(n => {
         const h = grid[hexKey(n.q, n.r)];
         if (!h || h.structureType === 'VOID' || h.currentLevel > bot.playerLevel) return false;
-        if (obstacles.some(o => o.q === n.q && o.r === n.r)) return false;
+        if (obsKeys.has(hexKey(n.q, n.r))) return false;
         return true;
     });
 
@@ -157,6 +165,7 @@ const findStaircaseTarget = (bot: Entity, grid: Record<string, Hex>, monument: H
     const open: Hex[] = [];
     const visited     = new Set<string>();
     const candidates: StaircaseTarget[] = [];
+    const obsKeys     = new Set(navObstacles.map(o => hexKey(o.q, o.r)));
 
     for (const c of getNeighbors(monument.q, monument.r)) {
         const h = grid[hexKey(c.q, c.r)];
@@ -171,7 +180,7 @@ const findStaircaseTarget = (bot: Entity, grid: Record<string, Hex>, monument: H
         visited.add(current.id);
 
         if (claimedSet.has(current.id) || blacklisted.includes(current.id)) continue; 
-        if (navObstacles.some(o => o.q === current.q && o.r === current.r)) continue;
+        if (obsKeys.has(current.id)) continue;
 
         const d          = dist(monument, current);
         const idealLevel = Math.max(0, monument.maxLevel - d);
@@ -766,7 +775,9 @@ const moveAndAct = (bot: Entity, target: Hex, actionType: 'UPGRADE' | 'DIG', gri
         return { action: { type: 'WAIT', stateVersion }, debug: `${debugPrefix}:Blocked`, memory: { ...mem, stuckCounter: (mem.stuckCounter ?? 0) + 1 } };
     }
 
-    const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles);
+    const hasVoidCore = (bot.equipment && Object.values(bot.equipment).some(item => item && item.baseId === 'void_core')) ||
+                        (bot.activeStatuses && bot.activeStatuses.some(s => (s.type as string) === 'VOID_CORE' || s.label === 'Void Core'));
+    const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles, hasVoidCore);
     const path = pathResult.path;
     if (path && path.length > 0) {
         const cost = calculateMovementCost(bot, [path[0]], grid);
@@ -804,7 +815,9 @@ const executeStep = (step: PlanStep, bot: Entity, grid: Record<string, Hex>, ind
         mem.targetHexId = step.targetId;
         if (dist(bot, target) === 0) return 'STEP_DONE';
 
-        const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles);
+        const hasVoidCore = (bot.equipment && Object.values(bot.equipment).some(item => item && item.baseId === 'void_core')) ||
+                            (bot.activeStatuses && bot.activeStatuses.some(s => (s.type as string) === 'VOID_CORE' || s.label === 'Void Core'));
+        const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles, hasVoidCore);
         const path = pathResult.path;
         if (!path || path.length === 0) {
             if (dist(bot, target) === 1 && bot.storage > 0) {
@@ -885,6 +898,11 @@ const isProd = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'pro
 const finalize = (result: AiResult, mem: BotMemory): AiResult => {
     result.memory.waitStreak = result.action?.type === 'WAIT' ? (mem.waitStreak ?? 0) + 1 : 0;
     result.memory.lastActionType = result.action?.type ?? null; 
+    
+    // Add detailed console trace of the bot's decision-making and trigger conditions:
+    const activePlanLabel = mem.plan ? `${mem.plan.label} (${mem.plan.steps.length} steps remaining)` : 'No active plan';
+    console.log(`[Bot Decision] Bot ID: ${result.memory.targetHexId ? 'Targeted' : 'Searching'} | Pos: (${mem.lastPosKey || '?'}) | Action Chosen: ${result.action ? result.action.type : 'WAIT'} details: ${JSON.stringify(result.action)} | Logic Reason/Debug: ${result.debug} | Active Plan: ${activePlanLabel}`);
+
     if (isProd) {
         result.debug = '';
         if (result.memory.plan) {
@@ -947,7 +965,14 @@ export const calculateBotMove = (
     const monument = index.getHexesByStructureType('MONUMENT').find(h => h.botRevealed && (h.botRevealed[bot.id] || h.botRevealed['SHARED_BOTS'])) ?? null;
     const bots     = allBots ?? [];
     
-    const reachable = getReachableHexes(bot, grid, navObs, 50);
+    // Lazy calculation of reachable set to avoid heavy BFS traversal of size 50 on every single action tick.
+    let reachableCache: Set<string> | null = null;
+    const getReachable = (): Set<string> => {
+        if (!reachableCache) {
+            reachableCache = getReachableHexes(bot, grid, navObs, 35);
+        }
+        return reachableCache;
+    };
 
     const { exchangeRate } = getStatusModifiers(bot);
     const needsSurvival = bot.moves === 0 && bot.coins < exchangeRate && !bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID';
@@ -968,12 +993,12 @@ export const calculateBotMove = (
 
     const planStale = (stateVersion - (mem.plan?.createdAt ?? 0)) > PLAN_TTL || (mem.waitStreak ?? 0) >= MAX_WAIT_STREAK;
     if (!mem.plan || mem.plan.steps.length === 0 || planStale) {
-        mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, activeLevelId, activeLevelConfig, reachable);
+        mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, activeLevelId, activeLevelConfig, getReachable());
         mem.waitStreak = 0;
     }
 
     while (mem.plan && mem.plan.steps.length > 0) {
-        const result = executeStep(mem.plan.steps[0], bot, grid, index, navObs, stateVersion, mem, monument, claimed, bots, reachable);
+        const result = executeStep(mem.plan.steps[0], bot, grid, index, navObs, stateVersion, mem, monument, claimed, bots, getReachable());
         
         if (result === 'STEP_DONE') { 
             mem.plan.steps.shift(); 

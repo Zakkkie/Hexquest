@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, memo } from 'react';
-import { useGameStore } from '../store';
+import { useGameStore } from '../store.ts';
 
 interface BackgroundProps {
   variant?: 'MENU' | 'GAME';
@@ -55,8 +55,11 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
     const drawHex = (x: number, y: number, size: number, color: string, height: number, strokeColor: string) => {
       const rotationDeg = 0; 
       
+      // Draw and fill the main hex
       ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
+      const startAngleRad = (Math.PI / 180) * (30 + rotationDeg);
+      ctx.moveTo(x + size * Math.cos(startAngleRad), y + size * Math.sin(startAngleRad));
+      for (let i = 1; i < 6; i++) {
         const angle_deg = 60 * i + 30 + rotationDeg;
         const angle_rad = Math.PI / 180 * angle_deg;
         ctx.lineTo(x + size * Math.cos(angle_rad), y + size * Math.sin(angle_rad));
@@ -66,10 +69,18 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
       ctx.fillStyle = color;
       ctx.fill();
 
+      // Stroke the main hex before starting secondary paths
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 1 + height * 2;
+      ctx.stroke();
+
+      // Draw inner glowing hex if height is significant
       if (height > 0.2) {
         ctx.beginPath();
         const innerSize = size * (1 - height * 0.5); 
-        for (let i = 0; i < 6; i++) {
+        const innerStartAngleRad = (Math.PI / 180) * (30 + rotationDeg);
+        ctx.moveTo(x + innerSize * Math.cos(innerStartAngleRad), y + innerSize * Math.sin(innerStartAngleRad));
+        for (let i = 1; i < 6; i++) {
           const angle_deg = 60 * i + 30 + rotationDeg;
           const angle_rad = Math.PI / 180 * angle_deg;
           ctx.lineTo(x + innerSize * Math.cos(angle_rad), y + innerSize * Math.sin(angle_rad));
@@ -78,10 +89,6 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
         ctx.fillStyle = `rgba(255, 255, 255, ${height * 0.2})`;
         ctx.fill();
       }
-
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 1 + height * 2;
-      ctx.stroke();
     };
 
     const render = (timestamp: number) => {
@@ -148,7 +155,6 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
               grad1.addColorStop(0, `rgba(220, 38, 38, ${0.1 * smoothEntropy})`);
               grad1.addColorStop(1, 'rgba(0, 0, 0, 0)');
               ctx.fillStyle = grad1;
-              ctx.fill();
               ctx.fillRect(0, 0, w, h);
 
               // Nebula 2: Opposite orbit

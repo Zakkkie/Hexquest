@@ -120,6 +120,27 @@ class AudioService {
 
   constructor() {
       this.handleUnlock = this.handleUnlock.bind(this);
+      
+      // Safe fallback load of persistent audio settings to avoid initial state mismatch
+      try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+              const raw = localStorage.getItem('hexquest-storage-v4');
+              if (raw) {
+                  const parsed = JSON.parse(raw);
+                  if (parsed && parsed.state) {
+                      if (typeof parsed.state.isMusicMuted === 'boolean') {
+                          this.isMusicMuted = parsed.state.isMusicMuted;
+                      }
+                      if (typeof parsed.state.isSfxMuted === 'boolean') {
+                          this.isSfxMuted = parsed.state.isSfxMuted;
+                      }
+                  }
+              }
+          }
+      } catch (e) {
+          // localStorage might be unavailable in private browsing or iframe restrictions
+          console.warn('AudioService local storage load failed', e);
+      }
   }
 
   // IOS AUDIO UNLOCK HANDLER

@@ -46,7 +46,7 @@ class TextureService {
     return new Promise((resolve) => {
       const levels = [-2, -1, 0, 1, 2, 3, 4];
       const variants = [0, 1, 2, 3];
-      const terrainTypes = ['ROAD', 'CITY', 'FOREST', 'MOUNTAINS'];
+      const terrainTypes = ['STANDARD'];
       
       const tasks: (() => void)[] = [];
 
@@ -157,7 +157,7 @@ class TextureService {
       let secColor = '#0284c7';
 
       if (terrainType || poiId) {
-          const colors = this.getTerrainColors(terrainType || 'CITY', poiId);
+          const colors = this.getTerrainColors(terrainType || 'STANDARD', poiId);
           baseColor = colors.base;
           accentColor = colors.accent;
           secColor = colors.sec;
@@ -287,7 +287,7 @@ class TextureService {
       let stroke = '#44403c';
       
       if (terrainType || poiId) {
-          const colors = this.getTerrainColors(terrainType || 'CITY', poiId);
+          const colors = this.getTerrainColors(terrainType || 'STANDARD', poiId);
           base = colors.base;
           stroke = colors.sec;
       } else {
@@ -350,7 +350,7 @@ class TextureService {
       let strokeColor = '#334155';
 
       if (terrainType || poiId) {
-          const colors = this.getTerrainColors(terrainType || 'CITY', poiId);
+          const colors = this.getTerrainColors(terrainType || 'STANDARD', poiId);
           baseColor = colors.base;
           strokeColor = colors.sec;
       }
@@ -393,7 +393,7 @@ class TextureService {
       let bottomColor = '#0f172a';
 
       if (terrainType || poiId) {
-          const colors = this.getTerrainColors(terrainType || 'CITY', poiId);
+          const colors = this.getTerrainColors(terrainType || 'STANDARD', poiId);
           topColor = colors.sec;
           bottomColor = colors.base;
       } else {
@@ -444,16 +444,7 @@ class TextureService {
       }
 
       switch(type) {
-          case 'PLAINS':        return { base: '#334155', accent: '#94a3b8', sec: '#475569' }; 
-          case 'FOREST':        return { base: '#1e293b', accent: '#64748b', sec: '#334155' }; 
-          case 'SWAMP':         return { base: '#4c1d95', accent: '#a855f7', sec: '#581c87' }; 
-          case 'WATER':         return { base: '#0c4a6e', accent: '#38bdf8', sec: '#075985' }; 
-          case 'MOUNTAINS':     return { base: '#44403c', accent: '#cbd5e1', sec: '#57534e' }; 
-          case 'ROAD':          return { base: '#44403c', accent: '#e7e5e4', sec: '#57534e' }; 
-          case 'CITY':          return { base: '#78350f', accent: '#fcd34d', sec: '#92400e' }; 
-          case 'RUINS':         return { base: '#312e81', accent: '#818cf8', sec: '#3730a3' }; 
-          case 'OUTPOST':       return { base: '#7f1d1d', accent: '#fca5a5', sec: '#991b1b' }; 
-          case 'MERCHANT_CAMP': return { base: '#713f12', accent: '#fde047', sec: '#854d0e' }; 
+          case 'STANDARD':      return { base: '#334155', accent: '#94a3b8', sec: '#475569' }; 
           default:              return { base: '#1e293b', accent: '#94a3b8', sec: '#334155' }; 
       }
   }

@@ -317,18 +317,26 @@ export const findPath = (
   const endKey = getHexKey(end.q, end.r);
   
   // 1. Immediate checks - Return empty array if already at destination (Success, no movement needed)
-  if (startKey === endKey) return { path: [] };
+  if (startKey === endKey) {
+    return { path: [] };
+  }
   
   // DESTINATION VALIDITY CHECK
   const endHex = grid[endKey];
-  if (endHex && endHex.structureType === 'VOID') return { path: null, reason: 'VOID' }; // Cannot move into a hole
+  if (endHex && endHex.structureType === 'VOID') {
+    return { path: null, reason: 'VOID' }; // Cannot move into a hole
+  }
 
   // Quick pre-check distance to avoid searching impossible paths
-  if (cubeDistance(start, end) > SAFETY_CONFIG.MAX_PATH_LENGTH) return { path: null, reason: 'TOO_FAR' };
+  if (cubeDistance(start, end) > SAFETY_CONFIG.MAX_PATH_LENGTH) {
+    return { path: null, reason: 'TOO_FAR' };
+  }
 
   // O(1) Obstacle Lookup
   const obsKeys = new Set(obstacles.map(o => getHexKey(o.q, o.r)));
-  if (obsKeys.has(endKey)) return { path: null, reason: 'OBSTACLE' };
+  if (obsKeys.has(endKey)) {
+    return { path: null, reason: 'OBSTACLE' };
+  }
 
   // 2. Setup Data Structures
   const openSet = new PriorityQueue<string>();
@@ -346,7 +354,9 @@ export const findPath = (
   // 3. Main Loop
   while (openSet.length > 0) {
     // Safety Break
-    if (iterations++ > SAFETY_CONFIG.MAX_SEARCH_ITERATIONS) return { path: null, reason: 'TIMEOUT' };
+    if (iterations++ > SAFETY_CONFIG.MAX_SEARCH_ITERATIONS) {
+      return { path: null, reason: 'TIMEOUT' };
+    }
 
     const currentKey = openSet.pop()!;
     

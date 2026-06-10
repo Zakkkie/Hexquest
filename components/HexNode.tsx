@@ -154,15 +154,16 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const progressRatio = isGrowing ? Math.min(1.0, progress / neededTicks) : 0;
 
   // Textures are now always loaded since LOD is removed
+  const showTexture = renderMode?.showTexture;
   const topTexture = useMemo(() => {
-      if (renderMode && !renderMode.showTexture) return null;
+      if (showTexture === false) return null;
       return textureService.getTexture(level, q, r, undefined);
-  }, [level, q, r, renderMode]);
+  }, [level, q, r, showTexture]);
 
   const sideTexture = useMemo(() => {
-      if (renderMode && !renderMode.showTexture) return null;
+      if (showTexture === false) return null;
       return textureService.getSideTexture(level, undefined);
-  }, [level, renderMode]);
+  }, [level, showTexture]);
 
   const isRealVoid = structureType === 'VOID';
   const isMonument = structureType === 'MONUMENT';
@@ -228,6 +229,51 @@ const HexNodeComponent = (props: HexNodeProps) => {
   const topFaceGroupRef = useRef<Konva.Group>(null);
   const faceContainerRef = useRef<Konva.Group>(null);
   const overlaysContainerRef = useRef<Konva.Group>(null);
+
+  // Distance and Blur calculation for player vision reducing to 5 hexes:
+  const distToPlayer = useMemo(() => {
+      if (playerQ !== undefined && playerR !== undefined) {
+          return (Math.abs(q - playerQ) + Math.abs(q + r - playerQ - playerR) + Math.abs(r - playerR)) / 2;
+      }
+      return 0;
+  }, [q, r, playerQ, playerR]);
+
+  const isBlurred = distToPlayer >= 3;
+
+  const blurProps = useMemo(() => {
+      if (distToPlayer <= 2) {
+          return { shadowEnabled: false };
+      }
+      // Progressive physical edge blurring utilizing hardware-accelerated drop shadow properties
+      const blurRadius = (distToPlayer - 2) * 8; // e.g., 8px blur at d=3, 16px blur at d=4, 24px blur at d=5
+      return {
+          shadowEnabled: true,
+          shadowColor: '#020617', // Match the deep space background color
+          shadowBlur: blurRadius,
+          shadowOpacity: 0.15 * distToPlayer,
+          shadowOffset: { x: 0, y: 0 }
+      };
+  }, [distToPlayer]);
+
+  // Smoothly transition node opacity via native highly-optimized Konva Tween engine
+  useEffect(() => {
+      const g = groupRef.current;
+      if (g) {
+          const isLite = useGameStore.getState().isLiteMode;
+          if (isLite) {
+              g.opacity(opacity);
+          } else {
+              const tween = new Konva.Tween({
+                  node: g,
+                  duration: 0.35, // 350ms gradual smooth fade-in/fade-out
+                  opacity: opacity,
+                  easing: Konva.Easings.EaseInOut
+              });
+              tween.play();
+              return () => tween.destroy();
+          }
+      }
+  }, [opacity]);
 
   // Holographic scan matrix animation refs
   const growingGlowGroupRef = useRef<Konva.Group>(null);
@@ -698,6 +744,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
         listening={true}
         transformsEnabled="position"
         opacity={opacity}
+        {...blurProps}
     >
         {/* 1. WALLS */}
         {neighborLevels.map((_, i) => {
@@ -877,7 +924,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     />
                 )}
 
-                {damageLevel > 0 && (
+                {damageLevel > 0 && !isBlurred && (
                     <Group listening={false} perfectDrawEnabled={false}>
                         {CRACK_PATHS.slice(0, damageLevel).map((path, idx) => (
                             <Path key={idx} data={path} stroke="#000000" strokeWidth={2} opacity={0.6} lineJoin="round" lineCap="round" perfectDrawEnabled={false} shadowForStrokeEnabled={false} />
@@ -1040,7 +1087,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
                     </Group>
                 )}
 
-                {isGrowing && (
+                {isGrowing && !isBlurred && (
                     <Group listening={false} perfectDrawEnabled={false}>
                         {/* Clockwise rotating holographic scanner ring */}
                         <Group ref={growingGlowGroupRef}>
@@ -1224,6 +1271,20 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
     if (prev.playerGrowthIntent !== next.playerGrowthIntent) return false;
     if (prev.growthAccelerator !== next.growthAccelerator) return false;
     if (prev.portalActive !== next.portalActive) return false;
+    if (prev.drawVoidWalls !== next.drawVoidWalls) return false;
+    if (prev.q !== next.q || prev.r !== next.r) return false;
+
+    // Theme comparison
+    if (prev.theme.main !== next.theme.main ||
+        prev.theme.light !== next.theme.light ||
+        prev.theme.dark !== next.theme.dark ||
+        prev.theme.stroke !== next.theme.stroke) return false;
+
+    // RenderMode comparison
+    if (prev.renderMode?.detailLevel !== next.renderMode?.detailLevel ||
+        prev.renderMode?.showTexture !== next.renderMode?.showTexture ||
+        prev.renderMode?.showGlow !== next.renderMode?.showGlow ||
+        prev.renderMode?.showDetails !== next.renderMode?.showDetails) return false;
     
     for (let i = 0; i < 6; i++) {
         if (prev.neighborLevels[i] !== next.neighborLevels[i]) return false;

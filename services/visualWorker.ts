@@ -80,33 +80,31 @@ self.onmessage = (e) => {
         const hr = hex.r;
         const distToPlayer = cubeDistance({ q: playerQ, r: playerR }, { q: hq, r: hr });
         
-        // Culling: Any hex further than 12 tiles from the player cannot have active opacity or lighting, skip it immediately.
-        if (distToPlayer > 12) continue;
+        // Culling: Any hex further than 5 tiles from the player is completely hidden (outside player's vision radius).
+        if (distToPlayer > 5) continue;
 
         const isRevealed = !!hex.revealed || cachedIsCampaign;
 
-        // A. Active Discovery
-        let discoveryVisibility = 0;
-        if (distToPlayer <= 1) discoveryVisibility = 1.0;
-        else if (distToPlayer === 2) discoveryVisibility = 0.66;
-        else if (distToPlayer === 3) discoveryVisibility = 0.33;
-
-        // B. Memory/Revealed Visibility
-        let memoryVisibility = 0;
-        if (isRevealed) {
-            if (distToPlayer <= 7) {
-                memoryVisibility = 1.0;
-            } else if (distToPlayer <= 12) {
-                memoryVisibility = (12 - distToPlayer) * 0.2;
-            }
+        // Custom progressive view and fade-out up to 5 tiles:
+        // distToPlayer <= 2 is fully bright/opaque (1.0)
+        // distToPlayer === 3 starts to fade/blur (0.7)
+        // distToPlayer === 4 fades more (0.4)
+        // distToPlayer === 5 reaches the maximum fade/blur limit (0.15)
+        let finalVisibility = 0;
+        if (distToPlayer <= 2) {
+            finalVisibility = 1.0;
+        } else if (distToPlayer === 3) {
+            finalVisibility = 0.70;
+        } else if (distToPlayer === 4) {
+            finalVisibility = 0.40;
+        } else if (distToPlayer === 5) {
+            finalVisibility = 0.15;
         }
 
-        const finalVisibility = discoveryVisibility > memoryVisibility ? discoveryVisibility : memoryVisibility;
-        
         const finalOpacity = finalVisibility;
         const finalLighting = finalVisibility;
 
-        if (finalOpacity <= 0 && finalLighting <= 0) continue;
+        if (finalOpacity <= 0) continue;
 
         const rawX = HEX_SIZE * (SQRT3 * hq + SQRT3_2 * hr);
         const rawY = HEX_SIZE * (ONE_POINT_FIVE * hr);
@@ -194,27 +192,22 @@ self.onmessage = (e) => {
         const uR = u.r;
 
         if (!u.isPlayer) {
-            const uHex = cachedGrid[getHexKey(uQ, uR)];
             const distToPlayer = cubeDistance({ q: uQ, r: uR }, playerPos);
-            const isRevealed = uHex && (uHex.revealed || cachedIsCampaign);
             
-            // ACTIVE DISCOVERY
-            let discoveryVis = 0;
-            if (distToPlayer <= 1) discoveryVis = 1.0;
-            else if (distToPlayer === 2) discoveryVis = 0.66;
-            else if (distToPlayer === 3) discoveryVis = 0.33;
+            if (distToPlayer > 5) continue;
 
-            // MEMORY/REVEALED 
-            let memoryVis = 0;
-            if (isRevealed) {
-                if (distToPlayer <= 7) {
-                    memoryVis = 1.0;
-                } else if (distToPlayer <= 12) {
-                    memoryVis = (12 - distToPlayer) * 0.2;
-                }
+            if (distToPlayer <= 2) {
+                uOpacity = 1.0;
+            } else if (distToPlayer === 3) {
+                uOpacity = 0.70;
+            } else if (distToPlayer === 4) {
+                uOpacity = 0.40;
+            } else if (distToPlayer === 5) {
+                uOpacity = 0.15;
+            } else {
+                uOpacity = 0;
             }
 
-            uOpacity = discoveryVis > memoryVis ? discoveryVis : memoryVis;
             if (uOpacity <= 0) continue;
         }
 

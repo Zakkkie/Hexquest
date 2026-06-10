@@ -345,7 +345,7 @@ export const series1Levels: LevelConfig[] = [
     }
   },
 
-  // 1.5: Регенерация ландшафта / Exception: Regrowth & Valley
+  // 1.5: Жесткие Опоры
   {
     id: '1.5',
     title: 'Sim 1.5: Жесткие Опоры',

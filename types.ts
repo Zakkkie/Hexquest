@@ -263,9 +263,9 @@ export interface ToastMessage {
   timestamp: number;
 }
 
-export type TerrainType = 'PLAINS' | 'FOREST' | 'SWAMP' | 'WATER' | 'MOUNTAINS' | 'ROAD' | 'CITY' | 'RUINS' | 'MONUMENT_AREA' | 'RIFT_ZONE';
+export type TerrainType = 'STANDARD';
 
-export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'INTRO' | 'CAMPAIGN_LOADING' | 'STORY_BUILDER';
+export type UIState = 'MENU' | 'GAME' | 'LEADERBOARD' | 'CAMPAIGN_MAP' | 'INTRO' | 'CAMPAIGN_LOADING' | 'STORY_BUILDER' | 'LEVEL_EDITOR';
 export type DeviceType = 'MOBILE' | 'TABLET' | 'DESKTOP';
 
 export interface UserProfile {

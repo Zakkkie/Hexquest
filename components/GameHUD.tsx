@@ -9,6 +9,7 @@ import InventoryModal from './InventoryModal.tsx';
 import MonumentHintBanner from './hud/MonumentHintBanner.tsx';
 import SkirmishHintBanner from './hud/SkirmishHintBanner.tsx';
 import CentralTutorialBanner from './hud/CentralTutorialBanner.tsx';
+import { OnboardingTutorial } from './hud/OnboardingTutorial.tsx';
 import { Item } from '../types.ts';
 
 interface GameHUDProps {
@@ -128,6 +129,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
         )}
 
         <InventoryModal isOpen={showInventory} onClose={() => setShowInventory(false)} />
+
+        <OnboardingTutorial />
 
         <GameDialogs 
             activeModal={activeModal}

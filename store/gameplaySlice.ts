@@ -122,10 +122,11 @@ export const createGameplaySlice = (
     }
     historyService.clear();
     resourceService.clear();
+    const isCustomEditor = get().session?.activeLevelConfig?.id === 'custom_editor_level';
     set(() => ({ 
       session: null, 
       hasActiveSession: false, 
-      uiState: 'MENU', 
+      uiState: isCustomEditor ? 'LEVEL_EDITOR' : 'MENU', 
       voidDialogTarget: null, 
       monumentDialogState: { isOpen: false, slots: [null, null, null] }, 
       lastVisualEvent: undefined 
@@ -159,6 +160,7 @@ export const createGameplaySlice = (
 
     engine.setPlayerIntent(shouldGrow, shouldGrow ? intent : null);
     set(() => ({ session: engine!.state }));
+    get().tick(); // Trigger immediate tick to start growth action instantly!
   },
 
   destroyItem: (itemId: string) => {
@@ -167,6 +169,7 @@ export const createGameplaySlice = (
     if (res.ok) {
       audioService.play('CRACK');
       set(() => ({ session: engine!.state }));
+      get().tick(); // Trigger immediate tick!
     }
   },
 
@@ -176,6 +179,7 @@ export const createGameplaySlice = (
     if (res.ok) {
       audioService.play('SUCCESS');
       set(() => ({ session: engine!.state }));
+      get().tick(); // Trigger immediate tick!
     }
   },
 
@@ -185,6 +189,7 @@ export const createGameplaySlice = (
     if (res.ok) {
       audioService.play('UI_HOVER');
       set(() => ({ session: engine!.state }));
+      get().tick(); // Trigger immediate tick!
     }
   },
 
@@ -217,6 +222,7 @@ export const createGameplaySlice = (
       };
       engine.applyAction(session.player.id, action);
       set(() => ({ session: engine!.state }));
+      get().tick(); // Trigger immediate tick!
       return;
     }
 
@@ -247,6 +253,7 @@ export const createGameplaySlice = (
         if (res.ok) {
           audioService.play('TELEPORT');
           set(() => ({ session: engine!.state }));
+          get().tick(); // Trigger immediate tick!
         } else {
           audioService.play('ERROR');
           set(() => ({ toast: { message: res.reason || "Action failed", type: 'error', timestamp: Date.now() } }));
@@ -320,6 +327,7 @@ export const createGameplaySlice = (
     if (res.ok) {
       audioService.play('MOVE');
       set(() => ({ session: engine!.state }));
+      get().tick(); // Trigger immediate tick!
     } else {
       audioService.play('ERROR');
       let msg = res.reason || lConfig?.TOAST?.GENERIC_ERROR || "Action failed";
@@ -339,6 +347,7 @@ export const createGameplaySlice = (
     if (res.ok) {
       audioService.play('MOVE');
       set(() => ({ session: engine!.state, pendingConfirmation: null }));
+      get().tick(); // Trigger immediate tick!
     } else {
       audioService.play('ERROR');
       set(() => ({ toast: { message: res.reason || lConfig?.TOAST?.GENERIC_ERROR || "Error routing", type: 'error', timestamp: Date.now() }, pendingConfirmation: null }));
@@ -376,6 +385,7 @@ export const createGameplaySlice = (
     if (res.ok) {
       audioService.play('GROWTH_START');
       set(() => ({ session: engine!.state, voidDialogTarget: null }));
+      get().tick(); // Trigger immediate tick!
     } else {
       audioService.play('ERROR');
       set(() => ({ toast: { message: res.reason || lConfig?.TOAST?.RESTORE_ERROR || "Restoration bad", type: 'error', timestamp: Date.now() } }));
@@ -517,6 +527,7 @@ export const createGameplaySlice = (
     if (res.ok) {
       audioService.play('LEVEL_UP'); 
       set(() => ({ monumentDialogState: { isOpen: false, slots: Array(reqCount).fill(null) } }));
+      get().tick(); // Trigger immediate tick!
     } else {
       audioService.play('ERROR');
       
@@ -541,7 +552,6 @@ export const createGameplaySlice = (
     if (engine.state.gameStatus !== 'PLAYING') return;
     
     isProcessingTick = true;
-    const prevState = get().session;
     
     try {
       const result = await engine.processTick();
@@ -778,14 +788,9 @@ export const createGameplaySlice = (
         newToast = { message: error.message || 'Error', type: 'error', timestamp: now };
       }
 
-      const playerIsMoving = result.state.player.state === 'MOVING' || (prevState && (prevState.player.q !== result.state.player.q || prevState.player.r !== result.state.player.r));
-      const shouldRender = tickCount % 2 === 0 || playerIsMoving; 
-      const hasCriticalEvents = result.events.length > 0 || newToast !== get().toast;
-      const playerStateChanged = prevState && prevState.player.state !== result.state.player.state;
-
-      if (shouldRender || hasCriticalEvents || playerStateChanged) {
-        set(() => ({ session: result.state, toast: newToast }));
-      }
+      // For maximum smoothness of multi-bot activities & real-time animations, we commit the state on every single tick.
+      // This eliminates rendering stutters, layout jitters, and visual delay offsets.
+      set(() => ({ session: result.state, toast: newToast }));
     } finally {
       isProcessingTick = false;
     }

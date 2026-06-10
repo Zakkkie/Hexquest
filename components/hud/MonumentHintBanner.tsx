@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useGameStore } from '../../store';
 import { motion, AnimatePresence } from 'motion/react';
 import { Compass, ChevronsUp, Key, Zap, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
@@ -188,8 +188,28 @@ const MonumentHintBanner: React.FC = () => {
 
     // Auto-expand on phase/text change for visibility using hook
     const currentPhaseWithText = `${currentPhase || ''}_${info?.text || ''}`;
-    const { isCollapsed, handleToggleCollapse } = useCollapsibleHint(currentPhaseWithText, playUiSound);
+    const { isCollapsed, setIsCollapsed, handleToggleCollapse } = useCollapsibleHint(currentPhaseWithText, playUiSound);
 
+    // Auto-minimize expanded banner on global click/touch outside
+    useEffect(() => {
+        if (isCollapsed) return;
+        const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+            const target = e.target as HTMLElement;
+            const modal = document.getElementById("monument-hint-banner-expanded");
+            if (modal && !modal.contains(target)) {
+                setIsCollapsed(true);
+            }
+        };
+
+        document.addEventListener("mousedown", handleOutsideClick);
+        document.addEventListener("touchstart", handleOutsideClick);
+        return () => {
+            document.removeEventListener("mousedown", handleOutsideClick);
+            document.removeEventListener("touchstart", handleOutsideClick);
+        };
+    }, [isCollapsed, setIsCollapsed]);
+
+    if ((window as any).isOnboardingActive) return null;
     if (!monument || !info) return null;
 
     const IconComponent = info.icon;
@@ -243,6 +263,7 @@ const MonumentHintBanner: React.FC = () => {
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.2 }}
                     className="pointer-events-auto w-full"
+                    id="monument-hint-banner-expanded"
                 >
                     <div className={`p-4 rounded-xl border bg-slate-950/92 backdrop-blur-md shadow-2xl flex flex-col gap-3 transition-all duration-300 relative overflow-hidden group border-amber-500/30`}>
                         {/* Header container */}
