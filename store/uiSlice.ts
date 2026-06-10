@@ -13,6 +13,7 @@ export const createUiSlice = (
   setDeviceType: (deviceType: DeviceType) => set(() => ({ deviceType })),
   
   setLanguage: (lang: 'EN' | 'RU') => set(() => ({ language: lang })),
+  setIsStoryTutorialActive: (active: boolean) => set(() => ({ isStoryTutorialActive: active })),
   
   showToast: (message: string, type: 'error' | 'success' | 'info') => {
     // Sanitize string to bypass potential injection bugs or too large messages

@@ -174,7 +174,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                                 <div className="bg-indigo-500/15 p-1.5 rounded-lg border border-indigo-500/35">
                                     <Layers className="w-4 h-4 text-indigo-400" />
                                 </div>
-                                <h2 className="text-base md:text-lg lg:text-xl font-black uppercase text-white tracking-[0.15em] leading-none drop-shadow-md">Узлы Развития</h2>
+                                <h2 className="text-base md:text-lg lg:text-xl font-black uppercase text-white tracking-[0.15em] leading-none drop-shadow-md">{language === 'RU' ? 'Узлы Развития' : 'Development Nodes'}</h2>
                             </div>
                             <p className="hidden sm:block text-indigo-400/50 text-[8px] font-mono tracking-[0.4em] uppercase ml-11 mt-1 leading-none">Exp_Protocol_v2.1</p>
                         </div>
@@ -198,24 +198,24 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                 </div>
 
                 <div className="p-4 md:p-6 lg:p-8 overflow-y-auto no-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 relative z-10 flex-1 content-start">
-                    {renderNode('startingEnergy', 'Энергия', 'Базовый запас энергии на старте', <BatteryCharging />, 1, 1, 'text-cyan-400', 10, 0.05)}
-                    {renderNode('startingMoves', 'Ходы', 'Свободные очки перемещения', <TrendingUp />, 1, 1, 'text-emerald-400', 5, 0.08)}
-                    {renderNode('startingMaterials', 'Материя', 'Запас материалов на старте', <Layers />, 1, 1, 'text-purple-400', 10, 0.11)}
-                    {renderNode('maxMaterials', 'Склад', 'Вместимость грузового отсека', <Box />, 1, 1, 'text-pink-400', 20, 0.14)}
-                    {renderNode('startingGold', 'Золото', 'Капитал для торговли', <Coins />, 5, 1, 'text-amber-400', 10, 0.17)}
-                    {renderNode('inventorySlots', 'Рюкзак', 'Ячейки для артефактов', <Gem />, 1, 3, 'text-indigo-400', 5, 0.2)}
-                    {renderNode('fuelEfficiency', 'Топливо', 'Снижение стоимости хода', <Gauge />, 1, 2, 'text-orange-400', 2, 0.23)}
-                    {renderNode('scanRadius', 'Радар', 'Дистанция обзора (Fog of War)', <Radar />, 1, 2, 'text-teal-400', 2, 0.26)}
-                    {renderNode('fatigueResistance', 'Стойкость', 'Защита от штрафов усталости', <Shield />, 1, 2, 'text-red-400', 2, 0.29)}
-                    {renderNode('growthAccelerator', 'Синтез', 'Скорость стройки объектов', <Clock />, 1, 3, 'text-blue-400', 2, 0.32)}
-                    {renderNode('foundationStrength', 'Основа', 'Прочность L1 гексов (Durability)', <Layers />, 2, 1, 'text-stone-400', 2, 0.35)}
-                    {renderNode('economicMultiplier', 'Налоги', 'Пассивный доход золота (%)', <TrendingUp />, 10, 1, 'text-yellow-400', 5, 0.38)}
-                    {renderNode('diggerLuck', 'Удача', 'Шанс редкого лута при копке', <Star />, 1, 3, 'text-fuchsia-400', 2, 0.41)}
-                    {renderNode('doubleDigChance', 'Экстрактор', 'Шанс 2x материи при копке (%)', <Copy />, 10, 2, 'text-violet-400', 3, 0.44)}
-                    {renderNode('reserveCapacitor', 'Заряд', 'Заряды восстановления L4+', <Battery />, 1, 2, 'text-sky-400', 2, 0.47)}
-                    {renderNode('turboRecharge', 'Турбо', 'Кулдаун энергетики L4+', <Zap />, 5, 3, 'text-lime-400', 1, 0.5)}
-                    {renderNode('entropyResistance', 'Стабильность', 'Снижение роста энтропии (%)', <Infinity />, 10, 2, 'text-rose-400', 3, 0.53)}
-                    {renderNode('restorationMaster', 'Ремонт', 'Шанс восстановления Бездны (%)', <Wrench />, 10, 2, 'text-amber-500', 3, 0.56)}
+                    {renderNode('startingEnergy', language === 'RU' ? 'Энергия' : 'Energy', language === 'RU' ? 'Базовый запас энергии на старте' : 'Base starting energy', <BatteryCharging />, 1, 1, 'text-cyan-400', 10, 0.05)}
+                    {renderNode('startingMoves', language === 'RU' ? 'Ходы' : 'Moves', language === 'RU' ? 'Свободные очки перемещения' : 'Free movement points', <TrendingUp />, 1, 1, 'text-emerald-400', 5, 0.08)}
+                    {renderNode('startingMaterials', language === 'RU' ? 'Материя' : 'Matter', language === 'RU' ? 'Запас материалов на старте' : 'Starting materials stock', <Layers />, 1, 1, 'text-purple-400', 10, 0.11)}
+                    {renderNode('maxMaterials', language === 'RU' ? 'Склад' : 'Storage', language === 'RU' ? 'Вместимость грузового отсека' : 'Cargo bay capacity', <Box />, 1, 1, 'text-pink-400', 20, 0.14)}
+                    {renderNode('startingGold', language === 'RU' ? 'Золото' : 'Credits', language === 'RU' ? 'Капитал для торговли' : 'Trading capital', <Coins />, 5, 1, 'text-amber-400', 10, 0.17)}
+                    {renderNode('inventorySlots', language === 'RU' ? 'Рюкзак' : 'Backpack', language === 'RU' ? 'Ячейки для артефактов' : 'Slots for artifacts', <Gem />, 1, 3, 'text-indigo-400', 5, 0.2)}
+                    {renderNode('fuelEfficiency', language === 'RU' ? 'Топливо' : 'Fuel', language === 'RU' ? 'Снижение стоимости хода' : 'Movement cost reduction', <Gauge />, 1, 2, 'text-orange-400', 2, 0.23)}
+                    {renderNode('scanRadius', language === 'RU' ? 'Радар' : 'Radar', language === 'RU' ? 'Дистанция обзора (Fog of War)' : 'Vision range (Fog of War)', <Radar />, 1, 2, 'text-teal-400', 2, 0.26)}
+                    {renderNode('fatigueResistance', language === 'RU' ? 'Стойкость' : 'Endurance', language === 'RU' ? 'Защита от штрафов усталости' : 'Protection against fatigue', <Shield />, 1, 2, 'text-red-400', 2, 0.29)}
+                    {renderNode('growthAccelerator', language === 'RU' ? 'Синтез' : 'Synthesis', language === 'RU' ? 'Скорость стройки объектов' : 'Construction speed', <Clock />, 1, 3, 'text-blue-400', 2, 0.32)}
+                    {renderNode('foundationStrength', language === 'RU' ? 'Основа' : 'Foundation', language === 'RU' ? 'Прочность L1 гексов (Durability)' : 'L1 hex durability', <Layers />, 2, 1, 'text-stone-400', 2, 0.35)}
+                    {renderNode('economicMultiplier', language === 'RU' ? 'Налоги' : 'Taxes', language === 'RU' ? 'Пассивный доход золота (%)' : 'Passive credits income (%)', <TrendingUp />, 10, 1, 'text-yellow-400', 5, 0.38)}
+                    {renderNode('diggerLuck', language === 'RU' ? 'Удача' : 'Luck', language === 'RU' ? 'Шанс редкого лута при копке' : 'Rare loot chance on dig', <Star />, 1, 3, 'text-fuchsia-400', 2, 0.41)}
+                    {renderNode('doubleDigChance', language === 'RU' ? 'Экстрактор' : 'Extractor', language === 'RU' ? 'Шанс 2x материи при копке (%)' : '2x gather chance (%)', <Copy />, 10, 2, 'text-violet-400', 3, 0.44)}
+                    {renderNode('reserveCapacitor', language === 'RU' ? 'Заряд' : 'Battery', language === 'RU' ? 'Заряды восстановления L4+' : 'L4+ recovery charges', <Battery />, 1, 2, 'text-sky-400', 2, 0.47)}
+                    {renderNode('turboRecharge', language === 'RU' ? 'Турбо' : 'Turbo', language === 'RU' ? 'Кулдаун энергетики L4+' : 'L4+ recharge cooldown', <Zap />, 5, 3, 'text-lime-400', 1, 0.5)}
+                    {renderNode('entropyResistance', language === 'RU' ? 'Стабильность' : 'Stability', language === 'RU' ? 'Снижение роста энтропии (%)' : 'Entropy growth reduction (%)', <Infinity />, 10, 2, 'text-rose-400', 3, 0.53)}
+                    {renderNode('restorationMaster', language === 'RU' ? 'Ремонт' : 'Repair', language === 'RU' ? 'Шанс восстановления Бездны (%)' : 'Void structural repair chance (%)', <Wrench />, 10, 2, 'text-amber-500', 3, 0.56)}
                 </div>
             </motion.div>
         </motion.div>

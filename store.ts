@@ -56,6 +56,11 @@ export const useGameStore = create<GameStore>()(
       lastVisualEvent: undefined,
       isCampaignLoading: false,
       loadingLevelId: null,
+      isStoryTutorialActive: (() => {
+        try {
+            return localStorage.getItem('hexopol_story_tutorial_completed') !== 'true';
+        } catch { return true; }
+      })(),
 
       // --- ASSEMBLE COMBINED ACTIONS VIA SLICES ---
       ...createAuthSlice(set as any, get as any),

@@ -57,9 +57,11 @@ export interface GameStore extends GameState {
   isCampaignLoading: boolean;
   loadingLevelId: string | null;
   hasHydrated: boolean;
+  isStoryTutorialActive?: boolean;
   
   // UI & System
   setUIState: (state: UIState) => void;
+  setIsStoryTutorialActive: (active: boolean) => void;
   setDeviceType: (type: DeviceType) => void;
   setLanguage: (lang: 'EN' | 'RU') => void;
   setCampaignMode: (mode: 'STORY' | 'LEVELS') => void;

@@ -15,6 +15,8 @@ import { NebulaBackground, MiniFigureBlueprint, StoryHex } from './StoryBuilderC
 
 
 
+import { StoryTutorial } from './hud/StoryTutorial.tsx';
+
 const drawInventoryHex = (lvl: number, theme: any) => {
     return (
         <svg viewBox="0 0 40 46" className="w-10 h-11 drop-shadow-[0_2.5px_5px_rgba(0,0,0,0.65)] select-none pointer-events-none transition-all duration-300">
@@ -80,17 +82,10 @@ const StoryBuilderView: React.FC = () => {
     const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 30 });
     const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 1.55 : 2.15);
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
-    const [isDimmedTutorialActive, setIsDimmedTutorialActive] = useState(() => {
-        try {
-            return localStorage.getItem('hexopol_tutorial_dismissed_v4') !== 'true';
-        } catch {
-            return true;
-        }
-    });
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [tabletTab, setTabletTab] = useState<'blueprint' | 'diagnostics' | 'rules'>('blueprint');
     const isUiHidden = false;
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showUpgrades, setShowUpgrades] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -291,6 +286,24 @@ const StoryBuilderView: React.FC = () => {
     const hasAnyHex = useMemo(() => {
         return Object.values(storyMap).some(lvl => lvl !== undefined && lvl >= 0);
     }, [storyMap]);
+
+    const autoTutorialTriggeredRef = useRef(false);
+
+    useEffect(() => {
+        if (!hasAnyHex && unlockedFigureIndex <= 3) {
+            if (!autoTutorialTriggeredRef.current) {
+                const timer = setTimeout(() => {
+                    if ((window as any).startStoryTutorial) {
+                        (window as any).startStoryTutorial();
+                        autoTutorialTriggeredRef.current = true;
+                    }
+                }, 500);
+                return () => clearTimeout(timer);
+            }
+        } else if (hasAnyHex) {
+            autoTutorialTriggeredRef.current = false;
+        }
+    }, [hasAnyHex, unlockedFigureIndex]);
 
     // Direct placement eligibility calculation
     const isEligibleForPlacement = useCallback((q: number, r: number, forceLevel?: number) => {
@@ -586,7 +599,7 @@ const StoryBuilderView: React.FC = () => {
     };
 
     return (
-        <div ref={containerRef} className="absolute inset-0 bg-[#020617] flex flex-col font-sans overflow-hidden">
+        <div id="tutorial-hex-board" ref={containerRef} className="absolute inset-0 bg-[#020617] flex flex-col font-sans overflow-hidden">
             {/* FLOATING +1 SP NOTIFICATIONS CONTAINER FLOATING OVER THE COMPLETED SHAPE */}
             <div className="absolute inset-0 pointer-events-none z-[100] select-none overflow-hidden">
                 <AnimatePresence>
@@ -861,6 +874,7 @@ const StoryBuilderView: React.FC = () => {
                     <div className="flex items-center gap-2 h-full">
                         {/* Floating SP Island inside top header bar */}
                         <button 
+                            id="tutorial-sp-badge"
                             onClick={() => { playUiSound('CLICK'); setShowUpgrades(true); }}
                             className="h-10 px-3 bg-slate-900/95 border border-indigo-500/30 hover:border-indigo-400 hover:bg-indigo-950/40 rounded-xl flex items-center gap-1.5 shadow-md text-indigo-300 text-xs font-semibold cursor-pointer select-none backdrop-blur-md transition-all active:scale-95 duration-200"
                         >
@@ -890,11 +904,11 @@ const StoryBuilderView: React.FC = () => {
                                         className="absolute top-full right-0 mt-2 p-3 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2 min-w-[200px] z-[60] origin-top-right"
                                     > 
                                         <button 
-                                            onClick={() => { playUiSound('CLICK'); setIsHelpOpen(true); setIsSettingsOpen(false); }}
-                                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all w-full text-left font-black uppercase text-[9px] tracking-[0.1em]"
+                                            onClick={() => { playUiSound('CLICK'); (window as any).startStoryTutorial && (window as any).startStoryTutorial(); setIsSettingsOpen(false); }}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all w-full text-left font-black uppercase text-[9px] tracking-[0.1em]"
                                         >
                                             <HelpCircle className="w-4 h-4 shrink-0" />
-                                            <span>{language === 'RU' ? 'Справка Гексагона' : 'Hexagon Guide'}</span>
+                                            <span>{language === 'RU' ? 'ОБУЧЕНИЕ ГЕКСАГОН' : 'HEXAGON TUTORIAL'}</span>
                                         </button>
 
                                         <button 
@@ -1209,6 +1223,7 @@ const StoryBuilderView: React.FC = () => {
                     {/* "Levels" (Уровни) button precisely in the empty region specified */}
                     {!isUiHidden && (
                         <motion.button
+                            id="tutorial-levels-btn"
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             onClick={() => { playUiSound('CLICK'); setUIState('CAMPAIGN_MAP'); }}
@@ -1230,7 +1245,7 @@ const StoryBuilderView: React.FC = () => {
                         transition={{ duration: 0.3 }}
                         className="w-full md:max-w-md lg:max-w-xl flex flex-col items-stretch pointer-events-auto"
                     >
-                        <div className="w-full bg-[#090d1f]/85 border border-white/5 rounded-2xl p-2 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                        <div id="tutorial-shape-list" className="w-full bg-[#090d1f]/85 border border-white/5 rounded-2xl p-2 backdrop-blur-xl shadow-2xl relative overflow-hidden">
                             <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500/20 to-transparent" />
                             
                             {/* Carousel Wrapper */}
@@ -1400,8 +1415,8 @@ const StoryBuilderView: React.FC = () => {
                                     </h4>
                                     <p className="text-[11px] text-slate-400 leading-normal">
                                         {language === 'RU'
-                                            ? 'Вам изначально дается 10 плиток почвы 0-го уровня. При размещении новых плиток баланс автоматически пополняется до 10 штук, так что у вас всегда есть материал!'
-                                            : 'You receive 10 level 0 tiles initially. Placement consumes a block, though the matrix maintains your backup buffer at 10 tiles, ensuring you never run out!'}
+                                            ? 'Вам изначально дается 10 плиток почвы 0-го уровня. При размещении новых плиток баланс автоматически пополняется до 10 штук, так что у вас всегда есть материал! Дополнительные плитки добываются через прохождение уровней в режиме Кампании.'
+                                            : 'You receive 10 level 0 tiles initially. Placement consumes a block, though the matrix maintains your backup buffer at 10 tiles, ensuring you never run out! Additional supply tiles are gathered by beating Simulation Campaign levels.'}
                                     </p>
                                 </div>
 
@@ -1509,53 +1524,7 @@ const StoryBuilderView: React.FC = () => {
                 })()}
             </AnimatePresence>
 
-            {/* TUTORIAL HIGH-CONTRAST TEMPORARY DIMMING GUIDE (No borders, high-contrast text top of screen) */}
-            <AnimatePresence>
-                {isDimmedTutorialActive && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => {
-                            playUiSound('CLICK');
-                            setIsDimmedTutorialActive(false);
-                            try {
-                                localStorage.setItem('hexopol_tutorial_dismissed_v4', 'true');
-                            } catch {}
-                        }}
-                        className="absolute inset-0 z-[200] bg-black/75 backdrop-blur-[4px] flex flex-col justify-start items-center p-6 text-center cursor-pointer pointer-events-auto animate-fade-in"
-                    >
-                        {/* High-contrast text positioned at the top of the screen */}
-                        <div className="mt-[12vh] max-w-xl flex flex-col gap-4 select-none pointer-events-none px-4">
-                            <span className="text-emerald-400 font-mono text-[9px] uppercase tracking-[0.3em] font-black animate-pulse">
-                                {language === 'RU' ? '● ИНТУИТИВНОЕ РУКОВОДСТВО' : '● INTUITIVE GUIDANCE'}
-                            </span>
-                            
-                            <h2 className="text-xl md:text-3xl font-sans font-black text-white leading-tight tracking-wider uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
-                                {language === 'RU' 
-                                    ? 'НАЖМИТЕ НА СВЕТЯЩИЙСЯ ЗЕЛЕНЫЙ ГЕКСАГОН В ЦЕНТРЕ ПОЛЯ' 
-                                    : 'TAP THE GLOWING GREEN HEXAGON IN THE CENTER OF THE FIELD'}
-                            </h2>
-                            
-                            <p className="text-xs md:text-sm font-mono text-slate-300 font-medium leading-relaxed max-w-lg mx-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                                {language === 'RU'
-                                    ? 'Это ваша базовая точка отсчета. Коснитесь ее, затем выберите элемент уровня L0 на нижней панели и нажмите "УСТАНОВИТЬ" (UPGRADE), либо собирайте конструкцию согласно чертежу.'
-                                    : 'This is your basic origin point. Tap it, then select a level L0 element from the bottom array and click "UPGRADE" to deploy, or build according to the targeted blueprints.'}
-                            </p>
-
-                            <div className="w-12 h-px bg-white/20 mx-auto my-3" />
-
-                            <span className="text-[10px] md:text-xs uppercase font-black tracking-widest text-[#10b981] animate-pulse">
-                                {language === 'RU' 
-                                    ? '[ КОСНИТЕСЬ ЭКРАНА В ЛЮБОМ МЕСТЕ, ЧТОБЫ НАЧАТЬ ИГРАТЬ ]' 
-                                    : '[ TOUCH ANYWHERE ON THE SCREEN TO START PLAYING ]'}
-                            </span>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-
+            <StoryTutorial />
         </div>
     );
 };

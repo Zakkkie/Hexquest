@@ -1562,7 +1562,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         <div className="flex items-center gap-3 border-b border-slate-800 pb-3 relative z-20">
                             <div className="p-2 bg-indigo-950/50 rounded-xl border border-indigo-900/50 shadow-inner"><Info className="w-6 h-6 text-indigo-500" /></div>
                             <div>
-                                <h3 className="text-xl font-black text-white uppercase tracking-tighter leading-none">Подсказка Обелиска</h3>
+                                <h3 className="text-xl font-black text-white uppercase tracking-tighter leading-none">{language === 'RU' ? 'Подсказка Обелиска' : 'Obelisk Hint'}</h3>
                             </div>
                         </div>
 
