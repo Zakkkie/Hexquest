@@ -280,6 +280,7 @@ const MainMenu: React.FC = () => {
   const [selectedBody, setSelectedBody] = useState(0);
   
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isGuestRegistration, setIsGuestRegistration] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{type: 'ABANDON_CAMPAIGN' | 'ABANDON_NEW_GAME' | 'LOGOUT' | 'RESET_PROGRESS_ALL', payload?: any} | null>(null);
   
 
@@ -328,6 +329,11 @@ const MainMenu: React.FC = () => {
 
   const startCampaignWithMode = (mode: 'STORY' | 'LEVELS') => {
     playUiSound('CLICK');
+    if (!user) {
+        setAuthMode('LOGIN');
+        setErrorMessage(null);
+        return;
+    }
     setCampaignMode(mode);
     if (hasActiveSession) {
         setConfirmAction({ type: 'ABANDON_CAMPAIGN', payload: mode });
@@ -338,6 +344,11 @@ const MainMenu: React.FC = () => {
 
   const handleNewGameClick = () => {
     playUiSound('CLICK');
+    if (!user) {
+        setAuthMode('LOGIN');
+        setErrorMessage(null);
+        return;
+    }
     if (hasActiveSession) {
       setConfirmAction({ type: 'ABANDON_NEW_GAME' });
     } else {
@@ -432,10 +443,7 @@ const MainMenu: React.FC = () => {
 
     const safeColor = selectedColor || AVATAR_COLORS[0];
 
-    if (authMode === 'GUEST') {
-      loginAsGuest(inputName, safeColor, selectedHead, selectedBody);
-      setAuthMode(null);
-    } else if (authMode === 'LOGIN') {
+    if (authMode === 'LOGIN') {
       if (!inputPassword.trim()) {
         setErrorMessage("Password is required.");
         return;
@@ -447,15 +455,20 @@ const MainMenu: React.FC = () => {
         setErrorMessage(res.message || "Login failed.");
       }
     } else if (authMode === 'REGISTER') {
-      if (!inputPassword.trim()) {
-        setErrorMessage("Password is required.");
-        return;
-      }
-      const res = registerUser(inputName, inputPassword, safeColor, selectedHead, selectedBody);
-      if (res.success) {
+      if (isGuestRegistration) {
+        loginAsGuest(inputName, safeColor, selectedHead, selectedBody);
         setAuthMode(null);
       } else {
-        setErrorMessage(res.message || "Registration failed.");
+        if (!inputPassword.trim()) {
+          setErrorMessage("Password is required.");
+          return;
+        }
+        const res = registerUser(inputName, inputPassword, safeColor, selectedHead, selectedBody);
+        if (res.success) {
+          setAuthMode(null);
+        } else {
+          setErrorMessage(res.message || "Registration failed.");
+        }
       }
     }
   };
@@ -764,17 +777,17 @@ const MainMenu: React.FC = () => {
               <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
             {/* ... Existing Auth Modal Content (kept as is) ... */}
             <div className="grid grid-cols-2 border-b border-indigo-500/20 bg-slate-900/50">
-                <button onClick={() => { setAuthMode('LOGIN'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
-                <button onClick={() => { setAuthMode('REGISTER'); playUiSound('CLICK'); }} className={`py-4 text-xs font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_REGISTER}</button>
+                <button onClick={() => { setAuthMode('LOGIN'); setErrorMessage(null); playUiSound('CLICK'); }} className={`py-4 text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
+                <button onClick={() => { setAuthMode('REGISTER'); setErrorMessage(null); playUiSound('CLICK'); }} className={`py-4 text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_REGISTER}</button>
             </div>
             <div className="p-4 md:p-8 flex flex-col gap-4 md:gap-5 overflow-y-auto no-scrollbar max-h-[80vh]">
               <div className="flex items-center gap-2 md:gap-3 mb-1">
-                  <div className={`p-2.5 md:p-3 rounded-xl border shadow-lg ${authMode === 'GUEST' ? 'bg-slate-800 border-slate-600' : (authMode === 'LOGIN' ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400')}`}>
-                      {authMode === 'GUEST' ? <Ghost className="w-5 h-5 md:w-6 md:h-6 text-slate-300" /> : (authMode === 'LOGIN' ? <LogIn className="w-5 h-5 md:w-6 md:h-6" /> : <UserPlus className="w-5 h-5 md:w-6 md:h-6" />)}
+                  <div className={`p-2.5 md:p-3 rounded-xl border shadow-lg ${authMode === 'REGISTER' && isGuestRegistration ? 'bg-slate-800 border-slate-600' : (authMode === 'LOGIN' ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400')}`}>
+                      {authMode === 'REGISTER' && isGuestRegistration ? <Ghost className="w-5 h-5 md:w-6 md:h-6 text-slate-300" /> : (authMode === 'LOGIN' ? <LogIn className="w-5 h-5 md:w-6 md:h-6" /> : <UserPlus className="w-5 h-5 md:w-6 md:h-6" />)}
                   </div>
                   <div>
-                      <h2 className="text-lg md:text-xl font-bold text-white leading-none break-words whitespace-pre-wrap">{authMode === 'GUEST' ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
-                      <p className="text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider break-words whitespace-pre-wrap">{authMode === 'GUEST' ? t.MODAL_GUEST_SUBTITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_SUBTITLE : t.MODAL_REGISTER_SUBTITLE)}</p>
+                      <h2 className="text-lg md:text-xl font-bold text-white leading-none break-words whitespace-pre-wrap">{authMode === 'REGISTER' && isGuestRegistration ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
+                      <p className="text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider break-words whitespace-pre-wrap">{authMode === 'REGISTER' && isGuestRegistration ? t.MODAL_GUEST_SUBTITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_SUBTITLE : t.MODAL_REGISTER_SUBTITLE)}</p>
                   </div>
               </div>
               <AnimatePresence>
@@ -790,7 +803,7 @@ const MainMenu: React.FC = () => {
               )}
               </AnimatePresence>
               <div className="space-y-3 md:space-y-4">
-                  {(authMode === 'REGISTER' || authMode === 'GUEST') && (
+                  {authMode === 'REGISTER' && (
                       <div className="bg-slate-950/50 rounded-2xl border border-slate-800 p-3 md:p-4 flex flex-col items-center gap-3 md:gap-4">
                           <span className="text-[8px] md:text-[9px] font-bold uppercase text-slate-500 tracking-widest w-full text-center break-words whitespace-pre-wrap">{t.UNIT_CONFIG}</span>
                           <div className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-slate-900 rounded-full border-2 border-slate-800 shadow-inner">
@@ -818,6 +831,20 @@ const MainMenu: React.FC = () => {
                                   </div>
                               </div>
                           </div>
+                          <button
+                              onClick={() => { setIsGuestRegistration(!isGuestRegistration); playUiSound('CLICK'); setErrorMessage(null); }}
+                              className="mt-2 w-full py-2 px-3 border border-slate-800 rounded-lg flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+                          >
+                              <div className="flex items-center gap-2">
+                                  <Ghost className={`w-4 h-4 ${isGuestRegistration ? 'text-emerald-400' : 'text-slate-500'}`} />
+                                  <span className={`text-[9px] uppercase tracking-wider font-bold ${isGuestRegistration ? 'text-emerald-400' : 'text-slate-400'}`}>
+                                      {isGuestRegistration ? t.BTN_GUEST : t.BYPASS_SECURITY}
+                                  </span>
+                              </div>
+                              <div className={`w-8 h-4 rounded-full border border-slate-700 p-0.5 flex ${isGuestRegistration ? 'bg-emerald-500/20 justify-end border-emerald-500/50' : 'bg-slate-900 justify-start'} transition-all`}>
+                                  <div className={`w-2.5 h-2.5 rounded-full ${isGuestRegistration ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                              </div>
+                          </button>
                       </div>
                   )}
                   <div>
@@ -826,33 +853,26 @@ const MainMenu: React.FC = () => {
                           <input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder={t.INPUT_NAME_PH} className="w-full bg-slate-950/80 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all font-mono text-sm shadow-inner group-hover:border-slate-600" maxLength={16} />
                       </div>
                   </div>
-                  {authMode !== 'GUEST' && (
+                  {authMode === 'LOGIN' || (authMode === 'REGISTER' && !isGuestRegistration) ? (
                       <div>
                           <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 block flex items-center gap-1.5"><Lock className="w-3 h-3 text-indigo-400" /> {t.INPUT_PASS}</label>
                           <div className="relative group">
                               <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder={t.INPUT_PASS_PH} className="w-full bg-slate-950/80 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all font-mono text-sm shadow-inner group-hover:border-slate-600" />
                           </div>
                       </div>
-                  )}
+                  ) : null}
                   <motion.button 
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleAuthSubmit} 
-                      className={`w-full py-4 mt-4 font-black rounded-2xl uppercase tracking-[0.15em] shadow-lg transition-all flex items-center justify-center gap-2 relative overflow-hidden group ${authMode === 'GUEST' ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-600/50 shadow-[0_4px_20px_rgba(0,0,0,0.4)]' : (authMode === 'LOGIN' ? 'bg-indigo-600/90 text-white shadow-[0_4px_25px_rgba(99,102,241,0.5)] border-t border-indigo-400/50 hover:bg-indigo-500 backdrop-blur-md' : 'bg-emerald-600/90 text-white shadow-[0_4px_25px_rgba(16,185,129,0.5)] border-t border-emerald-400/50 hover:bg-emerald-500 backdrop-blur-md')}`}
+                      className={`w-full py-4 mt-4 font-black rounded-2xl uppercase tracking-[0.15em] shadow-lg transition-all flex items-center justify-center gap-2 relative overflow-hidden group ${(authMode === 'REGISTER' && isGuestRegistration) ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-600/50 shadow-[0_4px_20px_rgba(0,0,0,0.4)]' : (authMode === 'LOGIN' ? 'bg-indigo-600/90 text-white shadow-[0_4px_25px_rgba(99,102,241,0.5)] border-t border-indigo-400/50 hover:bg-indigo-500 backdrop-blur-md' : 'bg-emerald-600/90 text-white shadow-[0_4px_25px_rgba(16,185,129,0.5)] border-t border-emerald-400/50 hover:bg-emerald-500 backdrop-blur-md')}`}
                   >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                      <span className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{authMode === 'GUEST' ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}</span> <ArrowRight className="w-4 h-4 relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
+                      <span className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{(authMode === 'REGISTER' && isGuestRegistration) ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}</span> <ArrowRight className="w-4 h-4 relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
                   </motion.button>
               </div>
-              <div className="border-t border-slate-800/80 pt-5 flex justify-center">
-                  {authMode === 'GUEST' ? (
-                      <button onClick={() => setAuthMode('LOGIN')} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-indigo-400 transition-colors">{t.BTN_BACK_LOGIN}</button>
-                  ) : (
-                      <button onClick={() => setAuthMode('GUEST')} className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-600 hover:text-slate-300 transition-colors flex items-center gap-2 group"><Ghost className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition-colors" /> {t.BYPASS_SECURITY}</button>
-                  )}
-              </div>
             </div>
-            <button onClick={() => setAuthMode(null)} className="absolute top-3 right-3 p-2 text-slate-600 hover:text-white transition-colors rounded-full hover:bg-slate-800"><X className="w-5 h-5" /></button>
+            <button onClick={() => { setAuthMode(null); setErrorMessage(null); }} className="absolute top-3 right-3 p-2 text-slate-600 hover:text-white transition-colors rounded-full hover:bg-slate-800"><X className="w-5 h-5" /></button>
           </motion.div>
         </motion.div>
       

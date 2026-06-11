@@ -711,8 +711,12 @@ const StoryBuilderView: React.FC = () => {
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
-                    onClick={() => setDestroyButtonCell(null)}
-                    onTap={() => setDestroyButtonCell(null)}
+                    onClick={() => {
+                        setDestroyButtonCell(null);
+                    }}
+                    onTap={() => {
+                        setDestroyButtonCell(null);
+                    }}
                 >
                     <Layer listening={false}>
                         <NebulaBackground width={stageSize.width} height={stageSize.height} />
@@ -881,6 +885,7 @@ const StoryBuilderView: React.FC = () => {
                     {/* INTERACTIVE TASK CAPSULE (Squeezed between back and settings) */}
                     <div className="flex-1 mx-2 max-w-[240px] sm:max-w-xs h-11 py-0.5">
                         <div 
+                            id="tutorial-blueprint-tablet"
                             onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(!isNarrativeCollapsed); }}
                             className="bg-slate-900/95 border border-indigo-500/30 hover:border-indigo-500/50 rounded-xl h-full shadow-lg backdrop-blur-md flex items-center justify-between pl-1.5 pr-3 relative cursor-pointer hover:bg-slate-800/90 transition-all duration-250 select-none overflow-hidden"
                         >

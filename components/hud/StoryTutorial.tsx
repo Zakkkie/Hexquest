@@ -23,8 +23,16 @@ const TRANSLATE = {
             skipPos: "bottom" 
         },
         { 
+            targetId: "tutorial-blueprint-tablet", 
+            text: "Шаг 3. Анализ Чертежа", 
+            desc: "Вам необходимо собрать правильную фигуру на игровом поле. Обратите внимание на инженерный планшет сборки в центре (нажмите на капсулу посередине сверху чтобы его развернуть). Как только вы повторите схему из планшета на поле — модель будет засчитана!",
+            position: "below", 
+            align: "center", 
+            skipPos: "bottom" 
+        },
+        { 
             targetId: "tutorial-sp-badge", 
-            text: "Шаг 3. Очки Навыков (SP) и Ранг", 
+            text: "Шаг 4. Очки Навыков (SP) и Ранг", 
             desc: "Каждая собранная фигура даёт +1 SP. Нажмите на фиолетовый индикатор вверху, чтобы улучшить Ранг инженера и открыть плиты с высокими цифрами и сложными геометриями!",
             position: "below", 
             align: "right", 
@@ -32,7 +40,7 @@ const TRANSLATE = {
         },
         { 
             targetId: "tutorial-levels-btn", 
-            text: "Шаг 4. Смена симуляций", 
+            text: "Шаг 5. Смена симуляций", 
             desc: "Нажмите эту кнопку, чтобы вернуться на главную карту космических симуляций Nebula для выбора новых испытаний.",
             position: "above", 
             align: "center", 
@@ -57,8 +65,16 @@ const TRANSLATE = {
             skipPos: "bottom" 
         },
         { 
+            targetId: "tutorial-blueprint-tablet", 
+            text: "Step 3. Blueprint Analysis", 
+            desc: "You need to build the correct figure on the field. Check the engineering blueprint tablet in the center (click the top-center capsule to expand it). Once you replicate the blueprint's pattern on the board, the shape will be completed!",
+            position: "below", 
+            align: "center", 
+            skipPos: "bottom" 
+        },
+        { 
             targetId: "tutorial-sp-badge", 
-            text: "Step 3. Engineering Skill Tree (SP)", 
+            text: "Step 4. Engineering Skill Tree (SP)", 
             desc: "Solving patterns grants +1 Skill Point (SP). Click this glowing token to upgrade your Engineering Rank and access blocks with higher digits and complex shapes.",
             position: "below", 
             align: "right", 
@@ -66,7 +82,7 @@ const TRANSLATE = {
         },
         { 
             targetId: "tutorial-levels-btn", 
-            text: "Step 4. Change Simulation", 
+            text: "Step 5. Change Simulation", 
             desc: "Press this navigation deck button to return to the simulation levels map to explore space zones and select challenges.",
             position: "above", 
             align: "center", 
@@ -425,6 +441,51 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
 
     if (step === 2) {
         return (
+            <div className="w-full bg-slate-950/80 rounded-xl border border-white/5 relative p-2 sm:p-2.5 flex flex-col items-center justify-center overflow-hidden font-mono text-[9px] select-none h-24 sm:h-28 md:h-32 my-1">
+                <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
+                    {isRu ? 'ПРИМЕРЫ СХЕМ (ЧЕРТЕЖЕЙ)' : 'BLUEPRINT EXAMPLES'}
+                </div>
+                
+                <div className="flex items-center justify-center gap-4 sm:gap-6 w-full flex-1 mt-1">
+                    {/* Example Figure 1 (Small Line) */}
+                    <div className="flex flex-col items-center">
+                        <div className="relative flex items-center justify-center w-14 h-14 bg-slate-900 border border-slate-700 rounded-lg shadow-inner">
+                            <div className="absolute top-1.5 left-2"><TutorialHexagon level={0} size={9} isSelected={true}/></div>
+                            <div className="absolute top-1.5 right-2"><TutorialHexagon level={0} size={9} isSelected={true}/></div>
+                            <div className="absolute bottom-2"><TutorialHexagon level={0} size={9} isSelected={true}/></div>
+                        </div>
+                        <span className="text-[5.5px] sm:text-[6px] text-pink-400 font-black mt-1 uppercase tracking-widest">
+                            {isRu ? 'ТРЕУГОЛЬНИК' : 'TRIANGLE'}
+                        </span>
+                    </div>
+
+                    <motion.div 
+                        animate={{ opacity: [0.3, 1, 0.3] }} 
+                        transition={{ repeat: Infinity, duration: 2 }}
+                    >
+                        <span className="text-slate-600 font-black">---&gt;</span>
+                    </motion.div>
+
+                    {/* Example Figure 2 (Rhombus/Diamond) */}
+                    <div className="flex flex-col items-center">
+                        <div className="relative flex items-center justify-center w-14 h-14 bg-slate-900 border border-slate-700 rounded-lg shadow-inner">
+                            <div className="absolute top-1"><TutorialHexagon level={0} size={8} isSelected={true}/></div>
+                            <div className="absolute left-1.5 top-5"><TutorialHexagon level={0} size={8} isSelected={true}/></div>
+                            <div className="absolute right-1.5 top-5"><TutorialHexagon level={0} size={8} isSelected={true}/></div>
+                            <div className="absolute bottom-1"><TutorialHexagon level={0} size={8} isSelected={true}/></div>
+                        </div>
+                        <span className="text-[5.5px] sm:text-[6px] text-indigo-400 font-black mt-1 uppercase tracking-widest">
+                            {isRu ? 'РОМБ' : 'RHOMBUS'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 3) {
+        return (
             <div className="w-full bg-slate-950/80 rounded-xl border border-white/5 relative p-2 sm:p-2.5 flex flex-col items-center justify-center overflow-hidden font-mono text-[9px] select-none h-20 sm:h-24 md:h-28 my-1">
                 <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 sm:mb-1.5 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px]">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
@@ -469,7 +530,7 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
         );
     }
 
-    if (step === 3) {
+    if (step === 4) {
         return (
             <div className="w-full bg-slate-950/80 rounded-xl border border-white/5 relative p-2 sm:p-2.5 flex flex-col items-center justify-center overflow-hidden font-mono text-[9px] select-none h-20 sm:h-24 md:h-28 my-1">
                 <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 sm:mb-1.5 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px]">
