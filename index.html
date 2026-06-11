@@ -88,6 +88,21 @@
         animation: scan 8s linear infinite;
       }
 
+      /* Premium border-glow animation */
+      @keyframes border-glow-anim {
+        0%, 100% {
+          border-color: rgba(99, 102, 241, 0.35);
+          box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.95), 0 0 12px rgba(99, 102, 241, 0.25), inset 0 0 10px rgba(99, 102, 241, 0.15);
+        }
+        50% {
+          border-color: rgba(52, 211, 153, 0.75);
+          box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.95), 0 0 24px rgba(52, 211, 153, 0.5), inset 0 0 14px rgba(52, 211, 153, 0.3);
+        }
+      }
+      .animate-border-glow-premium {
+        animation: border-glow-anim 4.5s infinite ease-in-out;
+      }
+
     </style>
   </head>
   <body>

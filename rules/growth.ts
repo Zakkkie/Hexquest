@@ -82,8 +82,8 @@ export function checkDigCondition(
           if (!neighborHex || neighborHex.structureType === 'VOID') return false;
           
           const neighborLevel = neighborHex.currentLevel ?? 0;
-          // Reverse Staircase Rule: Neighbors must be at or below CurrentLevel
-          return neighborLevel <= currentLevel;
+          // Reverse Staircase Rule: Neighbors must be at exactly CurrentLevel
+          return neighborLevel === currentLevel;
       });
 
       if (deepNeighbors.length < 2) {

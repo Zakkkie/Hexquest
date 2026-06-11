@@ -525,6 +525,17 @@ const StoryBuilderView: React.FC = () => {
         const touch1 = touches[0];
         const touch2 = touches[1];
         if (touch1 && touch2) {
+            const rawEvt = e.evt || e;
+            if (rawEvt && typeof rawEvt.preventDefault === 'function') {
+                rawEvt.preventDefault();
+            }
+            try {
+                const layer = typeof e.target?.getLayer === 'function' ? e.target.getLayer() : null;
+                if (layer) {
+                    layer.stopDrag();
+                }
+            } catch (err) {}
+
             const dist = Math.sqrt(
                 Math.pow(touch2.clientX - touch1.clientX, 2) +
                 Math.pow(touch2.clientY - touch1.clientY, 2)
@@ -547,6 +558,14 @@ const StoryBuilderView: React.FC = () => {
             }
             isPanning.current = true;
             setDestroyButtonCell(null);
+
+            try {
+                const layer = typeof e.target?.getLayer === 'function' ? e.target.getLayer() : null;
+                if (layer) {
+                    layer.stopDrag();
+                }
+            } catch (err) {}
+
             const dist = Math.sqrt(
                 Math.pow(touch2.clientX - touch1.clientX, 2) +
                 Math.pow(touch2.clientY - touch1.clientY, 2)
@@ -1245,7 +1264,7 @@ const StoryBuilderView: React.FC = () => {
                         transition={{ duration: 0.3 }}
                         className="w-full md:max-w-md lg:max-w-xl flex flex-col items-stretch pointer-events-auto"
                     >
-                        <div id="tutorial-shape-list" className="w-full bg-[#090d1f]/85 border border-white/5 rounded-2xl p-2 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                        <div id="tutorial-shape-list" className="w-full bg-slate-950/45 border rounded-2xl p-2 backdrop-blur-xl animate-border-glow-premium relative overflow-hidden transition-all duration-300">
                             <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500/20 to-transparent" />
                             
                             {/* Carousel Wrapper */}
@@ -1254,6 +1273,10 @@ const StoryBuilderView: React.FC = () => {
                                 {/* Left Scroll Command */}
                                 <button
                                     onClick={handleScrollLeft}
+                                    style={{
+                                        paddingLeft: '0px',
+                                        marginLeft: '-8px'
+                                    }}
                                     className="absolute left-0 z-20 w-6 h-6 rounded-lg bg-[#0c132c]/90 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-indigo-600 transition-all shadow-md active:scale-95 cursor-pointer"
                                     title={language === 'RU' ? 'Назад' : 'Prev'}
                                 >
@@ -1297,6 +1320,10 @@ const StoryBuilderView: React.FC = () => {
                                 {/* Right Scroll Command */}
                                 <button
                                     onClick={handleScrollRight}
+                                    style={{
+                                        marginRight: '-8px',
+                                        marginLeft: '0px'
+                                    }}
                                     className="absolute right-0 z-20 w-6 h-6 rounded-lg bg-[#0c132c]/90 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-indigo-600 transition-all shadow-md active:scale-95 cursor-pointer"
                                     title={language === 'RU' ? 'Вперед' : 'Next'}
                                 >
