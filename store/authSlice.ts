@@ -42,7 +42,8 @@ export function saveProfileProgress(nickname: string, state: any) {
     minedInSessionHexes: state.minedInSessionHexes,
     totalMinedMaterial: state.totalMinedMaterial,
     storyMap: state.storyMap,
-    campaignUpgrades: state.campaignUpgrades
+    campaignUpgrades: state.campaignUpgrades,
+    claimedLevelRewards: state.claimedLevelRewards
   };
   try {
     localStorage.setItem(`hexquest_progress_${nickname.toLowerCase()}`, JSON.stringify(progress));
@@ -65,7 +66,8 @@ export function loadProfileProgress(nickname: string) {
         minedInSessionHexes: parsed.minedInSessionHexes || { ...INITIAL_PLAYGROUND_SEED },
         totalMinedMaterial: typeof parsed.totalMinedMaterial === 'number' ? parsed.totalMinedMaterial : 0,
         storyMap: parsed.storyMap || {},
-        campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES, ...parsed.campaignUpgrades }
+        campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES, ...parsed.campaignUpgrades },
+        claimedLevelRewards: Array.isArray(parsed.claimedLevelRewards) ? parsed.claimedLevelRewards : []
       };
     }
   } catch (e) {

@@ -1,16 +1,16 @@
 import { GameState, UIState, WinCondition, SessionState, DeviceType, Item, CampaignUpgrades } from '../types.ts';
 
 export const INITIAL_PLAYGROUND_SEED: Record<number, number> = {
-  0: 30,
-  1: 15,
-  2: 15,
-  3: 10,
-  4: 10,
-  5: 8,
-  6: 8,
-  7: 6,
-  8: 5,
-  9: 5
+  0: 13,
+  1: 9,
+  2: 4,
+  3: 1,
+  4: 0,
+  5: 0,
+  6: 0,
+  7: 0,
+  8: 0,
+  9: 0
 };
 
 export const DEFAULT_CAMPAIGN_UPGRADES: CampaignUpgrades = {
@@ -42,7 +42,8 @@ export const createDefaultProgress = () => ({
   minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
   totalMinedMaterial: 0,
   storyMap: {},
-  campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES }
+  campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES },
+  claimedLevelRewards: [] as string[]
 });
 
 export interface AuthResponse {
@@ -100,6 +101,7 @@ export interface GameStore extends GameState {
   addCollectedHexes: (hexes: Record<number, number>) => void;
   placeStoryHex: (q: number, r: number, level: number) => void;
   clearStoryMap: () => void;
+  claimLevelReward: (levelId: string) => void;
 
   // Interactions
   openVoidDialog: (q: number, r: number) => void;

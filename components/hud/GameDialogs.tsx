@@ -177,17 +177,33 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     ]);
 
     const [victoryRewards, setVictoryRewards] = useState<{l0: number, l1: number, l2: number} | null>(null);
+    const [wasRewardPreviouslyClaimed, setWasRewardPreviouslyClaimed] = useState(false);
+
+    const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards) || [];
+    const claimLevelReward = useGameStore(state => state.claimLevelReward);
 
     useEffect(() => {
         if (gameStatus === 'VICTORY' && !victoryRewards) {
-            const l0 = Math.floor(Math.random() * 11) + 5;
-            const l1 = Math.floor(Math.random() * 6) + 5;
-            const l2 = Math.floor(Math.random() * 5) + 1;
-            setVictoryRewards({ l0, l1, l2 });
-            addCollectedHexes({ 0: l0, 1: l1, 2: l2 });
-            addMinedHexes({ 0: l0, 1: l1, 2: l2 });
+            const levelId = session?.activeLevelConfig?.id;
+            const isAlreadyClaimed = levelId ? claimedLevelRewards.includes(levelId) : false;
+            
+            setWasRewardPreviouslyClaimed(isAlreadyClaimed);
+
+            if (isAlreadyClaimed) {
+                setVictoryRewards({ l0: 0, l1: 0, l2: 0 });
+            } else {
+                const l0 = Math.floor(Math.random() * 11) + 5;
+                const l1 = Math.floor(Math.random() * 6) + 5;
+                const l2 = Math.floor(Math.random() * 5) + 1;
+                setVictoryRewards({ l0, l1, l2 });
+                addCollectedHexes({ 0: l0, 1: l1, 2: l2 });
+                addMinedHexes({ 0: l0, 1: l1, 2: l2 });
+                if (levelId) {
+                    claimLevelReward(levelId);
+                }
+            }
         }
-    }, [gameStatus, victoryRewards, addCollectedHexes, addMinedHexes]);
+    }, [gameStatus, victoryRewards, addCollectedHexes, addMinedHexes, claimedLevelRewards, session?.activeLevelConfig?.id, claimLevelReward]);
 
     useEffect(() => {
         if (gameStatus === 'BRIEFING') {
@@ -197,6 +213,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                 {id: 2, revealedLevel: null, isClaimed: false}
             ]);
             setVictoryRewards(null);
+            setWasRewardPreviouslyClaimed(false);
         }
     }, [gameStatus]);
 
@@ -1427,11 +1444,17 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                         <span className="text-xs font-bold text-slate-300">
                                                             {language === 'RU' ? 'Награда за завершение' : 'Completion Reward'}
                                                         </span>
-                                                        <div className="grid grid-cols-3 gap-2">
-                                                            <SlotMachineBox targetNumber={victoryRewards?.l0 || 0} labelLevel={0} />
-                                                            <SlotMachineBox targetNumber={victoryRewards?.l1 || 0} labelLevel={1} />
-                                                            <SlotMachineBox targetNumber={victoryRewards?.l2 || 0} labelLevel={2} />
-                                                        </div>
+                                                        {wasRewardPreviouslyClaimed ? (
+                                                            <div className="text-[10px] text-amber-500/80 italic font-mono mb-2">
+                                                                {language === 'RU' ? 'Награда за этот уровень уже получена ранее.' : 'Reward for this level has already been claimed.'}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                <SlotMachineBox targetNumber={victoryRewards?.l0 || 0} labelLevel={0} />
+                                                                <SlotMachineBox targetNumber={victoryRewards?.l1 || 0} labelLevel={1} />
+                                                                <SlotMachineBox targetNumber={victoryRewards?.l2 || 0} labelLevel={2} />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ) : (
@@ -1479,7 +1502,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                     </div>
                                 )}
 
-                                {campaignMode === 'LEVELS' && (
+                                {campaignMode === 'LEVELS' && !wasRewardPreviouslyClaimed && (
                                     <div className="bg-slate-900/20 border border-slate-905 p-2 rounded-xl mb-1.5 md:mb-4 shrink-0 mt-0.5">
                                         <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-slate-900/80">
                                             <h3 className="text-emerald-400 font-extrabold uppercase tracking-wider text-[9px] md:text-xs">

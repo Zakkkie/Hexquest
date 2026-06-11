@@ -8,8 +8,8 @@ const TRANSLATE = {
     RU: [
         { 
             targetId: "tutorial-shape-list", 
-            text: "Шаг 1. Выбор высоты блоков", 
-            desc: "Внизу экрана выберите блок нужной высоты (L0, L1, L2). Выбранный блок подсветится сияющим цветом и будет подготовлен для строительства.",
+            text: "Шаг 1. Выбор высоты блоков и фигур", 
+            desc: "Внизу выберите нужную высоту (кликом по блоку с соответствующей уникальной геометрической фигурой):\n• L0 — Ровная плита (Без фигуры)\n• L1 — Круг\n• L2 — Квадрат\n• L3 — Треугольник\n• L4 — Ромб\n• L5 — Пятиугольник\n• L6 — Малый Шестиугольник\n• L7 — Двойное Кольцо\n• L8-L9 — Древние глифы/Звёзды ◆★\nВыбранный блок подсветится сияющим цветом.",
             position: "above", 
             align: "center", 
             skipPos: "top" 
@@ -17,7 +17,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-hex-board", 
             text: "Шаг 2. Как строить без ошибок!", 
-            desc: "Кликните на гекс, чтобы изменить его высоту:\n• Высота L1 доступна без ограничений.\n• Для L2 и выше нужны 2 соседа такой же высоты или выше (опора), иначе блок станет неустойчивым!",
+            desc: "Кликните на гекс на поле, чтобы возвести выбранную фигуру/высоту:\n• Уровень L1 (Круг) доступен для установки в любом месте без ограничений.\n• Для уровня L2 и выше (Квадрат, Треугольник, Ромб и т.д.) требуются как минимум 2 соседних блока с такой же фигурой/высотой или выше для физической опоры, иначе конструкция разрушится!",
             position: "above", 
             align: "center", 
             skipPos: "bottom" 
@@ -25,7 +25,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-sp-badge", 
             text: "Шаг 3. Очки Навыков (SP) и Ранг", 
-            desc: "Каждая фигура по чертежу даёт +1 SP. Нажмите на фиолетовый индикатор вверху, чтобы улучшить Ранг инженера и открыть высокие блоки (до L9)!",
+            desc: "Каждая собранная фигура даёт +1 SP. Нажмите на фиолетовый индикатор вверху, чтобы улучшить Ранг инженера и открыть плиты с высокими цифрами и сложными геометриями!",
             position: "below", 
             align: "right", 
             skipPos: "bottom" 
@@ -42,8 +42,8 @@ const TRANSLATE = {
     EN: [
         { 
             targetId: "tutorial-shape-list", 
-            text: "Step 1. Choose Block Heights", 
-            desc: "Tap any level block (e.g. L0, L1, L2) at the bottom. The selected block will highlight in vibrant cyan, ready to be built on the board.",
+            text: "Step 1. Choose Heights & Figures", 
+            desc: "Select a level block at the bottom (blocks are stamped with unique geometric shapes corresponding to their height level):\n• L0 — Neutral plain (No shape)\n• L1 — Circle\n• L2 — Square\n• L3 — Triangle\n• L4 — Diamond\n• L5 — Pentagon\n• L6 — Small Hexagon\n• L7 — Double Ring\n• L8-L9 — Ancient Glyphs / Stars ◆★\nThe selected block highlights in vibrant cyan.",
             position: "above", 
             align: "center", 
             skipPos: "top" 
@@ -51,7 +51,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-hex-board", 
             text: "Step 2. Smart Building & Stability", 
-            desc: "Click any grid hex to set height!\n• L1 elevations can be placed anywhere.\n• Level L2 or higher requires at least 2 adjacent neighbors of that height or higher, or it collapse!",
+            desc: "Click any grid cell to place your selected figure/height:\n• Level L1 (Circle) can be placed anywhere without restrictions.\n• Level L2 or higher (Square, Triangle, Diamond, etc.) requires at least 2 adjacent neighbor blocks of that figure/height or higher as support, or it collapses!",
             position: "above", 
             align: "center", 
             skipPos: "bottom" 
@@ -59,14 +59,14 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-sp-badge", 
             text: "Step 3. Engineering Skill Tree (SP)", 
-            desc: "Solving patterns grants +1 Skill Point (SP). Click this glowing token to upgrade your Engineering Rank and access blocks up to L9.",
+            desc: "Solving patterns grants +1 Skill Point (SP). Click this glowing token to upgrade your Engineering Rank and access blocks with higher digits and complex shapes.",
             position: "below", 
             align: "right", 
             skipPos: "bottom" 
         },
         { 
             targetId: "tutorial-levels-btn", 
-            text: "Step 4. Cosmic Control Map", 
+            text: "Step 4. Change Simulation", 
             desc: "Press this navigation deck button to return to the simulation levels map to explore space zones and select challenges.",
             position: "above", 
             align: "center", 
@@ -75,44 +75,258 @@ const TRANSLATE = {
     ]
 };
 
+const LEVEL_COLORS: Record<string, { top: string; side: string; stroke: string }> = {
+    '0': { top: '#1e293b', side: '#0f172a', stroke: '#475569' }, 
+    '1': { top: '#0f172a', side: '#020617', stroke: '#0c4a6e' }, 
+    '2': { top: '#172554', side: '#0f172a', stroke: '#0284c7' }, 
+    '3': { top: '#1e3a8a', side: '#172554', stroke: '#0ea5e9' }, 
+    '4': { top: '#312e81', side: '#1e1b4b', stroke: '#6366f1' }, 
+    '5': { top: '#4c1d95', side: '#2e1065', stroke: '#8b5cf6' }, 
+    '6': { top: '#581c87', side: '#3b0764', stroke: '#a855f7' }, 
+    '7': { top: '#701a75', side: '#4a044e', stroke: '#d946ef' }, 
+    '8': { top: '#451a03', side: '#271a0c', stroke: '#d97706' }, 
+    '9': { top: '#713f12', side: '#422006', stroke: '#f59e0b' }
+};
+
+interface TutorialHexagonProps {
+    level: number;
+    isSelected?: boolean;
+    isCorrect?: boolean;
+    isIncorrect?: boolean;
+    size?: number;
+}
+
+const TutorialHexagon: React.FC<TutorialHexagonProps> = ({
+    level,
+    isSelected = false,
+    isCorrect = false,
+    isIncorrect = false,
+    size = 28
+}) => {
+    const rx = size;
+    const ry = size * 0.6;
+    
+    // Proportional wall height mapping to represent 3D depth to the player
+    const wallHeight = 4 + (level >= 0 ? level * 5 : 0);
+    
+    const cos30 = 0.866;
+    const sin30 = 0.5;
+    
+    // Squashed pointy-topped hexagon corners
+    const points = [
+        { x: rx * cos30, y: ry * sin30 },     // Corner 0
+        { x: 0, y: ry },                      // Corner 1
+        { x: -rx * cos30, y: ry * sin30 },    // Corner 2
+        { x: -rx * cos30, y: -ry * sin30 },   // Corner 3
+        { x: 0, y: -ry },                     // Corner 4
+        { x: rx * cos30, y: -ry * sin30 }     // Corner 5
+    ];
+    
+    const colorTheme = LEVEL_COLORS[String(level)] || LEVEL_COLORS['0'];
+    
+    // Context-sensitive colors matching active modes
+    let strokeColor = isSelected ? '#22d3ee' : (isCorrect ? '#10b981' : (isIncorrect ? '#ef4444' : colorTheme.stroke));
+    let fillTop = isIncorrect ? '#4c0519' : (isCorrect ? '#064e3b' : colorTheme.top);
+    let fillSide = isIncorrect ? '#310413' : (isCorrect ? '#022c22' : colorTheme.side);
+    
+    const topPathD = `M ${points[0].x} ${points[0].y} ` +
+                     `L ${points[1].x} ${points[1].y} ` +
+                     `L ${points[2].x} ${points[2].y} ` +
+                     `L ${points[3].x} ${points[3].y} ` +
+                     `L ${points[4].x} ${points[4].y} ` +
+                     `L ${points[5].x} ${points[5].y} Z`;
+
+    const sideWalls = [
+        { p1: points[5], p2: points[0], opacity: 0.9 },
+        { p1: points[0], p2: points[1], opacity: 0.95 },
+        { p1: points[1], p2: points[2], opacity: 0.8 }
+    ];
+    
+    const totalWidth = rx * 2.2;
+    const totalHeight = ry * 2 + wallHeight + 6;
+    const cx = totalWidth / 2;
+    const cy = ry + 2;
+
+    const renderGeometricMarker = () => {
+        if (level === 0) return null;
+        if (level === 1) {
+            return <circle cx={0} cy={0} r={rx * 0.28} fill="none" stroke={strokeColor} strokeWidth={1.2} transform="scale(1, 0.6)" opacity={0.65} />;
+        }
+        if (level === 2) {
+            return <rect x={-rx * 0.22} y={-rx * 0.22} width={rx * 0.44} height={rx * 0.44} fill="none" stroke={strokeColor} strokeWidth={1.2} transform="scale(1, 0.6)" opacity={0.65} />;
+        }
+        if (level === 3) {
+            return <polygon points={`0,${-rx * 0.28} ${rx * 0.26},${rx * 0.20} ${-rx * 0.26},${rx * 0.20}`} fill="none" stroke={strokeColor} strokeWidth={1.2} transform="scale(1, 0.6)" opacity={0.65} />;
+        }
+        if (level === 4) {
+            return <polygon points={`0,${-rx * 0.3} ${rx * 0.3},0 0,${rx * 0.3} ${-rx * 0.3},0`} fill="none" stroke={strokeColor} strokeWidth={1.2} transform="scale(1, 0.6)" opacity={0.65} />;
+        }
+        if (level === 5) {
+            let pts = [];
+            for (let i = 0; i < 5; i++) {
+                const a = (i * 72 - 90) * Math.PI / 180;
+                pts.push(`${(rx * 0.3 * Math.cos(a)).toFixed(1)},${(rx * 0.3 * Math.sin(a)).toFixed(1)}`);
+            }
+            return <polygon points={pts.join(' ')} fill="none" stroke={strokeColor} strokeWidth={1.2} transform="scale(1, 0.6)" opacity={0.65} />;
+        }
+        if (level === 6) {
+            let pts = [];
+            for (let i = 0; i < 6; i++) {
+                const a = (i * 60 + 30) * Math.PI / 180;
+                pts.push(`${(rx * 0.3 * Math.cos(a)).toFixed(1)},${(rx * 0.3 * Math.sin(a)).toFixed(1)}`);
+            }
+            return <polygon points={pts.join(' ')} fill="none" stroke={strokeColor} strokeWidth={1.2} transform="scale(1, 0.6)" opacity={0.65} />;
+        }
+        if (level === 7) {
+            return (
+                <g transform="scale(1, 0.6)" opacity={0.65}>
+                    <circle cx={0} cy={0} r={rx * 0.3} fill="none" stroke={strokeColor} strokeWidth={1.2} />
+                    <circle cx={0} cy={0} r={rx * 0.15} fill="none" stroke={strokeColor} strokeWidth={1.2} />
+                </g>
+            );
+        }
+        if (level >= 8) {
+            const glyphs = ['◆', '★', '◈', 'Ω', '☼'];
+            const glyph = glyphs[Math.min(glyphs.length - 1, level - 8)];
+            return (
+                <text 
+                    x={0} 
+                    y={1} 
+                    textAnchor="middle" 
+                    dominantBaseline="middle" 
+                    fill={strokeColor} 
+                    fontSize={rx * 0.7} 
+                    fontWeight="normal" 
+                    opacity={0.4}
+                >
+                    {glyph}
+                </text>
+            );
+        }
+        if (level < 0) {
+            return (
+                <g transform="scale(1, 0.6)" opacity={0.5}>
+                    {Array.from({ length: Math.min(3, Math.abs(level)) }).map((_, i) => (
+                        <circle key={i} cx={0} cy={0} r={rx * (0.35 - i * 0.1)} fill="none" stroke={strokeColor} strokeWidth={1} />
+                    ))}
+                </g>
+            );
+        }
+        return null;
+    };
+    
+    return (
+        <div className="relative flex flex-col items-center justify-center select-none shrink-0" style={{ width: totalWidth, height: totalHeight }}>
+            <svg viewBox={`0 0 ${totalWidth} ${totalHeight}`} width={totalWidth} height={totalHeight} className="overflow-visible">
+                <g transform={`translate(${cx}, ${cy})`}>
+                    {/* Footprint Shadow */}
+                    <ellipse cx={0} cy={ry + wallHeight - 1} rx={rx * 0.95} ry={ry * 0.45} fill="rgba(2, 6, 23, 0.75)" filter="blur(1px)" />
+                    
+                    {/* 3D Side Walls */}
+                    {wallHeight > 0 && sideWalls.map((wall, idx) => {
+                        const d = `M ${wall.p1.x} ${wall.p1.y} ` +
+                                  `L ${wall.p2.x} ${wall.p2.y} ` +
+                                  `L ${wall.p2.x} ${wall.p2.y + wallHeight} ` +
+                                  `L ${wall.p1.x} ${wall.p1.y + wallHeight} Z`;
+                        return (
+                            <path 
+                                key={idx} 
+                                d={d} 
+                                fill={fillSide} 
+                                stroke={strokeColor} 
+                                strokeWidth={1} 
+                                opacity={wall.opacity} 
+                                strokeLinejoin="round" 
+                            />
+                        );
+                    })}
+                    
+                    {/* Top Floor Hexagonal Face */}
+                    <path 
+                        d={topPathD} 
+                        fill={fillTop} 
+                        stroke={strokeColor} 
+                        strokeWidth={1.5} 
+                        strokeLinejoin="round" 
+                    />
+                    
+                    {/* Visual Bevel Line */}
+                    <path 
+                        d={`M ${points[2].x} ${points[2].y} L ${points[3].x} ${points[3].y} L ${points[4].x} ${points[4].y}`} 
+                        fill="none" 
+                        stroke="rgba(255,255,255,0.22)" 
+                        strokeWidth={1} 
+                    />
+                    
+                    {/* Selection Beacon Aura */}
+                    {isSelected && (
+                        <path 
+                            d={topPathD} 
+                            fill="none" 
+                            stroke="#22d3ee" 
+                            strokeWidth={2.5} 
+                            opacity={0.8}
+                        />
+                    )}
+                    
+                    {/* Geometric Shape Stamp */}
+                    {renderGeometricMarker()}
+                    
+                    {/* Level Height Digit */}
+                    <text 
+                        x={0} 
+                        y={1.5} 
+                        textAnchor="middle" 
+                        dominantBaseline="middle" 
+                        fill={isIncorrect ? '#fda4af' : (isCorrect ? '#a7f3d0' : (isSelected ? '#67e8f9' : '#ffffff'))} 
+                        fontSize={rx * 0.78} 
+                        fontWeight="900" 
+                        fontFamily="monospace"
+                        style={{ textShadow: `0 0 5px ${isSelected ? '#22d3ee' : colorTheme.stroke}` }}
+                    >
+                        {level}
+                    </text>
+                </g>
+            </svg>
+        </div>
+    );
+};
+
 // Custom interactive CSS/motion demonstration cards inside tooltips to explain mechanics visually
 const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step, language }) => {
     const isRu = language === 'RU';
 
     if (step === 0) {
         return (
-            <div className="w-full bg-slate-950/80 rounded-xl border border-white/5 relative p-2 sm:p-2.5 flex flex-col items-center justify-center overflow-hidden font-mono text-[9px] select-none h-20 sm:h-24 md:h-28 my-1">
+            <div className="w-full bg-slate-950/80 rounded-xl border border-white/5 relative p-2 sm:p-2.5 flex flex-col items-center justify-center overflow-hidden font-mono text-[9px] select-none h-24 sm:h-28 md:h-32 my-1">
                 <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 sm:mb-2 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px]">
                     <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                    {isRu ? 'ВЫБОР ВЫСОТЫ L0...L9' : 'SELECTING TARGET HEIGHT'}
+                    {isRu ? 'ВЫСОТА И ЦВЕТ ГЕКСАГРАММЫ (0...9)' : 'HEXAGON HEIGHT & COLORS (0...9)'}
                 </div>
                 
-                {/* Visual carousel list with click animation */}
-                <div className="relative flex gap-1.5 sm:gap-2 items-end justify-center w-full h-8 sm:h-10 md:h-11 mt-0.5 sm:mt-1">
-                    {[
-                        { label: 'L0', h: 'h-3 sm:h-4 bg-slate-800' },
-                        { label: 'L1', h: 'h-5 sm:h-6 bg-slate-700' },
-                        { label: 'L2', h: 'h-7 sm:h-9 bg-cyan-500/25 border-cyan-400 border shadow-[0_0_12px_rgba(34,211,238,0.4)]', selected: true },
-                        { label: 'L3', h: 'h-9 sm:h-11 bg-slate-600/40' },
-                    ].map((item, idx) => (
-                        <div key={idx} className="flex flex-col items-center w-8 sm:w-11 relative">
-                            <motion.div 
-                                className={`w-full ${item.h} rounded-md flex items-center justify-center text-[7px] sm:text-[8px] font-black ${item.selected ? 'text-cyan-300' : 'text-slate-500 border border-slate-700/50'}`}
-                                animate={item.selected ? { scale: [1, 1.05, 1] } : {}}
-                                transition={{ repeat: Infinity, duration: 2 }}
-                            >
-                                {item.label}
-                            </motion.div>
-                            <span className={`text-[6px] sm:text-[7px] mt-0.5 sm:mt-1 font-bold ${item.selected ? 'text-cyan-400 animate-pulse' : 'text-slate-600'}`}>
-                                {item.selected ? (isRu ? 'СЕКЦИЯ' : 'ACTIVE') : 'READY'}
-                            </span>
-                        </div>
-                    ))}
+                {/* Visual carousel list with click animation using high-fidelity hexagons */}
+                <div className="relative flex gap-3 sm:gap-4 items-center justify-center w-full h-12 sm:h-16 md:h-20 mt-1">
+                    {[0, 1, 2, 3].map((lvl) => {
+                        const isSel = lvl === 2;
+                        return (
+                            <div key={lvl} className="flex flex-col items-center relative">
+                                <motion.div
+                                    animate={isSel ? { y: [-2, 2, -2], filter: ["drop-shadow(0 0 4px rgba(34,211,238,0.3))", "drop-shadow(0 0 10px rgba(34,211,238,0.7))", "drop-shadow(0 0 4px rgba(34,211,238,0.3))"] } : {}}
+                                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                                >
+                                    <TutorialHexagon level={lvl} isSelected={isSel} size={lvl === 3 ? 20 : lvl === 2 ? 18 : 16} />
+                                </motion.div>
+                                <span className={`text-[6px] sm:text-[7px] mt-1 font-black ${isSel ? 'text-cyan-400 animate-pulse' : 'text-slate-500'}`}>
+                                    {isSel ? (isRu ? 'ОТБОР 2' : 'SEL 2') : `L${lvl}`}
+                                </span>
+                            </div>
+                        );
+                    })}
 
                     {/* Laser touch pointer hand clicking */}
                     <motion.div 
                         className="absolute w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-cyan-400 bg-cyan-400/20 z-10 flex items-center justify-center"
-                        style={{ bottom: -2, right: '35%' }}
+                        style={{ bottom: 14, right: '35%' }}
                         animate={{
                             scale: [1, 0.8, 1.15, 1],
                             opacity: [0, 1, 1, 0],
@@ -134,56 +348,55 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
     if (step === 1) {
         return (
             <div className="w-full flex flex-col gap-1 sm:gap-1.5 font-mono select-none my-1">
-                <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                <div className="grid grid-cols-2 gap-1.5 sm:gap-2 border-b border-white/5 pb-1">
                     {/* ACCORDING TO PHYSICAL CO-SUPPORT (CORRECT) */}
-                    <div className="bg-emerald-950/20 rounded-xl border border-emerald-500/35 p-1.5 sm:p-2 flex flex-col items-center relative overflow-hidden h-24 sm:h-28 md:h-32 justify-between">
+                    <div className="bg-emerald-955/20 rounded-xl border border-emerald-500/35 p-1.5 sm:p-2 flex flex-col items-center relative overflow-hidden h-26 sm:h-30 md:h-34 justify-between bg-slate-950/40">
                         <div className="text-emerald-400 font-black uppercase tracking-wider text-[7px] sm:text-[7.5px] flex items-center gap-1 self-start">
                             <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 flex items-center justify-center text-[5.5px] sm:text-[6px] text-black font-extrabold">✓</span>
                             {isRu ? 'СТАБИЛЬНО' : 'STABLE WAY'}
                         </div>
                         
-                        <div className="relative w-full flex-1 flex items-center justify-center gap-1">
-                            <div className="w-6 h-8 sm:w-8 sm:h-12 bg-emerald-900/30 border border-emerald-500/30 rounded-md flex flex-col items-center justify-center">
-                                <span className="text-[8px] sm:text-[10px] font-black text-emerald-400/80">L2</span>
-                                <span className="text-[4px] sm:text-[5px] text-slate-500 uppercase leading-none">{isRu ? 'ОПОРА' : 'SUPPORT'}</span>
+                        <div className="relative w-full flex-1 flex items-center justify-center gap-1 mt-1">
+                            <div className="flex flex-col items-center opacity-70">
+                                <TutorialHexagon level={2} size={14} />
+                                <span className="text-[4.5px] sm:text-[5px] text-slate-400 uppercase leading-none mt-1">{isRu ? 'ОПОРА' : 'SUPPORT'}</span>
                             </div>
                             <motion.div 
-                                className="w-6 h-8 sm:w-8 sm:h-12 bg-emerald-600/40 border-2 border-emerald-400 rounded-md flex flex-col items-center justify-center"
-                                animate={{ y: [2, 0, 2] }}
-                                transition={{ repeat: Infinity, duration: 1.8 }}
+                                className="flex flex-col items-center"
+                                animate={{ y: [1.5, -1.5, 1.5] }}
+                                transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
                             >
-                                <span className="text-[8px] sm:text-[10px] font-black text-emerald-300">L2</span>
-                                <span className="text-[4px] sm:text-[5px] text-white uppercase font-black leading-none">{isRu ? 'НОВЫЙ' : 'NEW'}</span>
-                                <div className="absolute inset-0 border border-emerald-300/30 rounded-md animate-ping pointer-events-none" />
+                                <TutorialHexagon level={2} isCorrect={true} size={16} />
+                                <span className="text-[4.5px] sm:text-[5px] text-emerald-300 uppercase font-black leading-none mt-1 animate-pulse">{isRu ? 'НОВЫЙ' : 'NEW'}</span>
                             </motion.div>
-                            <div className="w-6 h-8 sm:w-8 sm:h-12 bg-emerald-900/30 border border-emerald-500/30 rounded-md flex flex-col items-center justify-center">
-                                <span className="text-[8px] sm:text-[10px] font-black text-emerald-400/80">L2</span>
-                                <span className="text-[4px] sm:text-[5px] text-slate-500 uppercase leading-none">{isRu ? 'ОПОРА' : 'SUPPORT'}</span>
+                            <div className="flex flex-col items-center opacity-70">
+                                <TutorialHexagon level={2} size={14} />
+                                <span className="text-[4.5px] sm:text-[5px] text-slate-400 uppercase leading-none mt-1">{isRu ? 'ОПОРА' : 'SUPPORT'}</span>
                             </div>
                         </div>
-                        <span className="text-emerald-500/80 text-[6px] sm:text-[6.5px] font-black uppercase tracking-wider text-center">
+                        <span className="text-emerald-500/80 text-[6px] sm:text-[6.5px] font-black uppercase tracking-wider text-center mt-1">
                             {isRu ? '2 СОСЕДА РЯДОМ ✓' : '2 NEIGHBORS FOUND ✓'}
                         </span>
                     </div>
 
                     {/* UNSTABLE CRITICAL BREAKDOWN (INCORRECT) */}
-                    <div className="bg-rose-950/25 rounded-xl border border-rose-500/30 p-1.5 sm:p-2 flex flex-col items-center relative overflow-hidden h-24 sm:h-28 md:h-32 justify-between">
+                    <div className="bg-rose-955/20 rounded-xl border border-rose-500/30 p-1.5 sm:p-2 flex flex-col items-center relative overflow-hidden h-26 sm:h-30 md:h-34 justify-between bg-slate-950/40">
                         <div className="text-rose-400 font-black uppercase tracking-wider text-[7px] sm:text-[7.5px] flex items-center gap-1 self-start">
                             <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 flex items-center justify-center text-[5.5px] sm:text-[6px] text-black font-extrabold">✕</span>
-                            {isRu ? 'НЕЛЬЗЯ СТРОИТЬ' : 'UNSTABLE WAY'}
+                            {isRu ? 'ОБВАЛ' : 'UNSTABLE WAY'}
                         </div>
 
-                        <div className="relative w-full flex-1 flex items-center justify-center gap-1">
-                            <div className="w-6 h-5 sm:w-8 sm:h-7 opacity-20 bg-slate-800 border border-slate-700 rounded-md flex items-center justify-center">
-                                <span className="text-[6px] sm:text-[7px] text-slate-500">L0</span>
+                        <div className="relative w-full flex-1 flex items-center justify-center gap-1 mt-1">
+                            <div className="flex flex-col items-center opacity-30">
+                                <TutorialHexagon level={0} size={13} />
+                                <span className="text-[4.5px] sm:text-[5px] text-slate-500 uppercase leading-none mt-1">L0</span>
                             </div>
                             
                             <motion.div 
-                                className="w-6 h-8 sm:w-8 sm:h-12 bg-rose-900/60 border-2 border-rose-400 rounded-md flex flex-col items-center justify-center text-center px-0.5"
+                                className="flex flex-col items-center"
                                 animate={{
-                                    x: [-1, 1, -1.5, 1.5, -1, 0],
-                                    y: [1, -1, 1.5, -1, 0, 0],
-                                    borderColor: ['#f43f5e', '#ef4444', '#f43f5e']
+                                    x: [-0.8, 0.8, -1.2, 1.2, -0.8, 0],
+                                    y: [0.8, -0.8, 1.2, -1.2, 0.8, 0]
                                 }}
                                 transition={{
                                     repeat: Infinity,
@@ -191,16 +404,17 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
                                     repeatDelay: 0.1
                                 }}
                             >
-                                <span className="text-[8px] sm:text-[10px] font-black text-rose-300">L2</span>
-                                <span className="text-[4px] sm:text-[5px] text-rose-400 font-extrabold leading-tight uppercase animate-pulse">{isRu ? 'ПЛАТЫ НЕТ' : 'NO BACKING'}</span>
+                                <TutorialHexagon level={2} isIncorrect={true} size={16} />
+                                <span className="text-[4.5px] sm:text-[5px] text-rose-400 font-extrabold leading-none mt-1 uppercase animate-pulse">{isRu ? 'КРАХ' : 'CRASH'}</span>
                             </motion.div>
 
-                            <div className="w-6 h-5 sm:w-8 sm:h-7 opacity-20 bg-slate-800 border border-slate-700 rounded-md flex items-center justify-center">
-                                <span className="text-[6px] sm:text-[7px] text-slate-500">L0</span>
+                            <div className="flex flex-col items-center opacity-30">
+                                <TutorialHexagon level={0} size={13} />
+                                <span className="text-[4.5px] sm:text-[5px] text-slate-500 uppercase leading-none mt-1">L0</span>
                             </div>
                         </div>
 
-                        <span className="text-rose-400 text-[6px] sm:text-[6.5px] font-black uppercase text-center animate-pulse tracking-wide">
+                        <span className="text-rose-405 text-[6px] sm:text-[6.5px] font-black uppercase text-center animate-pulse tracking-wide mt-1">
                             {isRu ? 'КРАХ! НЕТ ОПОРЫ ⚠️' : 'CRASH! NO BASIS ⚠️'}
                         </span>
                     </div>

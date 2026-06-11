@@ -617,6 +617,7 @@ const GameView: React.FC = () => {
           height={dimensions.height} 
           // Disable native drag to use our physics target system
           draggable={false}
+          preventDefault={false}
           onWheel={handleWheel} 
           onMouseDown={handleMouseDown} 
           onMouseMove={handleMouseMove} 

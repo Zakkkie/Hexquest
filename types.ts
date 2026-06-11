@@ -506,6 +506,7 @@ export interface GameState {
   minedInSessionHexes: Record<number, number>;
   totalMinedMaterial?: number;
   storyMap: Record<string, number>;
+  claimedLevelRewards?: string[];
 
   hasActiveSession: boolean;
   isMusicMuted: boolean;

@@ -85,5 +85,13 @@ export const createCampaignSlice = (
       storyMap: {},
       minedInSessionHexes: newMined
     };
+  }),
+
+  claimLevelReward: (levelId: string) => set((state) => {
+    const claimedSet = new Set(state.claimedLevelRewards || []);
+    claimedSet.add(levelId);
+    return {
+      claimedLevelRewards: Array.from(claimedSet)
+    };
   })
 });

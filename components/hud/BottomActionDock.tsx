@@ -406,7 +406,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                     </div>
 
                     {/* CORE BUTTONS + QUICK SLOTS (Bottom Row) */}
-                    <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800/90 rounded-[1.5rem] shadow-[0_16px_40px_rgba(0,0,0,0.85)] p-2 px-3 flex items-center justify-between gap-3 relative overflow-visible">
+                    <div className="bg-slate-950/45 saturate-[175%] backdrop-blur-2xl border border-slate-800/40 rounded-[1.5rem] p-2 px-3 flex items-center justify-between gap-3 relative overflow-visible animate-border-glow-premium transition-all duration-500">
                         
                         {/* ITEM SHORTCUT TRAY OR TIMER */}
                         {isTimedLevel && gameStatus === 'PLAYING' ? (
@@ -535,7 +535,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                 </div>
             ) : (
                 /* DESKTOP VIEW: High-definition controls panel with maximum clarity and organization */
-                <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl md:rounded-3xl shadow-[0_15px_45px_black] p-1.5 md:p-3 pointer-events-auto flex flex-col gap-1.5 md:gap-2.5 w-full md:w-auto max-w-7xl mx-auto overflow-visible animate-in fade-in zoom-in-95 duration-200">
+                <div className="bg-slate-900/40 saturate-[175%] backdrop-blur-2xl border border-slate-700/35 rounded-2xl md:rounded-3xl p-1.5 md:p-3 pointer-events-auto flex flex-col gap-1.5 md:gap-2.5 w-full md:w-auto max-w-7xl mx-auto overflow-visible animate-in fade-in zoom-in-95 duration-200 animate-border-glow-premium transition-all duration-500">
                     
                     <div className="flex items-center gap-1.5 w-full">
                         {/* Inventory Toggle */}

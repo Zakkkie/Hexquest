@@ -186,9 +186,10 @@ export const StoryHex: React.FC<{
     isNew?: boolean,
     canPlace: boolean,
     isFlaring?: boolean,
+    isFailedClick?: boolean,
     onClick: (q: number, r: number) => void,
     onDblClick?: (q: number, r: number) => void
-}> = React.memo(({ q, r, level, isSelected, isBlueprint, blueprintLevel = 0, isEligible, isCenterInitially, isNew, canPlace, isFlaring, onClick, onDblClick }) => {
+}> = React.memo(({ q, r, level, isSelected, isBlueprint, blueprintLevel = 0, isEligible, isCenterInitially, isNew, canPlace, isFlaring, isFailedClick, onClick, onDblClick }) => {
     const px = useMemo(() => hexToPixel(q, r), [q, r]);
     const isBuilt = level !== undefined && level >= 0;
     
@@ -208,11 +209,6 @@ export const StoryHex: React.FC<{
         if (level === undefined) return null;
         return textureService.getTexture(level, q, r, undefined);
     }, [level, q, r]);
-
-    const sideTexture = useMemo(() => {
-        if (level === undefined) return null;
-        return textureService.getSideTexture(level, undefined);
-    }, [level]);
 
     // Height calculation - visual depth
     const height = level !== undefined ? (level >= 0 ? 12 + level * 12 : 12) : 0;
@@ -285,6 +281,42 @@ export const StoryHex: React.FC<{
         }
     }, [isFlaring]);
 
+    // Elegant and performant pulsing outline animation for valid placement slots
+    const pulseOutlineRef = useRef<Konva.Group>(null);
+    useEffect(() => {
+        if (isEligible && pulseOutlineRef.current) {
+            const node = pulseOutlineRef.current;
+            const anim = new Konva.Animation((frame) => {
+                if (!frame) return;
+                // Periodic wave between 0.45 and 0.95 opacity, frequency ~ 1.5Hz
+                const osc = 0.55 + Math.sin(frame.time * 0.0051) * 0.4;
+                node.opacity(osc);
+            }, node.getLayer());
+            anim.start();
+            return () => {
+                anim.stop();
+            };
+        }
+    }, [isEligible]);
+
+    // Rapid warning blink animation of red hex silhouette when failed click is triggered
+    const failedClickRef = useRef<Konva.Group>(null);
+    useEffect(() => {
+        if (isFailedClick && failedClickRef.current) {
+            const node = failedClickRef.current;
+            const anim = new Konva.Animation((frame) => {
+                if (!frame) return;
+                // Periodic intense blinking between 0.2 and 1.0 opacity
+                const osc = 0.45 + Math.abs(Math.sin(frame.time * 0.014)) * 0.55;
+                node.opacity(osc);
+            }, node.getLayer());
+            anim.start();
+            return () => {
+                anim.stop();
+            };
+        }
+    }, [isFailedClick]);
+
     const [isHovered, setIsHovered] = useState(false);
 
     // Front-facing sides for isometric view (0, 1, 5)
@@ -346,8 +378,6 @@ export const StoryHex: React.FC<{
                         <Path
                             key={side.id}
                             data={side.data}
-                            fillPatternImage={sideTexture as any}
-                            fillEnabled={!sideTexture}
                             fillLinearGradientStartPoint={{ x: side.midX, y: side.minY }}
                             fillLinearGradientEndPoint={{ x: side.midX, y: side.maxY }}
                             fillLinearGradientColorStops={[
@@ -504,19 +534,50 @@ export const StoryHex: React.FC<{
                 </Group>
             )}
 
-            {/* Pulse Placement Helper Outline for Neighbors */}
-            {!isBuilt && isEligible && !isCenterInitially && (
-                <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
+            {/* Glowing Pulsing Helper for Placement/Upgrade */}
+            {isEligible && !isCenterInitially && (
+                <Group ref={pulseOutlineRef} y={yOffset} scaleY={0.8} perfectDrawEnabled={false} listening={false}>
+                    {isBuilt ? (
+                        // If it's already built, show a highly visible solid glowing overlay over the top of the existing block
+                        <Path
+                            data={BASE_PATH_D}
+                            scaleX={0.97}
+                            scaleY={0.97}
+                            fill={canPlace ? "rgba(34, 211, 238, 0.22)" : "rgba(168, 85, 247, 0.12)"} // cyan-blue if placeable, purple if need item
+                            stroke={canPlace ? "#22d3ee" : "#a855f7"}
+                            strokeWidth={2.5}
+                            shadowColor={canPlace ? "#22d3ee" : "#a855f7"}
+                            shadowBlur={12}
+                            listening={false}
+                        />
+                    ) : (
+                        // If it's a new tile on empty space, show a phantom dashed outline on the floor
+                        <Path
+                            data={BASE_PATH_D}
+                            scaleX={0.96}
+                            scaleY={0.96}
+                            stroke={canPlace ? "rgba(34, 211, 238, 0.85)" : "rgba(168, 85, 247, 0.6)"}
+                            strokeWidth={2.2}
+                            dash={[6, 4]}
+                            shadowColor={canPlace ? "#22d3ee" : "#a855f7"}
+                            shadowBlur={10}
+                            listening={false}
+                        />
+                    )}
+                </Group>
+            )}
+
+            {/* Failed Click Overlay / Beautiful Flashing Red Warning */}
+            {isFailedClick && (
+                <Group ref={failedClickRef} y={yOffset} scaleY={0.8} perfectDrawEnabled={false} listening={false}>
                     <Path
                         data={BASE_PATH_D}
-                        scaleX={0.96}
-                        scaleY={0.96}
-                        stroke={'rgba(34, 211, 238, 0.65)'}
-                        strokeWidth={2.2}
-                        dash={[5, 4]}
-                        opacity={0.9}
-                        shadowColor="#22d3ee"
-                        shadowBlur={6}
+                        fill="rgba(239, 68, 68, 0.55)"
+                        stroke="#ef4444"
+                        strokeWidth={3}
+                        shadowColor="#ef4444"
+                        shadowBlur={18}
+                        shadowOpacity={1.0}
                         listening={false}
                     />
                 </Group>

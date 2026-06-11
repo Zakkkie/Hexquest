@@ -93,6 +93,7 @@ const StoryBuilderView: React.FC = () => {
     const [selectedBuildLevel, setSelectedBuildLevel] = useState<number>(0); // 0-9 for building higher levels, or -999 for demolish/снос
     const [errorMessage, setErrorMessage] = useState<string | null>(null); // Visual feedback warning toast
     const [destroyButtonCell, setDestroyButtonCell] = useState<{ q: number, r: number } | null>(null);
+    const [failedClickCoord, setFailedClickCoord] = useState<{ q: number, r: number } | null>(null);
 
     // Automation & Flare states
     const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number }[]>([]);
@@ -389,6 +390,18 @@ const StoryBuilderView: React.FC = () => {
         });
     }, []);
 
+    // Memoize the set of levels that have at least one valid slot on the map
+    const placeableLevels = useMemo(() => {
+        const placeable = new Set<number>();
+        for (let lvl = 0; lvl <= 9; lvl++) {
+            const hasSlot = gridPoints.some(gp => isEligibleForPlacement(gp.q, gp.r, lvl));
+            if (hasSlot) {
+                placeable.add(lvl);
+            }
+        }
+        return placeable;
+    }, [storyMap, isEligibleForPlacement, gridPoints]);
+
     const isPanning = useRef(false);
 
     const handleCellClick = useCallback((q: number, r: number) => {
@@ -422,13 +435,25 @@ const StoryBuilderView: React.FC = () => {
                 } else {
                     // Trying to place a forbidden upgraded hex (support or height-step violation)
                     playUiSound('ERROR');
-                    setErrorMessage(
-                        language === 'RU'
-                            ? 'Размещение здесь запрещено! Разместите гекс 0 уровня (или другого соответствующего уровня в соответствии с опорами).'
-                            : 'Placement is forbidden here! Place a level 0 hex (or other corresponding level matching supports).'
-                    );
+                    setFailedClickCoord({ q, r });
+                    setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
+
+                    const currentLevel = currentLvl;
+                    let blockBuildErrorMsg = '';
+
+                    if (buildLevel !== currentLevel + 1) {
+                        blockBuildErrorMsg = language === 'RU'
+                            ? `Стройте пошагово! Высоту можно повысить только на +1 (нужно поставить Уровень ${currentLevel + 1}).`
+                            : `Build step-by-step! Height can only be raised by +1 (you should select Level ${currentLevel + 1}).`;
+                    } else {
+                        blockBuildErrorMsg = language === 'RU'
+                            ? `Неустойчиво! Для высоты Уровня ${buildLevel} нужно 2 соседних блока Уровня ${currentLevel} или выше.`
+                            : `Unstable! Level ${buildLevel} height requires at least 2 adjacent neighbor blocks of Level ${currentLevel} or higher.`;
+                    }
+
+                    setErrorMessage(blockBuildErrorMsg);
                     setTimeout(() => {
-                        setErrorMessage(curr => curr?.includes('соответствующего уровня') || curr?.includes('corresponding level') ? null : curr);
+                        setErrorMessage(curr => curr === blockBuildErrorMsg ? null : curr);
                     }, 5000);
                     return;
                 }
@@ -436,21 +461,23 @@ const StoryBuilderView: React.FC = () => {
         } else if (!eligible) {
             setDestroyButtonCell(null);
             playUiSound('ERROR');
+            setFailedClickCoord({ q, r });
+            setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
+
+            let blockBuildErrorMsg = '';
             if (buildLevel !== 0) {
-                setErrorMessage(
-                    language === 'RU'
-                        ? 'Размещение запрещено! На пустой гекс допускается только установка плитки 0 уровня.'
-                        : 'Placement is forbidden! On empty hexes, only a level 0 tile can be placed.'
-                );
+                blockBuildErrorMsg = language === 'RU'
+                    ? `На пустом гексе можно построить только базовый Уровень 0!`
+                    : `On empty space you can only place a standard Level 0 block first!`;
             } else {
-                setErrorMessage(
-                    language === 'RU'
-                        ? 'Этот гекс недоступен! Разместите гекс 0 уровня на стартовой позиции или рядом с существующими гексами.'
-                        : 'This hex is unavailable! Place a level 0 hex on starting coordinates or next to existing hexes.'
-                );
+                blockBuildErrorMsg = language === 'RU'
+                    ? `Этот гекс недоступен! Ставьте блоки Уровня 0 только рядом со своими существующими блоками.`
+                    : `This hex is out of range! Place Level 0 blocks adjacent to your existing blocks.`;
             }
+
+            setErrorMessage(blockBuildErrorMsg);
             setTimeout(() => {
-                setErrorMessage(curr => curr?.includes('допускается только') || curr?.includes('недоступен') || curr?.includes('unavailable') || curr?.includes('only a level 0') ? null : curr);
+                setErrorMessage(curr => curr === blockBuildErrorMsg ? null : curr);
             }, 5000);
             return;
         }
@@ -459,6 +486,17 @@ const StoryBuilderView: React.FC = () => {
         const availableCount = minedInSessionHexes[buildLevel] || 0;
         if (availableCount <= 0) {
             playUiSound('WARNING');
+            setFailedClickCoord({ q, r });
+            setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
+
+            const inventoryErrorMsg = language === 'RU'
+                ? `У вас нет блоков Уровня ${buildLevel} в инвентаре! Добудьте их в кампании или режиме раскопок.`
+                : `You don't have Level ${buildLevel} blocks in your inventory! Mine them in Campaign or Excavation mode.`;
+            
+            setErrorMessage(inventoryErrorMsg);
+            setTimeout(() => {
+                setErrorMessage(curr => curr === inventoryErrorMsg ? null : curr);
+            }, 5000);
             return;
         }
 
@@ -740,6 +778,7 @@ const StoryBuilderView: React.FC = () => {
                                         isNew={lastPlacedKey === key}
                                         canPlace={canPlaceHex}
                                         isFlaring={flareKeys.has(key)}
+                                        isFailedClick={failedClickCoord !== null && failedClickCoord.q === coord.q && failedClickCoord.r === coord.r}
                                         onClick={handleCellClick}
                                         onDblClick={handleCellDblClick}
                                     />
@@ -1193,7 +1232,7 @@ const StoryBuilderView: React.FC = () => {
                                                     {language === 'RU' ? 'Шаг 1. Запуск основы' : '1. Anchor Base'}
                                                 </span>
                                                 <span>
-                                                    {language === 'RU' ? 'Размещайте гексы 0-го уровня (L0 — голубой цвет) кликом на пустые ячейки.' : 'Place level 0 hexes (L0 — cyan color) by clicking on empty gray cells on the field.'}
+                                                    {language === 'RU' ? 'Размещайте гексы уровня 0 (с цифрой 0 в центре — голубой цвет) кликом на пустые ячейки.' : 'Place level 0 hexes (digit 0 inside — cyan color) by clicking on empty gray cells on the field.'}
                                                 </span>
                                             </div>
                                         </div>
@@ -1212,10 +1251,10 @@ const StoryBuilderView: React.FC = () => {
                                             <span className="w-4 h-4 rounded-full bg-amber-950 border border-amber-500/30 flex items-center justify-center text-[7px] font-black text-amber-400 shrink-0">3</span>
                                             <div>
                                                 <span className="text-slate-200 font-bold block">
-                                                    {language === 'RU' ? 'Шаг 3. Соседняя поддержка L2+' : '3. Neighbor Support Scaffold'}
+                                                    {language === 'RU' ? 'Шаг 3. Соседняя поддержка для уровня 2 и выше' : '3. Neighbor Support Scaffold'}
                                                 </span>
                                                 <span>
-                                                    {language === 'RU' ? 'Помните, для подъема гекса до уровня L2 и выше требуется, чтобы рядом было не менее 2-х гексов такой же высоты!' : 'Structures at L2 and above need at least 2 adjacent neighbor hexes of that height to be stable!'}
+                                                    {language === 'RU' ? 'Помните, для подъема гекса до уровня 2 и выше (цифры 2-9) требуется, чтобы рядом было не менее 2-х гексов такой же высоты!' : 'Structures at level 2 and above (digits 2-9) need at least 2 adjacent neighbor hexes of that height to be stable!'}
                                                 </span>
                                             </div>
                                         </div>
@@ -1293,23 +1332,43 @@ const StoryBuilderView: React.FC = () => {
                                         const qty = minedInSessionHexes[lvl] || 0;
                                         const isSelected = selectedBuildLevel === lvl;
                                         const theme = THEME_PALETTE[String(lvl)] || THEME_PALETTE['0'];
+                                        const isPlaceable = placeableLevels.has(lvl);
+                                        
+                                        // Dynamic tooltip descriptions
+                                        const tooltipText = qty <= 0
+                                            ? (language === 'RU' ? 'Нет в наличии' : 'Out of stock')
+                                            : isPlaceable
+                                                ? (language === 'RU' ? `Уровень ${lvl}: готов к установке` : `Level ${lvl}: ready to place`)
+                                                : (language === 'RU' ? `Уровень ${lvl} (Недоступно): постройте сначала опорные блоки` : `Level ${lvl} (Locked): build parent support blocks first`);
+
                                         return (
                                             <button
                                                 key={lvl}
                                                 onClick={() => { playUiSound('CLICK'); setSelectedBuildLevel(lvl); }}
+                                                title={tooltipText}
                                                 className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 p-1 rounded-xl border text-center transition-all w-13 h-17 relative cursor-pointer outline-none group ${
                                                     isSelected
-                                                        ? 'bg-indigo-950/40 border-cyan-400/50 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102 font-bold'
+                                                        ? isPlaceable
+                                                            ? 'bg-indigo-950/45 border-cyan-400/70 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102 font-bold'
+                                                            : 'bg-slate-950/35 border-red-500/30 text-rose-400/60 opacity-40 scale-100 brightness-[0.45] grayscale saturate-50'
                                                         : qty > 0 
-                                                            ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
-                                                            : 'bg-slate-950/20 border-white/5 opacity-50 text-slate-500 hover:opacity-70'
+                                                            ? isPlaceable 
+                                                                ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
+                                                                : 'bg-slate-950/20 border-white/5 opacity-25 text-slate-500 scale-98 hover:opacity-40 brightness-[0.4] grayscale saturate-[20%]'
+                                                            : 'bg-slate-950/10 border-white/5 opacity-10 text-slate-600 scale-95 hover:opacity-20 grayscale saturate-0 brightness-[0.3]'
                                                 }`}
                                             >
                                                 <div className="w-10 h-11 flex items-center justify-center select-none pointer-events-none">
                                                     {drawInventoryHex(lvl, theme)}
                                                 </div>
 
-                                                <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none ${qty > 0 ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'text-slate-500'}`}>
+                                                <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none ${
+                                                    qty > 0 
+                                                        ? isPlaceable 
+                                                            ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' 
+                                                            : 'text-amber-600/30 drop-shadow-none opacity-40'
+                                                        : 'text-slate-500/30'
+                                                }`}>
                                                     x{qty}
                                                 </span>
                                             </button>
