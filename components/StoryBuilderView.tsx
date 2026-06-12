@@ -81,6 +81,18 @@ const StoryBuilderView: React.FC = () => {
     const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
     const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 30 });
     const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 1.55 : 2.15);
+
+    const cameraPosRef = useRef(cameraPos);
+    const zoomScaleRef = useRef(zoomScale);
+
+    useEffect(() => {
+        cameraPosRef.current = cameraPos;
+    }, [cameraPos]);
+
+    useEffect(() => {
+        zoomScaleRef.current = zoomScale;
+    }, [zoomScale]);
+
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [tabletTab, setTabletTab] = useState<'blueprint' | 'diagnostics' | 'rules'>('blueprint');
@@ -123,8 +135,12 @@ const StoryBuilderView: React.FC = () => {
     const handleResetCamera = useCallback(() => {
         const w = containerRef.current?.clientWidth || window.innerWidth;
         const h = containerRef.current?.clientHeight || window.innerHeight;
-        setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
-        setZoomScale(w < 768 ? 1.55 : 2.15);
+        const targetPos = { x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) };
+        const targetZoom = w < 768 ? 1.55 : 2.15;
+        cameraPosRef.current = targetPos;
+        zoomScaleRef.current = targetZoom;
+        setCameraPos(targetPos);
+        setZoomScale(targetZoom);
         playUiSound('CLICK');
     }, [playUiSound]);
 
@@ -522,11 +538,15 @@ const StoryBuilderView: React.FC = () => {
         setDestroyButtonCell(null);
     };
     const handleDragEnd = (e: any) => { 
-        setCameraPos({ x: e.target.x(), y: e.target.y() });
+        const newPos = { x: e.target.x(), y: e.target.y() };
+        cameraPosRef.current = newPos;
+        setCameraPos(newPos);
         setTimeout(() => { isPanning.current = false; }, 50); 
     };
 
-    const lastDist = useRef<number | null>(null);
+    const startDist = useRef<number | null>(null);
+    const startScale = useRef<number>(1.0);
+    const startPointTo = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
     const handleWheel = (e: any) => {
         if (e.evt && typeof e.evt.preventDefault === 'function') {
@@ -537,24 +557,29 @@ const StoryBuilderView: React.FC = () => {
         if (!stage) return;
         
         const scaleBy = 1.05;
-        const oldScale = zoomScale;
+        const oldScale = zoomScaleRef.current;
         
         const pointer = stage.getPointerPosition();
         if (!pointer) return;
 
         const mousePointTo = {
-            x: (pointer.x - cameraPos.x) / oldScale,
-            y: (pointer.y - cameraPos.y) / oldScale,
+            x: (pointer.x - cameraPosRef.current.x) / oldScale,
+            y: (pointer.y - cameraPosRef.current.y) / oldScale,
         };
 
         const newScale = e.evt.deltaY < 0 ? oldScale / scaleBy : oldScale * scaleBy;
         const clampedScale = Math.max(0.4, Math.min(2.0, newScale));
         
-        setZoomScale(clampedScale);
-        setCameraPos({
+        const newPos = {
             x: pointer.x - mousePointTo.x * clampedScale,
             y: pointer.y - mousePointTo.y * clampedScale,
-        });
+        };
+
+        zoomScaleRef.current = clampedScale;
+        cameraPosRef.current = newPos;
+
+        setZoomScale(clampedScale);
+        setCameraPos(newPos);
     };
 
     const handleTouchStart = (e: any) => {
@@ -578,9 +603,20 @@ const StoryBuilderView: React.FC = () => {
                 Math.pow(touch2.clientX - touch1.clientX, 2) +
                 Math.pow(touch2.clientY - touch1.clientY, 2)
             );
-            lastDist.current = dist;
+            startDist.current = dist;
+            startScale.current = zoomScaleRef.current;
+
+            const center = {
+                x: (touch1.clientX + touch2.clientX) / 2,
+                y: (touch1.clientY + touch2.clientY) / 2,
+            };
+
+            startPointTo.current = {
+                x: (center.x - cameraPosRef.current.x) / zoomScaleRef.current,
+                y: (center.y - cameraPosRef.current.y) / zoomScaleRef.current,
+            };
         } else {
-            lastDist.current = null;
+            startDist.current = null;
         }
     };
 
@@ -609,35 +645,33 @@ const StoryBuilderView: React.FC = () => {
                 Math.pow(touch2.clientY - touch1.clientY, 2)
             );
 
-            if (lastDist.current !== null && lastDist.current > 0) {
+            if (startDist.current !== null && startDist.current > 0) {
                 const center = {
                     x: (touch1.clientX + touch2.clientX) / 2,
                     y: (touch1.clientY + touch2.clientY) / 2,
                 };
 
-                const oldScale = zoomScale;
-                const pointTo = {
-                    x: (center.x - cameraPos.x) / oldScale,
-                    y: (center.y - cameraPos.y) / oldScale,
+                const scaleFactor = dist / startDist.current;
+                const newScale = Math.max(0.4, Math.min(2.0, startScale.current * scaleFactor));
+                
+                const newCameraPos = {
+                    x: center.x - startPointTo.current.x * newScale,
+                    y: center.y - startPointTo.current.y * newScale,
                 };
 
-                const scaleFactor = dist / lastDist.current;
-                const newScale = Math.max(0.4, Math.min(2.0, oldScale * scaleFactor));
-                setZoomScale(newScale);
+                zoomScaleRef.current = newScale;
+                cameraPosRef.current = newCameraPos;
 
-                setCameraPos({
-                    x: center.x - pointTo.x * newScale,
-                    y: center.y - pointTo.y * newScale,
-                });
+                setZoomScale(newScale);
+                setCameraPos(newCameraPos);
             }
-            lastDist.current = dist;
         } else {
-            lastDist.current = null;
+            startDist.current = null;
         }
     };
 
     const handleTouchEnd = () => { 
-        lastDist.current = null; 
+        startDist.current = null; 
         setTimeout(() => { isPanning.current = false; }, 50);
     };
 

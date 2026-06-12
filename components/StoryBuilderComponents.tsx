@@ -211,9 +211,22 @@ export const StoryHex: React.FC<{
     }, [level, q, r]);
 
     // Height calculation - visual depth
-    const height = level !== undefined ? (level >= 0 ? 12 + level * 12 : 12) : 0;
-    const yOffset = level !== undefined ? (level >= 0 ? -height : (Math.abs(level) - 1) * 12) : 0;
-    const wallHeight = level !== undefined ? (level >= 0 ? height : Math.abs(level) * 12) : 0;
+    const activeLvl = useMemo(() => {
+        if (level !== undefined) {
+            const n = Number(level);
+            return isNaN(n) ? 0 : n;
+        }
+        if (isBlueprint) {
+            const n = Number(blueprintLevel);
+            return isNaN(n) ? 0 : n;
+        }
+        return undefined;
+    }, [level, isBlueprint, blueprintLevel]);
+
+    const isBuiltOrBlueprint = isBuilt || isBlueprint;
+    const height = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? 12 + activeLvl * 12 : 12) : 0;
+    const yOffset = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? -height : (Math.abs(activeLvl) - 1) * 12) : 0;
+    const wallHeight = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? height : Math.abs(activeLvl) * 12) : 0;
 
     const groupRef = useRef<Konva.Group>(null);
     useEffect(() => {
