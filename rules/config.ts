@@ -18,10 +18,10 @@ export const GAME_CONFIG = {
   MAX_INVENTORY_SIZE: 5, // Updated from 3 to 5 for new UI layout
 
   // Movement & Animation Speeds
-  // Tuned for smoother transitions (0.6s animation provides distinct travel time)
-  // Logic interval slightly larger to ensure animation finishes before next logic tick
-  MOVEMENT_ANIMATION_DURATION: 0.6, // Seconds (Visual Tween)
-  MOVEMENT_LOGIC_INTERVAL_MS: 600,  // Milliseconds (Logic Throttle) - Synced with animation duration
+  // Tuned for responsive, snappy and completely stutter-free transitions.
+  // The animation finishes safely within 350ms, before the next logic step registers at 380ms.
+  MOVEMENT_ANIMATION_DURATION: 0.35, // Seconds (Visual Tween)
+  MOVEMENT_LOGIC_INTERVAL_MS: 380,  // Milliseconds (Logic Throttle) - Buffer prevents timing overlaps
   
   // Performance Limits
   MAX_FLOATING_TEXTS: 50, // Limit simultaneous floating numbers

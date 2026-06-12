@@ -224,9 +224,9 @@ export const StoryHex: React.FC<{
     }, [level, isBlueprint, blueprintLevel]);
 
     const isBuiltOrBlueprint = isBuilt || isBlueprint;
-    const height = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? 10 + activeLvl * 8 : 10) : 0;
-    const yOffset = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? -height : (Math.abs(activeLvl) - 1) * 8) : 0;
-    const wallHeight = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? height : Math.abs(activeLvl) * 8) : 0;
+    const height = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? 12 + activeLvl * 14 : 12) : 0;
+    const yOffset = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? -height : (Math.abs(activeLvl) - 1) * 14) : 0;
+    const wallHeight = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? height : Math.abs(activeLvl) * 14) : 0;
 
     const groupRef = useRef<Konva.Group>(null);
     useEffect(() => {
@@ -366,6 +366,28 @@ export const StoryHex: React.FC<{
         return 0.85; // id === 5
     }, []);
 
+    // OPTIMIZATION & DE-CLUTTER: Completely bypass rendering logic for standard empty cells that aren't parts of active mechanics.
+    // Instead of drawing concentric background outline paths, draw an elegant, subtle star-chart coordinate center-point dot.
+    if (!isBuilt && !isBlueprint && !isEligible && !isCenterInitially) {
+        return (
+            <Group 
+                x={px.x} 
+                y={px.y} 
+                perfectDrawEnabled={false}
+                transformsEnabled="position"
+                listening={false}
+            >
+                <Circle 
+                    x={0} 
+                    y={0} 
+                    radius={1.5} 
+                    fill="rgba(255, 255, 255, 0.12)" 
+                    perfectDrawEnabled={false}
+                />
+            </Group>
+        );
+    }
+
     return (
         <Group 
             ref={groupRef} 
@@ -433,32 +455,26 @@ export const StoryHex: React.FC<{
                     fillPatternScale={{ x: GAME_CONFIG.HEX_SIZE / 32, y: GAME_CONFIG.HEX_SIZE / 32 }}
                     fillPatternOffset={{ x: 32, y: 32 }}
                     fillPatternRepeat="repeat"
-                    stroke={isBuilt ? '#06b6d4' : (isCenterInitially ? '#10b981' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)'))}
-                    strokeWidth={isBuilt ? 2.5 : (isCenterInitially ? 3.5 : (isEligible ? 1.5 : 0.8))}
+                    stroke={isBuilt ? '#06b6d4' : (isCenterInitially ? '#10b981' : (isBlueprint ? 'rgba(168, 85, 247, 0.75)' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)')))}
+                    strokeWidth={isBuilt ? 2.0 : (isCenterInitially ? 3.0 : (isBlueprint ? 1.5 : (isEligible ? 1.5 : 0.8)))}
                     perfectDrawEnabled={false}
                     shadowForStrokeEnabled={false}
-                    dash={isEligible || isBlueprint ? [4, 4] : undefined}
+                    dash={isEligible || isBlueprint ? [5, 4] : undefined}
                 />
                 
                 {/* Visual plus (+) for center initially and eligible targets */}
                 {!isBuilt && (isCenterInitially || isEligible) && (
                     <Group listening={false}>
                         <Path 
-                            data="M -6 0 L 6 0"
-                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.95)"}
-                            strokeWidth={2}
-                            shadowColor={isCenterInitially ? "#10b981" : "#22d3ee"}
-                            shadowBlur={6}
-                            shadowOpacity={0.8}
+                            data="M -5 0 L 5 0"
+                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.75)"}
+                            strokeWidth={1.5}
                             listening={false}
                         />
                         <Path 
-                            data="M 0 -6 L 0 6"
-                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.95)"}
-                            strokeWidth={2}
-                            shadowColor={isCenterInitially ? "#10b981" : "#22d3ee"}
-                            shadowBlur={6}
-                            shadowOpacity={0.8}
+                            data="M 0 -5 L 0 5"
+                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.75)"}
+                            strokeWidth={1.5}
                             listening={false}
                         />
                     </Group>
@@ -471,16 +487,16 @@ export const StoryHex: React.FC<{
                             {/* Top/Light Bevel */}
                             <Path 
                                 data={`M ${BASE_POINTS[2].x} ${BASE_POINTS[2].y} L ${BASE_POINTS[3].x} ${BASE_POINTS[3].y} L ${BASE_POINTS[4].x} ${BASE_POINTS[4].y} L ${BASE_POINTS[5].x} ${BASE_POINTS[5].y}`}
-                                stroke="rgba(255,255,255,0.45)"
-                                strokeWidth={2}
+                                stroke="rgba(255,255,255,0.4)"
+                                strokeWidth={1.5}
                                 listening={false}
                                 perfectDrawEnabled={false}
                             />
                             {/* Bottom/Dark Bevel */}
                             <Path 
                                 data={`M ${BASE_POINTS[5].x} ${BASE_POINTS[5].y} L ${BASE_POINTS[0].x} ${BASE_POINTS[0].y} L ${BASE_POINTS[1].x} ${BASE_POINTS[1].y} L ${BASE_POINTS[2].x} ${BASE_POINTS[2].y}`}
-                                stroke="rgba(0,0,0,0.55)"
-                                strokeWidth={2}
+                                stroke="rgba(0,0,0,0.5)"
+                                strokeWidth={1.5}
                                 listening={false}
                                 perfectDrawEnabled={false}
                             />
@@ -489,37 +505,18 @@ export const StoryHex: React.FC<{
                 )}
             </Group>
 
-            {/* Empty Holographic blueprint decoration inside blueprint ghost targets */}
+            {/* Empty Holographic blueprint coordinate beacon inside blueprint ghost targets (Simplified to a gorgeous clean coordinate beacon) */}
             {!isBuilt && isBlueprint && !isCenterInitially && (
                 <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
-                    <Path
-                        data={BASE_PATH_D}
-                        scaleX={0.9}
-                        scaleY={0.9}
-                        stroke={isHovered ? 'rgba(168, 85, 247, 0.85)' : 'rgba(168, 85, 247, 0.5)'}
-                        strokeWidth={1.5}
-                        dash={[4, 3]}
-                        listening={false}
-                    />
-                    {blueprintLevel > 0 && (
-                        <Path
-                            data={BASE_PATH_D}
-                            scaleX={0.7}
-                            scaleY={0.7}
-                            stroke="rgba(168, 85, 247, 0.3)"
-                            strokeWidth={1}
-                            dash={[2, 2]}
-                            listening={false}
-                        />
-                    )}
-                    {/* Visual color dot representing the target level palette for the ghost block */}
                     <Circle 
                         x={0} 
                         y={0} 
-                        r={4} 
+                        r={5} 
                         fill={THEME_PALETTE[String(blueprintLevel)]?.main || 'rgba(168, 85, 247, 0.6)'} 
-                        stroke="#fff"
-                        strokeWidth={1}
+                        stroke="#ffffff"
+                        strokeWidth={1.2}
+                        shadowColor={THEME_PALETTE[String(blueprintLevel)]?.main || '#a855f7'}
+                        shadowBlur={6}
                         listening={false} 
                     />
                 </Group>
@@ -543,36 +540,18 @@ export const StoryHex: React.FC<{
                 </Group>
             )}
 
-            {/* Glowing Pulsing Helper for Placement/Upgrade */}
-            {isEligible && !isCenterInitially && (
+            {/* Glowing Pulsing Helper for Placement/Upgrade (Decluttered to a clean built-state overlay only) */}
+            {isEligible && !isCenterInitially && isBuilt && (
                 <Group ref={pulseOutlineRef} y={yOffset} scaleY={0.8} perfectDrawEnabled={false} listening={false}>
-                    {isBuilt ? (
-                        // If it's already built, show a highly visible solid glowing overlay over the top of the existing block
-                        <Path
-                            data={BASE_PATH_D}
-                            scaleX={0.97}
-                            scaleY={0.97}
-                            fill={canPlace ? "rgba(34, 211, 238, 0.22)" : "rgba(168, 85, 247, 0.12)"} // cyan-blue if placeable, purple if need item
-                            stroke={canPlace ? "#22d3ee" : "#a855f7"}
-                            strokeWidth={2.5}
-                            shadowColor={canPlace ? "#22d3ee" : "#a855f7"}
-                            shadowBlur={12}
-                            listening={false}
-                        />
-                    ) : (
-                        // If it's a new tile on empty space, show a phantom dashed outline on the floor
-                        <Path
-                            data={BASE_PATH_D}
-                            scaleX={0.96}
-                            scaleY={0.96}
-                            stroke={canPlace ? "rgba(34, 211, 238, 0.85)" : "rgba(168, 85, 247, 0.6)"}
-                            strokeWidth={2.2}
-                            dash={[6, 4]}
-                            shadowColor={canPlace ? "#22d3ee" : "#a855f7"}
-                            shadowBlur={10}
-                            listening={false}
-                        />
-                    )}
+                    <Path
+                        data={BASE_PATH_D}
+                        scaleX={0.96}
+                        scaleY={0.96}
+                        fill="rgba(34, 211, 238, 0.05)"
+                        stroke={canPlace ? "#22d3ee" : "#a855f7"}
+                        strokeWidth={1.5}
+                        listening={false}
+                    />
                 </Group>
             )}
 
@@ -592,19 +571,18 @@ export const StoryHex: React.FC<{
                 </Group>
             )}
 
-            {/* Selection Outline */}
+            {/* Selection Outline (Glows as a solid, high-contrast, premium selection ring) */}
             {isSelected && (
                 <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                     <Path
                         data={BASE_PATH_D}
-                        scaleX={0.9}
-                        scaleY={0.9}
-                        stroke="#a855f7"
-                        strokeWidth={3}
-                        dash={[4, 4]}
-                        opacity={0.94}
-                        shadowColor="#a855f7"
-                        shadowBlur={14}
+                        scaleX={0.95}
+                        scaleY={0.95}
+                        stroke="#d946ef"
+                        strokeWidth={2.5}
+                        opacity={0.95}
+                        shadowColor="#d946ef"
+                        shadowBlur={8}
                         listening={false}
                     />
                 </Group>
