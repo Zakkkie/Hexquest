@@ -224,9 +224,9 @@ export const StoryHex: React.FC<{
     }, [level, isBlueprint, blueprintLevel]);
 
     const isBuiltOrBlueprint = isBuilt || isBlueprint;
-    const height = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? 12 + activeLvl * 12 : 12) : 0;
-    const yOffset = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? -height : (Math.abs(activeLvl) - 1) * 12) : 0;
-    const wallHeight = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? height : Math.abs(activeLvl) * 12) : 0;
+    const height = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? 10 + activeLvl * 8 : 10) : 0;
+    const yOffset = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? -height : (Math.abs(activeLvl) - 1) * 8) : 0;
+    const wallHeight = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? height : Math.abs(activeLvl) * 8) : 0;
 
     const groupRef = useRef<Konva.Group>(null);
     useEffect(() => {
@@ -332,7 +332,7 @@ export const StoryHex: React.FC<{
 
     const [isHovered, setIsHovered] = useState(false);
 
-    // Front-facing sides for isometric view (0, 1, 5)
+    // Front-facing sides for isometric view (0, 1, 2, 5)
     const visibleSides = useMemo(() => {
         if (!isBuilt) return [];
         const squashedPoints = (BASE_POINTS || []).map(p => {
@@ -340,8 +340,8 @@ export const StoryHex: React.FC<{
             return { x: p.x ?? 0, y: (p.y ?? 0) * 0.8 };
         });
         
-        // Point-up hex, front facing sides are 0, 1 and 5
-        return [0, 1, 5].map(i => {
+        // Point-up hex, front facing sides are 0, 1, 2 and 5
+        return [0, 1, 2, 5].map(i => {
             const next = (i + 1) % 6;
             const p1 = squashedPoints[i] || { x: 0, y: 0 };
             const p2 = squashedPoints[next] || { x: 0, y: 0 };
@@ -362,6 +362,7 @@ export const StoryHex: React.FC<{
     const getSideOpacity = useCallback((id: number) => {
         if (id === 0) return 0.95;
         if (id === 1) return 0.75;
+        if (id === 2) return 0.70;
         return 0.85; // id === 5
     }, []);
 
@@ -465,18 +466,8 @@ export const StoryHex: React.FC<{
                 
                 {isBuilt && colors && (
                     <>
-                        {/* Always outline built hex with cyan glow - properly squashed on the floor */}
-                        <Group scaleY={0.8} perfectDrawEnabled={false}>
-                            <Path 
-                                data={BASE_PATH_D}
-                                stroke="#22d3ee"
-                                strokeWidth={1.5}
-                                opacity={0.65}
-                                listening={false}
-                            />
-                        </Group>
-                        {/* Bevels properly aligned on top face with yOffset and scaleY=0.8 */}
-                        <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
+                        {/* Bevels properly aligned with the already-offset and scaled top face */}
+                        <Group perfectDrawEnabled={false}>
                             {/* Top/Light Bevel */}
                             <Path 
                                 data={`M ${BASE_POINTS[2].x} ${BASE_POINTS[2].y} L ${BASE_POINTS[3].x} ${BASE_POINTS[3].y} L ${BASE_POINTS[4].x} ${BASE_POINTS[4].y} L ${BASE_POINTS[5].x} ${BASE_POINTS[5].y}`}

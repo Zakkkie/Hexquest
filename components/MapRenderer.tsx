@@ -340,9 +340,9 @@ const DUST_DISPERSION_VARIANCE = 10;
 // THEME CONFIGURATION
 export const THEME_PALETTE: Record<string, HexNodeTheme> = {
     '0': { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' }, 
-    '1': { main: '#0f172a', light: '#1e293b', dark: '#020617', stroke: '#0c4a6e' }, 
-    '2': { main: '#172554', light: '#1e3a8a', dark: '#0f172a', stroke: '#0284c7' }, 
-    '3': { main: '#1e3a8a', light: '#2563eb', dark: '#172554', stroke: '#0ea5e9' }, 
+    '1': { main: '#1e3a8a', light: '#3b82f6', dark: '#172554', stroke: '#2563eb' }, 
+    '2': { main: '#2563eb', light: '#60a5fa', dark: '#1e3a8a', stroke: '#3b82f6' }, 
+    '3': { main: '#3b82f6', light: '#93c5fd', dark: '#2563eb', stroke: '#60a5fa' },  
     '4': { main: '#312e81', light: '#4338ca', dark: '#1e1b4b', stroke: '#6366f1' }, 
     '5': { main: '#4c1d95', light: '#5b21b6', dark: '#2e1065', stroke: '#8b5cf6' }, 
     '6': { main: '#581c87', light: '#6b21a8', dark: '#3b0764', stroke: '#a855f7' }, 
