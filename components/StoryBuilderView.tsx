@@ -791,8 +791,8 @@ const StoryBuilderView: React.FC = () => {
                                 const key = getHexKey(coord.q, coord.r);
                                 const lvl = storyMap[key];
                                 const blueprintPt = activeFigure.shape.find(pt => pt.q === coord.q && pt.r === coord.r);
-                                const isBlueprint = !!blueprintPt && (lvl === undefined || lvl < 0);
                                 const blueprintLvl = blueprintPt?.lvl !== undefined ? blueprintPt.lvl : 0;
+                                const isBlueprint = !!blueprintPt && (lvl === undefined || lvl < blueprintLvl);
                                 
                                 const isEligible = isEligibleForPlacement(coord.q, coord.r);
                                 const isCenterInitially = coord.q === 0 && coord.r === 0 && !hasAnyHex;
@@ -884,7 +884,6 @@ const StoryBuilderView: React.FC = () => {
                                         e.stopPropagation();
                                         playUiSound('SUCCESS');
                                         placeStoryHex(q, r, -999);
-                                        addMinedHexes({ [lvl]: 1 });
                                         setDestroyButtonCell(null);
                                     }}
                                     onTouchStart={(e) => e.stopPropagation()}
@@ -1633,7 +1632,7 @@ const StoryBuilderView: React.FC = () => {
                                             onClick={() => {
                                                 playUiSound('SUCCESS');
                                                 placeStoryHex(popupCell.q, popupCell.r, -999);
-                                                addMinedHexes({ [currentLevel]: 1 });
+
                                                 setPopupCell(null);
                                             }}
                                             className="flex-1 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-red-600 text-white hover:bg-red-700 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-1 cursor-pointer border border-red-500"

@@ -620,7 +620,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 25, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="relative bg-slate-950/98 border border-indigo-500/40 rounded-2xl shadow-[0_0_60px_rgba(79,70,229,0.3)] max-w-2xl w-full max-h-[98vh] md:max-h-[94vh] overflow-hidden flex flex-col backdrop-blur-2xl group"
+                            className="relative bg-slate-950/98 border border-indigo-500/40 rounded-2xl shadow-[0_0_60px_rgba(79,70,229,0.3)] max-w-2xl w-full max-h-[82vh] sm:max-h-[85vh] md:max-h-[92vh] overflow-hidden flex flex-col backdrop-blur-2xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
