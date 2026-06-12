@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Group, Rect, Circle, Path } from 'react-konva';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { textureService } from '../services/textureService.ts';
@@ -195,7 +195,7 @@ export const StoryHex: React.FC<{
     
     const colors = useMemo(() => {
         const defaultTheme = { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' };
-        const lvlStr = level !== undefined ? String(level) : '0';
+        const lvlStr = level !== undefined ? String(level) : (isBlueprint ? String(blueprintLevel) : '0');
         const theme = THEME_PALETTE[lvlStr] || THEME_PALETTE['0'] || defaultTheme;
         return { 
             side: theme.dark || '#0f172a', 
@@ -203,7 +203,7 @@ export const StoryHex: React.FC<{
             stroke: theme.stroke || '#475569',
             light: theme.light || '#334155' 
         };
-    }, [level]);
+    }, [level, isBlueprint, blueprintLevel]);
 
     const topTexture = useMemo(() => {
         if (level === undefined) return null;
@@ -334,7 +334,7 @@ export const StoryHex: React.FC<{
 
     // Front-facing sides for isometric view (0, 1, 2, 5)
     const visibleSides = useMemo(() => {
-        if (!isBuilt) return [];
+        if (!isBuiltOrBlueprint) return [];
         const squashedPoints = (BASE_POINTS || []).map(p => {
             if (!p) return { x: 0, y: 0 };
             return { x: p.x ?? 0, y: (p.y ?? 0) * 0.8 };
@@ -357,14 +357,9 @@ export const StoryHex: React.FC<{
                 maxY
             };
         });
-    }, [isBuilt, wallHeight]);
+    }, [isBuiltOrBlueprint, wallHeight]);
 
-    const getSideOpacity = useCallback((id: number) => {
-        if (id === 0) return 0.95;
-        if (id === 1) return 0.75;
-        if (id === 2) return 0.70;
-        return 0.85; // id === 5
-    }, []);
+
 
     // OPTIMIZATION & DE-CLUTTER: Completely bypass rendering logic for standard empty cells that aren't parts of active mechanics.
     // Instead of drawing concentric background outline paths, draw an elegant, subtle star-chart coordinate center-point dot.
@@ -408,27 +403,63 @@ export const StoryHex: React.FC<{
             transformsEnabled="position"
         >
             {/* 3D Sides / Walls */}
-            {isBuilt && colors && visibleSides && visibleSides.length > 0 && (
+            {(isBuilt || isBlueprint) && colors && visibleSides && visibleSides.length > 0 && (
                 <Group y={yOffset}>
-                    {visibleSides.map(side => (
-                        <Path
-                            key={side.id}
-                            data={side.data}
-                            fillLinearGradientStartPoint={{ x: side.midX, y: side.minY }}
-                            fillLinearGradientEndPoint={{ x: side.midX, y: side.maxY }}
-                            fillLinearGradientColorStops={[
-                                0, colors.top,
-                                0.25, colors.side,
-                                1, 'rgba(11, 17, 32, 0.05)'
-                            ]}
-                            stroke={colors.side}
-                            strokeWidth={1.5}
-                            opacity={getSideOpacity(side.id)}
-                            listening={false}
-                            perfectDrawEnabled={false}
-                            shadowForStrokeEnabled={false}
-                        />
-                    ))}
+                    {visibleSides.map(side => {
+                        const isLit = side.id === 1;
+                        const isMild = side.id !== 0 && side.id !== 1;
+                        
+                        let colorStops;
+                        if (isBuilt) {
+                            if (isLit) {
+                                colorStops = [
+                                    0.0, colors.top,
+                                    0.15, colors.top,
+                                    0.5, colors.side,
+                                    1.0, '#010410'
+                                ];
+                            } else if (isMild) {
+                                colorStops = [
+                                    0.0, colors.top,
+                                    0.12, colors.top,
+                                    0.45, colors.side,
+                                    1.0, '#01020a'
+                                ];
+                            } else {
+                                // Shadowed
+                                colorStops = [
+                                    0.0, colors.top,
+                                    0.1, colors.side,
+                                    0.45, '#0c101d',
+                                    1.0, '#000000'
+                                ];
+                            }
+                        } else {
+                            // Holographic Blueprint Walls - Beautiful semi-transparent purple gradient matching the level's tier theme
+                            colorStops = [
+                                0.0, 'rgba(168, 85, 247, 0.45)',
+                                0.5, 'rgba(124, 58, 237, 0.22)',
+                                1.0, 'rgba(88, 28, 135, 0.08)'
+                            ];
+                        }
+
+                        return (
+                            <Path
+                                key={side.id}
+                                data={side.data}
+                                fillLinearGradientStartPoint={{ x: side.midX, y: side.minY }}
+                                fillLinearGradientEndPoint={{ x: side.midX, y: side.maxY }}
+                                fillLinearGradientColorStops={colorStops}
+                                stroke={isBuilt ? colors.side : 'rgba(168, 85, 247, 0.55)'}
+                                strokeWidth={isBuilt ? 1.5 : 1.0}
+                                dash={isBuilt ? undefined : [4, 4]}
+                                opacity={isBuilt ? 1.0 : 0.6}
+                                listening={false}
+                                perfectDrawEnabled={false}
+                                shadowForStrokeEnabled={false}
+                            />
+                        );
+                    })}
                 </Group>
             )}
 
