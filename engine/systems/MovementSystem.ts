@@ -25,6 +25,14 @@ export class MovementSystem implements System {
     // 1. Completion Check
     if (entity.movementQueue.length === 0) {
       if (entity.state === EntityState.MOVING) {
+         // Wait for the final step's visual animation/logic interval to complete before marking the entity as IDLE.
+         // This synchronizes rendering animations with real entities and prevents visual stutters/jerks.
+         const now = Date.now();
+         const lastMove = entity.lastMoveTime || 0;
+         if (now - lastMove < (GAME_CONFIG.MOVEMENT_LOGIC_INTERVAL_MS || 600)) {
+             return; // Still in transit
+         }
+
          entity.state = EntityState.IDLE;
          entity.recoveredCurrentHex = false;
          events.push(GameEventFactory.create('MOVE_COMPLETE', undefined, entity.id));

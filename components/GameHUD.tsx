@@ -62,9 +62,15 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
 
   // Trigger Victory Animation Flow
   useEffect(() => {
-      if (gameStatus === 'VICTORY' && victoryStage === 'HIDDEN') {
-           setVictoryStage('SALUTE');
-      } else if (gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT') {
+      if ((gameStatus === 'VICTORY' || gameStatus === 'DEFEAT')) {
+           if (gameStatus === 'VICTORY' && victoryStage === 'HIDDEN') {
+               setVictoryStage('SALUTE');
+           }
+           setActiveModal(null);
+           setHelpTopic(null);
+           setInspectedItem(null);
+           setShowInventory(false);
+      } else {
            setVictoryStage('HIDDEN');
       }
   }, [gameStatus, victoryStage]);
@@ -90,7 +96,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                     setHelpTopic={setHelpTopic}
                 />
                 
-                {(gameStatus === 'PLAYING' || toast) && (
+                {gameStatus === 'PLAYING' && (
                     <div className="absolute top-[calc(74px+env(safe-area-inset-top))] md:top-[96px] left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2.5">
                         <CentralTutorialBanner onOpenHelpDetail={() => setActiveModal('MISSION')} />
                         
@@ -104,15 +110,11 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                                         {toast.message}
                                     </span>
                                 </div>
-                            </div>
+                             </div>
                         )}
                         
-                        {gameStatus === 'PLAYING' && (
-                            <>
-                                <MonumentHintBanner />
-                                <SkirmishHintBanner />
-                            </>
-                        )}
+                        <MonumentHintBanner />
+                        <SkirmishHintBanner />
                     </div>
                 )}
                 
