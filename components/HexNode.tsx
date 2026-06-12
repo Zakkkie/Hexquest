@@ -905,6 +905,45 @@ const HexNodeComponent = (props: HexNodeProps) => {
     );
   }
 
+  const isTemplateTarget = useMemo(() => {
+    const requiredShapes = useGameStore.getState().session?.activeLevelConfig?.requiredShapes;
+    if (!requiredShapes || requiredShapes.length === 0) return false;
+    for (const req of requiredShapes) {
+      if (req.type === 'LINE_3') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:2, r:0}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      } else if (req.type === 'TRIANGLE_3') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      } else if (req.type === 'SQUARE_4' || req.type === 'DIAMOND_4') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}, {q:1, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      } else if (req.type === 'CROSS_5') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:-1, r:0}, {q:0, r:1}, {q:0, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      } else if (req.type === 'RING_6') {
+        const coords = [{q:1, r:-1}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}, {q:0, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      } else if (req.type === 'CROWN_5') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:-1, r:0}, {q:-1, r:1}, {q:1, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      } else if (req.type === 'HEXAGON_7') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}, {q:0, r:-1}, {q:1, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      } else if (req.type === 'HEART_6') {
+        const coords = [{q:0, r:0}, {q:1, r:-1}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      } else if (req.type === 'STAR_7') {
+        const coords = [{q:0, r:0}, {q:2, r:0}, {q:0, r:2}, {q:-2, r:2}, {q:-2, r:0}, {q:0, r:-2}, {q:2, r:-2}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      } else if (req.type === 'PYRAMID_6') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:2, r:0}, {q:0, r:1}, {q:1, r:1}, {q:0, r:2}];
+        if (coords.some(c => c.q === q && c.r === r)) return true;
+      }
+    }
+    return false;
+  }, [q, r]);
+
   const strokeColor = isMonument ? "#fcd34d" : theme.stroke;
   const strokeWidth = isMonument ? 3.0 : 2.0;
 
@@ -921,6 +960,60 @@ const HexNodeComponent = (props: HexNodeProps) => {
       opacity={opacity}
       {...blurProps}
     >
+      {/* VERTICAL AND HORIZONTAL DOTTED SCUFFOLD AND GRID SCAFFOLD (Anti-floating guidelines) */}
+      {!isRealVoid && (
+        <Group listening={false}>
+          {/* A. Six vertical corner dotted lines running from ground to visual face height */}
+          {BASE_POINTS.map((pt, index) => {
+            const startY = pt.y * 0.8;
+            const endY = offsetY + pt.y * 0.8;
+            if (offsetY < -1) {
+              return (
+                <Line
+                  key={`v-dotted-guideline-${index}`}
+                  points={[pt.x, startY, pt.x, endY]}
+                  stroke="rgba(99, 102, 241, 0.40)"
+                  strokeWidth={0.8}
+                  dash={[2, 3]}
+                  perfectDrawEnabled={false}
+                />
+              );
+            }
+            return null;
+          })}
+
+          {/* B. Symmetrical horizontal dotted slices detailing each intermediate stage height */}
+          {(() => {
+            if (offsetY < -2) {
+              const elements: React.ReactNode[] = [];
+              const tileLevel = level;
+              for (let lvl = 0; lvl <= tileLevel; lvl++) {
+                const stepY = -(10 + lvl * 10);
+                if (stepY >= offsetY) {
+                  const pts: number[] = [];
+                  for (let pIdx = 0; pIdx < 6; pIdx++) {
+                    pts.push(BASE_POINTS[pIdx].x, stepY + BASE_POINTS[pIdx].y * 0.8);
+                  }
+                  elements.push(
+                    <Line
+                      key={`h-dotted-slice-guideline-${lvl}`}
+                      points={pts}
+                      closed={true}
+                      stroke="rgba(99, 102, 241, 0.20)"
+                      strokeWidth={0.8}
+                      dash={[1, 4]}
+                      perfectDrawEnabled={false}
+                    />
+                  );
+                }
+              }
+              return elements;
+            }
+            return null;
+          })()}
+        </Group>
+      )}
+
       {/* 1. WALLS */}
       {neighborLevels.map((_, i) => {
         const shading = i === 1 ? 0 : i === 0 ? -0.2 : -0.1;
@@ -1008,6 +1101,20 @@ const HexNodeComponent = (props: HexNodeProps) => {
             perfectDrawEnabled={false}
             shadowForStrokeEnabled={false}
           />
+
+          {/* Symmetrical target shape template guideline highlight */}
+          {isTemplateTarget && (
+            <Path
+              data={BASE_PATH_D}
+              stroke={level >= (useGameStore.getState().session?.activeLevelConfig?.requiredShapes?.[0]?.level ?? 1) ? "#10b981" : "#fbbf24"}
+              strokeWidth={2.5}
+              dash={[5, 4]}
+              opacity={0.85}
+              listening={false}
+              perfectDrawEnabled={false}
+              shadowForStrokeEnabled={false}
+            />
+          )}
 
           {/* Surface variation gradient */}
           {isRevealed && !isMonument && (

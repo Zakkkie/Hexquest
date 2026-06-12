@@ -1265,3 +1265,47 @@ export const TEXT: Record<Language, Dictionary> = {
         }
     }
 };
+
+// Programmatic 200 campaign levels dynamic translator
+(() => {
+    const SHAPE_TEMPLATES = [
+        { type: 'LINE_3', titleEn: 'Linear Alignment', titleRu: 'Линейное выравнивание', descEn: '3-tile straight line.', descRu: 'Прямая линия из 3 плит.' },
+        { type: 'TRIANGLE_3', titleEn: 'Triangular Delta', titleRu: 'Треугольная дельта', descEn: 'Stable 3-tile delta shape.', descRu: 'Стабильная 3-плиточная дельта.' },
+        { type: 'SQUARE_4', titleEn: 'Cubic block', titleRu: 'Кубический блок', descEn: 'Symmetrical 4-tile square.', descRu: 'Симметричный квадрат из 4 плит.' },
+        { type: 'CROSS_5', titleEn: 'Celestial cross', titleRu: 'Небесный крест', descEn: 'Beautiful 5-tile symmetric cross.', descRu: 'Красивый 5-плиточный симметричный крест.' },
+        { type: 'RING_6', titleEn: 'Vortex Core Ring', titleRu: 'Вихревое кольцо', descEn: 'Hollow ring of 6 tiles.', descRu: 'Полое кольцо из 6 плит.' },
+        { type: 'CROWN_5', titleEn: 'Imperial Crown', titleRu: 'Имперская корона', descEn: 'Symmetrical crown of 5 tiles.', descRu: 'Симметричная корона из 5 плит.' },
+        { type: 'HEXAGON_7', titleEn: 'Symmetrical Honeycomb', titleRu: 'Симметричные соты', descEn: 'Solid 7-tile honeycomb core.', descRu: 'Прочный блок из 7 гексагональных сот.' },
+        { type: 'HEART_6', titleEn: 'Symmetrical Heart', titleRu: 'Симметричное сердце', descEn: 'Symmetrical heart of 6 tiles.', descRu: 'Симметричное сердце из 6 плит.' },
+        { type: 'STAR_7', titleEn: 'Stellar Nebula Star', titleRu: 'Звезда Туманности', descEn: '6-pronged star around central core.', descRu: 'Космический пульсар из 7 плит.' },
+        { type: 'PYRAMID_6', titleEn: 'Symmetrical Ziggurat', titleRu: 'Симметричный зиккурат', descEn: 'Majestic 6-tile pyramid structure.', descRu: 'Величественный зиккурат из 6 плит.' }
+    ];
+
+    const enCampaign = TEXT.EN.CAMPAIGN as any;
+    const ruCampaign = TEXT.RU.CAMPAIGN as any;
+
+    for (let i = 1; i <= 200; i++) {
+        const seriesId = Math.ceil(i / 10);
+        const levelOffset = i % 10 === 0 ? 10 : i % 10;
+        const key = `LEVEL_${seriesId}_${levelOffset}`;
+
+        const shape = SHAPE_TEMPLATES[(i - 1) % SHAPE_TEMPLATES.length];
+        const targetLevel = i < 20 ? 1 : Math.floor(i / 20);
+
+        // Inject English
+        if (!enCampaign[`${key}_TITLE`]) {
+            enCampaign[`${key}_TITLE`] = `Sim ${seriesId}.${levelOffset}: ${shape.titleEn}`;
+        }
+        if (!enCampaign[`${key}_DESC`]) {
+            enCampaign[`${key}_DESC`] = `SHAPE OBJECTIVE:\n\nConstruct a symmetrical ${shape.type} shape at height Level L${targetLevel}+.\n\nGuide: Drill elevated tiles for materials inside the deep mine, build side supporting plates, and construct the geometric target model to open the evacuation portal!`;
+        }
+
+        // Inject Russian
+        if (!ruCampaign[`${key}_TITLE`]) {
+            ruCampaign[`${key}_TITLE`] = `Сим ${seriesId}.${levelOffset}: ${shape.titleRu}`;
+        }
+        if (!ruCampaign[`${key}_DESC`]) {
+            ruCampaign[`${key}_DESC`] = `ЦЕЛЬ ФИГУРЫ:\n\nПостройте симметричную форму ${shape.type} на уровне высоты L${targetLevel}+.\n\nИнструкция: Срезайте возвышенности красной кнопкой для добычи материалов, выстраивайте опорный фундамент плит и соберите нужную геометрию для запуска портала эвакуации!`;
+        }
+    }
+})();

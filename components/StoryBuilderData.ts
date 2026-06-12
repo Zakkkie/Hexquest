@@ -19,6 +19,66 @@ export interface Figure {
     rewardSP: number;
 }
 
+const MASTER_COORDS = [
+    { q: 0, r: 0 },         // 0
+    { q: 1, r: -1 },        // 1
+    { q: 1, r: 0 },         // 2
+    { q: 0, r: 1 },         // 3
+    { q: -1, r: 1 },         // 4
+    { q: -1, r: 0 },        // 5
+    { q: 0, r: -1 },        // 6
+    
+    // Ring 2
+    { q: 2, r: -2 },        // 7
+    { q: 2, r: -1 },        // 8
+    { q: 2, r: 0 },         // 9
+    { q: 1, r: 1 },         // 10
+    { q: 0, r: 2 },         // 11
+    { q: -1, r: 2 },        // 12
+    { q: -2, r: 2 },        // 13
+    { q: -2, r: 1 },        // 14
+    { q: -2, r: 0 },        // 15
+    { q: -2, r: -1 },       // 16
+    { q: -1, r: -1 },       // 17
+    { q: 0, r: -2 },        // 18
+    { q: 1, r: -2 },        // 19
+    
+    // Ring 3
+    { q: 3, r: -3 },        // 20
+    { q: 3, r: -2 },        // 21
+    { q: 3, r: -1 },        // 22
+    { q: 3, r: 0 },         // 23
+    { q: 2, r: 1 },         // 24
+    { q: 1, r: 2 },         // 25
+    { q: 0, r: 3 },         // 26
+    { q: -1, r: 3 },        // 27
+    { q: -2, r: 3 },        // 28
+    { q: -3, r: 3 },        // 29
+    { q: -3, r: 2 },        // 30
+    { q: -3, r: 1 },        // 31
+    { q: -3, r: 0 },        // 32
+    { q: -3, r: -1 },       // 33
+    { q: -2, r: -2 },       // 34
+    { q: -1, r: -2 },       // 35
+    { q: 0, r: -3 },        // 36
+    { q: 1, r: -3 },        // 37
+    { q: 2, r: -3 },        // 38
+    
+    // Ring 4
+    { q: 4, r: -4 },        // 39
+    { q: 4, r: -3 },        // 40
+    { q: 4, r: -2 },        // 41
+    { q: 4, r: -1 },        // 42
+    { q: 4, r: 0 },         // 43
+    { q: 3, r: 1 },         // 44
+    { q: 2, r: 2 },         // 45
+    { q: 1, r: 3 },         // 46
+    { q: 0, r: 4 },         // 47
+    { q: -1, r: 4 },        // 48
+    { q: -2, r: 4 },        // 49
+    { q: -3, r: 4 }         // 50
+];
+
 const ruAdjectives = [
     'Квантовый', 'Эфирный', 'Небесный', 'Тектонический', 'Опорный',
     'Высотный', 'Парящий', 'Кристальный', 'Звездный', 'Горный',
@@ -51,270 +111,74 @@ const enNouns = [
     'Monolith', 'Outpost', 'Impulser', 'Signal', 'Centroid'
 ];
 
-export const getSymmetricShape = (targetSize: number, templateId: number): { q: number; r: number }[] => {
-    const shape: { q: number; r: number }[] = [];
-    const visited = new Set<string>();
-    const add = (q: number, r: number) => {
-        const key = `${q},${r}`;
-        if (!visited.has(key)) {
-            visited.add(key);
-            shape.push({ q, r });
-            return true;
-        }
-        return false;
-    };
-
-    // Always start with the origin
-    add(0, 0);
-
-    if (templateId === 0) {
-        // Hexagonal Snowflake (Rotational symmetry)
-        const dirs = [
-            { q: 1, r: 0 }, { q: -1, r: 0 },
-            { q: 0, r: 1 }, { q: 0, r: -1 },
-            { q: 1, r: -1 }, { q: -1, r: 1 }
-        ];
-        let dIdx = 0;
-        while (shape.length < targetSize) {
-            const dir = dirs[dIdx % dirs.length];
-            const multiplier = Math.floor(dIdx / dirs.length) + 1;
-            add(dir.q * multiplier, dir.r * multiplier);
-            dIdx++;
-        }
-    } else if (templateId === 1) {
-        // Twin Pillars with Central Bridge
-        const preCoords = [
-            { q: 0, r: 0 }, { q: 1, r: 0 }, { q: -1, r: 0 },
-            { q: 2, r: 0 }, { q: -2, r: 0 },
-            { q: 2, r: -1 }, { q: -2, r: 1 },
-            { q: 2, r: 1 }, { q: -2, r: -1 },
-            { q: 1, r: 1 }, { q: -1, r: -1 },
-            { q: 0, r: 1 }, { q: 0, r: -1 }
-        ];
-        for (const pt of preCoords) {
-            if (shape.length >= targetSize) break;
-            add(pt.q, pt.r);
-        }
-    } else if (templateId === 2) {
-        // Crown Ring (Concentric Placement)
-        const ring1 = [
-            { q: 1, r: -1 }, { q: 1, r: 0 }, { q: 0, r: 1 },
-            { q: -1, r: 1 }, { q: -1, r: 0 }, { q: 0, r: -1 }
-        ];
-        const ring2 = [
-            { q: 2, r: -2 }, { q: 2, r: -1 }, { q: 2, r: 0 },
-            { q: 1, r: 1 }, { q: 0, r: 2 }, { q: -1, r: 2 },
-            { q: -2, r: 2 }, { q: -2, r: 1 }, { q: -2, r: 0 },
-            { q: -1, r: -1 }, { q: 0, r: -2 }, { q: 1, r: -2 }
-        ];
-        for (const pt of ring1) {
-            if (shape.length >= targetSize) break;
-            add(pt.q, pt.r);
-        }
-        for (const pt of ring2) {
-            if (shape.length >= targetSize) break;
-            add(pt.q, pt.r);
-        }
-    } else if (templateId === 3) {
-        // Serpentine Path (Winding Curvy Line)
-        let q = 0, r = 0;
-        const moves = [
-            { q: 1, r: -1 }, { q: 1, r: 0 }, { q: 0, r: 1 },
-            { q: -1, r: 1 }, { q: -1, r: 0 }, { q: 0, r: -1 }
-        ];
-        let moveIdx = 0;
-        let stepCount = 0;
-        while (shape.length < targetSize) {
-            const m = moves[moveIdx % moves.length];
-            q += m.q;
-            r += m.r;
-            add(q, r);
-            stepCount++;
-            if (stepCount % 2 === 0) {
-                moveIdx++; // Curve the snake
-            }
-        }
-    } else if (templateId === 4) {
-        // Mirror Butterfly Wings
-        const order = [
-            { q: 0, r: 1 }, { q: 0, r: -1 },
-            { q: 1, r: 0 }, { q: -1, r: 1 },
-            { q: 1, r: -1 }, { q: -1, r: 0 },
-            { q: 2, r: -1 }, { q: -2, r: 1 },
-            { q: 2, r: -2 }, { q: -2, r: 0 },
-            { q: 1, r: 1 }, { q: -1, r: 2 }
-        ];
-        for (const pt of order) {
-            if (shape.length >= targetSize) break;
-            add(pt.q, pt.r);
-        }
-    } else if (templateId === 5) {
-        // Symmetric Cross / Trident Arms
-        for (let dist = 1; dist <= 4; dist++) {
-            if (shape.length >= targetSize) break;
-            add(dist, 0);
-            if (shape.length >= targetSize) break;
-            add(0, dist);
-            if (shape.length >= targetSize) break;
-            add(-dist, dist);
-
-            if (shape.length >= targetSize) break;
-            add(-dist, 0);
-            if (shape.length >= targetSize) break;
-            add(0, -dist);
-            if (shape.length >= targetSize) break;
-            add(dist, -dist);
-        }
-    } else {
-        // Star Spiral
-        let ring = 1;
-        const dirs = [
-            { q: 1, r: -1 }, { q: 0, r: -1 }, { q: -1, r: 0 },
-            { q: -1, r: 1 }, { q: 0, r: 1 }, { q: 1, r: 0 }
-        ];
-        while (shape.length < targetSize) {
-            let curQ = -ring;
-            let curR = ring;
-            for (let i = 0; i < 6; i++) {
-                for (let step = 0; step < ring; step++) {
-                    if (shape.length >= targetSize) break;
-                    add(curQ, curR);
-                    curQ += dirs[i].q;
-                    curR += dirs[i].r;
-                }
-            }
-            ring++;
-            if (ring > 5) break;
-        }
-    }
-
-    // Fail-safe size keeper to guarantee targetSize is reached and fully connected
-    while (shape.length < targetSize) {
-        let added = false;
-        for (const pt of shape) {
-            const neighbors = [
-                { q: pt.q + 1, r: pt.r },
-                { q: pt.q, r: pt.r + 1 },
-                { q: pt.q - 1, r: pt.r + 1 },
-                { q: pt.q - 1, r: pt.r },
-                { q: pt.q, r: pt.r - 1 },
-                { q: pt.q + 1, r: pt.r - 1 }
-            ];
-            for (const n of neighbors) {
-                if (add(n.q, n.r)) {
-                    added = true;
-                    if (shape.length >= targetSize) break;
-                }
-            }
-            if (shape.length >= targetSize) break;
-        }
-        if (!added) break;
-    }
-
-    return shape;
-};
-
 export const generateAllFiguresRaw = (): Figure[] => {
     const list: Figure[] = [];
     
-    for (let index = 1; index <= 200; index++) {
-        // Determine ID by chapters of 20 steps each
-        const chapter = Math.floor((index - 1) / 20) + 1;
-        const subIndex = ((index - 1) % 20) + 1;
-        const id_str = `c${chapter}_f${subIndex}`;
-        
-        // 1. Determine Level/Height Tier Constraints beautifully
-        // - up to 20: lvl 1
-        // - up to 40: lvl 2
-        // - up to 60: lvl 3
-        // - up to 80 (c4): lvl 4
-        // - up to 100 (c5): lvl 5
-        // - up to 120 (c6): lvl 6
-        // - up to 140 (c7): lvl 7
-        // - up to 160 (c8): lvl 8
-        // - up to 180 (c9): lvl 9
-        // - up to 200 (c10): lvl 10
-        let maxLvl = 1;
-        if (index <= 20) {
-            maxLvl = 1;
-        } else if (index <= 40) {
-            maxLvl = 2;
-        } else if (index <= 60) {
-            maxLvl = 3;
-        } else if (index <= 80) {
-            maxLvl = 4;
-        } else if (index <= 100) {
-            maxLvl = 5;
-        } else if (index <= 120) {
-            maxLvl = 6;
-        } else if (index <= 140) {
-            maxLvl = 7;
-        } else if (index <= 160) {
-            maxLvl = 8;
-        } else if (index <= 180) {
-            maxLvl = 9;
+    for (let index = 1; index <= 110; index++) {
+        // Determine ID
+        let id_str = '';
+        if (index <= 10) {
+            id_str = `c1_f${index}`;
+        } else if (index <= 20) {
+            id_str = `c2_f${index - 10}`;
+        } else if (index <= 30) {
+            id_str = `c3_f${index - 20}`;
         } else {
-            maxLvl = 10;
+            id_str = `c4_f${index}`;
         }
         
-        // 2. Shape size: grows organically from size 3 up to size 12-14 in each chapter.
-        let size = ((index - 1) % 20) + 3;
-        if (size > 14) size = 14;
+        // 1. Determine Level Tier Constraint (steps 1-20 -> Tier 0; steps 21-40 -> Tier 1, etc.)
+        const tier = Math.floor((index - 1) / 20); // 0, 1, 2, 3, 4, 5
+        const maxLvl = tier + 1; // L1 based, L2 based, etc.
         
-        // 3. Selection of template coordinates (0 - 6)
-        const templateId = index % 7;
-        const rawCoords = getSymmetricShape(size, templateId);
+        // 2. Shape size: grows organically from size 1 up to size 14 as steps increase within the 20-step chapter.
+        let size = ((index - 1) % 20) + 1;
+        if (size > 14) size = 14; // Cap size so maps fit neatly in viewport
         
         const shape: { q: number; r: number; lvl?: number }[] = [];
         
-        // 4. Assign beautiful symmetric heights flowing elegantly
-        for (let j = 0; j < rawCoords.length; j++) {
-            const pt = rawCoords[j];
-            let lvl = 1;
-
-            if (templateId === 0) {
-                // Snowflake Peak: center highest, edges fall beautifully
-                const dist = Math.max(Math.abs(pt.q), Math.abs(pt.r), Math.abs(pt.q + pt.r));
-                lvl = maxLvl - Math.min(maxLvl, dist);
-            } else if (templateId === 1) {
-                // Twin Pillars: high peaks, lower bridge in middle
-                const isOuter = Math.abs(pt.q) >= 1;
-                lvl = isOuter ? maxLvl : Math.max(0, maxLvl - 2);
-            } else if (templateId === 2) {
-                // Crown Ring alternating pattern
-                const angle = Math.atan2(pt.r, pt.q);
-                const normAngle = angle < 0 ? angle + 2 * Math.PI : angle;
-                const waves = Math.sin(normAngle * 3);
-                const factor = (waves + 1) / 2;
-                lvl = Math.round(factor * maxLvl);
-            } else if (templateId === 3) {
-                // Serpent winding path sequential climbups
-                const factor = j / (rawCoords.length - 1);
-                lvl = Math.round(factor * maxLvl);
-            } else if (templateId === 4) {
-                // Mirror Butterfly
-                const dist = Math.abs(pt.q);
-                lvl = Math.max(0, maxLvl - dist);
-            } else if (templateId === 5) {
-                // Trident star arm endpoints are towers
-                const dist = Math.max(Math.abs(pt.q), Math.abs(pt.r), Math.abs(pt.q + pt.r));
-                lvl = Math.min(maxLvl, dist + 1);
+        // 3. Select topographical mode for level allocation
+        const mode = index % 4;
+        
+        for (let j = 0; j < size; j++) {
+            const coord = MASTER_COORDS[j % MASTER_COORDS.length];
+            let lvl = 0;
+            
+            if (size <= 1) {
+                lvl = maxLvl;
             } else {
-                // Winding spiral slope gradient
-                const factor = 1 - (j / (rawCoords.length - 1));
-                lvl = Math.round(factor * maxLvl);
+                if (mode === 0) {
+                    // Symmetrical Peak: highest in center, falls to 0 at edges
+                    const mid = (size - 1) / 2;
+                    const distFromMid = Math.abs(j - mid);
+                    const factor = 1 - distFromMid / mid;
+                    lvl = Math.round(factor * maxLvl);
+                } else if (mode === 1) {
+                    // Continuous Rise: climb from 0 to maxLvl
+                    const factor = j / (size - 1);
+                    lvl = Math.round(factor * maxLvl);
+                } else if (mode === 2) {
+                    // Saddle Valley: high on edges, low in center
+                    const mid = (size - 1) / 2;
+                    const distFromMid = Math.abs(j - mid);
+                    const factor = distFromMid / mid;
+                    lvl = Math.round(factor * maxLvl);
+                } else {
+                    // Serrated Comb: alternating between maxLvl and 0
+                    lvl = (j % 2 === 0) ? maxLvl : Math.max(0, maxLvl - 2);
+                }
             }
-
-            // High priority safety clamp
+            
+            // Safety bounds
             if (lvl < 0) lvl = 0;
             if (lvl > maxLvl) lvl = maxLvl;
-
-            shape.push({ q: pt.q, r: pt.r, lvl });
+            
+            shape.push({ q: coord.q, r: coord.r, lvl: lvl });
         }
         
-        // 5. Naming pairings to ensure 100% uniqueness without duplication
-        const adjIndex = (index * 17) % ruAdjectives.length;
-        const nounIndex = (index * 23 + 5) % ruNouns.length;
+        // 4. Unique localized naming determinism
+        const adjIndex = (index * 7 + 3) % ruAdjectives.length;
+        const nounIndex = (index * 13 + 1) % ruNouns.length;
         
         const adjRu = ruAdjectives[adjIndex];
         const nounRu = ruNouns[nounIndex];
@@ -327,7 +191,8 @@ export const generateAllFiguresRaw = (): Figure[] => {
         const descRU = `Соберите структуру из ${size} смежных гексов. Максимальная высота достигает L${maxLvl}. Новые блоки гармонично перетекают из форм предыдущего этапа.`;
         const descEN = `Erect a continuous configuration of ${size} adjacent hexes. Maximum height reaches L${maxLvl}. The structure flows seamlessly from the geometries established in the prior step.`;
         
-        const rewardSP = Math.max(1, Math.floor(maxLvl * 1.5));
+        // Calculate SP reward
+        const rewardSP = tier + 1;
         
         list.push({
             id: id_str,

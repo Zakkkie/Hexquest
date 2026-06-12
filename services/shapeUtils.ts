@@ -1,7 +1,18 @@
 import { HexCoord, SessionState } from '../types';
 import { getHexKey } from './hexUtils';
 
-export type ShapeType = 'LINE_3' | 'TRIANGLE_3' | 'DIAMOND_4' | 'RING_6';
+export type ShapeType = 
+    | 'LINE_3' 
+    | 'TRIANGLE_3' 
+    | 'DIAMOND_4' 
+    | 'RING_6'
+    | 'CROSS_5'
+    | 'HEXAGON_7'
+    | 'STAR_7'
+    | 'PYRAMID_6'
+    | 'HEART_6'
+    | 'CROWN_5'
+    | 'SQUARE_4';
 
 export interface RequiredShape {
     type: ShapeType;
@@ -27,11 +38,33 @@ const SHAPE_DEFS: Record<ShapeType, HexCoord[][]> = {
     ],
     'DIAMOND_4': [
         [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}, {q:1, r:-1}],
-        [{q:0, r:0}, {q:1, r:0}, {q:2, r:-1}, {q:1, r:1}],
-        // simplified
+        [{q:0, r:0}, {q:1, r:0}, {q:2, r:-1}, {q:1, r:1}]
     ],
     'RING_6': [
         [{q:1, r:-1}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}, {q:0, r:-1}]
+    ],
+    'CROSS_5': [
+        [{q:0, r:0}, {q:1, r:0}, {q:-1, r:0}, {q:0, r:1}, {q:0, r:-1}],
+        [{q:0, r:0}, {q:1, r:-1}, {q:-1, r:1}, {q:1, r:0}, {q:-1, r:0}]
+    ],
+    'HEXAGON_7': [
+        [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}, {q:0, r:-1}, {q:1, r:-1}]
+    ],
+    'STAR_7': [
+        [{q:0, r:0}, {q:2, r:0}, {q:0, r:2}, {q:-2, r:2}, {q:-2, r:0}, {q:0, r:-2}, {q:2, r:-2}]
+    ],
+    'PYRAMID_6': [
+        [{q:0, r:0}, {q:1, r:0}, {q:2, r:0}, {q:0, r:1}, {q:1, r:1}, {q:0, r:2}],
+        [{q:0, r:0}, {q:0, r:1}, {q:0, r:2}, {q:-1, r:1}, {q:-1, r:2}, {q:-2, r:2}]
+    ],
+    'HEART_6': [
+        [{q:0, r:0}, {q:1, r:-1}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}]
+    ],
+    'CROWN_5': [
+        [{q:0, r:0}, {q:1, r:0}, {q:-1, r:0}, {q:-1, r:1}, {q:1, r:-1}]
+    ],
+    'SQUARE_4': [
+        [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}, {q:1, r:-1}]
     ]
 };
 

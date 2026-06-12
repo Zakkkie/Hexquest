@@ -37,7 +37,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
         description: string,
         icon: React.ReactNode, 
         amountPerUpgrade: number, 
-        cost: number, 
+        _cost: number, 
         colorClass: string,
         maxLevel?: number,
         delay: number = 0
@@ -48,8 +48,53 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
         if (key === 'maxMaterials') baseline = 3;
 
         const level = Math.floor((currentValue - baseline) / amountPerUpgrade);
+
+        // Calculate progressive and ranked dynamic cost based on importance of the upgrade
+        const getUpgradeCost = (k: typeof key, lvl: number): number => {
+            // Tier S: Extremely Rare / High value
+            if (k === 'inventorySlots') {
+                return 5 * (lvl + 1); // 5, 10, 15, 20, 25 SP
+            }
+            if (k === 'startingEnergy') {
+                return 3 * (lvl + 1); // 3, 6, 9, 12, 15, 18, 21, 24, 27, 30 SP
+            }
+            if (k === 'maxMaterials') {
+                return 2 * (lvl + 1); // 2, 4, 6... up to 40 SP
+            }
+            if (k === 'startingGold') {
+                return 2 * (lvl + 1); // 2, 4, 6... up to 20 SP
+            }
+
+            // Tier A: Rare / High Utility
+            if (k === 'startingMoves') {
+                return 2 + lvl; // 2, 3, 4, 5, 6 SP
+            }
+            if (k === 'startingMaterials') {
+                return 2 + Math.floor(lvl / 2); // 2, 2, 3, 3, 4, 4, 5, 5, 6, 6 SP
+            }
+            if (['fuelEfficiency', 'scanRadius', 'fatigueResistance', 'growthAccelerator', 'diggerLuck', 'doubleDigChance', 'reserveCapacitor', 'turboRecharge', 'entropyResistance', 'restorationMaster'].includes(k as string)) {
+                const base = (k === 'growthAccelerator' || k === 'diggerLuck' || k === 'turboRecharge') ? 3 : 2;
+                return base * (lvl + 1);
+            }
+
+            // Tier B: Common
+            return 1 + lvl; // 1, 2, 3... SP
+        };
+
+        const dynamicCost = getUpgradeCost(key, level);
+
+        const getCumulativeSpent = (k: typeof key, lvl: number): number => {
+            let sum = 0;
+            for (let i = 0; i < lvl; i++) {
+                sum += getUpgradeCost(k, i);
+            }
+            return sum;
+        };
+
+        const spentSP = getCumulativeSpent(key, level);
+
         const isMaxed = maxLevel !== undefined && level >= maxLevel;
-        const canAfford = skillPoints >= cost;
+        const canAfford = skillPoints >= dynamicCost;
         const glowColor = colorClass.match(/text-([a-z]+)-400/)?.[1] || 'indigo';
 
         return (
@@ -62,7 +107,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                  className={`group relative flex flex-col p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] transition-all duration-300 h-full
                     ${canAfford && !isMaxed ? 'cursor-pointer hover:shadow-[0_15px_30px_rgba(0,0,0,0.4)]' : 'opacity-85 grayscale-[20%] cursor-not-allowed'}
                  `}
-                 onClick={() => !isMaxed && handleUpgrade(key, amountPerUpgrade, cost)}
+                 onClick={() => !isMaxed && handleUpgrade(key, amountPerUpgrade, dynamicCost)}
             >
                  {/* Card Background */}
                  <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-lg border border-white/5 transition-all duration-300 rounded-2xl md:rounded-[1.5rem] overflow-hidden
@@ -118,7 +163,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                                 )}
                             </div>
                             <div className="text-[8px] font-mono text-slate-500 uppercase">
-                                {language === 'RU' ? 'Потрачено:' : 'Spent:'} {level * cost} SP
+                                {language === 'RU' ? 'Потрачено:' : 'Spent:'} {spentSP} SP
                             </div>
                         </div>
 
@@ -127,7 +172,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                             <div className={`px-2.5 py-1 rounded-lg border text-[10px] md:text-[11px] font-black tracking-tight transition-all duration-300
                                 ${canAfford ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-white/20' : 'bg-slate-800/40 text-slate-600 border-slate-700/40'}
                             `}>
-                                {cost} SP
+                                {dynamicCost} SP
                             </div>
                         )}
                      </div>

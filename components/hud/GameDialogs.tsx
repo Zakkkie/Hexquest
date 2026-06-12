@@ -12,6 +12,19 @@ import Fireworks from '../Fireworks';
 import { MiniMonumentDialog } from './MiniMonumentDialog';
 import { audioService } from '../../services/audioService';
 
+const getLevelIndexFromId = (id?: string | null): number => {
+    if (!id) return 1;
+    const parts = id.split('.');
+    if (parts.length === 2) {
+        const series = parseInt(parts[0], 10);
+        const offset = parseInt(parts[1], 10);
+        if (!isNaN(series) && !isNaN(offset)) {
+            return (series - 1) * 10 + offset;
+        }
+    }
+    return 1;
+};
+
 interface GameDialogsProps {
     activeModal: string | null;
     closeModal: () => void;
@@ -176,7 +189,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         {id: 2, revealedLevel: null, isClaimed: false}
     ]);
 
-    const [victoryRewards, setVictoryRewards] = useState<{l0: number, l1: number, l2: number} | null>(null);
+    const [victoryRewards, setVictoryRewards] = useState<{
+        l0: number;
+        l1: number;
+        l2: number;
+        lvl0: number;
+        lvl1: number;
+        lvl2: number;
+    } | null>(null);
     const [wasRewardPreviouslyClaimed, setWasRewardPreviouslyClaimed] = useState(false);
 
     const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards) || [];
@@ -190,20 +210,29 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             setWasRewardPreviouslyClaimed(isAlreadyClaimed);
 
             if (isAlreadyClaimed) {
-                setVictoryRewards({ l0: 0, l1: 0, l2: 0 });
+                setVictoryRewards({ l0: 0, l1: 0, l2: 0, lvl0: 0, lvl1: 1, lvl2: 2 });
             } else {
+                // Determine target level of current simulation config
+                const requiredShapes = session?.activeLevelConfig?.requiredShapes || [];
+                const T = requiredShapes[0]?.level || 1;
+
+                const lvl0 = Math.max(0, T - 1);
+                const lvl1 = Math.max(1, T);
+                const lvl2 = Math.min(10, T + 1);
+
                 const l0 = Math.floor(Math.random() * 11) + 5;
                 const l1 = Math.floor(Math.random() * 6) + 5;
                 const l2 = Math.floor(Math.random() * 5) + 1;
-                setVictoryRewards({ l0, l1, l2 });
-                addCollectedHexes({ 0: l0, 1: l1, 2: l2 });
-                addMinedHexes({ 0: l0, 1: l1, 2: l2 });
+                
+                setVictoryRewards({ l0, l1, l2, lvl0, lvl1, lvl2 });
+                addCollectedHexes({ [lvl0]: l0, [lvl1]: l1, [lvl2]: l2 });
+                addMinedHexes({ [lvl0]: l0, [lvl1]: l1, [lvl2]: l2 });
                 if (levelId) {
                     claimLevelReward(levelId);
                 }
             }
         }
-    }, [gameStatus, victoryRewards, addCollectedHexes, addMinedHexes, claimedLevelRewards, session?.activeLevelConfig?.id, claimLevelReward]);
+    }, [gameStatus, victoryRewards, addCollectedHexes, addMinedHexes, claimedLevelRewards, session?.activeLevelConfig, claimLevelReward]);
 
     useEffect(() => {
         if (gameStatus === 'BRIEFING') {
@@ -221,6 +250,11 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         if (rewardHexCells.find(c => c.id === id)?.revealedLevel !== null) return;
         
         if (playUiSound) playUiSound('CLICK');
+        
+        const levelId = session?.activeLevelConfig?.id;
+        const levelIndex = getLevelIndexFromId(levelId);
+        const maxAllowed = Math.min(10, 2 + Math.floor(levelIndex / 20));
+
         const r = Math.random();
         let level = 10;
         if (r < 0.3) level = 0;
@@ -233,6 +267,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         else if (r < 0.985) level = 7;
         else if (r < 0.995) level = 8;
         else if (r < 0.999) level = 9;
+
+        if (level > maxAllowed) {
+            level = maxAllowed;
+        }
 
         setRewardHexCells(prev => prev.map(c => c.id === id ? { ...c, revealedLevel: level, isClaimed: true } : c));
         
@@ -1450,9 +1488,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                             </div>
                                                         ) : (
                                                             <div className="grid grid-cols-3 gap-2">
-                                                                <SlotMachineBox targetNumber={victoryRewards?.l0 || 0} labelLevel={0} />
-                                                                <SlotMachineBox targetNumber={victoryRewards?.l1 || 0} labelLevel={1} />
-                                                                <SlotMachineBox targetNumber={victoryRewards?.l2 || 0} labelLevel={2} />
+                                                                <SlotMachineBox targetNumber={victoryRewards?.l0 || 0} labelLevel={victoryRewards?.lvl0 ?? 0} />
+                                                                <SlotMachineBox targetNumber={victoryRewards?.l1 || 0} labelLevel={victoryRewards?.lvl1 ?? 1} />
+                                                                <SlotMachineBox targetNumber={victoryRewards?.l2 || 0} labelLevel={victoryRewards?.lvl2 ?? 2} />
                                                             </div>
                                                         )}
                                                     </div>

@@ -195,7 +195,7 @@ export const StoryHex: React.FC<{
     
     const colors = useMemo(() => {
         const defaultTheme = { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' };
-        const lvlStr = level !== undefined ? String(level) : (isBlueprint ? String(blueprintLevel) : '0');
+        const lvlStr = level !== undefined ? String(level) : '0';
         const theme = THEME_PALETTE[lvlStr] || THEME_PALETTE['0'] || defaultTheme;
         return { 
             side: theme.dark || '#0f172a', 
@@ -203,7 +203,7 @@ export const StoryHex: React.FC<{
             stroke: theme.stroke || '#475569',
             light: theme.light || '#334155' 
         };
-    }, [level, isBlueprint, blueprintLevel]);
+    }, [level]);
 
     const topTexture = useMemo(() => {
         if (level === undefined) return null;
@@ -334,7 +334,7 @@ export const StoryHex: React.FC<{
 
     // Front-facing sides for isometric view (0, 1, 2, 5)
     const visibleSides = useMemo(() => {
-        if (!isBuiltOrBlueprint) return [];
+        if (!isBuilt) return [];
         const squashedPoints = (BASE_POINTS || []).map(p => {
             if (!p) return { x: 0, y: 0 };
             return { x: p.x ?? 0, y: (p.y ?? 0) * 0.8 };
@@ -357,7 +357,7 @@ export const StoryHex: React.FC<{
                 maxY
             };
         });
-    }, [isBuiltOrBlueprint, wallHeight]);
+    }, [isBuilt, wallHeight]);
 
 
 
@@ -403,43 +403,34 @@ export const StoryHex: React.FC<{
             transformsEnabled="position"
         >
             {/* 3D Sides / Walls */}
-            {(isBuilt || isBlueprint) && colors && visibleSides && visibleSides.length > 0 && (
+            {isBuilt && colors && visibleSides && visibleSides.length > 0 && (
                 <Group y={yOffset}>
                     {visibleSides.map(side => {
                         const isLit = side.id === 1;
                         const isMild = side.id !== 0 && side.id !== 1;
                         
                         let colorStops;
-                        if (isBuilt) {
-                            if (isLit) {
-                                colorStops = [
-                                    0.0, colors.top,
-                                    0.15, colors.top,
-                                    0.5, colors.side,
-                                    1.0, '#010410'
-                                ];
-                            } else if (isMild) {
-                                colorStops = [
-                                    0.0, colors.top,
-                                    0.12, colors.top,
-                                    0.45, colors.side,
-                                    1.0, '#01020a'
-                                ];
-                            } else {
-                                // Shadowed
-                                colorStops = [
-                                    0.0, colors.top,
-                                    0.1, colors.side,
-                                    0.45, '#0c101d',
-                                    1.0, '#000000'
-                                ];
-                            }
-                        } else {
-                            // Holographic Blueprint Walls - Beautiful semi-transparent purple gradient matching the level's tier theme
+                        if (isLit) {
                             colorStops = [
-                                0.0, 'rgba(168, 85, 247, 0.45)',
-                                0.5, 'rgba(124, 58, 237, 0.22)',
-                                1.0, 'rgba(88, 28, 135, 0.08)'
+                                0.0, colors.top,
+                                0.15, colors.top,
+                                0.5, colors.side,
+                                1.0, '#010410'
+                            ];
+                        } else if (isMild) {
+                            colorStops = [
+                                0.0, colors.top,
+                                0.12, colors.top,
+                                0.45, colors.side,
+                                1.0, '#01020a'
+                            ];
+                        } else {
+                            // Shadowed
+                            colorStops = [
+                                0.0, colors.top,
+                                0.1, colors.side,
+                                0.45, '#0c101d',
+                                1.0, '#000000'
                             ];
                         }
 
@@ -450,10 +441,8 @@ export const StoryHex: React.FC<{
                                 fillLinearGradientStartPoint={{ x: side.midX, y: side.minY }}
                                 fillLinearGradientEndPoint={{ x: side.midX, y: side.maxY }}
                                 fillLinearGradientColorStops={colorStops}
-                                stroke={isBuilt ? colors.side : 'rgba(168, 85, 247, 0.55)'}
-                                strokeWidth={isBuilt ? 1.5 : 1.0}
-                                dash={isBuilt ? undefined : [4, 4]}
-                                opacity={isBuilt ? 1.0 : 0.6}
+                                stroke={colors.side}
+                                strokeWidth={1.5}
                                 listening={false}
                                 perfectDrawEnabled={false}
                                 shadowForStrokeEnabled={false}
