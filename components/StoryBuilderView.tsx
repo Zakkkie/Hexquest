@@ -111,6 +111,77 @@ const StoryBuilderView: React.FC = () => {
     const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number }[]>([]);
     const [flareKeys, setFlareKeys] = useState<Set<string>>(new Set());
     const [isAnimatingCompletion, setIsAnimatingCompletion] = useState(false);
+
+    // Dynamic celestial constellation map computation of target blueprint figure
+    const constellationData = useMemo(() => {
+        if (!activeFigure || !activeFigure.shape || activeFigure.shape.length === 0) return null;
+        
+        const HEX_STEP_SIZE = 26; // Larger and clearer scale for background blueprint pattern
+        const coords = activeFigure.shape.map((pt, idx) => {
+            const rawX = HEX_STEP_SIZE * (Math.sqrt(3) * pt.q + (Math.sqrt(3) / 2) * pt.r);
+            const rawY = HEX_STEP_SIZE * (1.5 * pt.r) * 0.8;
+            return {
+                id: idx,
+                q: pt.q,
+                r: pt.r,
+                lvl: pt.lvl ?? 0,
+                x: rawX,
+                y: rawY
+            };
+        });
+
+        // Find bounding box limits to center correctly
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+        coords.forEach(pt => {
+            if (pt.x < minX) minX = pt.x;
+            if (pt.x > maxX) maxX = pt.x;
+            if (pt.y < minY) minY = pt.y;
+            if (pt.y > maxY) maxY = pt.y;
+        });
+
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
+        const centeredCoords = coords.map(pt => ({
+            ...pt,
+            cx: pt.x - centerX,
+            cy: pt.y - centerY
+        }));
+
+        // Determine all unique neighbor connecting links (distance = 1)
+        const lines: { id: string; x1: number; y1: number; x2: number; y2: number }[] = [];
+        for (let i = 0; i < centeredCoords.length; i++) {
+            for (let j = i + 1; j < centeredCoords.length; j++) {
+                const a = centeredCoords[i];
+                const b = centeredCoords[j];
+                const dq = a.q - b.q;
+                const dr = a.r - b.r;
+                const isNeighbor = Math.abs(dq) <= 1 && Math.abs(dr) <= 1 && Math.abs(dq + dr) <= 1;
+                if (isNeighbor) {
+                    lines.push({
+                        id: `${i}-${j}`,
+                        x1: a.cx,
+                        y1: a.cy,
+                        x2: b.cx,
+                        y2: b.cy
+                    });
+                }
+            }
+        }
+
+        const width = Math.max(maxX - minX + 60, 180);
+        const height = Math.max(maxY - minY + 60, 180);
+
+        return {
+            points: centeredCoords,
+            lines,
+            width,
+            height
+        };
+    }, [activeFigure]);
     
     // Auto-dismiss destroyButtonCell when clicking anywhere else on the document
     useEffect(() => {
@@ -728,6 +799,21 @@ const StoryBuilderView: React.FC = () => {
                     color: rgba(99, 102, 241, 0.4);
                     letter-spacing: 0.15em;
                 }
+                @keyframes breathe-constellation {
+                    0%, 100% {
+                        opacity: 0.75;
+                        stroke-width: 2.2px;
+                    }
+                    50% {
+                        opacity: 1.0;
+                        stroke-width: 3.8px;
+                    }
+                }
+                .constellation-glow-line {
+                    animation: breathe-constellation 3.0s ease-in-out infinite;
+                    stroke-linejoin: round;
+                    stroke-linecap: round;
+                }
             `}} />
 
             {/* DEEP COSMIC PROTOCOL ROOM BACKDROP */}
@@ -759,7 +845,88 @@ const StoryBuilderView: React.FC = () => {
                     <div>MAT_LIMIT: [ACTIVE_HARD_CAP]</div>
                     <div>ENGINEERING_ALIGN: [COAXIAL]</div>
                 </div>
-            </div>
+
+                {/* 6. Cosmic Constellation Overlay in Starry Celestial Background sky */}
+                {constellationData && (() => {
+                    const getLevelColor = (lvl: number) => {
+                        switch(lvl) {
+                            case 0: return '#94a3b8'; // bright silver slate
+                            case 1: return '#22d3ee'; // vivid cyan
+                            case 2: return '#3b82f6'; // bright blue
+                            case 3: return '#a855f7'; // vibrant purple
+                            default: return '#fda4af'; // light pink border
+                        }
+                    };
+
+                    const getLevelBg = (lvl: number) => {
+                        switch(lvl) {
+                            case 0: return 'rgba(148, 163, 184, 0.12)';
+                            case 1: return 'rgba(34, 211, 238, 0.22)';
+                            case 2: return 'rgba(59, 130, 246, 0.25)';
+                            case 3: return 'rgba(168, 85, 247, 0.28)';
+                            default: return 'rgba(253, 164, 175, 0.28)';
+                        }
+                    };
+
+                    return (
+                        <div className="absolute top-[85px] sm:top-[100px] md:top-[120px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none z-10">
+                            {/* Constellation Star Map SVG */}
+                            <svg 
+                                width={constellationData.width} 
+                                height={constellationData.height} 
+                                viewBox={`${-constellationData.width/2} ${-constellationData.height/2} ${constellationData.width} ${constellationData.height}`}
+                                className="overflow-visible drop-shadow-[0_0_28px_rgba(34,211,238,0.65)] transition-all duration-500"
+                            >
+                                {/* Hexagon outlines defining each cell of the blueprint shape boundary */}
+                                {constellationData.points.map((pt) => {
+                                    const hexPoints: string[] = [];
+                                    const hexSize = 26; // Matches HEX_STEP_SIZE perfectly for zero spacing/touching hexes
+                                    for (let i = 0; i < 6; i++) {
+                                        const angle = (60 * i + 30) * Math.PI / 180;
+                                        const hx = pt.cx + Math.cos(angle) * hexSize;
+                                        const hy = pt.cy + Math.sin(angle) * hexSize * 0.8; // Perspective factor matches center projection
+                                        hexPoints.push(`${hx},${hy}`);
+                                    }
+
+                                    const clr = getLevelColor(pt.lvl);
+                                    const bg = getLevelBg(pt.lvl);
+
+                                    return (
+                                        <g key={`hex-boundary-${pt.id}`}>
+                                            <polygon
+                                                points={hexPoints.join(' ')}
+                                                fill={bg}
+                                                stroke={clr}
+                                                strokeWidth={pt.lvl > 0 ? "3.2" : "2.0"}
+                                                className="constellation-glow-line"
+                                                style={{
+                                                    filter: `drop-shadow(0 0 8px ${clr})`
+                                                }}
+                                            />
+                                            {/* Display the height/level number clearly inside each blueprint cell */}
+                                            <text
+                                                x={pt.cx}
+                                                y={pt.cy + 4}
+                                                textAnchor="middle"
+                                                fontSize="12.5px"
+                                                fontWeight="900"
+                                                fill={pt.lvl > 0 ? "#ffffff" : "rgba(255,255,255,0.55)"}
+                                                fontFamily="monospace"
+                                                className="select-none pointer-events-none"
+                                                style={{
+                                                    textShadow: `0 0 8px ${clr}`
+                                                }}
+                                            >
+                                                {pt.lvl}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+                            </svg>
+                        </div>
+                    );
+                 })()}
+             </div>
 
             {/* FLOATING +1 SP NOTIFICATIONS CONTAINER FLOATING OVER THE COMPLETED SHAPE */}
             <div className="absolute inset-0 pointer-events-none z-[100] select-none overflow-hidden">

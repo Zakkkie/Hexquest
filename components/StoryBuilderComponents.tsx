@@ -8,22 +8,27 @@ import Konva from 'konva';
 import { BASE_POINTS, BASE_PATH_D } from './StoryBuilderData.ts';
 
 export const NebulaBackground: React.FC<{ width: number; height: number }> = ({ width, height }) => {
-    const clouds = useMemo(() => Array.from({ length: 8 }).map((_, i) => ({
-        id: i,
-        x: Math.random() * width,
-        y: Math.random() * height,
-        radius: 300 + Math.random() * 400,
-        color: ['#1e1b4b', '#312e81', '#1e3a8a', '#4c1d95', '#1e1b4b', '#581c87', '#0f172a', '#030712'][i % 8],
-    })), [width, height]);
+    const groupRef = useRef<any>(null);
 
-    const stars = useMemo(() => Array.from({ length: 220 }).map((_, i) => ({
+    const w = width || 1000;
+    const h = height || 1000;
+
+    const clouds = useMemo(() => Array.from({ length: 12 }).map((_, i) => ({
         id: i,
-        x: Math.random() * width,
-        y: Math.random() * height,
-        radius: 0.5 + Math.random() * 1.5,
+        x: (Math.random() - 0.25) * w * 1.5,
+        y: (Math.random() - 0.25) * h * 1.5,
+        radius: 400 + Math.random() * 600,
+        color: ['#1e1b4b', '#312e81', '#1e3a8a', '#4c1d95', '#1e1b4b', '#581c87', '#0f172a', '#030712'][i % 8],
+    })), [w, h]);
+
+    const stars = useMemo(() => Array.from({ length: 260 }).map((_, i) => ({
+        id: i,
+        x: (Math.random() - 0.25) * w * 1.5,
+        y: (Math.random() - 0.25) * h * 1.5,
+        radius: 0.5 + Math.random() * 1.8,
         opacity: 0.2 + Math.random() * 0.8,
         color: ['#ffffff', '#ffffff', '#e2e8f0', '#93c5fd', '#c084fc', '#22d3ee', '#fed7aa'][i % 7]
-    })), [width, height]);
+    })), [w, h]);
 
     // Tech circular radar ranges to imply spatial blueprint analysis coordinates
     const radarCircles = useMemo(() => {
@@ -35,8 +40,40 @@ export const NebulaBackground: React.FC<{ width: number; height: number }> = ({ 
         ];
     }, []);
 
+    useEffect(() => {
+        let animId: number;
+        let time = 0;
+
+        const animate = () => {
+            if (groupRef.current) {
+                time += 0.0003; // Extremely slow, cosmic scale motion
+                
+                // Slow drifting displacement
+                const driftX = Math.sin(time * 1.4) * 55;
+                const driftY = Math.cos(time * 1.1) * 45;
+                const rotation = Math.sin(time * 0.4) * 6; // slow rotate drift
+
+                groupRef.current.x(w / 2 + driftX);
+                groupRef.current.y(h / 2 + driftY);
+                groupRef.current.rotation(rotation);
+            }
+            animId = requestAnimationFrame(animate);
+        };
+
+        animate();
+        return () => {
+            cancelAnimationFrame(animId);
+        };
+    }, [w, h]);
+
     return (
-        <Group>
+        <Group
+            ref={groupRef}
+            x={w / 2}
+            y={h / 2}
+            offsetX={w / 2}
+            offsetY={h / 2}
+        >
             {clouds.map(c => (
                 <Circle
                     key={`c-${c.id}`}
@@ -57,8 +94,8 @@ export const NebulaBackground: React.FC<{ width: number; height: number }> = ({ 
             {radarCircles.map((circle, i) => (
                 <Circle
                     key={`radar-${i}`}
-                    x={width / 2}
-                    y={height / 2}
+                    x={w / 2}
+                    y={h / 2}
                     radius={circle.r}
                     stroke="#818cf8"
                     strokeWidth={1}
