@@ -250,7 +250,7 @@ const StoryBuilderView: React.FC = () => {
                 const [q, r] = key.split(',').map(Number);
                 const px = hexToPixel(q, r);
                 const lvl = storyMap[key] || 0;
-                const heightVal = 12 + lvl * 12;
+                const heightVal = 10 + lvl * 10;
                 sumX += px.x;
                 sumY += px.y - heightVal;
                 count++;
@@ -857,7 +857,7 @@ const StoryBuilderView: React.FC = () => {
                         if (lvl === undefined || lvl < 0) return null;
                         
                         const px = hexToPixel(q, r);
-                        const heightVal = 12 + lvl * 12;
+                        const heightVal = 10 + lvl * 10;
                         const yOffsetOffset = -heightVal;
                         const topFaceY = px.y + yOffsetOffset;
                         

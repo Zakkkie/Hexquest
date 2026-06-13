@@ -224,9 +224,9 @@ export const StoryHex: React.FC<{
     }, [level, isBlueprint, blueprintLevel]);
 
     const isBuiltOrBlueprint = isBuilt || isBlueprint;
-    const height = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? 12 + activeLvl * 14 : 12) : 0;
-    const yOffset = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? -height : (Math.abs(activeLvl) - 1) * 14) : 0;
-    const wallHeight = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? height : Math.abs(activeLvl) * 14) : 0;
+    const height = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? 10 + activeLvl * 10 : 10) : 0;
+    const yOffset = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? -height : (Math.abs(activeLvl) - 1) * 10) : 0;
+    const wallHeight = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? height : Math.abs(activeLvl) * 10) : 0;
 
     const groupRef = useRef<Konva.Group>(null);
     useEffect(() => {
