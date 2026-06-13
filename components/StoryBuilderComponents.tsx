@@ -13,20 +13,20 @@ export const NebulaBackground: React.FC<{ width: number; height: number }> = ({ 
     const w = width || 1000;
     const h = height || 1000;
 
-    const clouds = useMemo(() => Array.from({ length: 12 }).map((_, i) => ({
+    const clouds = useMemo(() => Array.from({ length: 5 }).map((_, i) => ({
         id: i,
-        x: (Math.random() - 0.25) * w * 1.5,
-        y: (Math.random() - 0.25) * h * 1.5,
-        radius: 400 + Math.random() * 600,
-        color: ['#1e1b4b', '#312e81', '#1e3a8a', '#4c1d95', '#1e1b4b', '#581c87', '#0f172a', '#030712'][i % 8],
+        x: Math.random() * (w + 200) - 100,
+        y: Math.random() * (h + 200) - 100,
+        radius: 300 + Math.random() * 300,
+        color: ['#1e1b4b', '#312e81', '#1e3a8a', '#4c1d95', '#581c87'][i % 5],
     })), [w, h]);
 
-    const stars = useMemo(() => Array.from({ length: 260 }).map((_, i) => ({
+    const stars = useMemo(() => Array.from({ length: 80 }).map((_, i) => ({
         id: i,
-        x: (Math.random() - 0.25) * w * 1.5,
-        y: (Math.random() - 0.25) * h * 1.5,
-        radius: 0.5 + Math.random() * 1.8,
-        opacity: 0.2 + Math.random() * 0.8,
+        x: Math.random() * (w + 200) - 100,
+        y: Math.random() * (h + 200) - 100,
+        radius: 0.5 + Math.random() * 1.5,
+        opacity: 0.3 + Math.random() * 0.7,
         color: ['#ffffff', '#ffffff', '#e2e8f0', '#93c5fd', '#c084fc', '#22d3ee', '#fed7aa'][i % 7]
     })), [w, h]);
 
@@ -40,6 +40,24 @@ export const NebulaBackground: React.FC<{ width: number; height: number }> = ({ 
         ];
     }, []);
 
+    // Performant offline canvas caching to lock visual gradients in GPU memory
+    useEffect(() => {
+        if (groupRef.current) {
+            try {
+                // cache boundary covers entire bounds plus padding
+                groupRef.current.cache({
+                    x: -120,
+                    y: -120,
+                    width: w + 240,
+                    height: h + 240,
+                    pixelRatio: 1 // maximum memory efficiency
+                });
+            } catch (err) {
+                console.warn("Could not cache NebulaBackground", err);
+            }
+        }
+    }, [w, h, clouds, stars]);
+
     useEffect(() => {
         let animId: number;
         let time = 0;
@@ -49,13 +67,18 @@ export const NebulaBackground: React.FC<{ width: number; height: number }> = ({ 
                 time += 0.0003; // Extremely slow, cosmic scale motion
                 
                 // Slow drifting displacement
-                const driftX = Math.sin(time * 1.4) * 55;
-                const driftY = Math.cos(time * 1.1) * 45;
-                const rotation = Math.sin(time * 0.4) * 6; // slow rotate drift
+                const driftX = Math.sin(time * 1.4) * 40;
+                const driftY = Math.cos(time * 1.1) * 35;
+                const rotation = Math.sin(time * 0.4) * 4; // slow rotate drift
 
                 groupRef.current.x(w / 2 + driftX);
                 groupRef.current.y(h / 2 + driftY);
                 groupRef.current.rotation(rotation);
+
+                const layer = groupRef.current.getLayer();
+                if (layer) {
+                    layer.batchDraw();
+                }
             }
             animId = requestAnimationFrame(animate);
         };
@@ -371,15 +394,18 @@ export const StoryHex: React.FC<{
     useEffect(() => {
         if (isEligible && pulseOutlineRef.current) {
             const node = pulseOutlineRef.current;
-            const anim = new Konva.Animation((frame) => {
-                if (!frame) return;
-                // Periodic wave between 0.45 and 0.95 opacity, frequency ~ 1.5Hz
-                const osc = 0.55 + Math.sin(frame.time * 0.0051) * 0.4;
-                node.opacity(osc);
-            }, node.getLayer());
-            anim.start();
+            node.opacity(0.5);
+            const tween = new Konva.Tween({
+                node: node,
+                duration: 1.4,
+                opacity: 0.9,
+                yoyo: true,
+                loop: true,
+                easing: Konva.Easings.EaseInOut
+            });
+            tween.play();
             return () => {
-                anim.stop();
+                tween.destroy();
             };
         }
     }, [isEligible]);
@@ -389,15 +415,16 @@ export const StoryHex: React.FC<{
     useEffect(() => {
         if (isFailedClick && failedClickRef.current) {
             const node = failedClickRef.current;
-            const anim = new Konva.Animation((frame) => {
-                if (!frame) return;
-                // Periodic intense blinking between 0.2 and 1.0 opacity
-                const osc = 0.45 + Math.abs(Math.sin(frame.time * 0.014)) * 0.55;
-                node.opacity(osc);
-            }, node.getLayer());
-            anim.start();
+            node.opacity(1.0);
+            const tween = new Konva.Tween({
+                node: node,
+                duration: 0.5,
+                opacity: 0,
+                easing: Konva.Easings.EaseOut
+            });
+            tween.play();
             return () => {
-                anim.stop();
+                tween.destroy();
             };
         }
     }, [isFailedClick]);
