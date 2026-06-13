@@ -77,7 +77,7 @@ export interface GameStore extends GameState {
   hideToast: () => void;
   
   // Auth
-  loginAsGuest: (n: string, c: string, h: number, b: number) => void;
+  loginAsGuest: (n: string, c: string, h: number, b: number) => AuthResponse;
   registerUser: (n: string, p: string, c: string, h: number, b: number) => AuthResponse;
   loginUser: (n: string, p: string) => AuthResponse;
   logout: () => void;

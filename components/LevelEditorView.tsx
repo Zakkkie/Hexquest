@@ -845,61 +845,161 @@ export const LevelEditorView: React.FC = () => {
     }
   };
 
+  // Helper to sanitize imports against XSS, injection, Denial of Service (DoS) and infinite loops
+  const sanitizeTextInput = (text: any, maxLength: number): string => {
+    if (typeof text !== 'string') return '';
+    const clean = text.replace(/<\/?[^>]+(>|$)/g, ""); // Strip HTML tags
+    return clean.trim().slice(0, maxLength);
+  };
+
   // Hydrate states from object
   const loadConfigObject = (imported: any) => {
-    if (!imported.title || !imported.mapConfig) {
+    if (!imported || typeof imported !== 'object') {
+      showToast(t.invalidJson, 'error');
+      return;
+    }
+    if (!imported.title || !imported.mapConfig || typeof imported.mapConfig !== 'object') {
       showToast(t.invalidJson, 'error');
       return;
     }
 
-    setTitle(imported.title);
-    setDescription(imported.description || '');
-    setGoalText(imported.goalText || '');
+    // 1. Sanitize text fields
+    const cleanTitle = sanitizeTextInput(imported.title, 100) || 'Custom Sector';
+    const cleanDescription = sanitizeTextInput(imported.description, 300);
+    const cleanGoalText = sanitizeTextInput(imported.goalText, 300);
+
+    setTitle(cleanTitle);
+    setDescription(cleanDescription);
+    setGoalText(cleanGoalText);
     
-    if (imported.mapConfig.size) {
-      setMapSize(imported.mapConfig.size);
-    }
+    // 2. Validate map layout fields
+    const cleanSize = typeof imported.mapConfig.size === 'number' && !isNaN(imported.mapConfig.size) 
+      ? Math.max(3, Math.min(25, Math.floor(imported.mapConfig.size))) 
+      : 5;
     
-    setMapType(imported.mapConfig.type || 'fixed');
+    setMapSize(cleanSize);
+    
+    const validMapTypes = ['fixed', 'procedural'];
+    const cleanMapType = typeof imported.mapConfig.type === 'string' && validMapTypes.includes(imported.mapConfig.type) ? imported.mapConfig.type : 'fixed';
+    setMapType(cleanMapType);
 
-    if (imported.startState) {
-      setCredits(imported.startState.credits ?? 150);
-      setMoves(imported.startState.moves ?? 40);
-      setRank(imported.startState.rank ?? 1);
-      setMaterials(imported.startState.materials ?? 0);
-      setInitialEntropy(imported.startState.initialEntropy ?? 100);
-      setStartInventory(imported.startState.startInventory || []);
+    // 3. Validate initial statistics and levels
+    if (imported.startState && typeof imported.startState === 'object') {
+      const cleanCredits = typeof imported.startState.credits === 'number' && !isNaN(imported.startState.credits)
+        ? Math.max(0, Math.min(1000000, Math.floor(imported.startState.credits)))
+        : 150;
+      const cleanMoves = typeof imported.startState.moves === 'number' && !isNaN(imported.startState.moves)
+        ? Math.max(0, Math.min(10000, Math.floor(imported.startState.moves)))
+        : 40;
+      const cleanRank = typeof imported.startState.rank === 'number' && !isNaN(imported.startState.rank)
+        ? Math.max(1, Math.min(10, Math.floor(imported.startState.rank)))
+        : 1;
+      const cleanMaterials = typeof imported.startState.materials === 'number' && !isNaN(imported.startState.materials)
+        ? Math.max(0, Math.min(10000, Math.floor(imported.startState.materials)))
+        : 0;
+      const cleanEntropy = typeof imported.startState.initialEntropy === 'number' && !isNaN(imported.startState.initialEntropy)
+        ? Math.max(0, Math.min(100, Math.floor(imported.startState.initialEntropy)))
+        : 100;
+      
+      setCredits(cleanCredits);
+      setMoves(cleanMoves);
+      setRank(cleanRank);
+      setMaterials(cleanMaterials);
+      setInitialEntropy(cleanEntropy);
+
+      // Inventory sanitization to ensure values are safe
+      const cleanInventory = Array.isArray(imported.startState.startInventory)
+        ? imported.startState.startInventory.filter((item: any) => typeof item === 'string' && item.length < 50)
+        : [];
+      setStartInventory(cleanInventory);
+    } else {
+      setCredits(150);
+      setMoves(40);
+      setRank(1);
+      setMaterials(0);
+      setInitialEntropy(100);
+      setStartInventory([]);
     }
 
-    setBotCount(imported.botSpawnPoints?.length ?? imported.winCondition?.botCount ?? 0);
-    setBotObjective(imported.botObjective || 'ROAM_MINING');
+    // 4. Validate bot stats
+    const rawBotCount = imported.botSpawnPoints?.length ?? imported.winCondition?.botCount ?? 0;
+    const cleanBotCount = typeof rawBotCount === 'number' && !isNaN(rawBotCount)
+      ? Math.max(0, Math.min(4, Math.floor(rawBotCount)))
+      : 0;
+    setBotCount(cleanBotCount);
 
-    if (imported.mapConfig.customLayout) {
-      const freshGrid = generateBlankCoords(imported.mapConfig.size || mapSize);
-      imported.mapConfig.customLayout.forEach((hexDef: any) => {
-        const key = getHexKey(hexDef.q, hexDef.r);
-        if (freshGrid[key]) {
-          freshGrid[key] = {
-            q: hexDef.q,
-            r: hexDef.r,
-            currentLevel: hexDef.currentLevel ?? 0,
-            maxLevel: hexDef.maxLevel ?? Math.max(0, hexDef.currentLevel ?? 0),
-            structureType: hexDef.structureType || 'NONE',
-            ownerId: hexDef.ownerId || null
-          };
+    const validObjectives = ['ROAM_MINING', 'DESTROY_MONUMENTS', 'HUNT_PLAYER', 'STAY_DEFENSIVE'];
+    const cleanObjective = typeof imported.botObjective === 'string' && validObjectives.includes(imported.botObjective) ? imported.botObjective : 'ROAM_MINING';
+    setBotObjective(cleanObjective);
+
+    // 5. Generate safe grid using cleanSize
+    const freshGrid = generateBlankCoords(cleanSize);
+
+    // 6. Populate custom layout safely
+    if (Array.isArray(imported.mapConfig.customLayout)) {
+      // Limit custom layout processing to avoid CPU lock
+      const safeLayout = imported.mapConfig.customLayout.slice(0, 2000);
+      
+      safeLayout.forEach((hexDef: any) => {
+        if (!hexDef || typeof hexDef !== 'object') return;
+        
+        const q = typeof hexDef.q === 'number' && !isNaN(hexDef.q) ? Math.floor(hexDef.q) : 0;
+        const r = typeof hexDef.r === 'number' && !isNaN(hexDef.r) ? Math.floor(hexDef.r) : 0;
+        
+        // Ensure within coordinate bounds of the current cleanSize radius to prevent layout corruption
+        if (Math.abs(q) <= cleanSize && Math.abs(r) <= cleanSize && Math.abs(q + r) <= cleanSize) {
+          const key = getHexKey(q, r);
+          if (freshGrid[key]) {
+            const currentLevel = typeof hexDef.currentLevel === 'number' && !isNaN(hexDef.currentLevel)
+              ? Math.max(-10, Math.min(10, Math.floor(hexDef.currentLevel)))
+              : 0;
+            const maxLevel = typeof hexDef.maxLevel === 'number' && !isNaN(hexDef.maxLevel)
+              ? Math.max(0, Math.min(10, Math.floor(hexDef.maxLevel)))
+              : Math.max(0, currentLevel);
+            
+            const validStructures = ['NONE', 'BARRIER', 'VOID', 'MONUMENT', 'MINE', 'MINI_MONUMENT'];
+            const structureType = typeof hexDef.structureType === 'string' && validStructures.includes(hexDef.structureType) ? hexDef.structureType : 'NONE';
+            
+            const ownerId = typeof hexDef.ownerId === 'string' && hexDef.ownerId.length < 50 ? hexDef.ownerId : null;
+
+            freshGrid[key] = {
+              q,
+              r,
+              currentLevel,
+              maxLevel,
+              structureType,
+              ownerId
+            };
+          }
         }
       });
-      setGrid(freshGrid);
     }
+    setGrid(freshGrid);
 
-    // Spawn points mapping
-    if (imported.botSpawnPoints) {
-      const sps: Record<number, {q: number, r: number}> = {};
-      imported.botSpawnPoints.forEach((pt: any, i: number) => {
-        sps[i] = { q: pt.q, r: pt.r };
+    // 7. Map bot spawns safely
+    const sps: Record<number, {q: number, r: number}> = {};
+    if (Array.isArray(imported.botSpawnPoints)) {
+      imported.botSpawnPoints.slice(0, cleanBotCount).forEach((pt: any, i: number) => {
+        if (pt && typeof pt === 'object') {
+          const botQ = typeof pt.q === 'number' && !isNaN(pt.q) ? Math.floor(pt.q) : 0;
+          const botR = typeof pt.r === 'number' && !isNaN(pt.r) ? Math.floor(pt.r) : 0;
+          
+          // Clamp inside board bounds
+          const boundedQ = Math.max(-cleanSize, Math.min(cleanSize, botQ));
+          const boundedR = Math.max(-cleanSize, Math.min(cleanSize, botR));
+          
+          sps[i] = { q: boundedQ, r: boundedR };
+        } else {
+          sps[i] = { q: -cleanSize, r: cleanSize };
+        }
       });
-      setBotSpawns(sps);
+    } else {
+      // Create defaults
+      for (let i = 0; i < cleanBotCount; i++) {
+        sps[i] = { q: -cleanSize, r: cleanSize };
+      }
     }
+    setBotSpawns(sps);
 
     showToast(t.importSuccess, 'success');
   };

@@ -456,8 +456,12 @@ const MainMenu: React.FC = () => {
       }
     } else if (authMode === 'REGISTER') {
       if (isGuestRegistration) {
-        loginAsGuest(inputName, safeColor, selectedHead, selectedBody);
-        setAuthMode(null);
+        const res = loginAsGuest(inputName, safeColor, selectedHead, selectedBody);
+        if (res.success) {
+          setAuthMode(null);
+        } else {
+          setErrorMessage(res.message || "Guest login failed.");
+        }
       } else {
         if (!inputPassword.trim()) {
           setErrorMessage("Password is required.");

@@ -76,6 +76,29 @@ export function loadProfileProgress(nickname: string) {
   return null;
 }
 
+function validateCredentials(nickname: string, password?: string, checkPasswordStrength = false): { success: boolean; message?: string } {
+  const cleanName = nickname.trim();
+  if (cleanName.length < 3) {
+    return { success: false, message: "Nickname must be at least 3 characters." };
+  }
+  if (cleanName.length > 20) {
+    return { success: false, message: "Nickname must not exceed 20 characters." };
+  }
+  // Safe alphanumeric + underscore, spaces, dashes (English and Russian UTF-8 supported)
+  const regex = /^[a-zA-Z0-9_\u0400-\u04FF\s-]+$/;
+  if (!regex.test(cleanName)) {
+    return { success: false, message: "Nickname can only contain letters, numbers, spaces, dashes, or underscores." };
+  }
+  
+  if (checkPasswordStrength && password !== undefined) {
+    const cleanPass = password.trim();
+    if (cleanPass.length < 4) {
+      return { success: false, message: "Password must be at least 4 characters long." };
+    }
+  }
+  return { success: true };
+}
+
 export const createAuthSlice = (
   set: (fn: (state: GameStore) => Partial<GameStore>) => void,
   get: () => GameStore
@@ -83,6 +106,12 @@ export const createAuthSlice = (
   loginAsGuest: (nickname: string, avatarColor: string, headIndex: number, bodyIndex: number) => {
     audioService.play('UI_CLICK');
     
+    const validation = validateCredentials(nickname);
+    if (!validation.success) {
+      audioService.play('ERROR');
+      return { success: false, message: validation.message };
+    }
+
     // Save previous active user's progress first
     const currentUser = get().user;
     if (currentUser && currentUser.nickname) {
@@ -113,11 +142,18 @@ export const createAuthSlice = (
       hasActiveSession: false,
       ...loaded
     }));
+    return { success: true };
   },
   
   registerUser: (nickname: string, password: string, avatarColor: string, headIndex: number, bodyIndex: number) => {
     audioService.play('UI_CLICK');
     
+    const validation = validateCredentials(nickname, password, true);
+    if (!validation.success) {
+      audioService.play('ERROR');
+      return { success: false, message: validation.message };
+    }
+
     const cleanedNickname = nickname.trim().slice(0, 32);
     const key = cleanedNickname.toLowerCase();
     
@@ -153,6 +189,13 @@ export const createAuthSlice = (
   
   loginUser: (nickname: string, password: string) => {
     audioService.play('UI_CLICK');
+    
+    const validation = validateCredentials(nickname, password, false);
+    if (!validation.success) {
+      audioService.play('ERROR');
+      return { success: false, message: validation.message };
+    }
+
     const cleanedNickname = nickname.trim();
     const key = cleanedNickname.toLowerCase();
     
