@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { Group, Rect, Circle, Path } from 'react-konva';
+import { Group, Circle, Path } from 'react-konva';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { textureService } from '../services/textureService.ts';
 import { GAME_CONFIG } from '../rules/config.ts';
@@ -8,41 +8,76 @@ import Konva from 'konva';
 import { BASE_POINTS, BASE_PATH_D } from './StoryBuilderData.ts';
 
 export const NebulaBackground: React.FC<{ width: number; height: number }> = ({ width, height }) => {
-    const clouds = useMemo(() => Array.from({ length: 6 }).map((_, i) => ({
+    const clouds = useMemo(() => Array.from({ length: 8 }).map((_, i) => ({
         id: i,
-        x: Math.random() * width - width / 2,
-        y: Math.random() * height - height / 2,
-        radius: 400 + Math.random() * 500,
-        color: ['#1e1b4b', '#312e81', '#1e3a8a', '#4338ca', '#1e1b4b', '#2e1065'][i % 6],
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: 300 + Math.random() * 400,
+        color: ['#1e1b4b', '#312e81', '#1e3a8a', '#4c1d95', '#1e1b4b', '#581c87', '#0f172a', '#030712'][i % 8],
     })), [width, height]);
 
-    const stars = useMemo(() => Array.from({ length: 150 }).map((_, i) => ({
+    const stars = useMemo(() => Array.from({ length: 220 }).map((_, i) => ({
         id: i,
-        x: Math.random() * width - width / 2,
-        y: Math.random() * height - height / 2,
-        radius: Math.random() * 1.2,
-        opacity: 0.3 + Math.random() * 0.7
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: 0.5 + Math.random() * 1.5,
+        opacity: 0.2 + Math.random() * 0.8,
+        color: ['#ffffff', '#ffffff', '#e2e8f0', '#93c5fd', '#c084fc', '#22d3ee', '#fed7aa'][i % 7]
     })), [width, height]);
+
+    // Tech circular radar ranges to imply spatial blueprint analysis coordinates
+    const radarCircles = useMemo(() => {
+        return [
+            { r: 120, opacity: 0.08, dash: [4, 8] },
+            { r: 280, opacity: 0.05, dash: [2, 12] },
+            { r: 440, opacity: 0.03, dash: [10, 15] },
+            { r: 600, opacity: 0.02, dash: [5, 20] }
+        ];
+    }, []);
 
     return (
         <Group>
             {clouds.map(c => (
-                <Rect
+                <Circle
                     key={`c-${c.id}`}
-                    x={c.x - c.radius}
-                    y={c.y - c.radius}
-                    width={c.radius * 2}
-                    height={c.radius * 2}
-                    fillLinearGradientStartPoint={{ x: c.x - c.radius, y: c.y - c.radius }}
-                    fillLinearGradientEndPoint={{ x: c.x + c.radius, y: c.y + c.radius }}
-                    fillLinearGradientColorStops={[0, c.color, 1, 'transparent']}
-                    opacity={0.3}
+                    x={c.x}
+                    y={c.y}
+                    radius={c.radius}
+                    fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+                    fillRadialGradientStartRadius={0}
+                    fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+                    fillRadialGradientEndRadius={c.radius}
+                    fillRadialGradientColorStops={[0, c.color, 0.6, `${c.color}22`, 1, 'transparent']}
+                    opacity={0.4}
+                    listening={false}
+                />
+            ))}
+
+            {/* Faint high-tech ambient backdrop graphics */}
+            {radarCircles.map((circle, i) => (
+                <Circle
+                    key={`radar-${i}`}
+                    x={width / 2}
+                    y={height / 2}
+                    radius={circle.r}
+                    stroke="#818cf8"
+                    strokeWidth={1}
+                    dash={circle.dash}
+                    opacity={circle.opacity}
                     listening={false}
                 />
             ))}
 
             {stars.map(s => (
-                <Circle key={`s-${s.id}`} x={s.x} y={s.y} radius={s.radius} fill="white" opacity={s.opacity} />
+                <Circle 
+                    key={`s-${s.id}`} 
+                    x={s.x} 
+                    y={s.y} 
+                    radius={s.radius} 
+                    fill={s.color} 
+                    opacity={s.opacity} 
+                    listening={false}
+                />
             ))}
         </Group>
     );

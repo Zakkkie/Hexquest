@@ -691,6 +691,76 @@ const StoryBuilderView: React.FC = () => {
 
     return (
         <div id="tutorial-hex-board" ref={containerRef} className="absolute inset-0 bg-[#020617] flex flex-col font-sans overflow-hidden">
+            <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes pulse-nebula {
+                    0%, 100% { transform: scale(1) translate(0px, 0px); opacity: 0.18; }
+                    50% { transform: scale(1.15) translate(25px, -15px); opacity: 0.38; }
+                }
+                @keyframes pulse-nebula-slow {
+                    0%, 100% { transform: scale(1.1) translate(0px, 0px); opacity: 0.15; }
+                    50% { transform: scale(0.95) translate(-35px, 35px); opacity: 0.32; }
+                }
+                @keyframes flow-matrix {
+                    0% { background-position: 0px 0px; }
+                    100% { background-position: 40px 80px; }
+                }
+                .blueprint-grid-glow {
+                    background-image: 
+                        linear-gradient(rgba(99, 102, 241, 0.06) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(99, 102, 241, 0.06) 1px, transparent 1px);
+                    background-size: 40px 40px;
+                    background-position: center;
+                    animation: flow-matrix 140s linear infinite;
+                }
+                .blueprint-grid-sub {
+                    background-image: 
+                        linear-gradient(rgba(34, 211, 238, 0.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(34, 211, 238, 0.02) 1px, transparent 1px);
+                    background-size: 8px 8px;
+                    background-position: center;
+                }
+                .cosmic-vignette {
+                    background: radial-gradient(circle at center, transparent 15%, rgba(2, 6, 23, 0.65) 65%, rgba(1, 4, 16, 0.95) 98%);
+                }
+                .hud-telemetry {
+                    font-family: 'JetBrains Mono', ui-monospace, monospace;
+                    font-size: 8px;
+                    color: rgba(99, 102, 241, 0.4);
+                    letter-spacing: 0.15em;
+                }
+            `}} />
+
+            {/* DEEP COSMIC PROTOCOL ROOM BACKDROP */}
+            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
+                {/* 1. Nebula Layer 1 - Violet Glow */}
+                <div 
+                    className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] bg-indigo-600/10 rounded-full blur-[140px] mix-blend-screen"
+                    style={{ animation: 'pulse-nebula 24s ease-in-out infinite' }}
+                />
+                {/* 2. Nebula Layer 2 - Cyan Glow */}
+                <div 
+                    className="absolute -bottom-[15%] -right-[15%] w-[85%] h-[85%] bg-cyan-600/8 rounded-full blur-[160px] mix-blend-screen"
+                    style={{ animation: 'pulse-nebula-slow 30s ease-in-out infinite' }}
+                />
+                
+                {/* 3. Holographic drawing grid */}
+                <div className="absolute inset-0 blueprint-grid-glow opacity-80" />
+                <div className="absolute inset-0 blueprint-grid-sub opacity-50" />
+                
+                {/* 4. Heavy cinematic vignette to focus on construction area */}
+                <div className="absolute inset-0 cosmic-vignette" />
+
+                {/* 5. Minimalist Ambient Decors - Blueprint Area Indicators */}
+                <div className="absolute bottom-[32px] left-6 flex flex-col gap-0.5 hud-telemetry opacity-50 select-none hidden md:block">
+                    <div>SECTOR: [OMEGA_NEBULA_SIM_v2.0]</div>
+                    <div>LATENCY: [0.03ms]</div>
+                </div>
+                <div className="absolute bottom-[32px] right-6 flex flex-col gap-0.5 hud-telemetry opacity-50 text-right select-none hidden md:block">
+                    <div>MAT_LIMIT: [ACTIVE_HARD_CAP]</div>
+                    <div>ENGINEERING_ALIGN: [COAXIAL]</div>
+                </div>
+            </div>
+
             {/* FLOATING +1 SP NOTIFICATIONS CONTAINER FLOATING OVER THE COMPLETED SHAPE */}
             <div className="absolute inset-0 pointer-events-none z-[100] select-none overflow-hidden">
                 <AnimatePresence>
