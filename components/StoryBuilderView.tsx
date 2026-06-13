@@ -108,7 +108,7 @@ const StoryBuilderView: React.FC = () => {
     const [failedClickCoord, setFailedClickCoord] = useState<{ q: number, r: number } | null>(null);
 
     // Automation & Flare states
-    const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number }[]>([]);
+    const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number; congratsRU?: string; congratsEN?: string }[]>([]);
     const [flareKeys, setFlareKeys] = useState<Set<string>>(new Set());
     const [isAnimatingCompletion, setIsAnimatingCompletion] = useState(false);
 
@@ -337,7 +337,14 @@ const StoryBuilderView: React.FC = () => {
             // Spawn SP floating toast notification at target screen location
             const toastId = Math.random().toString(36).substring(2, 9);
             const toastText = language === 'RU' ? '+1 Очко Симуляции (SP)' : '+1 Simulation Point (SP)';
-            setSpToasts(prev => [...prev, { id: toastId, text: toastText, x: screenX, y: screenY }]);
+            setSpToasts(prev => [...prev, { 
+                id: toastId, 
+                text: toastText, 
+                x: screenX, 
+                y: screenY,
+                congratsRU: activeFigure?.congratsRU,
+                congratsEN: activeFigure?.congratsEN
+            }]);
             setTimeout(() => {
                 setSpToasts(prev => prev.filter(t => t.id !== toastId));
             }, 3000);
@@ -955,7 +962,7 @@ const StoryBuilderView: React.FC = () => {
                                         textShadow: '0 0 10px rgba(34, 211, 238, 0.95), 0 0 20px rgba(34, 211, 238, 0.5)'
                                     }}
                                 >
-                                    {language === 'RU' ? 'ФИГУРА СОБРАНА!' : 'SHAPE COMPLETED!'}
+                                    {language === 'RU' ? (toast.congratsRU || 'ФИГУРА СОБРАНА!') : (toast.congratsEN || 'SHAPE COMPLETED!')}
                                 </span>
                                 <span 
                                     className="block text-2xl md:text-4xl font-black text-white tracking-widest select-none leading-none text-center"
@@ -1185,7 +1192,7 @@ const StoryBuilderView: React.FC = () => {
 
                                 <div className="flex flex-col justify-center min-w-0 text-left pl-1">
                                     <span className="text-[7.5px] font-mono font-black text-indigo-400/80 uppercase tracking-widest leading-none">
-                                        {language === 'RU' ? 'ЗАДАЧА' : 'CHALLENGE'}
+                                        {language === 'RU' ? activeFigure.nameRU : activeFigure.nameEN}
                                     </span>
                                     <span className="text-[12.5px] font-black font-mono text-white tracking-tight leading-none mt-1 shadow-sm">
                                         {unlockedFigureIndex + 1} <span className="text-slate-500 font-medium text-[9.5px]">/ {FIGURES_COLLECTION.length}</span>
