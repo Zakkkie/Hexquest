@@ -4,7 +4,7 @@ import { useGameStore } from '../store.ts';
 import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { UpgradesTree } from './UpgradesTree.tsx';
-import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { FIGURES_COLLECTION } from './StoryBuilderData.ts';
@@ -98,6 +98,7 @@ const StoryBuilderView: React.FC = () => {
 
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [showShapeHint, setShowShapeHint] = useState(true);
     const [tabletTab, setTabletTab] = useState<'blueprint' | 'diagnostics' | 'rules'>('blueprint');
     const isUiHidden = false;
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
@@ -973,7 +974,8 @@ const StoryBuilderView: React.FC = () => {
                 </div>
 
                 {/* 6. Cosmic Constellation Overlay in Starry Celestial Background sky */}
-                {constellationData && (() => {
+                <AnimatePresence>
+                {showShapeHint && constellationData && (() => {
                     const getLevelColor = (lvl: number) => {
                         switch(lvl) {
                             case 0: return '#94a3b8'; // bright silver slate
@@ -995,7 +997,13 @@ const StoryBuilderView: React.FC = () => {
                     };
 
                     return (
-                        <div className="absolute top-[85px] sm:top-[100px] md:top-[120px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none z-10">
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.4, ease: "easeInOut" }}
+                            className="absolute top-[85px] sm:top-[100px] md:top-[120px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none z-10"
+                        >
                             {/* Constellation Star Map SVG */}
                             <svg 
                                 width={constellationData.width} 
@@ -1049,10 +1057,11 @@ const StoryBuilderView: React.FC = () => {
                                     );
                                 })}
                             </svg>
-                        </div>
+                        </motion.div>
                     );
-                 })()}
-             </div>
+                })()}
+                </AnimatePresence>
+            </div>
 
             {/* FLOATING +1 SP NOTIFICATIONS CONTAINER FLOATING OVER THE COMPLETED SHAPE */}
             <div className="absolute inset-0 pointer-events-none z-[100] select-none overflow-hidden">
@@ -1423,6 +1432,22 @@ const StoryBuilderView: React.FC = () => {
                         </div>
                     </div>
                 </motion.div>
+
+                {/* Star Toggle Button for Shape Hint */}
+                <button
+                    onClick={() => {
+                        playUiSound('CLICK');
+                        setShowShapeHint(!showShapeHint);
+                    }}
+                    className={`absolute top-[68px] right-4 w-10 h-10 flex items-center justify-center backdrop-blur-md border rounded-xl pointer-events-auto transition-all duration-200 shadow-md active:scale-95 cursor-pointer z-[45] ${
+                        showShapeHint 
+                            ? 'bg-amber-500/20 border-amber-500/80 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.35)]' 
+                            : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-amber-400 hover:border-amber-500/30'
+                    }`}
+                    title={language === 'RU' ? 'Фоновая подсказка формы' : 'Background Shape Hint'}
+                >
+                    <Star className={`w-4.5 h-4.5 transition-transform duration-300 ${showShapeHint ? 'fill-amber-400 text-amber-400 scale-110 drop-shadow-[0_0_4px_rgba(245,158,11,0.6)]' : 'scale-100 hover:scale-110'}`} />
+                </button>
 
                 {/* FLOATING DROPDOWN FOR EXPANDED TASK DETAILS (Interactive Engineering Tablet) */}
                 <AnimatePresence>
