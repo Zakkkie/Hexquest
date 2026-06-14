@@ -196,6 +196,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
   } = props;
 
   const isPlayerAction = !!(isGrowing && playerQ === q && playerR === r);
+  const contrastHighlighting = useGameStore(state => state.campaignUpgrades.contrastHighlighting);
   const currentIntent = isPlayerAction
     ? playerGrowthIntent || "UPGRADE"
     : "UPGRADE";
@@ -1305,6 +1306,19 @@ const HexNodeComponent = (props: HexNodeProps) => {
               shadowForStrokeEnabled={
                 renderMode?.showGlow === false ? false : true
               }
+            />
+          )}
+
+          {/* Pink dashed line for contrast highlighting */}
+          {contrastHighlighting * 20 >= level && contrastHighlighting > 0 && (
+            <Path
+              data={BASE_PATH_D}
+              stroke="#ec4899"
+              strokeWidth={2}
+              dash={[5, 5]}
+              listening={false}
+              perfectDrawEnabled={false}
+              shadowForStrokeEnabled={false}
             />
           )}
 

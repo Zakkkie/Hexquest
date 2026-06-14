@@ -72,7 +72,8 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
             if (k === 'startingMaterials') {
                 return 2 + Math.floor(lvl / 2); // 2, 2, 3, 3, 4, 4, 5, 5, 6, 6 SP
             }
-            if (['fuelEfficiency', 'scanRadius', 'fatigueResistance', 'growthAccelerator', 'diggerLuck', 'doubleDigChance', 'reserveCapacitor', 'turboRecharge', 'entropyResistance', 'restorationMaster'].includes(k as string)) {
+            if (['fuelEfficiency', 'scanRadius', 'fatigueResistance', 'growthAccelerator', 'diggerLuck', 'doubleDigChance', 'reserveCapacitor', 'turboRecharge', 'entropyResistance', 'restorationMaster', 'contrastHighlighting'].includes(k as string)) {
+                if (k === 'contrastHighlighting') return 5;
                 const base = (k === 'growthAccelerator' || k === 'diggerLuck' || k === 'turboRecharge') ? 3 : 2;
                 return base * (lvl + 1);
             }
@@ -261,6 +262,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                     {renderNode('turboRecharge', language === 'RU' ? 'Турбо' : 'Turbo', language === 'RU' ? 'Кулдаун энергетики L4+' : 'L4+ recharge cooldown', <Zap />, 5, 3, 'text-lime-400', 1, 0.5)}
                     {renderNode('entropyResistance', language === 'RU' ? 'Стабильность' : 'Stability', language === 'RU' ? 'Снижение роста энтропии (%)' : 'Entropy growth reduction (%)', <Infinity />, 10, 2, 'text-rose-400', 3, 0.53)}
                     {renderNode('restorationMaster', language === 'RU' ? 'Ремонт' : 'Repair', language === 'RU' ? 'Шанс восстановления Бездны (%)' : 'Void structural repair chance (%)', <Wrench />, 10, 2, 'text-amber-500', 3, 0.56)}
+                    {renderNode('contrastHighlighting', language === 'RU' ? 'Подсветка' : 'Highlight', language === 'RU' ? 'Контурные линии для элементов до 20*lvl уровня' : 'Contour lines for elements up to 20*level', <Star />, 1, 5, 'text-pink-400', 10, 0.59)}
                 </div>
             </motion.div>
         </motion.div>

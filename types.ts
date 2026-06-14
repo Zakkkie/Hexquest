@@ -575,4 +575,5 @@ export interface CampaignUpgrades {
   turboRecharge: number;
   entropyResistance: number;
   restorationMaster: number;
+  contrastHighlighting: number;
 }

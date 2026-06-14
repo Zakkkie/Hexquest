@@ -112,7 +112,7 @@ const StoryBuilderView: React.FC = () => {
     const [failedClickCoord, setFailedClickCoord] = useState<{ q: number, r: number } | null>(null);
 
     // Automation & Flare states
-    const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number; congratsRU?: string; congratsEN?: string }[]>([]);
+    const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number; congratsRU?: string; congratsEN?: string; cleanNameRU?: string; cleanNameEN?: string }[]>([]);
     const [flareKeys, setFlareKeys] = useState<Set<string>>(new Set());
     const [isAnimatingCompletion, setIsAnimatingCompletion] = useState(false);
 
@@ -409,7 +409,9 @@ const StoryBuilderView: React.FC = () => {
                 x: screenX, 
                 y: screenY,
                 congratsRU: activeFigure?.congratsRU,
-                congratsEN: activeFigure?.congratsEN
+                congratsEN: activeFigure?.congratsEN,
+                cleanNameRU: activeFigure?.cleanNameRU,
+                cleanNameEN: activeFigure?.cleanNameEN
             }]);
             toastTimeout = setTimeout(() => {
                 setSpToasts(prev => prev.filter(t => t.id !== toastId));
@@ -1086,12 +1088,14 @@ const StoryBuilderView: React.FC = () => {
                                 className="pointer-events-none text-center flex flex-col items-center select-none w-max shrink-0"
                             >
                                 <span 
-                                    className="block text-[10px] md:text-xs font-black tracking-widest text-[#22d3ee] uppercase select-none leading-none mb-1 text-center"
+                                    className="block text-[14px] md:text-base font-black tracking-widest text-[#22d3ee] uppercase select-none leading-none mb-1 text-center"
                                     style={{
                                         textShadow: '0 0 10px rgba(34, 211, 238, 0.95), 0 0 20px rgba(34, 211, 238, 0.5)'
                                     }}
                                 >
-                                    {language === 'RU' ? (toast.congratsRU || 'ФИГУРА СОБРАНА!') : (toast.congratsEN || 'SHAPE COMPLETED!')}
+                                    {language === 'RU' 
+                                        ? `${toast.cleanNameRU?.toUpperCase() || 'ФИГУРА'} СОБРАН${!toast.cleanNameRU ? 'А' : ''}!` 
+                                        : `${toast.cleanNameEN?.toUpperCase() || 'SHAPE'} COMPLETED!`}
                                 </span>
                                 <span 
                                     className="block text-2xl md:text-4xl font-black text-white tracking-widest select-none leading-none text-center"
@@ -1694,7 +1698,11 @@ const StoryBuilderView: React.FC = () => {
                                 <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                                     <div className="w-full py-2.5 bg-cyan-950/45 border border-cyan-500/35 text-cyan-400 font-extrabold uppercase text-[8.5px] tracking-widest rounded-xl text-center flex items-center justify-center gap-2 animate-pulse select-none shadow-[0_0_20px_rgba(34,211,238,0.2)]">
                                         <Trophy className="w-3.5 h-3.5 text-yellow-500" />
-                                        <span>{language === 'RU' ? 'ФИГУРА ВЫПОЛНЕНА! (+1 SP)' : 'STRUCTURE COMPLETED! (+1 SP)'}</span>
+                                        <span>
+                                            {language === 'RU' 
+                                                ? `${activeFigure?.cleanNameRU?.toUpperCase() || 'ФИГУРА'} СОБРАН${!activeFigure?.cleanNameRU ? 'А' : ''}! (+1 SP)` 
+                                                : `${activeFigure?.cleanNameEN?.toUpperCase() || 'STRUCTURE'} COMPLETED! (+1 SP)`}
+                                        </span>
                                     </div>
                                 </div>
                             )}
@@ -1712,7 +1720,7 @@ const StoryBuilderView: React.FC = () => {
                                 <motion.div
                                     initial={{ scale: 0.9, opacity: 0, y: 10 }}
                                     animate={{ scale: 1, opacity: 1, y: 0 }}
-                                    className="mb-2 max-w-xs px-3 py-1.5 bg-amber-950/90 border border-amber-500/50 rounded-lg text-amber-200 text-[9px] font-bold tracking-tight shadow-[0_0_15px_rgba(245,158,11,0.25)] flex items-center gap-1.5 z-20 animate-pulse text-center justify-center pointer-events-auto"
+                                    className="mb-2 max-w-xs px-3 py-1.5 bg-amber-950/40 backdrop-blur-md border border-amber-500/50 rounded-lg text-amber-200 text-[9px] font-bold tracking-tight shadow-[0_0_15px_rgba(245,158,11,0.25)] flex items-center gap-1.5 z-20 animate-pulse text-center justify-center pointer-events-auto"
                                 >
                                     <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                                     <span>
