@@ -997,20 +997,20 @@ const StoryBuilderView: React.FC = () => {
                     };
 
                     return (
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{ duration: 0.4, ease: "easeInOut" }}
-                            className="absolute top-[85px] sm:top-[100px] md:top-[120px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none z-10"
-                        >
-                            {/* Constellation Star Map SVG */}
-                            <svg 
-                                width={constellationData.width} 
-                                height={constellationData.height} 
-                                viewBox={`${-constellationData.width/2} ${-constellationData.height/2} ${constellationData.width} ${constellationData.height}`}
-                                className="overflow-visible drop-shadow-[0_0_28px_rgba(34,211,238,0.65)] transition-all duration-500"
+                        <div className="absolute top-[85px] sm:top-[100px] md:top-[120px] left-1/2 -translate-x-1/2 pointer-events-none select-none z-10 flex flex-col items-center">
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.4, ease: "easeInOut" }}
                             >
+                                {/* Constellation Star Map SVG */}
+                                <svg 
+                                    width={constellationData.width} 
+                                    height={constellationData.height} 
+                                    viewBox={`${-constellationData.width/2} ${-constellationData.height/2} ${constellationData.width} ${constellationData.height}`}
+                                    className="overflow-visible drop-shadow-[0_0_28px_rgba(34,211,238,0.65)] transition-all duration-500"
+                                >
                                 {/* Hexagon outlines defining each cell of the blueprint shape boundary */}
                                 {constellationData.points.map((pt) => {
                                     const hexPoints: string[] = [];
@@ -1057,7 +1057,8 @@ const StoryBuilderView: React.FC = () => {
                                     );
                                 })}
                             </svg>
-                        </motion.div>
+                            </motion.div>
+                        </div>
                     );
                 })()}
                 </AnimatePresence>
