@@ -381,16 +381,25 @@ export const StoryHex: React.FC<{
     const wallHeight = isBuiltOrBlueprint && activeLvl !== undefined ? (activeLvl >= 0 ? height : Math.abs(activeLvl) * 10) : 0;
 
     const groupRef = useRef<Konva.Group>(null);
+    
+    // Hard synchronization of raw konva properties to fix tween interruption hanging.
+    useEffect(() => {
+        if (groupRef.current && !isNew) {
+            groupRef.current.y(px.y);
+            groupRef.current.opacity(1);
+        }
+    }, [px.y, isNew]);
+
     useEffect(() => {
         if (isNew && groupRef.current) {
             const node = groupRef.current;
-            const originalY = node.y();
-            node.y(originalY - 60);
+            const targetY = px.y;
+            node.y(targetY - 60);
             node.opacity(0);
             const tween = new Konva.Tween({
                 node: node,
                 duration: 0.5,
-                y: originalY,
+                y: targetY,
                 opacity: 1,
                 easing: Konva.Easings.BackEaseOut
             });
@@ -401,9 +410,12 @@ export const StoryHex: React.FC<{
                 } catch (e) {
                     console.warn("Safe tween destroy failed for isNew group", e);
                 }
+                // Ensure it ends at the target Y in case tween is destroyed early
+                node.y(targetY);
+                node.opacity(1);
             };
         }
-    }, [isNew]);
+    }, [isNew, px.y]);
 
     const rippleRef = useRef<Konva.Circle>(null);
     useEffect(() => {
@@ -540,6 +552,13 @@ export const StoryHex: React.FC<{
 
     const collapseRef = useRef<Konva.Group>(null);
     useEffect(() => {
+        if (collapseRef.current && !isFlaring) {
+            collapseRef.current.scale({ x: 1, y: 1 });
+            collapseRef.current.opacity(1);
+        }
+    }, [isFlaring]);
+
+    useEffect(() => {
         if (isFlaring && collapseRef.current) {
             const node = collapseRef.current;
             const timeout = setTimeout(() => {
@@ -562,6 +581,7 @@ export const StoryHex: React.FC<{
                     } catch (e) {
                         console.warn("Err destroying activeCollapseTween", e);
                     }
+                    (node as any).activeCollapseTween = null;
                 }
             };
         } else if (!isFlaring && collapseRef.current) {

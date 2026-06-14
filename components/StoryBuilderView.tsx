@@ -712,6 +712,7 @@ const StoryBuilderView: React.FC = () => {
         placeStoryHex(q, r, buildLevel);
         playUiSound('SUCCESS');
         setLastPlacedKey(key);
+        setTimeout(() => setLastPlacedKey(prev => prev === key ? null : prev), 600);
         setErrorMessage(null); // clear any previous warning
     }, [isPanning, isEligibleForPlacement, minedInSessionHexes, collectedHexes, placeStoryHex, addMinedHexes, playUiSound, setErrorMessage, language, setDestroyButtonCell, storyMap, selectedBuildLevel, hasAnyHex]);
 

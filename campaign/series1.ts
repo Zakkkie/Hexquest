@@ -350,41 +350,41 @@ export const series1Levels: LevelConfig[] = [
     id: '1.5',
     title: 'Sim 1.5: Жесткие Опоры',
     description: 'В пустоте возвысить изолированный гекс выше L1 невозможно.\nВсегда стройте опорное плато из смежных блоков!',
-    goalText: 'Улучшите Центр до уровня L1',
+    goalText: 'Улучшите Центр до уровня L2',
     mapConfig: {
-      size: 3,
+      size: 2,
       type: 'fixed',
       customLayout: [
-        { q: 0, r: 0, currentLevel: 0, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Лимит L1
-        // Symmetric disconnected outposts
-        { q: 2, r: -2, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: 2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: 0, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -2, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: 0, r: -2, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: 0, currentLevel: -1, maxLevel: 2, revealed: true, ownerId: 'player-1' }, // Center starts at -1
+        // Neighbors touching center (соприкасающиеся границами)
+        { q: 1, r: -1, currentLevel: 0, maxLevel: 2, revealed: true },
+        { q: 1, r: 0, currentLevel: 0, maxLevel: 2, revealed: true },
+        { q: 0, r: 1, currentLevel: 0, maxLevel: 2, revealed: true },
+        { q: -1, r: 1, currentLevel: 0, maxLevel: 2, revealed: true },
+        { q: -1, r: 0, currentLevel: 0, maxLevel: 2, revealed: true },
+        { q: 0, r: -1, currentLevel: 0, maxLevel: 2, revealed: true },
       ]
     },
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 1, label: 'L1 Peak', color: 'emerald' },
+      { q: 0, r: 0, targetLevel: 2, label: 'L2 Peak', color: 'emerald' },
     ],
-    startState: { credits: 0, moves: 10, rank: 3, materials: 3, initialEntropy: 100 },
+    startState: { credits: 0, moves: 20, rank: 3, materials: 8, initialEntropy: 100 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      const h00 = state.grid['0,0']?.currentLevel ?? 0;
-      if (h00 >= 1) {
+      const h00 = state.grid['0,0']?.currentLevel ?? -1;
+      if (h00 >= 2) {
         return isRu
-          ? "Отлично! Вы подняли гекс до уровня L1. Выше подняться нельзя без соседних опорных плит."
-          : "Great! You raised the hex to Level L1. You cannot go higher without supporting adjacent tiles.";
+          ? "Отлично! Вы подняли гекс до уровня L2 с помощью соседних опор."
+          : "Great! You raised the hex to Level L2 with the help of adjacent supports.";
       }
       return isRu
-        ? "Попробуйте улучшить Центр до уровня L1."
-        : "Try to upgrade the Center to level L1.";
+        ? "Вы начинаете на глубине -1. Выстройте опоры по краям до уровня L2, чтобы можно было поднять Центр до L2."
+        : "You start at depth -1. Build up the border supports to L2 so you can raise the Center to L2.";
     },
     hooks: {
       checkWinCondition: (state) => {
-        return (state.grid['0,0']?.currentLevel ?? 0) >= 1;
+        return (state.grid['0,0']?.currentLevel ?? -1) >= 2;
       },
       checkLossCondition: (state) => {
         return isStranded(state);
