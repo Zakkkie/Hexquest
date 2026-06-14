@@ -1,3 +1,42 @@
+/*
+Возникающая ошибка "Cannot convert undefined or null to object" во время
+обновления дерева компонентов React-Konva чаще всего связана с тем, как
+внутренний примитив сравнения свойств (reconciler) в React-Konva обрабатывает
+изменения сложных свойств-объектов (таких как fillPatternScale,
+fillPatternOffset или dash массивы), когда они переходят из состояния объекта в
+null или undefined (или наоборот). Так как typeof null возвращает 'object',
+попытка сравнить новые и старые свойства через Object.keys() приводит к
+этой ошибке.
+
+Кроме того, при сборке проекта через Vite могут возникать проблемы с циклической
+зависимостью при импорте THEME_PALETTE из MapRenderer.tsx, из-за чего этот
+объект временно может быть равен undefined в момент первого рендера
+StoryHex.
+
+Что было сделано для устранения ошибок:
+
+1.  Разделение рендеринга Path: Логика <Path> в StoryHex разделена на два
+    независимых элемента. Первый рендерит текстурированную плитку только
+    при наличии topTexture (со стабильными значениями fillPatternScale и др.),
+    второй рендерит обычный векторный шестиугольник. Это исключает передачу
+    null в качестве изображений и объектов масштабирования.
+2.  Безопасное значение свойства dash: Свойство dash теперь всегда принимает
+    массив (передается [] вместо undefined). Это предотвращает сбои
+    сравнения типов в React-Konva.
+3.  Безопасный доступ к THEME_PALETTE: Добавлены проверки на существование
+    палитры, предотвращающие падение при циклических импортах.
+4.  Защита точек BASE_POINTS: Созданы вспомогательные функции getPointX и
+    getPointY для безопасного построения фасок (bevels), что страхует от
+    неопределенных индексов массива.
+5.  Безопасное вычисление координат hexToPixel: Вычисления обернуты в блок
+    try-catch с возвратом дефолтных координат { x: 0, y: 0 }.
+6.  Исправление MiniFigureBlueprint: Добавлены дефолтные значения для shape и
+    безопасный расчет границ SVG (minX, maxX, minY, maxY), предотвращающий
+    появление значений Infinity при пустых массивах.
+
+Полный исправленный код файла components/StoryBuilderComponents.tsx:
+*/
+
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Group, Circle, Path } from 'react-konva';
 import { THEME_PALETTE } from './MapRenderer.tsx';
@@ -144,13 +183,13 @@ export const NebulaBackground: React.FC<{ width: number; height: number }> = ({ 
 };
 
 export const MiniFigureBlueprint: React.FC<{ 
-    shape: { q: number, r: number, lvl?: number }[], 
+    shape?: { q: number, r: number, lvl?: number }[], 
     cellSize?: number, 
     className?: string,
     onCellClick?: (index: number) => void,
     selectedCellIndex?: number | null,
     style?: React.CSSProperties
-}> = ({ shape, cellSize = 6, className, onCellClick, selectedCellIndex, style }) => {
+}> = ({ shape = [], cellSize = 6, className, onCellClick, selectedCellIndex, style }) => {
     const size = cellSize;
     const hexToPixelSmall = (q: number, r: number) => {
         const x = size * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
@@ -162,10 +201,10 @@ export const MiniFigureBlueprint: React.FC<{
     
     const xs = pixels.map(p => p.x);
     const ys = pixels.map(p => p.y);
-    const minX = Math.min(...xs) - size - 4;
-    const maxX = Math.max(...xs) + size + 4;
-    const minY = Math.min(...ys) - size - 4;
-    const maxY = Math.max(...ys) + size + 4;
+    const minX = xs.length > 0 ? Math.min(...xs) - size - 4 : -20;
+    const maxX = xs.length > 0 ? Math.max(...xs) + size + 4 : 20;
+    const minY = ys.length > 0 ? Math.min(...ys) - size - 4 : -20;
+    const maxY = ys.length > 0 ? Math.max(...ys) + size + 4 : 20;
     
     const width = maxX - minX;
     const height = maxY - minY;
@@ -285,24 +324,42 @@ export const StoryHex: React.FC<{
     onClick: (q: number, r: number) => void,
     onDblClick?: (q: number, r: number) => void
 }> = React.memo(({ q, r, level, isSelected, isBlueprint, blueprintLevel = 0, isEligible, isCenterInitially, isNew, canPlace, isFlaring, isFailedClick, onClick, onDblClick }) => {
-    const px = useMemo(() => hexToPixel(q, r), [q, r]);
+    
+    const px = useMemo(() => {
+        try {
+            return hexToPixel(q, r) || { x: 0, y: 0 };
+        } catch {
+            return { x: 0, y: 0 };
+        }
+    }, [q, r]);
+
     const isBuilt = level !== undefined && level >= 0;
+    const isVoid = level === -999;
+
+    if (isVoid) {
+        return null;
+    }
     
     const colors = useMemo(() => {
         const defaultTheme = { main: '#1e293b', light: '#334155', dark: '#0f172a', stroke: '#475569' };
         const lvlStr = level !== undefined ? String(level) : '0';
-        const theme = THEME_PALETTE[lvlStr] || THEME_PALETTE['0'] || defaultTheme;
+        const palette = THEME_PALETTE || {};
+        const theme = palette[lvlStr] || palette['0'] || defaultTheme;
         return { 
-            side: theme.dark || '#0f172a', 
-            top: theme.main || '#1e293b', 
-            stroke: theme.stroke || '#475569',
-            light: theme.light || '#334155' 
+            side: theme?.dark || '#0f172a', 
+            top: theme?.main || '#1e293b', 
+            stroke: theme?.stroke || '#475569',
+            light: theme?.light || '#334155' 
         };
     }, [level]);
 
     const topTexture = useMemo(() => {
         if (level === undefined) return null;
-        return textureService.getTexture(level, q, r, undefined);
+        try {
+            return textureService?.getTexture(level, q, r, undefined) || null;
+        } catch {
+            return null;
+        }
     }, [level, q, r]);
 
     // Height calculation - visual depth
@@ -339,7 +396,11 @@ export const StoryHex: React.FC<{
             });
             tween.play();
             return () => {
-                tween.destroy();
+                try {
+                    tween.destroy();
+                } catch (e) {
+                    console.warn("Safe tween destroy failed for isNew group", e);
+                }
             };
         }
     }, [isNew]);
@@ -362,7 +423,11 @@ export const StoryHex: React.FC<{
             });
             tween.play();
             return () => {
-                tween.destroy();
+                try {
+                    tween.destroy();
+                } catch (e) {
+                    console.warn("Safe tween destroy failed for ripple", e);
+                }
             };
         }
     }, [isNew]);
@@ -384,7 +449,11 @@ export const StoryHex: React.FC<{
             });
             tween.play();
             return () => {
-                tween.destroy();
+                try {
+                    tween.destroy();
+                } catch (e) {
+                    console.warn("Safe tween destroy failed for flare glow", e);
+                }
             };
         }
     }, [isFlaring]);
@@ -405,7 +474,11 @@ export const StoryHex: React.FC<{
             });
             tween.play();
             return () => {
-                tween.destroy();
+                try {
+                    tween.destroy();
+                } catch (e) {
+                    console.warn("Safe tween destroy failed for pulse outline", e);
+                }
             };
         }
     }, [isEligible]);
@@ -424,7 +497,11 @@ export const StoryHex: React.FC<{
             });
             tween.play();
             return () => {
-                tween.destroy();
+                try {
+                    tween.destroy();
+                } catch (e) {
+                    console.warn("Safe tween destroy failed for failed click indicator", e);
+                }
             };
         }
     }, [isFailedClick]);
@@ -458,30 +535,51 @@ export const StoryHex: React.FC<{
         });
     }, [isBuilt, wallHeight]);
 
+    const getPointX = (index: number) => BASE_POINTS?.[index]?.x ?? 0;
+    const getPointY = (index: number) => BASE_POINTS?.[index]?.y ?? 0;
 
+    const collapseRef = useRef<Konva.Group>(null);
+    useEffect(() => {
+        if (isFlaring && collapseRef.current) {
+            const node = collapseRef.current;
+            const timeout = setTimeout(() => {
+                const tween = new Konva.Tween({
+                    node: node,
+                    duration: 0.6,
+                    scaleX: 0.01,
+                    scaleY: 0.01,
+                    opacity: 0,
+                    easing: Konva.Easings.BackEaseIn
+                });
+                tween.play();
+                (node as any).activeCollapseTween = tween;
+            }, 1000);
+            return () => {
+                clearTimeout(timeout);
+                if ((node as any).activeCollapseTween) {
+                    try {
+                        (node as any).activeCollapseTween.destroy();
+                    } catch (e) {
+                        console.warn("Err destroying activeCollapseTween", e);
+                    }
+                }
+            };
+        } else if (!isFlaring && collapseRef.current) {
+            const node = collapseRef.current;
+            if ((node as any).activeCollapseTween) {
+                try {
+                    (node as any).activeCollapseTween.destroy();
+                } catch (e) {
+                    console.warn("Err destroying inactive activeCollapseTween", e);
+                }
+                (node as any).activeCollapseTween = null;
+            }
+            node.scale({ x: 1, y: 1 });
+            node.opacity(1);
+        }
+    }, [isFlaring]);
 
-    // OPTIMIZATION & DE-CLUTTER: Completely bypass rendering logic for standard empty cells that aren't parts of active mechanics.
-    // Instead of drawing concentric background outline paths, draw an elegant, subtle star-chart coordinate center-point dot.
-    if (!isBuilt && !isBlueprint && !isEligible && !isCenterInitially) {
-        return (
-            <Group 
-                x={px.x} 
-                y={px.y} 
-                perfectDrawEnabled={false}
-                transformsEnabled="position"
-                listening={false}
-            >
-                <Circle 
-                    x={0} 
-                    y={0} 
-                    radius={1.5} 
-                    fill="rgba(255, 255, 255, 0.12)" 
-                    perfectDrawEnabled={false}
-                />
-            </Group>
-        );
-    }
-
+    // Render base elements for all cells (removed heavy filtering optimization to always show base grid as requested)
     return (
         <Group 
             ref={groupRef} 
@@ -501,7 +599,8 @@ export const StoryHex: React.FC<{
             perfectDrawEnabled={false}
             transformsEnabled="position"
         >
-            {/* 3D Sides / Walls */}
+            <Group ref={collapseRef} perfectDrawEnabled={false}>
+                {/* 3D Sides / Walls */}
             {isBuilt && colors && visibleSides && visibleSides.length > 0 && (
                 <Group y={yOffset}>
                     {visibleSides.map(side => {
@@ -567,19 +666,31 @@ export const StoryHex: React.FC<{
                         listening={false}
                     />
                 )}
-                <Path
-                    data={BASE_PATH_D}
-                    fillPatternImage={topTexture as any}
-                    fill={topTexture ? undefined : (isBuilt ? colors?.top : (isCenterInitially ? 'rgba(16, 185, 129, 0.18)' : (isEligible ? 'rgba(34, 211, 238, 0.04)' : 'rgba(255,255,255,0.01)')))}
-                    fillPatternScale={{ x: GAME_CONFIG.HEX_SIZE / 32, y: GAME_CONFIG.HEX_SIZE / 32 }}
-                    fillPatternOffset={{ x: 32, y: 32 }}
-                    fillPatternRepeat="repeat"
-                    stroke={isBuilt ? '#06b6d4' : (isCenterInitially ? '#10b981' : (isBlueprint ? 'rgba(168, 85, 247, 0.75)' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)')))}
-                    strokeWidth={isBuilt ? 2.0 : (isCenterInitially ? 3.0 : (isBlueprint ? 1.5 : (isEligible ? 1.5 : 0.8)))}
-                    perfectDrawEnabled={false}
-                    shadowForStrokeEnabled={false}
-                    dash={isEligible || isBlueprint ? [5, 4] : undefined}
-                />
+                {isBuilt && topTexture ? (
+                    <Path
+                        key="textured-top-face"
+                        data={BASE_PATH_D}
+                        fillPatternImage={topTexture as any}
+                        fillPatternScale={{ x: ((GAME_CONFIG && GAME_CONFIG.HEX_SIZE) || 30) / 32, y: ((GAME_CONFIG && GAME_CONFIG.HEX_SIZE) || 30) / 32 }}
+                        fillPatternOffset={{ x: 32, y: 32 }}
+                        fillPatternRepeat="repeat"
+                        stroke="#06b6d4"
+                        strokeWidth={2.0}
+                        perfectDrawEnabled={false}
+                        shadowForStrokeEnabled={false}
+                    />
+                ) : (
+                    <Path
+                        key="solid-top-face"
+                        data={BASE_PATH_D}
+                        fill={isVoid ? 'rgba(5, 5, 12, 0.98)' : (isBuilt ? colors?.top : (isCenterInitially ? 'rgba(16, 185, 129, 0.18)' : (isEligible ? 'rgba(34, 211, 238, 0.04)' : 'rgba(255,255,255,0.01)')))}
+                        stroke={isVoid ? 'rgba(124, 58, 237, 0.25)' : (isBuilt ? '#06b6d4' : (isCenterInitially ? '#10b981' : (isBlueprint ? 'rgba(168, 85, 247, 0.75)' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)'))))}
+                        strokeWidth={isVoid ? 1.2 : (isBuilt ? 2.0 : (isCenterInitially ? 3.0 : (isBlueprint ? 1.5 : (isEligible ? 1.5 : 0.8))))}
+                        perfectDrawEnabled={false}
+                        shadowForStrokeEnabled={false}
+                        dash={isVoid ? [3, 4] : (isEligible || isBlueprint ? [5, 4] : [])}
+                    />
+                )}
                 
                 {/* Visual plus (+) for center initially and eligible targets */}
                 {!isBuilt && (isCenterInitially || isEligible) && (
@@ -605,7 +716,7 @@ export const StoryHex: React.FC<{
                         <Group perfectDrawEnabled={false}>
                             {/* Top/Light Bevel */}
                             <Path 
-                                data={`M ${BASE_POINTS[2].x} ${BASE_POINTS[2].y} L ${BASE_POINTS[3].x} ${BASE_POINTS[3].y} L ${BASE_POINTS[4].x} ${BASE_POINTS[4].y} L ${BASE_POINTS[5].x} ${BASE_POINTS[5].y}`}
+                                data={`M ${getPointX(2)} ${getPointY(2)} L ${getPointX(3)} ${getPointY(3)} L ${getPointX(4)} ${getPointY(4)} L ${getPointX(5)} ${getPointY(5)}`}
                                 stroke="rgba(255,255,255,0.4)"
                                 strokeWidth={1.5}
                                 listening={false}
@@ -613,7 +724,7 @@ export const StoryHex: React.FC<{
                             />
                             {/* Bottom/Dark Bevel */}
                             <Path 
-                                data={`M ${BASE_POINTS[5].x} ${BASE_POINTS[5].y} L ${BASE_POINTS[0].x} ${BASE_POINTS[0].y} L ${BASE_POINTS[1].x} ${BASE_POINTS[1].y} L ${BASE_POINTS[2].x} ${BASE_POINTS[2].y}`}
+                                data={`M ${getPointX(5)} ${getPointY(5)} L ${getPointX(0)} ${getPointY(0)} L ${getPointX(1)} ${getPointY(1)} L ${getPointX(2)} ${getPointY(2)}`}
                                 stroke="rgba(0,0,0,0.5)"
                                 strokeWidth={1.5}
                                 listening={false}
@@ -631,10 +742,10 @@ export const StoryHex: React.FC<{
                         x={0} 
                         y={0} 
                         r={5} 
-                        fill={THEME_PALETTE[String(blueprintLevel)]?.main || 'rgba(168, 85, 247, 0.6)'} 
+                        fill={(THEME_PALETTE && THEME_PALETTE[String(blueprintLevel)]?.main) || 'rgba(168, 85, 247, 0.6)'} 
                         stroke="#ffffff"
                         strokeWidth={1.2}
-                        shadowColor={THEME_PALETTE[String(blueprintLevel)]?.main || '#a855f7'}
+                        shadowColor={(THEME_PALETTE && THEME_PALETTE[String(blueprintLevel)]?.main) || '#a855f7'}
                         shadowBlur={6}
                         listening={false} 
                     />
@@ -712,7 +823,7 @@ export const StoryHex: React.FC<{
                 <Group y={yOffset} scaleY={0.8} perfectDrawEnabled={false}>
                     <Circle
                         ref={rippleRef}
-                        r={GAME_CONFIG.HEX_SIZE * 0.8}
+                        r={((GAME_CONFIG && GAME_CONFIG.HEX_SIZE) || 30) * 0.8}
                         stroke="#22d3ee"
                         strokeWidth={3}
                         opacity={0.9}
@@ -754,6 +865,7 @@ export const StoryHex: React.FC<{
                     />
                 </Group>
             )}
+            </Group>
         </Group>
     );
 });

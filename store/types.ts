@@ -100,6 +100,8 @@ export interface GameStore extends GameState {
   // Story Mode Actions
   addCollectedHexes: (hexes: Record<number, number>) => void;
   placeStoryHex: (q: number, r: number, level: number) => void;
+  consumeStoryHexes: (keys: string[]) => void;
+  transmuteHexes: (fromLvl: number, toLvl: number, count: number) => void;
   clearStoryMap: () => void;
   claimLevelReward: (levelId: string) => void;
 

@@ -4,7 +4,7 @@ import { useGameStore } from '../store.ts';
 import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import { UpgradesTree } from './UpgradesTree.tsx';
-import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { FIGURES_COLLECTION } from './StoryBuilderData.ts';
@@ -50,10 +50,13 @@ const StoryBuilderView: React.FC = () => {
     const setUIState = useGameStore(state => state.setUIState);
     const playUiSound = useGameStore(state => state.playUiSound);
     const minedInSessionHexes = useGameStore(state => state.minedInSessionHexes);
+    const collectedHexes = useGameStore(state => state.collectedHexes);
     const storyMap = useGameStore(state => state.storyMap);
     const placeStoryHex = useGameStore(state => state.placeStoryHex);
     const addMinedHexes = useGameStore(state => state.addMinedHexes);
     const clearStoryMap = useGameStore(state => state.clearStoryMap);
+    const consumeStoryHexes = useGameStore(state => state.consumeStoryHexes);
+    const transmuteHexes = useGameStore(state => state.transmuteHexes);
     const skillPoints = useGameStore(state => state.skillPoints);
     const setSkillPoints = useGameStore(state => state.setSkillPoints);
     const language = useGameStore(state => state.language);
@@ -111,6 +114,14 @@ const StoryBuilderView: React.FC = () => {
     const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number; congratsRU?: string; congratsEN?: string }[]>([]);
     const [flareKeys, setFlareKeys] = useState<Set<string>>(new Set());
     const [isAnimatingCompletion, setIsAnimatingCompletion] = useState(false);
+
+    const isUnmountingRef = useRef(false);
+    useEffect(() => {
+        isUnmountingRef.current = false;
+        return () => {
+            isUnmountingRef.current = true;
+        };
+    }, []);
 
     // Dynamic celestial constellation map computation of target blueprint figure
     const constellationData = useMemo(() => {
@@ -303,11 +314,65 @@ const StoryBuilderView: React.FC = () => {
         return completedHexKeys.size > 0;
     }, [completedHexKeys]);
 
+    const isInventoryInsufficient = useMemo(() => {
+        const shape = activeFigure.shape;
+        if (!shape || shape.length === 0) return false;
+
+        // Count how many hexes of each level are strictly needed to build the active figure
+        const neededCounts: { [lvl: number]: number } = {};
+        for (const pt of shape) {
+            const reqLvl = pt.lvl !== undefined ? pt.lvl : 0;
+            neededCounts[reqLvl] = (neededCounts[reqLvl] || 0) + 1;
+        }
+
+        // Count the total blocks the player controls (available both in inventories and on the board)
+        const ownedCounts: { [lvl: number]: number } = {};
+
+        // 1. Blocks from minedInSessionHexes
+        for (const [lvlStr, count] of Object.entries(minedInSessionHexes)) {
+            const lvl = Number(lvlStr);
+            if (!isNaN(lvl)) {
+                ownedCounts[lvl] = (ownedCounts[lvl] || 0) + count;
+            }
+        }
+
+        // 2. Blocks from collectedHexes
+        for (const [lvlStr, count] of Object.entries(collectedHexes)) {
+            const lvl = Number(lvlStr);
+            if (!isNaN(lvl)) {
+                ownedCounts[lvl] = (ownedCounts[lvl] || 0) + count;
+            }
+        }
+
+        // 3. Placed blocks on the map (which the player can erase/reclaim)
+        for (const lvl of Object.values(storyMap)) {
+            if (lvl !== undefined && lvl >= 0) {
+                ownedCounts[lvl] = (ownedCounts[lvl] || 0) + 1;
+            }
+        }
+
+        // Determine if there is an absolute shortage for any required level
+        for (const lvlStr of Object.keys(neededCounts)) {
+            const lvl = Number(lvlStr);
+            const needed = neededCounts[lvl];
+            const owned = ownedCounts[lvl] || 0;
+            if (owned < needed) {
+                return true; // Absolute shortage! Even reclaiming all blocks on the map won't suffice.
+            }
+        }
+
+        return false;
+    }, [storyMap, activeFigure, minedInSessionHexes, collectedHexes]);
+
     // Automatic Shape Assembly Completion & Neon Highlight Flare Effect
     useEffect(() => {
+        let toastTimeout: any = null;
+        let consumeTimeout: any = null;
+        let keysToFlare: Set<string> | null = null;
+
         if (targetCompleted && !isAnimatingCompletion) {
             setIsAnimatingCompletion(true);
-            const keysToFlare = new Set(completedHexKeys);
+            keysToFlare = new Set(completedHexKeys);
             setFlareKeys(keysToFlare);
             
             // Play success sound
@@ -345,7 +410,7 @@ const StoryBuilderView: React.FC = () => {
                 congratsRU: activeFigure?.congratsRU,
                 congratsEN: activeFigure?.congratsEN
             }]);
-            setTimeout(() => {
+            toastTimeout = setTimeout(() => {
                 setSpToasts(prev => prev.filter(t => t.id !== toastId));
             }, 3000);
             
@@ -370,33 +435,76 @@ const StoryBuilderView: React.FC = () => {
             
             setPopupCell(null);
             
-            // Complete beautiful neon flare fadeout (do NOT clear map so the user keeps structures intact!)
-            setTimeout(() => {
+            // Consume hexes logically immediately, but keep visually flaring, wait, no.
+            // Consume after flare fadeout.
+            consumeTimeout = setTimeout(() => {
+                if (keysToFlare) {
+                    consumeStoryHexes(Array.from(keysToFlare));
+                }
                 setIsAnimatingCompletion(false);
                 setFlareKeys(new Set());
+                consumeTimeout = null;
             }, 1600);
         }
-    }, [targetCompleted, completedHexKeys, unlockedFigureIndex, skillPoints, language, playUiSound, setSkillPoints, cameraPos, zoomScale, storyMap, isAnimatingCompletion]);
+
+        return () => {
+            if (toastTimeout) clearTimeout(toastTimeout);
+            if (isUnmountingRef.current) {
+                if (consumeTimeout) {
+                    clearTimeout(consumeTimeout);
+                    if (keysToFlare) {
+                        consumeStoryHexes(Array.from(keysToFlare));
+                    }
+                }
+            }
+        };
+    }, [targetCompleted, completedHexKeys, unlockedFigureIndex, skillPoints, language, playUiSound, setSkillPoints, cameraPos, zoomScale, storyMap, isAnimatingCompletion, consumeStoryHexes]);
 
     const hasAnyHex = useMemo(() => {
         return Object.values(storyMap).some(lvl => lvl !== undefined && lvl >= 0);
     }, [storyMap]);
 
-    const autoTutorialTriggeredRef = useRef(false);
+    const startCenterPoint = useMemo(() => {
+        if (storyMap['0,0'] !== -999) {
+            return { q: 0, r: 0 };
+        }
+        let bestQ = 0;
+        let bestR = 0;
+        let bestDist = 999;
+        const RADIUS = 12;
+        for (let q = -RADIUS; q <= RADIUS; q++) {
+            for (let r = -RADIUS; r <= RADIUS; r++) {
+                if (Math.abs(q + r) <= RADIUS) {
+                    const key = `${q},${r}`;
+                    if (storyMap[key] !== -999) {
+                        const dist = (Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2;
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestQ = q;
+                            bestR = r;
+                        }
+                    }
+                }
+            }
+        }
+        return { q: bestQ, r: bestR };
+    }, [storyMap]);
+
+    const autoTutorialTriggeredRef = useRef<boolean>(false);
 
     useEffect(() => {
-        if (!hasAnyHex && unlockedFigureIndex <= 3) {
+        const hasSeenTutorial = sessionStorage.getItem('story_tutorial_seen') === 'true';
+        if (!hasAnyHex && unlockedFigureIndex <= 3 && !hasSeenTutorial) {
             if (!autoTutorialTriggeredRef.current) {
                 const timer = setTimeout(() => {
                     if ((window as any).startStoryTutorial) {
                         (window as any).startStoryTutorial();
                         autoTutorialTriggeredRef.current = true;
+                        sessionStorage.setItem('story_tutorial_seen', 'true');
                     }
                 }, 500);
                 return () => clearTimeout(timer);
             }
-        } else if (hasAnyHex) {
-            autoTutorialTriggeredRef.current = false;
         }
     }, [hasAnyHex, unlockedFigureIndex]);
 
@@ -407,6 +515,8 @@ const StoryBuilderView: React.FC = () => {
         if (lvlToBuild === -999) return false; // Demolish is not a placement
 
         const currentLvl = currentMap[getHexKey(q, r)];
+        if (currentLvl === -999) return false; // Void tile cannot be built upon!
+
         const currentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
 
         if (!currentlyBuilt) {
@@ -414,7 +524,7 @@ const StoryBuilderView: React.FC = () => {
         }
 
         if (!hasAnyHex) {
-            if (q === 0 && r === 0) {
+            if (q === startCenterPoint.q && r === startCenterPoint.r) {
                 return lvlToBuild === 0;
             }
             return false;
@@ -463,7 +573,7 @@ const StoryBuilderView: React.FC = () => {
         }
 
         return true;
-    }, [storyMap, selectedBuildLevel, hasAnyHex]);
+    }, [storyMap, selectedBuildLevel, hasAnyHex, startCenterPoint]);
 
     const gridPoints = useMemo(() => {
         const points = [];
@@ -505,6 +615,10 @@ const StoryBuilderView: React.FC = () => {
         const buildLevel = selectedBuildLevel;
         const key = getHexKey(q, r);
         const currentLvl = map[key];
+        if (currentLvl === -999) {
+            playUiSound('ERROR');
+            return;
+        }
         const isCurrentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
 
         const eligible = isEligibleForPlacement(q, r);
@@ -577,7 +691,7 @@ const StoryBuilderView: React.FC = () => {
         }
 
         // Ensure player has the selected block in inventory
-        const availableCount = minedInSessionHexes[buildLevel] || 0;
+        const availableCount = (minedInSessionHexes[buildLevel] || 0) + (collectedHexes[buildLevel] || (collectedHexes as any)[String(buildLevel)] || 0);
         if (availableCount <= 0) {
             playUiSound('WARNING');
             setFailedClickCoord({ q, r });
@@ -599,11 +713,15 @@ const StoryBuilderView: React.FC = () => {
         playUiSound('SUCCESS');
         setLastPlacedKey(key);
         setErrorMessage(null); // clear any previous warning
-    }, [isPanning, isEligibleForPlacement, minedInSessionHexes, placeStoryHex, addMinedHexes, playUiSound, setErrorMessage, language, setDestroyButtonCell, storyMap, selectedBuildLevel, hasAnyHex]);
+    }, [isPanning, isEligibleForPlacement, minedInSessionHexes, collectedHexes, placeStoryHex, addMinedHexes, playUiSound, setErrorMessage, language, setDestroyButtonCell, storyMap, selectedBuildLevel, hasAnyHex]);
 
     const handleCellDblClick = useCallback((q: number, r: number) => {
         const key = getHexKey(q, r);
         const currentLvl = storyMap[key];
+        if (currentLvl === -999) {
+            playUiSound('ERROR');
+            return;
+        }
         const isCurrentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
         
         if (!isCurrentlyBuilt) {
@@ -1036,10 +1154,10 @@ const StoryBuilderView: React.FC = () => {
                                 const lvl = storyMap[key];
                                 const blueprintPt = activeFigure.shape.find(pt => pt.q === coord.q && pt.r === coord.r);
                                 const blueprintLvl = blueprintPt?.lvl !== undefined ? blueprintPt.lvl : 0;
-                                const isBlueprint = !!blueprintPt && (lvl === undefined || lvl < blueprintLvl);
+                                const isBlueprint = !!blueprintPt && (lvl === undefined || (lvl >= 0 && lvl < blueprintLvl));
                                 
                                 const isEligible = isEligibleForPlacement(coord.q, coord.r);
-                                const isCenterInitially = coord.q === 0 && coord.r === 0 && !hasAnyHex;
+                                const isCenterInitially = coord.q === startCenterPoint.q && coord.r === startCenterPoint.r && !hasAnyHex && lvl !== -999;
                                 const isDemolishMode = selectedBuildLevel === -999;
                                 const availableCount = minedInSessionHexes[selectedBuildLevel] || 0;
                                 const canPlaceHex = isDemolishMode ? (lvl !== undefined && lvl >= 0) : (isEligible && availableCount > 0);
@@ -1562,16 +1680,36 @@ const StoryBuilderView: React.FC = () => {
                     
                     {/* "Levels" (Уровни) button precisely in the empty region specified */}
                     {!isUiHidden && (
-                        <motion.button
-                            id="tutorial-levels-btn"
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            onClick={() => { playUiSound('CLICK'); setUIState('CAMPAIGN_MAP'); }}
-                            className="pointer-events-auto mb-3 px-6 py-2.5 bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-indigo-200 hover:text-white rounded-xl shadow-[0_4px_25px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] backdrop-blur-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-                        >
-                            <Map className="w-4 h-4 text-indigo-400 animate-pulse" />
-                            <span>{language === 'RU' ? 'Карта уровней' : 'Levels Map'}</span>
-                        </motion.button>
+                        <div className="flex flex-col items-center pointer-events-auto">
+                            {isInventoryInsufficient && (
+                                <motion.div
+                                    initial={{ scale: 0.9, opacity: 0, y: 10 }}
+                                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                                    className="mb-2 max-w-xs px-3 py-1.5 bg-amber-950/90 border border-amber-500/50 rounded-lg text-amber-200 text-[9px] font-bold tracking-tight shadow-[0_0_15px_rgba(245,158,11,0.25)] flex items-center gap-1.5 z-20 animate-pulse text-center justify-center pointer-events-auto"
+                                >
+                                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span>
+                                        {language === 'RU' 
+                                            ? 'Для постройки фигуры не хватает гексов! Перейдите в шахты для добычи материала.' 
+                                            : 'Not enough hexes to complete the figure! Enter the mines to collect materials.'}
+                                    </span>
+                                </motion.div>
+                            )}
+                            <motion.button
+                                id="tutorial-levels-btn"
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                onClick={() => { playUiSound('CLICK'); setUIState('CAMPAIGN_MAP'); }}
+                                className={`pointer-events-auto mb-3 px-6 py-2.5 bg-gradient-to-r rounded-xl backdrop-blur-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2 ${
+                                    isInventoryInsufficient
+                                        ? 'from-amber-950/90 via-amber-900/90 to-amber-950/90 border border-amber-500 text-amber-200 shadow-[0_0_20px_rgba(245,158,11,0.6)] animate-[pulse_1.5s_infinite_ease-in-out]'
+                                        : 'from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-indigo-200 hover:text-white shadow-[0_4px_25px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]'
+                                }`}
+                            >
+                                <Map className={`w-4 h-4 ${isInventoryInsufficient ? 'text-amber-400' : 'text-indigo-400'} animate-pulse`} />
+                                <span>{language === 'RU' ? 'Карта уровней' : 'Levels Map'}</span>
+                            </motion.button>
+                        </div>
                     )}
 
                     {/* COMPACT CAROUSEL - relocated elegantly to the center (cells made smaller, L0 to L9, eraser) */}
@@ -1607,14 +1745,17 @@ const StoryBuilderView: React.FC = () => {
                                 {/* Scrolling container */}
                                 <div 
                                     ref={carouselRef}
-                                    className="w-full flex flex-row gap-1.5 overflow-x-auto pb-0.5 scrollbar-none flex-nowrap scroll-smooth"
+                                    className="w-full flex flex-row gap-1.5 overflow-x-auto pt-3 pb-1 px-1 scrollbar-none flex-nowrap scroll-smooth"
                                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                                 >
                                     {Array.from({ length: 10 }).map((_, lvl) => {
-                                        const qty = minedInSessionHexes[lvl] || 0;
+                                        const sessionQty = minedInSessionHexes[lvl] || 0;
+                                        const permaQty = collectedHexes[lvl] || (collectedHexes as any)[String(lvl)] || 0;
+                                        const qty = sessionQty + permaQty;
                                         const isSelected = selectedBuildLevel === lvl;
                                         const theme = THEME_PALETTE[String(lvl)] || THEME_PALETTE['0'];
                                         const isPlaceable = placeableLevels.has(lvl);
+                                        const canTransmute = qty >= 3 && lvl < 9;
                                         
                                         // Dynamic tooltip descriptions
                                         const tooltipText = qty <= 0
@@ -1624,36 +1765,54 @@ const StoryBuilderView: React.FC = () => {
                                                 : (language === 'RU' ? `Уровень ${lvl} (Недоступно): постройте сначала опорные блоки` : `Level ${lvl} (Locked): build parent support blocks first`);
 
                                         return (
-                                            <button
-                                                key={lvl}
-                                                onClick={() => { playUiSound('CLICK'); setSelectedBuildLevel(lvl); }}
-                                                title={tooltipText}
-                                                className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 p-1 rounded-xl border text-center transition-all w-13 h-17 relative cursor-pointer outline-none group ${
-                                                    isSelected
-                                                        ? isPlaceable
-                                                            ? 'bg-indigo-950/45 border-cyan-400/70 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102 font-bold'
-                                                            : 'bg-slate-950/35 border-red-500/30 text-rose-400/60 opacity-40 scale-100 brightness-[0.45] grayscale saturate-50'
-                                                        : qty > 0 
-                                                            ? isPlaceable 
-                                                                ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
-                                                                : 'bg-slate-950/20 border-white/5 opacity-25 text-slate-500 scale-98 hover:opacity-40 brightness-[0.4] grayscale saturate-[20%]'
-                                                            : 'bg-slate-950/10 border-white/5 opacity-10 text-slate-600 scale-95 hover:opacity-20 grayscale saturate-0 brightness-[0.3]'
-                                                }`}
-                                            >
-                                                <div className="w-10 h-11 flex items-center justify-center select-none pointer-events-none">
-                                                    {drawInventoryHex(lvl, theme)}
-                                                </div>
+                                            <div key={lvl} className="flex flex-col items-center shrink-0">
+                                                <div className="relative">
+                                                <button
+                                                    onClick={() => { playUiSound('CLICK'); setSelectedBuildLevel(lvl); }}
+                                                    title={tooltipText}
+                                                    className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 p-1 rounded-xl border text-center transition-all w-13 h-17 relative cursor-pointer outline-none group ${
+                                                        isSelected
+                                                            ? isPlaceable
+                                                                ? 'bg-indigo-950/45 border-cyan-400/70 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102 font-bold'
+                                                                : 'bg-slate-950/35 border-red-500/30 text-rose-400/60 opacity-40 scale-100 brightness-[0.45] grayscale saturate-50'
+                                                            : qty > 0 
+                                                                ? isPlaceable 
+                                                                    ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
+                                                                    : 'bg-slate-950/20 border-white/5 opacity-25 text-slate-500 scale-98 hover:opacity-40 brightness-[0.4] grayscale saturate-[20%]'
+                                                                : 'bg-slate-950/10 border-white/5 opacity-10 text-slate-600 scale-95 hover:opacity-20 grayscale saturate-0 brightness-[0.3]'
+                                                    }`}
+                                                >
+                                                    <div className="w-10 h-11 flex items-center justify-center select-none pointer-events-none">
+                                                        {drawInventoryHex(lvl, theme)}
+                                                    </div>
 
-                                                <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none ${
-                                                    qty > 0 
-                                                        ? isPlaceable 
-                                                            ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' 
-                                                            : 'text-amber-600/30 drop-shadow-none opacity-40'
-                                                        : 'text-slate-500/30'
-                                                }`}>
-                                                    x{qty}
-                                                </span>
-                                            </button>
+                                                    <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none ${
+                                                        qty > 0 
+                                                            ? isPlaceable 
+                                                                ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' 
+                                                                : 'text-amber-600/30 drop-shadow-none opacity-40'
+                                                            : 'text-slate-500/30'
+                                                    }`}>
+                                                        x{qty}
+                                                    </span>
+                                                </button>
+                                                
+                                                {/* Transmutation Button */}
+                                                {canTransmute && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            playUiSound('SUCCESS'); // use a nice sound
+                                                            transmuteHexes(lvl, lvl + 1, 1);
+                                                        }}
+                                                        title={language === 'RU' ? `Сплавить 3 гекса L${lvl} в 1 гекс L${lvl + 1}` : `Transmute 3x L${lvl} into 1x L${lvl + 1}`}
+                                                        className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-cyan-900 border border-cyan-400 p-0.5 z-30 hover:bg-cyan-700 hover:scale-110 active:scale-95 transition-all shadow-[0_0_10px_rgba(34,211,238,0.5)] group overflow-hidden pt-[2px] -mt-[4px]"
+                                                    >
+                                                        <RefreshCw className="w-3 h-3 text-cyan-200 group-hover:text-white" />
+                                                    </button>
+                                                )}
+                                                </div>
+                                            </div>
                                         );
                                     })}
                                 </div>

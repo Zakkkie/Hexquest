@@ -40,12 +40,12 @@ export const createCampaignSlice = (
     const prevLevel = state.storyMap[key];
     const hasPrev = prevLevel !== undefined && prevLevel >= 0;
 
-    const newCollected = { ...state.collectedHexes };
+    const newCollected = { ...state.collectedHexes } as any;
     const newMined = { ...state.minedInSessionHexes };
 
     // 1. DEDUCT: If placing/upgrading to a level (level !== -999)
     if (level !== -999) {
-      const currentCountCollected = state.collectedHexes[level] || 0;
+      const currentCountCollected = state.collectedHexes[level] || (state.collectedHexes as any)[String(level)] || 0;
       const currentCountMined = state.minedInSessionHexes[level] || 0;
       const maxAvailable = Math.max(currentCountCollected, currentCountMined);
       
@@ -59,6 +59,10 @@ export const createCampaignSlice = (
       } else if (newCollected[level] && newCollected[level] > 0) {
         newCollected[level] = newCollected[level] - 1;
         if (newCollected[level] <= 0) delete newCollected[level];
+      } else if (newCollected[String(level)] && newCollected[String(level)] > 0) {
+        const sLevel = String(level);
+        newCollected[sLevel] = newCollected[sLevel] - 1;
+        if (newCollected[sLevel] <= 0) delete newCollected[sLevel];
       }
     }
 
@@ -94,6 +98,61 @@ export const createCampaignSlice = (
       storyMap: newMap, 
       collectedHexes: newCollected, 
       minedInSessionHexes: newMined 
+    };
+  }),
+
+  consumeStoryHexes: (keys: string[]) => set((state) => {
+    const newMap = { ...state.storyMap };
+    
+    // The keys that formed the completed figure are deleted (cleared) from the board,
+    // which effectively makes them disappear.
+    keys.forEach(key => {
+      delete newMap[key];
+    });
+
+    return { 
+      storyMap: newMap
+    };
+  }),
+
+  transmuteHexes: (fromLvl: number, toLvl: number, count: number) => set((state) => {
+    const cost = count * 3; // 3 to 1 transmutation
+    const newMined = { ...state.minedInSessionHexes };
+    const newCollected = { ...state.collectedHexes } as any;
+    
+    // Check if player has enough resources across mined and collected
+    const collectedCount = newCollected[fromLvl] || newCollected[String(fromLvl)] || 0;
+    const minedCount = newMined[fromLvl] || 0;
+    const total = collectedCount + minedCount;
+    
+    if (total < cost) return {};
+
+    let remainingCost = cost;
+    if (minedCount >= remainingCost) {
+      newMined[fromLvl] -= remainingCost;
+    } else {
+      remainingCost -= minedCount;
+      newMined[fromLvl] = 0;
+      
+      const strFromLvl = String(fromLvl);
+      if (newCollected[fromLvl] !== undefined) {
+        newCollected[fromLvl] -= remainingCost;
+      } else {
+        newCollected[strFromLvl] = (newCollected[strFromLvl] || 0) - remainingCost;
+      }
+    }
+
+    if (newMined[fromLvl] <= 0) delete newMined[fromLvl];
+    if (newCollected[fromLvl] <= 0) delete newCollected[fromLvl];
+    const strFromLvl = String(fromLvl);
+    if (newCollected[strFromLvl] <= 0) delete newCollected[strFromLvl];
+
+    // Give the crafted amount to mined
+    newMined[toLvl] = (newMined[toLvl] || 0) + count;
+
+    return { 
+      minedInSessionHexes: newMined,
+      collectedHexes: newCollected
     };
   }),
 
