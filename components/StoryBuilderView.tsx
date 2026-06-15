@@ -65,6 +65,7 @@ const StoryBuilderView: React.FC = () => {
     const isSfxMuted = useGameStore(state => state.isSfxMuted);
     const toggleMusic = useGameStore(state => state.toggleMusic);
     const toggleSfx = useGameStore(state => state.toggleSfx);
+    const contrastHighlighting = useGameStore(state => state.campaignUpgrades?.contrastHighlighting || 0);
 
     // Active unlocked state index
     const [unlockedFigureIndex, setUnlockedFigureIndex] = useState(() => {
@@ -82,19 +83,17 @@ const StoryBuilderView: React.FC = () => {
 
 
     const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-    const [cameraPos, setCameraPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 30 });
-    const [zoomScale, setZoomScale] = useState(window.innerWidth < 768 ? 1.55 : 2.15);
+    
+    // We get initial values from the global store, which decouples them from state updates
+    const initialStoreCamera = useGameStore.getState().cameraPos;
+    const initialStoreZoom = useGameStore.getState().zoomScale;
 
-    const cameraPosRef = useRef(cameraPos);
-    const zoomScaleRef = useRef(zoomScale);
+    const cameraPosRef = useRef(initialStoreCamera);
+    const zoomScaleRef = useRef(initialStoreZoom);
 
-    useEffect(() => {
-        cameraPosRef.current = cameraPos;
-    }, [cameraPos]);
-
-    useEffect(() => {
-        zoomScaleRef.current = zoomScale;
-    }, [zoomScale]);
+    // React refs for imperative updating (completely bypassing React re-renders of the whole view)
+    const layerRef = useRef<any>(null);
+    const destroyTooltipRef = useRef<HTMLDivElement>(null);
 
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -110,6 +109,30 @@ const StoryBuilderView: React.FC = () => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null); // Visual feedback warning toast
     const [destroyButtonCell, setDestroyButtonCell] = useState<{ q: number, r: number } | null>(null);
     const [failedClickCoord, setFailedClickCoord] = useState<{ q: number, r: number } | null>(null);
+
+    const updateTooltipPos = useCallback(() => {
+        if (!destroyTooltipRef.current || !destroyButtonCell) return;
+        const { q, r } = destroyButtonCell;
+        const px = hexToPixel(q, r);
+        const lvl = storyMap[getHexKey(q, r)] || 0;
+        const heightVal = 10 + lvl * 10;
+        const topFaceY = px.y - heightVal;
+        
+        const camX = cameraPosRef.current.x;
+        const camY = cameraPosRef.current.y;
+        const scale = zoomScaleRef.current;
+        
+        const leftPos = camX + px.x * scale;
+        const topPos = camY + topFaceY * scale - 46 * scale;
+        
+        destroyTooltipRef.current.style.left = `${leftPos}px`;
+        destroyTooltipRef.current.style.top = `${topPos}px`;
+        destroyTooltipRef.current.style.transform = `translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.25, scale))})`;
+    }, [destroyButtonCell, storyMap]);
+
+    useEffect(() => {
+        updateTooltipPos();
+    }, [destroyButtonCell, updateTooltipPos]);
 
     // Automation & Flare states
     const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number; congratsRU?: string; congratsEN?: string; cleanNameRU?: string; cleanNameEN?: string }[]>([]);
@@ -222,10 +245,20 @@ const StoryBuilderView: React.FC = () => {
         const targetZoom = w < 768 ? 1.55 : 2.15;
         cameraPosRef.current = targetPos;
         zoomScaleRef.current = targetZoom;
-        setCameraPos(targetPos);
-        setZoomScale(targetZoom);
+
+        if (layerRef.current) {
+            layerRef.current.x(targetPos.x);
+            layerRef.current.y(targetPos.y);
+            layerRef.current.scaleX(targetZoom);
+            layerRef.current.scaleY(targetZoom);
+            layerRef.current.batchDraw();
+        }
+
+        updateTooltipPos();
+        useGameStore.getState().setCameraPos(targetPos);
+        useGameStore.getState().setZoomScale(targetZoom);
         playUiSound('CLICK');
-    }, [playUiSound]);
+    }, [playUiSound, updateTooltipPos]);
 
     const handleScrollLeft = useCallback(() => {
         if (carouselRef.current) {
@@ -249,7 +282,14 @@ const StoryBuilderView: React.FC = () => {
                 const w = window.innerWidth;
                 const h = window.innerHeight;
                 setStageSize({ width: w, height: h });
-                setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
+                const newPos = { x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) };
+                cameraPosRef.current = newPos;
+                if (layerRef.current) {
+                    layerRef.current.x(newPos.x);
+                    layerRef.current.y(newPos.y);
+                    layerRef.current.batchDraw();
+                }
+                useGameStore.getState().setCameraPos(newPos);
             };
             window.addEventListener('resize', handleResize);
             handleResize();
@@ -262,7 +302,14 @@ const StoryBuilderView: React.FC = () => {
             const w = Math.max(100, Math.floor(width));
             const h = Math.max(100, Math.floor(height));
             setStageSize({ width: w, height: h });
-            setCameraPos({ x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) });
+            const newPos = { x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) };
+            cameraPosRef.current = newPos;
+            if (layerRef.current) {
+                layerRef.current.x(newPos.x);
+                layerRef.current.y(newPos.y);
+                layerRef.current.batchDraw();
+            }
+            useGameStore.getState().setCameraPos(newPos);
         });
 
         observer.observe(container);
@@ -397,8 +444,8 @@ const StoryBuilderView: React.FC = () => {
             const avgY = count > 0 ? (sumY / count) : 0;
 
             // Project 2D game world coordinates to screen coordinate space
-            const screenX = cameraPos.x + avgX * zoomScale;
-            const screenY = cameraPos.y + avgY * zoomScale;
+            const screenX = cameraPosRef.current.x + avgX * zoomScaleRef.current;
+            const screenY = cameraPosRef.current.y + avgY * zoomScaleRef.current;
 
             // Spawn SP floating toast notification at target screen location
             const toastId = Math.random().toString(36).substring(2, 9);
@@ -461,7 +508,7 @@ const StoryBuilderView: React.FC = () => {
                 }
             }
         };
-    }, [targetCompleted, completedHexKeys, unlockedFigureIndex, skillPoints, language, playUiSound, setSkillPoints, cameraPos, zoomScale, storyMap, isAnimatingCompletion, consumeStoryHexes]);
+    }, [targetCompleted, completedHexKeys, unlockedFigureIndex, skillPoints, language, playUiSound, setSkillPoints, storyMap, isAnimatingCompletion, consumeStoryHexes]);
 
     const hasAnyHex = useMemo(() => {
         return Object.values(storyMap).some(lvl => lvl !== undefined && lvl >= 0);
@@ -737,10 +784,16 @@ const StoryBuilderView: React.FC = () => {
         isPanning.current = true; 
         setDestroyButtonCell(null);
     };
+    const handleDragMove = (e: any) => {
+        const newPos = { x: e.target.x(), y: e.target.y() };
+        cameraPosRef.current = newPos;
+        updateTooltipPos();
+    };
     const handleDragEnd = (e: any) => { 
         const newPos = { x: e.target.x(), y: e.target.y() };
         cameraPosRef.current = newPos;
-        setCameraPos(newPos);
+        updateTooltipPos();
+        useGameStore.getState().setCameraPos(newPos);
         setTimeout(() => { isPanning.current = false; }, 50); 
     };
 
@@ -778,8 +831,17 @@ const StoryBuilderView: React.FC = () => {
         zoomScaleRef.current = clampedScale;
         cameraPosRef.current = newPos;
 
-        setZoomScale(clampedScale);
-        setCameraPos(newPos);
+        if (layerRef.current) {
+            layerRef.current.x(newPos.x);
+            layerRef.current.y(newPos.y);
+            layerRef.current.scaleX(clampedScale);
+            layerRef.current.scaleY(clampedScale);
+            layerRef.current.batchDraw();
+        }
+
+        updateTooltipPos();
+        useGameStore.getState().setCameraPos(newPos);
+        useGameStore.getState().setZoomScale(clampedScale);
     };
 
     const handleTouchStart = (e: any) => {
@@ -862,8 +924,17 @@ const StoryBuilderView: React.FC = () => {
                 zoomScaleRef.current = newScale;
                 cameraPosRef.current = newCameraPos;
 
-                setZoomScale(newScale);
-                setCameraPos(newCameraPos);
+                if (layerRef.current) {
+                    layerRef.current.x(newCameraPos.x);
+                    layerRef.current.y(newCameraPos.y);
+                    layerRef.current.scaleX(newScale);
+                    layerRef.current.scaleY(newScale);
+                    layerRef.current.batchDraw();
+                }
+
+                updateTooltipPos();
+                useGameStore.getState().setCameraPos(newCameraPos);
+                useGameStore.getState().setZoomScale(newScale);
             }
         } else {
             startDist.current = null;
@@ -1145,16 +1216,18 @@ const StoryBuilderView: React.FC = () => {
                         />
                     </Layer>
                     <Layer 
-                        x={cameraPos.x} 
-                        y={cameraPos.y} 
-                        scaleX={zoomScale}
-                        scaleY={zoomScale}
+                        ref={layerRef}
+                        x={cameraPosRef.current.x} 
+                        y={cameraPosRef.current.y} 
+                        scaleX={zoomScaleRef.current}
+                        scaleY={zoomScaleRef.current}
                         draggable 
                         onDragStart={handleDragStart} 
+                        onDragMove={handleDragMove}
                         onDragEnd={handleDragEnd}
                         dragBoundFunc={(pos) => {
-                            const BOUND_X = stageSize.width * 2.2 * Math.max(1, zoomScale);
-                            const BOUND_Y = stageSize.height * 2.2 * Math.max(1, zoomScale);
+                            const BOUND_X = stageSize.width * 2.2 * Math.max(1, zoomScaleRef.current);
+                            const BOUND_Y = stageSize.height * 2.2 * Math.max(1, zoomScaleRef.current);
                             const centerX = stageSize.width / 2;
                             const centerY = stageSize.height / 2 - (stageSize.width < 768 ? 20 : 50);
                             return {
@@ -1196,6 +1269,8 @@ const StoryBuilderView: React.FC = () => {
                                         isFailedClick={failedClickCoord !== null && failedClickCoord.q === coord.q && failedClickCoord.r === coord.r}
                                         onClick={handleCellClick}
                                         onDblClick={handleCellDblClick}
+                                        contrastHighlighting={contrastHighlighting}
+                                        figureIndex={unlockedFigureIndex}
                                     />
                                 );
                             })}
@@ -1239,11 +1314,12 @@ const StoryBuilderView: React.FC = () => {
                         const topFaceY = px.y + yOffsetOffset;
                         
                         // Calculate screen position
-                        const leftPos = cameraPos.x + px.x * zoomScale;
-                        const topPos = cameraPos.y + topFaceY * zoomScale - 46 * zoomScale; // place it 46px above the hex top face
+                        const leftPos = cameraPosRef.current.x + px.x * zoomScaleRef.current;
+                        const topPos = cameraPosRef.current.y + topFaceY * zoomScaleRef.current - 46 * zoomScaleRef.current; // place it 46px above the hex top face
                         
                         return (
                             <motion.div 
+                                ref={destroyTooltipRef}
                                 initial={{ scale: 0, opacity: 0, y: 10 }}
                                 animate={{ scale: 1, opacity: 1, y: 0 }}
                                 exit={{ scale: 0, opacity: 0, y: 10 }}
@@ -1251,7 +1327,7 @@ const StoryBuilderView: React.FC = () => {
                                     position: 'absolute',
                                     left: `${leftPos}px`,
                                     top: `${topPos}px`,
-                                    transform: `translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.25, zoomScale))})`,
+                                    transform: `translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.25, zoomScaleRef.current))})`,
                                     zIndex: 120,
                                 }}
                                 className="pointer-events-auto"

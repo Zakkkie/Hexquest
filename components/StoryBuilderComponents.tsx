@@ -322,8 +322,10 @@ export const StoryHex: React.FC<{
     isFlaring?: boolean,
     isFailedClick?: boolean,
     onClick: (q: number, r: number) => void,
-    onDblClick?: (q: number, r: number) => void
-}> = React.memo(({ q, r, level, isSelected, isBlueprint, blueprintLevel = 0, isEligible, isCenterInitially, isNew, canPlace, isFlaring, isFailedClick, onClick, onDblClick }) => {
+    onDblClick?: (q: number, r: number) => void,
+    contrastHighlighting?: number,
+    figureIndex?: number
+}> = React.memo(({ q, r, level, isSelected, isBlueprint, blueprintLevel = 0, isEligible, isCenterInitially, isNew, canPlace, isFlaring, isFailedClick, onClick, onDblClick, contrastHighlighting = 0, figureIndex = 9999 }) => {
     
     const px = useMemo(() => {
         try {
@@ -848,6 +850,21 @@ export const StoryHex: React.FC<{
                         strokeWidth={3}
                         opacity={0.9}
                         listening={false}
+                    />
+                </Group>
+            )}
+
+            {/* Hologram contour: Flat pink dashed line on the floor (y=0) when learned and within range */}
+            {isBlueprint && contrastHighlighting > 0 && figureIndex < contrastHighlighting * 20 && (
+                <Group y={0} scaleY={0.8} listening={false} perfectDrawEnabled={false}>
+                    <Path
+                        data={BASE_PATH_D}
+                        stroke="#ec4899"
+                        strokeWidth={2.4}
+                        dash={[5, 4]}
+                        listening={false}
+                        perfectDrawEnabled={false}
+                        shadowForStrokeEnabled={false}
                     />
                 </Group>
             )}

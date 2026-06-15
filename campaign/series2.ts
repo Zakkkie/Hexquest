@@ -16,12 +16,14 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.1',
     title: 'Sim 2.1: Монолит',
-    description: 'Цель: Активируйте Монолит в Центре (Ур. 3).\nНайдите обходной путь к нему.\nИспользуйте ВОССТАНОВЛЕНИЕ (Синяя кнопка) на старте для восполнения ходов.',
+    description: 'Активируйте центральный Монолит, найдя обходной путь к нему.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
           { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
           { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          { q: -1, r: 4, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
+          { q: 1, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
           // GOLDEN PATH
           { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
           { q: -1, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
@@ -42,7 +44,7 @@ export const series2Levels: LevelConfig[] = [
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
     hooks: {
-      checkWinCondition: () => false,
+      checkWinCondition: (state) => !!state.portalActive,
       checkLossCondition: (state) => isStranded(state),
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
@@ -98,7 +100,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.2',
     title: 'Sim 2.2: Погребенные Тайны',
-    description: 'Соберите ЛЮБЫЕ 3 ПРЕДМЕТА из-под земли и активируйте Монолит.\nКопайте (Красная кнопка) ниже 0. Чем глубже шахта, тем выше шанс дропа артефакта.',
+    description: 'Соберите три подземных артефакта и активируйте Монолит.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -181,7 +183,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.3',
     title: 'Sim 2.3: Растущая Энтропия',
-    description: 'Стабильность энтропии критическая! Каждое действие отнимает энтропию.\nЗайдите на вершину Ур. 5 на (1,2) для сброса шкалы!\nВозведите поддерживающую площадку, чтобы попасть на Монолит Ур. 4.',
+    description: 'Доберитесь до Монолита в условиях нестабильности. Стройте опоры для подъема.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -253,7 +255,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.4',
     title: 'Sim 2.4: Первый Сигнал',
-    description: 'Активируйте Обелиск на (1,2) для получения предмета защиты.\nОн подсветит тайник на (-1,3). Раскопайте (-1,3) и запустите центральный Монолит.',
+    description: 'Активируйте Обелиск для рассеивания барьера и запуска Монолита.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
@@ -298,7 +300,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.5',
     title: 'Sim 2.5: Линейная Матрица',
-    description: 'Постройте Линию из 3 смежных гексов Уровня 2+ (LINE_3), чтобы открыть портал.\nДобывайте материалы и помните про правило фундамента для Ур. 2.',
+    description: 'Постройте цельную Линию из трех смежных возвышенных блоков.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: false,
       customLayout: [
@@ -346,7 +348,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.6',
     title: 'Sim 2.6: Резонансный Треугольник',
-    description: 'Постройте Треугольник (TRIANGLE_3) Уровня 2+.\nЗащищайтесь от бота-Соперника: копайте рвы на его пути, чтобы заблокировать ему продвижение!',
+    description: 'Постройте Треугольник из возвышенных гексов и защитите плиты от бота.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
@@ -400,7 +402,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.7',
     title: 'Sim 2.7: Ромб Эфира',
-    description: 'Сформируйте Ромб из 4 смежных гексов Уровня 3+ (DIAMOND_4).\nРасчитывайте материалы: перед Ур. 3 нужно выстроить широкий фундамент опор Ур. 2.',
+    description: 'Выстройте геометрический Ромб из четырех смежных плит высокого уровня.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: false,
       customLayout: [
@@ -448,7 +450,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.8',
     title: 'Sim 2.8: Кольцо Пустоты',
-    description: 'Постройте Кольцо из 6 гексов Уровня 3 (RING_6) вокруг центральной Пустоты.\nОграничение энтропии экстремальное. Действуйте максимально эффективно!',
+    description: 'Постройте замкнутое Кольцо вокруг центральной Пустоты.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
@@ -509,7 +511,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.9',
     title: 'Sim 2.9: Двойная Динамика',
-    description: 'Постройте ОДНОВРЕМЕННО Линию (LINE_3) и Треугольник (TRIANGLE_3) Уровня 3.\nВраждебный бот будет разрушать ваши плиты - отрезайте его от своей базы пустотами!',
+    description: 'Сформируйте сложные геометрические конструкции, сдерживая разрушения бота.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
@@ -565,7 +567,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.10',
     title: 'Sim 2.10: Космическое Выравнивание',
-    description: 'Венец Испытания.\nАктивируйте 3 Обелиска, постройте кольцо (RING_6) вокруг центра,\nзатем раскопайте глубоко тайники с 2 предметами и запустите Монолит!',
+    description: 'Финальный синтез: активируйте защитные обелиски и запустите Монолит.',
     mapConfig: {
       size: 7, type: 'fixed', generateWalls: true, wallStartRadius: 6, wallType: 'pit_ring',
       customLayout: [

@@ -18,7 +18,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.1',
     title: 'Sim 4.1: Протокол Резонанса',
-    description: 'Задача: Создайте 3 РАЗНЫХ гекса Уровня 2 одновременно.\nНачните с добычи материалов раскопками.\nПланируйте 2 соседей Ур. 1 для поддержки каждого сооружения.',
+    description: 'Создайте три разных гекса Уровня 2 одновременно.',
     mapConfig: {
       size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -79,7 +79,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.2',
     title: 'Sim 4.2: Зеркальный Лабиринт',
-    description: 'Задача: Владейте ОБОИМИ гексами (-2,0) и (2,0) на уровне 1+.\nПрямой восточный путь заблокирован ПУСТОТОЙ. Ищите безопасные фланги!',
+    description: 'Захватите обе противоположные ключевые точки ландшафта.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -140,7 +140,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.3',
     title: 'Sim 4.3: Рекурсивный Движок',
-    description: 'Задача: Улучшите 2 гекса до 3-го уровня.\nКаждый уровень требует 2 соседей такого же уровня в качестве поддержки.\nТщательно планируйте цепочку опор - стройте вширь, потом ввысь.',
+    description: 'Улучшите два любых гекса до 3-го уровня.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -187,7 +187,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.4',
     title: 'Sim 4.4: Тепловое Равновесие',
-    description: 'Задача: Улучшите центральный гекс до 4-го уровня.\nКаждое действие повышает огромную массу Энтропии. У вас мало ходов!\nЛестница уже готова - сосредоточьтесь только на постройке башни.',
+    description: 'Улучшите центральный гекс до 4-го уровня.',
     mapConfig: {
       size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
       customLayout: [
@@ -253,7 +253,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.5',
     title: 'Sim 4.5: Точка Конвергенции',
-    description: 'Задача: Выполните 2 из 3 целей РАНЬШЕ Соперника!\nА) Владейте 6+ гексами Ур.2+. Б) Накопите 200 Кредитов. В) Встаньте на Монумент.\nВыберите стратегию и действуйте немедленно.',
+    description: 'Выполните две из трех целей раньше бота-соперника.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -317,7 +317,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.6',
     title: 'Sim 4.6: Каскадный Протокол',
-    description: 'Задача: Получите 8+ гексов 3-го уровня.\nКогда гекс достигает Ур.3, все его соседи Ур.2 каскадно обновляются до Ур.3!\nСоздайте сеть Ур.2 и запустите цепную реакцию.',
+    description: 'Создайте цепную реакцию для каскадного обновления плит до 3-го уровня.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -404,7 +404,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.7',
     title: 'Sim 4.7: Двойной Движок',
-    description: 'Задача: ОДНОВРЕМЕННО владейте 4 гексами Ур.3+ И 2 гексами Ур.4+.\nВам придется расширять базу и строить глубокие шахты для материалов.\nТщательно планируйте цепочки поддерживающего фундамента.',
+    description: 'Отрегулируйте баланс и владейте четырьмя плитами Ур.3 и двумя плитами Ур.4.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -455,7 +455,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.8',
     title: 'Sim 4.8: Омега Синтез',
-    description: 'ПОСЛЕДНЕЕ ИСПЫТАНИЕ! Достигните всех 4 целей до коллапса Энтропии.\n3+ гексов Ур.3, 300+ Кредитов, активация Монумента, Энтропия <60.\nУ вас около 30 действий на идеальное прохождение.',
+    description: 'Финальный синтез: выполните все четыре цели до температурного коллапса.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [

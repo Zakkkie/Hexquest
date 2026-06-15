@@ -34,7 +34,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
     const renderNode = (
         key: keyof typeof upgrades, 
         label: string, 
-        description: string,
+        description: string | ((lvl: number) => string),
         icon: React.ReactNode, 
         amountPerUpgrade: number, 
         _cost: number, 
@@ -42,7 +42,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
         maxLevel?: number,
         delay: number = 0
     ) => {
-        const currentValue = upgrades[key];
+        const currentValue = (upgrades[key] as number) || 0;
         let baseline = 0;
         if (key === 'inventorySlots') baseline = 3;
         if (key === 'maxMaterials') baseline = 3;
@@ -98,6 +98,8 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
         const canAfford = skillPoints >= dynamicCost;
         const glowColor = colorClass.match(/text-([a-z]+)-400/)?.[1] || 'indigo';
 
+        const resolvedDescription = typeof description === 'function' ? description(level + 1) : description;
+
         return (
             <motion.div 
                  initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -136,7 +138,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                             <div className={`inline-flex items-center px-1.5 py-0.5 rounded-md border text-[8px] font-mono tracking-tighter uppercase font-bold
                                ${isMaxed ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-slate-800/80 text-indigo-300/80 border-white/5 group-hover:border-white/10'}
                             `}>
-                                LVL {level} {isMaxed && '(MAX)'}
+                                LVL {level + 1} {isMaxed && '(MAX)'}
                             </div>
                          </div>
                      </div>
@@ -144,7 +146,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                      {/* Body Section: Description */}
                      <div className="flex-1">
                          <p className="text-[9px] md:text-[11px] text-slate-400/80 font-medium leading-normal line-clamp-2 md:line-clamp-3">
-                             {description}
+                             {resolvedDescription}
                          </p>
                      </div>
 
@@ -262,7 +264,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                     {renderNode('turboRecharge', language === 'RU' ? 'Турбо' : 'Turbo', language === 'RU' ? 'Кулдаун энергетики L4+' : 'L4+ recharge cooldown', <Zap />, 5, 3, 'text-lime-400', 1, 0.5)}
                     {renderNode('entropyResistance', language === 'RU' ? 'Стабильность' : 'Stability', language === 'RU' ? 'Снижение роста энтропии (%)' : 'Entropy growth reduction (%)', <Infinity />, 10, 2, 'text-rose-400', 3, 0.53)}
                     {renderNode('restorationMaster', language === 'RU' ? 'Ремонт' : 'Repair', language === 'RU' ? 'Шанс восстановления Бездны (%)' : 'Void structural repair chance (%)', <Wrench />, 10, 2, 'text-amber-500', 3, 0.56)}
-                    {renderNode('contrastHighlighting', language === 'RU' ? 'Подсветка' : 'Highlight', language === 'RU' ? 'Контурные линии для элементов до 20*lvl уровня' : 'Contour lines for elements up to 20*level', <Star />, 1, 5, 'text-pink-400', 10, 0.59)}
+                    {renderNode('contrastHighlighting', language === 'RU' ? 'Подсветка' : 'Highlight', (lvl) => language === 'RU' ? `Контурные сияющие линии для уровней от 1 до ${lvl} в зависимости от уровня скилла` : `Contour glowing lines for levels from 1 to ${lvl} depending on the skill level`, <Star />, 1, 5, 'text-pink-400', 10, 0.59)}
                 </div>
             </motion.div>
         </motion.div>

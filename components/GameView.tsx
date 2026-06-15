@@ -3,6 +3,7 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
+import { useEphemeralStore } from '../store/ephemeralStore.ts';
 import { hexToPixel } from '../services/hexUtils.ts';
 import Background from './Background.tsx';
 import GameHUD from './GameHUD.tsx';
@@ -81,8 +82,7 @@ const GameView: React.FC = () => {
   const cancelPendingAction = useGameStore(state => state.cancelPendingAction);
   const tick = useGameStore(state => state.tick);
   
-  // HUD State
-  const [hoveredHexId, setHoveredHexId] = useState<string | null>(null);
+  const setHoveredHexId = useEphemeralStore(state => state.setHoveredHexId);
 
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   
@@ -636,7 +636,6 @@ const GameView: React.FC = () => {
             rotation={renderCamera.rotation}
             onHexClick={handleHexClick}
             onHover={setHoveredHexId}
-            hoveredHexId={hoveredHexId}
             camera={renderCamera}
             dimensions={dimensions}
           />

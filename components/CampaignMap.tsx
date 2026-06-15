@@ -196,8 +196,8 @@ const CampaignMap: React.FC = () => {
                 const isCompleted = i < campaignProgress;
                 const isCurrent = i === campaignProgress;
                 const levelKey = pos.level.id.replace('.', '_');
-                const displayTitle = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${levelKey}_TITLE`] || pos.level.title).replace(/Simulation\s[\d.]+:\s|Сим\s[\d.]+:\s/, '');
-                const displayDesc = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${levelKey}_DESC`] || pos.level.description).split('\n')[0];
+                const displayTitle = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${levelKey}_TITLE`] || pos.level.title).replace(/^(?:Simulation|Sim|Сим|SIM|SIMULATION)\s*[\d.]+:?\s*/i, '');
+                const displayDesc = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${levelKey}_DESC`] || pos.level.description);
 
                 return (
                     <motion.div 
@@ -316,7 +316,7 @@ const CampaignMap: React.FC = () => {
                     const isUnlocked = i <= levelsModeProgress;
                     const isCompleted = i < levelsModeProgress;
                     const isCurrent = i === levelsModeProgress;
-                    const displayTitle = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_TITLE`] || level.title).replace(/Simulation\s[\d.]+:\s|Сим\s[\d.]+:\s/, '');
+                    const displayTitle = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_TITLE`] || level.title).replace(/^(?:Simulation|Sim|Сим|SIM|SIMULATION)\s*[\d.]+:?\s*/i, '');
                     const threat = level.aiMode === 'none' ? 'NONE' : (level.aiMode === 'basic' ? 'BASIC' : 'HIGH');
                     const glowColor = threat === 'NONE' ? 'emerald' : (threat === 'BASIC' ? 'amber' : 'red');
                     const delay = i * 0.03;

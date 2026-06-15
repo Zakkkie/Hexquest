@@ -382,9 +382,6 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                      (language === 'RU' ? 'НОРМ' : 'STABLE')}
                                 </span>
                                 <div className="flex items-center gap-1">
-                                    <span className="text-xs md:text-sm font-black text-slate-100 leading-none">
-                                        {entropy ? `${Math.floor((entropy.current / entropy.max) * 100)}%` : '--'}
-                                    </span>
                                     {entropy && (
                                         <span className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-full shadow-md ${
                                             entropy.current / entropy.max < 0.3 ? 'bg-red-500 shadow-red-500 animate-ping' :

@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useRef } from "react";
 import { Group, Path, Circle, Text, Line, Star } from "react-konva";
 import Konva from "konva";
 import { useGameStore } from "../store.ts";
+import { useEphemeralStore } from "../store/ephemeralStore.ts";
 import { HEX_SIZE, GAME_CONFIG } from "../rules/config.ts";
 import { textureService } from "../services/textureService.ts";
 import { wallUpdaterRegistry } from "../services/wallUpdater.ts";
@@ -58,7 +59,6 @@ export interface HexNodeProps {
   lighting?: number;
   isExcavated?: boolean;
   isPlayerBuilt?: boolean;
-  isHovered?: boolean;
   playerQ?: number;
   playerR?: number;
   playerGrowthIntent?: string | null;
@@ -70,6 +70,7 @@ export interface HexNodeProps {
     showDetails: boolean;
   };
   portalActive?: boolean;
+  figureIndex?: number;
 }
 
 // Precompute the base (unsquashed) hexagon path centered at 0,0
@@ -192,11 +193,9 @@ const HexNodeComponent = (props: HexNodeProps) => {
     growthAccelerator = 0,
     renderMode,
     portalActive,
-    isHovered,
   } = props;
 
   const isPlayerAction = !!(isGrowing && playerQ === q && playerR === r);
-  const contrastHighlighting = useGameStore(state => state.campaignUpgrades.contrastHighlighting);
   const currentIntent = isPlayerAction
     ? playerGrowthIntent || "UPGRADE"
     : "UPGRADE";
@@ -224,7 +223,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Boost speed & hover refs for Portal responsiveness
   const boostSpeedRef = useRef<number>(0);
-  const isHoveredRef = useRef<boolean>(false);
+  const hoverOutlineRef = useRef<Konva.Path>(null);
   const isPlayerInsideRef = useRef<boolean>(false);
 
   const isPlayerInside = !!(portalActive && playerQ === q && playerR === r);
@@ -233,8 +232,13 @@ const HexNodeComponent = (props: HexNodeProps) => {
   }, [isPlayerInside]);
 
   useEffect(() => {
-    isHoveredRef.current = !!isHovered;
-  }, [isHovered]);
+    return useEphemeralStore.subscribe((state) => {
+      const isHovered = state.hoveredHexId === id;
+      if (hoverOutlineRef.current) {
+         hoverOutlineRef.current.opacity(isHovered ? 1 : 0);
+      }
+    });
+  }, [id]);
 
   const handleClick = (e: any) => {
     if (e.evt && e.evt.button !== undefined && e.evt.button !== 0) return;
@@ -1105,6 +1109,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
           </Group>
         );
       })}
+
       <Group
         ref={faceContainerRef}
         y={offsetY}
@@ -1310,17 +1315,6 @@ const HexNodeComponent = (props: HexNodeProps) => {
           )}
 
           {/* Pink dashed line for contrast highlighting */}
-          {contrastHighlighting * 20 >= level && contrastHighlighting > 0 && (
-            <Path
-              data={BASE_PATH_D}
-              stroke="#ec4899"
-              strokeWidth={2}
-              dash={[5, 5]}
-              listening={false}
-              perfectDrawEnabled={false}
-              shadowForStrokeEnabled={false}
-            />
-          )}
 
           {poiType && (
             <Group listening={false} perfectDrawEnabled={false}>
@@ -1647,6 +1641,17 @@ const HexNodeComponent = (props: HexNodeProps) => {
             shadowBlur={25}
             shadowOpacity={0.95}
           />
+          
+          {/* HOVER OUTLINE */}
+          <Path
+            ref={hoverOutlineRef}
+            data={BASE_PATH_D}
+            stroke="#ffffff"
+            strokeWidth={2}
+            opacity={0}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
         </Group>
       </Group>
       {/* 3. FLOATING OVERLAYS (Wrapped inside an animated overlays group container) */}
@@ -1775,7 +1780,6 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
   if (prev.isRevealed !== next.isRevealed) return false;
   if (prev.isExcavated !== next.isExcavated) return false;
   if (prev.isPlayerBuilt !== next.isPlayerBuilt) return false;
-  if (prev.isHovered !== next.isHovered) return false;
   if (prev.playerQ !== next.playerQ) return false;
   if (prev.playerR !== next.playerR) return false;
   if (prev.playerGrowthIntent !== next.playerGrowthIntent) return false;
@@ -1783,6 +1787,7 @@ function arePropsEqual(prev: HexNodeProps, next: HexNodeProps) {
   if (prev.portalActive !== next.portalActive) return false;
   if (prev.drawVoidWalls !== next.drawVoidWalls) return false;
   if (prev.q !== next.q || prev.r !== next.r) return false;
+  if (prev.figureIndex !== next.figureIndex) return false;
 
   // Theme comparison
   if (

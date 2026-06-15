@@ -61,6 +61,12 @@ export interface GameStore extends GameState {
   hasHydrated: boolean;
   isStoryTutorialActive?: boolean;
   
+  // Camera & Zoom Zustand Store integrations (Bypassing React re-renders)
+  cameraPos: { x: number; y: number };
+  zoomScale: number;
+  setCameraPos: (pos: { x: number; y: number }) => void;
+  setZoomScale: (scale: number) => void;
+  
   // UI & System
   setUIState: (state: UIState) => void;
   setIsStoryTutorialActive: (active: boolean) => void;

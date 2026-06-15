@@ -16,7 +16,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.1',
     title: 'Первая Надпись',
-    description: 'Активируйте Монумент.\nОбелиски подсказывают нужные предметы для слотов Монумента. Посетите Обелиск, чтобы узнать требование.\nОграничение: Два события стабильности завершат миссию провалом.',
+    description: 'Активируйте Монумент по указаниям Обелисков.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -124,7 +124,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.2',
     title: 'Близнецы-Маяки',
-    description: 'Задача: Активируйте Монумент с 2 слотами.\nДва обелиска хранят по половине надписи. Посетите оба или рискните угадать второй требуемый предмет из инвентаря.',
+    description: 'Активируйте Монумент с двумя слотами, посетив Обелиски.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -249,7 +249,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.3',
     title: 'Глубина Затмения',
-    description: 'Задача: Активируйте Монумент НЕОБЫЧНЫМ (Uncommon) предметом.\nОбелиск раскроет, какой именно предмет нужен. Обычной редкости не подойдет!',
+    description: 'Активируйте Монумент необычным предметом по подсказке.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -348,7 +348,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.4',
     title: 'Энтропийная Депеша',
-    description: 'Задача: Активируйте Монумент с 2 слотами.\nОпасность: Каждые 10 действий происходит стабильностное событие. Второе событие = провал!\nВремени мало, посещайте Обелиски мудро.',
+    description: 'Активируйте Монумент с двумя слотами за минимальное число ходов.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -473,7 +473,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.5',
     title: "Цитадель Стража",
-    description: 'Задача: Активируйте Монумент РЕДКИМ (Rare) предметом.\nУгроза: Бот-страж патрулирует перекресток. Добраться до Обелиска с подсказкой - опасно!',
+    description: 'Активируйте Монумент редким предметом, обходя ботов-стражей.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -578,7 +578,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.6',
     title: 'Три Шепота',
-    description: 'Задача: Активируйте Монумент одним из подходящих предметов.\nСлот монумента вариативен: 3 обелиска покажут 3 разных верных варианта.\nНайдите хотя бы один предмет из списка для активации.',
+    description: 'Активируйте Монумент одним из трех подходящих по подсказкам предметов.',
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -684,7 +684,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.7',
     title: 'Господство',
-    description: 'Задача: Активируйте Монумент с 2 слотами на время.\nБот-конкурент не активирует Монумент, но быстро наращивает давление.\nУспейте расшифровать Обелиски за 29 действий!',
+    description: 'Активируйте Монумент быстрее, чем бот-конкурент нарастит энтропию.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -790,7 +790,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.8',
     title: 'Архив',
-    description: 'Последняя запись. Задача: Активируйте Монумент с 3 слотами.\nТри обелиска хранят полные требования, но бот патрулирует зоны доступа.\nУ вас всего 23 действия - рискуйте или считайте ходы!',
+    description: 'Активируйте сложный Монумент с тремя слотами, обходя патрули.',
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [

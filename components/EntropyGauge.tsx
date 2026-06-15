@@ -52,14 +52,15 @@ const EntropyGauge: React.FC<EntropyGaugeProps> = ({ className = "w-12 h-12", sh
                 className="transition-all duration-300 ease-out"
             />
         </svg>
-        
+
         {/* Digital Readout */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className={`font-mono font-black leading-none ${percentage < 20 ? 'text-red-500 animate-pulse' : 'text-slate-200'} ${parseInt(className) < 10 ? 'text-[8px]' : 'text-[10px]'}`}>
-                {current.toFixed(0)}
+            <span className={`font-mono font-black leading-none ${percentage < 20 ? 'text-red-500 animate-pulse' : 'text-slate-200'} ${className.includes('w-6') ? 'text-[8px]' : 'text-[10px]'}`}>
+                {isNaN(current) ? "0" : current.toFixed(0)}
             </span>
         </div>
         
+
         {/* Max Capacity Indicator (Visual hint that container is shrinking) */}
         {showLabel && max < 100 && (
             <div className="absolute -bottom-3 text-[8px] text-slate-600 font-mono whitespace-nowrap">

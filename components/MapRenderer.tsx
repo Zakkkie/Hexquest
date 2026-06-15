@@ -3,6 +3,7 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Layer, Group, Line, Circle, Text, Shape } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
+import { useEphemeralStore } from '../store/ephemeralStore.ts';
 import { HexNode, HexNodeTheme } from './HexNode.tsx';
 import Unit from './Unit.tsx';
 import { EntityType, EntityState, FloatingText, Hex, Entity } from '../types.ts';
@@ -513,12 +514,11 @@ interface MapRendererProps {
     rotation: number;
     onHexClick: (q: number, r: number) => void;
     onHover: (id: string | null) => void;
-    hoveredHexId: string | null;
     camera?: { x: number; y: number; scale: number; rotation: number };
     dimensions?: { width: number; height: number };
 }
 
-const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, hoveredHexId, camera, dimensions }) => {
+const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, camera, dimensions }) => {
     const dWidth = dimensions?.width ?? 800;
     const dHeight = dimensions?.height ?? 600;
     const grid = useGameStore(state => state.session?.grid);
@@ -631,6 +631,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
     // Update worker when grid or view changes
     const pendingTarget = pendingConfirmation?.data.path[pendingConfirmation.data.path.length - 1];
     const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
+    const hoveredHexId = useEphemeralStore(state => state.hoveredHexId);
 
     const lastPostedRef = useRef<{
         grid: any;
@@ -847,21 +848,21 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         }
 
         if (bestHexKey) {
-            if (hoveredHexId !== bestHexKey) {
+            if (useEphemeralStore.getState().hoveredHexId !== bestHexKey) {
                 onHover(bestHexKey);
             }
         } else {
-            if (hoveredHexId !== null) {
+            if (useEphemeralStore.getState().hoveredHexId !== null) {
                 onHover(null);
             }
         }
-    }, [grid, rotation, camera, activeLevelConfig, hoveredHexId, onHover]);
+    }, [grid, rotation, camera, activeLevelConfig, onHover]);
 
     const handleShapeMouseLeave = useCallback(() => {
-        if (hoveredHexId !== null) {
+        if (useEphemeralStore.getState().hoveredHexId !== null) {
             onHover(null);
         }
-    }, [hoveredHexId, onHover]);
+    }, [onHover]);
 
     const stackedEffects = useMemo(() => {
         if (!effects) return [];
@@ -995,6 +996,19 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         return { items };
     }, [grid, playerQ, playerR, playerStorage, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems, isLiteMode]);
 
+    const hexIndexMap = useMemo(() => {
+        const hexItems = renderList.items.filter(item => item.type === 'HEX');
+        const sorted = [...hexItems].sort((a, b) => {
+            if (a.props.q !== b.props.q) return a.props.q - b.props.q;
+            return a.props.r - b.props.r;
+        });
+        const map = new Map<string, number>();
+        sorted.forEach((item, idx) => {
+            map.set(item.props.id, idx);
+        });
+        return map;
+    }, [renderList.items]);
+
     return (
         <>
             <Layer>
@@ -1015,7 +1029,8 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                             for (let k = 0; k < items.length; k++) {
                                 const item = items[k];
                                 const props = item.props;
-                                const { x, y, offsetY, level, theme, isSelected, isPending, isHovered, isTutorialTarget, tutorialColor, isTargetArrow, structureType, neighborLevels, opacity } = props;
+                                const { x, y, offsetY, level, theme, isSelected, isPending, isTutorialTarget, tutorialColor, isTargetArrow, structureType, neighborLevels, opacity } = props;
+                                const isHovered = hoveredHexId === item.props.id;
                                 
                                 // Frustum Culling
                                 if (!isPointInViewport(x, y, offsetY, rotation, dWidth, dHeight, camera, 150)) {
@@ -1247,11 +1262,11 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                                     {...item.props} 
                                     onHexClick={memoizedOnHexClick} 
                                     onHover={onHover} 
-                                    isHovered={hoveredHexId === item.props.id} 
                                     playerQ={playerQ}
                                     playerR={playerR}
                                     playerGrowthIntent={playerGrowthIntent}
                                     growthAccelerator={campaignUpgrades?.growthAccelerator || 0}
+                                    figureIndex={hexIndexMap.get(item.props.id) ?? 9999}
                                 />
                             ))
                         }

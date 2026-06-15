@@ -62,6 +62,15 @@ export const useGameStore = create<GameStore>()(
         } catch { return true; }
       })(),
 
+      // Camera & Zoom Zustand Store integrations (Bypassing React re-renders)
+      cameraPos: { 
+        x: typeof window !== 'undefined' ? window.innerWidth / 2 : 400, 
+        y: typeof window !== 'undefined' ? window.innerHeight / 2 - 30 : 300 
+      },
+      zoomScale: typeof window !== 'undefined' ? (window.innerWidth < 768 ? 1.55 : 2.15) : 2.0,
+      setCameraPos: (pos: { x: number; y: number }) => set({ cameraPos: pos }),
+      setZoomScale: (scale: number) => set({ zoomScale: scale }),
+
       // --- ASSEMBLE COMBINED ACTIONS VIA SLICES ---
       ...createAuthSlice(set as any, get as any),
       ...createUiSlice(set as any, get as any),
