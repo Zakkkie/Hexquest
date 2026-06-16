@@ -996,8 +996,11 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
         return { items };
     }, [grid, playerQ, playerR, playerStorage, pendingConfirmation, tutorialData, activeLevelConfig, spawnDust, workerData.renderItems, isLiteMode]);
 
+    const hexItems = useMemo(() => {
+        return renderList.items.filter(item => item.type === 'HEX');
+    }, [renderList.items]);
+
     const hexIndexMap = useMemo(() => {
-        const hexItems = renderList.items.filter(item => item.type === 'HEX');
         const sorted = [...hexItems].sort((a, b) => {
             if (a.props.q !== b.props.q) return a.props.q - b.props.q;
             return a.props.r - b.props.r;
@@ -1007,7 +1010,7 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
             map.set(item.props.id, idx);
         });
         return map;
-    }, [renderList.items]);
+    }, [hexItems]);
 
     return (
         <>
@@ -1018,13 +1021,23 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                         perfectDrawEnabled={false}
                         listening={true}
                         sceneFunc={(context) => {
-                            const items = renderList.items.filter(item => item.type === 'HEX');
+                            const items = hexItems;
                             const ctx = context;
                             
                             const angleOffset = rotation * (Math.PI / 180);
                             const cos = Math.cos(angleOffset);
                             const sin = Math.sin(angleOffset);
                             const DEG_TO_RAD = Math.PI / 180;
+
+                            // Pre-allocated vertices array to completely avoid Garbage Collection during render loop
+                            const vertices = [
+                                { x: 0, y: 0 },
+                                { x: 0, y: 0 },
+                                { x: 0, y: 0 },
+                                { x: 0, y: 0 },
+                                { x: 0, y: 0 },
+                                { x: 0, y: 0 }
+                            ];
 
                             for (let k = 0; k < items.length; k++) {
                                 const item = items[k];
@@ -1044,14 +1057,11 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                                 const isRevealed = !!props.isRevealed;
                                 const isVoid = structureType === 'VOID';
                                 
-                                // Generate top face hexagon vertices
-                                const vertices = [];
+                                // Mutate pre-allocated vertices directly to avoid object instantiation overhead
                                 for (let i = 0; i < 6; i++) {
                                     const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
-                                    vertices.push({
-                                        x: cx + Math.cos(angle) * HEX_SIZE,
-                                        y: cy + Math.sin(angle) * HEX_SIZE * 0.8
-                                    });
+                                    vertices[i].x = cx + Math.cos(angle) * HEX_SIZE;
+                                    vertices[i].y = cy + Math.sin(angle) * HEX_SIZE * 0.8;
                                 }
                                 
                                 // Apply visibility opacity
@@ -1195,13 +1205,23 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                             perfectDrawEnabled={false}
                             listening={false}
                             sceneFunc={(context) => {
-                                const allHexes = renderList.items.filter(item => item.type === 'HEX');
+                                const allHexes = hexItems;
                                 const ctx = context;
                                 
                                 const angleOffset = rotation * (Math.PI / 180);
                                 const cos = Math.cos(angleOffset);
                                 const sin = Math.sin(angleOffset);
                                 const DEG_TO_RAD = Math.PI / 180;
+
+                                // Pre-allocated vertices array to completely avoid Garbage Collection during render loop
+                                const vertices = [
+                                    { x: 0, y: 0 },
+                                    { x: 0, y: 0 },
+                                    { x: 0, y: 0 },
+                                    { x: 0, y: 0 },
+                                    { x: 0, y: 0 },
+                                    { x: 0, y: 0 }
+                                ];
 
                                 for (let k = 0; k < allHexes.length; k++) {
                                     const item = allHexes[k];
@@ -1219,14 +1239,11 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                                     const cx = x * cos - y * sin;
                                     const cy = (x * sin + y * cos) * 0.8 + offsetY;
                                     
-                                    // Generate top face hexagon vertices
-                                    const vertices = [];
+                                    // Mutate pre-allocated vertices directly to avoid object instantiation overhead
                                     for (let i = 0; i < 6; i++) {
                                         const angle = (60 * i + 30) * DEG_TO_RAD + angleOffset;
-                                        vertices.push({
-                                            x: cx + Math.cos(angle) * HEX_SIZE,
-                                            y: cy + Math.sin(angle) * HEX_SIZE * 0.8
-                                        });
+                                        vertices[i].x = cx + Math.cos(angle) * HEX_SIZE;
+                                        vertices[i].y = cy + Math.sin(angle) * HEX_SIZE * 0.8;
                                     }
                                     
                                     // Apply visibility opacity
@@ -1253,8 +1270,8 @@ const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover
                         />
 
                         {/* 1b. REVEALED VISIBLE OPTIMIZED HEXNODES WITH FRUSTUM CULLING */}
-                        {renderList.items
-                            .filter(item => item.type === 'HEX' && !!item.props.isRevealed)
+                        {hexItems
+                            .filter(item => !!item.props.isRevealed)
                             .filter(item => isPointInViewport(item.props.x, item.props.y, item.props.offsetY, rotation, dWidth, dHeight, camera, 150))
                             .map(item => (
                                 <HexNode 
