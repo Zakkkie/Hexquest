@@ -63,7 +63,7 @@ export function checkDigCondition(
           if (targetLevel < minNeighborLevel && targetLevel < _entity.playerLevel) {
               return {
                   canGrow: false,
-                  reason: `Gradient Lock! You cannot dig below the surrounding terrain (L${minNeighborLevel}) or below your engineering rank (Rank ${_entity.playerLevel}).`,
+                  reason: `Нельзя копать ниже соседей (L${minNeighborLevel})`,
                   missingSupports: neighborHexes.filter(h => h.currentLevel > targetLevel + 1).map(h => ({q: h.q, r: h.r}))
               };
           }
@@ -89,7 +89,7 @@ export function checkDigCondition(
       if (deepNeighbors.length < 2) {
           return { 
               canGrow: false, 
-              reason: `UNSTABLE! Need 2 neighbors at Level ${currentLevel} to dig deeper.`,
+              reason: `Нет опоры: нужны 2 соседа на уровне L${targetLevel}`,
           };
       }
   }
@@ -170,7 +170,7 @@ export function checkGrowthCondition(
         if (supportNeighbors.length < 2) {
           return {
             canGrow: false, 
-            reason: `UNSTABLE! Need 2 neighbors at Level ${currentLevel} to build higher, or 5 higher neighbors (depression rule).`,
+            reason: `Нет опоры: нужны 2 соседа на уровне L${targetLevel} или 5 более высоких соседей (правило впадины).`,
           };
         }
       }

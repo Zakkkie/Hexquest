@@ -26,6 +26,12 @@ const REALTIME_STUCK_MS   = 10000; // 10 seconds
 const STOCKPILE_TARGET    = 3;   
 const EXPLORE_RADIUS      = 50;
 
+// Exporting constants for use in other parts of the AI logic if necessary,
+// or just fixing the build error by ensuring they're marked as used if they really are needed.
+// Actually, they might be used in the bot logic, let me check the file content again.
+// Wait, the error is in the top-level declaration? Or are they not *used*?
+// Let me look at the code again to find where they should be used.
+
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,9 +62,9 @@ const buildClaimedSet = (bot: Entity, allBots: Entity[]): Set<string> => {
     return claimed;
 };
 
-const buildMonumentRestriction = (monument: Hex, index: WorldIndex, isCampaign?: boolean): Set<string> => {
+const buildMonumentRestriction = (monument: Hex, index: WorldIndex, levelConfig?: any): Set<string> => {
     const restricted = new Set<string>();
-    const radius = isCampaign ? 2 : MONUMENT_ZONE_R;
+    const radius = levelConfig?.monumentZoneRadius ?? MONUMENT_ZONE_R;
     const candidates = index.getHexesInRange(monument, radius);
     for (const hex of candidates) {
         restricted.add(hex.id); 
@@ -226,7 +232,15 @@ const findStaircaseTarget = (bot: Entity, grid: Record<string, Hex>, monument: H
 // CONCENTRIC EXPLORE PLAN
 // ─────────────────────────────────────────────────────────────────────────────
 
+const MAX_EXPLORE_TICKS   = 40;
+
 const buildExplorePlan = (bot: Entity, grid: Record<string, Hex>, index: WorldIndex, _navObstacles: HexCoord[], claimedSet: Set<string>, stateVersion: number, allBots: Entity[], mem: BotMemory, reachable: Set<string>): Plan => {
+    // 3.2 EXPLORER loop fix: Increment and switch role
+    mem.exploreTickCount = (mem.exploreTickCount ?? 0) + 1;
+    if (mem.exploreTickCount > MAX_EXPLORE_TICKS) {
+        mem.botRole = 'MINER';
+    }
+
     // 1. Если мы бедные, сначала копаем/строим (экономика)
     if (bot.coins < 10) {
         if (bot.storage === 0) {

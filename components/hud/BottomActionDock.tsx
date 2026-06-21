@@ -132,14 +132,12 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const gameStatus = useGameStore(state => state.session?.gameStatus);
     
     const [timeLeft, setTimeLeft] = useState(75);
-    const isLevel1_1 = activeLevelConfig?.id === '1.1';
-    const isLevel1_5 = activeLevelConfig?.id === '1.5';
     const isLevel3_2 = activeLevelConfig?.id === '3.2';
-    const isTimedLevel = isLevel1_1 || isLevel1_5 || isLevel3_2;
+    const isTimedLevel = isLevel3_2;
 
     useEffect(() => {
         if (isTimedLevel && gameStatus === 'PLAYING') {
-            const timeLimit = isLevel1_1 ? 120 : (isLevel3_2 ? 180 : 75);
+            const timeLimit = isLevel3_2 ? 180 : 75;
             const interval = setInterval(() => {
                 const elapsed = Date.now() - (sessionStartTime || 0);
                 const remaining = Math.max(0, timeLimit - Math.floor(elapsed / 1000));
@@ -147,7 +145,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
             }, 250);
             return () => clearInterval(interval);
         }
-    }, [isLevel1_1, isLevel1_5, isLevel3_2, gameStatus, sessionStartTime, isTimedLevel]);
+    }, [isLevel3_2, gameStatus, sessionStartTime, isTimedLevel]);
 
     const [isMobile, setIsMobile] = useState(false);
     const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -159,21 +157,20 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const digDimmed = useMemo(() => {
         if (!isTutorialLevel1 || !levelId) return false;
         if (levelId === '1.0' && (!player || player.q !== 3 || player.r !== 0)) return true;
-        if (levelId === '1.1') return true;
-        if (['1.4', '1.5', '1.6', '1.7'].includes(levelId)) return true;
+        if (['1.3', '1.4', '1.7'].includes(levelId)) return true;
         return false;
     }, [isTutorialLevel1, levelId, player]);
 
     const upgradeDimmed = useMemo(() => {
         if (!isTutorialLevel1 || !levelId) return false;
         if (levelId === '1.0' && (!player || player.q !== 1 || player.r !== 0)) return true;
-        if (['1.1', '1.2', '1.3', '1.6', '1.7', '1.8'].includes(levelId)) return true;
+        if (['1.1', '1.2', '1.4', '1.5'].includes(levelId)) return true;
         return false;
     }, [isTutorialLevel1, levelId, player]);
 
     const recoverDimmed = useMemo(() => {
         if (!isTutorialLevel1 || !levelId) return false;
-        if (['1.0', '1.1', '1.2', '1.3', '1.4', '1.5', '1.8'].includes(levelId)) return true;
+        if (['1.0', '1.1', '1.2', '1.3', '1.5', '1.6', '1.7'].includes(levelId)) return true;
         return false;
     }, [isTutorialLevel1, levelId]);
 
@@ -369,14 +366,29 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 
     const inventoryList = [0, 1, 2, 3, 4];
 
+    // Short labels under the mobile core icons — mobile has no hover tooltip,
+    // so icon-only buttons are undiscoverable for new players.
+    const coreLabels = language === 'RU'
+        ? { dig: 'Копать', up: 'Строить', rec: 'Заряд' }
+        : { dig: 'Dig', up: 'Build', rec: 'Charge' };
+
     // Helper for Action Clicks
     const handleActionClick = (intent: 'DIG' | 'UPGRADE' | 'RECOVER') => {
         togglePlayerGrowth(intent);
         onCenterPlayer();
+
+        // Haptic feedback logic for DIG or RECOVER:
+        if ((intent === 'DIG' || intent === 'RECOVER') && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+            try {
+                navigator.vibrate(25); // Short, crisp 25ms haptic rumble
+            } catch (e) {
+                // Ignore any security or permission exceptions safely
+            }
+        }
     };
 
     return (
-        <div id="bottom-action-dock" className="absolute inset-x-0 bottom-0 p-2 md:p-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end z-30">
+        <div id="bottom-action-dock" className="absolute inset-x-0 bottom-0 p-2 pb-[calc(env(safe-area-inset-bottom)+18px)] md:p-4 md:pb-4 animate-in slide-in-from-bottom-6 pointer-events-none flex flex-col items-center justify-end z-30">
             <div className="mb-2 pointer-events-auto">
                 {renderActiveStatuses()}
             </div>
@@ -463,8 +475,9 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''} !p-0 !m-0`}
                                     title={digDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : digTooltip}
                                 >
-                                    <div className="flex items-center justify-center p-3">
+                                    <div className="flex flex-col items-center justify-center gap-0.5 px-2.5 py-2">
                                         <Pickaxe className={`w-5 h-5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12 text-white' : 'text-red-400'}`} />
+                                        <span className="text-[7px] font-black uppercase tracking-wide leading-none text-red-200/90">{coreLabels.dig}</span>
                                     </div>
                                 </HexButton>
                             </div>
@@ -481,13 +494,14 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
                                     disabled={!canUpgrade}
                                     dimmed={upgradeDimmed}
-                                    pulsate={levelId === '1.4' || levelId === '1.5' || (canUpgrade && !isPlayerGrowing)}
+                                    pulsate={levelId === '1.7' || (canUpgrade && !isPlayerGrowing)}
                                     progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0}
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'ring-2 ring-amber-500/30' : ''} !p-0 !m-0`}
                                     title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}
                                 >
-                                    <div className="flex items-center justify-center p-3">
+                                    <div className="flex flex-col items-center justify-center gap-0.5 px-2.5 py-2">
                                         <ChevronsUp className={`w-5.5 h-5.5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-115 -translate-y-0.5 text-white' : 'text-amber-400'}`} />
+                                        <span className="text-[7px] font-black uppercase tracking-wide leading-none text-amber-200/90">{coreLabels.up}</span>
                                     </div>
                                 </HexButton>
                             </div>
@@ -504,17 +518,14 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'}
                                     disabled={!recoveryState.canRecover}
                                     dimmed={recoverDimmed}
-                                    pulsate={levelId === '1.6' || levelId === '1.7'}
+                                    pulsate={levelId === '1.4'}
                                     progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0}
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''} !p-0 !m-0`}
                                     title={recoverDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : recoverTooltip}
                                 >
-                                    <div className="flex items-center justify-center p-3">
+                                    <div className="flex flex-col items-center justify-center gap-0.5 px-2.5 py-2">
                                         {recoveryState.cooling ? (
-                                            <div className="flex flex-col items-center justify-center leading-none">
-                                                <Hourglass className="w-5 h-5 animate-spin-slow text-blue-300" />
-                                                <span className="text-[7.5px] font-mono mt-0.5 text-slate-400">{recoveryState.label}</span>
-                                            </div>
+                                            <Hourglass className="w-5 h-5 animate-spin-slow text-blue-300" />
                                         ) : (
                                             <div className="relative flex flex-col items-center justify-center">
                                                 <RefreshCw className={`w-5 h-5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 text-white font-bold' : 'text-blue-400'}`} />
@@ -525,6 +536,9 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                                 )}
                                             </div>
                                         )}
+                                        <span className="text-[7px] font-black uppercase tracking-wide leading-none text-blue-200/90">
+                                            {recoveryState.cooling ? recoveryState.label : coreLabels.rec}
+                                        </span>
                                     </div>
                                 </HexButton>
                             </div>
@@ -662,7 +676,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} 
                                     disabled={!canUpgrade} 
                                     dimmed={upgradeDimmed}
-                                    pulsate={levelId === '1.4' || levelId === '1.5' || (canUpgrade && !isPlayerGrowing)} 
+                                    pulsate={levelId === '1.7' || (canUpgrade && !isPlayerGrowing)} 
                                     progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} 
                                     className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-0.5 ring-2 ring-amber-500/30 font-bold' : ''} 
                                     title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}
@@ -691,7 +705,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} 
                                     disabled={!recoveryState.canRecover} 
                                     dimmed={recoverDimmed}
-                                    pulsate={levelId === '1.6' || levelId === '1.7'}
+                                    pulsate={levelId === '1.4'}
                                     progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} 
                                     className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''} 
                                     title={recoverDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : recoverTooltip}

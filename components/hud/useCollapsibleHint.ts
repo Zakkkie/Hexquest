@@ -8,13 +8,11 @@ export function useCollapsibleHint(
   autoExpandKey: any,
   playUiSound: (type: 'CLICK') => void
 ) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const lastValueRef = useRef<any>(null);
 
   useEffect(() => {
-    if (autoExpandKey && lastValueRef.current && lastValueRef.current !== autoExpandKey) {
-      setIsCollapsed(false);
-    }
+    // Disabled auto-expansion on update to comply with minimal noise/user requests
     lastValueRef.current = autoExpandKey;
   }, [autoExpandKey]);
 
@@ -30,3 +28,4 @@ export function useCollapsibleHint(
     handleToggleCollapse,
   };
 }
+

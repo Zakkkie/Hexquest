@@ -19,6 +19,11 @@ export const series4Levels: LevelConfig[] = [
     id: '4.1',
     title: 'Sim 4.1: Протокол Резонанса',
     description: 'Создайте три разных гекса Уровня 2 одновременно.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 2, label: 'Pillar 1', color: 'amber' },
+      { q: 1, r: -1, targetLevel: 2, label: 'Pillar 2', color: 'amber' },
+      { q: -1, r: 1, targetLevel: 2, label: 'Pillar 3', color: 'amber' }
+    ],
     mapConfig: {
       size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -37,6 +42,14 @@ export const series4Levels: LevelConfig[] = [
     },
     startState: { credits: 0, moves: 3, rank: 1, materials: 0 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const c = countOwned(state, 2);
+      if (c >= 3) return isRu ? "ПОБЕДА: Условие Резонанса выполнено!" : "VICTORY: Resonance complete!";
+      return isRu 
+        ? `СТРОЙ: Копай для материалов, затем построй 3 гекса L2! Готово: ${Math.min(3, c)}/3` 
+        : `BUILD: Dig for materials, then build 3 hexes to L2! Built: ${Math.min(3, c)}/3`;
+    },
     hooks: {
       checkWinCondition: (state) => countOwned(state, 2) >= 3,
       checkLossCondition: (state) => isStranded(state),
@@ -80,6 +93,10 @@ export const series4Levels: LevelConfig[] = [
     id: '4.2',
     title: 'Sim 4.2: Зеркальный Лабиринт',
     description: 'Захватите обе противоположные ключевые точки ландшафта.',
+    objectiveHexes: [
+      { q: -2, r: 0, targetLevel: 1, label: 'Beacon A', color: 'emerald' },
+      { q: 2, r: 0, targetLevel: 1, label: 'Beacon B', color: 'emerald' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -110,6 +127,17 @@ export const series4Levels: LevelConfig[] = [
       ]
     },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const a = state.grid['-2,0'];
+      const b = state.grid['2,0'];
+      const aDone = !!(a?.ownerId === state.player.id && a.currentLevel >= 1);
+      const bDone = !!(b?.ownerId === state.player.id && b.currentLevel >= 1);
+      if (aDone && bDone) return isRu ? "ПОБЕДА: Маяки захвачены!" : "VICTORY: Beacons captured!";
+      return isRu 
+        ? "ЗАХВАТИ МАЯКИ: Возьми под контроль и возведи до L1 гексы (-2,0) и (2,0)!" 
+        : "CAPTURE BEACONS: Take control and build to L1 on hexes (-2,0) and (2,0)!";
+    },
     hooks: {
       checkWinCondition: (state) => {
         const a = state.grid[getHexKey(-2, 0)];
@@ -141,6 +169,10 @@ export const series4Levels: LevelConfig[] = [
     id: '4.3',
     title: 'Sim 4.3: Рекурсивный Движок',
     description: 'Улучшите два любых гекса до 3-го уровня.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 3, label: 'Pillar A', color: 'amber' },
+      { q: 1, r: -1, targetLevel: 3, label: 'Pillar B', color: 'amber' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -161,6 +193,14 @@ export const series4Levels: LevelConfig[] = [
     },
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const c = countOwned(state, 3);
+      if (c >= 2) return isRu ? "ПОБЕДА: Готово!" : "VICTORY: Done!";
+      return isRu 
+        ? `СТРОЙ: Возведи 2 любых гекса до L3! Готово: ${Math.min(2, c)}/2` 
+        : `BUILD: Upgrade any 2 hexes to L3! Built L3: ${Math.min(2, c)}/2`;
+    },
     hooks: {
       checkWinCondition: (state) => countOwned(state, 3) >= 2,
       checkLossCondition: (state) => isStranded(state),
@@ -188,6 +228,9 @@ export const series4Levels: LevelConfig[] = [
     id: '4.4',
     title: 'Sim 4.4: Тепловое Равновесие',
     description: 'Улучшите центральный гекс до 4-го уровня.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 4, label: 'Central Apex L4', color: 'amber' }
+    ],
     mapConfig: {
       size: 4, type: 'fixed', generateWalls: true, wallStartRadius: 2, wallType: 'pit_ring',
       customLayout: [
@@ -205,10 +248,25 @@ export const series4Levels: LevelConfig[] = [
     },
     startState: { credits: 50, moves: 8, rank: 3, materials: 4, initialEntropy: 70 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const centerHex = state.grid['0,0'];
+      const c = centerHex?.currentLevel || centerHex?.maxLevel || 0;
+      if (c >= 4) return isRu ? "ПОБЕДА: Готово!" : "VICTORY: Complete!";
+      return isRu 
+        ? `СТРОЙ: Улучши центральный гекс (0,0) до L4! Охладись на (0,1).` 
+        : `BUILD: Upgrade central hex (0,0) to L4! Cool down at (0,1).`;
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
-        state.entropy.current = Math.min(100, (state.entropy.current ?? 70) + 3);
+        // onAfterAction runs every ~100ms tick, not per action — heat only on a real
+        // player action (actionsTaken delta), else +3/tick auto-loses the level in ~1s.
+        const _a44 = state.player.actionsTaken ?? 0;
+        if (_a44 > ((state as any)._heat44 ?? 0)) {
+          (state as any)._heat44 = _a44;
+          state.entropy.current = Math.min(100, (state.entropy.current ?? 70) + 3);
+        }
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
@@ -254,6 +312,11 @@ export const series4Levels: LevelConfig[] = [
     id: '4.5',
     title: 'Sim 4.5: Точка Конвергенции',
     description: 'Выполните две из трех целей раньше бота-соперника.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 3, label: 'Monument Core', color: 'emerald' },
+      { q: -1, r: 1, targetLevel: 2, label: 'Secure Node A', color: 'amber' },
+      { q: 1, r: 1, targetLevel: 2, label: 'Secure Node B', color: 'amber' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -282,6 +345,19 @@ export const series4Levels: LevelConfig[] = [
     aiMode: 'basic',
     botObjective: 'MONUMENT_RACE',
     botSpawnPoints: [{ q: 0, r: -3 }],
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      let goals = 0;
+      if (countOwned(state, 2) >= 6) goals++;
+      if ((state.player.coins ?? 0) >= 200) goals++;
+      if (state.grid[`${state.player.q},${state.player.r}`]?.structureType === 'MONUMENT') goals++;
+      
+      if (goals >= 2) return isRu ? "ПОБЕДА: Условия выполнены!" : "VICTORY: Conditions met!";
+      
+      return isRu 
+        ? `ВЫПОЛНИТЕ 2 ИЗ 3: Соберите 200 Кредитов, постройте 6 гексов L2, или станьте на Монумент! Выполнено: ${goals}/2` 
+        : `COMPLETE 2 OF 3: Gather 200 Credits, build 6 L2 hexes, or step on Monument! Completed: ${goals}/2`;
+    },
     hooks: {
       checkWinCondition: (state) => {
         let goals = 0;
@@ -318,6 +394,9 @@ export const series4Levels: LevelConfig[] = [
     id: '4.6',
     title: 'Sim 4.6: Каскадный Протокол',
     description: 'Создайте цепную реакцию для каскадного обновления плит до 3-го уровня.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 3, label: 'Cascade Core', color: 'amber' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -345,6 +424,14 @@ export const series4Levels: LevelConfig[] = [
     },
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const c = countOwned(state, 3);
+      if (c >= 8) return isRu ? "ПОБЕДА: Каскад запущен!" : "VICTORY: Cascade complete!";
+      return isRu 
+        ? `КАСКАД: Строй L3 рядом с L2 для авто-расширения! Нужно гексов L3: ${Math.min(8, c)}/8` 
+        : `CASCADE: Build L3 near L2 to trigger auto-expand! Need L3 hexes: ${Math.min(8, c)}/8`;
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
@@ -405,6 +492,12 @@ export const series4Levels: LevelConfig[] = [
     id: '4.7',
     title: 'Sim 4.7: Двойной Движок',
     description: 'Отрегулируйте баланс и владейте четырьмя плитами Ур.3 и двумя плитами Ур.4.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 4, label: 'Apex Peak A', color: 'amber' },
+      { q: 1, r: -1, targetLevel: 4, label: 'Apex Peak B', color: 'amber' },
+      { q: 0, r: 1, targetLevel: 3, label: 'Support Pillar A', color: 'amber' },
+      { q: -1, r: 0, targetLevel: 3, label: 'Support Pillar B', color: 'amber' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -429,6 +522,15 @@ export const series4Levels: LevelConfig[] = [
     },
     startState: { credits: 0, moves: 3, rank: 3, materials: 0 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const l3 = countOwned(state, 3);
+      const l4 = countOwned(state, 4);
+      if (l3 >= 4 && l4 >= 2) return isRu ? "ПОБЕДА: Движок запущен!" : "VICTORY: Engine running!";
+      return isRu 
+        ? `СТРОЙ: Построй одновременно 4 гекса L3 (${Math.min(4, l3)}/4) и 2 гекса L4 (${Math.min(2, l4)}/2)!` 
+        : `BUILD: Simultaneously build 4 L3 hexes (${Math.min(4, l3)}/4) and 2 L4 hexes (${Math.min(2, l4)}/2)!`;
+    },
     hooks: {
       checkWinCondition: (state) => countOwned(state, 3) >= 4 && countOwned(state, 4) >= 2,
       checkLossCondition: (state) => isStranded(state),
@@ -456,6 +558,10 @@ export const series4Levels: LevelConfig[] = [
     id: '4.8',
     title: 'Sim 4.8: Омега Синтез',
     description: 'Финальный синтез: выполните все четыре цели до температурного коллапса.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' },
+      { q: 0, r: 1, targetLevel: 3, label: 'Omega Support', color: 'amber' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -486,10 +592,36 @@ export const series4Levels: LevelConfig[] = [
     },
     startState: { credits: 0, moves: 3, rank: 2, materials: 0, initialEntropy: 40 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const l3 = countOwned(state, 3);
+      const coins = state.player.coins ?? 0;
+      const items = state.player.inventory?.length ?? 0;
+      const cool = (state.entropy.current ?? 0) < 60;
+      
+      const onMon = state.grid[`${state.player.q},${state.player.r}`]?.structureType === 'MONUMENT';
+      if (onMon && l3 >= 3 && coins >= 300 && items >= 2 && cool) {
+          return isRu ? "ПОБЕДА: Омега Синтез завершен!" : "VICTORY: Omega Synthesis complete!";
+      }
+      
+      const cStr = `L3: ${Math.min(3, l3)}/3`;
+      const gStr = `Gold: ${Math.min(300, coins)}/300`;
+      const iStr = `Items: ${Math.min(2, items)}/2`;
+      const eStr = `Cool: ${cool ? 'OK' : 'HOT'}`;
+      
+      return isRu 
+        ? `ЦЕЛИ: Заверши: [${cStr}] [${gStr}] [${iStr}] [${eStr}], затем иди на Монумент!` 
+        : `COMPLETE: Finish [${cStr}] [${gStr}] [${iStr}] [${eStr}], then step on Monument!`;
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
-        state.entropy.current = Math.min(100, (state.entropy.current ?? 40) + 2);
+        // Heat per real action, not per tick (onAfterAction runs ~10x/s).
+        const _a48 = state.player.actionsTaken ?? 0;
+        if (_a48 > ((state as any)._heat48 ?? 0)) {
+          (state as any)._heat48 = _a48;
+          state.entropy.current = Math.min(100, (state.entropy.current ?? 40) + 2);
+        }
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 

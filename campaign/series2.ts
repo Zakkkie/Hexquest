@@ -17,6 +17,9 @@ export const series2Levels: LevelConfig[] = [
     id: '2.1',
     title: 'Sim 2.1: Монолит',
     description: 'Активируйте центральный Монолит, найдя обходной путь к нему.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -43,6 +46,14 @@ export const series2Levels: LevelConfig[] = [
     },
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Портал активирован!" : "VICTORY: Portal activated!";
+      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Ты на Монолите! Жми АКТИВИРОВАТЬ!" : "ACTIVATE: Press ACTIVATE on Monolith!";
+      return isRu 
+        ? "ИДИ НА УКАЗАТЕЛЬ: Обойди барьер по хребту и дойди до Монолита!" 
+        : "MOVE TO TARGET: Bypass barrier on ridge to reach Monolith!";
+    },
     hooks: {
       checkWinCondition: (state) => !!state.portalActive,
       checkLossCondition: (state) => isStranded(state),
@@ -101,6 +112,13 @@ export const series2Levels: LevelConfig[] = [
     id: '2.2',
     title: 'Sim 2.2: Погребенные Тайны',
     description: 'Соберите три подземных артефакта и активируйте Монолит.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' },
+      { q: 1, r: 3, targetLevel: -1, label: 'Dig Site 1', color: 'red' },
+      { q: -1, r: 3, targetLevel: -1, label: 'Dig Site 2', color: 'red' },
+      { q: 1, r: 2, targetLevel: -1, label: 'Dig Site 3', color: 'red' },
+      { q: -1, r: 2, targetLevel: -1, label: 'Dig Site 4', color: 'red' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -124,6 +142,21 @@ export const series2Levels: LevelConfig[] = [
     },
     startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Портал активирован!" : "VICTORY: Portal activated!";
+      if (state.player.inventory.length < 3) {
+        return isRu 
+          ? `КОПАЙ: Найди 3 предметы под землей (L-1, L-2)! Найдено: ${state.player.inventory.length}/3` 
+          : `DIG: Find 3 items underground (L-1, L-2)! Found: ${state.player.inventory.length}/3`;
+      }
+      if (state.player.q === 0 && state.player.r === 0) {
+        return isRu ? "АКТИВИРУЙ: Активируй Монолит!" : "ACTIVATE: Activate the Monolith!";
+      }
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Предметы собраны! Иди на (0,0) и активируй Монолит." 
+        : "MOVE TO CENTER: Items gathered! Walk to (0,0) and activate Monolith.";
+    },
     hooks: {
       checkWinCondition: () => false,
       checkLossCondition: (state) => isStranded(state),
@@ -184,6 +217,9 @@ export const series2Levels: LevelConfig[] = [
     id: '2.3',
     title: 'Sim 2.3: Растущая Энтропия',
     description: 'Доберитесь до Монолита в условиях нестабильности. Стройте опоры для подъема.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 4, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -207,6 +243,19 @@ export const series2Levels: LevelConfig[] = [
     },
     startState: { credits: 0, moves: 2, rank: 3, materials: 4, initialEntropy: 15 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Портал активирован!" : "VICTORY: Portal activated!";
+      if (!(state as any)._entropyDischarged) {
+        return isRu 
+          ? "ИДИ НА УКАЗАТЕЛЬ: Доберись до пика L5 (1,2), чтобы восстановить запас Стабильности!"
+          : "MOVE TO TARGET: Reach L5 peak at (1,2) to restore Stability!";
+      }
+      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ НА УКАЗАТЕЛЬ: Иди в Центр (0,0) и активируй Монолит!" 
+        : "MOVE TO CENTER: Go to Center (0,0) and activate Monolith!";
+    },
     hooks: {
       checkWinCondition: () => false, 
       checkLossCondition: (state) => {
@@ -256,6 +305,10 @@ export const series2Levels: LevelConfig[] = [
     id: '2.4',
     title: 'Sim 2.4: Первый Сигнал',
     description: 'Активируйте Обелиск для рассеивания барьера и запуска Монолита.',
+    objectiveHexes: [
+      { q: 1, r: 2, targetLevel: 2, label: 'Obelisk', color: 'blue' },
+      { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
@@ -272,6 +325,18 @@ export const series2Levels: LevelConfig[] = [
     },
     startState: { credits: 50, moves: 20, rank: 3, materials: 1 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Портал активирован!" : "VICTORY: Portal activated!";
+      if (!state.monumentRevealedSlots?.[0]) {
+        if (state.player.q === 1 && state.player.r === 2) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ на Обелиске!" : "ACTIVATE: Press ACTIVATE on Obelisk!";
+        return isRu ? "ИДИ НА УКАЗАТЕЛЬ: Иди к Обелиску (1,2) и взломай его!" : "MOVE TO TARGET: Head to Obelisk at (1,2) and hack it!";
+      }
+      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ НА УКАЗАТЕЛЬ: Возвращайся к Монолиту (0,0)!" 
+        : "MOVE TO CENTER: Return to the Monolith (0,0)!";
+    },
     hooks: {
       checkWinCondition: () => false,
       checkLossCondition: (state) => isStranded(state),
@@ -301,6 +366,11 @@ export const series2Levels: LevelConfig[] = [
     id: '2.5',
     title: 'Sim 2.5: Линейная Матрица',
     description: 'Постройте цельную Линию из трех смежных возвышенных блоков.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 2, label: 'Shape Node A', color: 'amber' },
+      { q: 1, r: 0, targetLevel: 2, label: 'Shape Node B', color: 'amber' },
+      { q: -1, r: 0, targetLevel: 2, label: 'Shape Node C', color: 'amber' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: false,
       customLayout: [
@@ -320,6 +390,14 @@ export const series2Levels: LevelConfig[] = [
     ],
     startState: { credits: 200, moves: 40, rank: 2, materials: 4 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.evacuationActive) return isRu ? "ПОБЕДА: Линия сформирована!" : "VICTORY: Line complete!";
+      const countL2 = Object.values(state.grid).filter((h: any) => h.currentLevel >= 2 && h.ownerId === state.player.id).length;
+      return isRu 
+        ? `СТРОЙ: Подними 3 гекса в одну линию до L2! Готово гексов L2: ${Math.min(3, countL2)}/3` 
+        : `BUILD: Upgrade 3 hexes in a straight line to L2! Built L2: ${Math.min(3, countL2)}/3`;
+    },
     hooks: {
       checkWinCondition: () => false,
       checkLossCondition: (state) => isStranded(state),
@@ -349,6 +427,11 @@ export const series2Levels: LevelConfig[] = [
     id: '2.6',
     title: 'Sim 2.6: Резонансный Треугольник',
     description: 'Постройте Треугольник из возвышенных гексов и защитите плиты от бота.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 2, label: 'Triangle Node A', color: 'amber' },
+      { q: 1, r: -1, targetLevel: 2, label: 'Triangle Node B', color: 'amber' },
+      { q: 1, r: 0, targetLevel: 2, label: 'Triangle Node C', color: 'amber' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
@@ -371,6 +454,14 @@ export const series2Levels: LevelConfig[] = [
     aiMode: 'basic',
     botObjective: 'MONUMENT_RACE',
     startState: { credits: 100, moves: 30, rank: 2, materials: 5, initialEntropy: 60 },
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.evacuationActive) return isRu ? "ПОБЕДА: Треугольник сформирован!" : "VICTORY: Triangle complete!";
+      const countL2 = Object.values(state.grid).filter((h: any) => h.currentLevel >= 2 && h.ownerId === state.player.id).length;
+      return isRu 
+        ? `СТРОЙ: Выстрой Треугольник (3 гекса) до L2! Остерегайся бота. Готово: ${Math.min(3, countL2)}/3` 
+        : `BUILD: Upgrade a Triangle (3 hexes) to L2! Beware of the bot. Built L2: ${Math.min(3, countL2)}/3`;
+    },
     hooks: {
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
@@ -403,6 +494,12 @@ export const series2Levels: LevelConfig[] = [
     id: '2.7',
     title: 'Sim 2.7: Ромб Эфира',
     description: 'Выстройте геометрический Ромб из четырех смежных плит высокого уровня.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 3, label: 'Apex Node', color: 'amber' },
+      { q: 1, r: -1, targetLevel: 3, label: 'Apex Left', color: 'amber' },
+      { q: 0, r: 1, targetLevel: 3, label: 'Apex Right', color: 'amber' },
+      { q: 1, r: 0, targetLevel: 3, label: 'Apex Base', color: 'amber' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: false,
       customLayout: [
@@ -422,6 +519,14 @@ export const series2Levels: LevelConfig[] = [
     ],
     startState: { credits: 150, moves: 50, rank: 3, materials: 8 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.evacuationActive) return isRu ? "ПОБЕДА: Ромб сформирован!" : "VICTORY: Diamond complete!";
+      const countL3 = Object.values(state.grid).filter((h: any) => h.currentLevel >= 3 && h.ownerId === state.player.id).length;
+      return isRu 
+        ? `СТРОЙ РОМБ: Подними 4 гекса в форме Ромба до L3! Готово L3: ${Math.min(4, countL3)}/4` 
+        : `BUILD DIAMOND: Upgrade 4 hexes in a Diamond shape to L3! Built L3: ${Math.min(4, countL3)}/4`;
+    },
     hooks: {
       checkWinCondition: () => false,
       checkLossCondition: (state) => isStranded(state),
@@ -451,6 +556,14 @@ export const series2Levels: LevelConfig[] = [
     id: '2.8',
     title: 'Sim 2.8: Кольцо Пустоты',
     description: 'Постройте замкнутое Кольцо вокруг центральной Пустоты.',
+    objectiveHexes: [
+      { q: 1, r: -1, targetLevel: 3, label: 'Ring Node 1', color: 'amber' },
+      { q: 1, r: 0, targetLevel: 3, label: 'Ring Node 2', color: 'amber' },
+      { q: 0, r: 1, targetLevel: 3, label: 'Ring Node 3', color: 'amber' },
+      { q: -1, r: 1, targetLevel: 3, label: 'Ring Node 4', color: 'amber' },
+      { q: -1, r: 0, targetLevel: 3, label: 'Ring Node 5', color: 'amber' },
+      { q: 0, r: -1, targetLevel: 3, label: 'Ring Node 6', color: 'amber' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
@@ -475,6 +588,14 @@ export const series2Levels: LevelConfig[] = [
     ],
     startState: { credits: 300, moves: 60, rank: 3, materials: 12, initialEntropy: 100 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.evacuationActive) return isRu ? "ПОБЕДА: Кольцо герметизации создано!" : "VICTORY: Containment Ring complete!";
+      const countL3 = Object.values(state.grid).filter((h: any) => h.currentLevel >= 3 && h.ownerId === state.player.id).length;
+      return isRu 
+        ? `СТРОЙ КОЛЬЦО: Выстрой 6 гексов кольцом вокруг Бездны до уровня L3! Готово: ${Math.min(6, countL3)}/6` 
+        : `BUILD RING: Construct 6 hexes in a ring around the Void to L3! Built: ${Math.min(6, countL3)}/6`;
+    },
     hooks: {
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
@@ -512,6 +633,12 @@ export const series2Levels: LevelConfig[] = [
     id: '2.9',
     title: 'Sim 2.9: Двойная Динамика',
     description: 'Сформируйте сложные геометрические конструкции, сдерживая разрушения бота.',
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 3, label: 'Central Hub', color: 'amber' },
+      { q: 1, r: -1, targetLevel: 3, label: 'North Node', color: 'amber' },
+      { q: 1, r: 0, targetLevel: 3, label: 'East Node', color: 'amber' },
+      { q: -1, r: 0, targetLevel: 3, label: 'West Node', color: 'amber' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
       customLayout: [
@@ -536,6 +663,13 @@ export const series2Levels: LevelConfig[] = [
     aiMode: 'basic',
     botObjective: 'DESTROY_PLAYER',
     startState: { credits: 200, moves: 70, rank: 3, materials: 10, initialEntropy: 80 },
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.evacuationActive) return isRu ? "ПОБЕДА: Фигуры построены!" : "VICTORY: Shapes built!";
+      return isRu 
+        ? "СТРОЙ ФИГУРЫ: Сформируй одновременно Треугольник (L3) и Линию (L3)!" 
+        : "BUILD SHAPES: Complete a Triangle (L3) and a Line (L3) simultaneously!";
+    },
     hooks: {
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
@@ -568,6 +702,12 @@ export const series2Levels: LevelConfig[] = [
     id: '2.10',
     title: 'Sim 2.10: Космическое Выравнивание',
     description: 'Финальный синтез: активируйте защитные обелиски и запустите Монолит.',
+    objectiveHexes: [
+      { q: 3, r: -3, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
+      { q: -3, r: 3, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
+      { q: 0, r: -3, targetLevel: 3, label: 'Obelisk 3', color: 'blue' },
+      { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 7, type: 'fixed', generateWalls: true, wallStartRadius: 6, wallType: 'pit_ring',
       customLayout: [
@@ -596,6 +736,34 @@ export const series2Levels: LevelConfig[] = [
     },
     startState: { credits: 200, moves: 80, rank: 4, materials: 14, initialEntropy: 100 },
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
+      
+      const activatedCount = state.monumentRevealedSlots?.filter(Boolean).length || 0;
+      if (activatedCount < 3) {
+        return isRu 
+          ? `АКТИВИРУЙ ОБЕЛИСКИ: Найди и взломай 3 периферийных Обелиска! Готово: ${activatedCount}/3` 
+          : `ACTIVATE OBELISKS: Find and hack 3 peripheral Obelisks! Activated: ${activatedCount}/3`;
+      }
+      
+      const ringKeys = ['1,-1', '1,0', '0,1', '-1,1', '-1,0', '0,-1'];
+      const ringCount = ringKeys.filter(k => {
+        const h = state.grid[k];
+        return h && h.currentLevel >= 3 && h.ownerId === state.player.id;
+      }).length;
+      
+      if (ringCount < 6) {
+        return isRu 
+          ? `СТРОЙ КОЛЬЦО: Возведи кольцо L3 вокруг Монолита (0,0)! Готово: ${ringCount}/6` 
+          : `BUILD RING: Construct an L3 ring around the Monolith (0,0)! Built: ${ringCount}/6`;
+      }
+
+      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,0) и Активируй его!" 
+        : "MOVE TO CENTER: Step on Monolith (0,0) and Activate it!";
+    },
     hooks: {
       checkWinCondition: () => false,
       checkLossCondition: (state) => {

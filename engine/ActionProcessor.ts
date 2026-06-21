@@ -101,6 +101,7 @@ export class ActionProcessor {
       }
 
       // Deduct Cost
+      console.log(`MOVING: costs=${cost.totalPoints}, availableMoves=${actor.moves}, availableCoins=${actor.coins}, deductMoves=${cost.deductMoves}, deductCoins=${cost.deductCoins}`);
       actor.moves -= cost.deductMoves;
       actor.coins -= cost.deductCoins;
       actor.totalCoinsEarned += 0; 
@@ -336,8 +337,8 @@ export class ActionProcessor {
           state.grid[hexKey] = {
               ...hex,
               structureType: undefined,
-              currentLevel: 0,
-              maxLevel: 0,
+              currentLevel: 1,
+              maxLevel: 1,
               progress: 0,
               durability: undefined 
           };

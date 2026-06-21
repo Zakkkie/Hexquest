@@ -2,6 +2,8 @@
 import { Hex, HexCoord, Entity, PathResult } from '../types';
 import { GAME_CONFIG, getLevelConfig, SAFETY_CONFIG } from '../rules/config';
 import { getItemDef } from '../rules/items';
+import { getMilestoneModifiers } from '../campaign/milestones.ts';
+import { useGameStore } from '../store.ts';
 
 export const getHexKey = (q: number, r: number): string => `${q},${r}`;
 export const getCoordinatesFromKey = (key: string): HexCoord => {
@@ -97,19 +99,40 @@ export const getStatusModifiers = (actor: Entity, session?: any): {
 
   const isPlayer = actor && actor.id === 'player';
   const upgrades = session?.campaignUpgrades;
+  
+  // --- FETCH MILSTONES EXTERNALLY FOR PASSIVES ---
+  if (isPlayer) {
+      let totalGoldEarned = 0;
+      try {
+          totalGoldEarned = useGameStore.getState().totalGoldEarned || 0;
+      } catch (e) {
+          // Fallback if accessed via tests/headless engine without Zustand
+          totalGoldEarned = session?.totalGoldEarned || 0;
+      }
 
-  if (isPlayer && upgrades) {
-      fogRadius += upgrades.scanRadius || 0;
-      exchangeRate = Math.max(1, exchangeRate - (upgrades.fuelEfficiency || 0));
-      growthAccelerator = upgrades.growthAccelerator || 0;
-      foundationStrength = upgrades.foundationStrength || 0;
-      economicMultiplier = 1.0 + ((upgrades.economicMultiplier || 0) / 100);
-      diggerLuck = upgrades.diggerLuck || 0;
-      doubleDigChance = (upgrades.doubleDigChance || 0) / 100;
-      reserveCapacitor = upgrades.reserveCapacitor || 0;
-      turboRecharge = upgrades.turboRecharge || 0;
-      entropyResistance = 1.0 - ((upgrades.entropyResistance || 0) / 100);
-      restorationMaster = upgrades.restorationMaster || 0;
+      // 0. Economic Milestones Passives (GLOBAL PROGREES)
+      if (totalGoldEarned > 0) {
+          const milestones = getMilestoneModifiers(totalGoldEarned);
+          exchangeRate = Math.max(1, exchangeRate - milestones.extraFuel);
+          economicMultiplier += milestones.extraIncomeMult;
+          fogRadius += milestones.extraVision;
+          reserveCapacitor += milestones.extraRecoveryCharges;
+      }
+      
+      // 1. Upgrades Tree passives
+      if (upgrades) {
+          fogRadius += upgrades.scanRadius || 0;
+          exchangeRate = Math.max(1, exchangeRate - (upgrades.fuelEfficiency || 0));
+          growthAccelerator = upgrades.growthAccelerator || 0;
+          foundationStrength = upgrades.foundationStrength || 0;
+          economicMultiplier += ((upgrades.economicMultiplier || 0) / 100);
+          diggerLuck = upgrades.diggerLuck || 0;
+          doubleDigChance += (upgrades.doubleDigChance || 0) / 100;
+          reserveCapacitor += upgrades.reserveCapacitor || 0;
+          turboRecharge = upgrades.turboRecharge || 0;
+          entropyResistance -= ((upgrades.entropyResistance || 0) / 100);
+          restorationMaster = upgrades.restorationMaster || 0;
+      }
   }
 
   // --- PASSIVE EQUIPMENT BONUSES ---

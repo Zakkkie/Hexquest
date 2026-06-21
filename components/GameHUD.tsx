@@ -17,10 +17,11 @@ interface GameHUDProps {
 }
 
 const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
-  const gameStatus = useGameStore(state => state.session?.gameStatus);
-  const player = useGameStore(state => state.session?.player);
+  const session = useGameStore(state => state.session);
+  const gameStatus = session?.gameStatus;
+  const player = session?.player;
   const toast = useGameStore(state => state.toast);
-  const completedShapeCoords = useGameStore(state => state.session?.completedShapeCoords);
+  const completedShapeCoords = session?.completedShapeCoords;
   
   // UI State orchestration
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -97,10 +98,10 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                 />
                 
                 {gameStatus === 'PLAYING' && (
-                    <div className="absolute top-[calc(74px+env(safe-area-inset-top))] md:top-[96px] left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2.5">
+                    <div className="absolute top-[calc(84px+env(safe-area-inset-top))] md:top-[104px] left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2.5">
                         <CentralTutorialBanner onOpenHelpDetail={() => setActiveModal('MISSION')} />
                         
-                        {toast && (
+                        {toast && !session?.activeLevelConfig && (
                             <div className="w-full flex justify-center pointer-events-auto">
                                 <div className="w-full bg-slate-950 px-4 py-3 rounded-lg border border-slate-800 shadow-xl flex items-center justify-center animate-in fade-in zoom-in-95 duration-200">
                                     <span className={`

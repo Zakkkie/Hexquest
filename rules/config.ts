@@ -75,6 +75,11 @@ export const SAFETY_CONFIG = {
 export const HEX_SIZE = GAME_CONFIG.HEX_SIZE;
 export const EXCHANGE_RATE_COINS_PER_MOVE = GAME_CONFIG.EXCHANGE_RATE_COINS_PER_MOVE;
 
+export const BOT_CONFIG = {
+    DESTROYER_SCAN_RADIUS: 2,
+    DESTROYER_COOLDOWN_MS: 12000
+};
+
 export const getLevelConfig = (level: number) => {
   // Handle Negative Levels (Pits) - No Income currently
   if (level < 0) {

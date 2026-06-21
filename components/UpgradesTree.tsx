@@ -190,7 +190,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-xl"
+            className="absolute inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-xl"
         >
             {/* Background floating effects */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
@@ -203,7 +203,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.98, y: 10 }}
                 transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                className="bg-slate-950 border-2 border-indigo-500/40 w-full max-w-6xl h-[95vh] md:h-auto md:max-h-[85vh] rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] flex flex-col relative z-10 overflow-hidden group"
+                className="bg-slate-950 sm:border-2 sm:border-indigo-500/40 w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-6xl sm:rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] flex flex-col relative z-10 overflow-hidden group"
             >
                 {/* Cyber Corner Brackets */}
                 <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
@@ -215,37 +215,37 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                 <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
 
                 {/* Header with Title and Skill Points */}
-                <div className="p-3 md:p-4 flex items-center justify-between border-b border-indigo-500/30 bg-indigo-905/10 relative z-20">
-                    <div className="flex items-center gap-3 md:gap-4 pl-1">
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                                <div className="bg-indigo-500/15 p-1.5 rounded-lg border border-indigo-500/35">
+                <div className="p-3 md:p-4 flex items-center justify-between border-b border-indigo-500/30 bg-indigo-905/10 relative z-20 gap-2">
+                    <div className="flex items-center gap-2 md:gap-4 pl-1 min-w-0">
+                        <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="bg-indigo-500/15 p-1.5 rounded-lg border border-indigo-500/35 shrink-0">
                                     <Layers className="w-4 h-4 text-indigo-400" />
                                 </div>
-                                <h2 className="text-base md:text-lg lg:text-xl font-black uppercase text-white tracking-[0.15em] leading-none drop-shadow-md">{language === 'RU' ? 'Узлы Развития' : 'Development Nodes'}</h2>
+                                <h2 className="text-sm sm:text-base md:text-lg lg:text-xl font-black uppercase text-white tracking-[0.1em] sm:tracking-[0.15em] leading-none drop-shadow-md truncate">{language === 'RU' ? 'Узлы Развития' : 'Development Nodes'}</h2>
                             </div>
                             <p className="hidden sm:block text-indigo-400/50 text-[8px] font-mono tracking-[0.4em] uppercase ml-11 mt-1 leading-none">Exp_Protocol_v2.1</p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 md:gap-3 pr-1">
+                    <div className="flex items-center gap-2 md:gap-3 pr-1 shrink-0">
                         {/* Lean SP Badge */}
-                        <div className="flex items-center gap-2.5 bg-slate-900/60 border border-indigo-500/20 rounded-lg px-2.5 py-1.5 md:px-3 md:py-2 transition-all shadow-inner">
+                        <div className="flex items-center gap-2 bg-slate-900/60 border border-indigo-500/20 rounded-lg px-2 py-1 md:px-3 md:py-2 transition-all shadow-inner">
                             <div className="flex flex-col items-center leading-none">
-                                <span className="text-[6px] md:text-[7px] text-indigo-400/85 font-black uppercase">Skill</span>
-                                <span className="text-[6px] md:text-[7px] text-indigo-400/85 font-black uppercase">Points</span>
+                                <span className="text-[5.5px] md:text-[7px] text-indigo-400/85 font-black uppercase leading-none">Skill</span>
+                                <span className="text-[5.5px] md:text-[7px] text-indigo-400/85 font-black uppercase leading-none">Points</span>
                             </div>
-                            <div className="w-[1px] h-4 bg-indigo-500/25 mx-0.5" />
-                            <span className="text-base md:text-xl font-black text-white font-mono leading-none tracking-tighter drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]">{skillPoints}</span>
+                            <div className="w-[1px] h-3.5 bg-indigo-500/25 mx-0.5" />
+                            <span className="text-sm md:text-xl font-black text-white font-mono leading-none tracking-tighter drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]">{skillPoints}</span>
                         </div>
 
-                        <button onClick={onClose} className="p-1.5 md:p-2 bg-slate-800/40 hover:bg-red-500/20 group rounded-lg border border-white/5 transition-all transform hover:scale-110 active:scale-95 cursor-pointer">
+                        <button onClick={onClose} className="p-1.5 md:p-2 bg-slate-800/40 hover:bg-red-500/20 group rounded-lg border border-white/5 transition-all transform hover:scale-110 active:scale-95 cursor-pointer shrink-0">
                             <X className="w-4 h-4 md:w-5 md:h-5 text-slate-500 group-hover:text-red-400 group-active:text-red-500 transition-colors" />
                         </button>
                     </div>
                 </div>
 
-                <div className="p-4 md:p-6 lg:p-8 overflow-y-auto no-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 relative z-10 flex-1 content-start">
+                <div className="p-3 sm:p-5 md:p-6 lg:p-8 overflow-y-auto no-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 relative z-10 flex-1 content-start">
                     {renderNode('startingEnergy', language === 'RU' ? 'Энергия' : 'Energy', language === 'RU' ? 'Базовый запас энергии на старте' : 'Base starting energy', <BatteryCharging />, 1, 1, 'text-cyan-400', 10, 0.05)}
                     {renderNode('startingMoves', language === 'RU' ? 'Ходы' : 'Moves', language === 'RU' ? 'Свободные очки перемещения' : 'Free movement points', <TrendingUp />, 1, 1, 'text-emerald-400', 5, 0.08)}
                     {renderNode('startingMaterials', language === 'RU' ? 'Материя' : 'Matter', language === 'RU' ? 'Запас материалов на старте' : 'Starting materials stock', <Layers />, 1, 1, 'text-purple-400', 10, 0.11)}
@@ -264,7 +264,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                     {renderNode('turboRecharge', language === 'RU' ? 'Турбо' : 'Turbo', language === 'RU' ? 'Кулдаун энергетики L4+' : 'L4+ recharge cooldown', <Zap />, 5, 3, 'text-lime-400', 1, 0.5)}
                     {renderNode('entropyResistance', language === 'RU' ? 'Стабильность' : 'Stability', language === 'RU' ? 'Снижение роста энтропии (%)' : 'Entropy growth reduction (%)', <Infinity />, 10, 2, 'text-rose-400', 3, 0.53)}
                     {renderNode('restorationMaster', language === 'RU' ? 'Ремонт' : 'Repair', language === 'RU' ? 'Шанс восстановления Бездны (%)' : 'Void structural repair chance (%)', <Wrench />, 10, 2, 'text-amber-500', 3, 0.56)}
-                    {renderNode('contrastHighlighting', language === 'RU' ? 'Подсветка' : 'Highlight', (lvl) => language === 'RU' ? `Контурные сияющие линии для уровней от 1 до ${lvl} в зависимости от уровня скилла` : `Contour glowing lines for levels from 1 to ${lvl} depending on the skill level`, <Star />, 1, 5, 'text-pink-400', 10, 0.59)}
+                    {renderNode('contrastHighlighting', language === 'RU' ? 'Подсветка' : 'Highlight', (lvl) => language === 'RU' ? `Отображает контурную сияющую сетку для схем до ${lvl * 20} фигур (уровень ${lvl})` : `Displays glowing outline grid for setups of up to ${lvl * 20} shapes (Level ${lvl})`, <Star />, 1, 5, 'text-pink-400', 10, 0.59)}
                 </div>
             </motion.div>
         </motion.div>

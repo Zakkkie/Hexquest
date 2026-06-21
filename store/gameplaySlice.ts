@@ -85,7 +85,11 @@ export const createGameplaySlice = (
     await new Promise(resolve => setTimeout(resolve, 50));
     
     try {
+      const totalGoldEarned = get().totalGoldEarned || 0;
       const initialSessionState = await createInitialSessionData(effectiveWin ?? null, levelConfig, get().language, stateUser, upgrades);
+      // Pass this directly to the session object
+      initialSessionState.totalGoldEarned = totalGoldEarned;
+
       engine = new GameEngine(initialSessionState); 
       set(() => ({ 
         session: engine!.state, 
@@ -300,7 +304,7 @@ export const createGameplaySlice = (
       return;
     }
 
-    const costResult = calculateMovementCost(session.player, path, session.grid);
+    const costResult = calculateMovementCost(session.player, path, session.grid, session);
 
     if (!costResult.canAfford) {
       audioService.play('ERROR');
@@ -553,11 +557,22 @@ export const createGameplaySlice = (
     
     isProcessingTick = true;
     
+    const prevEarned = engine.state.player.totalCoinsEarned || 0;
+    
     try {
       const result = await engine.processTick();
       if (!result || !result.state) return;
 
-      set(() => ({ totalMinedMaterial: result.state.totalMinedMaterial }));
+      const newEarned = result.state.player.totalCoinsEarned || 0;
+      const deltaGold = newEarned - prevEarned;
+
+      set((curr) => {
+          let payload: Partial<GameStore> = { totalMinedMaterial: result.state.totalMinedMaterial };
+          if (deltaGold > 0) {
+              payload.totalGoldEarned = (curr.totalGoldEarned || 0) + deltaGold;
+          }
+          return payload;
+      });
 
       tickCount++;
       const now = Date.now();
@@ -603,9 +618,14 @@ export const createGameplaySlice = (
           if (isPlayer || !event.entityId) {
             const sound = EVENT_SOUND_MAP[event.type];
             if (sound) audioService.play(sound as any);
-            if (event.type === 'ENTROPY_SHIFT') {
-              set(() => ({ lastVisualEvent: { type: 'ENTROPY_SHIFT', time: now } }));
-            }
+          }
+
+          const isMeteor = (event.message && /meteor|метеор/i.test(event.message)) ||
+                           (event.data && typeof event.data.type === 'string' && /meteor|метеор/i.test(event.data.type));
+
+          if (event.type === 'ENTROPY_SHIFT' || event.type === 'HEX_COLLAPSE' || isMeteor) {
+            const visualType = isMeteor ? 'METEOR_STRIKE' : event.type;
+            set(() => ({ lastVisualEvent: { type: visualType, time: now } }));
           }
 
           // ACHIEVE PROGRESS / PROGRESSIONS

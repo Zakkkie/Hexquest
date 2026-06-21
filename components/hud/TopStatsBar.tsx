@@ -167,7 +167,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     if (!player) return null;
 
     return (
-        <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-[60] pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in">
+        <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-[60] pt-[calc(env(safe-area-inset-top)+12px)] sm:pt-[calc(env(safe-area-inset-top)+16px)] animate-in fade-in">
             <style>{`
                 .stats-scroll-hide::-webkit-scrollbar { display: none; }
                 .stats-scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }

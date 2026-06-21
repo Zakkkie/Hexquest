@@ -519,7 +519,7 @@ const MainMenu: React.FC = () => {
     <div className="relative w-full h-full flex items-center justify-center pointer-events-auto">
       
       {/* HEADER BAR */}
-      <div className="absolute top-0 left-0 w-full p-4 md:p-6 flex justify-between items-start z-50 pointer-events-auto">
+      <div className="absolute top-0 left-0 w-full p-4 md:p-6 pt-[calc(env(safe-area-inset-top)+14px)] flex justify-between items-start z-50 pointer-events-auto">
         {/* LEFT UP CORNER: ACCESS/AUTH OR PROFILE */}
         <div className="flex items-center gap-2">
             {!user ? (
@@ -982,7 +982,7 @@ const MainMenu: React.FC = () => {
              </div>
 
              {/* SCROLLABLE CONTENT */}
-             <div className="flex-1 overflow-y-auto no-scrollbar p-2 md:p-6 space-y-2 md:space-y-6">
+             <div className="flex-1 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6">
                  
                  {/* 1. MISSION SELECTION (Compact Grid) */}
                  <div>
@@ -999,7 +999,7 @@ const MainMenu: React.FC = () => {
                                   key={id} 
                                   onClick={() => { setSelectedTier(id as 1|2|3); setDifficulty(tier.difficulty); playUiSound('CLICK'); }}
                                   className={`
-                                    relative flex flex-col items-center justify-center p-1 md:p-3 rounded-2xl transition-all duration-300 border focus:outline-none group h-14 md:h-24 overflow-hidden
+                                    relative flex flex-col items-center justify-center p-2 md:p-3 rounded-2xl transition-all duration-300 border focus:outline-none group h-16 md:h-24 overflow-hidden
                                     ${isSelected 
                                         ? 'bg-gradient-to-b from-indigo-500/20 to-slate-900/90 border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3),inset_0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5),inset_0_0_20px_rgba(99,102,241,0.3)] scale-[1.02]' 
                                         : 'bg-slate-900/40 border-slate-700/50 hover:border-slate-500 hover:bg-slate-800/60 shadow-lg'}

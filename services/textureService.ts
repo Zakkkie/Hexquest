@@ -100,6 +100,21 @@ class TextureService {
     // Request an alpha channel but we will fill it opaque
     const ctx = canvas.getContext('2d')!;
 
+    if (type === 'TOP') {
+        const cx = size / 2;
+        const cy = size / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i * 60 + 30) * Math.PI / 180;
+            const px = cx + 32 * Math.cos(angle);
+            const py = cy + 32 * Math.sin(angle);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.clip();
+    }
+
     if (type === 'SIDE') {
         this.drawSide(ctx, size, level, terrainType, poiId);
         return canvas;
@@ -128,12 +143,13 @@ class TextureService {
       
       // Шаг цикла 4, оптимизируем обращение к индексам шума
       for (let i = 0; i < data.length; i += 4) {
+          if (data[i + 3] === 0) continue; // Skip fully transparent pixels
           const noise = table[(i >> 2) % tableLength]; 
           
           data[i]     = Math.max(0, Math.min(255, data[i] + noise));
           data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
           data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
-          data[i + 3] = 255; // Оставляем полностью непрозрачным
+          // leave alpha as is
       }
       ctx.putImageData(imgData, 0, 0);
   }

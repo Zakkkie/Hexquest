@@ -161,6 +161,11 @@ export class GameEngine {
         nextState.currentTurn++; 
         nextState.stateVersion++;
         
+        // Strip any remaining Immer proxy references inside events to prevent "proxy revoked" errors
+        // This MUST be done before finishDraft is called, because once finishDraft resolves,
+        // all Immer proxies are revoked and accessing their properties throws an error.
+        const cleanEvents: GameEvent[] = JSON.parse(JSON.stringify(tickEvents));
+
         // Finalize the state draft
         const finalState = finishDraft(nextState) as SessionState;
         
@@ -172,9 +177,6 @@ export class GameEngine {
         }
         
         this._state = finalState;
-
-        // Strip any remaining Immer proxy references inside events to prevent "proxy revoked" errors
-        const cleanEvents: GameEvent[] = JSON.parse(JSON.stringify(tickEvents));
 
         return {
             state: this._state,

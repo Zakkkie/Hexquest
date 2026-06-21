@@ -42,6 +42,7 @@ export const createDefaultProgress = () => ({
   collectedHexes: {},
   minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
   totalMinedMaterial: 0,
+  totalGoldEarned: 0,
   storyMap: {},
   campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES },
   claimedLevelRewards: [] as string[]

@@ -50,7 +50,7 @@ export const calculateMovementCost = (
         
         // 1. Void Check
         if (nextHex && nextHex.structureType === 'VOID') {
-             return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "VOID" };
+             return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "Пустота — непроходимо" };
         }
 
         // 1.5 Passable Check
@@ -69,7 +69,7 @@ export const calculateMovementCost = (
                  deductMoves: 0, 
                  deductCoins: 0, 
                  canAfford: false, 
-                 reason: "STEEP" 
+                 reason: "Слишком круто: разница уровней > 1. Нужен промежуточный уровень" 
              };
         }
 
@@ -88,8 +88,11 @@ export const calculateMovementCost = (
     }
 
     // Apply Multiplier (e.g. Fatigue x2)
-    totalPoints *= moveCostMultiplier;
-
+    // The total points might be fractional due to multipliers,
+    // and the rule implies we buy "Turns", which are discrete integers.
+    // "5 Credits per 1 Turn (rounded up to the nearest integer)".
+    totalPoints = Math.ceil(totalPoints * moveCostMultiplier);
+    
     const movesAvailable = Math.max(0, entity.moves);
     const coinsAvailable = Math.max(0, entity.coins);
 
@@ -99,12 +102,9 @@ export const calculateMovementCost = (
     // Cost Breakdown
     const deductMoves = totalPoints - movesDeficit;
     
-    if (isNaN(movesDeficit)) {
-        return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "Calculation Error" };
-    }
-
     // Exchange Rate
     const deductCoins = Math.ceil(movesDeficit * exchangeRate);
+    console.log(`MOVEMENT DEBUG: totalPoints=${totalPoints}, movesAvailable=${movesAvailable}, movesDeficit=${movesDeficit}, deductCoins=${deductCoins}, coinsAvailable=${coinsAvailable}, exchangeRate=${exchangeRate}`);
 
     const canAfford = coinsAvailable >= deductCoins;
 

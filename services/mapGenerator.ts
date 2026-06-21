@@ -209,7 +209,7 @@ export const ensureMonumentAccessibility = (
   }
 };
 
-export const generateLevel12Map = (_levelConfig: LevelConfig): Record<string, Hex> => {
+export const generateLevel11Map = (_levelConfig: LevelConfig): Record<string, Hex> => {
     const grid: Record<string, Hex> = {};
     
     // 1. Safe Southern Winding bypass road (level 1, durability 3, fully paved ROAD)
@@ -321,8 +321,8 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
   const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? baseRadius;
 
   // 1. Generate core area
-  if (levelConfig?.id === '1.2') {
-    initialGrid = generateLevel12Map(levelConfig);
+  if (levelConfig?.id === '1.1') {
+    initialGrid = generateLevel11Map(levelConfig);
   } else if (levelConfig?.mapConfig.type !== 'fixed') {
       for (let q = -wallStartRadius; q <= wallStartRadius; q++) {
           const r1 = Math.max(-wallStartRadius, -q - wallStartRadius);

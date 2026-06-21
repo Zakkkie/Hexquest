@@ -755,6 +755,50 @@ const HexNodeComponent = (props: HexNodeProps) => {
     }
   }, [isTargetArrow]);
 
+  const templateTargetInfo = useMemo(() => {
+    if (campaignMode !== 'STORY') return { isTarget: false, targetLevel: 0 };
+    const requiredShapes = useGameStore.getState().session?.activeLevelConfig?.requiredShapes;
+    if (!requiredShapes || requiredShapes.length === 0) return { isTarget: false, targetLevel: 0 };
+    for (const req of requiredShapes) {
+      let isMatch = false;
+      if (req.type === 'LINE_3') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:2, r:0}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      } else if (req.type === 'TRIANGLE_3') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      } else if (req.type === 'SQUARE_4' || req.type === 'DIAMOND_4') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}, {q:1, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      } else if (req.type === 'CROSS_5') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:-1, r:0}, {q:0, r:1}, {q:0, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      } else if (req.type === 'RING_6') {
+        const coords = [{q:1, r:-1}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}, {q:0, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      } else if (req.type === 'CROWN_5') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:-1, r:0}, {q:-1, r:1}, {q:1, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      } else if (req.type === 'HEXAGON_7') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}, {q:0, r:-1}, {q:1, r:-1}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      } else if (req.type === 'HEART_6') {
+        const coords = [{q:0, r:0}, {q:1, r:-1}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      } else if (req.type === 'STAR_7') {
+        const coords = [{q:0, r:0}, {q:2, r:0}, {q:0, r:2}, {q:-2, r:2}, {q:-2, r:0}, {q:0, r:-2}, {q:2, r:-2}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      } else if (req.type === 'PYRAMID_6') {
+        const coords = [{q:0, r:0}, {q:1, r:0}, {q:2, r:0}, {q:0, r:1}, {q:1, r:1}, {q:0, r:2}];
+        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
+      }
+      if (isMatch) {
+        return { isTarget: true, targetLevel: req.level };
+      }
+    }
+    return { isTarget: false, targetLevel: 0 };
+  }, [q, r, campaignMode]);
+
   const completedShapeCoords = useGameStore(
     (state) => state.session?.completedShapeCoords,
   );
@@ -911,49 +955,7 @@ const HexNodeComponent = (props: HexNodeProps) => {
     );
   }
 
-  const templateTargetInfo = useMemo(() => {
-    if (campaignMode !== 'STORY') return { isTarget: false, targetLevel: 0 };
-    const requiredShapes = useGameStore.getState().session?.activeLevelConfig?.requiredShapes;
-    if (!requiredShapes || requiredShapes.length === 0) return { isTarget: false, targetLevel: 0 };
-    for (const req of requiredShapes) {
-      let isMatch = false;
-      if (req.type === 'LINE_3') {
-        const coords = [{q:0, r:0}, {q:1, r:0}, {q:2, r:0}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      } else if (req.type === 'TRIANGLE_3') {
-        const coords = [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      } else if (req.type === 'SQUARE_4' || req.type === 'DIAMOND_4') {
-        const coords = [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}, {q:1, r:-1}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      } else if (req.type === 'CROSS_5') {
-        const coords = [{q:0, r:0}, {q:1, r:0}, {q:-1, r:0}, {q:0, r:1}, {q:0, r:-1}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      } else if (req.type === 'RING_6') {
-        const coords = [{q:1, r:-1}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}, {q:0, r:-1}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      } else if (req.type === 'CROWN_5') {
-        const coords = [{q:0, r:0}, {q:1, r:0}, {q:-1, r:0}, {q:-1, r:1}, {q:1, r:-1}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      } else if (req.type === 'HEXAGON_7') {
-        const coords = [{q:0, r:0}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}, {q:0, r:-1}, {q:1, r:-1}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      } else if (req.type === 'HEART_6') {
-        const coords = [{q:0, r:0}, {q:1, r:-1}, {q:1, r:0}, {q:0, r:1}, {q:-1, r:1}, {q:-1, r:0}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      } else if (req.type === 'STAR_7') {
-        const coords = [{q:0, r:0}, {q:2, r:0}, {q:0, r:2}, {q:-2, r:2}, {q:-2, r:0}, {q:0, r:-2}, {q:2, r:-2}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      } else if (req.type === 'PYRAMID_6') {
-        const coords = [{q:0, r:0}, {q:1, r:0}, {q:2, r:0}, {q:0, r:1}, {q:1, r:1}, {q:0, r:2}];
-        if (coords.some(c => c.q === q && c.r === r)) isMatch = true;
-      }
-      if (isMatch) {
-        return { isTarget: true, targetLevel: req.level };
-      }
-    }
-    return { isTarget: false, targetLevel: 0 };
-  }, [q, r, campaignMode]);
+
 
 
 

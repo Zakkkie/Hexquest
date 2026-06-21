@@ -34,7 +34,7 @@ export class VictorySystem implements System {
     // --- CHECK EVACUATION COMPLETION ---
     if (state.evacuationActive) {
         if (!state.evacuationCompletionTime) {
-            state.evacuationCompletionTime = Date.now() + 3000;
+            state.evacuationCompletionTime = Date.now() + 1500;
         }
 
         if (Date.now() >= state.evacuationCompletionTime) {
@@ -102,6 +102,14 @@ export class VictorySystem implements System {
                  return;
             }
         }
+    }
+
+    // --- GLOBAL CAPITAL CHECK ---
+    const playerHexKey = getHexKey(state.player.q, state.player.r);
+    const playerHex = state.grid[playerHexKey];
+    if (playerHex && playerHex.structureType === 'CAPITAL') {
+        this.triggerPortal(state, 'Reached the Capital!');
+        return;
     }
 
     // --- LEGACY/SKIRMISH WIN CONDITION ---

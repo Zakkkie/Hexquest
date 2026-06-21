@@ -413,33 +413,40 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         const ownedByLevel = (minLvl: number) =>
             Object.values(grid).filter((h: any) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
 
-        if (levelId === '1.1') {
+        if (levelId === '1.0') {
             const wavePath = [
                 { q: 0, r: 0 },
-                { q: 1, r: -1 },
-                { q: 2, r: -1 },
+                { q: 1, r: 0 },
                 { q: 2, r: 0 },
-                { q: 1, r: 1 },
-                { q: 0, r: 2 },
-                { q: -1, r: 2 },
-                { q: -2, r: 2 },
-                { q: -3, r: 2 },
-                { q: -3, r: 1 },
-                { q: -2, r: 0 }
+                { q: 3, r: 0 },
+                { q: 4, r: 0 },
+                { q: 5, r: 0 },
+                { q: 6, r: 0 },
+                { q: 6, r: 1 },
+                { q: 5, r: 2 },
+                { q: 4, r: 3 },
+                { q: 3, r: 3 },
+                { q: 2, r: 3 },
+                { q: 1, r: 3 },
+                { q: 0, r: 3 },
+                { q: -1, r: 3 },
+                { q: -2, r: 3 }
             ];
             const idx = wavePath.findIndex(p => p.q === player.q && p.r === player.r);
-            return { current: idx !== -1 ? idx : 0, target: 10, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
+            return { current: idx !== -1 ? idx : 0, target: 15, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
         }
-        if (levelId === '1.3') return { current: Math.max(0, 2 - (grid[`0,0`]?.currentLevel ?? 2)), target: 2, label: language === 'RU' ? 'СРЕЗАННЫЕ СЛОИ' : 'DIG LAYERS' };
-        if (levelId === '1.4') return { current: grid[`0,0`]?.currentLevel ?? 0, target: 2, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
-        if (levelId === '1.5') return { current: grid[`0,0`]?.currentLevel ?? 0, target: 1, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
-        if (levelId === '1.6') return { current: player.coins, target: 100, label: language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS' };
-        if (levelId === '1.7') {
+        if (levelId === '1.2') return { current: Math.max(0, 2 - (grid[`0,0`]?.currentLevel ?? 2)), target: 2, label: language === 'RU' ? 'СРЕЗАННЫЕ СЛОИ' : 'DIG LAYERS' };
+        if (levelId === '1.3') return { current: grid[`0,0`]?.currentLevel ?? 0, target: 3, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
+        if (levelId === '1.4') return { current: player.coins, target: 100, label: language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS' };
+        if (levelId === '1.5') {
             return { current: (player.q === 3 && player.r === -1) ? 1 : 0, target: 1, label: language === 'RU' ? 'ПОРТАЛ' : 'PORTAL' };
         }
-        if (levelId === '1.8') return { current: Math.max(0, -(grid[`0,0`]?.currentLevel ?? 0)), target: 2, label: language === 'RU' ? 'ГЛУБИНА' : 'DEPTH' };
-        if (levelId === '1.9') return { current: grid[`1,-1`]?.structureType !== 'VOID' ? 1 : 0, target: 1, label: language === 'RU' ? 'ЗАПЕЧАТАНО' : 'SEALED' };
-        if (levelId === '1.10') {
+        if (levelId === '1.6') {
+            const depthOk = (grid['0,0']?.currentLevel ?? 0) <= -2 ? 1 : 0;
+            const healedOk = grid['1,-1']?.structureType !== 'VOID' ? 1 : 0;
+            return { current: depthOk + healedOk, target: 2, label: language === 'RU' ? 'ЗАДАЧИ' : 'OBJECTIVES' };
+        }
+        if (levelId === '1.7') {
             const count = [grid['0,-1'], grid['0,0'], grid['0,1']].filter(h => (h?.currentLevel ?? 0) >= 2).length;
             return { current: count, target: 3, label: language === 'RU' ? 'ОПОРЫ' : 'SUPPORTS' };
         }
@@ -1060,7 +1067,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         <span className="text-xs font-bold text-white uppercase tracking-widest truncate">{t.MINI_LB_TITLE}</span>
                                     </div>
                                 </div>
-                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1 cursor-pointer"><X className="w-5 h-5" /></button>
+                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer flex items-center justify-center translate-x-1"><X className="w-5 h-5" /></button>
                             </div>
                             <div className="flex-1 overflow-y-auto no-scrollbar p-3 z-20 bg-slate-950/40">
                                 {liveRankings.length === 0 ? <div className="p-8 text-center text-slate-500 text-xs font-mono uppercase tracking-widest opacity-40">NO_DATA_STREAM</div> : 
@@ -1141,7 +1148,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         <span className="text-xs font-bold text-white uppercase tracking-widest truncate">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
                                     </div>
                                 </div>
-                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1 cursor-pointer"><X className="w-5 h-5" /></button>
+                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer flex items-center justify-center translate-x-1"><X className="w-5 h-5" /></button>
                             </div>
                             <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2 bg-slate-950/40 z-20 custom-scrollbar">
                                 {messageLog && messageLog.length > 0 ? (
@@ -1219,7 +1226,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                     </div>
                                     <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-white leading-none">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</h3>
                                 </div>
-                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-1 cursor-pointer"><X className="w-5 h-5" /></button>
+                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer flex items-center justify-center translate-x-1"><X className="w-5 h-5" /></button>
                             </div>
                             <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-6 bg-slate-950/30 custom-scrollbar">
                                 {(['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'] as const).map(rarity => {
@@ -1325,7 +1332,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50" />
 
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-indigo-700" />
-                            <button onClick={closeInspect} className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors p-1 cursor-pointer"><X className="w-5 h-5"/></button>
+                            <button onClick={closeInspect} className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 active:scale-95 transition-all rounded-full cursor-pointer z-30"><X className="w-5 h-5"/></button>
                             {(() => {
                                 const data = resolveItemText(inspectedItem, language);
                                 return (
@@ -1618,7 +1625,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         
                         <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
                         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                        <button onClick={closeMiniMonumentDialog} className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5"/></button>
+                        <button onClick={closeMiniMonumentDialog} className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 active:scale-95 transition-all rounded-full cursor-pointer z-30"><X className="w-5 h-5"/></button>
 
                         <div className="flex items-center gap-3 border-b border-slate-800 pb-3 relative z-20">
                             <div className="p-2 bg-indigo-950/50 rounded-xl border border-indigo-900/50 shadow-inner"><Info className="w-6 h-6 text-indigo-500" /></div>
@@ -1648,7 +1655,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
 
                         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                        <button onClick={closeMonumentDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
+                        <button onClick={closeMonumentDialog} className="absolute top-1 right-1 md:top-2 md:right-2 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 active:scale-95 transition-all rounded-full cursor-pointer z-35"><X className="w-5 h-5 md:w-6 h-6"/></button>
                         <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0 relative z-20">
                             <div className="p-2 md:p-3 bg-amber-950/50 rounded-xl border border-amber-900/50 shadow-inner"><Crown className="w-6 h-6 md:w-8 md:h-8 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" /></div>
                             <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none break-words whitespace-pre-wrap">{t.MONUMENT_TITLE}</h3><p className="text-[10px] md:text-xs text-amber-600 uppercase tracking-widest font-mono mt-1 break-words whitespace-pre-wrap">{t.MONUMENT_SUB}</p></div>
@@ -1813,7 +1820,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
 
                         <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                        <button onClick={closeVoidDialog} className="absolute top-3 right-3 md:top-4 md:right-4 text-slate-500 hover:text-white transition-colors z-20"><X className="w-5 h-5 md:w-6 h-6"/></button>
+                        <button onClick={closeVoidDialog} className="absolute top-1 right-1 md:top-2 md:right-2 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 active:scale-95 transition-all rounded-full cursor-pointer z-30"><X className="w-5 h-5 md:w-6 h-6"/></button>
                         <div className="flex items-center gap-3 md:gap-4 border-b border-slate-800 pb-3 md:pb-4 shrink-0 relative z-20">
                             <div className="p-2 md:p-3 bg-red-950/50 rounded-xl border border-red-900/50 shadow-inner animate-pulse"><AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" /></div>
                             <div><h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none break-words whitespace-pre-wrap">{t.VOID_TITLE}</h3><p className="text-[10px] md:text-xs text-red-400 uppercase tracking-widest font-mono mt-1 break-words whitespace-pre-wrap">{t.VOID_SUB}</p></div>

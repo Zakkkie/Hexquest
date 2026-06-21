@@ -1,6 +1,5 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { useGameStore } from '../store.ts';
 import { useEphemeralStore } from '../store/ephemeralStore.ts';
@@ -124,8 +123,6 @@ const GameView: React.FC = () => {
   const lastPointerPos = useRef({ x: 0, y: 0 });
   const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 }); 
   
-  const stageRef = useRef<Konva.Stage>(null);
-  
   // Multi-touch refs
   const lastDist = useRef<number>(0);
   const lastCenter = useRef<{ x: number; y: number } | null>(null);
@@ -179,8 +176,19 @@ const GameView: React.FC = () => {
 
   // --- SCREEN SHAKE TRIGGER ---
   useEffect(() => {
-      if (lastVisualEvent?.type === 'ENTROPY_SHIFT') {
+      const type = lastVisualEvent?.type;
+      if (type === 'ENTROPY_SHIFT' || type === 'HEX_COLLAPSE' || type === 'METEOR_STRIKE') {
           let duration = 600;
+          let intensityBase = 10;
+          
+          if (type === 'HEX_COLLAPSE') {
+              duration = 400;
+              intensityBase = 12;
+          } else if (type === 'METEOR_STRIKE') {
+              duration = 800;
+              intensityBase = 16;
+          }
+
           let start = Date.now();
           const shakeAnim = new Konva.Animation((_frame) => {
               const now = Date.now();
@@ -191,11 +199,11 @@ const GameView: React.FC = () => {
                   return;
               }
               const progress = elapsed / duration;
-              const intensity = 10 * (1 - progress); 
+              const intensity = intensityBase * (1 - progress); 
               const dx = (Math.random() - 0.5) * intensity * 2;
               const dy = (Math.random() - 0.5) * intensity * 2;
               setShakeOffset({ x: dx, y: dy });
-          }, stageRef.current?.getLayer()); 
+          }); 
           
           shakeAnim.start();
           return () => { shakeAnim.stop(); };
@@ -338,26 +346,30 @@ const GameView: React.FC = () => {
           // This ensures render is synced with AnimationFrame
           setRenderCamera(nextState);
 
-      }, stageRef.current?.getLayer());
+      });
 
       anim.start();
       return () => { anim.stop(); };
   }, []); 
 
 
-  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
       isTouchActive.current = false;
       // Left Click (0) = Drag, Right Click (2) = Rotate
-      const stage = e.target.getStage();
-      if (e.evt.button === 0) {
+      const rect = canvasContainerRef.current?.getBoundingClientRect();
+      const pointer = rect ? {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+      } : { x: e.clientX, y: e.clientY };
+
+      if (e.button === 0) {
           isDragging.current = true;
-          const pointer = stage?.getPointerPosition();
-          if (pointer) mouseDownPosRef.current = pointer; // Record start
+          mouseDownPosRef.current = pointer; // Record start
           
-          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
-      } else if (e.evt.button === 2) { 
+          lastPointerPos.current = { x: e.clientX, y: e.clientY };
+      } else if (e.button === 2) { 
           isRotating.current = true;
-          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
+          lastPointerPos.current = { x: e.clientX, y: e.clientY };
       }
   };
   
@@ -366,11 +378,13 @@ const GameView: React.FC = () => {
       if (now - lastClickTimeRef.current < 200) return;
       lastClickTimeRef.current = now;
 
-      const stage = stageRef.current;
-      const pointer = stage?.getPointerPosition();
+      const rect = canvasContainerRef.current?.getBoundingClientRect();
+      const currentPointer = lastPointerPos.current;
       
-      if (pointer) {
-          const dist = Math.hypot(pointer.x - mouseDownPosRef.current.x, pointer.y - mouseDownPosRef.current.y);
+      if (currentPointer && rect) {
+          const pointerX = currentPointer.x - rect.left;
+          const pointerY = currentPointer.y - rect.top;
+          const dist = Math.hypot(pointerX - mouseDownPosRef.current.x, pointerY - mouseDownPosRef.current.y);
           if (dist > 20) return; // Threshold check: increased for mobile reliability
       }
       
@@ -379,14 +393,15 @@ const GameView: React.FC = () => {
 
   // --- INPUT HANDLERS (Update Targets Only) ---
 
-  const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
-    e.evt.preventDefault();
-    const stage = e.target.getStage();
-    if (!stage) return;
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const rect = canvasContainerRef.current?.getBoundingClientRect();
+    if (!rect) return;
 
     const oldScale = targetCameraRef.current.scale;
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
+    const pointer = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
 
     // Calculate zoom relative to current target, not current visual state (avoids oscillation)
     const mousePointTo = {
@@ -395,8 +410,8 @@ const GameView: React.FC = () => {
     };
 
     // Use a dynamic scale based on wheel delta for smoother trackpad zooming
-    const scaleBy = 1.0 + Math.min(Math.abs(e.evt.deltaY) * 0.002, 0.2); 
-    let newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    const scaleBy = 1.0 + Math.min(Math.abs(e.deltaY) * 0.002, 0.2); 
+    let newScale = e.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
     newScale = Math.max(0.8, Math.min(newScale, 2.5));
     
     if (isNaN(newScale)) newScale = 1.0;
@@ -408,18 +423,22 @@ const GameView: React.FC = () => {
     targetCameraRef.current = { ...targetCameraRef.current, x: safePos.x, y: safePos.y, scale: newScale };
   }, []);
 
-  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
-     if (e.target === e.target.getStage() && !isDragging.current) {
+  const handleStageClick = (e: React.MouseEvent) => {
+     if (!isDragging.current) {
+         const target = e.target as HTMLElement;
+         if (target && target.closest('.cursor-crosshair')) {
+             return;
+         }
          cancelPendingAction();
      }
   };
   
-  const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
       if (isTouchActive.current) return;
       if (isDragging.current) {
-          const dx = e.evt.clientX - lastPointerPos.current.x;
-          const dy = e.evt.clientY - lastPointerPos.current.y;
-          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
+          const dx = e.clientX - lastPointerPos.current.x;
+          const dy = e.clientY - lastPointerPos.current.y;
+          lastPointerPos.current = { x: e.clientX, y: e.clientY };
 
           // Direct update to target
           const nx = targetCameraRef.current.x + dx;
@@ -430,8 +449,8 @@ const GameView: React.FC = () => {
       }
       
       if (isRotating.current) {
-          const deltaX = e.evt.clientX - lastPointerPos.current.x;
-          lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY };
+          const deltaX = e.clientX - lastPointerPos.current.x;
+          lastPointerPos.current = { x: e.clientX, y: e.clientY };
           
           const target = targetCameraRef.current;
           
@@ -469,15 +488,14 @@ const GameView: React.FC = () => {
   const handleNativeTouchStart = (e: TouchEvent) => {
     isTouchActive.current = true;
     const touches = e.touches;
-    const stage = stageRef.current;
     if (touches.length === 1) {
         isDragging.current = true;
         isMultitouch.current = false;
         
-        // Calibrate container-relative coordinates accurately with Konva taps
-        if (stage) {
+        // Calibrate container-relative coordinates accurately
+        const container = canvasContainerRef.current;
+        if (container) {
             try {
-                const container = stage.container();
                 const rect = container.getBoundingClientRect();
                 mouseDownPosRef.current = {
                     x: touches[0].clientX - rect.left,
@@ -578,11 +596,10 @@ const GameView: React.FC = () => {
       }
   };
 
-  // Attach touch events directly to Konva stage container DOM node for reliable pinch-to-zoom on interactive subcomponents
+  // Attach touch events directly to Pixi-wrapped DOM node for reliable pinch-to-zoom on interactive subcomponents
   useEffect(() => {
-      const stage = stageRef.current;
-      if (!stage) return;
-      const container = stage.container();
+      const container = canvasContainerRef.current;
+      if (!container) return;
 
       container.addEventListener('touchstart', handleNativeTouchStart, { passive: false });
       container.addEventListener('touchmove', handleNativeTouchMove, { passive: false });
@@ -610,36 +627,24 @@ const GameView: React.FC = () => {
       <div 
         ref={canvasContainerRef} 
         className="absolute inset-0 z-10"
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onClick={handleStageClick}
       >
-        <Stage 
-          ref={stageRef}
-          width={dimensions.width} 
-          height={dimensions.height} 
-          // Disable native drag to use our physics target system
-          draggable={false}
-          preventDefault={false}
-          onWheel={handleWheel} 
-          onMouseDown={handleMouseDown} 
-          onMouseMove={handleMouseMove} 
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onClick={handleStageClick} 
-          onTap={handleStageClick}
-          onDragStart={() => setHoveredHexId(null)}
-          onContextMenu={(e) => e.evt.preventDefault()} 
-          x={renderCamera.x + shakeOffset.x} 
-          y={renderCamera.y + shakeOffset.y} 
-          scaleX={renderCamera.scale} 
-          scaleY={renderCamera.scale}
-        >
           <MapRenderer 
             rotation={renderCamera.rotation}
             onHexClick={handleHexClick}
             onHover={setHoveredHexId}
-            camera={renderCamera}
+            camera={{
+              ...renderCamera,
+              x: renderCamera.x + shakeOffset.x,
+              y: renderCamera.y + shakeOffset.y
+            }}
             dimensions={dimensions}
           />
-        </Stage>
       </div>
 
       <GameHUD 

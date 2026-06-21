@@ -163,6 +163,7 @@ export interface BotMemory {
 
   phase?: 'EXPLORE' | 'STOCKPILE' | 'ASSAULT';
   exploreAnchor?: HexCoord | null;
+  exploreTickCount?: number;
   stockpileWaitTicks?: number;
   isCampaign?: boolean;
 }
@@ -426,8 +427,10 @@ export interface LevelConfig {
   blueprints?: Blueprint[];
   monumentRecipe?: MonumentRecipe;
   miniMonumentCoords?: HexCoord[];
+  monumentZoneRadius?: number;
   preGeneratedLootHexes?: HexCoord[];
   requiredShapes?: import('./services/shapeUtils').RequiredShape[];
+  secretLootHexes?: SecretLootHex[];
 
   aiMode: 'none' | 'dummy' | 'basic';
   getTutorialHint?: (state: SessionState) => string | null;
@@ -475,6 +478,7 @@ export interface SessionState {
   language: Language; 
   
   totalMinedMaterial?: number;
+  totalGoldEarned?: number;
   portalActive?: boolean;
   evacuationActive?: boolean;
   evacuationCompletionTime?: number;
@@ -505,6 +509,7 @@ export interface GameState {
   collectedHexes: Record<number, number>;
   minedInSessionHexes: Record<number, number>;
   totalMinedMaterial?: number;
+  totalGoldEarned?: number;
   storyMap: Record<string, number>;
   claimedLevelRewards?: string[];
 

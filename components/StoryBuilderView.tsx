@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Stage, Layer, Group, Rect } from 'react-konva';
 import { useGameStore } from '../store.ts';
 import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
+import StoryBoardPixi from './StoryBoardPixi.tsx';
 import { UpgradesTree } from './UpgradesTree.tsx';
 import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { FIGURES_COLLECTION } from './StoryBuilderData.ts';
-import { NebulaBackground, MiniFigureBlueprint, StoryHex } from './StoryBuilderComponents.tsx';
+import { MiniFigureBlueprint } from './StoryBuilderComponents.tsx';
+import { textureService } from '../services/textureService.ts';
+import { getPixiTexture } from '../services/pixiHexRender.ts';
 
 
 
@@ -83,7 +85,7 @@ const StoryBuilderView: React.FC = () => {
 
 
     const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-    
+
     // We get initial values from the global store, which decouples them from state updates
     const initialStoreCamera = useGameStore.getState().cameraPos;
     const initialStoreZoom = useGameStore.getState().zoomScale;
@@ -91,8 +93,26 @@ const StoryBuilderView: React.FC = () => {
     const cameraPosRef = useRef(initialStoreCamera);
     const zoomScaleRef = useRef(initialStoreZoom);
 
-    // React refs for imperative updating (completely bypassing React re-renders of the whole view)
-    const layerRef = useRef<any>(null);
+    // Holds the latest updateTooltipPos so stable callbacks can call it without deps churn.
+    const updateTooltipPosRef = useRef<(() => void) | null>(null);
+
+    // Reactive camera (store-driven) so the Pixi board reflects reset/resize updates.
+    const storeCameraPos = useGameStore(state => state.cameraPos);
+    const storeZoomScale = useGameStore(state => state.zoomScale);
+    const pixiCamera = useMemo(
+        () => ({ x: storeCameraPos.x, y: storeCameraPos.y, scale: storeZoomScale }),
+        [storeCameraPos, storeZoomScale]
+    );
+
+    // Camera changes coming back from the Pixi board (wheel / pinch / drag pan).
+    const handlePixiCameraChange = useCallback((cam: { x: number; y: number; scale: number }) => {
+        cameraPosRef.current = { x: cam.x, y: cam.y };
+        zoomScaleRef.current = cam.scale;
+        updateTooltipPosRef.current?.();
+        useGameStore.getState().setCameraPos({ x: cam.x, y: cam.y });
+        useGameStore.getState().setZoomScale(cam.scale);
+    }, []);
+
     const destroyTooltipRef = useRef<HTMLDivElement>(null);
 
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
@@ -109,6 +129,57 @@ const StoryBuilderView: React.FC = () => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null); // Visual feedback warning toast
     const [destroyButtonCell, setDestroyButtonCell] = useState<{ q: number, r: number } | null>(null);
     const [failedClickCoord, setFailedClickCoord] = useState<{ q: number, r: number } | null>(null);
+    const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+
+    const [diagnosticsRun, setDiagnosticsRun] = useState<{
+        status: 'IDLE' | 'SUCCESS' | 'FAILED';
+        results: {
+            level: number;
+            canvasOk: boolean;
+            pixiOk: boolean;
+            width: number;
+            height: number;
+            errorMsg?: string;
+            elapsedMs: number;
+        }[];
+        totalElapsedMs: number;
+    } | null>(null);
+
+    const verifyPixiTextures = useCallback(() => {
+        const results = [];
+        const testLevels = [-3, -2, -1, 0, 1, 2, 3];
+        
+        for (const lvl of testLevels) {
+            const startTime = performance.now();
+            try {
+                const canvas = textureService.getTexture(lvl, 0, 0, undefined);
+                const canvasOk = !!canvas && canvas instanceof HTMLCanvasElement;
+                
+                const pixiTex = getPixiTexture(canvas);
+                const pixiOk = !!pixiTex && pixiTex.width > 0 && pixiTex.height > 0;
+                
+                results.push({
+                    level: lvl,
+                    canvasOk,
+                    pixiOk,
+                    width: pixiTex?.width ?? 0,
+                    height: pixiTex?.height ?? 0,
+                    elapsedMs: Number((performance.now() - startTime).toFixed(2))
+                });
+            } catch (err: any) {
+                results.push({
+                    level: lvl,
+                    canvasOk: false,
+                    pixiOk: false,
+                    width: 0,
+                    height: 0,
+                    errorMsg: err?.message || String(err),
+                    elapsedMs: Number((performance.now() - startTime).toFixed(2))
+                });
+            }
+        }
+        return results;
+    }, []);
 
     const updateTooltipPos = useCallback(() => {
         if (!destroyTooltipRef.current || !destroyButtonCell) return;
@@ -129,6 +200,8 @@ const StoryBuilderView: React.FC = () => {
         destroyTooltipRef.current.style.top = `${topPos}px`;
         destroyTooltipRef.current.style.transform = `translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.25, scale))})`;
     }, [destroyButtonCell, storyMap]);
+
+    updateTooltipPosRef.current = updateTooltipPos;
 
     useEffect(() => {
         updateTooltipPos();
@@ -246,14 +319,7 @@ const StoryBuilderView: React.FC = () => {
         cameraPosRef.current = targetPos;
         zoomScaleRef.current = targetZoom;
 
-        if (layerRef.current) {
-            layerRef.current.x(targetPos.x);
-            layerRef.current.y(targetPos.y);
-            layerRef.current.scaleX(targetZoom);
-            layerRef.current.scaleY(targetZoom);
-            layerRef.current.batchDraw();
-        }
-
+        // Camera state is now applied by StoryBoardPixi via the store-driven `camera` prop.
         updateTooltipPos();
         useGameStore.getState().setCameraPos(targetPos);
         useGameStore.getState().setZoomScale(targetZoom);
@@ -284,11 +350,6 @@ const StoryBuilderView: React.FC = () => {
                 setStageSize({ width: w, height: h });
                 const newPos = { x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) };
                 cameraPosRef.current = newPos;
-                if (layerRef.current) {
-                    layerRef.current.x(newPos.x);
-                    layerRef.current.y(newPos.y);
-                    layerRef.current.batchDraw();
-                }
                 useGameStore.getState().setCameraPos(newPos);
             };
             window.addEventListener('resize', handleResize);
@@ -304,11 +365,6 @@ const StoryBuilderView: React.FC = () => {
             setStageSize({ width: w, height: h });
             const newPos = { x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) };
             cameraPosRef.current = newPos;
-            if (layerRef.current) {
-                layerRef.current.x(newPos.x);
-                layerRef.current.y(newPos.y);
-                layerRef.current.batchDraw();
-            }
             useGameStore.getState().setCameraPos(newPos);
         });
 
@@ -521,7 +577,7 @@ const StoryBuilderView: React.FC = () => {
         let bestQ = 0;
         let bestR = 0;
         let bestDist = 999;
-        const RADIUS = 12;
+        const RADIUS = 24;
         for (let q = -RADIUS; q <= RADIUS; q++) {
             for (let r = -RADIUS; r <= RADIUS; r++) {
                 if (Math.abs(q + r) <= RADIUS) {
@@ -627,7 +683,7 @@ const StoryBuilderView: React.FC = () => {
 
     const gridPoints = useMemo(() => {
         const points = [];
-        const RADIUS = 12;
+        const RADIUS = 24;
         for (let q = -RADIUS; q <= RADIUS; q++) {
             for (let r = -RADIUS; r <= RADIUS; r++) {
                 if (Math.abs(q + r) <= RADIUS) {
@@ -636,13 +692,49 @@ const StoryBuilderView: React.FC = () => {
                 }
             }
         }
-        
+
         return points.sort((a, b) => {
             const depthA = (a.y * 10) + (a.x * 0.1);
             const depthB = (b.y * 10) + (b.x * 0.1);
             return depthA - depthB;
         });
     }, []);
+
+    // Build a lookup object from the active figure shape to avoid O(n) find() per cell per render
+    const blueprintShapeMap = useMemo(() => {
+        const m: Record<string, number> = {};
+        for (const pt of activeFigure.shape) {
+            m[getHexKey(pt.q, pt.r)] = pt.lvl !== undefined ? pt.lvl : 0;
+        }
+        return m;
+    }, [activeFigure]);
+
+    // Count available blocks for the current build level (stable scalar, computed once per render)
+    const currentLevelAvailableCount = useMemo(() => {
+        return (minedInSessionHexes[selectedBuildLevel] || 0) +
+               (collectedHexes[selectedBuildLevel] || (collectedHexes as any)[String(selectedBuildLevel)] || 0);
+    }, [minedInSessionHexes, collectedHexes, selectedBuildLevel]);
+
+    // Stable per-cell data: recomputes only when storyMap / figure / build-level / inventory change.
+    // Does NOT recompute when popupCell, lastPlacedKey, flareKeys, failedClickCoord, errorMessage,
+    // spToasts, tabletTab, isSettingsOpen, etc. change — those are the frequent UI-only state changes
+    // that previously forced 469 × 6-neighbour eligibility re-evaluations per render.
+    const cellDataList = useMemo(() => {
+        const isDemolishMode = selectedBuildLevel === -999;
+        const avail = isDemolishMode ? 0 : currentLevelAvailableCount;
+        return gridPoints.map(coord => {
+            const key = getHexKey(coord.q, coord.r);
+            const lvl = storyMap[key];
+            const blueprintLvlVal = blueprintShapeMap[key];
+            const isBlueprint = blueprintLvlVal !== undefined && (lvl === undefined || (lvl >= 0 && lvl < blueprintLvlVal));
+            const blueprintLevel = blueprintLvlVal !== undefined ? blueprintLvlVal : 0;
+            const isEligible = isEligibleForPlacement(coord.q, coord.r);
+            const isCenterInitially = coord.q === startCenterPoint.q && coord.r === startCenterPoint.r && !hasAnyHex && lvl !== -999;
+            const canPlaceHex = isDemolishMode ? (lvl !== undefined && lvl >= 0) : (isEligible && avail > 0);
+            return { key, q: coord.q, r: coord.r, lvl, isBlueprint, blueprintLevel, isEligible, isCenterInitially, canPlaceHex };
+        });
+    }, [gridPoints, storyMap, blueprintShapeMap, selectedBuildLevel, currentLevelAvailableCount,
+        isEligibleForPlacement, startCenterPoint, hasAnyHex]);
 
     // Memoize the set of levels that have at least one valid slot on the map
     const placeableLevels = useMemo(() => {
@@ -780,171 +872,8 @@ const StoryBuilderView: React.FC = () => {
         }
     }, [storyMap, handleResetCamera]);
 
-    const handleDragStart = () => { 
-        isPanning.current = true; 
-        setDestroyButtonCell(null);
-    };
-    const handleDragMove = (e: any) => {
-        const newPos = { x: e.target.x(), y: e.target.y() };
-        cameraPosRef.current = newPos;
-        updateTooltipPos();
-    };
-    const handleDragEnd = (e: any) => { 
-        const newPos = { x: e.target.x(), y: e.target.y() };
-        cameraPosRef.current = newPos;
-        updateTooltipPos();
-        useGameStore.getState().setCameraPos(newPos);
-        setTimeout(() => { isPanning.current = false; }, 50); 
-    };
-
-    const startDist = useRef<number | null>(null);
-    const startScale = useRef<number>(1.0);
-    const startPointTo = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
-    const handleWheel = (e: any) => {
-        if (e.evt && typeof e.evt.preventDefault === 'function') {
-            e.evt.preventDefault();
-        }
-        setDestroyButtonCell(null);
-        const stage = e.target.getStage();
-        if (!stage) return;
-        
-        const scaleBy = 1.05;
-        const oldScale = zoomScaleRef.current;
-        
-        const pointer = stage.getPointerPosition();
-        if (!pointer) return;
-
-        const mousePointTo = {
-            x: (pointer.x - cameraPosRef.current.x) / oldScale,
-            y: (pointer.y - cameraPosRef.current.y) / oldScale,
-        };
-
-        const newScale = e.evt.deltaY < 0 ? oldScale / scaleBy : oldScale * scaleBy;
-        const clampedScale = Math.max(0.4, Math.min(2.0, newScale));
-        
-        const newPos = {
-            x: pointer.x - mousePointTo.x * clampedScale,
-            y: pointer.y - mousePointTo.y * clampedScale,
-        };
-
-        zoomScaleRef.current = clampedScale;
-        cameraPosRef.current = newPos;
-
-        if (layerRef.current) {
-            layerRef.current.x(newPos.x);
-            layerRef.current.y(newPos.y);
-            layerRef.current.scaleX(clampedScale);
-            layerRef.current.scaleY(clampedScale);
-            layerRef.current.batchDraw();
-        }
-
-        updateTooltipPos();
-        useGameStore.getState().setCameraPos(newPos);
-        useGameStore.getState().setZoomScale(clampedScale);
-    };
-
-    const handleTouchStart = (e: any) => {
-        setDestroyButtonCell(null);
-        const touches = e.evt?.touches || e.touches || [];
-        const touch1 = touches[0];
-        const touch2 = touches[1];
-        if (touch1 && touch2) {
-            const rawEvt = e.evt || e;
-            if (rawEvt && typeof rawEvt.preventDefault === 'function') {
-                rawEvt.preventDefault();
-            }
-            try {
-                const layer = typeof e.target?.getLayer === 'function' ? e.target.getLayer() : null;
-                if (layer) {
-                    layer.stopDrag();
-                }
-            } catch (err) {}
-
-            const dist = Math.sqrt(
-                Math.pow(touch2.clientX - touch1.clientX, 2) +
-                Math.pow(touch2.clientY - touch1.clientY, 2)
-            );
-            startDist.current = dist;
-            startScale.current = zoomScaleRef.current;
-
-            const center = {
-                x: (touch1.clientX + touch2.clientX) / 2,
-                y: (touch1.clientY + touch2.clientY) / 2,
-            };
-
-            startPointTo.current = {
-                x: (center.x - cameraPosRef.current.x) / zoomScaleRef.current,
-                y: (center.y - cameraPosRef.current.y) / zoomScaleRef.current,
-            };
-        } else {
-            startDist.current = null;
-        }
-    };
-
-    const handleTouchMove = (e: any) => {
-        const touches = e.evt?.touches || e.touches || [];
-        const touch1 = touches[0];
-        const touch2 = touches[1];
-
-        if (touch1 && touch2) {
-            const rawEvt = e.evt || e;
-            if (rawEvt && typeof rawEvt.preventDefault === 'function') {
-                rawEvt.preventDefault();
-            }
-            isPanning.current = true;
-            setDestroyButtonCell(null);
-
-            try {
-                const layer = typeof e.target?.getLayer === 'function' ? e.target.getLayer() : null;
-                if (layer) {
-                    layer.stopDrag();
-                }
-            } catch (err) {}
-
-            const dist = Math.sqrt(
-                Math.pow(touch2.clientX - touch1.clientX, 2) +
-                Math.pow(touch2.clientY - touch1.clientY, 2)
-            );
-
-            if (startDist.current !== null && startDist.current > 0) {
-                const center = {
-                    x: (touch1.clientX + touch2.clientX) / 2,
-                    y: (touch1.clientY + touch2.clientY) / 2,
-                };
-
-                const scaleFactor = dist / startDist.current;
-                const newScale = Math.max(0.4, Math.min(2.0, startScale.current * scaleFactor));
-                
-                const newCameraPos = {
-                    x: center.x - startPointTo.current.x * newScale,
-                    y: center.y - startPointTo.current.y * newScale,
-                };
-
-                zoomScaleRef.current = newScale;
-                cameraPosRef.current = newCameraPos;
-
-                if (layerRef.current) {
-                    layerRef.current.x(newCameraPos.x);
-                    layerRef.current.y(newCameraPos.y);
-                    layerRef.current.scaleX(newScale);
-                    layerRef.current.scaleY(newScale);
-                    layerRef.current.batchDraw();
-                }
-
-                updateTooltipPos();
-                useGameStore.getState().setCameraPos(newCameraPos);
-                useGameStore.getState().setZoomScale(newScale);
-            }
-        } else {
-            startDist.current = null;
-        }
-    };
-
-    const handleTouchEnd = () => { 
-        startDist.current = null; 
-        setTimeout(() => { isPanning.current = false; }, 50);
-    };
+    // Pan/zoom (wheel, drag, two-finger pinch) and hover/click hit-testing are now
+    // handled inside StoryBoardPixi; camera changes flow back via handlePixiCameraChange.
 
     // Clear board reset
     const handleClearBoard = () => {
@@ -1183,100 +1112,28 @@ const StoryBuilderView: React.FC = () => {
             </div>
 
             {/* CANVAS */}
-            <div 
+            <div
                 className="absolute inset-0 z-0"
             >
-                <Stage 
-                    width={stageSize.width} 
-                    height={stageSize.height}
-                    onWheel={handleWheel}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    onClick={() => {
-                        setDestroyButtonCell(null);
+                <StoryBoardPixi
+                    cells={cellDataList}
+                    camera={pixiCamera}
+                    dimensions={stageSize}
+                    transient={{
+                        popupKey: popupCell ? getHexKey(popupCell.q, popupCell.r) : null,
+                        flareKeys,
+                        lastPlacedKey,
+                        failedClickKey: failedClickCoord ? getHexKey(failedClickCoord.q, failedClickCoord.r) : null,
+                        hoveredKey,
                     }}
-                    onTap={() => {
-                        setDestroyButtonCell(null);
-                    }}
-                >
-                    <Layer listening={false}>
-                        <NebulaBackground width={stageSize.width} height={stageSize.height} />
-                        <Rect
-                            x={0}
-                            y={0}
-                            width={stageSize.width}
-                            height={stageSize.height}
-                            fillRadialGradientStartPoint={{ x: stageSize.width/2, y: stageSize.height/2 }}
-                            fillRadialGradientStartRadius={Math.min(stageSize.width, stageSize.height) * 0.4}
-                            fillRadialGradientEndPoint={{ x: stageSize.width/2, y: stageSize.height/2 }}
-                            fillRadialGradientEndRadius={Math.max(stageSize.width, stageSize.height) * 0.8}
-                            fillRadialGradientColorStops={[0, 'transparent', 1, 'rgba(2, 6, 23, 1)']}
-                            listening={false}
-                        />
-                    </Layer>
-                    <Layer 
-                        ref={layerRef}
-                        x={cameraPosRef.current.x} 
-                        y={cameraPosRef.current.y} 
-                        scaleX={zoomScaleRef.current}
-                        scaleY={zoomScaleRef.current}
-                        draggable 
-                        onDragStart={handleDragStart} 
-                        onDragMove={handleDragMove}
-                        onDragEnd={handleDragEnd}
-                        dragBoundFunc={(pos) => {
-                            const BOUND_X = stageSize.width * 2.2 * Math.max(1, zoomScaleRef.current);
-                            const BOUND_Y = stageSize.height * 2.2 * Math.max(1, zoomScaleRef.current);
-                            const centerX = stageSize.width / 2;
-                            const centerY = stageSize.height / 2 - (stageSize.width < 768 ? 20 : 50);
-                            return {
-                                x: Math.max(Math.min(pos.x, centerX + BOUND_X), centerX - BOUND_X),
-                                y: Math.max(Math.min(pos.y, centerY + BOUND_Y), centerY - BOUND_Y),
-                            };
-                        }}
-                    >
-                        <Group>
-                            {gridPoints.map(coord => {
-                                const key = getHexKey(coord.q, coord.r);
-                                const lvl = storyMap[key];
-                                const blueprintPt = activeFigure.shape.find(pt => pt.q === coord.q && pt.r === coord.r);
-                                const blueprintLvl = blueprintPt?.lvl !== undefined ? blueprintPt.lvl : 0;
-                                const isBlueprint = !!blueprintPt && (lvl === undefined || (lvl >= 0 && lvl < blueprintLvl));
-                                
-                                const isEligible = isEligibleForPlacement(coord.q, coord.r);
-                                const isCenterInitially = coord.q === startCenterPoint.q && coord.r === startCenterPoint.r && !hasAnyHex && lvl !== -999;
-                                const isDemolishMode = selectedBuildLevel === -999;
-                                const availableCount = minedInSessionHexes[selectedBuildLevel] || 0;
-                                const canPlaceHex = isDemolishMode ? (lvl !== undefined && lvl >= 0) : (isEligible && availableCount > 0);
-
-
-
-                                return (
-                                    <StoryHex
-                                        key={key}
-                                        q={coord.q}
-                                        r={coord.r}
-                                        level={lvl}
-                                        isBlueprint={isBlueprint}
-                                        blueprintLevel={blueprintLvl}
-                                        isEligible={isEligible}
-                                        isCenterInitially={isCenterInitially}
-                                        isSelected={popupCell !== null && popupCell.q === coord.q && popupCell.r === coord.r}
-                                        isNew={lastPlacedKey === key}
-                                        canPlace={canPlaceHex}
-                                        isFlaring={flareKeys.has(key)}
-                                        isFailedClick={failedClickCoord !== null && failedClickCoord.q === coord.q && failedClickCoord.r === coord.r}
-                                        onClick={handleCellClick}
-                                        onDblClick={handleCellDblClick}
-                                        contrastHighlighting={contrastHighlighting}
-                                        figureIndex={unlockedFigureIndex}
-                                    />
-                                );
-                            })}
-                        </Group>
-                    </Layer>
-                </Stage>
+                    contrastHighlighting={contrastHighlighting}
+                    figureIndex={unlockedFigureIndex}
+                    onCellClick={handleCellClick}
+                    onCellDblClick={handleCellDblClick}
+                    onHover={setHoveredKey}
+                    onCameraChange={handlePixiCameraChange}
+                    onBackgroundClick={() => setDestroyButtonCell(null)}
+                />
             </div>
             
             <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between overflow-hidden p-4 md:p-8">
@@ -1572,12 +1429,13 @@ const StoryBuilderView: React.FC = () => {
                             </div>
 
                             {/* Tablet Tabs */}
-                            <div className="grid grid-cols-2 gap-1 mb-3 bg-slate-900/50 p-0.5 rounded-lg border border-white/5">
+                            <div className="grid grid-cols-3 gap-1 mb-3 bg-slate-900/50 p-0.5 rounded-lg border border-white/5">
                                 {[
-                                    { id: 'blueprint', labelRU: 'СХЕМА И АНАЛИЗ', labelEN: 'DIAGRAM & ANALYSIS' },
+                                    { id: 'blueprint', labelRU: 'СХЕМА', labelEN: 'DIAGRAM' },
+                                    { id: 'diagnostics', labelRU: 'ДИАГНОСТИКА', labelEN: 'DIAGNOSTICS' },
                                     { id: 'rules', labelRU: 'ИНСТРУКЦИЯ', labelEN: 'GUIDE' }
                                 ].map((tab) => {
-                                    const isActive = tabletTab === tab.id || (tab.id === 'blueprint' && tabletTab === 'diagnostics');
+                                    const isActive = tabletTab === tab.id;
                                     return (
                                         <button
                                             key={tab.id}
@@ -1712,6 +1570,118 @@ const StoryBuilderView: React.FC = () => {
                                             </div>
                                         );
                                     })()}
+                                </div>
+                            )}
+
+                            {tabletTab === 'diagnostics' && (
+                                <div className="flex flex-col text-left mb-3.5 scrollbar-thin overflow-y-auto max-h-[420px] pr-1">
+                                    <div className="bg-slate-900/40 border border-white/5 rounded-xl p-3">
+                                        <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/5 gap-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-[9.5px] font-black text-rose-400 uppercase tracking-widest leading-none">
+                                                    {language === 'RU' ? 'ТЕСТИРОВАНИЕ ТЕКСТУР PIXIJS' : 'PIXIJS TEXTURE DIAGNOSTICS'}
+                                                </span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    playUiSound('CLICK');
+                                                    const start = performance.now();
+                                                    const res = verifyPixiTextures();
+                                                    const end = performance.now();
+                                                    const isAnyFailed = res.some(r => !r.canvasOk || !r.pixiOk);
+                                                    setDiagnosticsRun({
+                                                        status: isAnyFailed ? 'FAILED' : 'SUCCESS',
+                                                        results: res,
+                                                        totalElapsedMs: Number((end - start).toFixed(2))
+                                                    });
+                                                }}
+                                                className="bg-indigo-600 hover:bg-indigo-500 font-extrabold text-[8px] tracking-wide uppercase px-2 py-1 rounded transition-colors text-white border border-indigo-400/30 font-sans cursor-pointer shadow-md select-none outline-none"
+                                            >
+                                                {language === 'RU' ? 'ЗАПУСТИТЬ ТЕСТ' : 'RUN TEST'}
+                                            </button>
+                                        </div>
+
+                                        <p className="text-slate-400 text-[8.5px] font-medium leading-normal mb-3">
+                                            {language === 'RU' 
+                                                ? 'Этот инструмент проверяет процедурную генерацию текстур услугой TextureService и их корректное сопоставление с WebGL контекстом рендерера PixiJS.' 
+                                                : 'This tool verifies procedural texture generation via TextureService and validates that HTML Canvas objects map correctly to PixiJS GPU textures.'}
+                                        </p>
+
+                                        {diagnosticsRun ? (
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center justify-between text-[8px] font-mono bg-slate-950/40 p-2 rounded border border-white/5">
+                                                    <div>
+                                                        <span className="text-slate-500 font-bold block">{language === 'RU' ? 'СТАТУС ПРОВЕРКИ:' : 'VERIFICATION STATUS:'}</span>
+                                                        <span className={`font-black uppercase text-[9px] ${diagnosticsRun.status === 'SUCCESS' ? 'text-emerald-400' : 'text-rose-500'}`}>
+                                                            {diagnosticsRun.status === 'SUCCESS' ? 'PASS / УСПЕШНО' : 'FAIL / ОШИБКА'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-slate-500 font-bold block">{language === 'RU' ? 'ОБЩЕЕ ВРЕМЯ:' : 'TOTAL ELAPSED TIME:'}</span>
+                                                        <span className="text-white font-black">{diagnosticsRun.totalElapsedMs} ms</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col gap-1.5 mt-1">
+                                                    {diagnosticsRun.results.map((res) => {
+                                                        const TexturePreview: React.FC<{ level: number }> = ({ level }) => {
+                                                            const containerRef = useRef<HTMLDivElement>(null);
+                                                            useEffect(() => {
+                                                                if (!containerRef.current) return;
+                                                                containerRef.current.innerHTML = '';
+                                                                try {
+                                                                    const canvas = textureService.getTexture(level, 0, 0, undefined);
+                                                                    const clone = document.createElement('canvas');
+                                                                    clone.width = canvas.width;
+                                                                    clone.height = canvas.height;
+                                                                    const ctx = clone.getContext('2d');
+                                                                    if (ctx) {
+                                                                        ctx.drawImage(canvas, 0, 0);
+                                                                    }
+                                                                    clone.className = "w-full h-full object-contain";
+                                                                    containerRef.current.appendChild(clone);
+                                                                } catch (e) {
+                                                                    console.error(e);
+                                                                }
+                                                            }, [level]);
+
+                                                            return <div ref={containerRef} className="w-6 h-6 rounded bg-slate-900 border border-white/10 overflow-hidden flex items-center justify-center pointer-events-none select-none" />;
+                                                        };
+
+                                                        return (
+                                                            <div key={res.level} className="bg-slate-950/25 border border-white/5 p-2 rounded-lg flex items-center justify-between text-[8px] font-mono hover:bg-slate-950/40 transition-colors">
+                                                                <div className="flex items-center gap-2">
+                                                                    <TexturePreview level={res.level} />
+                                                                    <div>
+                                                                        <span className="text-white font-bold block">Level {res.level} ({res.level >= 0 ? `L${res.level}` : `M${Math.abs(res.level)}`})</span>
+                                                                        <span className="text-slate-500 font-bold">Res: {res.width}x{res.height} px</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex flex-col gap-1 items-end">
+                                                                    <div className="flex gap-1">
+                                                                        <span className={`px-1 rounded text-[7px] font-black uppercase ${res.canvasOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
+                                                                            Canvas
+                                                                        </span>
+                                                                        <span className={`px-1 rounded text-[7px] font-black uppercase ${res.pixiOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
+                                                                            PixiJS
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="text-slate-500 text-[7px] font-bold">{res.elapsedMs} ms</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center py-8 border border-dashed border-white/10 rounded-lg text-slate-500 font-medium text-[8.5px] gap-2">
+                                                <Info className="w-4 h-4 text-slate-600 animate-pulse" />
+                                                <span>{language === 'RU' ? 'Ожидание запуска диагностики...' : 'Awaiting manual trigger...'}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 

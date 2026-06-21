@@ -59,6 +59,9 @@ export const generateMapAsync = async (levelConfig: LevelConfig | undefined, map
   });
 };
 
+import { getMilestoneModifiers } from '../campaign/milestones.ts';
+import { useGameStore } from '../store.ts';
+
 export const createInitialSessionData = async (
     winCondition: WinCondition | null,
     levelConfig: LevelConfig | undefined,
@@ -133,6 +136,17 @@ export const createInitialSessionData = async (
       startCredits += campaignUpgrades.startingGold;
       startMoves += campaignUpgrades.startingMoves;
       startStorage += campaignUpgrades.startingMaterials;
+  }
+
+  try {
+      const totalGoldEarned = useGameStore.getState().totalGoldEarned || 0;
+      if (totalGoldEarned > 0) {
+          const milestones = getMilestoneModifiers(totalGoldEarned);
+          startMoves += milestones.extraFuel;
+          startStorage += milestones.extraStartingMats;
+      }
+  } catch (e) {
+      // Ignored for headless tests
   }
 
   let activeStatuses: import('../types.ts').ActiveStatus[] = [];
@@ -366,7 +380,10 @@ export const createInitialSessionData = async (
   };
 
   // --- SECRET LOOT HEXES GENERATION FOR MONUMENTS ---
-  if (monumentRequirements && monumentRequirements.length > 0) {
+  if (levelConfig?.secretLootHexes) {
+    session.secretLootHexes = levelConfig.secretLootHexes.map((h: any) => ({ ...h, found: false }));
+    session.activatedMiniMonuments = [];
+  } else if (monumentRequirements && monumentRequirements.length > 0) {
     const secretLootHexes: any[] = [];
     const candidates = Object.values(initialGrid).filter(h => 
       h.structureType !== 'MONUMENT' && 
@@ -408,8 +425,8 @@ export const createInitialSessionData = async (
     session.activatedMiniMonuments = [];
   }
 
-  // Dynamic objective for Level 1.2
-  if (levelConfig?.id === '1.2' && session.activeLevelConfig) {
+  // Dynamic objective for Level 1.1
+  if (levelConfig?.id === '1.1' && session.activeLevelConfig) {
     const finishHex = Object.values(initialGrid).find(h => h.structureType === 'CAPITAL');
     if (finishHex) {
       session.activeLevelConfig = {
@@ -419,10 +436,10 @@ export const createInitialSessionData = async (
     }
   }
 
-  // Portal starts inactive for Level 1.1, opens only after reaching the goal
-  if (levelConfig?.id === '1.1') {
-    session.portalActive = false;
-    session.portalHex = { q: -2, r: 0 };
+  // Portal starts active for the merged Level 1.0
+  if (levelConfig?.id === '1.0') {
+    session.portalActive = true;
+    session.portalHex = { q: -2, r: 3 };
   }
 
   return session;

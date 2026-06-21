@@ -17,6 +17,10 @@ export const series3Levels: LevelConfig[] = [
     id: '3.1',
     title: 'Первая Надпись',
     description: 'Активируйте Монумент по указаниям Обелисков.',
+    objectiveHexes: [
+      { q: -1, r: 2, targetLevel: 3, label: 'Obelisk', color: 'blue' },
+      { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -44,6 +48,20 @@ export const series3Levels: LevelConfig[] = [
     },
     goalText: 'Activate the Monument',
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
+      
+      if (!state.monumentRevealedSlots?.[0]) {
+        if (state.player.q === -1 && state.player.r === 2) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ на Обелиске!" : "ACTIVATE: Press ACTIVATE on Obelisk!";
+        return isRu ? "ИДИ НА УКАЗАТЕЛЬ: Иди к Обелиску (-1,2) и взломай его!" : "MOVE TO TARGET: Head to Obelisk at (-1,2) and hack it!";
+      }
+
+      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,0) и Активируй его!" 
+        : "MOVE TO CENTER: Step on Monolith (0,0) and Activate it!";
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
@@ -51,7 +69,8 @@ export const series3Levels: LevelConfig[] = [
         const isRu = state.language === 'RU';
         
         // Entropy spikes
-        if (turn > 0 && turn % 20 === 0) {
+        const _a = state.player.actionsTaken ?? 0; const _fire = _a > 0 && _a % 20 === 0 && (state as any)._spk !== _a; if (_fire) (state as any)._spk = _a;
+        if (_fire) {
           state.entropy.current = Math.max(0, state.entropy.current - 10);
           state.messageLog.unshift({
             id: `msg-31-spike-${turn}-${Date.now()}`,
@@ -112,7 +131,7 @@ export const series3Levels: LevelConfig[] = [
       checkWinCondition: () => false, // Victory set by ACTIVATE_MONUMENT
       checkLossCondition: (state) => {
         if (state.entropy.current <= 0) return true;
-        if (Math.floor((state.currentTurn ?? 0) / 20) >= 2) return true;
+        if (Math.floor((state.player.actionsTaken ?? 0) / 20) >= 2) return true;
         return isStranded(state);
       }
     }
@@ -125,6 +144,11 @@ export const series3Levels: LevelConfig[] = [
     id: '3.2',
     title: 'Близнецы-Маяки',
     description: 'Активируйте Монумент с двумя слотами, посетив Обелиски.',
+    objectiveHexes: [
+      { q: -1, r: 1, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
+      { q: 1, r: 1, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
+      { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -155,13 +179,30 @@ export const series3Levels: LevelConfig[] = [
     },
     goalText: 'Activate the 2-slot Monument',
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
+      
+      const activatedCount = state.monumentRevealedSlots?.filter(Boolean).length || 0;
+      if (activatedCount < 2) {
+        return isRu 
+          ? `АКТИВИРУЙ ОБЕЛИСКИ: Активируй два Обелиска (-1,1) и (1,1)! Готово: ${activatedCount}/2` 
+          : `ACTIVATE OBELISKS: Activate the two Obelisks at (-1,1) and (1,1)! Activated: ${activatedCount}/2`;
+      }
+
+      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,0) и Активируй его!" 
+        : "MOVE TO CENTER: Step on Monolith (0,0) and Activate it!";
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
-        if (turn > 0 && turn % 20 === 0) {
+        const _a = state.player.actionsTaken ?? 0; const _fire = _a > 0 && _a % 20 === 0 && (state as any)._spk !== _a; if (_fire) (state as any)._spk = _a;
+        if (_fire) {
           state.entropy.current = Math.max(0, state.entropy.current - 10);
           state.messageLog.unshift({
             id: `msg-32-spike-${turn}-${Date.now()}`,
@@ -237,7 +278,7 @@ export const series3Levels: LevelConfig[] = [
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
         if (state.entropy.current <= 0) return true;
-        if (Math.floor((state.currentTurn ?? 0) / 20) >= 2) return true;
+        if (Math.floor((state.player.actionsTaken ?? 0) / 20) >= 2) return true;
         return isStranded(state);
       }
     }
@@ -250,6 +291,10 @@ export const series3Levels: LevelConfig[] = [
     id: '3.3',
     title: 'Глубина Затмения',
     description: 'Активируйте Монумент необычным предметом по подсказке.',
+    objectiveHexes: [
+      { q: 0, r: 1, targetLevel: 3, label: 'Obelisk', color: 'blue' },
+      { q: 0, r: -1, targetLevel: 5, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -278,13 +323,30 @@ export const series3Levels: LevelConfig[] = [
     },
     goalText: 'Activate the Monument (UNCOMMON item)',
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
+      
+      const activatedCount = state.monumentRevealedSlots?.filter(Boolean).length || 0;
+      if (activatedCount < 1) {
+        return isRu 
+          ? `АКТИВИРУЙ ОБЕЛИСК: Иди на Обелиск (0,1) и расшифруй слот!` 
+          : `ACTIVATE OBELISK: Move to Obelisk at (0,1) and decode the slot!`;
+      }
+
+      if (state.player.q === 0 && state.player.r === -1) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,-1) и Активируй его!" 
+        : "MOVE TO CENTER: Step on Monolith (0,-1) and Activate it!";
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
-        if (turn > 0 && turn % 18 === 0) {
+        const _a = state.player.actionsTaken ?? 0; const _fire = _a > 0 && _a % 18 === 0 && (state as any)._spk !== _a; if (_fire) (state as any)._spk = _a;
+        if (_fire) {
           state.entropy.current = Math.max(0, state.entropy.current - 10);
         }
 
@@ -336,7 +398,7 @@ export const series3Levels: LevelConfig[] = [
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
         if (state.entropy.current <= 0) return true;
-        if (Math.floor((state.currentTurn ?? 0) / 18) >= 2) return true;
+        if (Math.floor((state.player.actionsTaken ?? 0) / 18) >= 2) return true;
         return isStranded(state);
       }
     }
@@ -349,6 +411,11 @@ export const series3Levels: LevelConfig[] = [
     id: '3.4',
     title: 'Энтропийная Депеша',
     description: 'Активируйте Монумент с двумя слотами за минимальное число ходов.',
+    objectiveHexes: [
+      { q: -1, r: 1, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
+      { q: 1, r: 1, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
+      { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -379,13 +446,30 @@ export const series3Levels: LevelConfig[] = [
     },
     goalText: 'Activate the Monument (fast)',
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
+      
+      const activatedCount = state.monumentRevealedSlots?.filter(Boolean).length || 0;
+      if (activatedCount < 2) {
+        return isRu 
+          ? `АКТИВИРУЙ ОБЕЛИСКИ: Активируй два Обелиска (-1,1) и (1,1)! Готово: ${activatedCount}/2` 
+          : `ACTIVATE OBELISKS: Activate the two Obelisks at (-1,1) and (1,1)! Activated: ${activatedCount}/2`;
+      }
+
+      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,0) и Активируй его!" 
+        : "MOVE TO CENTER: Step on Monolith (0,0) and Activate it!";
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
-        if (turn > 0 && turn % 10 === 0) {
+        const _a = state.player.actionsTaken ?? 0; const _fire = _a > 0 && _a % 10 === 0 && (state as any)._spk !== _a; if (_fire) (state as any)._spk = _a;
+        if (_fire) {
           state.entropy.current = Math.max(0, state.entropy.current - 25);
           state.messageLog.unshift({
             id: `msg-34-disruption-${turn}-${Date.now()}`,
@@ -461,7 +545,7 @@ export const series3Levels: LevelConfig[] = [
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
         if (state.entropy.current <= 0) return true;
-        if (Math.floor((state.currentTurn ?? 0) / 10) >= 2) return true;
+        if (Math.floor((state.player.actionsTaken ?? 0) / 10) >= 2) return true;
         return isStranded(state);
       }
     }
@@ -474,6 +558,10 @@ export const series3Levels: LevelConfig[] = [
     id: '3.5',
     title: "Цитадель Стража",
     description: 'Активируйте Монумент редким предметом, обходя ботов-стражей.',
+    objectiveHexes: [
+      { q: -1, r: 1, targetLevel: 3, label: 'Obelisk', color: 'blue' },
+      { q: 0, r: -1, targetLevel: 5, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -506,13 +594,30 @@ export const series3Levels: LevelConfig[] = [
       startInventory: ['fuel_cell', 'architect_nanites', 'data_disc']
     },
     goalText: 'Activate the Monument (RARE item)',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
+      
+      const activatedCount = state.monumentRevealedSlots?.filter(Boolean).length || 0;
+      if (activatedCount < 1) {
+        return isRu 
+          ? `АКТИВИРУЙ ОБЕЛИСК: Иди на Обелиск (-1,1), избегая бота!` 
+          : `ACTIVATE OBELISK: Move to Obelisk at (-1,1), avoid the bot!`;
+      }
+
+      if (state.player.q === 0 && state.player.r === -1) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,-1) и Активируй его!" 
+        : "MOVE TO CENTER: Step on Monolith (0,-1) and Activate it!";
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
-        if (turn > 0 && turn % 15 === 0) {
+        const _a = state.player.actionsTaken ?? 0; const _fire = _a > 0 && _a % 15 === 0 && (state as any)._spk !== _a; if (_fire) (state as any)._spk = _a;
+        if (_fire) {
           state.entropy.current = Math.max(0, state.entropy.current - 15);
         }
 
@@ -566,7 +671,7 @@ export const series3Levels: LevelConfig[] = [
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
         if (state.entropy.current <= 0) return true;
-        if (Math.floor((state.currentTurn ?? 0) / 15) >= 2) return true;
+        if (Math.floor((state.player.actionsTaken ?? 0) / 15) >= 2) return true;
         return isStranded(state);
       }
     }
@@ -579,6 +684,12 @@ export const series3Levels: LevelConfig[] = [
     id: '3.6',
     title: 'Три Шепота',
     description: 'Активируйте Монумент одним из трех подходящих по подсказкам предметов.',
+    objectiveHexes: [
+      { q: -1, r: 1, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
+      { q: 1, r: 1, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
+      { q: 0, r: 1, targetLevel: 3, label: 'Obelisk 3', color: 'blue' },
+      { q: 0, r: -1, targetLevel: 5, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 3, wallType: 'pit_ring',
       customLayout: [
@@ -609,13 +720,30 @@ export const series3Levels: LevelConfig[] = [
     },
     goalText: 'Activate the Monument (1 of 3 items)',
     aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
+      
+      const activatedCount = state.monumentRevealedSlots?.filter(Boolean).length || 0;
+      if (activatedCount < 3) {
+        return isRu 
+          ? `АКТИВИРУЙ ОБЕЛИСКИ: Найди 3 Обелиска, чтобы разблокировать награду! Готово: ${activatedCount}/3` 
+          : `ACTIVATE OBELISKS: Visit 3 Obelisks for a bonus! Activated: ${activatedCount}/3`;
+      }
+
+      if (state.player.q === 0 && state.player.r === -1) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,-1) и Активируй его!" 
+        : "MOVE TO CENTER: Step on Monolith (0,-1) and Activate it!";
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
-        if (turn > 0 && turn % 20 === 0) {
+        const _a = state.player.actionsTaken ?? 0; const _fire = _a > 0 && _a % 20 === 0 && (state as any)._spk !== _a; if (_fire) (state as any)._spk = _a;
+        if (_fire) {
           state.entropy.current = Math.max(0, state.entropy.current - 10);
         }
 
@@ -672,7 +800,7 @@ export const series3Levels: LevelConfig[] = [
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
         if (state.entropy.current <= 0) return true;
-        if (Math.floor((state.currentTurn ?? 0) / 20) >= 2) return true;
+        if (Math.floor((state.player.actionsTaken ?? 0) / 20) >= 2) return true;
         return isStranded(state);
       }
     }
@@ -685,6 +813,11 @@ export const series3Levels: LevelConfig[] = [
     id: '3.7',
     title: 'Господство',
     description: 'Активируйте Монумент быстрее, чем бот-конкурент нарастит энтропию.',
+    objectiveHexes: [
+      { q: -1, r: 1, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
+      { q: 1, r: 1, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
+      { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -720,13 +853,30 @@ export const series3Levels: LevelConfig[] = [
       startInventory: ['rusted_scanner', 'hornet_drill', 'matter_prism', 'fuel_cell']
     },
     goalText: 'Activate the 2-slot Monument',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
+      
+      const activatedCount = state.monumentRevealedSlots?.filter(Boolean).length || 0;
+      if (activatedCount < 2) {
+        return isRu 
+          ? `АКТИВИРУЙ ОБЕЛИСКИ: Активируй два Обелиска (-1,1) и (1,1)! Готово: ${activatedCount}/2` 
+          : `ACTIVATE OBELISKS: Activate the two Obelisks at (-1,1) and (1,1)! Activated: ${activatedCount}/2`;
+      }
+
+      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,0) и Активируй его!" 
+        : "MOVE TO CENTER: Step on Monolith (0,0) and Activate it!";
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
-        if (turn > 0 && turn % 15 === 0) {
+        const _a = state.player.actionsTaken ?? 0; const _fire = _a > 0 && _a % 15 === 0 && (state as any)._spk !== _a; if (_fire) (state as any)._spk = _a;
+        if (_fire) {
           state.entropy.current = Math.max(0, state.entropy.current - 15);
         }
 
@@ -778,7 +928,7 @@ export const series3Levels: LevelConfig[] = [
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
         if (state.entropy.current <= 0) return true;
-        if (Math.floor((state.currentTurn ?? 0) / 15) >= 2) return true;
+        if (Math.floor((state.player.actionsTaken ?? 0) / 15) >= 2) return true;
         return isStranded(state);
       }
     }
@@ -791,6 +941,12 @@ export const series3Levels: LevelConfig[] = [
     id: '3.8',
     title: 'Архив',
     description: 'Активируйте сложный Монумент с тремя слотами, обходя патрули.',
+    objectiveHexes: [
+      { q: 0, r: 2, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
+      { q: -1, r: 2, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
+      { q: 1, r: 2, targetLevel: 3, label: 'Obelisk 3', color: 'blue' },
+      { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
+    ],
     mapConfig: {
       size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
       customLayout: [
@@ -832,13 +988,30 @@ export const series3Levels: LevelConfig[] = [
       startInventory: ['cargo_prism', 'stability_scanner', 'matter_prism', 'fuel_cell', 'data_disc']
     },
     goalText: 'Activate the 3-slot Monument',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
+      
+      const activatedCount = state.monumentRevealedSlots?.filter(Boolean).length || 0;
+      if (activatedCount < 3) {
+        return isRu 
+          ? `АКТИВИРУЙ ОБЕЛИСКИ: Активируй 3 Обелиска (-1,2), (0,2), (1,2)! Готово: ${activatedCount}/3` 
+          : `ACTIVATE OBELISKS: Activate the 3 Obelisks at (-1,2), (0,2), (1,2)! Activated: ${activatedCount}/3`;
+      }
+
+      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
+      return isRu 
+        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,0) и Активируй его!" 
+        : "MOVE TO CENTER: Step on Monolith (0,0) and Activate it!";
+    },
     hooks: {
       onBeforeAction: () => null,
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
-        if (turn > 0 && turn % 12 === 0) {
+        const _a = state.player.actionsTaken ?? 0; const _fire = _a > 0 && _a % 12 === 0 && (state as any)._spk !== _a; if (_fire) (state as any)._spk = _a;
+        if (_fire) {
           state.entropy.current = Math.max(0, state.entropy.current - 20);
         }
 
@@ -906,7 +1079,7 @@ export const series3Levels: LevelConfig[] = [
       checkWinCondition: () => false,
       checkLossCondition: (state) => {
         if (state.entropy.current <= 0) return true;
-        if (Math.floor((state.currentTurn ?? 0) / 12) >= 2) return true;
+        if (Math.floor((state.player.actionsTaken ?? 0) / 12) >= 2) return true;
         return isStranded(state);
       }
     }
