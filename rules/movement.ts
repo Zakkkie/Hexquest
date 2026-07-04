@@ -50,7 +50,7 @@ export const calculateMovementCost = (
         
         // 1. Void Check
         if (nextHex && nextHex.structureType === 'VOID') {
-             return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "Пустота — непроходимо" };
+             return { totalPoints: 0, deductMoves: 0, deductCoins: 0, canAfford: false, reason: "VOID" };
         }
 
         // 1.5 Passable Check
@@ -69,7 +69,7 @@ export const calculateMovementCost = (
                  deductMoves: 0, 
                  deductCoins: 0, 
                  canAfford: false, 
-                 reason: "Слишком круто: разница уровней > 1. Нужен промежуточный уровень" 
+                 reason: "STEEP" 
              };
         }
 

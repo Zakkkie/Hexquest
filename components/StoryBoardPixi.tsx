@@ -31,6 +31,7 @@ export interface StoryCellData {
     isEligible: boolean;
     isCenterInitially: boolean;
     canPlaceHex: boolean;
+    isCore?: boolean;
 }
 
 interface StoryBoardPixiProps {
@@ -62,6 +63,7 @@ interface CellAnim {
     collapseT?: number;   // 0.6s collapse (isFlaring after 1000ms)
     failedT?: number;     // 0.5s blink (isFailedClick)
     pulseT?: number;      // looping pulse phase (isEligible+built)
+    eligPulseT?: number;  // looping pulse for eligible unbuilt hexes
 }
 
 // Helper: build a hex polygon path on a Graphics from a point list.
@@ -185,6 +187,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     // ---------- Nebula background (drawn once, drift+pulse in ticker) ----------
     const nebulaRef = useRef<PIXI.Container | null>(null);
     const vignetteRef = useRef<PIXI.Graphics | null>(null);
+    const starsRef = useRef<PIXI.Graphics | null>(null);
     const nebulaTimeRef = useRef(0);
 
     const buildBackground = () => {
@@ -217,10 +220,12 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             const radius = 300 + rand(i + 200) * 300;
             const color = cloudColors[i % 5];
             const cg = new PIXI.Graphics();
-            const RINGS = 6;
+            const RINGS = 36; // Increased from 6 to 36 for complete smoothness
             for (let k = RINGS; k >= 1; k--) {
                 const rr = radius * (k / RINGS);
-                const a = 0.4 * (1 - (k - 1) / RINGS) * 0.5;
+                const ratio = (k - 1) / RINGS;
+                // Soft non-linear falling power curve completely dissolves circle borders
+                const a = 0.18 * Math.pow(1 - ratio, 2.5);
                 cg.beginPath();
                 cg.circle(cx, cy, rr);
                 cg.fill({ color: C(color), alpha: a });
@@ -269,20 +274,26 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             sg.circle(sx, sy, radius);
             sg.fill({ color: C(starColors[i % 7]), alpha: opacity });
         }
-        nebula.addChild(sg);
+        sg.x = w / 2;
+        sg.y = h / 2;
+        sg.pivot.set(w / 2, h / 2);
+        starsRef.current = sg;
+        bg.addChild(sg);
 
-        // Radial vignette (transparent center -> dark edge), drawn as banded rings.
+        // Radial vignette (transparent center -> dark edge), drawn as adjacent concentric rings.
         const vignette = new PIXI.Graphics();
-        const innerR = Math.min(w, h) * 0.4;
-        const outerR = Math.max(w, h) * 0.8;
-        const VBANDS = 24;
-        for (let b = VBANDS; b >= 1; b--) {
+        const innerR = Math.min(w, h) * 0.15;
+        const outerR = Math.max(w, h) * 1.5;
+        const VBANDS = 80; // Increased from 40 to 80 for seamless blending
+        const step = (outerR - innerR) / VBANDS;
+        for (let b = 1; b <= VBANDS; b++) {
             const f = b / VBANDS;
-            const rr = innerR + (outerR - innerR) * f;
-            const alpha = f; // transparent at center, opaque (1) at edge
+            const rr = innerR + step * (b - 0.5);
+            // Non-linear power curve for perfect seamless transition without ring borders
+            const alpha = Math.pow(f, 2.0) * 0.95;
             vignette.beginPath();
             vignette.circle(w / 2, h / 2, rr);
-            vignette.fill({ color: C('#020617'), alpha: alpha / VBANDS * 2 });
+            vignette.stroke({ width: step + 1.5, color: C('#020617'), alpha: alpha });
         }
         vignetteRef.current = vignette;
         bg.addChild(vignette);
@@ -417,6 +428,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
 
         list.forEach(cell => {
             const { key, q, r, lvl, blueprintLevel, isEligible, isCenterInitially, canPlaceHex } = cell;
+            const isCore = cell.isCore || (q === 0 && r === 0);
             const showDashed = contrast > 0 && figIndex < contrast * 20;
             const isBlueprint = cell.isBlueprint && showDashed;
             const isVoid = lvl === -999;
@@ -444,6 +456,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             const px = hexToPixel(q, r);
 
             let container = cellCache.current.get(key);
+            const isNewContainer = !container;
             if (!container) {
                 container = new PIXI.Container();
                 container.name = key;
@@ -459,6 +472,9 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             container.eventMode = 'static';
             container.cursor = 'pointer';
 
+            // Cache the pixel position for zero-allocation ticker access
+            (container as any).px = px;
+
             // collapse group (scaled/faded by collapse + spawn handled at container level).
             let collapse = container.getChildByName('collapse') as PIXI.Container;
             if (!collapse) {
@@ -471,6 +487,13 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 collapse.scale.set(1, 1);
                 collapse.alpha = 1;
             }
+
+            // High Performance Cache Key Check
+            const stateKey = `${lvl}_${isBlueprint}_${blueprintLevel}_${isEligible}_${isCenterInitially}_${canPlaceHex}_${isCore}`;
+            const mustRedraw = isNewContainer || (container as any).stateKey !== stateKey;
+
+            if (mustRedraw) {
+                (container as any).stateKey = stateKey;
 
             // ---- WALLS (3D sides) ----
             let walls = collapse.getChildByName('walls') as PIXI.Graphics;
@@ -534,7 +557,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             let faceSolid = topGroup.getChildByName('faceSolid') as PIXI.Graphics;
             const topTexture = (() => {
                 if (lvl === undefined) return null;
-                try { return textureService.getTexture(lvl, q, r, undefined) || null; } catch { return null; }
+                try { return textureService.getTexture(lvl, q, r, undefined, isCore ? 'CORE' : undefined) || null; } catch { return null; }
             })();
 
             if (isBuilt && topTexture) {
@@ -560,7 +583,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 }
                 faceOutline.clear();
                 tracePoly(faceOutline, BASE_POINTS);
-                faceOutline.stroke({ width: 2.0, color: C('#06b6d4') });
+                faceOutline.stroke({ width: isCore ? 3.0 : 2.0, color: C(isCore ? '#f43f5e' : '#06b6d4') });
                 faceOutline.visible = true;
             } else {
                 if (faceSprite) faceSprite.visible = false;
@@ -577,22 +600,25 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
 
                 const fillColor =
                     isBuilt ? colors.top
+                    : isCore ? 'rgba(244, 63, 94, 0.22)'
                     : isCenterInitially ? 'rgba(16, 185, 129, 0.18)'
-                    : isEligible ? 'rgba(34, 211, 238, 0.04)'
+                    : isEligible ? 'rgba(34, 211, 238, 0.15)'
                     : 'rgba(255,255,255,0.01)';
                 const strokeColor =
-                    isBuilt ? '#06b6d4'
+                    isBuilt ? (isCore ? '#f43f5e' : '#06b6d4')
+                    : isCore ? '#f43f5e'
                     : isCenterInitially ? '#10b981'
                     : isBlueprint ? 'rgba(168, 85, 247, 0.75)'
-                    : isEligible ? 'rgba(34, 211, 238, 0.55)'
+                    : isEligible ? 'rgba(34, 211, 238, 0.85)'
                     : 'rgba(255,255,255,0.075)';
                 const strokeWidth =
-                    isBuilt ? 2.0
+                    isBuilt ? (isCore ? 3.0 : 2.0)
+                    : isCore ? 3.0
                     : isCenterInitially ? 3.0
                     : isBlueprint ? 1.5
-                    : isEligible ? 1.5
+                    : isEligible ? 2.5
                     : 0.8;
-                const dash = (isEligible || isBlueprint);
+                const dash = (isEligible || isBlueprint) && !isCore;
 
                 // fill (parse rgba)
                 const fc = PIXI.Color.shared.setValue(fillColor);
@@ -607,19 +633,39 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                     tracePoly(faceSolid, BASE_POINTS);
                     faceSolid.stroke({ width: strokeWidth, color: sc.toNumber(), alpha: sc.alpha });
                 }
+
+            }
+
+            // ---- eligibility glow (now on all eligible cells across all levels) ----
+            let eligGlow = topGroup.getChildByName('eligGlow') as PIXI.Graphics;
+            if (isEligible) {
+                if (!eligGlow) {
+                    eligGlow = new PIXI.Graphics();
+                    eligGlow.name = 'eligGlow';
+                    topGroup.addChild(eligGlow);
+                }
+                eligGlow.clear();
+                // Draw a shape fitted within the boundaries of the hex
+                tracePoly(eligGlow, BASE_POINTS);
+                eligGlow.fill({ color: 0x22d3ee, alpha: 0.15 });
+                tracePoly(eligGlow, BASE_POINTS.map(p => ({ x: p.x * 0.95, y: p.y * 0.95 })));
+                eligGlow.stroke({ width: 2.5, color: 0x22d3ee, alpha: 0.4 });
+                eligGlow.visible = true;
+            } else if (eligGlow) {
+                eligGlow.visible = false;
             }
 
             // plus marker (+) for center / eligible empty cells
             let plus = topGroup.getChildByName('plus') as PIXI.Graphics;
-            if (!isBuilt && (isCenterInitially || isEligible)) {
+            if (!isBuilt && (isCenterInitially || isEligible || isCore)) {
                 if (!plus) {
                     plus = new PIXI.Graphics();
                     plus.name = 'plus';
                     topGroup.addChild(plus);
                 }
                 plus.clear();
-                const pc = isCenterInitially ? C('#10b981') : PIXI.Color.shared.setValue('rgba(34, 211, 238, 0.75)').toNumber();
-                const pa = isCenterInitially ? 1 : 0.75;
+                const pc = isCore ? C('#f43f5e') : (isCenterInitially ? C('#10b981') : PIXI.Color.shared.setValue('rgba(34, 211, 238, 0.75)').toNumber());
+                const pa = (isCore || isCenterInitially) ? 1 : 0.75;
                 plus.moveTo(-5, 0); plus.lineTo(5, 0);
                 plus.moveTo(0, -5); plus.lineTo(0, 5);
                 plus.stroke({ width: 1.5, color: pc, alpha: pa });
@@ -698,6 +744,46 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 centerBeacon.visible = false;
             }
 
+            // ---- Energy Core text & marker at 0,0 ----
+            let coreMarker = collapse.getChildByName('coreMarker') as PIXI.Text;
+            if (q === 0 && r === 0) {
+                if (!coreMarker) {
+                    coreMarker = new PIXI.Text({
+                        text: '⎔ CORE',
+                        style: {
+                            fontSize: 10,
+                            fill: '#ec4899',
+                            fontWeight: 'bold',
+                            fontFamily: 'monospace'
+                        }
+                    });
+                    coreMarker.name = 'coreMarker';
+                    coreMarker.anchor.set(0.5, 0.5);
+                    coreMarker.zIndex = 50;
+                    collapse.addChild(coreMarker);
+                }
+                coreMarker.y = yOffset - 4;
+                coreMarker.visible = false; // Hide text overlay so the core texture is clean
+                
+                // Draw a pulsing pink ring on the core cell
+                let corePulseRing = collapse.getChildByName('corePulseRing') as PIXI.Graphics;
+                if (!corePulseRing) {
+                    corePulseRing = new PIXI.Graphics();
+                    corePulseRing.name = 'corePulseRing';
+                    collapse.addChild(corePulseRing);
+                }
+                corePulseRing.clear();
+                corePulseRing.y = yOffset;
+                corePulseRing.scale.set(1, 0.8);
+                tracePoly(corePulseRing, BASE_POINTS.map(p => ({ x: p.x * 0.85, y: p.y * 0.85 })));
+                corePulseRing.stroke({ width: 1.5, color: '#ec4899', alpha: 0.8 });
+                corePulseRing.visible = true;
+            } else {
+                if (coreMarker) coreMarker.visible = false;
+                let corePulseRing = collapse.getChildByName('corePulseRing') as PIXI.Graphics;
+                if (corePulseRing) corePulseRing.visible = false;
+            }
+
             // ---- pulse outline (eligible + built, looping) ----
             let pulse = collapse.getChildByName('pulse') as PIXI.Graphics;
             if (isEligible && !isCenterInitially && isBuilt) {
@@ -718,6 +804,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             } else if (pulse) {
                 pulse.visible = false;
             }
+            } // end of mustRedraw
 
             // ---- failed click overlay (red blink) ----
             let failed = collapse.getChildByName('failed') as PIXI.Graphics;
@@ -873,6 +960,12 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             } else {
                 st.pulseT = undefined;
             }
+
+            if (isEligible) {
+                if (st.eligPulseT === undefined) st.eligPulseT = Math.random() * 2;
+            } else {
+                st.eligPulseT = undefined;
+            }
         });
 
         // Evict stale cells.
@@ -904,16 +997,47 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
         // Nebula drift + vignette pulse.
         const nebula = nebulaRef.current;
         if (nebula) {
-            nebulaTimeRef.current += 0.0003 * (dtMs / 16.6667);
+            nebulaTimeRef.current += 0.0018 * (dtMs / 16.6667); // Accelerated from 0.0003 for high-speed dynamic background
             const time = nebulaTimeRef.current;
             const w = dimsRef.current.width || 1000;
             const h = dimsRef.current.height || 1000;
-            const driftX = Math.sin(time * 1.4) * 40;
-            const driftY = Math.cos(time * 1.1) * 35;
-            const rotation = Math.sin(time * 0.4) * 4 * (Math.PI / 180);
+            const driftX = Math.sin(time * 1.4) * 65; // increased drift amplitude
+            const driftY = Math.cos(time * 1.1) * 55;
+            const rotation = Math.sin(time * 0.4) * 6 * (Math.PI / 180); // wider rotation angle
             nebula.x = w / 2 + driftX;
             nebula.y = h / 2 + driftY;
             nebula.rotation = rotation;
+        }
+
+        const stars = starsRef.current;
+        if (stars) {
+            const time = nebulaTimeRef.current;
+            const w = dimsRef.current.width || 1000;
+            const h = dimsRef.current.height || 1000;
+            // Stars drift independently from the color clouds for a rich parallax effect
+            const starDriftX = Math.cos(time * 2.8) * 80;
+            const starDriftY = Math.sin(time * 2.2) * 70;
+            stars.x = w / 2 + starDriftX;
+            stars.y = h / 2 + starDriftY;
+            // Stars rotate at a faster, continuous speed
+            stars.rotation = time * 0.95;
+            // Shimmering twinkle animation
+            stars.alpha = 0.75 + Math.sin(time * 14.0) * 0.25;
+        }
+
+        const vignette = vignetteRef.current;
+        if (vignette) {
+            const time = nebulaTimeRef.current;
+            const w = dimsRef.current.width || 1000;
+            const h = dimsRef.current.height || 1000;
+            const vigTime = time * 0.35; // smoothed down vignette movement so edges remain clean
+            const driftX = Math.sin(vigTime * 1.1) * 20;
+            const driftY = Math.cos(vigTime * 0.9) * 15;
+            const scale = 1.0 + Math.sin(vigTime * 1.5) * 0.03;
+            vignette.pivot.set(w / 2, h / 2);
+            vignette.position.set(w / 2 + driftX, h / 2 + driftY);
+            vignette.scale.set(scale);
+            vignette.alpha = 0.95 + Math.sin(vigTime * 1.2) * 0.04;
         }
 
         // Per-cell animations.
@@ -921,10 +1045,8 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             const container = cellCache.current.get(key);
             if (!container) return;
             const collapse = container.getChildByName('collapse') as PIXI.Container;
-            const px = (() => {
-                const [q, r] = key.split(',').map(Number);
-                return hexToPixel(q, r);
-            })();
+            const px = (container as any).px;
+            if (!px) return;
 
             // 1. spawn (BackEaseOut, 0.5s): y targetY-60 -> targetY, opacity 0->1
             if (st.spawnT !== undefined) {
@@ -1000,6 +1122,19 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 const tri = phase <= 1 ? phase : 2 - phase;
                 const e = easeInOut(tri);
                 pulse.alpha = 0.5 + (0.9 - 0.5) * e;
+            }
+
+            // 4b. eligible glow pulse (EaseInOut, 1.5s yoyo loop): scale 0.82<->1.0, alpha 0.45<->1.0
+            const topGroup = collapse?.getChildByName('topGroup') as PIXI.Container;
+            const eligGlow = topGroup?.getChildByName('eligGlow') as PIXI.Graphics;
+            if (st.eligPulseT !== undefined && eligGlow) {
+                st.eligPulseT = (st.eligPulseT + dtMs / 1500);
+                const phase = st.eligPulseT % 2;
+                const tri = phase <= 1 ? phase : 2 - phase;
+                const e = easeInOut(tri);
+                const s = 0.82 + 0.18 * e;
+                eligGlow.scale.set(s, s);
+                eligGlow.alpha = 0.45 + 0.55 * e;
             }
         });
     };
@@ -1115,7 +1250,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             y: (pointer.y - cam.y) / oldScale,
         };
         const newScale = e.deltaY < 0 ? oldScale / scaleBy : oldScale * scaleBy;
-        const clampedScale = Math.max(0.15, Math.min(2.0, newScale));
+        const clampedScale = Math.max(0.45, Math.min(2.0, newScale));
         const newPos = {
             x: pointer.x - mousePointTo.x * clampedScale,
             y: pointer.y - mousePointTo.y * clampedScale,
@@ -1204,7 +1339,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             if (ps.dist > 0) {
                 const center = { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
                 const scaleFactor = dist / ps.dist;
-                const newScale = Math.max(0.15, Math.min(2.0, ps.scale * scaleFactor));
+                const newScale = Math.max(0.45, Math.min(2.0, ps.scale * scaleFactor));
                 const newPos = {
                     x: center.x - ps.pointTo.x * newScale,
                     y: center.y - ps.pointTo.y * newScale,

@@ -121,7 +121,9 @@ class TextureService {
     }
 
     // --- TOP TEXTURE ---
-    if (level > 0) {
+    if (poiId === 'CORE') {
+        this.drawCore(ctx, size, level, seed);
+    } else if (level > 0) {
         this.drawPositive(ctx, size, level, seed, terrainType, poiId);
     } else if (level < 0) {
         this.drawNegative(ctx, size, level, seed, terrainType, poiId);
@@ -272,14 +274,51 @@ class TextureService {
           // Double Ring
           ctx.beginPath(); ctx.arc(cx, cy, 9, 0, Math.PI*2); ctx.stroke();
           ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2); ctx.fill();
+      } else if (level === 8) {
+          // Star (equivalent to '★')
+          ctx.beginPath();
+          for (let i = 0; i < 10; i++) {
+              const r = i % 2 === 0 ? 9 : 4;
+              const a = (i * 36 - 90) * Math.PI / 180;
+              const px = cx + r * Math.cos(a);
+              const py = cy + r * Math.sin(a);
+              if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fill();
+      } else if (level === 9) {
+          // Diamond inside a square outline (equivalent to '◈')
+          ctx.beginPath();
+          ctx.moveTo(cx, cy-9); ctx.lineTo(cx+9, cy); ctx.lineTo(cx, cy+9); ctx.lineTo(cx-9, cy);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(cx-5, cy-5, 10, 10);
+      } else if (level === 10) {
+          // Double Concentric Hexagons (equivalent to 'Ω')
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = 1.5;
+          this.drawHexagon(ctx, cx, cy, 9);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+          ctx.fill();
       } else {
-          // High Levels: Special Glyphs
-          ctx.font = 'bold 26px monospace';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          const glyphs = ['◆', '★', '◈', 'Ω', '☼'];
-          const glyph = glyphs[Math.min(glyphs.length - 1, level - 8)];
-          ctx.fillText(glyph, cx, cy + 2);
+          // Level 11+: Central core with rays (equivalent to '☼')
+          ctx.beginPath();
+          ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          for (let i = 0; i < 8; i++) {
+              const a = (i * 45) * Math.PI / 180;
+              ctx.moveTo(cx + 6 * Math.cos(a), cy + 6 * Math.sin(a));
+              ctx.lineTo(cx + 10 * Math.cos(a), cy + 10 * Math.sin(a));
+          }
+          ctx.stroke();
       }
       
       // 5. Tech Decor (Circuitry)
@@ -450,6 +489,82 @@ class TextureService {
       ctx.fillStyle = 'rgba(255,255,255,0.05)';
       ctx.fillRect(0, 0, 2, size);
       ctx.fillRect(size-2, 0, 2, size);
+  }
+
+  private drawCore(ctx: CanvasRenderingContext2D, size: number, _level: number, seed: number) {
+      const cx = size / 2;
+      const cy = size / 2;
+
+      // 1. Base dark tech background
+      ctx.fillStyle = '#090d1a'; // Deep futuristic navy
+      ctx.fillRect(0, 0, size, size);
+
+      // 2. High-tech matrix scanlines
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.08)'; // subtle matrix green
+      for (let i = 0; i < size; i += 3) {
+          ctx.fillRect(0, i, size, 1);
+      }
+
+      // 3. Glowing neon pink/red outer hex ring
+      ctx.strokeStyle = '#f43f5e'; // neon rose
+      ctx.lineWidth = 2.5;
+      this.drawHexagon(ctx, cx, cy, 27);
+      ctx.stroke();
+
+      // Inner cyan protective barrier ring
+      ctx.strokeStyle = '#06b6d4'; // bright cyan
+      ctx.lineWidth = 1.2;
+      this.drawHexagon(ctx, cx, cy, 24);
+      ctx.stroke();
+
+      // 4. Energy conduits (power lines running from corners towards the center)
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+          const angle = (i * 60 + 30) * Math.PI / 180;
+          const px1 = cx + 24 * Math.cos(angle);
+          const py1 = cy + 24 * Math.sin(angle);
+          const px2 = cx + 12 * Math.cos(angle);
+          const py2 = cy + 12 * Math.sin(angle);
+          ctx.moveTo(px1, py1);
+          ctx.lineTo(px2, py2);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      // 5. Central Reactor Core (Glowing circular engine)
+      const gradient = ctx.createRadialGradient(cx, cy, 2, cx, cy, 12);
+      gradient.addColorStop(0, '#ffffff'); // bright hot center
+      gradient.addColorStop(0.3, '#10b981'); // glowing emerald green
+      gradient.addColorStop(0.7, '#047857'); // dark emerald
+      gradient.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 6. Micro-electronic details or core glyph overlay
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      // Draw 3 rotor blades/segments for nuclear/energy feel
+      for (let i = 0; i < 3; i++) {
+          const a = (i * 120 + (seed * 15)) * Math.PI / 180;
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, 6, a - 0.3, a + 0.3);
+          ctx.closePath();
+      }
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
   }
 
   private getTerrainColors(type: string, poiId?: string): { base: string, accent: string, sec: string } {

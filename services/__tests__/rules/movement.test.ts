@@ -1,6 +1,6 @@
-import { calculateMovementCost } from '../../rules/movement';
-import { EntityType, EntityState } from '../../types';
-import type { Entity, Hex } from '../../types';
+import { calculateMovementCost } from '../../../rules/movement';
+import { EntityType, EntityState } from '../../../types';
+import type { Entity, Hex } from '../../../types';
 
 // Helper factories
 const makeEntity = (overrides: Partial<Entity> = {}): Entity => ({

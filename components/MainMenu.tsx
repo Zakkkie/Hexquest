@@ -1,8 +1,12 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store.ts';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, LogOut, Ghost, ArrowRight, Shield, X, LogIn, Lock, Target, Gem, Crown, Bot, Activity, Volume2, VolumeX, BookOpen, Music, ChevronLeft, ChevronRight, Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, Mountain, Crosshair, Flame, Shuffle, Settings, Minus, Plus } from 'lucide-react';
+import { 
+  Trophy, LogOut, Ghost, ArrowRight, X, LogIn, Lock, Target, Gem, Crown, 
+  Bot, Volume2, VolumeX, BookOpen, Music, ChevronLeft, ChevronRight, 
+  Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, 
+  Mountain, Crosshair, Shuffle, Settings, Minus, Plus, Compass, Check
+} from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -19,15 +23,210 @@ const AVATAR_COLORS = [
   '#ec4899'  
 ];
 
+// Moving futuristic nebula backdrop with blurred glowing fields
+const NebulaBackground: React.FC = () => {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {/* Deep Space Base */}
+      <div className="absolute inset-0 bg-transparent" />
+      
+      {/* Violet/Indigo Nebula Core */}
+      <motion.div 
+        className="absolute top-[-10%] left-[-15%] w-[70vw] h-[70vw] rounded-full bg-indigo-900/20 blur-[120px]"
+        animate={{
+          x: [0, 40, -20, 0],
+          y: [0, -30, 50, 0],
+          scale: [1, 1.15, 0.9, 1],
+        }}
+        transition={{
+          duration: 30,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      {/* Fuchsia/Magenta Nebula Accent */}
+      <motion.div 
+        className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-fuchsia-950/20 blur-[130px]"
+        animate={{
+          x: [0, -50, 30, 0],
+          y: [0, 40, -40, 0],
+          scale: [1, 0.9, 1.1, 1],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      {/* Cyan Tactical Pulse Spot */}
+      <motion.div 
+        className="absolute top-[40%] right-[20%] w-[50vw] h-[50vw] rounded-full bg-cyan-950/15 blur-[100px]"
+        animate={{
+          x: [0, -30, -10, 0],
+          y: [0, -20, 30, 0],
+          scale: [1, 1.2, 0.85, 1],
+        }}
+        transition={{
+          duration: 22,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+    </div>
+  );
+};
+
+// Intricate particle field for celestial depth
+const FloatingParticles: React.FC = () => {
+  const particles = Array.from({ length: 25 });
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {particles.map((_, i) => {
+        const size = Math.random() * 3 + 1.5;
+        const initialX = Math.random() * 100;
+        const initialY = Math.random() * 100;
+        const duration = Math.random() * 12 + 10;
+        const delay = Math.random() * -12;
+        
+        return (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-indigo-400/20 blur-[0.5px]"
+            style={{
+              width: size,
+              height: size,
+              left: `${initialX}%`,
+              top: `${initialY}%`,
+              boxShadow: '0 0 6px rgba(129, 140, 248, 0.5)',
+            }}
+            animate={{
+              y: [0, -150, 0],
+              x: [0, Math.random() * 30 - 15, 0],
+              opacity: [0.15, 0.6, 0.15],
+              scale: [1, 1.4, 1],
+            }}
+            transition={{
+              duration: duration,
+              repeat: Infinity,
+              delay: delay,
+              ease: "easeInOut",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+// Holographic cyber grid in the background with slow float
+const GridAtmosphere: React.FC = () => {
+  return (
+    <div 
+      className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-15"
+      style={{
+        backgroundImage: `linear-gradient(rgba(79, 70, 229, 0.08) 1px, transparent 1px), 
+                          linear-gradient(90deg, rgba(79, 70, 229, 0.08) 1px, transparent 1px)`,
+        backgroundSize: '40px 40px',
+        backgroundPosition: 'center',
+        perspective: '1000px',
+      }}
+    >
+      <motion.div 
+        className="absolute inset-0"
+        style={{
+          transformStyle: "preserve-3d",
+        }}
+        animate={{
+          rotateX: [12, 16, 12],
+          y: [0, -15, 0],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+    </div>
+  );
+};
+
+const FloatingHexagons: React.FC = () => {
+  const hexes = Array.from({ length: 6 });
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 select-none">
+      {hexes.map((_, i) => {
+        const size = Math.random() * 40 + 20;
+        const initialX = Math.random() * 100;
+        const initialY = Math.random() * 100;
+        const duration = Math.random() * 20 + 20;
+        const delay = Math.random() * -20;
+        const rotate = Math.random() * 360;
+        
+        return (
+          <motion.div
+            key={i}
+            className="absolute text-indigo-500/15"
+            style={{
+              width: size,
+              height: size,
+              left: `${initialX}%`,
+              top: `${initialY}%`,
+            }}
+            animate={{
+              y: [0, -100, 0],
+              x: [0, Math.random() * 40 - 20, 0],
+              rotate: [rotate, rotate + 360],
+              scale: [0.8, 1.15, 0.8],
+              opacity: [0.03, 0.18, 0.03],
+            }}
+            transition={{
+              duration: duration,
+              repeat: Infinity,
+              delay: delay,
+              ease: "easeInOut",
+            }}
+          >
+            <Hexagon className="w-full h-full stroke-current fill-none" strokeWidth={0.8} />
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.15
+    }
+  }
+} as const;
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 110,
+      damping: 15
+    }
+  }
+} as const;
+
 type AuthMode = 'GUEST' | 'LOGIN' | 'REGISTER' | null;
 
-// Mock Rendering of Character for Preview (Simulates Unit.tsx logic in SVG)
+// Character renderer for preview
 const CharacterPreview: React.FC<{ head: number, body: number, color: string }> = ({ head, body, color }) => {
-    
-    // Position adjustments for new floating bodies
     const headY = 43;
     const bodyY = 55;
-    const eyeColor = '#22d3ee'; // Player eye color cyan
+    const eyeColor = '#22d3ee';
 
     const renderHead = () => {
         switch(head % 4) {
@@ -75,11 +274,10 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
     };
 
     const renderBody = () => {
-        // Floating Shadow
         const shadow = <ellipse cx="50" cy="67" rx="14" ry="5" fill="rgba(0,0,0,0.4)" filter="url(#blur)" />;
 
         switch(body % 4) {
-            case 0: // Crawler
+            case 0:
                 return (
                     <g>
                         {shadow}
@@ -93,7 +291,7 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
                         <circle cx="50" cy={bodyY} r="4" fill="#38bdf8" filter="url(#glow)" />
                     </g>
                 );
-            case 1: // Glider
+            case 1:
                 return (
                     <g>
                         {shadow}
@@ -104,7 +302,7 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
                         <circle cx="66" cy={bodyY} r="1.5" fill="#38bdf8" />
                     </g>
                 );
-            case 2: // Monolith
+            case 2:
                 return (
                     <g>
                         {shadow}
@@ -118,7 +316,7 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
                         <rect x="48" y={bodyY-12} width="4" height="10" fill="#e2e8f0" />
                     </g>
                 );
-            case 3: // Prism
+            case 3:
                 return (
                     <g>
                         {shadow}
@@ -173,32 +371,52 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
     );
 };
 
+// Premium Menu Action Button
 const MenuButton: React.FC<{ 
   onClick: () => void; 
   icon: React.ReactNode; 
   label: string; 
   subLabel?: string; 
-  variant?: 'primary' | 'battle' | 'campaign' | 'danger' | 'default';
+  variant?: 'primary' | 'battle' | 'campaign' | 'danger' | 'default' | 'resume';
   className?: string;
   style?: React.CSSProperties;
 }> = ({ onClick, icon, label, subLabel, variant = 'default', className = '', style }) => {
   const getStyle = () => {
     switch(variant) {
-      case 'primary': return 'bg-indigo-950/40 border-indigo-500/30 hover:bg-indigo-900/50 hover:border-indigo-400/80 text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(99,102,241,0.2)] backdrop-blur-xl border-t-white/10';
-      case 'campaign': return 'bg-gradient-to-r from-indigo-950/40 via-purple-900/30 to-indigo-950/40 border-indigo-400/30 hover:border-purple-400/80 hover:from-indigo-900/50 hover:via-purple-800/40 hover:to-indigo-900/50 text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(168,85,247,0.2)] backdrop-blur-xl border-t-white/10 transition-all duration-300';
-      case 'battle': return 'bg-gradient-to-r from-red-950/40 via-rose-900/30 to-red-950/40 backdrop-blur-xl border border-red-500/30 hover:border-red-400/80 hover:from-red-900/50 hover:via-rose-800/40 hover:to-red-900/50 text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(220,38,38,0.2)] border-t-white/10 transition-all duration-300';
-      case 'danger': return 'bg-red-950/30 border-red-900/30 hover:bg-red-900/40 hover:border-red-500/50 text-red-200 backdrop-blur-md border-t-white/5';
-      default: return 'bg-slate-900/40 border-slate-700/50 hover:bg-slate-800/50 hover:border-slate-500/80 text-slate-200 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(255,255,255,0.05)] border-t-white/10';
+      case 'primary': 
+        return 'bg-gradient-to-r from-indigo-950/50 to-indigo-900/30 border-indigo-500/40 hover:from-indigo-900/60 hover:to-indigo-800/40 text-white hover:border-indigo-400 shadow-[0_4px_24px_rgba(99,102,241,0.15)] hover:shadow-[0_4px_30px_rgba(99,102,241,0.35)]';
+      case 'campaign': 
+        return 'bg-gradient-to-r from-violet-950/50 via-purple-950/40 to-violet-950/50 border-purple-500/40 hover:border-purple-400 hover:from-purple-900/60 hover:via-indigo-900/40 hover:to-purple-900/60 text-white shadow-[0_4px_24px_rgba(168,85,247,0.15)] hover:shadow-[0_4px_30px_rgba(168,85,247,0.35)]';
+      case 'battle': 
+        return 'bg-gradient-to-r from-rose-950/50 via-red-950/40 to-rose-950/50 border-rose-500/40 hover:border-red-400 hover:from-red-900/60 hover:via-rose-900/40 hover:to-red-900/60 text-white shadow-[0_4px_24px_rgba(244,63,94,0.15)] hover:shadow-[0_4px_30px_rgba(244,63,94,0.35)]';
+      case 'resume': 
+        return 'bg-gradient-to-r from-amber-950/60 via-yellow-950/50 to-amber-950/60 border-amber-500/60 hover:border-amber-400 hover:from-amber-900/70 hover:to-amber-900/60 text-amber-50 shadow-[0_0_25px_rgba(245,158,11,0.25)] hover:shadow-[0_0_35px_rgba(245,158,11,0.45)] border-t-amber-400/20';
+      case 'danger': 
+        return 'bg-red-950/25 border-red-900/30 hover:bg-red-900/30 hover:border-red-500/50 text-red-100';
+      default: 
+        return 'bg-slate-900/50 border-slate-700/60 hover:bg-slate-800/60 hover:border-indigo-500/50 text-slate-200 hover:text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)]';
     }
   };
 
   const getIconStyle = () => {
     switch(variant) {
-      case 'primary': return 'bg-indigo-500/10 border border-indigo-400/20 shadow-inner text-indigo-300 group-hover:text-indigo-100 group-hover:border-indigo-400/50 group-hover:bg-indigo-500/20 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all';
-      case 'campaign': return 'bg-purple-500/10 border border-purple-400/20 shadow-inner text-purple-300 group-hover:text-purple-100 group-hover:border-purple-400/50 group-hover:bg-purple-500/20 group-hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all';
-      case 'battle': return 'bg-red-500/10 border border-red-400/20 shadow-inner text-red-300 group-hover:text-red-100 group-hover:border-red-400/50 group-hover:bg-red-500/20 group-hover:shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all';
-      case 'danger': return 'bg-red-900/20 border border-red-800/30 text-red-400 group-hover:bg-red-800/40 group-hover:text-red-200 transition-all';
-      default: return 'bg-slate-800/30 border border-slate-600/30 text-slate-400 group-hover:bg-slate-700/50 group-hover:text-slate-200 shadow-inner group-hover:border-slate-500/50 transition-all';
+      case 'primary': return 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 group-hover:bg-indigo-500/25 group-hover:text-white group-hover:scale-110';
+      case 'campaign': return 'bg-purple-500/10 border border-purple-500/30 text-purple-300 group-hover:bg-purple-500/25 group-hover:text-white group-hover:scale-110';
+      case 'battle': return 'bg-rose-500/10 border border-rose-500/30 text-rose-300 group-hover:bg-rose-500/25 group-hover:text-white group-hover:scale-110';
+      case 'resume': return 'bg-amber-500/15 border border-amber-500/40 text-amber-300 group-hover:bg-amber-500/30 group-hover:text-white group-hover:scale-110 animate-pulse';
+      case 'danger': return 'bg-red-500/10 border border-red-500/20 text-red-400 group-hover:bg-red-500/20 group-hover:text-red-200';
+      default: return 'bg-slate-800/40 border border-slate-700/50 text-slate-400 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/30 group-hover:text-indigo-300 group-hover:scale-110';
+    }
+  };
+
+  const getLedColor = () => {
+    switch(variant) {
+      case 'primary': return 'bg-indigo-500 shadow-[0_0_8px_#6366f1]';
+      case 'campaign': return 'bg-purple-500 shadow-[0_0_8px_#a855f7]';
+      case 'battle': return 'bg-rose-500 shadow-[0_0_8px_#f43f5e]';
+      case 'resume': return 'bg-amber-400 shadow-[0_0_12px_#fbbf24]';
+      case 'danger': return 'bg-red-500 shadow-[0_0_8px_#ef4444]';
+      default: return 'bg-indigo-400/40';
     }
   };
 
@@ -207,43 +425,39 @@ const MenuButton: React.FC<{
       onClick={onClick}
       whileHover={{ scale: 1.02, x: 4 }}
       whileTap={{ scale: 0.98 }}
-      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden touch-manipulation backdrop-blur-sm ${getStyle()} ${className}`}
+      transition={{ type: "spring", stiffness: 350, damping: 14 }}
+      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border backdrop-blur-xl transition-all duration-300 relative overflow-hidden touch-manipulation cursor-pointer ${getStyle()} ${className}`}
       style={style}
     >
-      <div className={`p-3 md:p-3.5 rounded-xl transition-all duration-300 relative z-10 ${getIconStyle()}`}>
-        {/* Pass larger icon size down if possible, but container controls visual weight */}
-        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-6 h-6 md:w-5 md:h-5 drop-shadow-md' })}
+      {/* Visual left accent light strip */}
+      <div className={`absolute left-0 top-0 bottom-0 w-[4px] transition-all duration-300 ${getLedColor()}`} />
+
+      <div className={`p-3 rounded-xl transition-all duration-300 relative z-10 ${getIconStyle()}`}>
+        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-5 h-5 md:w-5 md:h-5 drop-shadow-md' })}
       </div>
+
       <div className="flex flex-col items-start relative z-10 text-left">
-        <span className={`text-base md:text-sm font-black uppercase tracking-widest break-words whitespace-pre-wrap 
-          ${variant === 'battle' ? 'text-red-50 drop-shadow-[0_0_10px_rgba(220,38,38,0.6)] group-hover:drop-shadow-[0_0_15px_rgba(220,38,38,0.9)]' : 
-            variant === 'campaign' ? 'text-purple-50 drop-shadow-[0_0_10px_rgba(168,85,247,0.6)] group-hover:drop-shadow-[0_0_15px_rgba(168,85,247,0.9)]' : 
-            variant === 'primary' ? 'text-indigo-50 drop-shadow-[0_0_10px_rgba(99,102,241,0.6)] group-hover:drop-shadow-[0_0_15px_rgba(99,102,241,0.9)]' : 
-            'drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]'
-          } transition-all duration-300`}
-          style={{ textShadow: variant !== 'default' && variant !== 'danger' ? '0 0 20px currentColor' : undefined }}
-        >
+        <span className="text-sm md:text-sm font-black uppercase tracking-wider transition-all duration-300">
           {label}
         </span>
         {subLabel && (
-          <span className={`font-mono group-hover:text-slate-300 transition-colors break-words whitespace-pre-wrap 
-            ${variant === 'primary' ? 'font-bold text-[13px] md:text-[13px] leading-[17.5px] text-indigo-300' : 'text-[11px] md:text-[10px] text-slate-500'} 
-            ${variant === 'battle' ? 'text-red-200/70' : variant === 'campaign' ? 'text-purple-200/70' : ''}`}
-          >
+          <span className="text-[11px] font-mono text-slate-400/80 group-hover:text-slate-200 transition-colors mt-0.5 max-w-[200px] md:max-w-xs break-words">
             {subLabel}
           </span>
         )}
       </div>
       
-      {/* Dynamic Hover Glow */}
-      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-      
-      {/* Shimmer Effect */}
+      {/* Right chevron interactive layout accent */}
+      <div className="ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300 text-white/50">
+        <ChevronRight className="w-4 h-4" />
+      </div>
+
+      {/* Glossy sweeping scanline overlay */}
       <motion.div 
-         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" 
+         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" 
          initial={{ x: '-100%' }}
          animate={{ x: '200%' }}
-         transition={{ repeat: Infinity, duration: 2, ease: "linear", repeatDelay: 1 }}
+         transition={{ repeat: Infinity, duration: 2.5, ease: "linear", repeatDelay: 1.5 }}
       />
     </motion.button>
   );
@@ -252,6 +466,9 @@ const MenuButton: React.FC<{
 const MainMenu: React.FC = () => {
   const user = useGameStore(state => state.user);
   const hasActiveSession = useGameStore(state => state.hasActiveSession);
+  const campaignProgress = useGameStore(state => state.campaignProgress);
+  const storyMap = useGameStore(state => state.storyMap);
+  const hasProgress = campaignProgress > 0 || Object.keys(storyMap || {}).length > 0;
   const isMusicMuted = useGameStore(state => state.isMusicMuted);
   const isSfxMuted = useGameStore(state => state.isSfxMuted);
   const language = useGameStore(state => state.language);
@@ -282,12 +499,11 @@ const MainMenu: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isGuestRegistration, setIsGuestRegistration] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{type: 'ABANDON_CAMPAIGN' | 'ABANDON_NEW_GAME' | 'LOGOUT' | 'RESET_PROGRESS_ALL', payload?: any} | null>(null);
-  
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsMenuRef = useRef<HTMLDivElement>(null);
 
-  // Animation State
+  // Entrance animations state
   const [logoVisible, setLogoVisible] = useState(false);
 
   // Config State
@@ -295,10 +511,10 @@ const MainMenu: React.FC = () => {
   const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
   const [botCount, setBotCount] = useState<number>(1);
   const [storageCap, setStorageCap] = useState<number>(4); 
-  const [mapType, setMapType] = useState<'FLAT' | 'CHAOTIC'>('FLAT'); // New state
+  const [mapType, setMapType] = useState<'FLAT' | 'CHAOTIC'>('FLAT');
 
   const t = TEXT[language].MENU;
-  // UPDATED MISSION TIERS FOR SUMMIT OBJECTIVE
+  
   const MISSION_TIERS = {
     1: { level: 5, coins: 0, label: language === 'RU' ? 'ПИК УР.5' : 'SUMMIT L5', time: '~10m', color: 'text-blue-400', difficulty: 'EASY' as Difficulty, icon: Mountain, desc: 'Recon' },
     2: { level: 6, coins: 0, label: language === 'RU' ? 'ПИК УР.6' : 'SUMMIT L6', time: '~15m', color: 'text-amber-400', difficulty: 'MEDIUM' as Difficulty, icon: Target, desc: 'Std Ops' },
@@ -306,7 +522,6 @@ const MainMenu: React.FC = () => {
   };
 
   useEffect(() => {
-      // Trigger entrance animation with a slight delay to ensure the browser registers the initial 'opacity-0' state
       const timer = setTimeout(() => {
           setLogoVisible(true);
       }, 100);
@@ -360,16 +575,11 @@ const MainMenu: React.FC = () => {
 
   const randomizeConfig = () => {
       playUiSound('CLICK');
-      // Random Tier (1-3)
       const rTier = (Math.floor(Math.random() * 3) + 1) as 1|2|3;
-      // Random Diff
       const diffs: Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
       const rDiff = diffs[Math.floor(Math.random() * 3)];
-      // Random Bots (1-6)
       const rBots = Math.floor(Math.random() * 6) + 1;
-      // Random Storage (3-6)
       const rStor = Math.floor(Math.random() * 4) + 3;
-      // Random Map
       const rMap = Math.random() > 0.5 ? 'CHAOTIC' : 'FLAT';
 
       setSelectedTier(rTier);
@@ -382,7 +592,6 @@ const MainMenu: React.FC = () => {
   const confirmMissionStart = () => {
     playUiSound('CLICK');
     const tier = MISSION_TIERS[selectedTier as 1|2|3];
-    // Create WinCondition and Inject Storage Cap
     const winCondition: WinCondition = {
       levelId: -1,
       targetLevel: tier.level,
@@ -392,8 +601,8 @@ const MainMenu: React.FC = () => {
       label: `${tier.label}`,
       queueSize: DIFFICULTY_SETTINGS[difficulty].queueSize,
       winType: 'SUMMIT',
-      initialStorage: storageCap, // PASS CUSTOM STORAGE SETTING
-      mapType: mapType // Pass map type
+      initialStorage: storageCap,
+      mapType: mapType
     };
     
     startNewGame(winCondition);
@@ -478,26 +687,14 @@ const MainMenu: React.FC = () => {
   };
 
   const renderAvatar = (color: string, head: number, body: number, size = 'md') => {
-    let dims = size === 'lg' ? 'w-16 h-16' : (size === 'sm' ? 'w-6 h-6' : 'w-8 h-8');
+    let dims = size === 'lg' ? 'w-16 h-16' : (size === 'sm' ? 'w-7 h-7' : 'w-10 h-10');
     return (
-      <div className={`${dims} rounded-full flex items-center justify-center border-2 border-white/20 shadow-lg bg-slate-900 overflow-hidden relative`}>
+      <div className={`${dims} rounded-full flex items-center justify-center border-2 border-indigo-400/30 shadow-[0_0_12px_rgba(99,102,241,0.2)] bg-[#0c0d1e] overflow-hidden relative shrink-0`}>
          <div className="scale-50 translate-y-1">
             <CharacterPreview head={head} body={body} color={color} />
          </div>
       </div>
     );
-  };
-
-  const getDifficultyColor = (d: Difficulty) => {
-      if (d === 'EASY') return 'text-emerald-400 border-emerald-500/50 bg-emerald-900/20';
-      if (d === 'MEDIUM') return 'text-amber-400 border-amber-500/50 bg-amber-900/20';
-      return 'text-red-400 border-red-500/50 bg-red-900/20';
-  };
-
-  const getDifficultyDesc = (d: Difficulty) => {
-      if (d === 'EASY') return language === 'RU' ? 'Принимает любые предметы' : 'Accepts ANY Item';
-      if (d === 'MEDIUM') return language === 'RU' ? 'Предметы: Необычные+' : 'Items: Uncommon+';
-      return language === 'RU' ? 'Предметы: Редкие+' : 'Items: Rare+ Only';
   };
 
   const getBotLabel = (count: number) => {
@@ -516,40 +713,66 @@ const MainMenu: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center pointer-events-auto">
+    <div className="relative w-full h-full flex items-center justify-center pointer-events-auto overflow-hidden font-sans">
+      {/* Background Ambience Layering */}
+      <NebulaBackground />
+      <GridAtmosphere />
+      <FloatingHexagons />
+      <FloatingParticles />
       
-      {/* HEADER BAR */}
-      <div className="absolute top-0 left-0 w-full p-4 md:p-6 pt-[calc(env(safe-area-inset-top)+14px)] flex justify-between items-start z-50 pointer-events-auto">
-        {/* LEFT UP CORNER: ACCESS/AUTH OR PROFILE */}
+      {/* TOP SYSTEM NAV BAR */}
+      <div className="absolute top-0 left-0 w-full p-4 md:p-6 pt-[calc(env(safe-area-inset-top)+14px)] flex justify-between items-center z-50 pointer-events-auto">
+        
+        {/* Profile / Authorization credentials badge */}
         <div className="flex items-center gap-2">
             {!user ? (
-              <button 
+              <motion.button 
                 onClick={() => { setAuthMode('LOGIN'); setInputName(''); setInputPassword(''); setErrorMessage(null); playUiSound('CLICK'); }} 
-                className="flex items-center gap-2 px-4 py-2.5 md:py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 hover:text-white rounded-full border border-indigo-500/30 hover:border-indigo-400/60 transition-all shadow-[0_4px_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] backdrop-blur-xl group cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-950/40 hover:bg-indigo-900/40 text-indigo-200 hover:text-white rounded-full border border-indigo-500/30 hover:border-indigo-400/80 transition-all shadow-[0_4px_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] backdrop-blur-xl group cursor-pointer"
               >
                  <Fingerprint className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 drop-shadow-[0_0_8px_currentColor]" />
-                 <span className="text-[10px] md:text-xs font-black uppercase tracking-widest drop-shadow-md">{t.MODAL_LOGIN_TITLE}</span>
-              </button>
+                 <span className="text-[10px] font-black uppercase tracking-widest drop-shadow-md">{t.MODAL_LOGIN_TITLE}</span>
+              </motion.button>
             ) : (
-              <div className="flex items-center gap-3 bg-slate-900/40 backdrop-blur-xl p-1.5 pl-4 md:pl-6 rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] group hover:border-white/20 hover:bg-slate-800/60 transition-all">
-                <div className="hidden md:flex flex-col items-end">
-                  <span className="text-xs font-black text-white leading-tight max-w-[100px] truncate break-words whitespace-pre-wrap drop-shadow-md">{user.nickname}</span>
-                  <span className="text-[9px] md:text-[10px] text-indigo-300/80 font-mono uppercase tracking-[0.2em] break-words whitespace-pre-wrap">{user.isGuest ? t.AUTH_GUEST : 'Commander'}</span>
+              <div className="flex items-center gap-3 bg-[#0d0f26]/65 backdrop-blur-xl p-1.5 pl-4 pr-1.5 rounded-full border border-indigo-500/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:border-indigo-500/40 transition-all group">
+                <div className="flex flex-col items-start leading-tight">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-white max-w-[110px] truncate drop-shadow-md">{user.nickname}</span>
+                    {!user.isGuest ? <Crown className="w-3 h-3 text-amber-400 drop-shadow-[0_0_4px_rgba(245,158,11,0.5)]" /> : null}
+                  </div>
+                  <span className="text-[9px] text-indigo-300 font-mono uppercase tracking-[0.15em]">
+                    {user.isGuest ? t.AUTH_GUEST : 'Commander'}
+                  </span>
                 </div>
                 {renderAvatar(user.avatarColor, user.headIndex, user.bodyIndex, 'sm')}
-                <button onClick={handleLogout} className="p-2 md:p-2.5 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-all bg-black/20 border border-transparent hover:border-red-500/30 cursor-pointer"><LogOut className="w-4 h-4 md:w-5 md:h-5" /></button>
+                <motion.button 
+                  onClick={handleLogout} 
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 450, damping: 14 }}
+                  className="p-2 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/15 transition-all bg-black/30 border border-slate-800 hover:border-red-500/40 cursor-pointer"
+                  title="Logout"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </motion.button>
               </div>
             )}
         </div>
 
-        {/* RIGHT UP CORNER: SETTINGS WITH GEAR ICON */}
+        {/* System parameters with drop-down control desk */}
         <div className="relative" ref={settingsMenuRef}>
-            <button 
+            <motion.button 
               onClick={() => { setIsSettingsOpen(!isSettingsOpen); playUiSound('CLICK'); }}
-              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl rounded-full transition-all border border-indigo-500/30 bg-slate-900/40 text-indigo-300 hover:text-white hover:border-indigo-400/80 hover:bg-indigo-900/50 hover:shadow-[0_0_15px_rgba(99,102,241,0.4)] shadow-[0_4px_20px_rgba(0,0,0,0.3)] cursor-pointer"
+              whileHover={{ scale: 1.08, rotate: 10 }}
+              whileTap={{ scale: 0.92, rotate: -10 }}
+              transition={{ type: "spring", stiffness: 400, damping: 12 }}
+              className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center backdrop-blur-xl rounded-full transition-all border border-indigo-500/30 bg-[#0d0f26]/65 text-indigo-300 hover:text-white hover:border-indigo-400/80 hover:bg-indigo-900/30 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] shadow-[0_4px_20px_rgba(0,0,0,0.3)] cursor-pointer"
             >
-              <Settings className="w-5 h-5 animate-[spin_20s_linear_infinite_paused] hover:animate-[spin_4s_linear_infinite]" />
-            </button>
+              <Settings className="w-5 h-5" />
+            </motion.button>
 
             <AnimatePresence>
             {isSettingsOpen && (
@@ -557,70 +780,74 @@ const MainMenu: React.FC = () => {
                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    transition={{ type: "spring", damping: 20, stiffness: 200 }}
-                    className="absolute top-full right-0 mt-2 bg-slate-900/95 backdrop-blur-xl border-2 border-indigo-500/40 p-3 md:p-3.5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-2 min-w-[240px] md:min-w-[260px] z-[60]"
+                    transition={{ type: "spring", damping: 20, stiffness: 220 }}
+                    className="absolute top-full right-0 mt-2 bg-[#090a18]/95 backdrop-blur-2xl border-2 border-indigo-500/40 p-4 rounded-2xl shadow-[0_12px_45px_rgba(0,0,0,0.7)] flex flex-col gap-3.5 min-w-[260px] z-[60]"
                 >
-                    {/* Header in the dropdown */}
-                    <div className="flex flex-col border-b border-indigo-500/20 pb-1.5 mb-0.5">
-                        <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest leading-none">SYSTEM CONTROL</span>
-                        <span className="text-xs md:text-sm font-black text-white uppercase tracking-wider mt-0.5">{language === 'RU' ? 'Панель управления' : 'Control Desk'}</span>
+                    {/* Header */}
+                    <div className="flex flex-col border-b border-indigo-500/20 pb-2 mb-0.5">
+                        <span className="text-[9px] font-mono text-indigo-400 uppercase tracking-widest leading-none">SYSTEM PARAMS</span>
+                        <span className="text-xs font-black text-white uppercase tracking-wider mt-1">{language === 'RU' ? 'Панель настроек' : 'Control Deck'}</span>
                     </div>
 
                     {/* Language Settings */}
-                    <div className="flex flex-col gap-1">
-                        <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-slate-950/80 rounded-xl border border-white/5">
-                            <button 
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{language === 'RU' ? 'ЯЗЫК ИНТЕРФЕЙСА' : 'SYSTEM LANGUAGE'}</span>
+                        <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-black/40 rounded-xl border border-white/5">
+                            <motion.button 
                                 onClick={() => { setLanguage('EN'); playUiSound('CLICK'); }}
-                                className={`py-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${language === 'EN' ? 'bg-indigo-600/30 text-white border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                className={`py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${language === 'EN' ? 'bg-indigo-600/30 text-white border border-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.2)]' : 'text-slate-500 hover:text-slate-300'}`}
                             >
+                                {language === 'EN' && <Check className="w-3 h-3 text-indigo-400" />}
                                 English
-                            </button>
-                            <button 
+                            </motion.button>
+                            <motion.button 
                                 onClick={() => { setLanguage('RU'); playUiSound('CLICK'); }}
-                                className={`py-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${language === 'RU' ? 'bg-indigo-600/30 text-white border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                className={`py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${language === 'RU' ? 'bg-indigo-600/30 text-white border border-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.2)]' : 'text-slate-500 hover:text-slate-300'}`}
                             >
+                                {language === 'RU' && <Check className="w-3 h-3 text-indigo-400" />}
                                 Русский
-                            </button>
+                            </motion.button>
                         </div>
                     </div>
 
                     {/* Sounds Settings */}
-                    <div className="flex flex-col gap-1">
-                        <div className="flex flex-col gap-1">
-                            {/* Music Toggle */}
-                            <button 
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{language === 'RU' ? 'СИГНАЛЫ И ЗВУКИ' : 'AUDIO OUTPUT'}</span>
+                        <div className="flex flex-col gap-1.5">
+                            <motion.button 
                                 onClick={() => { toggleMusic(); playUiSound('CLICK'); }} 
-                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border transition-all text-left cursor-pointer ${isMusicMuted ? 'border-slate-800 bg-slate-950/40 text-slate-500' : 'border-indigo-500/30 bg-indigo-950/20 text-indigo-300 hover:bg-indigo-950/30'}`}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all text-left cursor-pointer ${isMusicMuted ? 'border-slate-800 bg-black/20 text-slate-500' : 'border-indigo-500/30 bg-indigo-950/20 text-indigo-300 hover:bg-indigo-950/30'}`}
                             >
                                 <div className="flex items-center gap-2">
                                     {isMusicMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Music className="w-3.5 h-3.5 text-indigo-400" />}
-                                    <span className="text-[11px] font-black uppercase tracking-wider">{language === 'RU' ? 'Музыка' : 'Music'}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{language === 'RU' ? 'Музыка' : 'Music'}</span>
                                 </div>
-                                <span className="text-[9px] font-mono leading-none">{isMusicMuted ? 'OFF' : 'ON'}</span>
-                            </button>
-                            {/* SFX Toggle */}
-                            <button 
+                                <span className="text-[9px] font-mono leading-none font-bold">{isMusicMuted ? 'OFF' : 'ON'}</span>
+                            </motion.button>
+                            <motion.button 
                                 onClick={() => { toggleSfx(); playUiSound('CLICK'); }} 
-                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border transition-all text-left cursor-pointer ${isSfxMuted ? 'border-slate-800 bg-slate-950/40 text-slate-500' : 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-950/30'}`}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all text-left cursor-pointer ${isSfxMuted ? 'border-slate-800 bg-black/20 text-slate-500' : 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-950/30'}`}
                             >
                                 <div className="flex items-center gap-2">
                                     {isSfxMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
-                                    <span className="text-[11px] font-black uppercase tracking-wider">{language === 'RU' ? 'Эффекты' : 'SFX'}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{language === 'RU' ? 'Эффекты' : 'SFX'}</span>
                                 </div>
-                                <span className="text-[9px] font-mono leading-none">{isSfxMuted ? 'OFF' : 'ON'}</span>
-                            </button>
+                                <span className="text-[9px] font-mono leading-none font-bold">{isSfxMuted ? 'OFF' : 'ON'}</span>
+                            </motion.button>
                         </div>
                     </div>
 
-                    {/* Leaderboard Link inside Dropdown */}
-                    <div className="flex flex-col border-t border-indigo-500/20 pt-2 mt-0.5">
-                        <button 
+                    {/* Rankings & Leaderboard */}
+                    <div className="flex flex-col border-t border-indigo-500/20 pt-3.5 mt-0.5">
+                        <motion.button 
                             onClick={() => { setIsSettingsOpen(false); setUIState('LEADERBOARD'); playUiSound('CLICK'); }}
-                            className="flex items-center gap-2 w-full p-2 bg-gradient-to-r from-indigo-950/40 to-indigo-900/10 border border-indigo-500/20 hover:border-indigo-400/60 rounded-xl hover:bg-indigo-900/30 hover:text-white transition-all text-left text-indigo-300 text-[10px] font-black uppercase tracking-wider cursor-pointer"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="flex items-center justify-center gap-2 w-full p-2.5 bg-gradient-to-r from-indigo-950/40 to-indigo-900/10 border border-indigo-500/30 hover:border-indigo-400/60 rounded-xl hover:bg-indigo-900/30 hover:text-white transition-all text-center text-indigo-300 text-[10px] font-black uppercase tracking-wider cursor-pointer shadow-inner"
                         >
                             <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                            <span>{language === 'RU' ? 'Открыть Рейтинг' : 'Open Rankings'}</span>
-                        </button>
+                            <span>{language === 'RU' ? 'Рейтинг лидеров' : 'Launch Rankings'}</span>
+                        </motion.button>
                     </div>
                 </motion.div>
             )}
@@ -628,262 +855,334 @@ const MainMenu: React.FC = () => {
         </div>
       </div>
 
-      {/* CENTER MENU - ADAPTIVE GRID SYSTEM */}
-      <div className="flex flex-col md:grid md:grid-cols-12 gap-10 md:gap-14 lg:gap-20 w-full max-w-sm md:max-w-4xl lg:max-w-5xl px-6 md:px-10 z-10 max-h-screen overflow-y-auto no-scrollbar py-20 md:py-6 items-center justify-center">
+      {/* CORE MENU CENTRAL STAGE */}
+      <div className="flex flex-col md:grid md:grid-cols-12 gap-8 md:gap-14 lg:gap-16 w-full max-w-sm md:max-w-4xl lg:max-w-5xl px-6 md:px-10 z-10 max-h-screen overflow-y-auto no-scrollbar py-24 md:py-6 items-center justify-center">
         
-        {/* LOGO BLOCK WITH ANIMATION (Column 1) */}
+        {/* LEFT COLUMN: THE LOGO & BRAND IDENTITY PANEL */}
         <motion.div 
-            initial={{ opacity: 0, x: -40, scale: 0.95 }}
-            animate={{ opacity: logoVisible ? 1 : 0, x: logoVisible ? 0 : -40, scale: logoVisible ? 1 : 0.95 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="md:col-span-6 lg:col-span-7 flex flex-col items-center md:items-start text-center md:text-left selection:bg-indigo-500/30 font-sans"
+            initial={{ opacity: 0, x: -30, scale: 0.95 }}
+            animate={{ opacity: logoVisible ? 1 : 0, x: logoVisible ? 0 : -30, scale: logoVisible ? 1 : 0.95 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="md:col-span-6 lg:col-span-7 flex flex-col items-center md:items-start text-center md:text-left select-none relative"
         >
-            {/* Top Security Status Header */}
-            <div className="hidden md:flex items-center gap-2 mb-3 px-3 py-1 bg-indigo-950/40 border border-indigo-500/20 rounded-full select-none shadow-[0_0_15px_rgba(99,102,241,0.15)] animate-[pulse_3s_ease-in-out_infinite]">
-                <Activity className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                <span className="text-[9px] md:text-[10px] text-indigo-300 font-mono font-bold tracking-[0.2em] uppercase">
-                    {language === 'RU' ? 'СЕКТОР_НЕБУЛА // СФЕРА_02' : 'NEBULA_SECTOR // HUB_02'}
-                </span>
-            </div>
+            {/* Rotating Tech HUD and Hologram Core */}
+            <div className="relative w-28 h-28 md:w-36 md:h-36 mb-5 flex items-center justify-center select-none group">
+                {/* Background glow shadow */}
+                <div className="absolute w-32 h-32 md:w-44 md:h-44 bg-indigo-500/20 blur-[30px] md:blur-[45px] rounded-full animate-[pulse_4s_ease-in-out_infinite]" />
 
-            {/* Rotating Cyber HUD and Central Hexagon */}
-            <div className="relative w-28 h-28 md:w-36 md:h-36 mb-4 flex items-center justify-center select-none group">
-                {/* Background radial overlay */}
-                <div className="absolute w-36 h-36 md:w-48 md:h-48 bg-indigo-500/20 blur-[35px] md:blur-[50px] rounded-full animate-[pulse_4s_ease-in-out_infinite]" />
-
-                {/* Rotating Outer Tech Ring with Custom Segments */}
-                <svg className="absolute w-full h-full animate-[spin_30s_linear_infinite]" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="44" stroke="#4f46e5" strokeWidth="1" strokeDasharray="6 8 36 8 16 12" fill="none" opacity="0.3" />
-                    <circle cx="50" cy="50" r="44" stroke="#c084fc" strokeWidth="2" strokeDasharray="2 18" fill="none" opacity="0.5" />
+                {/* Rotating Outer Ring Slices */}
+                <svg className="absolute w-full h-full animate-[spin_25s_linear_infinite]" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="44" stroke="#4f46e5" strokeWidth="1.2" strokeDasharray="6 8 36 8 16 12" fill="none" opacity="0.4" />
+                    <circle cx="50" cy="50" r="44" stroke="#c084fc" strokeWidth="2" strokeDasharray="2 18" fill="none" opacity="0.6" />
                 </svg>
 
-                {/* Rotating Counter-Clockwise Dotted Ring */}
-                <div className="absolute inset-2 border border-dotted border-indigo-400/40 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
+                {/* Counter-Clockwise Dotted Ring */}
+                <div className="absolute inset-1.5 border border-dotted border-indigo-400/30 rounded-full animate-[spin_12s_linear_infinite_reverse]" />
 
-                {/* Middle Hex-Boundary Ring */}
-                <div className="absolute inset-4 border border-dashed border-indigo-500/20 rounded-full animate-[spin_20s_linear_infinite]" />
+                {/* Inner Compass Ticks */}
+                <div className="absolute inset-3 border border-dashed border-indigo-500/20 rounded-full animate-[spin_18s_linear_infinite]" />
 
-                {/* Central Double-layered Hexagon Logo Core */}
-                <div className="relative z-10 p-0.5 bg-slate-950/80 rounded-2xl border border-indigo-500/30 shadow-[inset_0_0_15px_rgba(99,102,241,0.3)] transition-transform duration-500 group-hover:scale-110">
-                    <Hexagon className="w-14 h-14 md:w-18 md:h-18 text-indigo-400 drop-shadow-[0_0_20px_rgba(99,102,241,0.8)] fill-indigo-950/60" strokeWidth={1.25} />
+                {/* Central Hexagonal Core with Hologram */}
+                <div className="relative z-10 p-1 bg-[#060714]/90 rounded-2xl border-2 border-indigo-500/40 shadow-[inset_0_0_15px_rgba(99,102,241,0.4)] transition-all duration-500 group-hover:scale-105 group-hover:border-indigo-400">
+                    <Hexagon className="w-14 h-14 md:w-16 md:h-16 text-indigo-400 drop-shadow-[0_0_12px_rgba(99,102,241,0.6)] fill-indigo-950/50" strokeWidth={1} />
                     <div className="absolute inset-0 flex items-center justify-center animate-pulse">
-                        <Target className="w-5 h-5 md:w-7 md:h-7 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
+                        <Target className="w-5 h-5 md:w-6 md:h-6 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
                     </div>
                 </div>
 
-                {/* Isometric coordinate tick marks for corner decoration */}
-                <div className="absolute top-2 left-2 text-[7px] text-indigo-400/55 font-mono">Q+0.2</div>
-                <div className="absolute bottom-2 right-2 text-[7px] text-indigo-400/55 font-mono">R-0.8</div>
+                {/* Tactical HUD markings */}
+                <div className="absolute top-1 left-1 text-[7px] text-indigo-400/40 font-mono">X+12.4</div>
+                <div className="absolute bottom-1 right-1 text-[7px] text-indigo-400/40 font-mono">Y-45.9</div>
             </div>
 
-            {/* Main Typographic Pile */}
-            <div className="flex flex-col items-center md:items-start mt-2 relative group-hover:scale-[1.01] transition-transform duration-500">
-                {/* Sci-Fi Decorative Grid Backdrop Accent */}
-                <div className="absolute -inset-x-4 -inset-y-2 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.1)_0%,transparent_70%)] pointer-events-none rounded-2xl" />
-
-                {/* Left/Right Bracket Matrix Decorations */}
+            {/* Typography & Title */}
+            <div className="flex flex-col items-center md:items-start mt-2 relative">
                 <div className="relative flex items-center">
                     <span className="hidden md:inline-block text-indigo-500/30 text-4xl lg:text-5xl font-mono mr-3 select-none leading-none animate-pulse">[</span>
                     
                     <h1 
-                        className="relative text-5xl sm:text-6xl md:text-5xl lg:text-7xl xl:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-50 to-indigo-200 select-none uppercase transition-all duration-300"
+                        className="relative text-5xl sm:text-6xl md:text-5xl lg:text-7xl xl:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-indigo-50 to-indigo-200 select-none uppercase"
                         style={{ 
                             WebkitTextStroke: '1.2px rgba(255,255,255,0.22)',
-                            filter: 'drop-shadow(0 0 25px rgba(99,102,241,0.45)) drop-shadow(0 0 50px rgba(168,85,247,0.2))'
+                            filter: 'drop-shadow(0 0 15px rgba(99,102,241,0.35))'
                         }}
                     >
                         {t.TITLE}
                         
-                        {/* Interactive Scanline Glint Mask */}
+                        {/* Scanning Gloss Glint */}
                         <motion.div 
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent pointer-events-none mix-blend-color-dodge rounded-lg"
-                            initial={{ x: '-100%', skewX: -25 }}
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent pointer-events-none mix-blend-color-dodge"
+                            initial={{ x: '-100%', skewX: -20 }}
                             animate={{ x: '200%' }}
-                            transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut", repeatDelay: 1.2 }}
+                            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut", repeatDelay: 1 }}
                         />
                     </h1>
 
                     <span className="hidden md:inline-block text-indigo-500/30 text-4xl lg:text-5xl font-mono ml-3 select-none leading-none animate-pulse">]</span>
                 </div>
 
-                {/* Subtitle with Scan Banner background & colorful text gradient */}
-                <div className="relative mt-1 px-4 py-1.5 rounded bg-slate-900/50 border border-indigo-500/10 backdrop-blur-sm shadow-[inset_0_0_12px_rgba(99,102,241,0.15)] flex items-center justify-center overflow-hidden">
-                    {/* Pulsating horizontal laser light */}
-                    <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-fuchsia-500 to-transparent animate-pulse" />
+                {/* Subtitle with high-contrast indicator */}
+                <div className="relative mt-2 px-4 py-1 rounded bg-slate-950/40 border border-indigo-500/10 backdrop-blur-md shadow-[inset_0_0_12px_rgba(99,102,241,0.15)] overflow-hidden">
+                    {/* Glowing bottom border laser line */}
+                    <div className="absolute inset-x-0 bottom-0 h-[1.5px] bg-gradient-to-r from-transparent via-fuchsia-500 to-transparent animate-pulse" />
 
-                    <div className="text-sm sm:text-base md:text-sm lg:text-lg text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-fuchsia-400 to-pink-400 font-mono font-black uppercase tracking-[0.3em] md:tracking-[0.4em] drop-shadow-[0_0_8px_rgba(168,85,247,0.3)] select-none">
+                    <div className="text-xs sm:text-sm md:text-xs lg:text-base text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-fuchsia-400 to-pink-400 font-mono font-black uppercase tracking-[0.3em] md:tracking-[0.4em] drop-shadow-[0_0_8px_rgba(168,85,247,0.3)]">
                         {language === 'RU' ? 'ЭКОНОМИКА' : 'ECONOMY'}
                     </div>
                 </div>
             </div>
 
-            {/* Custom Divider Line & Subtitle */}
-            <div className="flex items-center gap-3 mt-5 md:mt-6 select-none opacity-90 w-full justify-center md:justify-start">
-                <div className="h-[2px] w-10 md:w-16 bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent md:to-indigo-500/40"></div>
-                <p className="text-[10px] md:text-xs text-indigo-200/90 font-mono font-black tracking-[0.25em] uppercase drop-shadow-[0_0_10px_rgba(99,102,241,0.6)] whitespace-nowrap">
+            {/* Custom Divider line */}
+            <div className="flex items-center gap-3 mt-5 md:mt-6 w-full justify-center md:justify-start">
+                <div className="h-[2px] w-10 md:w-14 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
+                <p className="text-[10px] md:text-[11px] text-indigo-200/95 font-mono font-black tracking-[0.2em] uppercase drop-shadow-[0_0_8px_rgba(99,102,241,0.5)] whitespace-nowrap">
                     {t.SUBTITLE}
                 </p>
-                <div className="h-[2px] w-10 md:w-16 bg-gradient-to-l from-transparent via-indigo-500/60 to-transparent md:to-indigo-500/40"></div>
+                <div className="h-[2px] w-10 md:w-14 bg-gradient-to-l from-transparent via-indigo-500/50 to-transparent"></div>
             </div>
 
-            {/* Lower decorative protocol footprint */}
-            <div className="hidden md:flex items-center gap-1.5 mt-5 text-[8px] text-slate-500 font-mono select-none uppercase tracking-wider">
-                <span>VER: 2.0.0</span>
+            {/* Micro details footprint */}
+            <div className="hidden md:flex items-center gap-2 mt-5 text-[8.5px] text-slate-500 font-mono uppercase tracking-wider select-none">
+                <span>VER: 2.0.0 // LIVE</span>
                 <span>•</span>
-                <span>SYS_INIT_OK</span>
+                <span>CORE_INIT_SUCCESS</span>
                 <span>•</span>
-                <span>STABILITY: ACTIVE</span>
+                <span>SECURE_SESSION</span>
             </div>
         </motion.div>
 
-        {/* PANELS & CONTROL ACTIONS BLOCK (Column 2) */}
-        <div className="md:col-span-6 lg:col-span-5 flex flex-col gap-3.5 w-full max-w-sm shrink-0">
-          <div className="flex flex-col gap-2">
-            <MenuButton 
-                onClick={() => startCampaignWithMode('STORY')} 
-                variant="primary" 
-                icon={<BookOpen className="w-5 h-5 fill-current" />} 
-                label={t.CAMPAIGN} 
-                subLabel={t.CAMPAIGN_SUB} 
-                style={{ marginRight: '0px' }}
-            />
-          </div>
+        {/* RIGHT COLUMN: ACTION CONTROLS & SELECTION BUTTONS */}
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="md:col-span-6 lg:col-span-5 flex flex-col gap-3.5 w-full max-w-sm shrink-0"
+        >
+          {/* Glassmorphic border container that bundles controls nicely */}
+          <div className="bg-[#0b0c1e]/40 border-2 border-indigo-500/15 p-4 md:p-5 rounded-3xl backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col gap-3.5 relative overflow-hidden">
+            {/* Holographic background mesh inside the card */}
+            <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/[0.02] to-transparent pointer-events-none" />
+            
+            {/* Grid corner decoration notches */}
+            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-indigo-500/20 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-indigo-500/20 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-indigo-500/20 pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-indigo-500/20 pointer-events-none" />
 
-          <MenuButton onClick={handleNewGameClick} variant="battle" icon={<Swords className="w-5 h-5" />} label={t.SKIRMISH} subLabel={t.SKIRMISH_SUB} />
-          {hasActiveSession && <MenuButton onClick={() => { setUIState('GAME'); playUiSound('CLICK'); }} icon={<ArrowRight className="w-5 h-5" />} label={t.RESUME} subLabel={t.RESUME_SUB} />}
-        </div>
+            {/* Campaign Launch Button */}
+            <motion.div variants={itemVariants}>
+              <MenuButton 
+                  onClick={() => startCampaignWithMode('STORY')} 
+                  variant="campaign" 
+                  icon={<BookOpen className="w-5 h-5" />} 
+                  label={hasProgress ? t.CONTINUE_GAME : t.CAMPAIGN} 
+                  subLabel={hasProgress ? t.CONTINUE_GAME_SUB : t.CAMPAIGN_SUB} 
+              />
+            </motion.div>
+
+            {/* Skirmish Game Mode */}
+            <motion.div variants={itemVariants}>
+              <MenuButton 
+                  onClick={handleNewGameClick} 
+                  variant="battle" 
+                  icon={<Swords className="w-5 h-5" />} 
+                  label={t.SKIRMISH} 
+                  subLabel={t.SKIRMISH_SUB} 
+              />
+            </motion.div>
+
+            {/* Action Resume Session - Lights up premium gold when active! */}
+            {hasActiveSession && (
+              <motion.div 
+                variants={itemVariants}
+                className="relative"
+              >
+                {/* Extra ambient glow behind active campaign */}
+                <div className="absolute -inset-1 bg-amber-500/10 rounded-2xl blur-md animate-pulse pointer-events-none" />
+                <MenuButton 
+                    onClick={() => { setUIState('GAME'); playUiSound('CLICK'); }} 
+                    variant="resume"
+                    icon={<Compass className="w-5 h-5" />} 
+                    label={t.RESUME} 
+                    subLabel={t.RESUME_SUB} 
+                />
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
 
       </div>
 
-      {/* AUTH MODAL */}
+      {/* AUTHENTICATION / SIGN IN MODAL */}
       <AnimatePresence>
       {authMode && (
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4"
+            className="absolute inset-0 bg-black/85 backdrop-blur-xl z-50 flex items-center justify-center p-4 pointer-events-auto"
         >
           <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-sm relative overflow-hidden flex flex-col group"
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", damping: 25, stiffness: 280 }}
+              className="bg-[#060712] border-2 border-indigo-500/35 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-sm relative overflow-hidden flex flex-col"
           >
-              {/* Cyber Corner Brackets */}
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+              {/* Corner decors */}
+              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/40 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/40 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/40 pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/40 pointer-events-none" />
 
-              {/* Scanlines */}
-              <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
-            {/* ... Existing Auth Modal Content (kept as is) ... */}
-            <div className="grid grid-cols-2 border-b border-indigo-500/20 bg-slate-900/50">
-                <button onClick={() => { setAuthMode('LOGIN'); setErrorMessage(null); playUiSound('CLICK'); }} className={`py-4 text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'LOGIN' ? 'bg-slate-800/50 text-indigo-400 border-b-2 border-indigo-500 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_LOGIN}</button>
-                <button onClick={() => { setAuthMode('REGISTER'); setErrorMessage(null); playUiSound('CLICK'); }} className={`py-4 text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-colors break-words whitespace-pre-wrap ${authMode === 'REGISTER' ? 'bg-slate-800/50 text-emerald-400 border-b-2 border-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>{t.AUTH_REGISTER}</button>
+              {/* Scanlines layer */}
+              <div className="absolute inset-0 bg-scanlines opacity-5 pointer-events-none" />
+              
+            {/* Modal tab navigation */}
+            <div className="grid grid-cols-2 border-b border-indigo-500/20 bg-[#0d0f22]/60 shrink-0">
+                <button 
+                    onClick={() => { setAuthMode('LOGIN'); setErrorMessage(null); playUiSound('CLICK'); }} 
+                    className={`py-4 text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${authMode === 'LOGIN' ? 'bg-[#0f1129]/60 text-indigo-400 border-b-2 border-indigo-500 shadow-[inset_0_0_12px_rgba(99,102,241,0.2)]' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    {t.AUTH_LOGIN}
+                </button>
+                <button 
+                    onClick={() => { setAuthMode('REGISTER'); setErrorMessage(null); playUiSound('CLICK'); }} 
+                    className={`py-4 text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${authMode === 'REGISTER' ? 'bg-[#0f1129]/60 text-emerald-400 border-b-2 border-emerald-500 shadow-[inset_0_0_12px_rgba(16,185,129,0.2)]' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    {t.AUTH_REGISTER}
+                </button>
             </div>
-            <div className="p-4 md:p-8 flex flex-col gap-4 md:gap-5 overflow-y-auto no-scrollbar max-h-[80vh]">
-              <div className="flex items-center gap-2 md:gap-3 mb-1">
-                  <div className={`p-2.5 md:p-3 rounded-xl border shadow-lg ${authMode === 'REGISTER' && isGuestRegistration ? 'bg-slate-800 border-slate-600' : (authMode === 'LOGIN' ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400')}`}>
-                      {authMode === 'REGISTER' && isGuestRegistration ? <Ghost className="w-5 h-5 md:w-6 md:h-6 text-slate-300" /> : (authMode === 'LOGIN' ? <LogIn className="w-5 h-5 md:w-6 md:h-6" /> : <UserPlus className="w-5 h-5 md:w-6 md:h-6" />)}
+
+            {/* Inner Content scroll area */}
+            <div className="p-5 md:p-6 flex flex-col gap-4 overflow-y-auto no-scrollbar max-h-[75vh]">
+              <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl border shrink-0 ${authMode === 'REGISTER' && isGuestRegistration ? 'bg-slate-800/40 border-slate-700 text-slate-300' : (authMode === 'LOGIN' ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-400' : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400')}`}>
+                      {authMode === 'REGISTER' && isGuestRegistration ? <Ghost className="w-5 h-5" /> : (authMode === 'LOGIN' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />)}
                   </div>
-                  <div>
-                      <h2 className="text-lg md:text-xl font-bold text-white leading-none break-words whitespace-pre-wrap">{authMode === 'REGISTER' && isGuestRegistration ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
-                      <p className="text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-wider break-words whitespace-pre-wrap">{authMode === 'REGISTER' && isGuestRegistration ? t.MODAL_GUEST_SUBTITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_SUBTITLE : t.MODAL_REGISTER_SUBTITLE)}</p>
+                  <div className="leading-tight text-left">
+                      <h2 className="text-base font-bold text-white uppercase tracking-tight">{authMode === 'REGISTER' && isGuestRegistration ? t.MODAL_GUEST_TITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_TITLE : t.MODAL_REGISTER_TITLE)}</h2>
+                      <p className="text-[9px] text-slate-500 font-mono mt-0.5 uppercase tracking-wider">{authMode === 'REGISTER' && isGuestRegistration ? t.MODAL_GUEST_SUBTITLE : (authMode === 'LOGIN' ? t.MODAL_LOGIN_SUBTITLE : t.MODAL_REGISTER_SUBTITLE)}</p>
                   </div>
               </div>
+
               <AnimatePresence>
               {errorMessage && (
                   <motion.div 
-                      initial={{ opacity: 0, y: -10 }} 
+                      initial={{ opacity: 0, y: -5 }} 
                       animate={{ opacity: 1, y: 0 }} 
-                      exit={{ opacity: 0, y: -10 }} 
-                      className="p-3 bg-slate-950 border border-slate-800 rounded-lg flex items-center justify-center text-red-400 text-xs font-mono font-black uppercase tracking-wider text-center"
+                      exit={{ opacity: 0, y: -5 }} 
+                      className="p-3 bg-red-950/20 border border-red-500/30 rounded-xl text-red-400 text-[10px] font-mono font-black uppercase tracking-wider text-center"
                   >
                       {errorMessage}
                   </motion.div>
               )}
               </AnimatePresence>
-              <div className="space-y-3 md:space-y-4">
+
+              <div className="space-y-4 text-left">
                   {authMode === 'REGISTER' && (
-                      <div className="bg-slate-950/50 rounded-2xl border border-slate-800 p-3 md:p-4 flex flex-col items-center gap-3 md:gap-4">
-                          <span className="text-[8px] md:text-[9px] font-bold uppercase text-slate-500 tracking-widest w-full text-center break-words whitespace-pre-wrap">{t.UNIT_CONFIG}</span>
-                          <div className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-slate-900 rounded-full border-2 border-slate-800 shadow-inner">
+                      <div className="bg-[#0c0d1e]/80 rounded-2xl border border-indigo-500/10 p-3.5 flex flex-col items-center gap-3">
+                          <span className="text-[8px] font-black uppercase text-slate-500 tracking-wider w-full text-center">{t.UNIT_CONFIG}</span>
+                          <div className="w-20 h-20 flex items-center justify-center bg-black/40 rounded-full border border-indigo-500/20 shadow-inner">
                               <CharacterPreview head={selectedHead} body={selectedBody} color={selectedColor} />
                           </div>
-                          <div className="flex gap-1.5 md:gap-2 w-full justify-between items-center">
-                              <div className="flex flex-col items-center gap-1">
-                                  <span className="text-[7px] md:text-[8px] uppercase text-slate-500 break-words whitespace-pre-wrap">{t.UNIT_HEAD}</span>
-                                  <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
-                                      <button onClick={() => cycleOption(setSelectedHead, selectedHead, -1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
-                                      <button onClick={() => cycleOption(setSelectedHead, selectedHead, 1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
+                          
+                          <div className="grid grid-cols-3 gap-2 w-full items-center text-center">
+                              <div className="flex flex-col items-center gap-1 bg-black/30 p-1.5 rounded-lg border border-slate-900">
+                                  <span className="text-[7px] uppercase font-bold text-slate-500">{t.UNIT_HEAD}</span>
+                                  <div className="flex items-center">
+                                      <button onClick={() => cycleOption(setSelectedHead, selectedHead, -1, 4)} className="p-0.5 hover:bg-slate-800 text-indigo-400 cursor-pointer"><ChevronLeft className="w-3 h-3"/></button>
+                                      <button onClick={() => cycleOption(setSelectedHead, selectedHead, 1, 4)} className="p-0.5 hover:bg-slate-800 text-indigo-400 cursor-pointer"><ChevronRight className="w-3 h-3"/></button>
                                   </div>
                               </div>
-                              <div className="flex flex-col items-center gap-1">
-                                  <span className="text-[7px] md:text-[8px] uppercase text-slate-500 break-words whitespace-pre-wrap">{t.UNIT_HULL}</span>
-                                  <div className="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
-                                      {AVATAR_COLORS.slice(0, 4).map(c => <button key={c} onClick={() => setSelectedColor(c)} style={{backgroundColor: c}} className={`w-3.5 h-3.5 md:w-4 md:h-4 rounded-full ${selectedColor === c ? 'ring-1 ring-white' : 'opacity-50'}`} />)}
+                              <div className="flex flex-col items-center gap-1 bg-black/30 p-1.5 rounded-lg border border-slate-900 col-span-1">
+                                  <span className="text-[7px] uppercase font-bold text-slate-500">{t.UNIT_HULL}</span>
+                                  <div className="flex gap-1 justify-center max-w-full overflow-x-auto py-0.5">
+                                      {AVATAR_COLORS.slice(0, 4).map(c => (
+                                        <button 
+                                          key={c} 
+                                          onClick={() => setSelectedColor(c)} 
+                                          style={{backgroundColor: c}} 
+                                          className={`w-3 h-3 rounded-full shrink-0 ${selectedColor === c ? 'ring-2 ring-white scale-110' : 'opacity-40'} cursor-pointer transition-all`} 
+                                        />
+                                      ))}
                                   </div>
                               </div>
-                              <div className="flex flex-col items-center gap-1">
-                                  <span className="text-[7px] md:text-[8px] uppercase text-slate-500 break-words whitespace-pre-wrap">{t.UNIT_CHASSIS}</span>
-                                  <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800">
-                                      <button onClick={() => cycleOption(setSelectedBody, selectedBody, -1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
-                                      <button onClick={() => cycleOption(setSelectedBody, selectedBody, 1, 4)} className="p-1 hover:bg-slate-800 text-slate-400"><ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
+                              <div className="flex flex-col items-center gap-1 bg-black/30 p-1.5 rounded-lg border border-slate-900">
+                                  <span className="text-[7px] uppercase font-bold text-slate-500">{t.UNIT_CHASSIS}</span>
+                                  <div className="flex items-center">
+                                      <button onClick={() => cycleOption(setSelectedBody, selectedBody, -1, 4)} className="p-0.5 hover:bg-slate-800 text-indigo-400 cursor-pointer"><ChevronLeft className="w-3 h-3"/></button>
+                                      <button onClick={() => cycleOption(setSelectedBody, selectedBody, 1, 4)} className="p-0.5 hover:bg-slate-800 text-indigo-400 cursor-pointer"><ChevronRight className="w-3 h-3"/></button>
                                   </div>
                               </div>
                           </div>
+
                           <button
                               onClick={() => { setIsGuestRegistration(!isGuestRegistration); playUiSound('CLICK'); setErrorMessage(null); }}
-                              className="mt-2 w-full py-2 px-3 border border-slate-800 rounded-lg flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+                              className="w-full py-2 px-3 border border-indigo-500/15 rounded-xl flex items-center justify-between hover:bg-indigo-950/20 transition-all cursor-pointer"
                           >
-                              <div className="flex items-center gap-2">
-                                  <Ghost className={`w-4 h-4 ${isGuestRegistration ? 'text-emerald-400' : 'text-slate-500'}`} />
-                                  <span className={`text-[9px] uppercase tracking-wider font-bold ${isGuestRegistration ? 'text-emerald-400' : 'text-slate-400'}`}>
+                              <div className="flex items-center gap-1.5">
+                                  <Ghost className={`w-3.5 h-3.5 ${isGuestRegistration ? 'text-emerald-400' : 'text-slate-500'}`} />
+                                  <span className={`text-[8.5px] uppercase tracking-wider font-bold ${isGuestRegistration ? 'text-emerald-400' : 'text-slate-400'}`}>
                                       {isGuestRegistration ? t.BTN_GUEST : t.BYPASS_SECURITY}
                                   </span>
                               </div>
-                              <div className={`w-8 h-4 rounded-full border border-slate-700 p-0.5 flex ${isGuestRegistration ? 'bg-emerald-500/20 justify-end border-emerald-500/50' : 'bg-slate-900 justify-start'} transition-all`}>
+                              <div className={`w-7 h-4 rounded-full border p-0.5 flex ${isGuestRegistration ? 'bg-emerald-500/20 justify-end border-emerald-500/30' : 'bg-black justify-start border-slate-700'} transition-all`}>
                                   <div className={`w-2.5 h-2.5 rounded-full ${isGuestRegistration ? 'bg-emerald-400' : 'bg-slate-500'}`} />
                               </div>
                           </button>
                       </div>
                   )}
+
                   <div>
-                      <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 block flex items-center gap-1.5"><User className="w-3 h-3 text-indigo-400" /> {t.INPUT_NAME}</label>
-                      <div className="relative group">
-                          <input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder={t.INPUT_NAME_PH} className="w-full bg-slate-950/80 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all font-mono text-sm shadow-inner group-hover:border-slate-600" maxLength={16} />
-                      </div>
+                      <label className="text-[8.5px] uppercase font-bold text-slate-500 tracking-wider mb-1 flex items-center gap-1"><User className="w-3 h-3 text-indigo-400" /> {t.INPUT_NAME}</label>
+                      <input 
+                        type="text" 
+                        value={inputName} 
+                        onChange={(e) => setInputName(e.target.value)} 
+                        placeholder={t.INPUT_NAME_PH} 
+                        className="w-full bg-black/60 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono text-xs shadow-inner" 
+                        maxLength={16} 
+                      />
                   </div>
-                  {authMode === 'LOGIN' || (authMode === 'REGISTER' && !isGuestRegistration) ? (
+
+                  {(authMode === 'LOGIN' || (authMode === 'REGISTER' && !isGuestRegistration)) && (
                       <div>
-                          <label className="text-[8px] md:text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1 block flex items-center gap-1.5"><Lock className="w-3 h-3 text-indigo-400" /> {t.INPUT_PASS}</label>
-                          <div className="relative group">
-                              <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder={t.INPUT_PASS_PH} className="w-full bg-slate-950/80 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all font-mono text-sm shadow-inner group-hover:border-slate-600" />
-                          </div>
+                          <label className="text-[8.5px] uppercase font-bold text-slate-500 tracking-wider mb-1 flex items-center gap-1"><Lock className="w-3 h-3 text-indigo-400" /> {t.INPUT_PASS}</label>
+                          <input 
+                            type="password" 
+                            value={inputPassword} 
+                            onChange={(e) => setInputPassword(e.target.value)} 
+                            placeholder={t.INPUT_PASS_PH} 
+                            className="w-full bg-black/60 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono text-xs shadow-inner" 
+                          />
                       </div>
-                  ) : null}
+                  )}
+
                   <motion.button 
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleAuthSubmit} 
-                      className={`w-full py-4 mt-4 font-black rounded-2xl uppercase tracking-[0.15em] shadow-lg transition-all flex items-center justify-center gap-2 relative overflow-hidden group ${(authMode === 'REGISTER' && isGuestRegistration) ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-600/50 shadow-[0_4px_20px_rgba(0,0,0,0.4)]' : (authMode === 'LOGIN' ? 'bg-indigo-600/90 text-white shadow-[0_4px_25px_rgba(99,102,241,0.5)] border-t border-indigo-400/50 hover:bg-indigo-500 backdrop-blur-md' : 'bg-emerald-600/90 text-white shadow-[0_4px_25px_rgba(16,185,129,0.5)] border-t border-emerald-400/50 hover:bg-emerald-500 backdrop-blur-md')}`}
+                      className={`w-full py-3.5 mt-3 font-black rounded-xl uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 relative overflow-hidden group ${(authMode === 'REGISTER' && isGuestRegistration) ? 'bg-slate-800 text-slate-100 hover:bg-slate-700 border border-slate-700 shadow-[0_4px_15px_rgba(0,0,0,0.3)]' : (authMode === 'LOGIN' ? 'bg-indigo-600 text-white shadow-[0_4px_20px_rgba(99,102,241,0.4)] hover:bg-indigo-500' : 'bg-emerald-600 text-white shadow-[0_4px_20px_rgba(16,185,129,0.4)] hover:bg-emerald-500')}`}
                   >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                      <span className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{(authMode === 'REGISTER' && isGuestRegistration) ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}</span> <ArrowRight className="w-4 h-4 relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
+                      <span>{(authMode === 'REGISTER' && isGuestRegistration) ? t.BTN_GUEST : (authMode === 'LOGIN' ? t.BTN_LOGIN : t.BTN_REGISTER)}</span> 
+                      <ArrowRight className="w-4 h-4" />
                   </motion.button>
               </div>
             </div>
-            <button onClick={() => { setAuthMode(null); setErrorMessage(null); }} className="absolute top-3 right-3 p-2 text-slate-600 hover:text-white transition-colors rounded-full hover:bg-slate-800"><X className="w-5 h-5" /></button>
+
+            <button 
+              onClick={() => { setAuthMode(null); setErrorMessage(null); }} 
+              className="absolute top-3.5 right-3.5 p-1.5 text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors rounded-full cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </motion.div>
         </motion.div>
-      
       )}
       </AnimatePresence>
 
-      {/* CONFIRM ACTION MODAL */}
+      {/* ACTION WARNINGS / ABANDON CONFIRMATION MODAL */}
       <AnimatePresence>
       {confirmAction && (
           <motion.div 
@@ -898,15 +1197,15 @@ const MainMenu: React.FC = () => {
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.95, y: 10 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative text-center"
+                className="bg-[#0b0c16] border border-indigo-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative text-center"
             >
-                <div className="w-12 h-12 rounded-full border-2 border-amber-500/30 flex items-center justify-center mx-auto mb-4 bg-amber-500/10">
-                    <span className="text-amber-500 text-xl font-bold">!</span>
+                <div className="w-12 h-12 rounded-full border-2 border-amber-500/30 flex items-center justify-center mx-auto mb-3 bg-amber-500/10 animate-bounce">
+                    <span className="text-amber-500 text-xl font-bold font-mono">!</span>
                 </div>
-                <h3 className="text-xl md:text-2xl font-black font-mono text-white mb-2 tracking-tight uppercase">
-                    {language === 'RU' ? 'ВНИМАНИЕ' : 'WARNING'}
+                <h3 className="text-lg font-black font-mono text-white mb-1.5 tracking-tight uppercase">
+                    {language === 'RU' ? 'ВНИМАНИЕ' : 'SECURITY WARNING'}
                 </h3>
-                <p className="text-slate-300 mb-6 text-sm md:text-base px-2">
+                <p className="text-slate-300 mb-5 text-xs md:text-sm px-2 text-center leading-relaxed">
                     {confirmAction.type === 'LOGOUT' 
                         ? (language === 'RU' ? t.LOGOUT_CONFIRM : t.LOGOUT_CONFIRM)
                         : confirmAction.type === 'RESET_PROGRESS_ALL'
@@ -915,16 +1214,16 @@ const MainMenu: React.FC = () => {
                             : 'Are you sure you want to reset ALL training progression, blueprints, and points back to 0? This action is irreversible.')
                         : (language === 'RU' ? t.ABANDON_CONFIRM : t.ABANDON_CONFIRM)}
                 </p>
-                <div className="flex gap-3">
+                <div className="flex gap-3 shrink-0">
                     <button 
                         onClick={cancelConfirmAction}
-                        className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider text-xs md:text-sm rounded-xl transition-all border border-slate-700 active:scale-95 touch-manipulation"
+                        className="flex-1 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold uppercase tracking-wider text-xs rounded-xl transition-all border border-slate-800 cursor-pointer"
                     >
                         {language === 'RU' ? 'Отмена' : 'Cancel'}
                     </button>
                     <button 
                         onClick={executeConfirmAction}
-                        className="flex-1 px-4 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase tracking-wider text-xs md:text-sm rounded-xl transition-all border border-amber-500/50 shadow-[0_4px_15px_rgba(245,158,11,0.4)] active:scale-95 touch-manipulation"
+                        className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase tracking-wider text-xs rounded-xl transition-all border border-amber-500/40 shadow-[0_4px_15px_rgba(245,158,11,0.3)] cursor-pointer"
                     >
                         {language === 'RU' ? 'Продолжить' : 'Proceed'}
                     </button>
@@ -934,62 +1233,67 @@ const MainMenu: React.FC = () => {
       )}
       </AnimatePresence>
 
-      {/* COMPACT BATTLE CONFIGURATOR */}
+      {/* COMPACT BATTLE / SKIRMISH GAME MODE CONFIGURATOR */}
       <AnimatePresence>
       {showMissionConfig && (
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4"
+            className="absolute inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4 pointer-events-auto"
         >
           <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-2xl h-fit max-h-[90vh] relative overflow-hidden flex flex-col group"
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", damping: 25, stiffness: 280 }}
+              className="bg-[#04050e] border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.3)] w-full max-w-2xl h-fit max-h-[90vh] relative overflow-hidden flex flex-col"
           >
-              {/* Cyber Corner Brackets */}
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/40 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/40 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/40 pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/40 pointer-events-none" />
 
-              {/* Scanlines */}
-              <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
-             
-             {/* Header */}
-             <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-indigo-500/20 bg-slate-900/50 shrink-0">
-                <div className="flex items-center gap-3 md:gap-4">
-                    <div className="p-2 bg-red-600/10 border border-red-500/30 rounded-xl shadow-[0_0_15px_rgba(220,38,38,0.2)]">
-                        <Swords className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-indigo-500/25 bg-[#0d0f22]/60 shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-red-500/10 border border-red-500/30 rounded-xl">
+                        <Swords className="w-5 h-5 text-red-500" />
                     </div>
-                    <div>
-                        <h2 className="text-base md:text-lg font-black text-white uppercase tracking-tighter leading-none break-words whitespace-pre-wrap">{t.CONFIG_TITLE}</h2>
-                        <div className="flex items-center gap-2 mt-1">
+                    <div className="text-left">
+                        <h2 className="text-base font-black text-white uppercase tracking-tight">{t.CONFIG_TITLE}</h2>
+                        <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <p className="text-[8px] md:text-[9px] text-emerald-400 uppercase tracking-widest font-mono break-words whitespace-pre-wrap">{t.TERMINAL_ACTIVE}</p>
+                            <p className="text-[9px] text-emerald-400 uppercase tracking-widest font-mono font-bold">{t.TERMINAL_ACTIVE}</p>
                         </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={randomizeConfig} className="p-2 text-slate-400 hover:text-white transition-colors rounded-full hover:bg-slate-800 border border-slate-700 hover:border-slate-500" title="Randomize Conditions">
-                        <Shuffle className="w-4 h-4 md:w-5 md:h-5" />
+                    <button 
+                        onClick={randomizeConfig} 
+                        className="p-2 text-slate-400 hover:text-white transition-colors rounded-full hover:bg-slate-800/60 border border-slate-800 hover:border-slate-600 cursor-pointer" 
+                        title="Randomize Parameters"
+                    >
+                        <Shuffle className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setShowMissionConfig(false)} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800"><X className="w-5 h-5" /></button>
+                    <button 
+                        onClick={() => setShowMissionConfig(false)} 
+                        className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800/60 cursor-pointer"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
-             </div>
+              </div>
 
-             {/* SCROLLABLE CONTENT */}
-             <div className="flex-1 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6">
-                 
-                 {/* 1. MISSION SELECTION (Compact Grid) */}
-                 <div>
-                    <h3 className="text-[8.5px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2 mb-1 md:mb-3 break-words whitespace-pre-wrap">
-                        <Target className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t.COL_GOAL_TITLE}
+              {/* Scrollable Setup parameters */}
+              <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-5 text-left md:space-y-6">
+                  
+                  {/* Goal tier selectors */}
+                  <div>
+                    <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5 mb-2.5">
+                        <Target className="w-3.5 h-3.5 text-indigo-400" /> {t.COL_GOAL_TITLE}
                     </h3>
-                    <div className="grid grid-cols-3 gap-1.5 md:gap-3 relative">
+                    <div className="grid grid-cols-3 gap-2">
                         {[1, 2, 3].map(id => {
                               const tier = MISSION_TIERS[id as 1|2|3];
                               const isSelected = selectedTier === id;
@@ -999,309 +1303,174 @@ const MainMenu: React.FC = () => {
                                   key={id} 
                                   onClick={() => { setSelectedTier(id as 1|2|3); setDifficulty(tier.difficulty); playUiSound('CLICK'); }}
                                   className={`
-                                    relative flex flex-col items-center justify-center p-2 md:p-3 rounded-2xl transition-all duration-300 border focus:outline-none group h-16 md:h-24 overflow-hidden
+                                    relative flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 h-20 md:h-24 overflow-hidden cursor-pointer text-center
                                     ${isSelected 
-                                        ? 'bg-gradient-to-b from-indigo-500/20 to-slate-900/90 border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3),inset_0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5),inset_0_0_20px_rgba(99,102,241,0.3)] scale-[1.02]' 
-                                        : 'bg-slate-900/40 border-slate-700/50 hover:border-slate-500 hover:bg-slate-800/60 shadow-lg'}
+                                        ? 'bg-gradient-to-b from-indigo-500/15 to-[#0b0c1e] border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.25)]' 
+                                        : 'bg-black/40 border-slate-800 hover:border-slate-600 hover:bg-[#070814]'}
                                   `}
                                 >
-                                   {isSelected && (
-                                     <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/10 to-transparent pointer-events-none" />
-                                   )}
-                                   {isSelected && (
-                                     <div className="absolute inset-0 opacity-30 shadow-[inset_0_0_15px_#818cf8] rounded-2xl pointer-events-none blur-sm" />
-                                   )}
-                                   <Icon className={`relative z-10 w-3.5 h-3.5 md:w-6 md:h-6 mb-0.5 md:mb-2 transition-all duration-300 ${isSelected ? 'text-indigo-300 drop-shadow-[0_0_10px_rgba(165,180,252,0.8)] scale-110' : 'text-slate-500 group-hover:text-slate-300'}`} />
-                                   <span className={`relative z-10 text-[8px] md:text-[10px] font-black uppercase tracking-wider text-center leading-tight break-words whitespace-pre-wrap transition-all duration-300 ${isSelected ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : 'text-slate-400'}`}>{tier.label}</span>
-                                   <span className={`relative z-10 text-[7px] md:text-[9px] font-mono mt-0 md:mt-1 transition-all duration-300 ${isSelected ? 'text-indigo-200/80 drop-shadow-md' : 'text-slate-600'}`}>{tier.time}</span>
+                                   <Icon className={`w-4 h-4 md:w-5 md:h-5 mb-1.5 transition-all duration-300 ${isSelected ? 'text-indigo-400 scale-110' : 'text-slate-500'}`} />
+                                   <span className={`text-[9px] font-black uppercase tracking-wide leading-tight ${isSelected ? 'text-white' : 'text-slate-400'}`}>{tier.label}</span>
+                                   <span className={`text-[8px] font-mono mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-600'}`}>{tier.time}</span>
                                 </button>
                               );
                         })}
                     </div>
-                 </div>
+                  </div>
 
-                 <div className="h-px bg-slate-800 w-full" />
+                  <div className="h-px bg-slate-900 w-full" />
 
-                 {/* 2. CONFIGURATION GRID */}
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5">
-                     
-                     {/* LEFT: DIFFICULTY & MAP TYPE */}
-                     <div className="flex flex-col gap-3 md:gap-5">
-                        
-                        {/* DIFFICULTY (STYLISH UNIFIED CARD PANEL) */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3.5 md:p-4.5 flex flex-col gap-3 md:gap-4 transition-all hover:border-slate-700/60 shadow-lg relative overflow-hidden group">
-                            {/* Accent lighting pattern */}
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/8 transition-all duration-300 pointer-events-none" />
-                            
-                            <div className="flex flex-wrap items-center justify-between gap-3 relative z-10">
-                                <div className="flex flex-col gap-0.5">
-                                    <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.12em] text-slate-300 flex items-center gap-2 leading-none">
-                                        <Shield className="w-3.5 h-3.5 text-indigo-400" /> {t.LBL_DIFFICULTY}
-                                    </h3>
-                                    <span className="text-[8px] md:text-[9px] text-slate-500 font-mono uppercase tracking-wider leading-none mt-1">
-                                        {difficulty === 'EASY' ? t.DIFF_EASY : difficulty === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
-                                    </span>
-                                </div>
-
-                                <div className="flex bg-slate-950 p-0.5 rounded-xl border border-slate-800 shrink-0 w-44 md:w-52">
-                                    {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => {
-                                        const active = difficulty === d;
-                                        let btnColor = 'text-slate-600 hover:text-slate-400';
-                                        if (active) {
-                                            if (d === 'EASY') btnColor = 'bg-emerald-600/90 text-white shadow-md shadow-emerald-950/50 font-bold';
-                                            if (d === 'MEDIUM') btnColor = 'bg-amber-600/90 text-white shadow-md shadow-amber-950/50 font-bold';
-                                            if (d === 'HARD') btnColor = 'bg-red-600/90 text-white shadow-md shadow-red-950/50 font-bold';
-                                        }
-                                        return (
-                                            <button 
-                                                key={d} 
-                                                type="button"
-                                                onClick={() => { setDifficulty(d); playUiSound('CLICK'); }}
-                                                className={`flex-1 py-1 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all break-words ${btnColor}`}
-                                            >
-                                                {d === 'EASY' ? t.DIFF_EASY : d === 'MEDIUM' ? t.DIFF_MEDIUM : t.DIFF_HARD}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            
-                            <div className={`p-2 rounded-xl border flex items-start gap-1.5 md:gap-2.5 transition-all duration-300 relative z-10 ${getDifficultyColor(difficulty)}`}>
-                                <Activity className="w-3.5 h-3.5 shrink-0 animate-pulse mt-0.5" />
-                                <div>
-                                    <span className="block text-[7px] md:text-[8px] font-black uppercase tracking-widest opacity-70 leading-none">{t.RULES_ENGAGEMENT}</span>
-                                    <span className="text-[7.5px] md:text-[9.5px] font-medium leading-tight block mt-1">{getDifficultyDesc(difficulty)}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* MAP TYPE SELECTOR (STYLISH COMPACT CARD PANEL) */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3.5 md:p-4.5 flex items-center justify-between gap-4 transition-all hover:border-slate-700/60 shadow-lg relative overflow-hidden group">
-                            {/* Accent lighting pattern */}
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/3 rounded-full blur-2xl group-hover:bg-cyan-500/5 transition-all duration-300 pointer-events-none" />
-                            
-                            <div className="flex flex-col gap-0.5 relative z-10">
-                                <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.12em] text-slate-300 flex items-center gap-2 leading-none">
-                                    <MapIcon className="w-3.5 h-3.5 text-cyan-400" /> {language === 'RU' ? 'Ландшафт' : 'Terrain'}
+                  {/* Settings Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      
+                      {/* Left: Terrain selection */}
+                      <div className="flex flex-col gap-4">
+                        <div className="bg-black/35 border border-slate-900 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-lg hover:border-slate-800/80 transition-all">
+                            <div className="flex flex-col text-left">
+                                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <MapIcon className="w-3.5 h-3.5 text-cyan-400" /> {language === 'RU' ? 'Рельеф Сектора' : 'Sector Terrain'}
                                 </h3>
-                                <span className="text-[8px] md:text-[9.5px] text-slate-500 font-mono uppercase tracking-wider leading-normal mt-1 max-w-[120px] md:max-w-[200px]">
+                                <span className="text-[9px] text-slate-500 mt-1 font-mono uppercase tracking-wide leading-normal">
                                     {mapType === 'FLAT' 
-                                        ? (language === 'RU' ? 'Мягкий плоский сектор' : 'Flat, stable terrain') 
-                                        : (language === 'RU' ? 'Опасные аномальные выступы' : 'High tactical verticality')}
+                                        ? (language === 'RU' ? 'Устойчивые ровные плиты' : 'Flat stable hex tiles') 
+                                        : (language === 'RU' ? 'Крутые аномальные уступы' : 'Steep vertical heights')}
                                 </span>
                             </div>
 
-                            <div className="flex bg-slate-950 p-0.5 rounded-xl border border-slate-800 shrink-0 w-36 md:w-44 relative z-10">
+                            <div className="flex bg-black p-0.5 rounded-xl border border-slate-850 shrink-0 w-32 md:w-36">
                                 <button 
-                                    type="button"
                                     onClick={() => { setMapType('FLAT'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 md:py-1.5 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${mapType === 'FLAT' ? 'bg-slate-800 text-white shadow-[0_0_8px_rgba(255,255,255,0.1)]' : 'text-slate-600 hover:text-slate-400'}`}
+                                    className={`flex-1 py-1 rounded-lg text-[8.5px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${mapType === 'FLAT' ? 'bg-slate-800 text-white shadow-[0_0_8px_rgba(255,255,255,0.1)]' : 'text-slate-600 hover:text-slate-400'}`}
                                 >
-                                    <Layers className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Плоский' : 'Flat'}
+                                    {language === 'RU' ? 'Плоский' : 'Flat'}
                                 </button>
                                 <button 
-                                    type="button"
                                     onClick={() => { setMapType('CHAOTIC'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 md:py-1.5 rounded-lg text-[7.5px] md:text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${mapType === 'CHAOTIC' ? 'bg-indigo-600/90 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-600 hover:text-slate-400'}`}
+                                    className={`flex-1 py-1 rounded-lg text-[8.5px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-400'}`}
                                 >
-                                    <Activity className="w-2.5 h-2.5 md:w-3 md:h-3" /> {language === 'RU' ? 'Хаос' : 'Chaos'}
+                                    {language === 'RU' ? 'Хаос' : 'Chaos'}
                                 </button>
                             </div>
                         </div>
+                      </div>
 
-                     </div>
-
-                     {/* RIGHT: BOTS & STORAGE */}
-                     <div className="flex flex-col gap-3 md:gap-5">
-                        
-                        {/* BOTS (STYLISH RE-ENGINEERED COMPACT CARD PANEL) */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3.5 md:p-4.5 flex items-center justify-between gap-4 transition-all hover:border-slate-700/60 shadow-lg relative overflow-hidden group">
-                            {/* Accent lighting pattern */}
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/3 rounded-full blur-2xl group-hover:bg-rose-500/5 transition-all duration-300 pointer-events-none" />
-                            
-                            <div className="flex flex-col gap-0.5 flex-1 relative z-10">
-                                <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.12em] text-slate-300 flex items-center gap-2 leading-none">
-                                    <Bot className="w-3.5 h-3.5 text-rose-500 animate-pulse" /> {t.LBL_RIVALS}
+                      {/* Right: Opponents count */}
+                      <div className="flex flex-col gap-4">
+                        <div className="bg-black/35 border border-slate-900 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-lg hover:border-slate-800/80 transition-all">
+                            <div className="flex flex-col text-left flex-1">
+                                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <Bot className="w-3.5 h-3.5 text-rose-500" /> {t.LBL_RIVALS}
                                 </h3>
-                                <span className="text-[8px] md:text-[9.5px] text-slate-500 font-mono uppercase tracking-wider leading-none mt-1 break-words">
+                                <span className="text-[9px] text-slate-500 font-mono mt-1 uppercase tracking-wide leading-none">
                                     {getBotLabel(botCount)}
                                 </span>
-                                {botCount >= 4 && (
-                                    <span className="text-[7px] md:text-[8px] text-red-500 font-bold font-mono uppercase flex items-center gap-0.5 animate-pulse mt-1 leading-none">
-                                        <Flame className="w-2 md:w-2.5 md:h-2.5" /> {t.HIGH_CPU}
-                                    </span>
-                                )}
-                                {/* Matrix Grid dot indicator */}
-                                <div className="flex gap-1.5 mt-2.5">
-                                    {Array.from({ length: 6 }).map((_, i) => {
-                                        const active = i < botCount;
-                                        return (
-                                            <div 
-                                                key={i} 
-                                                className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-[1px] transition-all duration-300 ${
-                                                    active 
-                                                        ? 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]' 
-                                                        : 'bg-slate-800/60'
-                                                }`} 
-                                            />
-                                        );
-                                    })}
+                                
+                                <div className="flex gap-1 mt-2.5">
+                                    {Array.from({ length: 6 }).map((_, i) => (
+                                        <div 
+                                            key={i} 
+                                            className={`w-1 h-1.5 rounded-[1px] transition-all duration-300 ${i < botCount ? 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]' : 'bg-slate-800'}`} 
+                                        />
+                                    ))}
                                 </div>
                             </div>
 
-                            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1 w-24 md:w-28 shrink-0 justify-between relative z-10">
+                            <div className="flex items-center bg-black p-0.5 border border-slate-850 rounded-xl shrink-0 w-24 md:w-28 justify-between">
                                 <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (botCount > 1) {
-                                            setBotCount(botCount - 1);
-                                            playUiSound('CLICK');
-                                        }
-                                    }}
+                                    onClick={() => { if (botCount > 1) { setBotCount(botCount - 1); playUiSound('CLICK'); } }}
                                     disabled={botCount <= 1}
-                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all ${
-                                        botCount <= 1
-                                            ? 'text-slate-800 bg-transparent cursor-not-allowed opacity-20'
-                                            : 'text-rose-400 bg-slate-900 border border-slate-800/50 hover:text-rose-300 hover:bg-rose-500/10 hover:border-rose-500/30 active:scale-95'
-                                    }`}
+                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${botCount <= 1 ? 'text-slate-800 opacity-20' : 'text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 cursor-pointer'}`}
                                 >
-                                    <Minus className="w-3 h-3 md:w-4 md:h-4" />
+                                    <Minus className="w-3.5 h-3.5" />
                                 </button>
-                                
-                                <span className="text-xs md:text-sm font-mono font-black text-rose-500">
-                                    {botCount}
-                                </span>
-
+                                <span className="text-xs font-mono font-black text-rose-500">{botCount}</span>
                                 <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (botCount < 6) {
-                                            setBotCount(botCount + 1);
-                                            playUiSound('CLICK');
-                                        }
-                                    }}
+                                    onClick={() => { if (botCount < 6) { setBotCount(botCount + 1); playUiSound('CLICK'); } }}
                                     disabled={botCount >= 6}
-                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all ${
-                                        botCount >= 6
-                                            ? 'text-slate-800 bg-transparent cursor-not-allowed opacity-20'
-                                            : 'text-rose-400 bg-slate-900 border border-slate-800/50 hover:text-rose-300 hover:bg-rose-500/10 hover:border-rose-500/30 active:scale-95'
-                                    }`}
+                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${botCount >= 6 ? 'text-slate-800 opacity-20' : 'text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 cursor-pointer'}`}
                                 >
-                                    <Plus className="w-3 h-3 md:w-4 md:h-4" />
+                                    <Plus className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </div>
+                      </div>
 
-                        {/* STORAGE SELECTOR (STYLISH EMERALD COMPACT CARD PANEL) */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3.5 md:p-4.5 flex items-center justify-between gap-4 transition-all hover:border-slate-700/60 shadow-lg relative overflow-hidden group">
-                            {/* Accent lighting pattern */}
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/3 rounded-full blur-2xl group-hover:bg-emerald-500/5 transition-all duration-300 pointer-events-none" />
-                            
-                            <div className="flex flex-col gap-0.5 flex-1 relative z-10">
-                                <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.12em] text-slate-300 flex items-center gap-2 leading-none">
-                                    <Box className="w-3.5 h-3.5 text-emerald-500" /> {t.CARGO_CAP}
-                                </h3>
-                                <span className="text-[8px] md:text-[9.5px] text-slate-500 font-mono uppercase tracking-wider leading-none mt-1 break-words">
-                                    {language === 'RU' ? `Объем склада: ${storageCap}` : `Cargo Capacity: ${storageCap}`}
-                                </span>
-                                {/* Slots physical status containers */}
-                                <div className="flex gap-1.5 mt-2.5">
-                                    {Array.from({ length: 6 }).map((_, i) => {
-                                        const active = i < storageCap;
-                                        return (
-                                            <div 
-                                                key={i} 
-                                                className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-[1px] transition-all duration-300 border ${
-                                                    active 
-                                                        ? 'border-emerald-500/50 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' 
-                                                        : 'border-slate-800 bg-slate-850'
-                                                }`} 
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                      {/* Cargo Capacity Selection */}
+                      <div className="col-span-1 md:col-span-2 bg-black/35 border border-slate-900 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-lg hover:border-slate-800/80 transition-all">
+                          <div className="flex flex-col text-left flex-1">
+                              <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                  <Box className="w-3.5 h-3.5 text-emerald-400" /> {t.CARGO_CAP}
+                              </h3>
+                              <span className="text-[9px] text-slate-500 font-mono mt-1 uppercase tracking-wide leading-none">
+                                  {language === 'RU' ? `Предел хранения: ${storageCap}` : `Inventory Slot Limit: ${storageCap}`}
+                              </span>
+                              
+                              <div className="flex gap-1 mt-2.5">
+                                  {Array.from({ length: 6 }).map((_, i) => (
+                                      <div 
+                                          key={i} 
+                                          className={`w-1 h-1.5 rounded-[1px] transition-all duration-300 ${i < storageCap ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]' : 'bg-slate-800'}`} 
+                                      />
+                                  ))}
+                              </div>
+                          </div>
 
-                            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1 w-24 md:w-28 shrink-0 justify-between relative z-10">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (storageCap > 3) {
-                                            setStorageCap(storageCap - 1);
-                                            playUiSound('CLICK');
-                                        }
-                                    }}
-                                    disabled={storageCap <= 3}
-                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all ${
-                                        storageCap <= 3
-                                            ? 'text-slate-800 bg-transparent cursor-not-allowed opacity-20'
-                                            : 'text-emerald-400 bg-slate-900 border border-slate-800/50 hover:text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/30 active:scale-95'
-                                    }`}
-                                >
-                                    <Minus className="w-3 h-3 md:w-4 md:h-4" />
-                                </button>
-                                
-                                <span className="text-xs md:text-sm font-mono font-black text-emerald-400">
-                                    {storageCap}
-                                </span>
+                          <div className="flex items-center bg-black p-0.5 border border-slate-850 rounded-xl shrink-0 w-24 md:w-28 justify-between">
+                              <button
+                                  onClick={() => { if (storageCap > 3) { setStorageCap(storageCap - 1); playUiSound('CLICK'); } }}
+                                  disabled={storageCap <= 3}
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${storageCap <= 3 ? 'text-slate-800 opacity-20' : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer'}`}
+                              >
+                                  <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="text-xs font-mono font-black text-emerald-400">{storageCap}</span>
+                              <button
+                                  onClick={() => { if (storageCap < 6) { setStorageCap(storageCap + 1); playUiSound('CLICK'); } }}
+                                  disabled={storageCap >= 6}
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${storageCap >= 6 ? 'text-slate-800 opacity-20' : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer'}`}
+                              >
+                                  <Plus className="w-3.5 h-3.5" />
+                              </button>
+                          </div>
+                      </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (storageCap < 6) {
-                                            setStorageCap(storageCap + 1);
-                                            playUiSound('CLICK');
-                                        }
-                                    }}
-                                    disabled={storageCap >= 6}
-                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all ${
-                                        storageCap >= 6
-                                            ? 'text-slate-800 bg-transparent cursor-not-allowed opacity-20'
-                                            : 'text-emerald-400 bg-slate-900 border border-slate-800/50 hover:text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/30 active:scale-95'
-                                    }`}
-                                >
-                                    <Plus className="w-3 h-3 md:w-4 md:h-4" />
-                                </button>
-                            </div>
-                        </div>
+                  </div>
+              </div>
 
-                     </div>
-
-                 </div>
-             </div>
-
-             {/* FOOTER ACTION */}
-             <div className="p-3 md:p-6 border-t border-indigo-500/20 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between gap-3 md:gap-4 shrink-0">
-                 <div className="flex flex-col">
-                     <span className="text-[7px] md:text-[9px] text-slate-500 font-bold uppercase tracking-widest break-words whitespace-pre-wrap">{t.EST_REWARD}</span>
-                     <span className="text-xs md:text-base font-mono font-black text-amber-400 flex items-center gap-1 md:gap-2 break-words whitespace-pre-wrap">
-                        <Gem className="w-3 md:w-4 md:h-4" />
+              {/* Footer action buttons */}
+              <div className="p-4 md:p-5 border-t border-indigo-500/20 bg-[#0d0f22]/60 backdrop-blur-md flex flex-wrap items-center justify-between gap-4 shrink-0">
+                  <div className="flex flex-col text-left leading-tight">
+                      <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">{t.EST_REWARD}</span>
+                      <span className="text-sm font-mono font-black text-amber-400 flex items-center gap-1.5 mt-0.5">
+                        <Gem className="w-4 h-4 text-amber-400" />
                         {selectedTier === 3 ? t.REWARD_HIGH : (selectedTier === 2 ? t.REWARD_MED : t.REWARD_STD)}
-                     </span>
-                 </div>
+                      </span>
+                  </div>
 
-                 <button
-                    onClick={() => {
-                      playUiSound('CLICK');
-                      setShowMissionConfig(false);
-                      setUIState('LEVEL_EDITOR');
-                    }}
-                    className="px-4 py-3 bg-slate-950 border border-indigo-500/30 hover:border-indigo-400 text-indigo-300 hover:text-white font-bold rounded-xl text-[10px] md:text-xs uppercase tracking-wider transition-all flex items-center gap-2 font-mono shrink-0"
-                 >
-                    <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                    {language === 'RU' ? 'Конструктор' : 'Level Editor'}
-                 </button>
+                  <div className="flex gap-3 ml-auto shrink-0">
+                     <button
+                        onClick={() => {
+                          playUiSound('CLICK');
+                          setShowMissionConfig(false);
+                          setUIState('LEVEL_EDITOR');
+                        }}
+                        className="px-4 py-2.5 bg-black/60 border border-indigo-500/30 hover:border-indigo-400 text-indigo-300 hover:text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5 font-mono cursor-pointer"
+                     >
+                        <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                        {language === 'RU' ? 'Чертежи' : 'Level Editor'}
+                     </button>
 
-                 <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={confirmMissionStart}
-                    className="flex-1 max-w-xs py-3 md:py-4 bg-indigo-600/90 backdrop-blur-md hover:bg-indigo-500 text-white font-black rounded-2xl border-t border-indigo-400/50 uppercase tracking-[0.2em] md:tracking-[0.25em] shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:shadow-[0_8px_40px_rgba(99,102,241,0.5)] transition-all flex items-center justify-center gap-2 md:gap-3 group text-xs md:text-sm break-words whitespace-pre-wrap"
-                 >
-                    <Crosshair className="w-3.5 h-3.5 md:w-5 md:h-5 text-indigo-100 group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] group-hover:rotate-90 transition-all duration-500" />
-                    <span className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{t.BTN_START}</span>
-                 </motion.button>
-             </div>
+                     <motion.button 
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={confirmMissionStart}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl border-t border-indigo-400/30 uppercase tracking-widest shadow-[0_4px_20px_rgba(99,102,241,0.35)] transition-all flex items-center justify-center gap-2 group text-xs cursor-pointer"
+                     >
+                        <Crosshair className="w-4 h-4 text-indigo-100 group-hover:rotate-90 transition-all duration-500" />
+                        <span>{t.BTN_START}</span>
+                     </motion.button>
+                  </div>
+              </div>
 
           </motion.div>
         </motion.div>

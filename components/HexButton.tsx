@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { motion } from 'motion/react';
 
 interface HexButtonProps {
   onClick?: () => void;
@@ -46,22 +47,27 @@ const HexButton: React.FC<HexButtonProps> = ({
   const baseClasses = `relative flex items-center justify-center select-none transition-all duration-500 touch-manipulation focus:outline-none ${className}`;
   
   // Interactive Classes
-  let interactClasses = 'cursor-pointer hover:scale-105 active:scale-95 hover:brightness-110 hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] focus-visible:ring-2 focus-visible:ring-white rounded-none bg-transparent border-none appearance-none';
+  let interactClasses = 'cursor-pointer hover:brightness-110 hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] focus-visible:ring-2 focus-visible:ring-white rounded-none bg-transparent border-none appearance-none';
   
   if (disabled) {
       interactClasses = 'opacity-40 grayscale-[80%] cursor-not-allowed bg-transparent border-none appearance-none';
   } else if (dimmed) {
-      interactClasses = 'opacity-30 grayscale saturate-0 cursor-default scale-95 bg-transparent border-none appearance-none'; // Dimmed state
+      interactClasses = 'opacity-30 grayscale saturate-0 cursor-default bg-transparent border-none appearance-none'; // Dimmed state
   }
 
   const glowClass = (active || pulsate) && !dimmed ? 'animate-pulse' : '';
 
+  const isInteractive = !disabled && !dimmed;
+
   return (
-    <button 
+    <motion.button 
       type="button"
       className={`${baseClasses} ${interactClasses} ${glowClass} ${sClass}`}
-      onClick={(!disabled && !dimmed) ? onClick : onDisabledClick}
+      onClick={isInteractive ? onClick : onDisabledClick}
       title={title}
+      whileHover={isInteractive ? { scale: 1.05 } : undefined}
+      whileTap={isInteractive ? { scale: 0.95 } : undefined}
+      transition={{ type: "spring", stiffness: 450, damping: 14 }}
     >
       {/* Dynamic Ambient Glow Behind the Button */}
       {(active || (!disabled && !dimmed && pulsate)) && (
@@ -170,7 +176,7 @@ const HexButton: React.FC<HexButtonProps> = ({
       <div className={`absolute inset-0 flex flex-col items-center justify-center text-white pointer-events-none z-20 break-words whitespace-pre-wrap ${active ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'text-slate-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]'}`}>
         {children}
       </div>
-    </button>
+    </motion.button>
   );
 };
 

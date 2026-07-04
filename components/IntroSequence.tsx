@@ -108,18 +108,13 @@ const IntroSequence: React.FC = () => {
             </h2>
             <button
               onClick={skipIntro}
-              style={{ paddingLeft: '14px' }}
-              className="group flex flex-col items-center justify-center gap-2 px-12 py-6 bg-slate-900/80 border border-indigo-500/50 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 font-black uppercase tracking-[0.3em] transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] hover:scale-105 relative overflow-hidden"
+              className="group flex items-center justify-center gap-3 px-8 py-4 bg-slate-900/80 border border-indigo-500/50 hover:bg-slate-800 text-white font-black uppercase tracking-[0.2em] transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] hover:scale-105 relative overflow-hidden rounded-xl"
             >
               <div className="absolute inset-0 bg-indigo-500/10 transition-opacity opacity-0 group-hover:opacity-100 pointer-events-none" />
-              <div className="flex items-center gap-3 relative z-10 text-white">
-                 <span style={{ marginLeft: 0, paddingLeft: '4px', marginBottom: 0, marginRight: '10px' }}>
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                 </span>
-                 <span style={{ paddingLeft: 0, paddingTop: 0, marginLeft: 0, marginRight: '14px', marginBottom: '45px', marginTop: '15px' }}>
-                    Deploy Unit
-                 </span>
-              </div>
+              <span className="relative z-10 text-sm flex items-center gap-2.5">
+                Deploy Unit
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </span>
             </button>
           </motion.div>
         )}

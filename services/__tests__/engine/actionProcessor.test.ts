@@ -1,5 +1,5 @@
-import { ActionProcessor } from '../../engine/ActionProcessor';
-import { WorldIndex } from '../../engine/WorldIndex';
+import { ActionProcessor } from '../../../engine/ActionProcessor';
+import { WorldIndex } from '../../../engine/WorldIndex';
 import {
   EntityType,
   EntityState,
@@ -7,7 +7,7 @@ import {
   type Hex,
   type SessionState,
   type GameAction,
-} from '../../types';
+} from '../../../types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -584,7 +584,7 @@ describe('ActionProcessor', () => {
 
   describe('RESTORE_HEX action', () => {
     // Shared item factories
-    const makeItem = (overrides: Partial<import('../../types').Item> = {}): import('../../types').Item => ({
+    const makeItem = (overrides: Partial<import('../../../types').Item> = {}): import('../../../types').Item => ({
       id: 'item-restore-1',
       baseId: 'spent_fuel_cell',
       rarity: 'COMMON',
@@ -811,8 +811,8 @@ describe('ActionProcessor', () => {
     const makeMonumentItem = (
       id: string,
       baseId: string,
-      rarity: import('../../types').ItemRarity = 'RARE',
-    ): import('../../types').Item => ({
+      rarity: import('../../../types').ItemRarity = 'RARE',
+    ): import('../../../types').Item => ({
       id,
       baseId,
       rarity,

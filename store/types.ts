@@ -44,6 +44,8 @@ export const createDefaultProgress = () => ({
   totalMinedMaterial: 0,
   totalGoldEarned: 0,
   storyMap: {},
+  savedSiegeMap: {},
+  unlockedBlueprintIndices: [0],
   campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES },
   claimedLevelRewards: [] as string[]
 });
@@ -99,7 +101,7 @@ export interface GameStore extends GameState {
   
   // Gameplay Actions
   tick: () => Promise<void>;
-  togglePlayerGrowth: (intent?: 'RECOVER' | 'UPGRADE' | 'DIG') => void;
+  togglePlayerGrowth: (intent?: 'RECOVER' | 'UPGRADE' | 'DIG' | 'TURRET') => void;
   movePlayer: (q: number, r: number) => void;
   confirmPendingAction: () => void;
   cancelPendingAction: () => void;
@@ -112,6 +114,9 @@ export interface GameStore extends GameState {
   transmuteHexes: (fromLvl: number, toLvl: number, count: number) => void;
   clearStoryMap: () => void;
   claimLevelReward: (levelId: string) => void;
+
+  startLevelEditorTest?: () => void;
+  startDefenseSiege: () => void;
 
   // Interactions
   openVoidDialog: (q: number, r: number) => void;
@@ -127,6 +132,10 @@ export interface GameStore extends GameState {
   removeItemFromMonument: (slotIndex: number) => void;
   rerollSingleMonumentRequirement: (slotIndex: number) => void;
   activateMonument: () => void;
+  
+  oracleDialogOpen: boolean;
+  openOracleDialog: () => void;
+  closeOracleDialog: () => void;
 
   setHasHydrated: (val: boolean) => void;
   

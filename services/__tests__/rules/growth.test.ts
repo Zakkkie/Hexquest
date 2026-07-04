@@ -1,6 +1,6 @@
-import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
-import { EntityType, EntityState } from '../../types';
-import type { Hex, Entity } from '../../types';
+import { checkGrowthCondition, checkDigCondition } from '../../../rules/growth';
+import { EntityType, EntityState } from '../../../types';
+import type { Hex, Entity } from '../../../types';
 
 // Helper factories
 const makeEntity = (overrides: Partial<Entity> = {}): Entity => ({

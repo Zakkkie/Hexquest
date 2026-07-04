@@ -100,6 +100,9 @@ export const createCampaignSlice = (
   consumeStoryHexes: (keys: string[]) => set((state) => {
     const newMap = { ...state.storyMap };
     
+    // Save current canvas to siege map before consuming
+    const savedSiegeMap = { ...newMap };
+    
     // The keys that formed the completed figure are deleted (cleared) from the board,
     // which effectively makes them disappear.
     keys.forEach(key => {
@@ -107,44 +110,62 @@ export const createCampaignSlice = (
     });
 
     return { 
-      storyMap: newMap
+      storyMap: newMap,
+      savedSiegeMap: savedSiegeMap
     };
   }),
 
   transmuteHexes: (fromLvl: number, toLvl: number, count: number) => set((state) => {
     const cost = count * 3; // 3 to 1 transmutation
-    const newMined = { ...state.minedInSessionHexes };
+    const newMined = { ...state.minedInSessionHexes } as any;
     const newCollected = { ...state.collectedHexes } as any;
     
+    const fromLvlStr = String(fromLvl);
+    const toLvlStr = String(toLvl);
+
     // Check if player has enough resources across mined and collected
-    const collectedCount = newCollected[fromLvl] || newCollected[String(fromLvl)] || 0;
-    const minedCount = newMined[fromLvl] || 0;
+    const collectedCount = Number(newCollected[fromLvl] || newCollected[fromLvlStr] || 0);
+    const minedCount = Number(newMined[fromLvl] || newMined[fromLvlStr] || 0);
     const total = collectedCount + minedCount;
     
     if (total < cost) return {};
 
     let remainingCost = cost;
-    if (minedCount >= remainingCost) {
-      newMined[fromLvl] -= remainingCost;
-    } else {
-      remainingCost -= minedCount;
-      newMined[fromLvl] = 0;
-      
-      const strFromLvl = String(fromLvl);
-      if (newCollected[fromLvl] !== undefined) {
-        newCollected[fromLvl] -= remainingCost;
-      } else {
-        newCollected[strFromLvl] = (newCollected[strFromLvl] || 0) - remainingCost;
-      }
+    let deductedFromMined = 0;
+    let deductedFromCollected = 0;
+
+    // Deduct from mined first
+    if (minedCount > 0) {
+      const takeFromMined = Math.min(minedCount, remainingCost);
+      const currentKey = newMined[fromLvl] !== undefined ? fromLvl : fromLvlStr;
+      newMined[currentKey] = (newMined[currentKey] || 0) - takeFromMined;
+      deductedFromMined += takeFromMined;
+      remainingCost -= takeFromMined;
     }
 
-    if (newMined[fromLvl] <= 0) delete newMined[fromLvl];
-    if (newCollected[fromLvl] <= 0) delete newCollected[fromLvl];
-    const strFromLvl = String(fromLvl);
-    if (newCollected[strFromLvl] <= 0) delete newCollected[strFromLvl];
+    // Deduct remaining from collected
+    if (remainingCost > 0 && collectedCount > 0) {
+      const takeFromCollected = Math.min(collectedCount, remainingCost);
+      const currentKey = newCollected[fromLvl] !== undefined ? fromLvl : fromLvlStr;
+      newCollected[currentKey] = (newCollected[currentKey] || 0) - takeFromCollected;
+      deductedFromCollected += takeFromCollected;
+      remainingCost -= takeFromCollected;
+    }
 
-    // Give the crafted amount to mined
-    newMined[toLvl] = (newMined[toLvl] || 0) + count;
+    // Clean up <= 0 keys in both
+    if (newMined[fromLvl] !== undefined && newMined[fromLvl] <= 0) delete newMined[fromLvl];
+    if (newMined[fromLvlStr] !== undefined && newMined[fromLvlStr] <= 0) delete newMined[fromLvlStr];
+    if (newCollected[fromLvl] !== undefined && newCollected[fromLvl] <= 0) delete newCollected[fromLvl];
+    if (newCollected[fromLvlStr] !== undefined && newCollected[fromLvlStr] <= 0) delete newCollected[fromLvlStr];
+
+    // Decide where to add the crafted hex based on where we took the majority of the materials
+    if (deductedFromCollected >= deductedFromMined) {
+      const targetKey = newCollected[toLvl] !== undefined ? toLvl : toLvlStr;
+      newCollected[targetKey] = (newCollected[targetKey] || 0) + count;
+    } else {
+      const targetKey = newMined[toLvl] !== undefined ? toLvl : toLvlStr;
+      newMined[targetKey] = (newMined[targetKey] || 0) + count;
+    }
 
     return { 
       minedInSessionHexes: newMined,
@@ -162,6 +183,13 @@ export const createCampaignSlice = (
     return {
       storyMap: {},
       minedInSessionHexes: newMined
+    };
+  }),
+
+  unlockBlueprint: (blueprintIndex: number) => set((state) => {
+    if (state.unlockedBlueprintIndices.includes(blueprintIndex)) return {};
+    return {
+      unlockedBlueprintIndices: [...state.unlockedBlueprintIndices, blueprintIndex]
     };
   }),
 

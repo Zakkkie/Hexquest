@@ -122,6 +122,7 @@ const GameView: React.FC = () => {
   const mouseDownPosRef = useRef({ x: 0, y: 0 }); // Track start position
   const lastPointerPos = useRef({ x: 0, y: 0 });
   const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 }); 
+  const [isDamageFlashed, setIsDamageFlashed] = useState(false);
   
   // Multi-touch refs
   const lastDist = useRef<number>(0);
@@ -177,16 +178,26 @@ const GameView: React.FC = () => {
   // --- SCREEN SHAKE TRIGGER ---
   useEffect(() => {
       const type = lastVisualEvent?.type;
-      if (type === 'ENTROPY_SHIFT' || type === 'HEX_COLLAPSE' || type === 'METEOR_STRIKE') {
+      if (type === 'ENTROPY_SHIFT' || type === 'HEX_COLLAPSE' || type === 'METEOR_STRIKE' || type === 'CORE_DAMAGED' || type === 'TURRET_FIRED') {
           let duration = 600;
           let intensityBase = 10;
           
+          let flashTimer: any = null;
           if (type === 'HEX_COLLAPSE') {
               duration = 400;
               intensityBase = 12;
           } else if (type === 'METEOR_STRIKE') {
               duration = 800;
               intensityBase = 16;
+          } else if (type === 'CORE_DAMAGED') {
+              duration = 500;
+              intensityBase = 22;
+              setIsDamageFlashed(true);
+              audioService.play('WARNING');
+              flashTimer = setTimeout(() => setIsDamageFlashed(false), 450);
+          } else if (type === 'TURRET_FIRED') {
+              duration = 250;
+              intensityBase = 6;
           }
 
           let start = Date.now();
@@ -206,7 +217,10 @@ const GameView: React.FC = () => {
           }); 
           
           shakeAnim.start();
-          return () => { shakeAnim.stop(); };
+          return () => { 
+              shakeAnim.stop();
+              if (flashTimer) clearTimeout(flashTimer);
+          };
       }
   }, [lastVisualEvent]);
 
@@ -646,6 +660,11 @@ const GameView: React.FC = () => {
             dimensions={dimensions}
           />
       </div>
+
+      {/* SCREEN DAMAGE FLASH */}
+      {isDamageFlashed && (
+        <div className="absolute inset-0 z-[15] pointer-events-none bg-rose-500/20 border-[12px] border-rose-600/40 shadow-[inset_0_0_100px_rgba(244,63,94,0.4)] animate-pulse" />
+      )}
 
       <GameHUD 
         onCenterPlayer={centerOnPlayer}

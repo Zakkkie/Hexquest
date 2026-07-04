@@ -97,560 +97,717 @@ interface SeriesConfig {
 const SERIES_DEFS: SeriesConfig[] = [
     {
         seriesId: 1,
-        nameRU: 'Смайлик',
-        nameEN: 'Smiley',
-        descRU: 'Модуль эмоциональной симуляции. Развивается от глаз и носа к широкой улыбке.',
-        descEN: 'Emotion simulation module. Progresses from eyes and nose to a wide smiling face.',
+        nameRU: 'Весёлый Смайлик',
+        nameEN: 'Classic Smiley',
+        descRU: 'Культовый жёлтый смайлик из интернета и чатов. Растет от глаз и носа к широкой улыбке.',
+        descEN: 'The legendary yellow smiley face of internet culture. Grows from simple eyes and nose to a wide smiling face.',
         coords: [
             { q: 0, r: 0 },
-            { q: -1, r: 0 },
-            { q: 1, r: -1 },
-            { q: 1, r: 0 },
-            { q: 0, r: -1 },
+            { q: -1, r: -1 },
+            { q: 2, r: -1 },
             { q: -1, r: 1 },
             { q: 0, r: 1 },
-            { q: -1, r: -1 },
-            { q: 1, r: 1 },
+            { q: -1, r: 0 },
+            { q: 1, r: 0 },
+            { q: 0, r: -1 },
+            { q: 1, r: -1 },
             { q: -2, r: 1 },
-            { q: 2, r: -1 },
+            { q: 1, r: 1 },
+            { q: 1, r: -2 },
             { q: 0, r: -2 },
-            { q: -2, r: 2 },
             { q: 2, r: -2 },
-            { q: 0, r: 2 }
+            { q: -1, r: 2 },
+            { q: -2, r: 2 },
+            { q: 0, r: 2 },
+            { q: -2, r: 0 },
+            { q: 2, r: 0 },
+            { q: -2, r: 3 },
+            { q: -1, r: 3 },
+            { q: 1, r: 2 }
         ],
-        milestonesRU: ["Очки Эмоций", "Линия Рта", "Форма Лица", "Подмигивание", "Финальный Смайлик"],
-        milestonesEN: ["Emotion Dots", "Mouth Line", "Face Outline", "Winking Face", "Ultimate Smiley"]
+        milestonesRU: ["Очки Эмоций", "Линия Улыбки", "Контур Лица", "Подмигивающий Глаз", "Идеальный Смайлик"],
+        milestonesEN: ["Emotion Dots", "Smile Line", "Face Outline", "Winking Eye", "Ultimate Smiley"]
     },
     {
         seriesId: 2,
-        nameRU: 'Захватчик',
-        nameEN: 'Invader',
-        descRU: 'Легендарный пиксельный пришелец. Растет в стороны, выпуская антенны.',
-        descEN: 'Legendary pixel invader. Grows sideways, extending antennae and leg claws.',
+        nameRU: 'Ретро Пакман',
+        nameEN: 'Retro Pac-Man',
+        descRU: 'Культовый жёлтый пожиратель точек из ретро-аркад 80-х. Круглая форма со знаменитым открытым ртом.',
+        descEN: 'The iconic yellow dot-munching hero of retro arcade cabinets. A circular shape featuring the open mouth.',
         coords: [
             { q: 0, r: 0 },
             { q: -1, r: 0 },
-            { q: 1, r: 0 },
-            { q: 0, r: -1 },
-            { q: -1, r: -1 },
             { q: 1, r: -1 },
             { q: 0, r: 1 },
-            { q: -2, r: 1 },
-            { q: 2, r: -1 },
+            { q: -1, r: -1 },
+            { q: -1, r: 1 },
+            { q: 0, r: -1 },
+            { q: 1, r: -2 },
+            { q: -1, r: 2 },
             { q: -2, r: 0 },
+            { q: 0, r: -2 },
             { q: 2, r: -2 },
             { q: -2, r: 2 },
-            { q: 2, r: 0 },
+            { q: 0, r: 2 },
+            { q: 2, r: -1 },
             { q: 1, r: 1 },
-            { q: -1, r: 1 }
+            { q: -2, r: 1 },
+            { q: -2, r: -1 },
+            { q: 2, r: 0 },
+            { q: 3, r: 0 },
+            { q: 4, r: 0 },
+            { q: 1, r: 0 }
         ],
-        milestonesRU: ["Инкубатор ЯДра", "Сенсоры Пришельца", "Боковые Дроиды", "Клешни Чужого", "Легендарный Space Invader"],
-        milestonesEN: ["Core Incubator", "Invader Sensors", "Side Droids", "Alien Pincers", "Legendary Space Invader"]
+        milestonesRU: ["Хрустящая Точка", "Открытый Рот", "Глаз Пакмана", "Жёлтый Корпус", "Легендарный Пакман"],
+        milestonesEN: ["Munching Dot", "Open Mouth Curve", "Pac-Eye Sensor", "Yellow Arcade Shell", "Legendary Pac-Man"]
     },
     {
         seriesId: 3,
-        nameRU: 'Меч',
-        nameEN: 'Sword',
-        descRU: 'Выкованный плазменный клинок. Растет от гарды вниз к рукояти и вверх к острию.',
-        descEN: 'Forged plasma blade. Grows from the crossguard down to the hilt and up to the tip.',
+        nameRU: 'Световой Меч',
+        nameEN: 'Laser Lightsaber',
+        descRU: 'Изящное оружие джедаев и ситхов из Звёздных Войн. Энергетический клинок растет вверх от рукояти.',
+        descEN: 'An elegant plasma weapon from a galaxy far, far away. The pure energy beam grows upwards from the hilt.',
         coords: [
             { q: 0, r: 0 },
+            { q: 1, r: -1 },
+            { q: 0, r: -1 },
+            { q: -1, r: 2 },
+            { q: -1, r: 3 },
+            { q: 1, r: -2 },
+            { q: 2, r: -3 },
+            { q: -2, r: 2 },
+            { q: 0, r: 2 },
+            { q: -1, r: 1 },
+            { q: 0, r: 1 },
+            { q: 1, r: -3 },
+            { q: 2, r: -4 },
             { q: -1, r: 0 },
             { q: 1, r: 0 },
-            { q: 0, r: -1 },
-            { q: 0, r: -2 },
-            { q: 0, r: -3 },
-            { q: 0, r: -4 },
-            { q: 0, r: 1 },
-            { q: 0, r: 2 },
-            { q: -1, r: -1 },
-            { q: 1, r: -1 },
-            { q: -2, r: 0 },
-            { q: 2, r: 0 },
-            { q: -1, r: 1 },
-            { q: 1, r: 1 }
+            { q: 3, r: -5 },
+            { q: 2, r: -5 },
+            { q: 3, r: -6 },
+            { q: 4, r: -7 },
+            { q: 3, r: -7 },
+            { q: 4, r: -8 },
+            { q: -2, r: 3 }
         ],
-        milestonesRU: ["Рукоять Клинка", "Шпиль Стали", "Гарда Оруженосца", "Закаленное Лезвие", "Королевский Экскалибур"],
-        milestonesEN: ["Hilt of Blade", "Steel Spire", "Squire Guard", "Tempered Edge", "Royal Excalibur"]
+        milestonesRU: ["Кристалл Кайбер", "Джедайская Рукоять", "Кнопка Старта", "Излучатель Лезвия", "Световой Меч Силы"],
+        milestonesEN: ["Kyber Crystal", "Jedi Grip Hilt", "Activation Key", "Emitter Shroud", "Legendary Lightsaber"]
     },
     {
         seriesId: 4,
-        nameRU: 'Сердце',
-        nameEN: 'Heart',
-        descRU: 'Резонирующее сердце аномалии. Закругляется в верхних долях и сходится в острие.',
-        descEN: 'Resonating heart of anomaly. Curves into upper lobes and converges to a sharp tip.',
+        nameRU: 'Сердце Жизни',
+        nameEN: 'Life Heart',
+        descRU: 'Пиксельное сердечко здоровья и выносливости из Zelda и Minecraft. Восстанавливает жизненный тонус.',
+        descEN: 'Pixel heart of life and stamina from Zelda, Minecraft, and iconic RPGs. Restores maximum health.',
         coords: [
             { q: 0, r: 0 },
             { q: -1, r: 0 },
-            { q: 1, r: -1 },
             { q: 1, r: 0 },
-            { q: 0, r: 1 },
-            { q: -1, r: 1 },
-            { q: -1, r: -1 },
             { q: 0, r: -1 },
-            { q: 2, r: -1 },
-            { q: -2, r: 0 },
-            { q: -2, r: 1 },
+            { q: 0, r: 1 },
+            { q: -1, r: -1 },
+            { q: 1, r: -1 },
+            { q: -1, r: 1 },
+            { q: 1, r: 1 },
+            { q: 0, r: -2 },
             { q: 2, r: -2 },
-            { q: 1, r: -2 },
+            { q: -1, r: 2 },
             { q: -2, r: 2 },
-            { q: 2, r: 0 }
+            { q: 0, r: 2 },
+            { q: -1, r: -2 },
+            { q: 1, r: -2 },
+            { q: -2, r: 0 },
+            { q: 2, r: 0 },
+            { q: -2, r: 1 },
+            { q: 2, r: 1 },
+            { q: -2, r: 3 },
+            { q: 3, r: -2 }
         ],
-        milestonesRU: ["Дрожь Любви", "Пульсация Канала", "Доли Энергии", "Форма Валентинки", "Квантовое Сердце Вселенной"],
-        milestonesEN: ["Love Vibe", "Channel Pulse", "Energy Lobes", "Valentine Silhouette", "Quantum Universe Heart"]
+        milestonesRU: ["Пульсация Канала", "Изгиб Доли", "Левое Крыло", "Сетка Здоровья", "Красный Контейнер Сердца"],
+        milestonesEN: ["Life Vibe", "Lobe Curve", "Left Wing Seal", "Heart Grid Shell", "Zelda Heart Container"]
     },
     {
         seriesId: 5,
-        nameRU: 'Звезда',
-        nameEN: 'Star',
-        descRU: 'Пятиконечный космический маяк. Растет лучами во все пять направлений.',
-        descEN: 'Five-pointed cosmic beacon. Extends beams symmetrically in all directions.',
+        nameRU: 'Супер Гриб',
+        nameEN: 'Super Mushroom',
+        descRU: 'Культовый красно-белый гриб из вселенной Super Mario Bros, увеличивающий силу и размер героя.',
+        descEN: 'The iconic red spotted power-up mushroom from the Super Mario Bros world. Grants growth and speed.',
         coords: [
             { q: 0, r: 0 },
-            { q: 0, r: -1 },
-            { q: -1, r: 1 },
-            { q: 1, r: 0 },
             { q: -1, r: 0 },
-            { q: 1, r: -1 },
-            { q: 0, r: -2 },
-            { q: -2, r: 2 },
-            { q: 2, r: 0 },
-            { q: -2, r: 0 },
-            { q: 2, r: -2 },
+            { q: 1, r: 0 },
+            { q: -1, r: 1 },
             { q: 0, r: 1 },
+            { q: 1, r: -1 },
+            { q: 0, r: -1 },
+            { q: 2, r: -1 },
+            { q: -1, r: 2 },
+            { q: 1, r: -2 },
+            { q: 0, r: -2 },
+            { q: 2, r: -2 },
+            { q: -2, r: 2 },
+            { q: 0, r: 2 },
+            { q: -2, r: 0 },
+            { q: 2, r: 0 },
+            { q: -2, r: 3 },
+            { q: -1, r: 3 },
             { q: -1, r: -1 },
-            { q: 1, r: 1 },
-            { q: 0, r: 2 }
+            { q: -2, r: -1 },
+            { q: 3, r: -2 },
+            { q: 3, r: -1 }
         ],
-        milestonesRU: ["Искра Пыли", "Перекрестие Высот", "Лучи Спутника", "Звёздная Пыль", "Сверхновая Звезда Сектора"],
-        milestonesEN: ["Spark of Dust", "Cross of Altitude", "Satellite Rays", "Shooting Star", "Supernova Sector Star"]
+        milestonesRU: ["Споры Роста", "Мухоморная Ножка", "Белые Пятна", "Шляпка Гриба", "Большой Супер-Гриб Марио"],
+        milestonesEN: ["Growth Spores", "Mushroom Stem", "Spun White Spots", "Spacious Cap Banner", "Super Mario Mushroom"]
     },
     {
         seriesId: 6,
-        nameRU: 'Корона',
-        nameEN: 'Crown',
-        descRU: 'Корона верховного лорда. Нижний венец держит опорные зубцы и венчающий кристалл.',
-        descEN: 'Crown of the supreme lord. The lower band locks upward defensive spikes and crown jewel.',
+        nameRU: 'Шлем Вейдера',
+        nameEN: 'Vader Helmet',
+        descRU: 'Зловещая обсидиановая дыхательная маска Дарта Вейдера. Тёмная Сила и грозный вид.',
+        descEN: 'The imposing obsidian respirator mask of Darth Vader. Sign of cosmic dark power and dominance.',
         coords: [
             { q: 0, r: 0 },
+            { q: -1, r: 0 },
+            { q: 1, r: 0 },
             { q: -1, r: 1 },
             { q: 0, r: 1 },
-            { q: 1, r: 0 },
-            { q: -1, r: 0 },
-            { q: 1, r: -1 },
-            { q: -2, r: 1 },
-            { q: 2, r: -1 },
-            { q: -2, r: 0 },
             { q: 0, r: -1 },
-            { q: 2, r: -2 },
-            { q: -1, r: -1 },
+            { q: 1, r: -1 },
             { q: 1, r: -2 },
             { q: 0, r: -2 },
-            { q: 0, r: 2 }
+            { q: 2, r: -2 },
+            { q: -1, r: -1 },
+            { q: 2, r: -1 },
+            { q: -2, r: 0 },
+            { q: 2, r: 0 },
+            { q: -1, r: 2 },
+            { q: -2, r: 2 },
+            { q: 0, r: 2 },
+            { q: -3, r: 2 },
+            { q: 1, r: 2 },
+            { q: -2, r: 3 },
+            { q: -3, r: 3 },
+            { q: -1, r: 3 }
         ],
-        milestonesRU: ["Ободок Власти", "Опора Лорда", "Боковые Зубцы", "Царский Кастет", "Императорская Корона Симуляции"],
-        milestonesEN: ["Band of Sovereignty", "Lord Base", "Side Spikes", "Regal Battlements", "Imperial Crown of Simulation"]
+        milestonesRU: ["Респиратор Ситха", "Взгляд Окуляра", "Броня Черепа", "Имперский Купол", "Маска Дарта Вейдера"],
+        milestonesEN: ["Respirator Core", "Visor Gaze", "Plated Skull", "Commanding Dome", "Darth Vader Helmet"]
     },
     {
         seriesId: 7,
-        nameRU: 'Древо',
-        nameEN: 'Tree',
-        descRU: 'Вековое био-инженерное древо. Произрастает от корня к кроне.',
-        descEN: 'Venerable bio-engineered tree. Grows from roots up the trunk to the crowned canopy.',
+        nameRU: 'Череп Зомби',
+        nameEN: 'Zombie Skull',
+        descRU: 'Квадратная зелёная голова зомби из Minecraft. Пустые пиксельные глаза и гнилой оттенок кожи.',
+        descEN: 'The square pixel head of a Minecraft zombie. Empty hollow eyes and rotting undead block features.',
         coords: [
             { q: 0, r: 0 },
-            { q: 0, r: 1 },
-            { q: 0, r: 2 },
-            { q: -1, r: 1 },
-            { q: 1, r: 0 },
             { q: 0, r: -1 },
             { q: -1, r: 0 },
-            { q: 1, r: -1 },
-            { q: 0, r: -2 },
-            { q: -1, r: -1 },
+            { q: 1, r: 0 },
+            { q: 0, r: 1 },
             { q: 1, r: -2 },
-            { q: -2, r: 2 },
+            { q: -1, r: -1 },
+            { q: 1, r: -1 },
+            { q: -1, r: 1 },
+            { q: 1, r: -2 },
+            { q: 0, r: -2 },
+            { q: 2, r: -2 },
+            { q: -2, r: 0 },
             { q: 2, r: 0 },
-            { q: 0, r: -3 },
+            { q: -1, r: 2 },
+            { q: -2, r: 1 },
+            { q: 2, r: -1 },
+            { q: -2, r: 2 },
+            { q: 0, r: 2 },
+            { q: -1, r: 3 },
+            { q: -2, r: 3 },
             { q: 0, r: 3 }
         ],
-        milestonesRU: ["Росток Бурения", "Ствол Дерева", "Латеральные Ветки", "Купол Эфира", "Тектоническое Древо Миров"],
-        milestonesEN: ["Drill Sprout", "Tree Trunk", "Lateral Branches", "Aether Canopy", "Tectonic Tree of Worlds"]
+        milestonesRU: ["Пиксельные Глазницы", "Зелёная Кожа", "Челюсть Нежити", "Плита Лба", "Череп Зомби Minecraft"],
+        milestonesEN: ["Pixel Sockets", "Green Rotting Flesh", "Deceased Underjaw", "Frontal Brainplate", "Minecraft Zombie Skull"]
     },
     {
         seriesId: 8,
-        nameRU: 'Портал',
-        nameEN: 'Portal',
-        descRU: 'Древние пространственные врата. Несущая арка смыкается над центральной пустотой.',
-        descEN: 'Ancient spatial stargate. The load-bearing arch closes over the central portal void.',
+        nameRU: 'Квантовый Портал',
+        nameEN: 'Quantum Portal',
+        descRU: 'Двусторонние синие/оранжевые ворота искривления пространства от Aperture Science из Portal.',
+        descEN: 'The orange-blue spatial tearing portal from Aperture Science labs. Transcends 3D geometry.',
         coords: [
             { q: 0, r: 0 },
-            { q: -1, r: 0 },
-            { q: 1, r: -1 },
-            { q: -1, r: 1 },
-            { q: 1, r: 0 },
-            { q: -1, r: -1 },
-            { q: 1, r: -2 },
-            { q: 0, r: -2 },
-            { q: -2, r: 2 },
-            { q: 2, r: -1 },
-            { q: -2, r: 1 },
-            { q: 2, r: -2 },
             { q: 0, r: -1 },
             { q: 0, r: 1 },
-            { q: 0, r: 2 }
+            { q: -1, r: 0 },
+            { q: 1, r: 0 },
+            { q: 1, r: -2 },
+            { q: -1, r: 2 },
+            { q: -1, r: -1 },
+            { q: 2, r: -1 },
+            { q: -2, r: 1 },
+            { q: 1, r: 1 },
+            { q: 1, r: -1 },
+            { q: -1, r: 1 },
+            { q: 0, r: -2 },
+            { q: 2, r: -2 },
+            { q: -2, r: 2 },
+            { q: 0, r: 2 },
+            { q: -2, r: 0 },
+            { q: 2, r: 0 },
+            { q: 1, r: -3 },
+            { q: -3, r: 2 },
+            { q: 1, r: 2 }
         ],
-        milestonesRU: ["Столбы Врат", "Свод Арки", "Якорь Поля", "Стабилизатор Вихря", "Врата Вечности Небулы"],
-        milestonesEN: ["Portal Pillars", "Arch Keystone", "Field Anchor", "Vortex Stabilizer", "Eternity Gates of Nebula"]
+        milestonesRU: ["Порог Апертуры", "Матрица Запуска", "Квантовый Обод", "Голубое Свечение", "Квантовый Портал Апертур"],
+        milestonesEN: ["Aperture Threshold", "Launcher Matrix", "Spatial Border Loop", "Portal Shimmer Blue", "Aperture Quantum Portal"]
     },
     {
         seriesId: 9,
         nameRU: 'Покебол',
-        nameEN: 'Pokeball',
-        descRU: 'Красная сфера ловли аномалий (Покебол). Растет кругом во все направления.',
-        descEN: 'Red capture sphere for quantum anomalies (Pokeball). Grows outwards, defining a circular shape.',
+        nameEN: 'Catch Pokeball',
+        descRU: 'Красно-белый сферический контейнер для поимки диких Покемонов. Культовый шар с кнопкой.',
+        descEN: 'The red-and-white spherical device used to capture and carry pocket monsters. Features central push button.',
         coords: [
             { q: 0, r: 0 },
             { q: -1, r: 0 },
             { q: 1, r: 0 },
             { q: 0, r: -1 },
+            { q: 0, r: 1 },
             { q: -1, r: -1 },
             { q: 1, r: -1 },
-            { q: 0, r: 1 },
             { q: -1, r: 1 },
             { q: 1, r: 1 },
-            { q: -2, r: 1 },
-            { q: 2, r: -1 },
-            { q: 0, r: -2 },
-            { q: 0, r: 2 },
             { q: -2, r: 0 },
+            { q: 2, r: 0 },
+            { q: 1, r: -2 },
+            { q: 0, r: -2 },
             { q: 2, r: -2 },
             { q: -1, r: 2 },
-            { q: 1, r: -2 },
             { q: -2, r: 2 },
-            { q: 2, r: 0 },
-            { q: 0, r: -3 }
+            { q: 0, r: 2 },
+            { q: -3, r: 0 },
+            { q: 3, r: 0 },
+            { q: -1, r: -2 },
+            { q: 1, r: 2 },
+            { q: -2, r: 3 }
         ],
-        milestonesRU: ["Клипсовый Фиксатор", "Сегменты Диска", "Капсула Ловли", "Красная Сфера Захвата", "Легендарный Покебол"],
-        milestonesEN: ["Lock Button", "Disc Segments", "Catch Capsule", "Red Sphere Capture", "Legendary Master Pokeball"]
+        milestonesRU: ["Кнопка Вызова", "Поясная Защёлка", "Сфера Покемонов", "Красная Сфера", "Легендарный Мастер-Покебол"],
+        milestonesEN: ["Trigger Button", "Belt Capture Seal", "Capsule Inner Chamber", "Crimson Upper Hull", "Ultimate Master Pokeball"]
     },
     {
         seriesId: 10,
         nameRU: 'Крипер',
-        nameEN: 'Creeper',
-        descRU: 'Зеленый крипер-саботер из кубических пикселей. Известное грустное лицо.',
-        descEN: 'Green creeper saboteur made of cubic pixels. Features the famous frowning facial features.',
+        nameEN: 'Minecraft Creeper',
+        descRU: 'Взрывная зелёная пиксельная угроза из Minecraft. Знаменитая грустная гримаса.',
+        descEN: 'The iconic green pixel explosives block monster from Minecraft. Famous sad huff warning face.',
         coords: [
             { q: 0, r: 0 },
-            { q: -1, r: -1 },
-            { q: 1, r: -2 },
+            { q: -1, r: 0 },
+            { q: 1, r: 0 },
             { q: 0, r: 1 },
             { q: -1, r: 1 },
-            { q: 1, r: 0 },
             { q: 0, r: -1 },
-            { q: -2, r: 1 },
-            { q: 2, r: -2 },
-            { q: -1, r: 0 },
             { q: 1, r: -1 },
-            { q: -2, r: 0 },
-            { q: 2, r: -1 },
+            { q: 1, r: -2 },
             { q: 0, r: -2 },
-            { q: -1, r: -2 },
+            { q: 2, r: -2 },
             { q: 1, r: -3 },
-            { q: 0, r: 2 },
+            { q: 2, r: -3 },
             { q: -1, r: 2 },
-            { q: 1, r: 1 },
-            { q: -2, r: 2 }
-        ],
-        milestonesRU: ["Взгляд Саботера", "Грустный Рот", "Пиксельная Маска", "Защита Шеи", "Тектонический Крипер Майнкрафта"],
-        milestonesEN: ["Saboteur Gaze", "Frowning Smile", "Pixel Mask", "Guard Plate", "Tectonic Creeper of Minecraft"]
-    },
-    {
-        seriesId: 11,
-        nameRU: 'Космонавт',
-        nameEN: 'Crewmate',
-        descRU: 'Космонавт из выживания в космосе. Стеклянный щиток скафандра и ранец жизнеобеспечения.',
-        descEN: 'Heroic survival space explorer. Features the thick glass visor and oxygen lifepack.',
-        coords: [
-            { q: 0, r: 0 },
-            { q: 1, r: -1 },
-            { q: -1, r: 0 },
-            { q: 0, r: -1 },
-            { q: 1, r: -2 },
-            { q: -1, r: 1 },
-            { q: -2, r: 1 },
-            { q: 0, r: 1 },
-            { q: 1, r: 0 },
+            { q: -2, r: 2 },
             { q: 0, r: 2 },
-            { q: -1, r: 2 },
-            { q: 1, r: 1 },
+            { q: -2, r: 3 },
+            { q: -3, r: 3 },
             { q: -1, r: 3 },
-            { q: 1, r: 2 },
             { q: 0, r: 3 },
             { q: -1, r: -1 },
-            { q: -2, r: 2 },
-            { q: 2, r: -1 },
-            { q: 2, r: -2 },
-            { q: 0, r: -2 }
+            { q: -1, r: -2 },
+            { q: 0, r: -3 }
         ],
-        milestonesRU: ["Визор Скафандра", "Кислородный Баллон", "Скафандр Защиты", "Сигнальный Шлем", "Космонавт Амонг Ас"],
-        milestonesEN: ["Visor Shield", "Oxygen Backpack", "Protective Suit", "Beaming Helmet", "Among Us Crewmate Astronaut"]
-    },
-    {
-        seriesId: 12,
-        nameRU: 'Бастион',
-        nameEN: 'Citadel',
-        descRU: 'Небесный королевский бастион. Включает изгиб крепостных стен, башни дозора и величественный шпиль.',
-        descEN: 'Celestial royal bastion. Features curved protection battlements, sentinel watchtowers, and a grand spire.',
-        coords: [
-            { q: 0, r: 0 },
-            { q: -1, r: 0 },
-            { q: 1, r: -1 },
-            { q: -1, r: 1 },
-            { q: 1, r: 0 },
-            { q: -2, r: 0 },
-            { q: 2, r: -2 },
-            { q: -2, r: -1 },
-            { q: 2, r: -3 },
-            { q: -2, r: -2 },
-            { q: 2, r: -4 },
-            { q: 0, r: -1 },
-            { q: 0, r: -2 },
-            { q: 0, r: -3 },
-            { q: -1, r: -1 },
-            { q: 1, r: -2 },
-            { q: -3, r: 1 },
-            { q: 3, r: -3 },
-            { q: -3, r: 0 },
-            { q: 3, r: -2 }
-        ],
-        milestonesRU: ["Внутренний Засов", "Опускные Опоры", "Башни Лордов", "Замок Бастиона", "Небесный Бастион Цитадели"],
-        milestonesEN: ["Inner Portcullis", "Foundation Anchors", "Lords Watchtowers", "Keep Fortress", "Celestial Grand Bastion"]
+        milestonesRU: ["Взгляд Вредителя", "Шипение Пороха", "Грустная Гримаса", "Зелёный Блок", "Гигантский Крипер Minecraft"],
+        milestonesEN: ["Spying Eye", "Gunpowder Hiss", "Frowning Face Mask", "Emerald Block Skin", "World Creeper Monument"]
     }
 ];
 
 
 export const VIBRANT_NAMES: { nameRU: string; nameEN: string }[] = [
     // 1-20: Смайлик (Smiley)
-    { nameRU: "Смайлик", nameEN: "Smiley" },
-    { nameRU: "Улыбка", nameEN: "Happy Face" },
-    { nameRU: "Подмигивание", nameEN: "Wink Face" },
-    { nameRU: "Смех", nameEN: "Laughing Face" },
-    { nameRU: "Взгляд", nameEN: "Silent Gaze" },
-    { nameRU: "Радость", nameEN: "Pure Joy" },
-    { nameRU: "Румянец", nameEN: "Blush Tint" },
-    { nameRU: "Гримаса", nameEN: "Funny Grimace" },
-    { nameRU: "Шепот", nameEN: "Soft Whisper" },
-    { nameRU: "Хитрец", nameEN: "Sly Smirk" },
-    { nameRU: "Восторг", nameEN: "Mega Delight" },
-    { nameRU: "Милашка", nameEN: "Cute Face" },
-    { nameRU: "Озорник", nameEN: "Mischievous Kid" },
-    { nameRU: "Весельчак", nameEN: "Jolly Spirit" },
-    { nameRU: "Розыгрыш", nameEN: "Playful Prank" },
-    { nameRU: "Скромняга", nameEN: "Shy Face" },
-    { nameRU: "Мечтатель", nameEN: "Dreamy Explorer" },
-    { nameRU: "Философ", nameEN: "Thinker Node" },
-    { nameRU: "Добряк", nameEN: "Kind Heart" },
-    { nameRU: "Хохот", nameEN: "Loud Laugh" },
+    { nameRU: "Весёлый Смайлик", nameEN: "Classic Smiley" },
+    { nameRU: "Простая Улыбка", nameEN: "Simple Smile" },
+    { nameRU: "Желтый Колобок", nameEN: "Yellow Emoji" },
+    { nameRU: "Искристый Смех", nameEN: "Jolly Laugh" },
+    { nameRU: "Подмигивание", nameEN: "Winking Face" },
+    { nameRU: "Хитрый Прищур", nameEN: "Sly Smirk" },
+    { nameRU: "Радостный Взгляд", nameEN: "Vibrant Gaze" },
+    { nameRU: "Добряк", nameEN: "Kind Soul" },
+    { nameRU: "Смеюн", nameEN: "Chuckle Hub" },
+    { nameRU: "Шептун", nameEN: "Soft Whisperer" },
+    { nameRU: "Большое Лицо", nameEN: "Grand Outline" },
+    { nameRU: "Скромняга", nameEN: "Shy Emoji" },
+    { nameRU: "Озорник", nameEN: "Mischievous Dot" },
+    { nameRU: "Круглый Смайл", nameEN: "Perfect Round" },
+    { nameRU: "Эмодзи Радости", nameEN: "Joy Express" },
+    { nameRU: "Весельчак", nameEN: "Happy Fellow" },
+    { nameRU: "Философ", nameEN: "Thinker Cube" },
+    { nameRU: "Мечтатель", nameEN: "Dreamer Core" },
+    { nameRU: "Любимчик", nameEN: "Cute Face" },
+    { nameRU: "Король Смайликов", nameEN: "Sovereign Smiley" },
 
-    // 21-40: Захватчик (Invader)
-    { nameRU: "Дроид", nameEN: "Scout Droid" },
-    { nameRU: "Пришелец", nameEN: "Star Invader" },
-    { nameRU: "Антенна", nameEN: "Signal Receiver" },
-    { nameRU: "Захватчик", nameEN: "Galaxy Raider" },
-    { nameRU: "Киборг", nameEN: "Metal Cyborg" },
-    { nameRU: "Спрут", nameEN: "Space Squid" },
-    { nameRU: "Саботажник", nameEN: "Orbit Saboteur" },
-    { nameRU: "Мутант", nameEN: "Gamma Mutant" },
-    { nameRU: "Робокраб", nameEN: "Robo Crab" },
-    { nameRU: "Паук", nameEN: "Void Spider" },
-    { nameRU: "Жужжалка", nameEN: "Orbit Buzzer" },
-    { nameRU: "Клешня", nameEN: "Steel Pincer" },
-    { nameRU: "Ксеноморф", nameEN: "Xenomorph Spawn" },
-    { nameRU: "Сталкер", nameEN: "Nebula Stalker" },
-    { nameRU: "Пилигрим", nameEN: "Void Traveler" },
-    { nameRU: "Мимик", nameEN: "Mimic Bot" },
-    { nameRU: "Разведчик", nameEN: "Deep Scout" },
-    { nameRU: "Инквизитор", nameEN: "Sector Inquisitor" },
-    { nameRU: "Генерал", nameEN: "Alien Warlord" },
-    { nameRU: "Властелин", nameEN: "Sovereign Master" },
+    // 21-40: Пакман (Pacman)
+    { nameRU: "Пиксельная Точка", nameEN: "Arcade Dot" },
+    { nameRU: "Жёлтая Сфера", nameEN: "Yellow Arc" },
+    { nameRU: "Открытый Рот", nameEN: "Pacman Mouth" },
+    { nameRU: "Драже Силы", nameEN: "Power Pellet" },
+    { nameRU: "Пожиратель Точек", nameEN: "Dot Muncher" },
+    { nameRU: "Аркадная Вишня", nameEN: "Retro Cherry" },
+    { nameRU: "Клубничка Сегмент", nameEN: "Arcade Strawberry" },
+    { nameRU: "Беглец Блинки", nameEN: "Blinky Ghost" },
+    { nameRU: "Беглец Пинки", nameEN: "Pinky Ghost" },
+    { nameRU: "Беглец Инки", nameEN: "Inky Ghost" },
+    { nameRU: "Беглец Клайд", nameEN: "Clyde Ghost" },
+    { nameRU: "Ключ Квеста", nameEN: "Arcade Key" },
+    { nameRU: "Угловой Туннель", nameEN: "Maze Corridor" },
+    { nameRU: "Ретро-Джойстик", nameEN: "Retro Joystick" },
+    { nameRU: "Игровой Автомат", nameEN: "Arcade Cabinet" },
+    { nameRU: "Синее Напуганное Привидение", nameEN: "Frightened Ghost" },
+    { nameRU: "Фрукт-Бонус", nameEN: "Bonus Fruit" },
+    { nameRU: "Лабиринт Душ", nameEN: "Chamber Maze" },
+    { nameRU: "Золотой Пакман", nameEN: "Golden Pacman" },
+    { nameRU: "Ретро Пакман", nameEN: "Retro Pac-Man" },
 
-    // 41-60: Меч (Sword)
-    { nameRU: "Кинжал", nameEN: "Sharp Dagger" },
-    { nameRU: "Стилет", nameEN: "Swift Stiletto" },
-    { nameRU: "Палаш", nameEN: "Broad Sword" },
-    { nameRU: "Рапира", nameEN: "Fine Rapier" },
-    { nameRU: "Эспадон", nameEN: "Grand Zweihander" },
-    { nameRU: "Катана", nameEN: "Steel Katana" },
-    { nameRU: "Ятаган", nameEN: "Curved Scimitar" },
-    { nameRU: "Глефа", nameEN: "Light Glaive" },
-    { nameRU: "Копье", nameEN: "Quartz Spear" },
-    { nameRU: "Топор", nameEN: "Heavy Axe" },
-    { nameRU: "Секира", nameEN: "Battle Axe" },
-    { nameRU: "Тесак", nameEN: "Cleaver Blade" },
-    { nameRU: "Кортик", nameEN: "Dirk Blade" },
-    { nameRU: "Шпага", nameEN: "Swift Foil" },
-    { nameRU: "Сабля", nameEN: "Guard Saber" },
-    { nameRU: "Экскалибур", nameEN: "Excalibur Sword" },
-    { nameRU: "Клеймор", nameEN: "Claymore Blade" },
-    { nameRU: "Фламберг", nameEN: "Wave Sword" },
-    { nameRU: "Алебарда", nameEN: "Guard Halberd" },
-    { nameRU: "Трезубец", nameEN: "Sea Trident" },
+    // 41-60: Световой Меч (Lightsaber)
+    { nameRU: "Кристалл Кайбер", nameEN: "Kyber Crystal" },
+    { nameRU: "Эмиттер Плазмы", nameEN: "Plasma Emitter" },
+    { nameRU: "Рукоять Стали", nameEN: "Steel Hilt" },
+    { nameRU: "Световой Стержень", nameEN: "Light Beam" },
+    { nameRU: "Синее Лезвие", nameEN: "Blue Blade" },
+    { nameRU: "Шахта Кайбера", nameEN: "Kyber Shaft" },
+    { nameRU: "Гарда Меча", nameEN: "Blade Guard" },
+    { nameRU: "Световой Стержень Йоды", nameEN: "Green Saber" },
+    { nameRU: "Плазменный Луч ситхов", nameEN: "Crimson Saber" },
+    { nameRU: "Фиолетовый Луч", nameEN: "Purple Saber" },
+    { nameRU: "Кнопка Инициации", nameEN: "Power Switch" },
+    { nameRU: "Орден Силы", nameEN: "Force Emblem" },
+    { nameRU: "Стальной Держатель", nameEN: "Chassis Grip" },
+    { nameRU: "Посох Ситха", nameEN: "Sith Staff" },
+    { nameRU: "Двуручный Клинок", nameEN: "Zweihander Beam" },
+    { nameRU: "Зубчатый Излучатель", nameEN: "Flared Shroud" },
+    { nameRU: "Джедайский Меч", nameEN: "Knight Saber" },
+    { nameRU: "Энергетический Щит", nameEN: "Aegis Saber" },
+    { nameRU: "Меч Скайуокера", nameEN: "Skywalker Blade" },
+    { nameRU: "Световой Меч Силы", nameEN: "Laser Lightsaber" },
 
-    // 61-80: Сердце (Heart)
-    { nameRU: "Искра", nameEN: "Energy Spark" },
-    { nameRU: "Пульс", nameEN: "Core Beating" },
-    { nameRU: "Валентинка", nameEN: "Sweet Valentine" },
-    { nameRU: "Амулет", nameEN: "Mystic Amulet" },
-    { nameRU: "Рубин", nameEN: "Crimson Ruby" },
-    { nameRU: "Аметист", nameEN: "Purple Amethyst" },
-    { nameRU: "Изумруд", nameEN: "Green Emerald" },
-    { nameRU: "Сапфир", nameEN: "Blue Sapphire" },
-    { nameRU: "Алмаз", nameEN: "Pure Diamond" },
-    { nameRU: "Кристалл", nameEN: "Prism Crystal" },
-    { nameRU: "Талисман", nameEN: "Lucky Charm" },
-    { nameRU: "Родонит", nameEN: "Pink Rhodonite" },
-    { nameRU: "Янтарь", nameEN: "Amber Stone" },
-    { nameRU: "Нефрит", nameEN: "Jade Carving" },
-    { nameRU: "Оберег", nameEN: "Ward Rune" },
-    { nameRU: "Узел", nameEN: "Unity Knot" },
-    { nameRU: "Роза", nameEN: "Glass Rose" },
-    { nameRU: "Пламя", nameEN: "Loving Flame" },
-    { nameRU: "Магма", nameEN: "Burning Heart" },
-    { nameRU: "Вечность", nameEN: "Eternal Bond" },
+    // 61-80: Сердечко (Pixel Heart)
+    { nameRU: "Очко Здоровья", nameEN: "Health Dot" },
+    { nameRU: "Дробь Жизни", nameEN: "Life Fraction" },
+    { nameRU: "Красная Долька", nameEN: "Scarlet Lobe" },
+    { nameRU: "Пиксельное Сердце", nameEN: "Pixel Heart" },
+    { nameRU: "Левая Половинка", nameEN: "Left Chamber" },
+    { nameRU: "Правая Половинка", nameEN: "Right Chamber" },
+    { nameRU: "Рубин Силы", nameEN: "Power Ruby" },
+    { nameRU: "Рупия Хайрула", nameEN: "Hyrule Rupee" },
+    { nameRU: "Трифорс Золота", nameEN: "Golden Triforce" },
+    { nameRU: "Контейнер Выносливости", nameEN: "Stamina Vessel" },
+    { nameRU: "Амулет Сердца", nameEN: "Heart Charm" },
+    { nameRU: "Сердечко Minecraft", nameEN: "Blocky Heart" },
+    { nameRU: "Охрана Сердца", nameEN: "Armored Heart" },
+    { nameRU: "Стеклянная Фляга Жизни", nameEN: "Elixir Bottle" },
+    { nameRU: "Золотое Сердечко", nameEN: "Golden Heart" },
+    { nameRU: "Кристалл Жизни", nameEN: "Lifestone Core" },
+    { nameRU: "Сингулярность Любви", nameEN: "Loving Core" },
+    { nameRU: "Искра Здоровья", nameEN: "Sanctuary Spark" },
+    { nameRU: "Запасное Сердце", nameEN: "Reserve Heart" },
+    { nameRU: "Контейнер Сердца Зельды", nameEN: "Zelda Heart Container" },
 
-    // 81-100: Звезда (Star)
-    { nameRU: "Вспышка", nameEN: "Nova Flare" },
-    { nameRU: "Спутник", nameEN: "Orbit Satellite" },
-    { nameRU: "Метеор", nameEN: "Swift Meteor" },
-    { nameRU: "Комета", nameEN: "Blue Comet" },
-    { nameRU: "Андромеда", nameEN: "Andromeda Cloud" },
-    { nameRU: "Квазар", nameEN: "Power Quasar" },
-    { nameRU: "Пульсар", nameEN: "Cosmic Pulsar" },
-    { nameRU: "Сверхновая", nameEN: "Supernova Core" },
-    { nameRU: "Галактика", nameEN: "Spiral Galaxy" },
-    { nameRU: "Туманность", nameEN: "Nebula Dust" },
-    { nameRU: "Созвездие", nameEN: "Star Cluster" },
-    { nameRU: "Астероид", nameEN: "Gray Asteroid" },
-    { nameRU: "Орбита", nameEN: "High Orbit" },
-    { nameRU: "Затмение", nameEN: "Solar Eclipse" },
-    { nameRU: "Рассвет", nameEN: "Space Sunrise" },
-    { nameRU: "Зенит", nameEN: "High Zenith" },
-    { nameRU: "Надир", nameEN: "Deep Nadir" },
-    { nameRU: "Космос", nameEN: "Deep Void" },
-    { nameRU: "Бездна", nameEN: "Infinite Abyss" },
-    { nameRU: "Маяк", nameEN: "Star Beacon" },
+    // 81-100: Гриб Марио (Mario Mushroom)
+    { nameRU: "Споры Гриба", nameEN: "Fungal Spore" },
+    { nameRU: "Опорная Ножка", nameEN: "Mushroom Stem" },
+    { nameRU: "Плоская Шляпка", nameEN: "Cap Base" },
+    { nameRU: "Белая Крапинка", nameEN: "White Spot" },
+    { nameRU: "Зеленый 1-UP Гриб", nameEN: "1-UP Spore" },
+    { nameRU: "Красный Супер-Гриб", nameEN: "Super Spore" },
+    { nameRU: "Монстр Гумба", nameEN: "Enemy Goomba" },
+    { nameRU: "Труба Марио", nameEN: "Warp Pipe" },
+    { nameRU: "Огненный Цветок", nameEN: "Fire Flower" },
+    { nameRU: "Супер Золотая Звезда", nameEN: "Starman Power" },
+    { nameRU: "Блок с Вопросом", nameEN: "Question Block" },
+    { nameRU: "Луиджи Зеленка", nameEN: "Luigi Green" },
+    { nameRU: "Замок Принцессы Пич", nameEN: "Peach Castle" },
+    { nameRU: "Золотая Монетка", nameEN: "Retro Coin" },
+    { nameRU: "Панцирь Черепахи Купы", nameEN: "Koopa Shell" },
+    { nameRU: "Кирпичный Блок", nameEN: "Brick Block" },
+    { nameRU: "Пингвин-костюм", nameEN: "Penguin Suit" },
+    { nameRU: "Летающий Лист Тануки", nameEN: "Tanooki Leaf" },
+    { nameRU: "Облачный Купол", nameEN: "Cloud Cap" },
+    { nameRU: "Гигантский Гриб Марио", nameEN: "Super Mario Mushroom" },
 
-    // 101-120: Корона (Crown)
-    { nameRU: "Венец", nameEN: "Royal Diadem" },
-    { nameRU: "Тиара", nameEN: "Bright Tiara" },
-    { nameRU: "Шлем", nameEN: "Guard Helmet" },
-    { nameRU: "Забрало", nameEN: "Iron Visor" },
-    { nameRU: "Наплечник", nameEN: "Steel Pauldron" },
-    { nameRU: "Нагрудник", nameEN: "Solid Breastplate" },
-    { nameRU: "Перчатка", nameEN: "Iron Gauntlet" },
-    { nameRU: "Поножи", nameEN: "Plate Greaves" },
-    { nameRU: "Щит", nameEN: "Aegis Shield" },
-    { nameRU: "Скипетр", nameEN: "Golden Scepter" },
-    { nameRU: "Держава", nameEN: "Royal Orb" },
-    { nameRU: "Трон", nameEN: "Marble Throne" },
-    { nameRU: "Мантия", nameEN: "Velvet Cloak" },
-    { nameRU: "Герб", nameEN: "Crest Banner" },
-    { nameRU: "Печать", nameEN: "Signature Seal" },
-    { nameRU: "Кольцо", nameEN: "Signet Ring" },
-    { nameRU: "Кулон", nameEN: "Royal Pendant" },
-    { nameRU: "Барбют", nameEN: "Barbuta Helmet" },
-    { nameRU: "Посох", nameEN: "Eldritch Staff" },
-    { nameRU: "Корона", nameEN: "Sovereign Crown" },
+    // 101-120: Шлем Вейдера (Vader Helmet)
+    { nameRU: "Окуляр Ситха", nameEN: "Sith Lens" },
+    { nameRU: "Решётка Дыхания", nameEN: "Respirator Mesh" },
+    { nameRU: "Противогаз Тьмы", nameEN: "Shadow Filter" },
+    { nameRU: "Купол Шлема", nameEN: "Iron Dome" },
+    { nameRU: "Имперская Кокарда", nameEN: "Imperial Cog" },
+    { nameRU: "Тёмный Офицер", nameEN: "Officer Skull" },
+    { nameRU: "Маска Пилота", nameEN: "TIE Pilot Shroud" },
+    { nameRU: "Крыло Разрушителя", nameEN: "Destroyer Hull" },
+    { nameRU: "Тронный Столб", nameEN: "Throne Spire" },
+    { nameRU: "Звезда Смерти Ядро", nameEN: "Death Star Core" },
+    { nameRU: "Шлем Вейдера Сбоку", nameEN: "Vader Profile" },
+    { nameRU: "Имперский Штурмовик", nameEN: "Stormtrooper Plate" },
+    { nameRU: "Алая Гвардия", nameEN: "Royal Guard Visor" },
+    { nameRU: "Клон-Шлем", nameEN: "Clone Phase II" },
+    { nameRU: "Ситхский Медальон", nameEN: "Sith medallion" },
+    { nameRU: "Звёздная Верфь", nameEN: "Star Forge" },
+    { nameRU: "Маска Лорда", nameEN: "Lord Mask" },
+    { nameRU: "Броня Из Тьмы", nameEN: "Obsidian Shell" },
+    { nameRU: "Капюшон Ситха", nameEN: "Emperor Hood" },
+    { nameRU: "Шлем Дарта Вейдера", nameEN: "Darth Vader Helmet" },
 
-    // 121-140: Древо (Tree)
-    { nameRU: "Росток", nameEN: "Fresh Sprout" },
-    { nameRU: "Корень", nameEN: "Deep Root" },
-    { nameRU: "Стебель", nameEN: "Green Stem" },
-    { nameRU: "Листок", nameEN: "Ivy Leaf" },
-    { nameRU: "Крона", nameEN: "Forest Canopy" },
-    { nameRU: "Ветка", nameEN: "Oak Branch" },
-    { nameRU: "Почка", nameEN: "Spring Bud" },
-    { nameRU: "Кора", nameEN: "Thick Bark" },
-    { nameRU: "Хвоя", nameEN: "Pine Needle" },
-    { nameRU: "Желудь", nameEN: "Golden Acorn" },
-    { nameRU: "Саженец", nameEN: "Tree Sapling" },
-    { nameRU: "Клен", nameEN: "Red Maple" },
-    { nameRU: "Ольха", nameEN: "Alder Shrub" },
-    { nameRU: "Орех", nameEN: "Hazel Nut" },
-    { nameRU: "Пихта", nameEN: "Silver Fir" },
-    { nameRU: "Бамбук", nameEN: "Green Bamboo" },
-    { nameRU: "Лотос", nameEN: "Sacred Lotus" },
-    { nameRU: "Лилия", nameEN: "White Lily" },
-    { nameRU: "Кактус", nameEN: "Desert Cactus" },
-    { nameRU: "Древо", nameEN: "World Tree" },
+    // 121-140: Череп Зомби (Zombie Skull)
+    { nameRU: "Зеленая Кожа", nameEN: "Rotten Skin" },
+    { nameRU: "Пустая Челюсть", nameEN: "Undead Jaw" },
+    { nameRU: "Взгляд Зомби", nameEN: "Zombie Gaze" },
+    { nameRU: "Квадратная Голова", nameEN: "Cubic Head" },
+    { nameRU: "Голова Стива", nameEN: "Steve Block" },
+    { nameRU: "Скелет Кость", nameEN: "Skeleton Skull" },
+    { nameRU: "Паучий Глаз", nameEN: "Spider Eye" },
+    { nameRU: "Ведьмин Котёл", nameEN: "Witch Cauldron" },
+    { nameRU: "Гнилая Плоть", nameEN: "Rotten Flesh" },
+    { nameRU: "Кадавр пустыни", nameEN: "Husk Skull" },
+    { nameRU: "Утопленник Тёмный", nameEN: "Drowned Head" },
+    { nameRU: "Зомби-Свиночеловек", nameEN: "Zombie Pigman" },
+    { nameRU: "Зомби Бродяга", nameEN: "Stray Face" },
+    { nameRU: "Шлем Из Костей", nameEN: "Bone Headdress" },
+    { nameRU: "Топор Дровосека", nameEN: "Iron Cleaver" },
+    { nameRU: "Блок Земли", nameEN: "Dirt Block" },
+    { nameRU: "Заражение Биома", nameEN: "Infested Soil" },
+    { nameRU: "Орда Зомби", nameEN: "Zombie Swarm" },
+    { nameRU: "Некро-Блок", nameEN: "Necro Block" },
+    { nameRU: "Череп Зомби Minecraft", nameEN: "Minecraft Zombie Skull" },
 
-    // 141-160: Портал (Portal)
-    { nameRU: "Излом", nameEN: "Reality Fracture" },
-    { nameRU: "Разлом", nameEN: "Void Rift" },
-    { nameRU: "Трещина", nameEN: "Spatial Crack" },
-    { nameRU: "Проход", nameEN: "Passage Way" },
-    { nameRU: "Дверь", nameEN: "Secret Door" },
-    { nameRU: "Ворота", nameEN: "Iron Gate" },
-    { nameRU: "Арка", nameEN: "Gothic Arch" },
-    { nameRU: "Скважина", nameEN: "Keyhole Slot" },
-    { nameRU: "Туннель", nameEN: "Quantum Tunnel" },
-    { nameRU: "Воронка", nameEN: "Swirling Vortex" },
-    { nameRU: "Коридор", nameEN: "Vector Corridor" },
-    { nameRU: "Мост", nameEN: "Aether Bridge" },
-    { nameRU: "Свод", nameEN: "Keystone Vault" },
-    { nameRU: "Окно", nameEN: "Mirror Window" },
-    { nameRU: "Зеркало", nameEN: "Reality Reflector" },
-    { nameRU: "Врата", nameEN: "Stargate Arch" },
-    { nameRU: "Телепорт", nameEN: "Teleport Node" },
-    { nameRU: "Сингулярность", nameEN: "Gravitational Singularity" },
-    { nameRU: "Червоточина", nameEN: "Wormhole Path" },
-    { nameRU: "Портал", nameEN: "Prime Portal" },
+    // 141-160: Квантовый Портал (Portal)
+    { nameRU: "Генератор Порталов", nameEN: "Portal Gun" },
+    { nameRU: "Голубой Свод", nameEN: "Blue Ring" },
+    { nameRU: "Оранжевый Свод", nameEN: "Orange Ring" },
+    { nameRU: "Куб Компаньон", nameEN: "Companion Cube" },
+    { nameRU: "Мотор Уитли", nameEN: "Wheatley Sphere" },
+    { nameRU: "Босс ГЛэДОС", nameEN: "GLaDOS Core" },
+    { nameRU: "Турель Дозора", nameEN: "Sentry Turret" },
+    { nameRU: "Апертур Тест-Комната", nameEN: "Aperture Tile" },
+    { nameRU: "Гравитационный Гель", nameEN: "Bouncy Gel" },
+    { nameRU: "Скоростной Гель", nameEN: "Speedy Gel" },
+    { nameRU: "Решётка Очистки", nameEN: "Fizzler Grid" },
+    { nameRU: "Утяжеленный Куб", nameEN: "Storage Cube" },
+    { nameRU: "Лазерное Прицеливание", nameEN: "Laser Target" },
+    { nameRU: "Кнопка Веса", nameEN: "Floor Button" },
+    { nameRU: "Радио-Локатор", nameEN: "Radio Signal" },
+    { nameRU: "Ядро Безумия", nameEN: "Anger Core" },
+    { nameRU: "Разлом Реальности", nameEN: "Void Tearing" },
+    { nameRU: "Овальный Переход", nameEN: "Oval Gateway" },
+    { nameRU: "Лаборатория Торта", nameEN: "The Lie Cake" },
+    { nameRU: "Портал Aperture Science", nameEN: "Aperture Quantum Portal" },
 
     // 161-180: Покебол (Pokeball)
-    { nameRU: "Диск", nameEN: "Data Disc" },
-    { nameRU: "Шар", nameEN: "Energy Sphere" },
-    { nameRU: "Сфера", nameEN: "Perfect Orb" },
-    { nameRU: "Ядро", nameEN: "Core Reactor" },
-    { nameRU: "Капсула", nameEN: "Cargo Pod" },
-    { nameRU: "Кнопка", nameEN: "Action Key" },
-    { nameRU: "Чип", nameEN: "Micro Chip" },
-    { nameRU: "Плата", nameEN: "Circuit Board" },
-    { nameRU: "Контроллер", nameEN: "Input Pad" },
-    { nameRU: "Джойстик", nameEN: "Game Lever" },
-    { nameRU: "Кассета", nameEN: "Retro Tape" },
-    { nameRU: "Картридж", nameEN: "Game Cartridge" },
-    { nameRU: "Монета", nameEN: "Gold Coin" },
-    { nameRU: "Жетон", nameEN: "Game Token" },
-    { nameRU: "Сержант", nameEN: "Star Emblem" },
-    { nameRU: "Радар", nameEN: "Intel Radar" },
-    { nameRU: "Куб", nameEN: "Cosmic Cube" },
-    { nameRU: "Призма", nameEN: "Light Prism" },
-    { nameRU: "Покебол", nameEN: "Catch Pokeball" },
-    { nameRU: "Артефакт", nameEN: "Master Artifact" },
+    { nameRU: "Железная Защелка", nameEN: "Latch Button" },
+    { nameRU: "Центральная Кнопка", nameEN: "Trigger Button" },
+    { nameRU: "Красное Полушарие", nameEN: "Red Dome" },
+    { nameRU: "Белая Чаша", nameEN: "White Base" },
+    { nameRU: "Грейт-Бол", nameEN: "Great Ball" },
+    { nameRU: "Ультра-Бол", nameEN: "Ultra Ball" },
+    { nameRU: "Мастер-Бол", nameEN: "Master Ball" },
+    { nameRU: "Кепка Тренера Эша", nameEN: "Trainers Cap" },
+    { nameRU: "Щёчки Пикачу", nameEN: "Pikachu Cheeks" },
+    { nameRU: "Уши Споты", nameEN: "Pika Ears" },
+    { nameRU: "Молния Наволочка", nameEN: "Thunder Emblem" },
+    { nameRU: "Сканер Покедекс", nameEN: "Pokedex Monitor" },
+    { nameRU: "Ягодка Черри", nameEN: "Oran Berry" },
+    { nameRU: "Лига Покемонов", nameEN: "League Pin" },
+    { nameRU: "Водный Брызг Сквиртла", nameEN: "Water Blast" },
+    { nameRU: "Огонёк Чармандера", nameEN: "Tail Flame" },
+    { nameRU: "Бутон Бульбазавра", nameEN: "Seed Bulb" },
+    { nameRU: "Трава Сафари", nameEN: "Safari Bush" },
+    { nameRU: "Арена Боя", nameEN: "Battle Stadium" },
+    { nameRU: "Покебол Ловли", nameEN: "Catch Pokeball" },
 
     // 181-200: Крипер (Creeper)
-    { nameRU: "Зомби", nameEN: "Rotten Zombie" },
-    { nameRU: "Скелет", nameEN: "Bone Archer" },
-    { nameRU: "Паук", nameEN: "Cave Spider" },
-    { nameRU: "Эндермен", nameEN: "Shadow Enderman" },
-    { nameRU: "Слизень", nameEN: "Green Slime" },
-    { nameRU: "Гаст", nameEN: "Floating Ghast" },
-    { nameRU: "Пиглин", nameEN: "Piglin Trader" },
-    { nameRU: "Ифрит", nameEN: "Blaze Spawner" },
-    { nameRU: "Чешуйница", nameEN: "Silverfish Spawn" },
-    { nameRU: "Ведьма", nameEN: "Swamp Witch" },
-    { nameRU: "Свинозомби", nameEN: "Zombie Pigman" },
-    { nameRU: "Кадавр", nameEN: "Desert Husk" },
-    { nameRU: "Зимогор", nameEN: "Ice Stray" },
-    { nameRU: "Утопленник", nameEN: "Drowned Walker" },
-    { nameRU: "Фантом", nameEN: "Night Phantom" },
-    { nameRU: "Хоглин", nameEN: "Hoglin Beast" },
-    { nameRU: "Страж", nameEN: "Elder Guardian" },
-    { nameRU: "Разбойник", nameEN: "Pillager Outlaw" },
-    { nameRU: "Разоритель", nameEN: "Ravager Beast" },
-    { nameRU: "Крипер", nameEN: "Redstone Creeper" }
+    { nameRU: "Запас Пороха", nameEN: "Gunpowder Chest" },
+    { nameRU: "Веревка Саботажа", nameEN: "Igniting String" },
+    { nameRU: "Минный Блок", nameEN: "Redstone Trap" },
+    { nameRU: "Бесшумный Подход", nameEN: "Silent Hoof" },
+    { nameRU: "Опасная Маска", nameEN: "Creeper Face" },
+    { nameRU: "Красная Пыль Майнкрафта", nameEN: "Redstone Cable" },
+    { nameRU: "Динамит Спичка", nameEN: "TNT Fuse" },
+    { nameRU: "Грусть Крипера", nameEN: "Frowning Mouth" },
+    { nameRU: "Заряженное Тело", nameEN: "Charged Shell" },
+    { nameRU: "Вспышка Молнии", nameEN: "Lightning Strike" },
+    { nameRU: "Кубическая Кожа", nameEN: "Green Pixels" },
+    { nameRU: "Ужас Редстоуна", nameEN: "Redstone Horror" },
+    { nameRU: "Глаза Взрывателя", nameEN: "Explosive Eyes" },
+    { nameRU: "Обсидиановая Коробка", nameEN: "Obsidian Shell" },
+    { nameRU: "Кирка Шахтера", nameEN: "Diamond Pickaxe" },
+    { nameRU: "Алмазная Глыба", nameEN: "Diamond Ore" },
+    { nameRU: "Эндер Портал", nameEN: "Ender Portal" },
+    { nameRU: "Золотое Яблоко", nameEN: "Golden Apple" },
+    { nameRU: "Взрыв Сегмента", nameEN: "Sizzling Hiss" },
+    { nameRU: "Легендарный Крипер", nameEN: "Minecraft Creeper" }
 ];
+
+export const getCustomShapeForName = (nameEN: string, seriesCoords: { q: number; r: number }[]): { q: number; r: number }[] => {
+    const nameLower = nameEN.toLowerCase();
+
+    if (nameLower.includes("pikachu") || nameLower.includes("pika")) {
+        return [
+            { q: 0, r: 0 }, { q: -1, r: 0 }, { q: 1, r: 0 },
+            { q: -1, r: 1 }, { q: 0, r: 1 }, { q: 1, r: 1 }, { q: -2, r: 1 }, { q: 2, r: 0 },
+            { q: -1, r: -1 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+            { q: -2, r: -1 }, { q: -3, r: -2 }, { q: -4, r: -2 },
+            { q: 2, r: -2 }, { q: 3, r: -3 }, { q: 4, r: -4 }
+        ];
+    }
+    if (nameLower.includes("ghost") || nameLower.includes("blinky") || nameLower.includes("pinky") || nameLower.includes("inky") || nameLower.includes("clyde")) {
+        return [
+            { q: 0, r: 0 },
+            { q: 0, r: -1 }, { q: -1, r: 0 }, { q: 1, r: -1 },
+            { q: -1, r: -1 }, { q: 1, r: -2 },
+            { q: -1, r: 1 }, { q: 0, r: 1 }, { q: 1, r: 0 },
+            { q: -2, r: 1 }, { q: 2, r: -1 },
+            { q: -1, r: 2 }, { q: 1, r: 1 },
+            { q: -2, r: 2 }, { q: 2, r: 0 }
+        ];
+    }
+    if (nameLower.includes("cherry") || nameLower.includes("strawberry") || nameLower.includes("berry") || nameLower.includes("fruit")) {
+        return [
+            { q: 0, r: 1 }, { q: -1, r: 2 }, { q: 0, r: 2 },
+            { q: 1, r: 0 }, { q: 2, r: -1 }, { q: 2, r: 0 },
+            { q: 0, r: 0 }, { q: 1, r: -1 }, { q: 1, r: -2 }, { q: 0, r: -1 }
+        ];
+    }
+    if (nameLower.includes("key")) {
+        return [
+            { q: 0, r: 0 }, { q: -1, r: -1 }, { q: 0, r: -1 }, { q: 1, r: -1 }, { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 }, { q: -1, r: 0 },
+            { q: 1, r: 1 }, { q: 2, r: 2 }, { q: 3, r: 3 },
+            { q: 2, r: 3 }, { q: 3, r: 4 }
+        ];
+    }
+    if (nameLower.includes("joystick")) {
+        return [
+            { q: 0, r: 2 }, { q: -1, r: 2 }, { q: 1, r: 1 }, { q: 0, r: 3 }, { q: -1, r: 3 },
+            { q: 0, r: 1 }, { q: 0, r: 0 },
+            { q: 0, r: -1 }, { q: -1, r: -1 }, { q: 1, r: -1 }, { q: 0, r: -2 }
+        ];
+    }
+    if (nameLower.includes("crystal") || nameLower.includes("ruby") || nameLower.includes("rupee") || nameLower.includes("gem") || nameLower.includes("lifestone") || nameLower.includes("loving")) {
+        return [
+            { q: 0, r: 0 },
+            { q: 0, r: -1 }, { q: 0, r: 1 },
+            { q: -1, r: 1 }, { q: 1, r: -1 },
+            { q: -1, r: 2 }, { q: 1, r: -2 },
+            { q: 0, r: -2 }, { q: 0, r: 2 }
+        ];
+    }
+    if (nameLower.includes("hilt") || nameLower.includes("grip") || nameLower.includes("emitter")) {
+        return [
+            { q: 0, r: 0 }, { q: 1, r: -1 }, { q: -1, r: 1 },
+            { q: 0, r: -1 }, { q: 1, r: -2 },
+            { q: -1, r: 0 }, { q: -2, r: 1 },
+            { q: 0, r: 1 }, { q: -1, r: 2 }
+        ];
+    }
+    if (nameLower.includes("emblem") || nameLower.includes("starman") || nameLower.includes("star") || nameLower.includes("orden")) {
+        return [
+            { q: 0, r: 0 },
+            { q: 0, r: -1 }, { q: 0, r: 1 },
+            { q: -1, r: 0 }, { q: 1, r: 0 },
+            { q: 1, r: -1 }, { q: -1, r: 1 },
+            { q: -2, r: 1 }, { q: 2, r: -1 },
+            { q: 1, r: -2 }, { q: -1, r: 2 },
+            { q: -2, r: 2 }, { q: 2, r: -2 }
+        ];
+    }
+    if (nameLower.includes("triforce")) {
+        return [
+            { q: 0, r: -2 }, { q: -1, r: -1 }, { q: 1, r: -2 },
+            { q: -2, r: 1 }, { q: -1, r: 1 }, { q: -2, r: 2 },
+            { q: 1, r: 1 }, { q: 2, r: 0 }, { q: 2, r: 1 }
+        ];
+    }
+    if (nameLower.includes("bottle") || nameLower.includes("flask") || nameLower.includes("vial") || nameLower.includes("elixir")) {
+        return [
+            { q: 0, r: -2 }, { q: 0, r: -1 },
+            { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 },
+            { q: -1, r: 1 }, { q: 1, r: 1 },
+            { q: 0, r: 1 },
+            { q: -1, r: 2 }, { q: 0, r: 2 }, { q: 1, r: 2 }
+        ];
+    }
+    if (nameLower.includes("pipe")) {
+        return [
+            { q: -1, r: -1 }, { q: 0, r: -1 }, { q: 1, r: -1 },
+            { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 },
+            { q: 0, r: 1 }, { q: 1, r: 1 },
+            { q: 0, r: 2 }, { q: 1, r: 2 },
+            { q: 0, r: 3 }
+        ];
+    }
+    if (nameLower.includes("block") || nameLower.includes("box") || nameLower.includes("cube") || nameLower.includes("question") || nameLower.includes("chest") || nameLower.includes("ore") || nameLower.includes("pixels") || nameLower.includes("soil")) {
+        return [
+            { q: 0, r: 0 }, { q: -1, r: 0 }, { q: 1, r: 0 },
+            { q: 0, r: -1 }, { q: 1, r: -1 }, { q: -1, r: 1 }, { q: 0, r: 1 },
+            { q: -1, r: -1 }, { q: 1, r: -2 }, { q: 0, r: -2 }, { q: -1, r: 2 }, { q: 0, r: 2 },
+            { q: -2, r: 0 }, { q: 2, r: 0 }, { q: -2, r: 1 }, { q: 2, r: -1 }
+        ];
+    }
+    if (nameLower.includes("death star")) {
+        return [
+            { q: 0, r: 0 }, { q: 0, r: -1 }, { q: 0, r: 1 }, { q: -1, r: 0 }, { q: 1, r: 0 },
+            { q: -1, r: -1 }, { q: -1, r: 1 }, { q: 1, r: 1 },
+            { q: -2, r: 1 }, { q: 2, r: -1 }, { q: 0, r: -2 }, { q: 2, r: -2 },
+            { q: -1, r: 2 }, { q: 0, r: 2 }, { q: -2, r: 2 },
+            { q: -2, r: 0 }, { q: 2, r: 0 }
+        ];
+    }
+    if (nameLower.includes("pickaxe") || nameLower.includes("axe") || nameLower.includes("cleaver") || nameLower.includes("sword") || nameLower.includes("blade") || nameLower.includes("staff")) {
+        return [
+            { q: 0, r: 0 }, { q: -1, r: 1 }, { q: -2, r: 2 }, { q: -3, r: 3 }, { q: -4, r: 4 },
+            { q: 1, r: -1 }, { q: 2, r: -2 }, { q: 3, r: -3 },
+            { q: 0, r: -1 }, { q: -1, r: -1 }, { q: -1, r: -2 }
+        ];
+    }
+    if (nameLower.includes("turret") || nameLower.includes("sentry")) {
+        return [
+            { q: 0, r: -2 },
+            { q: 0, r: -1 }, { q: -1, r: -1 }, { q: 1, r: -2 },
+            { q: 0, r: 0 }, { q: -1, r: 0 }, { q: 1, r: 0 },
+            { q: -1, r: 1 }, { q: 1, r: 1 },
+            { q: -2, r: 2 }, { q: 0, r: 2 }, { q: 2, r: 2 }
+        ];
+    }
+    if (nameLower.includes("ender portal") || nameLower.includes("frame")) {
+        return [
+            { q: -2, r: -2 }, { q: -1, r: -2 }, { q: 0, r: -2 }, { q: 1, r: -2 }, { q: 2, r: -2 },
+            { q: -2, r: -1 }, { q: 2, r: -1 },
+            { q: -2, r: 0 }, { q: 2, r: 0 },
+            { q: -2, r: 1 }, { q: 2, r: 1 },
+            { q: -2, r: 2 }, { q: -1, r: 2 }, { q: 0, r: 2 }, { q: 1, r: 2 }, { q: 2, r: 2 }
+        ];
+    }
+    if (nameLower.includes("bulb") || nameLower.includes("seed") || nameLower.includes("spore")) {
+        return [
+            { q: 0, r: 0 }, { q: -1, r: 0 }, { q: 1, r: 0 },
+            { q: 0, r: -1 }, { q: -1, r: 1 }, { q: 1, r: -1 },
+            { q: 0, r: -2 }, { q: -1, r: -1 }, { q: 1, r: -2 },
+            { q: -1, r: 2 }, { q: 0, r: 2 }, { q: 1, r: 1 }
+        ];
+    }
+    if (nameLower.includes("beam") || nameLower.includes("line")) {
+        return [
+            { q: 0, r: 0 }, { q: 0, r: -1 }, { q: 0, r: -2 }, { q: 0, r: -3 }, { q: 0, r: -4 }, { q: 0, r: -5 }, { q: 0, r: 1 }, { q: 0, r: 2 }
+        ];
+    }
+    if (nameLower.includes("wink")) {
+        return seriesCoords.filter(c => !(c.q === -1 && c.r === -1));
+    }
+
+    return seriesCoords;
+};
 
 export const padCoords = (seriesCoords: { q: number; r: number }[]): { q: number; r: number }[] => {
     const result = [...seriesCoords];
@@ -677,7 +834,7 @@ export const generateAllFiguresRaw = (): Figure[] => {
     const list: Figure[] = [];
 
     for (let index = 1; index <= 200; index++) {
-        const { series, offset } = getSeriesForIndex(index);
+        const { series } = getSeriesForIndex(index);
         
         // 1. Level constraint logic:
         // First 10 figures must be level 0 strictly. Then we unlock a new level tier every 20 levels.
@@ -689,13 +846,14 @@ export const generateAllFiguresRaw = (): Figure[] => {
             maxLvl = Math.min(9, tier + 1);
         }
 
-        // 2. Continuous growing size definition:
-        // Size grows from 3 to 22 within each 20-figure cycle, making a satisfying loop
-        const size = 3 + offset;
+        // Get the signature unique name of the figure
+        const nameUnit = VIBRANT_NAMES[index - 1] || { nameRU: `Фигура ${index}`, nameEN: `Figure ${index}` };
+        const nameRU = nameUnit.nameRU;
+        const nameEN = nameUnit.nameEN;
 
-        // Pad sequence to ensure we can safely slice up to 22 coords
-        const paddedCoords = padCoords(series.coords);
-        const baseCoords = paddedCoords.slice(0, size);
+        // Custom shape lookup based on name to keep ALL shapes highly recognizable and complete
+        const baseCoords = getCustomShapeForName(nameEN, series.coords);
+        const size = baseCoords.length;
 
         // Assign levels in a clean progressive ramp
         const shape: { q: number; r: number; lvl?: number }[] = [];
@@ -717,11 +875,6 @@ export const generateAllFiguresRaw = (): Figure[] => {
         if (!shape.some(pt => pt.lvl === maxLvl) && shape.length > 0) {
             shape[shape.length - 1].lvl = maxLvl;
         }
-
-        // Get the signature unique name of the figure
-        const nameUnit = VIBRANT_NAMES[index - 1] || { nameRU: `Фигура ${index}`, nameEN: `Figure ${index}` };
-        const nameRU = nameUnit.nameRU;
-        const nameEN = nameUnit.nameEN;
 
         const congratsRU = `Прекрасно! Фигура "${nameRU}" была верифицирована!`;
         const congratsEN = `Excellent! The structure "${nameEN}" has been verified!`;

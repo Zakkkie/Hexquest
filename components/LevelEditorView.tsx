@@ -8,6 +8,7 @@ import {
   Shield, Activity, Sparkles, Map as MapIcon, Bot, 
   Hammer, X, ChevronLeft, Sliders
 } from 'lucide-react';
+import { LevelExitDialog } from './hud/LevelExitDialog.tsx';
 
 interface CustomHex {
   q: number;
@@ -266,6 +267,7 @@ export const LevelEditorView: React.FC = () => {
   const startNewGame = useGameStore(state => state.startNewGame);
   const playUiSound = useGameStore(state => state.playUiSound);
   const showToast = useGameStore(state => state.showToast);
+  const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
 
   // --- EDITOR STATE ---
   const [title, setTitle] = useState(language === 'RU' ? 'Мой сектор аномалии' : 'My Anomaly Sector');
@@ -1093,7 +1095,7 @@ export const LevelEditorView: React.FC = () => {
       <header className="px-6 py-4 bg-slate-900/80 border-b border-indigo-500/20 flex items-center justify-between shrink-0 relative z-10 backdrop-blur-md">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => { playUiSound('CLICK'); setUIState('MENU'); }}
+            onClick={() => { playUiSound('CLICK'); setIsExitDialogOpen(true); }}
             className="p-2.5 rounded-xl border border-slate-700/60 bg-slate-950/60 hover:text-white hover:bg-slate-800 hover:border-slate-500 transition-all flex items-center gap-2 text-xs font-mono"
           >
             <ChevronLeft className="w-4 h-4" /> {t.backMenu}
@@ -1788,6 +1790,18 @@ export const LevelEditorView: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <LevelExitDialog 
+        isOpen={isExitDialogOpen}
+        onClose={() => setIsExitDialogOpen(false)}
+        onConfirm={() => {
+          setIsExitDialogOpen(false);
+          setUIState('MENU');
+        }}
+        mode="EDITOR"
+        language={language === 'RU' ? 'RU' : 'EN'}
+        playUiSound={playUiSound}
+      />
     </div>
   );
 };

@@ -4,11 +4,10 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import StoryBoardPixi from './StoryBoardPixi.tsx';
 import { UpgradesTree } from './UpgradesTree.tsx';
-import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle, Star } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle, Hexagon, Terminal, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { FIGURES_COLLECTION } from './StoryBuilderData.ts';
-import { MiniFigureBlueprint } from './StoryBuilderComponents.tsx';
 import { textureService } from '../services/textureService.ts';
 import { getPixiTexture } from '../services/pixiHexRender.ts';
 
@@ -18,6 +17,7 @@ import { getPixiTexture } from '../services/pixiHexRender.ts';
 
 
 import { StoryTutorial } from './hud/StoryTutorial.tsx';
+import { LevelExitDialog } from './hud/LevelExitDialog.tsx';
 
 const drawInventoryHex = (lvl: number, theme: any) => {
     return (
@@ -48,15 +48,42 @@ const drawInventoryHex = (lvl: number, theme: any) => {
     );
 };
 
+const TexturePreview: React.FC<{ level: number }> = ({ level }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!containerRef.current) return;
+        containerRef.current.innerHTML = '';
+        try {
+            const canvas = textureService.getTexture(level, 0, 0, undefined);
+            const clone = document.createElement('canvas');
+            clone.width = canvas.width;
+            clone.height = canvas.height;
+            const ctx = clone.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(canvas, 0, 0);
+            }
+            clone.className = "w-full h-full object-contain";
+            containerRef.current.appendChild(clone);
+        } catch (e) {
+            console.error(e);
+        }
+    }, [level]);
+
+    return <div ref={containerRef} className="w-6 h-6 rounded bg-slate-900 border border-white/10 overflow-hidden flex items-center justify-center pointer-events-none select-none" />;
+};
+
 const StoryBuilderView: React.FC = () => {
     const setUIState = useGameStore(state => state.setUIState);
     const playUiSound = useGameStore(state => state.playUiSound);
+    const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
+    const [exitTargetState, setExitTargetState] = useState<'MENU' | 'CAMPAIGN_MAP' | null>(null);
     const minedInSessionHexes = useGameStore(state => state.minedInSessionHexes);
     const collectedHexes = useGameStore(state => state.collectedHexes);
     const storyMap = useGameStore(state => state.storyMap);
     const placeStoryHex = useGameStore(state => state.placeStoryHex);
     const addMinedHexes = useGameStore(state => state.addMinedHexes);
     const clearStoryMap = useGameStore(state => state.clearStoryMap);
+    const startDefenseSiege = useGameStore(state => state.startDefenseSiege);
     const consumeStoryHexes = useGameStore(state => state.consumeStoryHexes);
     const transmuteHexes = useGameStore(state => state.transmuteHexes);
     const skillPoints = useGameStore(state => state.skillPoints);
@@ -68,6 +95,17 @@ const StoryBuilderView: React.FC = () => {
     const toggleMusic = useGameStore(state => state.toggleMusic);
     const toggleSfx = useGameStore(state => state.toggleSfx);
     const contrastHighlighting = useGameStore(state => state.campaignUpgrades?.contrastHighlighting || 0);
+    const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards) || [];
+
+    const totalInventoryTiles = useMemo(() => {
+        let sum = 0;
+        for (let lvl = 0; lvl <= 9; lvl++) {
+            const sessionQty = (minedInSessionHexes as any)[lvl] || (minedInSessionHexes as any)[String(lvl)] || 0;
+            const permaQty = (collectedHexes as any)[lvl] || (collectedHexes as any)[String(lvl)] || 0;
+            sum += sessionQty + permaQty;
+        }
+        return sum;
+    }, [minedInSessionHexes, collectedHexes]);
 
     // Active unlocked state index
     const [unlockedFigureIndex, setUnlockedFigureIndex] = useState(() => {
@@ -77,6 +115,19 @@ const StoryBuilderView: React.FC = () => {
             return 0;
         }
     });
+
+    const isSiegeActive = useMemo(() => {
+        const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_')).length;
+        return completedNormalCount > 0 && 
+               completedNormalCount % 5 === 0 && 
+               !claimedLevelRewards.includes(`siege_completed_${completedNormalCount}`);
+    }, [claimedLevelRewards]);
+
+    useEffect(() => {
+        if (isSiegeActive) {
+            setIsNarrativeCollapsed(true);
+        }
+    }, [isSiegeActive]);
 
     const activeFigure = useMemo(() => {
         return FIGURES_COLLECTION[unlockedFigureIndex] || FIGURES_COLLECTION[0];
@@ -104,25 +155,45 @@ const StoryBuilderView: React.FC = () => {
         [storeCameraPos, storeZoomScale]
     );
 
+    const storeUpdateTimeoutRef = useRef<any>(null);
+
     // Camera changes coming back from the Pixi board (wheel / pinch / drag pan).
     const handlePixiCameraChange = useCallback((cam: { x: number; y: number; scale: number }) => {
         cameraPosRef.current = { x: cam.x, y: cam.y };
         zoomScaleRef.current = cam.scale;
         updateTooltipPosRef.current?.();
-        useGameStore.getState().setCameraPos({ x: cam.x, y: cam.y });
-        useGameStore.getState().setZoomScale(cam.scale);
+
+        // Debounce Zustand store updates to avoid triggering massive parent re-renders during active interaction
+        if (storeUpdateTimeoutRef.current) {
+            clearTimeout(storeUpdateTimeoutRef.current);
+        }
+        storeUpdateTimeoutRef.current = setTimeout(() => {
+            if (!isUnmountingRef.current) {
+                useGameStore.getState().setCameraPos({ x: cam.x, y: cam.y });
+                useGameStore.getState().setZoomScale(cam.scale);
+            }
+        }, 150);
     }, []);
 
     const destroyTooltipRef = useRef<HTMLDivElement>(null);
 
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
+    
+    useEffect(() => {
+        (window as any).setStoryNarrativeCollapsed = (val: boolean) => {
+            setIsNarrativeCollapsed(val);
+        };
+        return () => {
+            delete (window as any).setStoryNarrativeCollapsed;
+        };
+    }, []);
+
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [showShapeHint, setShowShapeHint] = useState(true);
+    const showShapeHint = false;
     const [tabletTab, setTabletTab] = useState<'blueprint' | 'diagnostics' | 'rules'>('blueprint');
     const isUiHidden = false;
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
     const [showUpgrades, setShowUpgrades] = useState(false);
-    const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [popupCell, setPopupCell] = useState<{ q: number, r: number } | null>(null);
     const [selectedBuildLevel, setSelectedBuildLevel] = useState<number>(0); // 0-9 for building higher levels, or -999 for demolish/снос
@@ -130,6 +201,31 @@ const StoryBuilderView: React.FC = () => {
     const [destroyButtonCell, setDestroyButtonCell] = useState<{ q: number, r: number } | null>(null);
     const [failedClickCoord, setFailedClickCoord] = useState<{ q: number, r: number } | null>(null);
     const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+
+    // CENTRALIZED HIGH-TECH NOTIFICATION LOGS
+    const [isTerminalLogExpanded, setIsTerminalLogExpanded] = useState(false);
+    const [systemLogs, setSystemLogs] = useState<{ id: string; textRU: string; textEN: string; time: string; type: 'info' | 'success' | 'warning' }[]>([
+        {
+            id: 'init',
+            textRU: 'Операционная связь установлена. Сектор стабилен.',
+            textEN: 'Operations link established. Sector telemetry stable.',
+            time: new Date().toLocaleTimeString().substring(0, 8),
+            type: 'success'
+        }
+    ]);
+
+    const addSystemLog = useCallback((textRU: string, textEN: string, type: 'info' | 'success' | 'warning' = 'info') => {
+        setSystemLogs(prev => [
+            {
+                id: Math.random().toString(36).substring(2, 9),
+                textRU,
+                textEN,
+                time: new Date().toLocaleTimeString().substring(0, 8),
+                type
+            },
+            ...prev
+        ].slice(0, 50));
+    }, []);
 
     const [diagnosticsRun, setDiagnosticsRun] = useState<{
         status: 'IDLE' | 'SUCCESS' | 'FAILED';
@@ -217,8 +313,61 @@ const StoryBuilderView: React.FC = () => {
         isUnmountingRef.current = false;
         return () => {
             isUnmountingRef.current = true;
+            if (storeUpdateTimeoutRef.current) {
+                clearTimeout(storeUpdateTimeoutRef.current);
+            }
         };
     }, []);
+
+    // Tracks error messages and adds them to centralized system logs
+    useEffect(() => {
+        if (errorMessage) {
+            addSystemLog(errorMessage, errorMessage, 'warning');
+        }
+    }, [errorMessage, addSystemLog]);
+
+    // Auto-collapse expanded windows when user clicks outside them
+    useEffect(() => {
+        const handleOutsideClick = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (!target || typeof target.closest !== 'function') return;
+
+            // Check if any of the floating panels are expanded
+            const anyExpanded = !isNarrativeCollapsed || isTerminalLogExpanded || isSettingsOpen;
+            if (!anyExpanded) return;
+
+            // Check if the click was inside any of the panels or their toggle controls
+            const insideTablet = target.closest('#tutorial-blueprint-tablet') || target.closest('#tutorial-blueprint-toggle');
+            const insideOpsLink = target.closest('#operations-link-container');
+            const insideSettings = target.closest('#settings-container');
+
+            if (!insideTablet && !insideOpsLink && !insideSettings) {
+                // Click was outside all expanded panels, collapse them
+                if (!isNarrativeCollapsed) setIsNarrativeCollapsed(true);
+                if (isTerminalLogExpanded) setIsTerminalLogExpanded(false);
+                if (isSettingsOpen) setIsSettingsOpen(false);
+            }
+        };
+
+        document.addEventListener('click', handleOutsideClick, { capture: true });
+        return () => {
+            document.removeEventListener('click', handleOutsideClick, { capture: true });
+        };
+    }, [isNarrativeCollapsed, isTerminalLogExpanded, isSettingsOpen]);
+
+    // Tracks SP changes and logs shape completion
+    const prevSpRef = useRef(skillPoints);
+    useEffect(() => {
+        if (skillPoints > prevSpRef.current) {
+            const diff = skillPoints - prevSpRef.current;
+            addSystemLog(
+                `УСПЕХ: Новая форма успешно синтезирована! Получено +${diff} SP.`,
+                `SUCCESS: New blueprint shape synthesized! +${diff} SP awarded.`,
+                'success'
+            );
+        }
+        prevSpRef.current = skillPoints;
+    }, [skillPoints, addSystemLog]);
 
     // Dynamic celestial constellation map computation of target blueprint figure
     const constellationData = useMemo(() => {
@@ -311,11 +460,44 @@ const StoryBuilderView: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
     const carouselRef = useRef<HTMLDivElement>(null);
 
-    const handleResetCamera = useCallback(() => {
+    const handleResetCamera = useCallback((silent?: boolean) => {
         const w = containerRef.current?.clientWidth || window.innerWidth;
         const h = containerRef.current?.clientHeight || window.innerHeight;
-        const targetPos = { x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) };
-        const targetZoom = w < 768 ? 1.55 : 2.15;
+        
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+
+        if (activeFigure && activeFigure.shape && activeFigure.shape.length > 0) {
+            activeFigure.shape.forEach(pt => {
+                const pixel = hexToPixel(pt.q, pt.r);
+                if (pixel.x < minX) minX = pixel.x;
+                if (pixel.x > maxX) maxX = pixel.x;
+                if (pixel.y < minY) minY = pixel.y;
+                if (pixel.y > maxY) maxY = pixel.y;
+            });
+        }
+
+        const figureWidth = (maxX - minX > 0) ? (maxX - minX) : 100;
+        const figureHeight = (maxY - minY > 0) ? (maxY - minY) : 100;
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
+        // "охватывать не менее 100% фигуры" means 100% of the figure should be fully visible and centered.
+        // We use a safe utilization factor of 80% (0.80) of the viewport width/height to guarantee 
+        // that 100% of the figure is comfortably inside the screen boundaries.
+        const scaleX = (w * 0.80) / figureWidth;
+        const scaleY = (h * 0.80) / figureHeight;
+        let targetZoom = Math.min(scaleX, scaleY);
+        // Clamp to a reasonable range (minimum 0.20 to support fitting the entire figure even on narrow mobile viewports)
+        targetZoom = Math.max(0.20, Math.min(2.5, targetZoom));
+
+        const targetPos = { 
+            x: w / 2 - centerX * targetZoom, 
+            y: h / 2 - centerY * targetZoom 
+        };
+
         cameraPosRef.current = targetPos;
         zoomScaleRef.current = targetZoom;
 
@@ -323,22 +505,40 @@ const StoryBuilderView: React.FC = () => {
         updateTooltipPos();
         useGameStore.getState().setCameraPos(targetPos);
         useGameStore.getState().setZoomScale(targetZoom);
-        playUiSound('CLICK');
-    }, [playUiSound, updateTooltipPos]);
+        if (!silent) {
+            playUiSound('CLICK');
+        }
+    }, [activeFigure, playUiSound, updateTooltipPos]);
+
+    // Automatically fit camera to the shape on mount and when active figure changes
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            handleResetCamera(true);
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [activeFigure, handleResetCamera]);
 
     const handleScrollLeft = useCallback(() => {
+        if (totalInventoryTiles === 0) {
+            playUiSound('ERROR');
+            return;
+        }
         if (carouselRef.current) {
             carouselRef.current.scrollBy({ left: -140, behavior: 'smooth' });
             playUiSound('CLICK');
         }
-    }, [playUiSound]);
+    }, [playUiSound, totalInventoryTiles]);
 
     const handleScrollRight = useCallback(() => {
+        if (totalInventoryTiles === 0) {
+            playUiSound('ERROR');
+            return;
+        }
         if (carouselRef.current) {
             carouselRef.current.scrollBy({ left: 140, behavior: 'smooth' });
             playUiSound('CLICK');
         }
-    }, [playUiSound]);
+    }, [playUiSound, totalInventoryTiles]);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -375,98 +575,11 @@ const StoryBuilderView: React.FC = () => {
     // Shape completeness check - checks if the placed level 0 or higher hexes match the active figure's coordinates
     // under any translation offset (allows random placement anywhere on the board!)
     const completedHexKeys = useMemo(() => {
-        const shape = activeFigure.shape;
-        const activeHexKeys = Object.entries(storyMap)
-            .filter(([_, lvl]) => lvl !== undefined && lvl >= 0)
-            .map(([key, lvl]) => {
-                const [q, r] = key.split(',').map(Number);
-                return { q, r, lvl };
-            });
-        
-        if (activeHexKeys.length < shape.length) return new Set<string>();
-
-        const pt0 = shape[0];
-        if (!pt0) return new Set<string>();
-
-        for (const anchor of activeHexKeys) {
-            const dq = anchor.q - pt0.q;
-            const dr = anchor.r - pt0.r;
-
-            let matchesAll = true;
-            const tempKeys = new Set<string>();
-            for (const pt of shape) {
-                // Determine layout coordinates relative to anchor offset
-                const targetKey = getHexKey(pt.q + dq, pt.r + dr);
-                const targetLvl = storyMap[targetKey];
-                if (targetLvl === undefined || targetLvl < 0) {
-                    matchesAll = false;
-                    break;
-                }
-                const reqLvl = pt.lvl !== undefined ? pt.lvl : 0;
-                if (targetLvl !== reqLvl) {
-                    matchesAll = false;
-                    break;
-                }
-                tempKeys.add(targetKey);
-            }
-            if (matchesAll) return tempKeys;
-        }
+        // Disabled shape matching in Sandbox. Shape building is handled in levels.
         return new Set<string>();
-    }, [storyMap, activeFigure]);
+    }, []);
 
-    const targetCompleted = useMemo(() => {
-        return completedHexKeys.size > 0;
-    }, [completedHexKeys]);
-
-    const isInventoryInsufficient = useMemo(() => {
-        const shape = activeFigure.shape;
-        if (!shape || shape.length === 0) return false;
-
-        // Count how many hexes of each level are strictly needed to build the active figure
-        const neededCounts: { [lvl: number]: number } = {};
-        for (const pt of shape) {
-            const reqLvl = pt.lvl !== undefined ? pt.lvl : 0;
-            neededCounts[reqLvl] = (neededCounts[reqLvl] || 0) + 1;
-        }
-
-        // Count the total blocks the player controls (available both in inventories and on the board)
-        const ownedCounts: { [lvl: number]: number } = {};
-
-        // 1. Blocks from minedInSessionHexes
-        for (const [lvlStr, count] of Object.entries(minedInSessionHexes)) {
-            const lvl = Number(lvlStr);
-            if (!isNaN(lvl)) {
-                ownedCounts[lvl] = (ownedCounts[lvl] || 0) + count;
-            }
-        }
-
-        // 2. Blocks from collectedHexes
-        for (const [lvlStr, count] of Object.entries(collectedHexes)) {
-            const lvl = Number(lvlStr);
-            if (!isNaN(lvl)) {
-                ownedCounts[lvl] = (ownedCounts[lvl] || 0) + count;
-            }
-        }
-
-        // 3. Placed blocks on the map (which the player can erase/reclaim)
-        for (const lvl of Object.values(storyMap)) {
-            if (lvl !== undefined && lvl >= 0) {
-                ownedCounts[lvl] = (ownedCounts[lvl] || 0) + 1;
-            }
-        }
-
-        // Determine if there is an absolute shortage for any required level
-        for (const lvlStr of Object.keys(neededCounts)) {
-            const lvl = Number(lvlStr);
-            const needed = neededCounts[lvl];
-            const owned = ownedCounts[lvl] || 0;
-            if (owned < needed) {
-                return true; // Absolute shortage! Even reclaiming all blocks on the map won't suffice.
-            }
-        }
-
-        return false;
-    }, [storyMap, activeFigure, minedInSessionHexes, collectedHexes]);
+    const targetCompleted = false;
 
     // Automatic Shape Assembly Completion & Neon Highlight Flare Effect
     useEffect(() => {
@@ -702,16 +815,13 @@ const StoryBuilderView: React.FC = () => {
 
     // Build a lookup object from the active figure shape to avoid O(n) find() per cell per render
     const blueprintShapeMap = useMemo(() => {
-        const m: Record<string, number> = {};
-        for (const pt of activeFigure.shape) {
-            m[getHexKey(pt.q, pt.r)] = pt.lvl !== undefined ? pt.lvl : 0;
-        }
-        return m;
-    }, [activeFigure]);
+        // Empty in sandbox mode so no violet blueprint outlines are shown. Shape building is in levels.
+        return {} as Record<string, number>;
+    }, []);
 
     // Count available blocks for the current build level (stable scalar, computed once per render)
     const currentLevelAvailableCount = useMemo(() => {
-        return (minedInSessionHexes[selectedBuildLevel] || 0) +
+        return (minedInSessionHexes[selectedBuildLevel] || (minedInSessionHexes as any)[String(selectedBuildLevel)] || 0) +
                (collectedHexes[selectedBuildLevel] || (collectedHexes as any)[String(selectedBuildLevel)] || 0);
     }, [minedInSessionHexes, collectedHexes, selectedBuildLevel]);
 
@@ -731,7 +841,8 @@ const StoryBuilderView: React.FC = () => {
             const isEligible = isEligibleForPlacement(coord.q, coord.r);
             const isCenterInitially = coord.q === startCenterPoint.q && coord.r === startCenterPoint.r && !hasAnyHex && lvl !== -999;
             const canPlaceHex = isDemolishMode ? (lvl !== undefined && lvl >= 0) : (isEligible && avail > 0);
-            return { key, q: coord.q, r: coord.r, lvl, isBlueprint, blueprintLevel, isEligible, isCenterInitially, canPlaceHex };
+            const isCore = coord.q === 0 && coord.r === 0;
+            return { key, q: coord.q, r: coord.r, lvl, isBlueprint, blueprintLevel, isEligible, isCenterInitially, canPlaceHex, isCore };
         });
     }, [gridPoints, storyMap, blueprintShapeMap, selectedBuildLevel, currentLevelAvailableCount,
         isEligibleForPlacement, startCenterPoint, hasAnyHex]);
@@ -753,6 +864,19 @@ const StoryBuilderView: React.FC = () => {
     const handleCellClick = useCallback((q: number, r: number) => {
         if (isPanning.current) return;
         
+        if (isSiegeActive) {
+            playUiSound('ERROR');
+            const alertMsg = language === 'RU'
+                ? "⚠️ Защита ядра активна! Строительство запрещено до ее завершения."
+                : "⚠️ Core Defense is active! Construction is blocked until complete.";
+            setErrorMessage(alertMsg);
+            useGameStore.getState().showToast(alertMsg, 'error');
+            setTimeout(() => {
+                setErrorMessage(curr => curr === alertMsg ? null : curr);
+            }, 5000);
+            return;
+        }
+        
         const map = storyMap;
         const buildLevel = selectedBuildLevel;
         const key = getHexKey(q, r);
@@ -766,6 +890,12 @@ const StoryBuilderView: React.FC = () => {
         const eligible = isEligibleForPlacement(q, r);
         
         if (isCurrentlyBuilt) {
+            if (q === 0 && r === 0 && (buildLevel === -999 || (currentLvl === buildLevel && buildLevel !== -999))) {
+                playUiSound('ERROR');
+                setErrorMessage(language === 'RU' ? 'Главное ядро (0,0) неуязвимо и не может быть удалено!' : 'The Core Matrix (0,0) is invulnerable and cannot be demolished!');
+                setTimeout(() => setErrorMessage(null), 5000);
+                return;
+            }
             if (currentLvl === buildLevel && buildLevel !== -999) {
                 playUiSound('CLICK');
                 setDestroyButtonCell(prev => (prev && prev.q === q && prev.r === r) ? null : { q, r });
@@ -833,7 +963,7 @@ const StoryBuilderView: React.FC = () => {
         }
 
         // Ensure player has the selected block in inventory
-        const availableCount = (minedInSessionHexes[buildLevel] || 0) + (collectedHexes[buildLevel] || (collectedHexes as any)[String(buildLevel)] || 0);
+        const availableCount = (minedInSessionHexes[buildLevel] || (minedInSessionHexes as any)[String(buildLevel)] || 0) + (collectedHexes[buildLevel] || (collectedHexes as any)[String(buildLevel)] || 0);
         if (availableCount <= 0) {
             playUiSound('WARNING');
             setFailedClickCoord({ q, r });
@@ -1136,145 +1266,66 @@ const StoryBuilderView: React.FC = () => {
                 />
             </div>
             
-            <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between overflow-hidden p-4 md:p-8">
-                
-                {/* FLOATING LIGHTWEIGHT ERROR MESSAGE (Moved ergonomically to perfectly centered bottom position, avoiding overflow) */}
-                <AnimatePresence>
-                    {errorMessage && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 30, scale: 0.95 }}
-                            className="absolute bottom-36 md:bottom-28 left-0 right-0 mx-auto z-[100] pointer-events-auto w-[calc(100%-3rem)] max-w-sm flex justify-center"
-                        >
-                            <div 
-                                onClick={() => { playUiSound('CLICK'); setErrorMessage(null); }}
-                                className="bg-slate-950/98 border border-slate-800 text-red-400 font-mono font-black uppercase text-xs tracking-wider px-4 py-3 rounded-lg shadow-xl w-full cursor-pointer hover:bg-slate-900 transition-all select-none text-center"
-                            >
-                                {errorMessage}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-                
-                {/* FLOATING ACTION TOOLTIP FOR SAME-LEVEL HEX DEMOLISHING */}
-                <AnimatePresence>
-                    {destroyButtonCell && (() => {
-                        const { q, r } = destroyButtonCell;
-                        const key = getHexKey(q, r);
-                        const lvl = storyMap[key];
-                        if (lvl === undefined || lvl < 0) return null;
-                        
-                        const px = hexToPixel(q, r);
-                        const heightVal = 10 + lvl * 10;
-                        const yOffsetOffset = -heightVal;
-                        const topFaceY = px.y + yOffsetOffset;
-                        
-                        // Calculate screen position
-                        const leftPos = cameraPosRef.current.x + px.x * zoomScaleRef.current;
-                        const topPos = cameraPosRef.current.y + topFaceY * zoomScaleRef.current - 46 * zoomScaleRef.current; // place it 46px above the hex top face
-                        
-                        return (
-                            <motion.div 
-                                ref={destroyTooltipRef}
-                                initial={{ scale: 0, opacity: 0, y: 10 }}
-                                animate={{ scale: 1, opacity: 1, y: 0 }}
-                                exit={{ scale: 0, opacity: 0, y: 10 }}
-                                style={{
-                                    position: 'absolute',
-                                    left: `${leftPos}px`,
-                                    top: `${topPos}px`,
-                                    transform: `translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.25, zoomScaleRef.current))})`,
-                                    zIndex: 120,
-                                }}
-                                className="pointer-events-auto"
-                            >
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        playUiSound('SUCCESS');
-                                        placeStoryHex(q, r, -999);
-                                        setDestroyButtonCell(null);
-                                    }}
-                                    onTouchStart={(e) => e.stopPropagation()}
-                                    onTouchEnd={(e) => e.stopPropagation()}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onMouseUp={(e) => e.stopPropagation()}
-                                    className="bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[8px] md:text-[9.5px] tracking-wider px-2.5 py-1.5 rounded-lg shadow-[0_5px_15px_rgba(239,68,68,0.4)] border border-red-500 flex items-center gap-1 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
-                                >
-                                    <span>✖</span>
-                                    <span>{language === 'RU' ? 'УНИЧТОЖИТЬ' : 'DESTROY'}</span>
-                                </button>
-                            </motion.div>
-                        );
-                    })()}
-                </AnimatePresence>
-                
-                {/* TOP HEADER STATUS */}
+            {/* TOP HEADER STATUS MENU BAR (ABOVE ALL OTHER WINDOWS) */}
+            <div className="absolute top-0 left-0 right-0 p-4 md:p-8 z-[9999] pointer-events-none">
                 <motion.div 
                     animate={{ y: isUiHidden ? -100 : 0, opacity: isUiHidden ? 0 : 1 }}
                     transition={{ duration: 0.3 }}
-                    className="flex justify-between items-center w-full pointer-events-auto h-14 relative z-[50]"
+                    className="flex justify-between items-center w-full pointer-events-auto h-14 relative z-[9999]"
                 >
                     <div className="flex items-center gap-2 h-full">
                         <button 
-                            onClick={() => { playUiSound('CLICK'); setUIState('MENU'); }}
+                            onClick={() => { playUiSound('CLICK'); setExitTargetState('MENU'); setIsExitDialogOpen(true); }}
                             className="flex items-center justify-center w-10 h-10 bg-slate-900/90 border border-slate-800 rounded-xl hover:bg-slate-800/90 hover:border-indigo-500/30 text-slate-400 hover:text-white transition-all duration-250 shadow-md backdrop-blur-md cursor-pointer active:scale-95"
                         >
                             <ArrowLeft className="w-5 h-5" /> 
                         </button>
                     </div>
 
-                    {/* INTERACTIVE TASK CAPSULE (Squeezed between back and settings) */}
-                    <div className="flex-1 mx-2 max-w-[240px] sm:max-w-xs h-11 py-0.5">
-                        <div 
-                            id="tutorial-blueprint-tablet"
-                            onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(!isNarrativeCollapsed); }}
-                            className="bg-slate-900/95 border border-indigo-500/30 hover:border-indigo-500/50 rounded-xl h-full shadow-lg backdrop-blur-md flex items-center justify-between pl-1.5 pr-3 relative cursor-pointer hover:bg-slate-800/90 transition-all duration-250 select-none overflow-hidden"
-                        >
-                            {/* Micro progress line at top of the capsule */}
-                            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-slate-950/60 overflow-hidden rounded-t-xl">
-                                <div 
-                                    className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 transition-all duration-500"
-                                    style={{ width: `${((unlockedFigureIndex + 1) / FIGURES_COLLECTION.length) * 100}%` }}
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-2 py-0.5 min-w-0 flex-1">
-                                {/* Compact vector thumbnail preview of the shape with correct, standardized, restricted sizes */}
-                                <MiniFigureBlueprint 
-                                    shape={activeFigure.shape} 
-                                    cellSize={6} 
-                                    className="w-[36px] h-[36px] bg-transparent shrink-0 overflow-visible transition-all duration-300"
-                                    style={{ 
-                                        margin: '0 !important', 
-                                        marginLeft: '0px', 
-                                        marginRight: '0px', 
-                                        marginTop: '0px', 
-                                        marginBottom: '0px', 
-                                        padding: '0px' 
-                                    }}
-                                />
-
-                                <div className="flex flex-col justify-center min-w-0 text-left pl-1">
-                                    <span className="text-[7.5px] font-mono font-black text-indigo-400/80 uppercase tracking-widest leading-none">
-                                        {language === 'RU' ? activeFigure.nameRU : activeFigure.nameEN}
-                                    </span>
-                                    <span className="text-[12.5px] font-black font-mono text-white tracking-tight leading-none mt-1 shadow-sm">
-                                        {unlockedFigureIndex + 1} <span className="text-slate-500 font-medium text-[9.5px]">/ {FIGURES_COLLECTION.length}</span>
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0 ml-1">
-                                {targetCompleted && (
-                                    <span className="bg-emerald-950/90 border border-emerald-500/40 text-emerald-400 text-[6.5px] font-mono font-black px-1 py-0.5 rounded leading-none shrink-0 tracking-wide">DONE</span>
-                                )}
-                                <div className="text-slate-400 hover:text-white transition-colors duration-200 shrink-0">
-                                    {isNarrativeCollapsed ? <ChevronDown className="w-3.5 h-3.5 animate-pulse" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                                </div>
-                            </div>
-                        </div>
+                    {/* STATIC TITLE FOR SANDBOX WORKSPACE (SWAPS TO PULSING LAUNCH SIEGE BUTTON IF EVENT IS ACTIVE) */}
+                    <div className="flex-1 mx-2 flex items-center justify-center text-center">
+                        {(() => {
+                            if (isSiegeActive) {
+                                return (
+                                    <motion.button
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ 
+                                            scale: [1, 1.05, 1],
+                                            opacity: 1
+                                        }}
+                                        transition={{ 
+                                            scale: {
+                                                repeat: Infinity,
+                                                duration: 1.5,
+                                                ease: "easeInOut"
+                                            },
+                                            opacity: { duration: 0.3 }
+                                        }}
+                                        onClick={() => { playUiSound('CLICK'); startDefenseSiege(); }}
+                                        className="h-10 px-6 sm:px-10 bg-gradient-to-r from-red-650 via-rose-700 to-red-650 text-white font-black uppercase text-[10px] sm:text-[11px] tracking-[0.15em] sm:tracking-[0.25em] rounded-xl border-2 border-red-500 hover:border-white shadow-[0_0_25px_rgba(239,68,68,0.7)] flex items-center gap-2 cursor-pointer transition-all active:scale-95 select-none"
+                                    >
+                                        <AlertTriangle className="w-4 h-4 text-white animate-bounce" />
+                                        <span>{language === 'RU' ? '💥 НАЧАТЬ ЗАЩИТУ ЯДРА! 💥' : '💥 LAUNCH CORE DEFENSE! 💥'}</span>
+                                    </motion.button>
+                                );
+                            } else {
+                                return (
+                                    <button
+                                        id="tutorial-blueprint-toggle"
+                                        onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(!isNarrativeCollapsed); }}
+                                        className="flex flex-col justify-center text-center px-4 py-1 rounded-full bg-slate-900/40 hover:bg-indigo-950/20 border border-indigo-500/10 hover:border-indigo-400/30 cursor-pointer transition-all duration-200 active:scale-95 select-none"
+                                    >
+                                        <span className="text-[8px] font-mono tracking-[0.2em] text-indigo-400 font-black uppercase leading-none">
+                                            {language === 'RU' ? 'ПОЛИГОН НЕБЬЮЛА' : 'NEBULA PROVING GROUND'}
+                                        </span>
+                                        <span className="text-[12.5px] font-black tracking-tight text-white leading-none mt-1 shadow-sm uppercase font-sans flex items-center gap-1 justify-center">
+                                            {language === 'RU' ? 'Проектирование ядра' : 'Core Engineering'}
+                                            <span className="text-[8px] text-indigo-400 animate-pulse">▼</span>
+                                        </span>
+                                    </button>
+                                );
+                            }
+                        })()}
                     </div>
 
                     <div className="flex items-center gap-2 h-full">
@@ -1289,7 +1340,7 @@ const StoryBuilderView: React.FC = () => {
                         </button>
 
                         {/* Settings Button */}
-                        <div className="relative h-full flex items-center">
+                        <div id="settings-container" className="relative h-full flex items-center">
                             <button 
                                 onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
                                 className={`w-10 h-10 flex items-center justify-center backdrop-blur-md border rounded-xl transition-all duration-200 shadow-md active:scale-95 cursor-pointer ${
@@ -1307,7 +1358,7 @@ const StoryBuilderView: React.FC = () => {
                                         initial={{ opacity: 0, scale: 0.9, y: -10 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                                        className="absolute top-full right-0 mt-2 p-3 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2 min-w-[200px] z-[60] origin-top-right"
+                                        className="absolute top-full right-0 mt-2 p-3 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2 min-w-[200px] z-[9999] origin-top-right"
                                     > 
                                         <button 
                                             onClick={() => { playUiSound('CLICK'); (window as any).startStoryTutorial && (window as any).startStoryTutorial(); setIsSettingsOpen(false); }}
@@ -1315,6 +1366,14 @@ const StoryBuilderView: React.FC = () => {
                                         >
                                             <HelpCircle className="w-4 h-4 shrink-0" />
                                             <span>{language === 'RU' ? 'ОБУЧЕНИЕ ГЕКСАГОН' : 'HEXAGON TUTORIAL'}</span>
+                                        </button>
+
+                                        <button 
+                                            onClick={() => { playUiSound('CLICK'); startDefenseSiege(); setIsSettingsOpen(false); }}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-600/20 border border-rose-500/30 text-rose-400 hover:bg-rose-600 hover:text-white transition-all w-full text-left font-black uppercase text-[9px] tracking-[0.1em]"
+                                        >
+                                            <AlertTriangle className="w-4 h-4 shrink-0 animate-pulse text-rose-400" />
+                                            <span>{language === 'RU' ? 'ТЕСТ ОБОРОНЫ ЯДРА' : 'TEST CORE DEFENSE'}</span>
                                         </button>
 
                                         <button 
@@ -1370,27 +1429,174 @@ const StoryBuilderView: React.FC = () => {
                         </div>
                     </div>
                 </motion.div>
+            </div>
 
-                {/* Star Toggle Button for Shape Hint */}
-                <button
-                    onClick={() => {
-                        playUiSound('CLICK');
-                        setShowShapeHint(!showShapeHint);
-                    }}
-                    className={`absolute top-[68px] right-4 w-10 h-10 flex items-center justify-center backdrop-blur-md border rounded-xl pointer-events-auto transition-all duration-200 shadow-md active:scale-95 cursor-pointer z-[45] ${
-                        showShapeHint 
-                            ? 'bg-amber-500/20 border-amber-500/80 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.35)]' 
-                            : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-amber-400 hover:border-amber-500/30'
-                    }`}
-                    title={language === 'RU' ? 'Фоновая подсказка формы' : 'Background Shape Hint'}
-                >
-                    <Star className={`w-4.5 h-4.5 transition-transform duration-300 ${showShapeHint ? 'fill-amber-400 text-amber-400 scale-110 drop-shadow-[0_0_4px_rgba(245,158,11,0.6)]' : 'scale-100 hover:scale-110'}`} />
-                </button>
+            <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-end overflow-hidden p-4 md:p-8">
+
+                {/* COMPACT FLOATING OPERATIONS LINK & LOGS PANEL (Centralized high-tech notification/info link, optimized for mobile screens) */}
+                <div id="operations-link-container" className="absolute top-[76px] md:top-[100px] left-4 right-4 sm:left-auto sm:right-8 z-[55] pointer-events-auto flex flex-col items-end sm:w-[320px] select-none">
+                    
+                    {/* Collapsed State Panel */}
+                    {!isTerminalLogExpanded ? (
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            onClick={() => { playUiSound('CLICK'); setIsTerminalLogExpanded(true); }}
+                            className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 bg-slate-950/90 border border-indigo-500/30 hover:border-indigo-400 rounded-xl shadow-2xl backdrop-blur-md transition-all active:scale-98 group cursor-pointer text-left"
+                        >
+                            <div className="flex items-center gap-2 overflow-hidden w-full">
+                                <span className="relative flex h-2 w-2 shrink-0">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                                </span>
+                                <div className="flex flex-col overflow-hidden flex-1">
+                                    <span className="text-[10px] font-mono text-slate-200 font-medium tracking-tight truncate leading-tight block">
+                                        {systemLogs[0] ? (language === 'RU' ? systemLogs[0].textRU : systemLogs[0].textEN) : 'Initializing link...'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="p-1 bg-indigo-500/10 rounded-md border border-indigo-500/20 group-hover:bg-indigo-500/20 text-indigo-400 transition-all flex items-center shrink-0">
+                                <ChevronDown className="w-3.5 h-3.5" />
+                            </div>
+                        </motion.button>
+                    ) : (
+                        /* Expanded High-Tech Panel with full logs, completely optimized for mobile screen bounds and free of unnecessary guidelines/texts */
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="w-full bg-slate-950/98 border-2 border-indigo-500/40 rounded-2xl p-4 shadow-[0_0_35px_rgba(99,102,241,0.25)] backdrop-blur-xl flex flex-col relative overflow-hidden"
+                        >
+                            {/* Visual Reticles & Accents */}
+                            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-indigo-500/50 rounded-tl" />
+                            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-indigo-500/50 rounded-tr" />
+                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-indigo-500/50 rounded-bl" />
+                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50 rounded-br" />
+                            <div className="absolute inset-0 bg-scanlines opacity-[0.06] pointer-events-none" />
+
+                            {/* Header */}
+                            <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/30 text-indigo-400 shrink-0">
+                                        <Terminal className="w-3.5 h-3.5" />
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-[7.5px] font-black uppercase text-indigo-400 tracking-widest leading-none">OPERATIONS LINK</span>
+                                        <span className="text-[10px] font-bold text-white uppercase tracking-tight leading-none mt-0.5">
+                                            {language === 'RU' ? 'СИСТЕМНЫЕ УВЕДОМЛЕНИЯ' : 'SYSTEM NOTIFICATIONS'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => { playUiSound('CLICK'); setIsTerminalLogExpanded(false); }}
+                                    className="p-1 bg-slate-900/80 border border-white/5 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                                >
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+
+                            {/* Complete log with full untruncated text of the latest notification, beautifully styled */}
+                            <div className="max-h-[200px] md:max-h-[280px] overflow-y-auto pr-1 border border-white/5 rounded-xl bg-slate-900/20 p-2 flex flex-col gap-2.5 scrollbar-thin scrollbar-thumb-indigo-500/30">
+                                {(() => {
+                                    const log = systemLogs[0];
+                                    if (!log) {
+                                        return (
+                                            <div className="text-center py-4 text-xs font-mono text-slate-500">
+                                                {language === 'RU' ? 'Нет уведомлений' : 'No notifications'}
+                                            </div>
+                                        );
+                                    }
+                                    let textCls = "text-slate-300";
+                                    let dotCls = "bg-slate-400";
+                                    let containerCls = "bg-slate-950/40 border border-white/5 p-2 rounded-lg";
+                                    if (log.type === 'success') {
+                                        textCls = "text-emerald-400 font-semibold";
+                                        dotCls = "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]";
+                                        containerCls = "bg-emerald-950/10 border border-emerald-500/20 p-2 rounded-lg";
+                                    } else if (log.type === 'warning') {
+                                        textCls = "text-rose-400 font-bold";
+                                        dotCls = "bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]";
+                                        containerCls = "bg-rose-950/10 border border-rose-500/20 p-2 rounded-lg";
+                                    }
+                                    return (
+                                        <div key={log.id} className={`flex flex-col gap-1 text-left ${containerCls}`}>
+                                            <div className="flex justify-between items-center text-[8px] font-mono text-slate-500 border-b border-white/5 pb-1 mb-1">
+                                                <span className="flex items-center gap-1">
+                                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}`} />
+                                                    <span className="uppercase tracking-wider">{log.type}</span>
+                                                </span>
+                                                <span>{log.time}</span>
+                                            </div>
+                                            <p className={`text-[11px] leading-relaxed break-words whitespace-pre-wrap ${textCls}`}>
+                                                {language === 'RU' ? log.textRU : log.textEN}
+                                            </p>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+                
+                {/* FLOATING ACTION TOOLTIP FOR SAME-LEVEL HEX DEMOLISHING */}
+                <AnimatePresence>
+                    {destroyButtonCell && (() => {
+                        const { q, r } = destroyButtonCell;
+                        const key = getHexKey(q, r);
+                        const lvl = storyMap[key];
+                        if (lvl === undefined || lvl < 0) return null;
+                        
+                        const px = hexToPixel(q, r);
+                        const heightVal = 10 + lvl * 10;
+                        const yOffsetOffset = -heightVal;
+                        const topFaceY = px.y + yOffsetOffset;
+                        
+                        // Calculate screen position
+                        const leftPos = cameraPosRef.current.x + px.x * zoomScaleRef.current;
+                        const topPos = cameraPosRef.current.y + topFaceY * zoomScaleRef.current - 46 * zoomScaleRef.current; // place it 46px above the hex top face
+                        
+                        return (
+                            <motion.div 
+                                ref={destroyTooltipRef}
+                                initial={{ scale: 0, opacity: 0, y: 10 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0, opacity: 0, y: 10 }}
+                                style={{
+                                    position: 'absolute',
+                                    left: `${leftPos}px`,
+                                    top: `${topPos}px`,
+                                    transform: `translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.25, zoomScaleRef.current))})`,
+                                    zIndex: 120,
+                                }}
+                                className="pointer-events-auto"
+                            >
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        playUiSound('SUCCESS');
+                                        placeStoryHex(q, r, -999);
+                                        setDestroyButtonCell(null);
+                                    }}
+                                    onTouchStart={(e) => e.stopPropagation()}
+                                    onTouchEnd={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onMouseUp={(e) => e.stopPropagation()}
+                                    className="bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[8px] md:text-[9.5px] tracking-wider px-2.5 py-1.5 rounded-lg shadow-[0_5px_15px_rgba(239,68,68,0.4)] border border-red-500 flex items-center gap-1 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+                                >
+                                    <span>✖</span>
+                                    <span>{language === 'RU' ? 'УНИЧТОЖИТЬ' : 'DESTROY'}</span>
+                                </button>
+                            </motion.div>
+                        );
+                    })()}
+                </AnimatePresence>
+
+
 
                 {/* FLOATING DROPDOWN FOR EXPANDED TASK DETAILS (Interactive Engineering Tablet) */}
                 <AnimatePresence>
                     {!isNarrativeCollapsed && (
                         <motion.div
+                            id="tutorial-blueprint-tablet"
                             initial={{ opacity: 0, y: -15, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -15, scale: 0.95 }}
@@ -1402,7 +1608,7 @@ const StoryBuilderView: React.FC = () => {
                             <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-slate-900/60 overflow-hidden rounded-t-2xl">
                                 <div 
                                     className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 transition-all duration-500"
-                                    style={{ width: `${((unlockedFigureIndex + 1) / FIGURES_COLLECTION.length) * 100}%` }}
+                                    style={{ width: `100%` }}
                                 />
                             </div>
 
@@ -1411,12 +1617,12 @@ const StoryBuilderView: React.FC = () => {
                                 <div className="flex flex-col text-left">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[7.5px] font-black text-cyan-400 uppercase tracking-widest leading-none">
-                                            {language === 'RU' ? 'ИНЖЕНЕРНЫЙ ПЛАНШЕТ СБОРКИ' : 'ENGINEERING TABLET'}
+                                            {language === 'RU' ? 'ИНЖЕНЕРНЫЙ ТЕРМИНАЛ' : 'ENGINEERING TERMINAL'}
                                         </span>
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                     </div>
                                     <span className="text-[6px] font-mono text-slate-500 uppercase tracking-wider">
-                                        {language === 'RU' ? `ЧЕРТЕЖ: ${unlockedFigureIndex + 1} ИЗ ${FIGURES_COLLECTION.length}` : `BLUEPRINT: ${unlockedFigureIndex + 1} OF ${FIGURES_COLLECTION.length}`}
+                                        {language === 'RU' ? `ПРОЕКТИРОВАНИЕ ЯДРА` : `CORE SANDBOX`}
                                     </span>
                                 </div>
                                 <button 
@@ -1431,7 +1637,7 @@ const StoryBuilderView: React.FC = () => {
                             {/* Tablet Tabs */}
                             <div className="grid grid-cols-3 gap-1 mb-3 bg-slate-900/50 p-0.5 rounded-lg border border-white/5">
                                 {[
-                                    { id: 'blueprint', labelRU: 'СХЕМА', labelEN: 'DIAGRAM' },
+                                    { id: 'blueprint', labelRU: 'СТАТУС', labelEN: 'STATUS' },
                                     { id: 'diagnostics', labelRU: 'ДИАГНОСТИКА', labelEN: 'DIAGNOSTICS' },
                                     { id: 'rules', labelRU: 'ИНСТРУКЦИЯ', labelEN: 'GUIDE' }
                                 ].map((tab) => {
@@ -1451,8 +1657,8 @@ const StoryBuilderView: React.FC = () => {
                             {/* Centerpiece Container Panel */}
                             {tabletTab === 'blueprint' && (
                                 <div className="flex flex-col">
-                                    {/* Holographic Projection viewport */}
-                                    <div className="w-full h-56 bg-slate-900/20 border border-indigo-500/20 rounded-xl mb-3 flex items-center justify-center p-4 relative overflow-hidden backdrop-blur-md shadow-[inset_0_0_24px_rgba(99,102,241,0.15)]">
+                                    {/* Holographic Projection viewport - Engineering Schematic */}
+                                    <div className="w-full bg-slate-900/20 border border-indigo-500/20 rounded-xl mb-3 p-4 relative overflow-hidden backdrop-blur-md shadow-[inset_0_0_24px_rgba(99,102,241,0.15)] flex flex-col gap-3 min-h-[56px]">
                                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_80%)] pointer-events-none" />
                                         
                                         {/* Science fiction corner reticles */}
@@ -1462,14 +1668,58 @@ const StoryBuilderView: React.FC = () => {
                                         <div className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50 rounded-br" />
  
                                         <div className="absolute top-2.5 left-7 text-[7px] font-mono tracking-wider text-indigo-400/40 uppercase">
-                                            {language === 'RU' ? 'ПРОЕКЦИЯ ЦЕЛЕВОЙ СТРУКТУРЫ' : 'TARGET BLUEPRINT PROJECTION'}
+                                            {language === 'RU' ? 'ИНЖЕНЕРНАЯ СХЕМА УЗЛОВ' : 'ENGINEERING SCHEMATIC'}
                                         </div>
-                                        <div className="absolute bottom-2.5 right-3 flex gap-1.5 items-center">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                                            <span className="text-[7px] font-mono text-cyan-400/60 uppercase font-bold">
-                                                {language === 'RU' ? 'АНАЛИЗ СОВПАДЕНИЙ' : 'MATCH ANALYSIS'}
-                                            </span>
-                                        </div>
+                                        
+                                        {(() => {
+                                            const placedAll = Object.values(storyMap).filter(l => l !== undefined && l >= 0);
+                                            const placedNodes = placedAll.length;
+                                            const maxLevelPlaced = placedAll.length ? placedAll.reduce((a, b) => Math.max(a, b as number), 0) : 0;
+                                            const totalVolume = placedAll.reduce((sum, val) => sum + (val as number), 0);
+                                            const highTiers = placedAll.filter(l => (l as number) >= 5).length;
+                                            
+                                            return (
+                                                <div className="mt-4 flex gap-3 h-full">
+                                                    {/* Left Visual Diagram */}
+                                                    <div className="w-[80px] h-[80px] shrink-0 border border-indigo-500/30 rounded-lg flex items-center justify-center bg-indigo-950/20 relative">
+                                                        <Hexagon className="w-10 h-10 text-cyan-400 absolute opacity-30 animate-spin" style={{ animationDuration: '10s' }} />
+                                                        <Hexagon className="w-6 h-6 text-indigo-300 relative z-10" />
+                                                        <div className="absolute bottom-1 right-1 text-[6px] text-cyan-400 font-mono">v1.0</div>
+                                                    </div>
+                                                    {/* Right Stats */}
+                                                    <div className="flex-1 flex flex-col justify-center gap-2">
+                                                        <div>
+                                                            <div className="flex justify-between items-baseline mb-0.5">
+                                                                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest">{language === 'RU' ? 'СТРОИТЕЛЬНЫЕ УЗЛЫ' : 'CONSTRUCTION NODES'}</span>
+                                                                <span className="text-[10px] font-mono text-white font-bold">{placedNodes}</span>
+                                                            </div>
+                                                            <div className="w-full bg-slate-800/80 h-1 rounded overflow-hidden">
+                                                                <div className="bg-cyan-500 h-full" style={{ width: `${Math.min(100, placedNodes)}%` }} />
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <div className="flex justify-between items-baseline mb-0.5">
+                                                                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest">{language === 'RU' ? 'ОБЪЕМ ПЛАТФОРМ' : 'PLATFORM VOLUME'}</span>
+                                                                <span className="text-[10px] font-mono text-white font-bold">{totalVolume}</span>
+                                                            </div>
+                                                            <div className="h-[2px] w-full border-b border-dashed border-indigo-500/30" />
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-2 mt-1">
+                                                            <div className="bg-slate-900/60 border border-white/5 rounded p-1.5 flex flex-col justify-center items-center">
+                                                                <span className="text-[6.5px] text-slate-500 tracking-wider mb-0.5">{language === 'RU' ? 'МАКС ВЫСОТА' : 'MAX HEIGHT'}</span>
+                                                                <span className="text-xs text-amber-400 font-black font-mono">L{maxLevelPlaced}</span>
+                                                            </div>
+                                                            <div className="bg-slate-900/60 border border-white/5 rounded p-1.5 flex flex-col justify-center items-center">
+                                                                <span className="text-[6.5px] text-slate-500 tracking-wider mb-0.5">{language === 'RU' ? 'ЯДРА (L5+)' : 'CORES L5+'}</span>
+                                                                <span className="text-xs text-rose-400 font-black font-mono">{highTiers}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
  
                                         {/* Animated Laser Scanning Line */}
                                         <motion.div 
@@ -1478,98 +1728,9 @@ const StoryBuilderView: React.FC = () => {
                                             className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/35 to-transparent shadow-[0_0_8px_rgba(34,211,238,0.5)] pointer-events-none z-10"
                                             style={{ top: 0 }}
                                         />
- 
-                                        <MiniFigureBlueprint 
-                                            shape={activeFigure.shape} 
-                                            cellSize={24} 
-                                            className="w-full h-full max-w-[280px] max-h-[200px] bg-transparent p-0 drop-shadow-[0_0_30px_rgba(99,102,241,0.4)]"
-                                        />
                                     </div>
 
-                                    {/* Live Field Analysis and Diagnostics merged into the same window */}
-                                    {(() => {
-                                        const shape = activeFigure.shape;
-                                        const activeHexKeys = Object.entries(storyMap)
-                                            .filter(([_, lvl]) => lvl !== undefined && lvl >= 0)
-                                            .map(([key, lvl]) => {
-                                                const [q, r] = key.split(',').map(Number);
-                                                return { q, r, lvl };
-                                            });
-                                        
-                                        let bestMatchCount = 0;
-                                        for (const anchor of activeHexKeys) {
-                                            let matchedCount = 0;
-                                            for (const pt of shape) {
-                                                const targetKey = getHexKey(anchor.q + pt.q, anchor.r + pt.r);
-                                                const targetLvl = storyMap[targetKey];
-                                                const reqLvl = pt.lvl !== undefined ? pt.lvl : 0;
-                                                if (targetLvl !== undefined && targetLvl >= 0 && targetLvl === reqLvl) {
-                                                    matchedCount++;
-                                                }
-                                            }
-                                            if (matchedCount > bestMatchCount) {
-                                                bestMatchCount = matchedCount;
-                                            }
-                                        }
-                                        
-                                        const percentage = shape.length > 0 ? Math.round((bestMatchCount / shape.length) * 100) : 0;
-                                        
-                                        return (
-                                            <div className="flex flex-col gap-2 bg-slate-900/40 border border-white/5 rounded-xl p-3 mb-3">
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <span className="text-[8.5px] font-black text-cyan-400 uppercase tracking-widest">
-                                                        {language === 'RU' ? 'АНАЛИЗ ПОЛЯ И СОВПАДЕНИЯ' : 'FIELD CHECK & ALIGNMENT'}
-                                                    </span>
-                                                    <span className="text-white font-mono font-black text-[10px]">{percentage}%</span>
-                                                </div>
-                                                
-                                                {/* Progress bar container */}
-                                                <div className="w-full h-1.5 bg-slate-950/80 rounded-full overflow-hidden p-[1px] border border-white/5 mb-1">
-                                                    <motion.div 
-                                                        className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500 rounded-full"
-                                                        animate={{ width: `${percentage}%` }}
-                                                        transition={{ duration: 0.5 }}
-                                                    />
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-2 text-[8px] font-mono border-t border-white/5 pt-1.5">
-                                                    <div>
-                                                        <span className="text-slate-500 font-bold block">{language === 'RU' ? 'ПОСТРОЕНО ГЕКСОВ:' : 'HEXES BUILT:'}</span>
-                                                        <span className="text-white font-black">{activeHexKeys.length}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-slate-500 font-bold block">{language === 'RU' ? 'СОВПАЛО С ЧЕРТЕЖОМ:' : 'SUCCESSFULLY ALIGNED:'}</span>
-                                                        <span className="text-cyan-400 font-black">{bestMatchCount} / {shape.length}</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="text-[8px] font-sans border-t border-white/5 pt-1.5 leading-normal">
-                                                    {percentage === 100 ? (
-                                                        <div className="flex items-center gap-1.5 text-emerald-400 font-black">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                                                            <span>
-                                                                {language === 'RU' ? 'СТРУКТУРА СОВПАДАЕТ!' : 'ALIGNMENT COMPLETE!'}
-                                                            </span>
-                                                        </div>
-                                                    ) : percentage > 0 ? (
-                                                        <div className="flex items-center gap-1.5 text-indigo-400 font-medium">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-                                                            <span>
-                                                                {language === 'RU' ? `Достройте элементы до требуемых высот.` : `Place matching height levels.`}
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-1.5 text-slate-500 italic font-medium">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0" />
-                                                            <span>
-                                                                {language === 'RU' ? 'Разместите детали на игровом поле.' : 'Begin placing coordinates.'}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
+                                    {/* Summary removed as merged into Holographic Projection viewport */}
                                 </div>
                             )}
 
@@ -1625,30 +1786,6 @@ const StoryBuilderView: React.FC = () => {
 
                                                 <div className="flex flex-col gap-1.5 mt-1">
                                                     {diagnosticsRun.results.map((res) => {
-                                                        const TexturePreview: React.FC<{ level: number }> = ({ level }) => {
-                                                            const containerRef = useRef<HTMLDivElement>(null);
-                                                            useEffect(() => {
-                                                                if (!containerRef.current) return;
-                                                                containerRef.current.innerHTML = '';
-                                                                try {
-                                                                    const canvas = textureService.getTexture(level, 0, 0, undefined);
-                                                                    const clone = document.createElement('canvas');
-                                                                    clone.width = canvas.width;
-                                                                    clone.height = canvas.height;
-                                                                    const ctx = clone.getContext('2d');
-                                                                    if (ctx) {
-                                                                        ctx.drawImage(canvas, 0, 0);
-                                                                    }
-                                                                    clone.className = "w-full h-full object-contain";
-                                                                    containerRef.current.appendChild(clone);
-                                                                } catch (e) {
-                                                                    console.error(e);
-                                                                }
-                                                            }, [level]);
-
-                                                            return <div ref={containerRef} className="w-6 h-6 rounded bg-slate-900 border border-white/10 overflow-hidden flex items-center justify-center pointer-events-none select-none" />;
-                                                        };
-
                                                         return (
                                                             <div key={res.level} className="bg-slate-950/25 border border-white/5 p-2 rounded-lg flex items-center justify-between text-[8px] font-mono hover:bg-slate-950/40 transition-colors">
                                                                 <div className="flex items-center gap-2">
@@ -1690,10 +1827,10 @@ const StoryBuilderView: React.FC = () => {
                                     {/* Header Info */}
                                     <div className="mb-2.5">
                                         <h3 className="text-[12px] font-black text-white uppercase tracking-tight leading-tight mb-0.5">
-                                            {language === 'RU' ? activeFigure.nameRU : activeFigure.nameEN}
+                                            {language === 'RU' ? 'РЕЖИМ ПРОЕКТИРОВАНИЯ ЯДРА' : 'CORE SANDBOX ENGINEERING MODE'}
                                         </h3>
                                         <p className="text-slate-400 text-[9.5px] leading-relaxed font-sans font-medium line-clamp-2">
-                                            {language === 'RU' ? activeFigure.descRU : activeFigure.descEN}
+                                            {language === 'RU' ? 'Здесь нет ограничений. Свободно стройте оборонительные платформы для предстоящих Защит ядра от вредоносных ботов.' : 'There are no limits here. Construct defensive platforms freely for upcoming Core Defense scenarios against malicious bots.'}
                                         </p>
                                     </div>
 
@@ -1706,10 +1843,10 @@ const StoryBuilderView: React.FC = () => {
                                             <span className="w-4 h-4 rounded-full bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-[7px] font-black text-cyan-400 shrink-0">1</span>
                                             <div>
                                                 <span className="text-slate-200 font-bold block">
-                                                    {language === 'RU' ? 'Шаг 1. Запуск основы' : '1. Anchor Base'}
+                                                    {language === 'RU' ? 'Шаг 1. Платформы' : '1. Core Platforms'}
                                                 </span>
                                                 <span>
-                                                    {language === 'RU' ? 'Размещайте гексы уровня 0 (с цифрой 0 в центре — голубой цвет) кликом на пустые ячейки.' : 'Place level 0 hexes (digit 0 inside — cyan color) by clicking on empty gray cells on the field.'}
+                                                    {language === 'RU' ? 'Добавляйте новые ячейки (L0) или удаляйте старые для расширения платформ вокруг ядра и управления пространством.' : 'Place new Level 0 hexes or demolish existing ones to manage core topology and territory.'}
                                                 </span>
                                             </div>
                                         </div>
@@ -1720,7 +1857,7 @@ const StoryBuilderView: React.FC = () => {
                                                     {language === 'RU' ? 'Шаг 2. Подъем высоты' : '2. Elevate Heights'}
                                                 </span>
                                                 <span>
-                                                    {language === 'RU' ? 'Повышайте высоту добавленных гексов кнопкой "Upgrade" за материалы, проверяя нужный цвет уровня.' : 'Use "Upgrade" with material to raise the hex to the target height level matching the blueprint.'}
+                                                    {language === 'RU' ? 'Используйте материалы для усиления укреплений до L9+ для увеличения очков восстановления и награды.' : 'Extract and use materials to raise block heights up to L9+ for increased recovery values and durability.'}
                                                 </span>
                                             </div>
                                         </div>
@@ -1728,10 +1865,10 @@ const StoryBuilderView: React.FC = () => {
                                             <span className="w-4 h-4 rounded-full bg-amber-950 border border-amber-500/30 flex items-center justify-center text-[7px] font-black text-amber-400 shrink-0">3</span>
                                             <div>
                                                 <span className="text-slate-200 font-bold block">
-                                                    {language === 'RU' ? 'Шаг 3. Соседняя поддержка для уровня 2 и выше' : '3. Neighbor Support Scaffold'}
+                                                    {language === 'RU' ? 'Шаг 3. ЗАЩИТА ЯДРА' : '3. CORE DEFENSE'}
                                                 </span>
                                                 <span>
-                                                    {language === 'RU' ? 'Помните, для подъема гекса до уровня 2 и выше (цифры 2-9) требуется, чтобы рядом было не менее 2-х гексов такой же высоты!' : 'Structures at level 2 and above (digits 2-9) need at least 2 adjacent neighbor hexes of that height to be stable!'}
+                                                    {language === 'RU' ? 'Каждые 5 пройденных сюжетных уровней активируется ЗАЩИТА ЯДРА от вредоносных ботов (кнопка в центре сверху). Постройте прочную защиту!' : 'Completing 5 simulated sequence levels triggers a CORE DEFENSE against malicious bots. Build sturdy protection around the core!'}
                                                 </span>
                                             </div>
                                         </div>
@@ -1739,19 +1876,7 @@ const StoryBuilderView: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Claim & Completion Action Button (Appeared only during final complete phase) */}
-                            {isAnimatingCompletion && (
-                                <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-                                    <div className="w-full py-2.5 bg-cyan-950/45 border border-cyan-500/35 text-cyan-400 font-extrabold uppercase text-[8.5px] tracking-widest rounded-xl text-center flex items-center justify-center gap-2 animate-pulse select-none shadow-[0_0_20px_rgba(34,211,238,0.2)]">
-                                        <Trophy className="w-3.5 h-3.5 text-yellow-500" />
-                                        <span>
-                                            {language === 'RU' 
-                                                ? `${activeFigure?.cleanNameRU?.toUpperCase() || 'ФИГУРА'} СОБРАН${!activeFigure?.cleanNameRU ? 'А' : ''}! (+1 SP)` 
-                                                : `${activeFigure?.cleanNameEN?.toUpperCase() || 'STRUCTURE'} COMPLETED! (+1 SP)`}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
+                            {/* Removed Completion Banner */}
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -1759,35 +1884,17 @@ const StoryBuilderView: React.FC = () => {
                 {/* BOTTOM CONTENT - Compact Inventory Carousel with floating SP island */}
                 <div className="mt-auto flex flex-col items-center justify-end pointer-events-none pt-4 w-full max-w-5xl mx-auto px-4 md:px-0 select-none pb-2">
                     
-                    {/* "Levels" (Уровни) button precisely in the empty region specified */}
+                    {/* "Levels" (Уровни) buttons down the bottom region */}
                     {!isUiHidden && (
-                        <div className="flex flex-col items-center pointer-events-auto">
-                            {isInventoryInsufficient && (
-                                <motion.div
-                                    initial={{ scale: 0.9, opacity: 0, y: 10 }}
-                                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                                    className="mb-2 max-w-xs px-3 py-1.5 bg-amber-950/40 backdrop-blur-md border border-amber-500/50 rounded-lg text-amber-200 text-[9px] font-bold tracking-tight shadow-[0_0_15px_rgba(245,158,11,0.25)] flex items-center gap-1.5 z-20 animate-pulse text-center justify-center pointer-events-auto"
-                                >
-                                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                    <span>
-                                        {language === 'RU' 
-                                            ? 'Для постройки фигуры не хватает гексов! Перейдите в шахты для добычи материала.' 
-                                            : 'Not enough hexes to complete the figure! Enter the mines to collect materials.'}
-                                    </span>
-                                </motion.div>
-                            )}
+                        <div className="flex items-center justify-center gap-3 mb-3 pointer-events-auto">
                             <motion.button
                                 id="tutorial-levels-btn"
                                 initial={{ y: 20, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 onClick={() => { playUiSound('CLICK'); setUIState('CAMPAIGN_MAP'); }}
-                                className={`pointer-events-auto mb-3 px-6 py-2.5 bg-gradient-to-r rounded-xl backdrop-blur-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2 ${
-                                    isInventoryInsufficient
-                                        ? 'from-amber-950/90 via-amber-900/90 to-amber-950/90 border border-amber-500 text-amber-200 shadow-[0_0_20px_rgba(245,158,11,0.6)] animate-[pulse_1.5s_infinite_ease-in-out]'
-                                        : 'from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-indigo-200 hover:text-white shadow-[0_4px_25px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]'
-                                }`}
+                                className="px-5 py-2.5 bg-gradient-to-r rounded-xl backdrop-blur-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2 from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-indigo-200 hover:text-white shadow-[0_4px_25px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]"
                             >
-                                <Map className={`w-4 h-4 ${isInventoryInsufficient ? 'text-amber-400' : 'text-indigo-400'} animate-pulse`} />
+                                <Map className="w-4 h-4 text-indigo-400" />
                                 <span>{language === 'RU' ? 'Карта уровней' : 'Levels Map'}</span>
                             </motion.button>
                         </div>
@@ -1804,7 +1911,7 @@ const StoryBuilderView: React.FC = () => {
                         transition={{ duration: 0.3 }}
                         className="w-full md:max-w-md lg:max-w-xl flex flex-col items-stretch pointer-events-auto"
                     >
-                        <div id="tutorial-shape-list" className="w-full bg-slate-950/45 border rounded-2xl p-2 backdrop-blur-xl animate-border-glow-premium relative overflow-hidden transition-all duration-300">
+                        <div id="tutorial-shape-list" className="w-full bg-slate-950/45 border rounded-2xl p-2 backdrop-blur-xl animate-border-glow-premium relative transition-all duration-300">
                             <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500/20 to-transparent" />
                             
                             {/* Carousel Wrapper */}
@@ -1813,14 +1920,15 @@ const StoryBuilderView: React.FC = () => {
                                 {/* Left Scroll Command */}
                                 <button
                                     onClick={handleScrollLeft}
-                                    style={{
-                                        paddingLeft: '0px',
-                                        marginLeft: '-8px'
-                                    }}
-                                    className="absolute left-0 z-20 w-6 h-6 rounded-lg bg-[#0c132c]/90 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-indigo-600 transition-all shadow-md active:scale-95 cursor-pointer"
+                                    className={`absolute left-0 -translate-x-[calc(100%-1px)] top-1/2 -translate-y-1/2 z-20 w-5 h-12 rounded-l-xl bg-[#090d22]/95 border border-r-0 flex items-center justify-center transition-all ${
+                                        totalInventoryTiles > 0
+                                            ? 'border-cyan-400/50 text-cyan-400 hover:text-white hover:bg-cyan-950/40 shadow-[-8px_0_12px_-4px_rgba(34,211,238,0.5)] hover:shadow-[-8px_0_20px_-4px_rgba(34,211,238,0.8)] active:scale-95 cursor-pointer'
+                                            : 'border-slate-800 text-slate-600 opacity-40 cursor-not-allowed'
+                                    }`}
                                     title={language === 'RU' ? 'Назад' : 'Prev'}
+                                    disabled={totalInventoryTiles === 0}
                                 >
-                                    <ChevronLeft className="w-3 h-3" />
+                                    <ChevronLeft className="w-3.5 h-3.5 -mr-0.5" />
                                 </button>
 
                                 {/* Scrolling container */}
@@ -1830,7 +1938,7 @@ const StoryBuilderView: React.FC = () => {
                                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                                 >
                                     {Array.from({ length: 10 }).map((_, lvl) => {
-                                        const sessionQty = minedInSessionHexes[lvl] || 0;
+                                        const sessionQty = minedInSessionHexes[lvl] || (minedInSessionHexes as any)[String(lvl)] || 0;
                                         const permaQty = collectedHexes[lvl] || (collectedHexes as any)[String(lvl)] || 0;
                                         const qty = sessionQty + permaQty;
                                         const isSelected = selectedBuildLevel === lvl;
@@ -1849,30 +1957,56 @@ const StoryBuilderView: React.FC = () => {
                                             <div key={lvl} className="flex flex-col items-center shrink-0">
                                                 <div className="relative">
                                                 <button
-                                                    onClick={() => { playUiSound('CLICK'); setSelectedBuildLevel(lvl); }}
+                                                    onClick={() => {
+                                                        if (isSiegeActive) {
+                                                            playUiSound('ERROR');
+                                                            const alertMsg = language === 'RU'
+                                                                ? "⚠️ Защита ядра активна! Строительство запрещено до ее завершения."
+                                                                : "⚠️ Core defense is active! Construction is blocked until complete.";
+                                                            setErrorMessage(alertMsg);
+                                                            useGameStore.getState().showToast(alertMsg, 'error');
+                                                            setTimeout(() => {
+                                                                setErrorMessage(curr => curr === alertMsg ? null : curr);
+                                                            }, 5000);
+                                                            return;
+                                                        }
+                                                        
+                                                        playUiSound('CLICK'); 
+                                                        setSelectedBuildLevel(lvl); 
+                                                    }}
                                                     title={tooltipText}
                                                     className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 p-1 rounded-xl border text-center transition-all w-13 h-17 relative cursor-pointer outline-none group ${
                                                         isSelected
                                                             ? isPlaceable
                                                                 ? 'bg-indigo-950/45 border-cyan-400/70 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102 font-bold'
-                                                                : 'bg-slate-950/35 border-red-500/30 text-rose-400/60 opacity-40 scale-100 brightness-[0.45] grayscale saturate-50'
+                                                                : 'bg-slate-950/35 border-red-500/30 text-rose-400/60 scale-100'
                                                             : qty > 0 
                                                                 ? isPlaceable 
                                                                     ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
-                                                                    : 'bg-slate-950/20 border-white/5 opacity-25 text-slate-500 scale-98 hover:opacity-40 brightness-[0.4] grayscale saturate-[20%]'
-                                                                : 'bg-slate-950/10 border-white/5 opacity-10 text-slate-600 scale-95 hover:opacity-20 grayscale saturate-0 brightness-[0.3]'
+                                                                    : 'bg-slate-950/20 border-white/5 text-slate-400 scale-98 hover:bg-[#0f1530]/20'
+                                                                : 'bg-slate-950/10 border-white/5 text-slate-500 scale-95 hover:bg-[#0f1530]/15'
                                                     }`}
                                                 >
-                                                    <div className="w-10 h-11 flex items-center justify-center select-none pointer-events-none">
+                                                    <div className={`w-10 h-11 flex items-center justify-center select-none pointer-events-none transition-all ${
+                                                        isSelected
+                                                            ? isPlaceable
+                                                                ? ''
+                                                                : 'opacity-40 brightness-[0.5] grayscale saturate-50'
+                                                            : qty > 0
+                                                                ? isPlaceable
+                                                                    ? ''
+                                                                    : 'opacity-30 brightness-[0.45] grayscale saturate-[20%]'
+                                                                : 'opacity-20 brightness-[0.35] grayscale saturate-0'
+                                                    }`}>
                                                         {drawInventoryHex(lvl, theme)}
                                                     </div>
 
-                                                    <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none ${
+                                                    <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none transition-all ${
                                                         qty > 0 
                                                             ? isPlaceable 
-                                                                ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' 
-                                                                : 'text-amber-600/30 drop-shadow-none opacity-40'
-                                                            : 'text-slate-500/30'
+                                                                ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)] font-bold' 
+                                                                : 'text-amber-500 font-medium' 
+                                                            : 'text-slate-300 font-medium opacity-90'
                                                     }`}>
                                                         x{qty}
                                                     </span>
@@ -1884,6 +2018,19 @@ const StoryBuilderView: React.FC = () => {
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             playUiSound('SUCCESS'); // use a nice sound
+                                                            
+                                                            if (isSiegeActive) {
+                                                                playUiSound('ERROR');
+                                                                const alertMsg = language === 'RU'
+                                                                    ? "⚠️ Защита ядра активна! Трансмутация запрещена до ее завершения."
+                                                                    : "⚠️ Core defense is active! Transmutation is blocked until complete.";
+                                                                setErrorMessage(alertMsg);
+                                                                useGameStore.getState().showToast(alertMsg, 'error');
+                                                                setTimeout(() => {
+                                                                    setErrorMessage(curr => curr === alertMsg ? null : curr);
+                                                                }, 5000);
+                                                                return;
+                                                            }
                                                             transmuteHexes(lvl, lvl + 1, 1);
                                                         }}
                                                         title={language === 'RU' ? `Сплавить 3 гекса L${lvl} в 1 гекс L${lvl + 1}` : `Transmute 3x L${lvl} into 1x L${lvl + 1}`}
@@ -1901,14 +2048,15 @@ const StoryBuilderView: React.FC = () => {
                                 {/* Right Scroll Command */}
                                 <button
                                     onClick={handleScrollRight}
-                                    style={{
-                                        marginRight: '-8px',
-                                        marginLeft: '0px'
-                                    }}
-                                    className="absolute right-0 z-20 w-6 h-6 rounded-lg bg-[#0c132c]/90 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-indigo-600 transition-all shadow-md active:scale-95 cursor-pointer"
+                                    className={`absolute right-0 translate-x-[calc(100%-1px)] top-1/2 -translate-y-1/2 z-20 w-5 h-12 rounded-r-xl bg-[#090d22]/95 border border-l-0 flex items-center justify-center transition-all ${
+                                        totalInventoryTiles > 0
+                                            ? 'border-cyan-400/50 text-cyan-400 hover:text-white hover:bg-cyan-950/40 shadow-[8px_0_12px_-4px_rgba(34,211,238,0.5)] hover:shadow-[8px_0_20px_-4px_rgba(34,211,238,0.8)] active:scale-95 cursor-pointer'
+                                            : 'border-slate-800 text-slate-600 opacity-40 cursor-not-allowed'
+                                    }`}
                                     title={language === 'RU' ? 'Вперед' : 'Next'}
+                                    disabled={totalInventoryTiles === 0}
                                 >
-                                    <ChevronRight className="w-3 h-3" />
+                                    <ChevronRight className="w-3.5 h-3.5 -ml-0.5" />
                                 </button>
                             </div>
                         </div>
@@ -1966,101 +2114,6 @@ const StoryBuilderView: React.FC = () => {
             <AnimatePresence>
                 {showUpgrades && (
                     <UpgradesTree onClose={() => setShowUpgrades(false)} key="upgrades-tree" />
-                )}
-            </AnimatePresence>
-
-            {/* HIGH TECH INTENSIVE PHYSICAL RULES */}
-            <AnimatePresence>
-                {isHelpOpen && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto"
-                        onClick={() => setIsHelpOpen(false)}
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.95, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.95, y: 20 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-[0_0_50px_rgba(79,70,229,0.25)] relative overflow-hidden text-left"
-                        >
-                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
-                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
-                            <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
-
-                            <div className="flex justify-between items-start mb-6 z-20 relative">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-indigo-500/15 rounded-lg border border-indigo-500/35 text-indigo-400">
-                                        <Info className="w-5 h-5 text-cyan-400 shrink-0" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none mb-1">SYSTEM_GUIDE</span>
-                                        <h2 className="text-base md:text-lg font-black text-white uppercase tracking-wider leading-none">
-                                            {language === 'RU' ? 'Правила Гексагона' : 'Hexagon Guide rules'}
-                                        </h2>
-                                    </div>
-                                </div>
-                                <button onClick={() => { playUiSound('CLICK'); setIsHelpOpen(false); }} className="text-slate-500 hover:text-white transition-all transform hover:scale-110 active:scale-95 cursor-pointer">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            <p className="text-slate-400 text-xs md:text-sm mb-6 leading-relaxed relative z-20">
-                                {language === 'RU' 
-                                    ? 'Гексагон — это творческое логическое пространство, где вы собираете древние фигуры из гексов. Накапливайте Очки Умений для развития вашей Кампании:' 
-                                    : 'The Hexagon is a sanctuary of spatial construction where you shape hex figures. Use your analytical wits to claim Skill Points and power your global campaign Upgrades:'}
-                            </p>
-
-                            <div className="space-y-4 mb-6 relative z-20 max-h-[45vh] overflow-y-auto no-scrollbar pr-1">
-                                <div className="p-3 bg-slate-900/40 rounded-xl border border-white/5">
-                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
-                                        {language === 'RU' ? '1. Подача ресурсов (Плитки 0 уровня)' : '1. Supply Level 0 Tiles'}
-                                    </h4>
-                                    <p className="text-[11px] text-slate-400 leading-normal">
-                                        {language === 'RU'
-                                            ? 'Вам изначально дается 10 плиток почвы 0-го уровня. При размещении новых плиток баланс автоматически пополняется до 10 штук, так что у вас всегда есть материал! Дополнительные плитки добываются через прохождение уровней в режиме Кампании.'
-                                            : 'You receive 10 level 0 tiles initially. Placement consumes a block, though the matrix maintains your backup buffer at 10 tiles, ensuring you never run out! Additional supply tiles are gathered by beating Simulation Campaign levels.'}
-                                    </p>
-                                </div>
-
-                                <div className="p-3 bg-slate-900/40 rounded-xl border border-white/5">
-                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" />
-                                        {language === 'RU' ? '2. Очерёдность и Обводка' : '2. Adjacency Outline'}
-                                    </h4>
-                                    <p className="text-[11px] text-slate-400 leading-normal">
-                                        {language === 'RU'
-                                            ? 'Первая плитка выкладывается в самый центр (0,0), который упруго мигает синим вектором. Каждая последующая должна соприкасаться с уже уложенными гексами. Все доступные для укладки клетки обводятся синим пунктиром.'
-                                            : 'The first cell sits exactly at the anchor center (0,0), which glows with energetic cyan. All subsequent hexes must attach adjacent to built ones. Valid placement borders dynamically outline in dashed line.'}
-                                    </p>
-                                </div>
-
-                                <div className="p-3 bg-slate-900/40 rounded-xl border border-white/5">
-                                    <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.5)]" />
-                                        {language === 'RU' ? '3. Выкладывание по чертежам или случайно' : '3. Blueprint or Organic Shape'}
-                                    </h4>
-                                    <p className="text-[11px] text-slate-400 leading-normal">
-                                        {language === 'RU'
-                                            ? 'Каждая фигура имеет фиолетовый призрак-чертёж на поле. Вы можете собрать её строго по чертежу вокруг центра, а можете случайно разместить где угодно в стороне. Как только нужная форма совпадёт — она будет засчитана!'
-                                            : 'Each figure renders as a faint purple holographic ghost blueprint at the center. You can shape it on coordinates or organically assemble it anywhere offset. Once the form structure matches, the system validates it!'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => { playUiSound('CLICK'); setIsHelpOpen(false); }}
-                                className="w-full bg-indigo-600/25 border border-indigo-500 text-indigo-400 hover:bg-indigo-600 hover:text-white font-black py-3 rounded-xl transition-all uppercase tracking-[0.25em] text-xs shadow-xl active:scale-98 cursor-pointer relative z-20"
-                            >
-                                {language === 'RU' ? 'Вернуться в игру' : 'Resume Hexopl'}
-                            </button>
-                        </motion.div>
-                    </motion.div>
                 )}
             </AnimatePresence>
 
@@ -2133,6 +2186,18 @@ const StoryBuilderView: React.FC = () => {
             </AnimatePresence>
 
             <StoryTutorial />
+
+            <LevelExitDialog 
+                isOpen={isExitDialogOpen}
+                onClose={() => setIsExitDialogOpen(false)}
+                onConfirm={() => {
+                    setIsExitDialogOpen(false);
+                    if (exitTargetState) setUIState(exitTargetState);
+                }}
+                mode="SANDBOX"
+                language={language === 'RU' ? 'RU' : 'EN'}
+                playUiSound={playUiSound}
+            />
         </div>
     );
 };

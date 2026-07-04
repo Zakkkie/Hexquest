@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGameStore } from './store.ts';
 import { motion, AnimatePresence } from 'motion/react';
 import GameView from './components/GameView.tsx';
@@ -19,6 +19,8 @@ const App: React.FC = () => {
   const sessionId = useGameStore(state => state.session?.sessionId);
   const setDeviceType = useGameStore(state => state.setDeviceType);
 
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
   useEffect(() => {
     // One-time migration: reset overworld progress for v1 users
     try {
@@ -37,13 +39,19 @@ const App: React.FC = () => {
       setDeviceType(type);
     };
 
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize); // Handle rotation immediately
+    window.addEventListener('mousemove', handleMouseMove);
     handleResize(); // Init
 
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, [setDeviceType]);
 
@@ -64,15 +72,32 @@ const App: React.FC = () => {
            {/* Horizon Fog / Vignette Overlay */}
            <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-transparent to-slate-950/90" />
            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#020617_100%)]" />
-
-           {/* Floating Light Blobs */}
-           <div className="absolute inset-0 overflow-hidden mix-blend-screen opacity-50 pointer-events-none">
-              <div className="absolute top-[-20%] left-[10%] w-[70%] h-[70%] rounded-full bg-cyan-600/30 blur-[120px] animate-blob" />
-              <div className="absolute bottom-[-20%] right-[10%] w-[70%] h-[70%] rounded-full bg-indigo-600/30 blur-[120px] animate-blob animation-delay-2000" />
-              <div className="absolute top-[20%] left-[40%] w-[40%] h-[40%] rounded-full bg-fuchsia-700/20 blur-[100px] animate-blob animation-delay-4000" />
-           </div>
         </div>
       )}
+
+      {/* Global Glowing Light Blobs (Active in any mode!) */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none mix-blend-screen opacity-55">
+         <div className="absolute top-[-30%] left-[-10%] w-[90vw] h-[90vw] rounded-full bg-cyan-600/35 blur-[140px] animate-blob animate-delay-2000" />
+         <div className="absolute bottom-[-30%] right-[-10%] w-[90vw] h-[90vw] rounded-full bg-indigo-600/35 blur-[140px] animate-blob" />
+         <div className="absolute top-[15%] left-[25%] w-[60vw] h-[60vw] rounded-full bg-fuchsia-700/25 blur-[120px] animate-blob animation-delay-4000" />
+         <div className="absolute bottom-[20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-pink-700/15 blur-[110px] animate-blob" />
+      </div>
+
+      {/* Global Dynamic Cursor Light Glow (Active in any mode!) */}
+      <motion.div
+        className="hidden md:block absolute rounded-full bg-indigo-500/12 blur-[130px] pointer-events-none z-0 mix-blend-screen"
+        animate={{
+          x: mousePos.x - 250,
+          y: mousePos.y - 250,
+        }}
+        transition={{ type: "tween", ease: "backOut", duration: 0.6 }}
+        style={{
+          width: 500,
+          height: 500,
+          left: 0,
+          top: 0,
+        }}
+      />
 
       {/* Main Content Switcher */}
       <div className="relative z-10 w-full h-full">

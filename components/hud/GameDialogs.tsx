@@ -10,7 +10,9 @@ import { Item } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Fireworks from '../Fireworks';
 import { MiniMonumentDialog } from './MiniMonumentDialog';
+import { LevelExitDialog } from './LevelExitDialog';
 import { audioService } from '../../services/audioService';
+import { OracleDialog } from '../OracleDialog';
 
 const getLevelIndexFromId = (id?: string | null): number => {
     if (!id) return 1;
@@ -204,35 +206,61 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     useEffect(() => {
         if (gameStatus === 'VICTORY' && !victoryRewards) {
-            const levelId = session?.activeLevelConfig?.id;
-            const isAlreadyClaimed = levelId ? claimedLevelRewards.includes(levelId) : false;
-            
-            setWasRewardPreviouslyClaimed(isAlreadyClaimed);
-
-            if (isAlreadyClaimed) {
-                setVictoryRewards({ l0: 0, l1: 0, l2: 0, lvl0: 0, lvl1: 1, lvl2: 2 });
-            } else {
-                // Determine target level of current simulation config
-                const requiredShapes = session?.activeLevelConfig?.requiredShapes || [];
-                const T = requiredShapes[0]?.level || 1;
-
-                const lvl0 = Math.max(0, T - 1);
-                const lvl1 = Math.max(1, T);
-                const lvl2 = Math.min(10, T + 1);
-
-                const l0 = Math.floor(Math.random() * 11) + 5;
-                const l1 = Math.floor(Math.random() * 6) + 5;
-                const l2 = Math.floor(Math.random() * 5) + 1;
+            if (session?.winCondition?.winType === 'SIEGE') {
+                const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_')).length;
+                const siegeId = `siege_completed_${completedNormalCount}`;
+                const isAlreadyClaimed = claimedLevelRewards.includes(siegeId);
                 
-                setVictoryRewards({ l0, l1, l2, lvl0, lvl1, lvl2 });
-                addCollectedHexes({ [lvl0]: l0, [lvl1]: l1, [lvl2]: l2 });
-                addMinedHexes({ [lvl0]: l0, [lvl1]: l1, [lvl2]: l2 });
-                if (levelId) {
-                    claimLevelReward(levelId);
+                setWasRewardPreviouslyClaimed(isAlreadyClaimed);
+                setVictoryRewards({ l0: 15, l1: 10, l2: 5, lvl0: 1, lvl1: 2, lvl2: 3 });
+                
+                if (!isAlreadyClaimed) {
+                    addCollectedHexes({ 1: 15, 2: 10, 3: 5 });
+                    addMinedHexes({ 1: 15, 2: 10, 3: 5 });
+                    claimLevelReward(siegeId);
+                    
+                    // Add 3 Skill Points (SP)
+                    const currentSP = useGameStore.getState().skillPoints;
+                    useGameStore.getState().setSkillPoints(currentSP + 3);
+                    
+                    useGameStore.getState().showToast(
+                        language === 'RU' 
+                            ? '🏆 ЯДРО ЗАЩИЩЕНО! Получено +3 SP и бонусные гексы!' 
+                            : '🏆 CORE DEFENSE SURVIVED! Gained +3 SP and bonus hexes!', 
+                        'success'
+                    );
+                }
+            } else {
+                const levelId = session?.activeLevelConfig?.id;
+                const isAlreadyClaimed = levelId ? claimedLevelRewards.includes(levelId) : false;
+                
+                setWasRewardPreviouslyClaimed(isAlreadyClaimed);
+
+                if (isAlreadyClaimed) {
+                    setVictoryRewards({ l0: 0, l1: 0, l2: 0, lvl0: 0, lvl1: 1, lvl2: 2 });
+                } else {
+                    // Determine target level of current simulation config
+                    const requiredShapes = session?.activeLevelConfig?.requiredShapes || [];
+                    const T = requiredShapes[0]?.level || 1;
+
+                    const lvl0 = Math.max(0, T - 1);
+                    const lvl1 = Math.max(1, T);
+                    const lvl2 = Math.min(10, T + 1);
+
+                    const l0 = Math.floor(Math.random() * 11) + 5;
+                    const l1 = Math.floor(Math.random() * 6) + 5;
+                    const l2 = Math.floor(Math.random() * 5) + 1;
+                    
+                    setVictoryRewards({ l0, l1, l2, lvl0, lvl1, lvl2 });
+                    addCollectedHexes({ [lvl0]: l0, [lvl1]: l1, [lvl2]: l2 });
+                    addMinedHexes({ [lvl0]: l0, [lvl1]: l1, [lvl2]: l2 });
+                    if (levelId) {
+                        claimLevelReward(levelId);
+                    }
                 }
             }
         }
-    }, [gameStatus, victoryRewards, addCollectedHexes, addMinedHexes, claimedLevelRewards, session?.activeLevelConfig, claimLevelReward]);
+    }, [gameStatus, victoryRewards, addCollectedHexes, addMinedHexes, claimedLevelRewards, session?.activeLevelConfig, session?.winCondition?.winType, claimLevelReward, language]);
 
     useEffect(() => {
         if (gameStatus === 'BRIEFING') {
@@ -561,44 +589,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             )}
 
             {/* EXIT CONFIRMATION */}
-            <AnimatePresence>
-                {activeModal === 'EXIT' && (
-                    <div className="absolute inset-0 z-[200] flex items-center justify-center p-4 pointer-events-auto">
-                        <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={closeModal}
-                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
-                        />
-                        <motion.div 
-                            initial={{ scale: 0.95, y: 15, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.95, y: 15, opacity: 0 }}
-                            transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/90 border border-red-500/30 p-6 md:p-8 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.15)] max-w-[340px] md:max-w-sm w-full text-center relative overflow-hidden backdrop-blur-xl"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            {/* Corner brackets */}
-                            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-red-500/50" />
-                            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-red-500/50" />
-                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-red-500/50" />
-                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-red-500/50" />
-                            
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-red-400" />
-                            <div className="w-14 h-14 rounded-2xl bg-red-950/30 flex items-center justify-center mx-auto mb-4 border border-red-500/40 shadow-lg shadow-red-900/30">
-                                <LogOut className="w-7 h-7 text-red-500" />
-                            </div>
-                            <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight break-words whitespace-pre-wrap">{t.ABORT_TITLE}</h3>
-                            <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2 break-words whitespace-pre-wrap">{t.ABORT_DESC}</p>
-                            <div className="flex flex-col gap-3">
-                                <button onClick={() => { handleMenu(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 hover:brightness-110 text-white font-extrabold uppercase text-xs transition-all active:scale-95 shadow-lg shadow-red-900/40 cursor-pointer">{t.BTN_CONFIRM}</button>
-                                <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-850/80 text-slate-400 font-bold uppercase text-[10px] border border-slate-850 hover:border-slate-800 transition-all active:scale-95 cursor-pointer">{t.BTN_CANCEL}</button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            <LevelExitDialog
+                isOpen={activeModal === 'EXIT'}
+                onClose={closeModal}
+                onConfirm={handleMenu}
+                mode="GAME"
+                language={language}
+                playUiSound={playUiSound}
+            />
 
             {/* RESTART CONFIRMATION */}
             <AnimatePresence>
@@ -1154,7 +1152,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 {messageLog && messageLog.length > 0 ? (
                                     [...messageLog].reverse().map((log) => (
                                         <div key={log.id} className="relative flex gap-3 p-3 bg-slate-900/30 border border-slate-850 rounded hover:bg-slate-850/40 transition-all group/item overflow-hidden">
-                                            <div className={`absolute top-0 left-0 w-1 h-full ${log.type === 'INFO' ? 'bg-indigo-505' : log.type === 'ERROR' ? 'bg-red-500' : log.type === 'WARN' ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ backgroundColor: log.type === 'INFO' ? 'rgb(99, 102, 241)' : undefined }} />
+                                            <div className={`absolute top-0 left-0 w-1 h-full ${log.type === 'INFO' ? 'bg-indigo-500' : log.type === 'ERROR' ? 'bg-red-500' : log.type === 'WARN' ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ backgroundColor: log.type === 'INFO' ? 'rgb(99, 102, 241)' : undefined }} />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between mb-1">
                                                     <span className={`text-[9px] font-black uppercase tracking-widest ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : 'text-emerald-400'}`}>
@@ -1548,7 +1546,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 )}
 
                                 {campaignMode === 'LEVELS' && !wasRewardPreviouslyClaimed && (
-                                    <div className="bg-slate-900/20 border border-slate-905 p-2 rounded-xl mb-1.5 md:mb-4 shrink-0 mt-0.5">
+                                    <div className="bg-slate-900/20 border border-slate-900 p-2 rounded-xl mb-1.5 md:mb-4 shrink-0 mt-0.5">
                                         <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-slate-900/80">
                                             <h3 className="text-emerald-400 font-extrabold uppercase tracking-wider text-[9px] md:text-xs">
                                                 {language === 'RU' ? 'Получены новые гексы' : 'New Hexes Acquired'}
@@ -1908,6 +1906,11 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                 </motion.div>
             )}
             </AnimatePresence>
+
+            <OracleDialog
+                isOpen={useGameStore((state) => state.oracleDialogOpen)}
+                onClose={useGameStore((state) => state.closeOracleDialog)}
+            />
         </>
     );
 };

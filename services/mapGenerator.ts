@@ -53,7 +53,7 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
     let biome: TerrainType = 'STANDARD';
     let poiType: string | undefined = undefined;
     let isPassable = true;
-    let forceReveal = !!levelConfig;
+    let forceReveal = !levelConfig || (levelConfig.mapConfig?.revealMode !== 'fog');
 
     // --- CITY LOGIC ---
     if (levelConfig && isInsideCity(q, r)) {
@@ -397,7 +397,7 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
 
               initialGrid[nKey] = {
                   id: nKey, q: n.q, r: n.r,
-                  currentLevel: level, maxLevel: level, progress: 0, revealed: !!levelConfig,
+                  currentLevel: level, maxLevel: level, progress: 0, revealed: !levelConfig || (levelConfig.mapConfig?.revealMode !== 'fog'),
                   biome: 'STANDARD',
                   isPassable: true
               };
@@ -409,6 +409,20 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
   // Optimize monument accessibility check
   for (const m of monuments) {
       ensureMonumentAccessibility(m, initialGrid);
+  }
+
+  if (levelConfig?.mapConfig?.revealMode === 'fog') {
+      for (const key of Object.keys(initialGrid)) {
+          const h = initialGrid[key];
+          // We assume player starts at 0, 0
+          if (h.q === 0 && h.r === 0) continue;
+          // maybe reveal immediate neighbors of 0,0?
+          if (Math.abs(h.q) + Math.abs(h.r) + Math.abs((h.q + h.r)) <= 2) {
+              h.revealed = true;
+          } else {
+              h.revealed = false;
+          }
+      }
   }
 
   return initialGrid;

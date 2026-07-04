@@ -152,7 +152,8 @@ const runLocalRenderCalculation = (
     camera: { x: number; y: number; scale: number; rotation: number } | undefined,
     dimensions: { width: number; height: number } | undefined,
     isCampaign: boolean,
-    playerGrowthIntent?: 'RECOVER' | 'UPGRADE' | 'DIG' | null
+    playerGrowthIntent?: 'RECOVER' | 'UPGRADE' | 'DIG' | 'TURRET' | null,
+    isDefenseMode?: boolean
 ): any[] => {
     if (!grid || !player) return [];
 
@@ -181,19 +182,55 @@ const runLocalRenderCalculation = (
         const hr = hex.r;
         const distToPlayer = cubeDistance({ q: playerQ, r: playerR }, { q: hq, r: hr });
         
-        if (distToPlayer > 5) continue;
-
-        const isRevealed = !!hex.revealed || isCampaign;
-
+        const forceReveal = (isCampaign && useGameStore.getState().session?.activeLevelConfig?.mapConfig?.revealMode !== 'fog');
+        
+        let isRevealed = !!hex.revealed || forceReveal;
         let finalVisibility = 0;
-        if (distToPlayer <= 2) {
-            finalVisibility = 1.0;
-        } else if (distToPlayer === 3) {
-            finalVisibility = 0.70;
-        } else if (distToPlayer === 4) {
-            finalVisibility = 0.40;
-        } else if (distToPlayer === 5) {
-            finalVisibility = 0.15;
+
+        if (isDefenseMode) {
+            // Find player owned hexes to calculate nearest base distance
+            const playerOwnedHexes = Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore);
+            let distToPlayerBase = distToPlayer;
+            let minDist = 9999;
+            for (const ph of playerOwnedHexes) {
+                const d = cubeDistance({ q: ph.q, r: ph.r }, { q: hq, r: hr });
+                if (d < minDist) {
+                    minDist = d;
+                }
+            }
+            if (minDist !== 9999) {
+                distToPlayerBase = minDist;
+            }
+
+            if (distToPlayerBase <= 4) {
+                isRevealed = true;
+                if (distToPlayerBase <= 1) {
+                    finalVisibility = 1.0;
+                } else if (distToPlayerBase === 2) {
+                    finalVisibility = 0.70;
+                } else if (distToPlayerBase === 3) {
+                    finalVisibility = 0.40;
+                } else if (distToPlayerBase === 4) {
+                    finalVisibility = 0.15;
+                }
+            } else {
+                isRevealed = false;
+                finalVisibility = 0.0;
+            }
+        } else {
+            if (distToPlayer > 5 && !forceReveal) continue;
+            
+            if (forceReveal) {
+                finalVisibility = 1.0;
+            } else if (distToPlayer <= 2) {
+                finalVisibility = 1.0;
+            } else if (distToPlayer === 3) {
+                finalVisibility = 0.70;
+            } else if (distToPlayer === 4) {
+                finalVisibility = 0.40;
+            } else if (distToPlayer === 5) {
+                finalVisibility = 0.15;
+            }
         }
 
         const finalOpacity = finalVisibility;
@@ -235,7 +272,8 @@ const runLocalRenderCalculation = (
         const neighborLevels = NEIGHBOR_DIRECTIONS.map(d => {
             const nKey = getHexKey(hq + d.q, hr + d.r);
             const nHex = grid[nKey];
-            if (!nHex || (!nHex.revealed && !isCampaign)) return VOID_LEVEL_FLAG;
+            const forceReveal = (isCampaign && useGameStore.getState().session?.activeLevelConfig?.mapConfig?.revealMode !== 'fog') || !!useGameStore.getState().session?.defense?.isDefenseMode;
+            if (!nHex || (!nHex.revealed && !forceReveal)) return VOID_LEVEL_FLAG;
             if (nHex.structureType === 'VOID') return VOID_LEVEL_FLAG;
             return nHex.currentLevel ?? 0;
         });
@@ -248,7 +286,7 @@ const runLocalRenderCalculation = (
                 : bots?.find((b: any) => b.q === hq && b.r === hr);
 
             if (actingEntity) {
-                let intent: 'UPGRADE' | 'RECOVER' | 'DIG' | null = null;
+                let intent: 'UPGRADE' | 'RECOVER' | 'DIG' | 'TURRET' | null = null;
                 if (actingEntity.type === 'PLAYER') {
                     intent = playerGrowthIntent || null;
                 } else {
@@ -277,6 +315,8 @@ const runLocalRenderCalculation = (
                     } else if (intent === 'UPGRADE') {
                         const config = getLevelConfig(hex.currentLevel + 1);
                         needed = Math.max(10, config.growthTime - (growthAccelerator * 5));
+                    } else if (intent === 'TURRET') {
+                        needed = 40;
                     }
                 }
             }
@@ -306,6 +346,7 @@ const runLocalRenderCalculation = (
                 artifactType: isRevealed ? hex.artifact?.type : undefined,
                 biome: isRevealed ? hex.biome : undefined,
                 poiType: isRevealed ? hex.poiType : undefined,
+                hologramTargetLevel: isRevealed ? hex.hologramTargetLevel : undefined,
                 isPassable: hex.isPassable,
                 isRevealed: isRevealed,
                 opacity: finalOpacity,
@@ -323,21 +364,47 @@ const runLocalRenderCalculation = (
         const uR = u.r;
 
         if (!u.isPlayer) {
-            const distToPlayer = cubeDistance({ q: uQ, r: uR }, playerPos);
-            if (distToPlayer > 5) continue;
-
-            if (distToPlayer <= 2) {
-                uOpacity = 1.0;
-            } else if (distToPlayer === 3) {
-                uOpacity = 0.70;
-            } else if (distToPlayer === 4) {
-                uOpacity = 0.40;
-            } else if (distToPlayer === 5) {
-                uOpacity = 0.15;
+            if (isDefenseMode) {
+                // Find player owned hexes to calculate nearest base distance
+                const playerOwnedHexes = Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore);
+                let minDist = 9999;
+                for (const ph of playerOwnedHexes) {
+                    const d = cubeDistance({ q: ph.q, r: ph.r }, { q: uQ, r: uR });
+                    if (d < minDist) {
+                        minDist = d;
+                    }
+                }
+                if (minDist > 4) {
+                    continue; // Skip rendering/drawing the bot if it's beyond the visibility range!
+                }
+                // Apply fading opacity matching the tile's visibility
+                if (minDist <= 1) {
+                    uOpacity = 1.0;
+                } else if (minDist === 2) {
+                    uOpacity = 0.70;
+                } else if (minDist === 3) {
+                    uOpacity = 0.40;
+                } else if (minDist === 4) {
+                    uOpacity = 0.15;
+                }
             } else {
-                uOpacity = 0;
+                const uHex = grid[getHexKey(uQ, uR)];
+                const isRevealed = uHex ? uHex.revealed : false;
+                if (!isRevealed) continue;
+
+                const distToPlayer = cubeDistance({ q: uQ, r: uR }, playerPos);
+                if (distToPlayer <= 2) {
+                    uOpacity = 1.0;
+                } else if (distToPlayer === 3) {
+                    uOpacity = 0.85;
+                } else if (distToPlayer === 4) {
+                    uOpacity = 0.65;
+                } else if (distToPlayer === 5) {
+                    uOpacity = 0.45;
+                } else {
+                    uOpacity = 0.30;
+                }
             }
-            if (uOpacity <= 0) continue;
         }
 
         const rawX = HEX_SIZE * (SQRT3 * uQ + SQRT3_2 * uR);
@@ -380,7 +447,8 @@ const runLocalRenderCalculation = (
                 upgradePointCount: u.recentUpgrades?.length || 0,
                 headIndex: u.headIndex,
                 bodyIndex: u.bodyIndex,
-                opacity: uOpacity
+                opacity: uOpacity,
+                type: u.type
             }
         });
     }
@@ -453,6 +521,18 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     const portalActive = useGameStore(state => state.session?.portalActive);
     const gameStatus = useGameStore(state => state.session?.gameStatus);
     const evacuationActive = useGameStore(state => state.session?.evacuationActive);
+    const messageLog = useGameStore(state => state.session?.messageLog);
+    const sessionId = useGameStore(state => state.session?.sessionId);
+    const activeMeteors = useGameStore(state => state.session?.activeMeteors);
+    const isDefenseMode = useGameStore(state => !!state.session?.defense?.isDefenseMode);
+
+    const recentGradientLock = useMemo(() => {
+        if (!messageLog || messageLog.length === 0 || !player) return null;
+        const latest = messageLog[0];
+        const isRecent = Date.now() - latest.timestamp < 1500;
+        const isGradientLock = latest.text.includes("Нельзя копать") || latest.text.includes("below neighbors") || latest.text.includes("GRADIENT") || latest.text.includes("KOПАТЬ");
+        return (isRecent && isGradientLock) ? player : null;
+    }, [messageLog, player]);
 
     const playerQ = player?.q ?? 0;
     const playerR = player?.r ?? 0;
@@ -489,6 +569,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         q: number;
         r: number;
         stackIndex: number;
+        laserGraphics?: PIXI.Graphics;
     }>>(new Map());
 
     const particlesList = useRef<{
@@ -505,6 +586,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         life: number;
         decay: number;
     }[]>([]);
+
+    const lastSessionIdRef = useRef<string | null>(null);
+    const sessionStartTimeRef = useRef<number>(0);
+    const victoryStartTimeRef = useRef<number | null>(null);
 
     const [isPixiReady, setIsPixiReady] = useState(false);
 
@@ -536,9 +621,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             camera,
             dimensions,
             isCampaign,
-            playerGrowthIntent
+            playerGrowthIntent,
+            isDefenseMode
         );
-    }, [grid, player, bots, rotation, pendingKey, selectedHexId, camera, dimensions, isCampaign, playerGrowthIntent]);
+    }, [grid, player, bots, rotation, pendingKey, selectedHexId, camera, dimensions, isCampaign, playerGrowthIntent, isDefenseMode]);
 
     // Initialize Pixi Application
     useEffect(() => {
@@ -775,6 +861,12 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 container.addChild(text);
                 parent.addChild(container);
 
+                let laserGraphics: PIXI.Graphics | undefined = undefined;
+                if (eff.sourceQ !== undefined && eff.sourceR !== undefined) {
+                    laserGraphics = new PIXI.Graphics();
+                    parent.addChild(laserGraphics);
+                }
+
                 cached = {
                     container,
                     text,
@@ -782,7 +874,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     lifetime: eff.lifetime,
                     q: eff.q,
                     r: eff.r,
-                    stackIndex: idx
+                    stackIndex: idx,
+                    laserGraphics
                 };
                 effectCache.current.set(eff.id, cached);
             }
@@ -811,6 +904,63 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 cached.container.alpha = 1.0 - fadeProgress;
                 cached.container.scale.set(1.0 + fadeProgress * 0.2, 1.0 + fadeProgress * 0.2);
             }
+
+            // Draw laser beam if this effect has a source coordinate
+            if (cached.laserGraphics && eff.sourceQ !== undefined && eff.sourceR !== undefined) {
+                cached.laserGraphics.clear();
+                
+                const beamLifetime = 800; // Fades faster than floating text
+                if (elapsed < beamLifetime) {
+                    const beamProgress = elapsed / beamLifetime;
+                    const beamAlpha = 1.0 - beamProgress;
+                    
+                    const gridObj = useGameStore.getState().session?.grid || {};
+                    
+                    const sourceKey = getHexKey(eff.sourceQ, eff.sourceR);
+                    const sourceHex = gridObj[sourceKey];
+                    const sourceLevel = sourceHex ? (sourceHex.currentLevel ?? 0) : 0;
+                    const sourceZ = getHexVisualHeight(sourceLevel);
+                    
+                    const { x: sBasePx, y: sBasePy } = simpleHexToPixel(eff.sourceQ, eff.sourceR);
+                    const sX = sBasePx;
+                    const sY = sBasePy - sourceZ;
+                    
+                    const targetKey = getHexKey(eff.q, eff.r);
+                    const targetHex = gridObj[targetKey];
+                    const targetLevel = targetHex ? (targetHex.currentLevel ?? 0) : 0;
+                    const targetZ = getHexVisualHeight(targetLevel);
+                    
+                    const { x: tBasePx, y: tBasePy } = simpleHexToPixel(eff.q, eff.r);
+                    const tX = tBasePx;
+                    const tY = tBasePy - targetZ;
+                    
+                    // Main rose glow
+                    cached.laserGraphics.strokeStyle = { width: 4.5 * (1.0 - beamProgress), color: 0xF43F5E, alpha: beamAlpha * 0.75 };
+                    cached.laserGraphics.beginPath();
+                    cached.laserGraphics.moveTo(sX, sY);
+                    cached.laserGraphics.lineTo(tX, tY);
+                    cached.laserGraphics.stroke();
+                    
+                    // Core white beam
+                    cached.laserGraphics.strokeStyle = { width: 1.5 * (1.0 - beamProgress), color: 0xFFFFFF, alpha: beamAlpha * 0.95 };
+                    cached.laserGraphics.beginPath();
+                    cached.laserGraphics.moveTo(sX, sY);
+                    cached.laserGraphics.lineTo(tX, tY);
+                    cached.laserGraphics.stroke();
+                    
+                    // Muzzle flash circle at source turret
+                    cached.laserGraphics.fillStyle = { color: 0xF43F5E, alpha: beamAlpha * 0.9 };
+                    cached.laserGraphics.beginPath();
+                    cached.laserGraphics.circle(sX, sY, 8 * (1.0 - beamProgress));
+                    cached.laserGraphics.fill();
+                    
+                    // Impact burst circle at target bot
+                    cached.laserGraphics.fillStyle = { color: 0xF59E0B, alpha: beamAlpha * 0.9 };
+                    cached.laserGraphics.beginPath();
+                    cached.laserGraphics.circle(tX, tY, 10 * (1.0 - beamProgress));
+                    cached.laserGraphics.fill();
+                }
+            }
         });
 
         // Cull expired effects
@@ -818,6 +968,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             if (!activeEffectIds.has(id)) {
                 parent.removeChild(value.container);
                 value.container.destroy({ children: true });
+                if (value.laserGraphics) {
+                    parent.removeChild(value.laserGraphics);
+                    value.laserGraphics.destroy();
+                }
                 effectCache.current.delete(id);
             }
         }
@@ -853,6 +1007,20 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
     // Main Pixi update ticker loop executed every frame
     const updateSceneLoop = () => {
+        const nowTime = Date.now();
+        if (sessionId && sessionId !== lastSessionIdRef.current) {
+            lastSessionIdRef.current = sessionId;
+            sessionStartTimeRef.current = nowTime;
+        }
+
+        if (gameStatus === 'VICTORY') {
+            if (victoryStartTimeRef.current === null) {
+                victoryStartTimeRef.current = nowTime;
+            }
+        } else {
+            victoryStartTimeRef.current = null;
+        }
+
         updateFloatingEffects();
         updateDustParticles();
 
@@ -917,6 +1085,35 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             const ring = container.getChildByName('ring') as PIXI.Graphics;
             const sprite = container.getChildByName('sprite') as PIXI.Sprite;
 
+            // Calculate staggered offsets relative to player position
+            const uQ = state.isMoving ? state.currentQ : state.targetQ;
+            const uR = state.isMoving ? state.currentR : state.targetR;
+            const distToPlayer = cubeDistance({ q: playerQ, r: playerR }, { q: uQ, r: uR });
+
+            const sessionElapsed = now - sessionStartTimeRef.current;
+            const entranceDuration = 1200;
+
+            let entranceYOffset = 0;
+            if (sessionElapsed < entranceDuration + 600) {
+                const staggerDelay = distToPlayer * 100;
+                const elapsedForUnit = Math.max(0, sessionElapsed - staggerDelay);
+                const dropDuration = 800;
+                if (elapsedForUnit < dropDuration) {
+                    const p = elapsedForUnit / dropDuration;
+                    entranceYOffset = -500 * Math.pow(1 - p, 3);
+                }
+            }
+
+            let victoryYOffset = 0;
+            if (victoryStartTimeRef.current !== null) {
+                const victoryElapsed = now - victoryStartTimeRef.current;
+                const staggerDelay = distToPlayer * 100;
+                const elapsedForUnit = Math.max(0, victoryElapsed - staggerDelay);
+                if (elapsedForUnit > 0) {
+                    victoryYOffset = elapsedForUnit * 0.18;
+                }
+            }
+
             if (state.isMoving) {
                 const elapsed = now - state.startTime;
                 const duration = state.stepDuration;
@@ -956,7 +1153,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 state.currentLevel = state.startLevel + (state.targetLevel - state.startLevel) * easeClamped;
 
                 container.x = curX;
-                container.y = curY;
+                container.y = curY + entranceYOffset + victoryYOffset;
                 const tieBreaker = (state.currentQ * 0.0001) + (state.currentR * 0.00001);
                 container.zIndex = curY + 1 + tieBreaker;
                 
@@ -1021,7 +1218,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
                     // Perfect snapping to target positions
                     container.x = targetPx;
-                    container.y = targetPy;
+                    container.y = targetPy + entranceYOffset + victoryYOffset;
 
                     // Snaps to perfect rest frame
                     const finalTieBreaker = (state.targetQ * 0.0001) + (state.targetR * 0.00001);
@@ -1043,7 +1240,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 const targetPx = targetRawX * cos - targetRawY * sin;
                 const targetPy = (targetRawX * sin + targetRawY * cos) * 0.8;
                 container.x = targetPx;
-                container.y = targetPy;
+                container.y = targetPy + entranceYOffset + victoryYOffset;
 
                 const finalTieBreaker = (state.targetQ * 0.0001) + (state.targetR * 0.00001);
                 container.zIndex = targetPy + 1 + finalTieBreaker;
@@ -1291,8 +1488,178 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 }
             }
 
-            // Collapse Animation Check for Victory
-            if (unitId === player?.id && (gameStatus === 'VICTORY' || evacuationActive)) {
+            // Collapse or Triumphant Ascension Animation Check for Victory/Defeat/Evac
+            const dynContainer = container as any;
+            if (unitId === player?.id && gameStatus === 'VICTORY') {
+                if (sprite) {
+                    if (dynContainer.victoryStart === undefined) {
+                        dynContainer.victoryStart = Date.now();
+                    }
+                    const elapsed = Date.now() - dynContainer.victoryStart;
+                    
+                    // 1. Keep player sprite resting on the sinking hex tile
+                    const ascendY = 0;
+                    const targetZ = getHexVisualHeight(state.targetLevel);
+                    sprite.y = targetZ;
+                    
+                    // Gentle spin and fade
+                    sprite.rotation += 0.05;
+                    sprite.alpha = Math.max(0, 1.0 - elapsed / 2500); // fade out over 2.5 seconds
+                    
+                    // 2. Draw glorious Victory Beam on ground
+                    let victoryBeam = container.getChildByName('victoryBeam') as PIXI.Graphics;
+                    if (!victoryBeam) {
+                        victoryBeam = new PIXI.Graphics();
+                        victoryBeam.name = 'victoryBeam';
+                        victoryBeam.zIndex = -1; // behind player
+                        container.addChild(victoryBeam);
+                    }
+                    victoryBeam.visible = true;
+                    victoryBeam.clear();
+                    
+                    // Main beam: translucent green/cyan/gold
+                    const beamAlpha = Math.min(0.6, elapsed / 500) * Math.max(0, 1.0 - elapsed / 3000);
+                    const beamWidth = 30 + Math.sin(elapsed / 100) * 5;
+                    
+                    // Draw isometric base ellipse for beam
+                    victoryBeam.beginPath();
+                    victoryBeam.ellipse(0, targetZ, beamWidth, beamWidth * 0.5);
+                    victoryBeam.fill({ color: 0x10b981, alpha: beamAlpha * 0.3 });
+                    victoryBeam.stroke({ width: 2, color: 0x34d399, alpha: beamAlpha });
+
+                    // Vertical volumetric light cylinder
+                    victoryBeam.beginPath();
+                    victoryBeam.moveTo(-beamWidth, targetZ);
+                    victoryBeam.lineTo(-beamWidth * 0.6, targetZ - 300);
+                    victoryBeam.lineTo(beamWidth * 0.6, targetZ - 300);
+                    victoryBeam.lineTo(beamWidth, targetZ);
+                    victoryBeam.closePath();
+                    victoryBeam.fill({ color: 0x059669, alpha: beamAlpha * 0.15 });
+
+                    // Intense core line
+                    victoryBeam.beginPath();
+                    victoryBeam.moveTo(0, targetZ);
+                    victoryBeam.lineTo(0, targetZ - 300);
+                    victoryBeam.stroke({ width: 4 + Math.sin(elapsed / 50) * 2, color: 0xa7f3d0, alpha: beamAlpha * 0.8 });
+
+                    // Secondary cyan outer beam
+                    victoryBeam.beginPath();
+                    victoryBeam.moveTo(-beamWidth * 1.5, targetZ);
+                    victoryBeam.lineTo(-beamWidth * 1.0, targetZ - 300);
+                    victoryBeam.lineTo(beamWidth * 1.0, targetZ - 300);
+                    victoryBeam.lineTo(beamWidth * 1.5, targetZ);
+                    victoryBeam.closePath();
+                    victoryBeam.fill({ color: 0x06b6d4, alpha: beamAlpha * 0.06 });
+
+                    // 3. Floating celebratory particle rings and stars
+                    let victoryParticles = container.getChildByName('victoryParticles') as PIXI.Graphics;
+                    if (!victoryParticles) {
+                        victoryParticles = new PIXI.Graphics();
+                        victoryParticles.name = 'victoryParticles';
+                        victoryParticles.zIndex = 5;
+                        container.addChild(victoryParticles);
+                        // Store array of particle configurations
+                        dynContainer.vParts = Array.from({ length: 40 }, () => ({
+                            angle: Math.random() * Math.PI * 2,
+                            radius: 5 + Math.random() * 35,
+                            speedY: 1.5 + Math.random() * 3.0,
+                            size: 1.5 + Math.random() * 3.5,
+                            color: [0x10b981, 0x059669, 0x34d399, 0xf59e0b, 0x60a5fa, 0xffffff][Math.floor(Math.random() * 6)],
+                            yOffset: Math.random() * 100,
+                            driftSpeed: (Math.random() - 0.5) * 0.02
+                        }));
+                    }
+                    victoryParticles.visible = true;
+                    victoryParticles.clear();
+
+                    if (dynContainer.vParts) {
+                        dynContainer.vParts.forEach((p: any) => {
+                            // Update particle position (rising up)
+                            p.yOffset += p.speedY;
+                            p.angle += p.driftSpeed;
+                            if (p.yOffset > 300) {
+                                p.yOffset = 0;
+                                p.radius = 5 + Math.random() * 35;
+                            }
+
+                            // Map flat circle to 3D isometric perspective ellipse
+                            const px = Math.cos(p.angle) * p.radius;
+                            const py = targetZ - p.yOffset + Math.sin(p.angle) * p.radius * 0.5;
+
+                            const pAlpha = beamAlpha * Math.min(1.0, (300 - p.yOffset) / 80);
+                            victoryParticles.beginPath();
+                            victoryParticles.circle(px, py, p.size);
+                            victoryParticles.fill({ color: p.color, alpha: pAlpha });
+                        });
+                    }
+
+                    // 4. Floating glowing Holographic "STABILITY RESTORED" Text Banner above player
+                    let victoryHolo = container.getChildByName('victoryHolo') as PIXI.Container;
+                    if (!victoryHolo) {
+                        victoryHolo = new PIXI.Container();
+                        victoryHolo.name = 'victoryHolo';
+                        victoryHolo.zIndex = 20;
+                        container.addChild(victoryHolo);
+
+                        const holoBg = new PIXI.Graphics();
+                        holoBg.name = 'holoBg';
+                        victoryHolo.addChild(holoBg);
+
+                        const isRu = useGameStore.getState().session?.language === 'RU';
+                        const labelTextStr = isRu ? 'СТАБИЛЬНОСТЬ ВОССТАНОВЛЕНА' : 'NEXUS STABILITY RESTORED';
+                        const holoText = new PIXI.Text({
+                            text: labelTextStr,
+                            style: {
+                                fontFamily: 'Space Grotesk, Inter, sans-serif',
+                                fontSize: 12,
+                                fontWeight: '900',
+                                fill: 0x34d399,
+                                stroke: { color: 0x064e3b, width: 3 },
+                                align: 'center',
+                                letterSpacing: 2
+                            }
+                        });
+                        holoText.name = 'holoText';
+                        holoText.anchor.set(0.5, 0.5);
+                        victoryHolo.addChild(holoText);
+                    }
+                    victoryHolo.visible = true;
+                    
+                    // Animate holographic overlay floating/pulsing
+                    const holoY = targetZ - 130 - ascendY * 0.3 + Math.sin(elapsed / 150) * 5;
+                    victoryHolo.y = holoY;
+                    victoryHolo.alpha = Math.min(1.0, elapsed / 800) * Math.max(0, 1.0 - elapsed / 3000);
+                    victoryHolo.scale.set(1.0 + 0.05 * Math.sin(elapsed / 120));
+
+                    const hBg = victoryHolo.getChildByName('holoBg') as PIXI.Graphics;
+                    if (hBg) {
+                        hBg.clear();
+                        // Subtly animating tech scanline behind the text
+                        const w = 180 + Math.sin(elapsed / 100) * 15;
+                        hBg.roundRect(-w / 2, -12, w, 24, 4);
+                        hBg.fill({ color: 0x064e3b, alpha: 0.4 * victoryHolo.alpha });
+                        hBg.stroke({ width: 1.5, color: 0x34d399, alpha: 0.8 * victoryHolo.alpha });
+                        
+                        // scanning line
+                        const scanY = -12 + ((elapsed / 2) % 24);
+                        hBg.beginPath();
+                        hBg.moveTo(-w / 2 + 2, scanY);
+                        hBg.lineTo(w / 2 - 2, scanY);
+                        hBg.stroke({ width: 1.0, color: 0xa7f3d0, alpha: 0.6 * victoryHolo.alpha });
+                    }
+
+                    if (shadow) {
+                        shadow.alpha = 0.4 * Math.max(0, 1.0 - elapsed / 1500);
+                        shadow.scale.set(Math.max(0, 1.0 - elapsed / 1500));
+                    }
+                }
+                if (ring && ring.alpha > 0.01) {
+                    ring.scale.set(ring.scale.x * 0.9, ring.scale.y * 0.9);
+                    ring.alpha *= 0.9;
+                } else if (ring) {
+                    ring.alpha = 0;
+                }
+            } else if (unitId === player?.id && (gameStatus === 'DEFEAT' || evacuationActive)) {
                 if (sprite) {
                     const curSx = Math.abs(sprite.scale.x);
                     const curSy = sprite.scale.y;
@@ -1323,10 +1690,20 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     sprite.rotation = 0;
                     // Restore natural sprite scale
                     sprite.scale.set(state.facingLeft ? -1.0 : 1.0, 1.0);
+                    sprite.alpha = 1.0;
                 }
                 if (ring && !state.isMoving) {
                     ring.scale.set(1.0, 1.0);
                     ring.alpha = 0.6;
+                }
+                if (dynContainer.victoryStart !== undefined) {
+                    dynContainer.victoryStart = undefined;
+                    const victoryBeam = container.getChildByName('victoryBeam');
+                    if (victoryBeam) victoryBeam.visible = false;
+                    const victoryParticles = container.getChildByName('victoryParticles');
+                    if (victoryParticles) victoryParticles.visible = false;
+                    const victoryHolo = container.getChildByName('victoryHolo');
+                    if (victoryHolo) victoryHolo.visible = false;
                 }
             }
         });
@@ -1346,7 +1723,95 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             if (voidFlickerNode) {
                 voidFlickerNode.alpha = 0.5 + 0.5 * Math.sin(now2 / 150);
             }
+            const voidCircleGlow = hContainer.getChildByName('voidCircleGlow') as PIXI.Graphics;
+            if (voidCircleGlow) {
+                // Pulse size and alpha
+                const scaleVal = 1.0 + 0.12 * Math.sin(now2 / 180);
+                voidCircleGlow.scale.set(scaleVal, scaleVal);
+                voidCircleGlow.alpha = 0.6 + 0.4 * Math.sin(now2 / 240);
+            }
         });
+
+        // 4. Draw Bot Laser Beam Action Animations
+        const parent = renderItemsContainerRef.current;
+        if (parent) {
+            let laserGraphics = parent.getChildByName('botLasers') as PIXI.Graphics;
+            if (!laserGraphics) {
+                laserGraphics = new PIXI.Graphics();
+                laserGraphics.name = 'botLasers';
+                laserGraphics.zIndex = 999999;
+                parent.addChild(laserGraphics);
+            }
+            laserGraphics.clear();
+
+            if (bots && bots.length > 0 && grid) {
+                bots.forEach(bot => {
+                    const queue = bot.movementQueue;
+                    const isGrowing = bot.state === 'GROWING' || (queue && queue.length > 0 && queue[0].upgrade);
+                    if (!isGrowing) return;
+
+                    const botContainer = unitCache.current.get(bot.id);
+                    if (!botContainer) return;
+
+                    if (!queue || queue.length === 0) return;
+                    const targetCoord = queue[0];
+
+                    const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+                    if (isDefenseMode) {
+                        const dist = cubeDistance({ q: bot.q, r: bot.r }, { q: targetCoord.q, r: targetCoord.r });
+                        if (dist > 1) return;
+                    }
+
+                    const targetKey = getHexKey(targetCoord.q, targetCoord.r);
+                    const targetHexContainer = hexCache.current.get(targetKey);
+                    if (!targetHexContainer) return;
+
+                    const botSprite = botContainer.getChildByName('sprite') as PIXI.Sprite;
+                    const botZ = botSprite ? botSprite.y : 0;
+                    const startX = botContainer.x;
+                    const startY = botContainer.y + botZ - 12;
+
+                    const targetLevel = grid[targetKey]?.currentLevel ?? 0;
+                    const targetZ = getHexVisualHeight(targetLevel);
+                    const endX = targetHexContainer.x;
+                    const endY = targetHexContainer.y + targetZ;
+
+                    const intent = (targetCoord.intent || 'UPGRADE') as string;
+                    let color = 0x00f0ff; // Cyan for UPGRADE
+                    if (intent === 'DIG') {
+                        color = 0xff3366; // Red/pink for DIG
+                    } else if (intent === 'TURRET') {
+                        color = 0xffaa00; // Orange for TURRET
+                    }
+
+                    // Draw main glow beam
+                    laserGraphics.strokeStyle = { width: 3.5, color: color, alpha: 0.85 };
+                    laserGraphics.beginPath();
+                    laserGraphics.moveTo(startX, startY);
+                    laserGraphics.lineTo(endX, endY);
+                    laserGraphics.stroke();
+
+                    // Draw bright core
+                    laserGraphics.strokeStyle = { width: 1.2, color: 0xffffff, alpha: 1.0 };
+                    laserGraphics.beginPath();
+                    laserGraphics.moveTo(startX, startY);
+                    laserGraphics.lineTo(endX, endY);
+                    laserGraphics.stroke();
+
+                    // Impact ring glow
+                    const pulse = Math.sin(now2 * 0.02) * 2;
+                    laserGraphics.fillStyle = { color: color, alpha: 0.45 };
+                    laserGraphics.beginPath();
+                    laserGraphics.ellipse(endX, endY, 8 + pulse, 5 + pulse * 0.6);
+                    laserGraphics.fill();
+
+                    laserGraphics.fillStyle = { color: 0xffffff, alpha: 0.75 };
+                    laserGraphics.beginPath();
+                    laserGraphics.ellipse(endX, endY, 3, 1.8);
+                    laserGraphics.fill();
+                });
+            }
+        }
     };
 
     const latestUpdateSceneLoop = useRef<() => void>(updateSceneLoop);
@@ -1403,10 +1868,79 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 const theme = getTheme(item.props.isRevealed ? hex.maxLevel : 0);
                 const isRealVoid = props.structureType === 'VOID';
                 
+                const costMoves = pendingConfirmation?.data?.costMoves;
+                const costCoins = pendingConfirmation?.data?.costCoins;
+                const gradientLockStatus = !!recentGradientLock;
+
+                const cProps = (curContainer as any)._hexCacheProps;
+                let isDirty = !cProps || 
+                    cProps.rotation !== rotation ||
+                    cProps.offsetY !== props.offsetY ||
+                    cProps.level !== props.level ||
+                    cProps.maxLevel !== props.maxLevel ||
+                    cProps.structureType !== props.structureType ||
+                    cProps.isSelected !== props.isSelected ||
+                    cProps.isPending !== props.isPending ||
+                    cProps.isOccupied !== props.isOccupied ||
+                    cProps.isGrowing !== props.isGrowing ||
+                    cProps.isRankLocked !== props.isRankLocked ||
+                    cProps.progress !== props.progress ||
+                    cProps.durability !== props.durability ||
+                    cProps.artifactType !== props.artifactType ||
+                    cProps.poiType !== props.poiType ||
+                    cProps.hologramTargetLevel !== props.hologramTargetLevel ||
+                    cProps.isPassable !== props.isPassable ||
+                    cProps.isRevealed !== props.isRevealed ||
+                    cProps.lighting !== props.lighting ||
+                    cProps.drawVoidWalls !== props.drawVoidWalls ||
+                    cProps.costMoves !== costMoves ||
+                    cProps.costCoins !== costCoins ||
+                    cProps.gradientLockStatus !== gradientLockStatus;
+
+                if (!isDirty) {
+                    // Check array manually
+                    for (let i = 0; i < 6; i++) {
+                        if (cProps.neighborLevels[i] !== props.neighborLevels[i]) {
+                            isDirty = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isDirty) {
+                    return;
+                }
+
                 const rotatedBasePoints = BASE_POINTS.map(pt => ({
                     x: pt.x * cos - pt.y * sin,
                     y: pt.x * sin + pt.y * cos
                 }));
+
+                (curContainer as any)._hexCacheProps = {
+                    rotation,
+                    offsetY: props.offsetY,
+                    level: props.level,
+                    maxLevel: props.maxLevel,
+                    structureType: props.structureType,
+                    neighborLevels: [...props.neighborLevels],
+                    isSelected: props.isSelected,
+                    isPending: props.isPending,
+                    isOccupied: props.isOccupied,
+                    isGrowing: props.isGrowing,
+                    isRankLocked: props.isRankLocked,
+                    progress: props.progress,
+                    durability: props.durability,
+                    artifactType: props.artifactType,
+                    poiType: props.poiType,
+                    hologramTargetLevel: props.hologramTargetLevel,
+                    isPassable: props.isPassable,
+                    isRevealed: props.isRevealed,
+                    lighting: props.lighting,
+                    drawVoidWalls: props.drawVoidWalls,
+                    costMoves,
+                    costCoins,
+                    gradientLockStatus,
+                };
 
                 // Graphics references
                 let baseLayer = curContainer.getChildByName('base') as PIXI.Graphics;
@@ -1477,6 +2011,38 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     voidFlickerNode.closePath();
                     voidFlickerNode.fill({ color: 0xef4444 });
                     voidFlickerNode.stroke({ width: 3.0, color: 0xef4444, alignment: 1.0 });
+
+                    // Pulsing Round Red Glimmer on top
+                    let voidCircleGlow = curContainer.getChildByName('voidCircleGlow') as PIXI.Graphics;
+                    if (!voidCircleGlow) {
+                        voidCircleGlow = new PIXI.Graphics();
+                        voidCircleGlow.name = 'voidCircleGlow';
+                        voidCircleGlow.zIndex = 16;
+                        curContainer.addChild(voidCircleGlow);
+                    }
+                    voidCircleGlow.x = 0;
+                    voidCircleGlow.y = faceY; // Positioned so scaling is around center
+                    voidCircleGlow.clear();
+                    
+                    // Inner glowing circle (scaled ellipse for isometric projection)
+                    voidCircleGlow.beginPath();
+                    voidCircleGlow.ellipse(0, 0, 15, 12);
+                    voidCircleGlow.fill({ color: 0xef4444, alpha: 0.85 });
+                    
+                    // Middle glowing circle
+                    voidCircleGlow.beginPath();
+                    voidCircleGlow.ellipse(0, 0, 28, 22.4);
+                    voidCircleGlow.fill({ color: 0xef4444, alpha: 0.45 });
+                    
+                    // Outer glowing circle
+                    voidCircleGlow.beginPath();
+                    voidCircleGlow.ellipse(0, 0, 42, 33.6);
+                    voidCircleGlow.fill({ color: 0xef4444, alpha: 0.20 });
+
+                    // Circular outline
+                    voidCircleGlow.beginPath();
+                    voidCircleGlow.ellipse(0, 0, 32, 25.6);
+                    voidCircleGlow.stroke({ width: 2.5, color: 0xff3b30, alpha: 0.95 });
 
                     // Draw Void boundaries (side walls)
                     for (let i = 0; i < 6; i++) {
@@ -1634,6 +2200,29 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         
                         if (isCritical) {
                             damageLayer.fill({ color: 0xef4444, alpha: 0.25 });
+                            
+                            // High frequency blink/pulse for critical warning
+                            damageLayer.alpha = 0.6 + 0.4 * Math.sin(Date.now() / 150);
+                            
+                            // Draw a small yellow/orange warning triangle at the center of the face
+                            const ty = props.offsetY - 5;
+                            damageLayer.beginPath();
+                            damageLayer.moveTo(0, ty - 8);
+                            damageLayer.lineTo(8, ty + 6);
+                            damageLayer.lineTo(-8, ty + 6);
+                            damageLayer.closePath();
+                            damageLayer.fill({ color: 0xeab308 }); // yellow triangle
+                            damageLayer.stroke({ width: 1.5, color: 0x000000 });
+                            
+                            // Draw the exclamation mark inside the triangle
+                            damageLayer.beginPath();
+                            damageLayer.moveTo(0, ty - 4);
+                            damageLayer.lineTo(0, ty + 1);
+                            damageLayer.stroke({ width: 2, color: 0x000000 });
+                            
+                            damageLayer.beginPath();
+                            damageLayer.ellipse(0, ty + 4, 1, 1);
+                            damageLayer.fill({ color: 0x000000 });
                         }
                         
                         // Pseudo-random static procedural cracks
@@ -1668,10 +2257,74 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         const damageLayer = curContainer.getChildByName('damageLayer') as PIXI.Graphics;
                         if (damageLayer) damageLayer.clear();
                     }
+
+                    // L4+ High-level Hex Cooldown and Recovery Charge indicators
+                    if (props.level >= 4 && isRevealed) {
+                        let recoveryOverlay = curContainer.getChildByName('recoveryOverlay') as PIXI.Graphics;
+                        if (!recoveryOverlay) {
+                            recoveryOverlay = new PIXI.Graphics();
+                            recoveryOverlay.name = 'recoveryOverlay';
+                            recoveryOverlay.zIndex = 14;
+                            curContainer.addChild(recoveryOverlay);
+                        }
+                        recoveryOverlay.clear();
+
+                        const now = Date.now();
+                        const isOnCooldown = hex.cooldownEndTime && now < hex.cooldownEndTime;
+                        const charges = hex.recoveryCharges !== undefined ? hex.recoveryCharges : 3;
+
+                        const cy = props.offsetY - 2; // Slightly above face level
+                        if (isOnCooldown) {
+                            // Cooldown state: draw a dull crimson overlay ring
+                            recoveryOverlay.beginPath();
+                            recoveryOverlay.ellipse(0, cy, 18, 14.4);
+                            recoveryOverlay.fill({ color: 0xef4444, alpha: 0.15 });
+                            recoveryOverlay.stroke({ width: 2, color: 0xef4444, alpha: 0.7 });
+
+                            // Draw a small warning/overheat cooling core
+                            recoveryOverlay.beginPath();
+                            recoveryOverlay.ellipse(0, cy, 6, 4.8);
+                            recoveryOverlay.fill({ color: 0xf43f5e, alpha: 0.6 });
+                        } else {
+                            // Healthy state: draw bright cyan/blue charges!
+                            const dotRadius = 2.5;
+                            const spacing = 7;
+                            for (let j = 0; j < 3; j++) {
+                                const dx = (j - 1) * spacing;
+                                const dy = cy + 4; // placed neatly on top face
+                                
+                                const isCharged = j < charges;
+                                
+                                recoveryOverlay.beginPath();
+                                recoveryOverlay.ellipse(dx, dy, dotRadius, dotRadius * 0.8);
+                                if (isCharged) {
+                                    recoveryOverlay.fill({ color: 0x06b6d4, alpha: 0.95 });
+                                    recoveryOverlay.stroke({ width: 1, color: 0x22d3ee });
+                                } else {
+                                    recoveryOverlay.fill({ color: 0x1e293b, alpha: 0.6 });
+                                    recoveryOverlay.stroke({ width: 1, color: 0x475569 });
+                                }
+                            }
+
+                            // Draw a subtle ambient blue pulsing ring
+                            recoveryOverlay.beginPath();
+                            recoveryOverlay.ellipse(0, cy, 15, 12);
+                            recoveryOverlay.stroke({ width: 1.5, color: 0x06b6d4, alpha: 0.4 });
+                        }
+                    } else {
+                        const rOverlay = curContainer.getChildByName('recoveryOverlay');
+                        if (rOverlay) {
+                            curContainer.removeChild(rOverlay).destroy();
+                        }
+                    }
                 } else {
                     if (faceContainer) faceContainer.visible = false;
                     const voidFlickerNode = curContainer.getChildByName('voidFlicker');
                     if (voidFlickerNode && !isRealVoid) curContainer.removeChild(voidFlickerNode).destroy();
+                    const voidCircleGlow = curContainer.getChildByName('voidCircleGlow');
+                    if (voidCircleGlow && !isRealVoid) curContainer.removeChild(voidCircleGlow).destroy();
+                    const rOverlay = curContainer.getChildByName('recoveryOverlay');
+                    if (rOverlay) curContainer.removeChild(rOverlay).destroy();
                 }
 
                 // borderLayer already grabbed
@@ -1759,7 +2412,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         : bots?.find((b: any) => b.q === hq && b.r === hr);
 
                     if (actingEntity) {
-                        let intent: 'UPGRADE' | 'RECOVER' | 'DIG' | null = null;
+                        let intent: 'UPGRADE' | 'RECOVER' | 'DIG' | 'TURRET' | null = null;
                         if (actingEntity.type === 'PLAYER') {
                             intent = playerGrowthIntent || null;
                         } else {
@@ -1788,6 +2441,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                             } else if (intent === 'UPGRADE') {
                                 const config = getLevelConfig(props.level + 1);
                                 needed = Math.max(10, config.growthTime - (growthAccelerator * 5));
+                            } else if (intent === 'TURRET') {
+                                needed = 40;
                             }
                         }
                     }
@@ -1822,16 +2477,81 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     borderLayer.stroke();
                 }
 
+                // Holographic Blueprint projection overlay (Step 3)
+                if (props.hologramTargetLevel !== undefined && activatedMiniMonuments?.length === 3) {
+                    // Flash cyan or blue depending on if it is fully assembled or just blueprint
+                    const isConstructed = props.level >= props.hologramTargetLevel;
+                    const holoColor = isConstructed ? 0x22d3ee : 0x4f46e5; // Cyan full, Indigo outline
+                    // Draw outer hologram wireframe
+                    borderLayer.beginPath();
+                    rotatedBasePoints.forEach((pt, j) => {
+                        const px = pt.x * 0.9;
+                        const py = (pt.y * 0.8 + faceY) * 0.9;
+                        if (j === 0) borderLayer.moveTo(px, py);
+                        else borderLayer.lineTo(px, py);
+                    });
+                    borderLayer.closePath();
+                    borderLayer.strokeStyle = { width: 2.0, color: holoColor, alpha: 0.8 };
+                    borderLayer.stroke();
+
+                    // Optional Text Label indicating the TargetLvl
+                    if (!isConstructed) {
+                         let holoTextLayer = curContainer.getChildByName('holoText') as PIXI.Text;
+                         if (!holoTextLayer) {
+                             holoTextLayer = new PIXI.Text({
+                                text: `[L${props.hologramTargetLevel}]`,
+                                style: { fontFamily: 'monospace', fontSize: 14, fill: 0x4f46e5, fontWeight: 'bold' }
+                             });
+                             holoTextLayer.name = 'holoText';
+                             holoTextLayer.anchor.set(0.5, 0.5);
+                             holoTextLayer.y = faceY - 15;
+                             holoTextLayer.zIndex = 15;
+                             curContainer.addChild(holoTextLayer);
+                         } else {
+                             holoTextLayer.text = `[L${props.hologramTargetLevel}]`;
+                             holoTextLayer.y = faceY - 15;
+                             holoTextLayer.visible = true;
+                         }
+                    } else {
+                         const hText = curContainer.getChildByName('holoText');
+                         if (hText) hText.visible = false;
+                    }
+                } else {
+                     const hText = curContainer.getChildByName('holoText');
+                     if (hText) hText.visible = false;
+                }
+
                 // Draw POI or Special structure Emojis
                 let emojiLayer = curContainer.getChildByName('emoji') as PIXI.Text;
-                if (isRevealed && (props.poiType || props.structureType === 'MONUMENT')) {
-                    const icon = props.structureType === 'MONUMENT' ? '★' : getPoiIcon(props.poiType || '');
+                const isSpecialStructure = props.structureType === 'MONUMENT' || props.structureType === 'MINI_MONUMENT' || props.structureType === 'CORE' || props.structureType === 'TURRET' || props.isCore || props.isMiniMonument || props.isTurret;
+                if (isRevealed && (props.poiType || isSpecialStructure)) {
+                    let icon = '';
+                    let colorVal = '#ffffff';
+                    if (props.structureType === 'MONUMENT') {
+                        icon = '★';
+                        colorVal = '#f59e0b'; // Amber star
+                    } else if (props.structureType === 'MINI_MONUMENT' || props.isMiniMonument) {
+                        const isA = props.isActivated || (activatedMiniMonuments && activatedMiniMonuments.includes(`${props.q},${props.r}`));
+                        icon = isA ? '▲' : '△'; // filled vs empty triangle
+                        colorVal = isA ? '#22d3ee' : '#64748b'; // cyan vs slate
+                    } else if (props.structureType === 'CORE' || props.isCore) {
+                        icon = '⎔'; // Hex Nucleus Core
+                        colorVal = '#ec4899'; // Pink
+                    } else if (props.structureType === 'TURRET' || props.isTurret) {
+                        icon = '⌖'; // Target Reticle / Turret
+                        colorVal = '#a855f7'; // Purple
+                    } else {
+                        icon = getPoiIcon(props.poiType || '');
+                        colorVal = '#ffffff';
+                    }
                     if (!emojiLayer) {
                         emojiLayer = new PIXI.Text({
                             text: icon,
                             style: {
                                 fontSize: 18,
                                 align: 'center',
+                                fill: colorVal,
+                                fontWeight: 'bold'
                             }
                         });
                         emojiLayer.name = 'emoji';
@@ -1840,6 +2560,9 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         curContainer.addChild(emojiLayer);
                     }
                     emojiLayer.text = icon;
+                    if (emojiLayer.style) {
+                        emojiLayer.style.fill = colorVal;
+                    }
                     emojiLayer.y = faceY - 5;
                     emojiLayer.visible = true;
                 } else {
@@ -1950,6 +2673,359 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     const existingArrow = curContainer.getChildByName('objective_arrow');
                     if (existingArrow) {
                         existingArrow.visible = false;
+                    }
+                }
+
+                // Custom DIG arrows/indicators for 1.5 and 1.6
+                const activeLevelId = activeLevelConfig?.id;
+                let showDigArrow = false;
+                let digLabel = '';
+
+                if (activeLevelId === '1.5' && isRevealed) {
+                    const voidHex = grid['1,-1'];
+                    const centerHex = grid['0,0'];
+                    const isVoidHealed = voidHex && voidHex.structureType !== 'VOID';
+                    
+                    if (isVoidHealed) {
+                        const minedNeighbors = [grid['1,-1'], grid['0,1'], grid['-1,0'], grid['0,-1'], grid['1,0'], grid['-1,1']].filter(h => h && h.currentLevel <= -1);
+                        if (minedNeighbors.length < 2) {
+                            const isNeighbor = ['1,-1', '0,1', '-1,0', '0,-1', '1,0', '-1,1'].includes(`${props.q},${props.r}`);
+                            const currentHex = grid[`${props.q},${props.r}`];
+                            if (isNeighbor && currentHex && currentHex.currentLevel > -1) {
+                                showDigArrow = true;
+                                digLabel = 'DIG';
+                            }
+                        } else {
+                            if (props.q === 0 && props.r === 0 && centerHex && centerHex.currentLevel > -2) {
+                                showDigArrow = true;
+                                digLabel = 'DIG x2';
+                            }
+                        }
+                    }
+                } else if (activeLevelId === '1.6' && isRevealed) {
+                    const void1Healed = grid['2,0']?.structureType !== 'VOID';
+                    const void2Healed = grid['6,0']?.structureType !== 'VOID';
+                    const hasPatch = player?.inventory?.some((i: any) => i.baseId === 'reality_patch');
+                    
+                    if (!void1Healed) {
+                        if (!hasPatch && props.q === 0 && props.r === 0) {
+                            const hexNode = grid['0,0'];
+                            if (hexNode && hexNode.currentLevel > -2) {
+                                showDigArrow = true;
+                                digLabel = 'DIG x2';
+                            }
+                        }
+                    } else if (!void2Healed) {
+                        if (!hasPatch && props.q === 4 && props.r === 0) {
+                            const hexNode = grid['4,0'];
+                            if (hexNode && hexNode.currentLevel > -2) {
+                                showDigArrow = true;
+                                digLabel = 'DIG x2';
+                            }
+                        }
+                    }
+                }
+
+                if (showDigArrow && isRevealed) {
+                    let digArrow = curContainer.getChildByName('dig_arrow') as PIXI.Container;
+                    if (!digArrow) {
+                        digArrow = new PIXI.Container();
+                        digArrow.name = 'dig_arrow';
+                        digArrow.zIndex = 39; // Just below main objective arrow
+                        curContainer.addChild(digArrow);
+
+                        const arrowGraphic = new PIXI.Graphics();
+                        arrowGraphic.name = 'dig_arrow_art';
+                        
+                        const arrowColor = 0xef4444; // Red for DIG/EXCAVATION
+                        const arrowDarkColor = 0x991b1b;
+
+                        // Soft glow halo
+                        const glow = new PIXI.Graphics();
+                        glow.name = 'dig_arrow_glow';
+                        glow.circle(0, -8, 20);
+                        glow.fill({ color: arrowColor, alpha: 0.22 });
+                        digArrow.addChild(glow);
+
+                        const drawArrowPath = (g: PIXI.Graphics, dy: number) => {
+                            g.beginPath();
+                            g.moveTo(-8, -22 + dy);
+                            g.lineTo(8, -22 + dy);
+                            g.lineTo(8, -9 + dy);
+                            g.lineTo(14, -9 + dy);
+                            g.lineTo(0, 6 + dy);
+                            g.lineTo(-14, -9 + dy);
+                            g.lineTo(-8, -9 + dy);
+                            g.lineTo(-8, -22 + dy);
+                            g.closePath();
+                        };
+
+                        // Draw bottom/shadow layer for 3D effect
+                        drawArrowPath(arrowGraphic, 3);
+                        arrowGraphic.fill({ color: arrowDarkColor });
+                        arrowGraphic.stroke({ width: 1.2, color: 0x000000, alpha: 0.8, alignment: 1 });
+
+                        // Draw top layer
+                        drawArrowPath(arrowGraphic, 0);
+                        arrowGraphic.fill({ color: arrowColor });
+                        arrowGraphic.stroke({ width: 1.2, color: 0x000000, alpha: 0.6, alignment: 1 });
+
+                        digArrow.addChild(arrowGraphic);
+
+                        if (digLabel) {
+                            const lbl = new PIXI.Text({
+                                text: digLabel,
+                                style: {
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: 10,
+                                    fontWeight: 'bold',
+                                    fill: 0xffffff,
+                                    stroke: { color: 0x000000, width: 2.5 },
+                                    align: 'center'
+                                }
+                            });
+                            lbl.name = 'dig_arrow_label';
+                            lbl.anchor.set(0.5, 1.0);
+                            lbl.y = -24;
+                            digArrow.addChild(lbl);
+                        }
+                    }
+
+                    digArrow.visible = true;
+                    // Offset phase slightly from objective arrow so they bounce independently/beautifully!
+                    const bounceAmt = Math.sin(Date.now() * 0.008 + props.q) * 6;
+                    digArrow.y = faceY - 32 + Math.min(0, bounceAmt);
+                    
+                    const glowChild = digArrow.getChildByName('dig_arrow_glow');
+                    if (glowChild) glowChild.alpha = 0.4 + Math.sin(Date.now() * 0.006 + props.r) * 0.25;
+                } else {
+                    const existingDigArrow = curContainer.getChildByName('dig_arrow');
+                    if (existingDigArrow) {
+                        existingDigArrow.visible = false;
+                    }
+                }
+
+                // --- GRADIENT LOCK VISUAL AIDS ---
+                const playerHex = player && grid ? grid[getHexKey(player.q, player.r)] : null;
+                const playerHeightLevel = playerHex ? (playerHex.currentLevel ?? 0) : 0;
+
+                const isNeighborOfPlayer = player && cubeDistance(player, props) === 1;
+                const isBlockingNeighbor = isNeighborOfPlayer && recentGradientLock && grid && (props.level >= playerHeightLevel);
+                
+                let gradientWarningOverlay = curContainer.getChildByName('gradient_warning') as PIXI.Graphics;
+                if (isBlockingNeighbor && isRevealed) {
+                    if (!gradientWarningOverlay) {
+                        gradientWarningOverlay = new PIXI.Graphics();
+                        gradientWarningOverlay.name = 'gradient_warning';
+                        gradientWarningOverlay.zIndex = 35;
+                        curContainer.addChild(gradientWarningOverlay);
+                    }
+                    gradientWarningOverlay.clear();
+                    const alphaPulse = 0.4 + 0.3 * Math.sin(Date.now() / 100);
+                    gradientWarningOverlay.beginPath();
+                    rotatedBasePoints.forEach((pt, j) => {
+                        const px = pt.x;
+                        const py = pt.y * 0.8 + props.offsetY;
+                        if (j === 0) gradientWarningOverlay.moveTo(px, py);
+                        else gradientWarningOverlay.lineTo(px, py);
+                    });
+                    gradientWarningOverlay.closePath();
+                    gradientWarningOverlay.stroke({ width: 3, color: 0xef4444, alpha: alphaPulse });
+                    gradientWarningOverlay.fill({ color: 0xef4444, alpha: alphaPulse * 0.4 });
+                } else {
+                    if (gradientWarningOverlay) {
+                        curContainer.removeChild(gradientWarningOverlay).destroy();
+                    }
+                }
+
+                const isPlayerHex = player && player.q === props.q && player.r === props.r;
+                let gradientArrows = curContainer.getChildByName('gradient_arrows') as PIXI.Graphics;
+                
+                if (isPlayerHex && recentGradientLock && isRevealed && grid) {
+                    if (!gradientArrows) {
+                        gradientArrows = new PIXI.Graphics();
+                        gradientArrows.name = 'gradient_arrows';
+                        gradientArrows.zIndex = 38;
+                        curContainer.addChild(gradientArrows);
+                    }
+                    gradientArrows.clear();
+                    
+                    NEIGHBOR_DIRECTIONS.forEach(dir => {
+                        const nQ = props.q + dir.q;
+                        const nR = props.r + dir.r;
+                        const nHex = grid[getHexKey(nQ, nR)];
+                        if (nHex && nHex.structureType !== 'VOID' && (nHex.currentLevel ?? 0) >= playerHeightLevel) {
+                            const nPx = simpleHexToPixel(nQ, nR);
+                            const curPx = simpleHexToPixel(props.q, props.r);
+                            const dx = nPx.x - curPx.x;
+                            const nOffsetY = -((nHex.currentLevel ?? 0) * 8);
+                            const dy = (nPx.y - curPx.y) + (nOffsetY - props.offsetY);
+                            
+                            gradientArrows.beginPath();
+                            gradientArrows.moveTo(0, props.offsetY);
+                            const arrowLengthFactor = 0.65;
+                            const targetX = dx * arrowLengthFactor;
+                            const targetY = props.offsetY + dy * arrowLengthFactor;
+                            
+                            gradientArrows.lineTo(targetX, targetY);
+                            gradientArrows.stroke({ width: 3.5, color: 0xef4444, alpha: 0.8 });
+                            
+                            const angle = Math.atan2(dy, dx);
+                            const headSize = 7;
+                            gradientArrows.beginPath();
+                            gradientArrows.moveTo(targetX, targetY);
+                            gradientArrows.lineTo(
+                                targetX - headSize * Math.cos(angle - Math.PI / 6),
+                                targetY - headSize * Math.sin(angle - Math.PI / 6)
+                            );
+                            gradientArrows.lineTo(
+                                targetX - headSize * Math.cos(angle + Math.PI / 6),
+                                targetY - headSize * Math.sin(angle + Math.PI / 6)
+                            );
+                            gradientArrows.closePath();
+                            gradientArrows.fill({ color: 0xef4444, alpha: 0.9 });
+                        }
+                    });
+                } else {
+                    if (gradientArrows) {
+                        curContainer.removeChild(gradientArrows).destroy();
+                    }
+                }
+
+                // --- RADAR PULSE FOR MINI-MONUMENTS (OBELISKS) ---
+                const isMiniMonument = props.structureType === 'MINI_MONUMENT' || props.isMiniMonument;
+                let miniMonumentPulse = curContainer.getChildByName('mini_monument_pulse') as PIXI.Graphics;
+                
+                if (isMiniMonument && isRevealed) {
+                    if (!miniMonumentPulse) {
+                        miniMonumentPulse = new PIXI.Graphics();
+                        miniMonumentPulse.name = 'mini_monument_pulse';
+                        miniMonumentPulse.zIndex = 5;
+                        curContainer.addChild(miniMonumentPulse);
+                    }
+                    miniMonumentPulse.clear();
+                    
+                    const t = (Date.now() / 2000) % 1.0;
+                    const maxRadius = HEX_SIZE * 3.0;
+                    const curRadius = HEX_SIZE * 0.8 + (maxRadius - HEX_SIZE * 0.8) * t;
+                    const curAlpha = 0.5 * (1.0 - t);
+                    
+                    const isActivated = props.isActivated || (activatedMiniMonuments && activatedMiniMonuments.includes(`${props.q},${props.r}`));
+                    const pulseColor = isActivated ? 0x22d3ee : 0xf1f5f9;
+                    
+                    miniMonumentPulse.beginPath();
+                    miniMonumentPulse.ellipse(0, props.offsetY, curRadius, curRadius * 0.8);
+                    miniMonumentPulse.stroke({ width: 2, color: pulseColor, alpha: curAlpha });
+                    miniMonumentPulse.fill({ color: pulseColor, alpha: curAlpha * 0.15 });
+                } else {
+                    if (miniMonumentPulse) {
+                        curContainer.removeChild(miniMonumentPulse).destroy();
+                    }
+                }
+
+                // --- METEOR WARNING SHADOW/TELEGRAPH ---
+                const targetedMeteor = activeMeteors?.find(m => m.q === props.q && m.r === props.r);
+                let meteorTelegraph = curContainer.getChildByName('meteor_telegraph') as PIXI.Graphics;
+                if (targetedMeteor && isRevealed) {
+                    if (!meteorTelegraph) {
+                        meteorTelegraph = new PIXI.Graphics();
+                        meteorTelegraph.name = 'meteor_telegraph';
+                        meteorTelegraph.zIndex = 42;
+                        curContainer.addChild(meteorTelegraph);
+                    }
+                    meteorTelegraph.clear();
+                    
+                    const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.02);
+                    
+                    meteorTelegraph.beginPath();
+                    rotatedBasePoints.forEach((pt, j) => {
+                        const px = pt.x;
+                        const py = pt.y * 0.8 + props.offsetY;
+                        if (j === 0) meteorTelegraph.moveTo(px, py);
+                        else meteorTelegraph.lineTo(px, py);
+                    });
+                    meteorTelegraph.closePath();
+                    meteorTelegraph.stroke({ width: 3, color: 0xef4444, alpha: 0.8 + pulse * 0.2 });
+                    meteorTelegraph.fill({ color: 0xef4444, alpha: 0.25 + pulse * 0.15 });
+
+                    const maxTicks = 4;
+                    const ticksLeft = targetedMeteor.warnTicksRemaining;
+                    const collapseRatio = ticksLeft / maxTicks;
+                    
+                    const maxRadius = 32;
+                    const radius = 10 + maxRadius * collapseRatio;
+                    
+                    meteorTelegraph.beginPath();
+                    meteorTelegraph.ellipse(0, props.offsetY, radius * 1.3, radius * 0.8);
+                    meteorTelegraph.stroke({ width: 2.5, color: 0xf97316, alpha: 0.9 });
+                    meteorTelegraph.fill({ color: 0xf97316, alpha: 0.25 });
+                } else {
+                    if (meteorTelegraph) {
+                        curContainer.removeChild(meteorTelegraph).destroy();
+                    }
+                }
+
+                // --- GHOST PREVIEW FOR UPGRADE ---
+                const isHovered = hoveredHexId === `${props.q},${props.r}`;
+                const isUpgradeIntent = playerGrowthIntent === 'UPGRADE';
+                let ghostPreview = curContainer.getChildByName('ghost_preview') as PIXI.Graphics;
+                
+                if (isHovered && isUpgradeIntent && isRevealed) {
+                    if (!ghostPreview) {
+                        ghostPreview = new PIXI.Graphics();
+                        ghostPreview.name = 'ghost_preview';
+                        ghostPreview.zIndex = 30;
+                        curContainer.addChild(ghostPreview);
+                    }
+                    ghostPreview.clear();
+                    
+                    const nextOffsetY = props.offsetY - 8;
+                    
+                    ghostPreview.beginPath();
+                    rotatedBasePoints.forEach((pt, j) => {
+                        const px = pt.x;
+                        const py = pt.y * 0.8 + nextOffsetY;
+                        if (j === 0) ghostPreview.moveTo(px, py);
+                        else ghostPreview.lineTo(px, py);
+                    });
+                    ghostPreview.closePath();
+                    
+                    ghostPreview.stroke({ width: 2.0, color: 0x10b981, alpha: 0.95 });
+                    ghostPreview.fill({ color: 0x10b981, alpha: 0.28 });
+                    
+                    rotatedBasePoints.forEach(pt => {
+                        ghostPreview.beginPath();
+                        ghostPreview.moveTo(pt.x, pt.y * 0.8 + props.offsetY);
+                        ghostPreview.lineTo(pt.x, pt.y * 0.8 + nextOffsetY);
+                        ghostPreview.stroke({ width: 1.0, color: 0x10b981, alpha: 0.5 });
+                    });
+                    
+                    let ghostText = curContainer.getChildByName('ghost_text') as PIXI.Text;
+                    if (!ghostText) {
+                        ghostText = new PIXI.Text({
+                            text: `+L${props.level + 1}`,
+                            style: {
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                                fontWeight: 'bold',
+                                fill: 0x10b981,
+                                stroke: { color: 0x000000, width: 2.5 }
+                            }
+                        });
+                        ghostText.name = 'ghost_text';
+                        ghostText.anchor.set(0.5, 0.5);
+                        ghostText.zIndex = 31;
+                        curContainer.addChild(ghostText);
+                    }
+                    ghostText.y = nextOffsetY - 12;
+                    ghostText.visible = true;
+                } else {
+                    if (ghostPreview) {
+                        curContainer.removeChild(ghostPreview).destroy();
+                    }
+                    const ghostText = curContainer.getChildByName('ghost_text');
+                    if (ghostText) {
+                        curContainer.removeChild(ghostText).destroy();
                     }
                 }
 
@@ -2189,14 +3265,14 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         // 4. SORT Z-INDEX DEPTH OF VISIBLE GRAPHICS (Ensure perfect 3D occlusion layering overlays)
         parent.sortChildren();
 
-    }, [activeRenderItems, rotation, grid, isPixiReady, player, activeLevelConfig, activatedMiniMonuments, portalActive]);
+    }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors]);
 
     // Handle Pointer clicks and map page client pixels directly to local grid axial tiles
     const handleCanvasClick = (e: React.MouseEvent | React.TouchEvent) => {
         const app = pixiAppRef.current;
-        if (!app || !grid) return;
+        if (!app || !app.renderer || !app.renderer.canvas || !grid) return;
 
-        const rect = app.canvas.getBoundingClientRect();
+        const rect = app.renderer.canvas.getBoundingClientRect();
         const clientX = 'clientX' in e ? e.clientX : e.touches?.[0]?.clientX;
         const clientY = 'clientY' in e ? e.clientY : e.touches?.[0]?.clientY;
 
@@ -2245,7 +3321,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 const cand = grid[hKey];
                 if (!cand) continue;
 
-                const isRevealed = !!cand.revealed || !!activeLevelConfig;
+                const forceReveal = (!!activeLevelConfig && activeLevelConfig.mapConfig?.revealMode !== 'fog') || !!useGameStore.getState().session?.defense?.isDefenseMode;
+                const isRevealed = !!cand.revealed || forceReveal;
                 if (!isRevealed) continue;
 
                 const rawXCenter = HEX_SIZE * (Math.sqrt(3) * cand.q + (Math.sqrt(3) / 2) * cand.r);
@@ -2282,9 +3359,9 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     // Tracks Pointer-moves to highlight hover states
     const handleCanvasMouseMove = (e: React.MouseEvent) => {
         const app = pixiAppRef.current;
-        if (!app || !grid) return;
+        if (!app || !app.renderer || !app.renderer.canvas || !grid) return;
 
-        const rect = app.canvas.getBoundingClientRect();
+        const rect = app.renderer.canvas.getBoundingClientRect();
         const canvasX = e.clientX - rect.left;
         const canvasY = e.clientY - rect.top;
 
@@ -2325,7 +3402,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 const cand = grid[hKey];
                 if (!cand) continue;
 
-                const isRevealed = !!cand.revealed || !!activeLevelConfig;
+                const forceReveal = (!!activeLevelConfig && activeLevelConfig.mapConfig?.revealMode !== 'fog') || !!useGameStore.getState().session?.defense?.isDefenseMode;
+                const isRevealed = !!cand.revealed || forceReveal;
                 if (!isRevealed) continue;
 
                 const rawXCenter = HEX_SIZE * (Math.sqrt(3) * cand.q + (Math.sqrt(3) / 2) * cand.r);
@@ -2426,16 +3504,140 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         window.dispatchEvent(updateEvent);
     }, [player, playerQ, playerR, camera, rotation, grid]);
 
+    // Render offscreen bot indicators if any bot is offscreen
+    const offscreenBotIndicators = useMemo(() => {
+        if (!bots || bots.length === 0 || !grid || !containerRef.current) return [];
+        
+        const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+        const playerOwnedHexes = isDefenseMode 
+            ? Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore)
+            : [];
+
+        const w = containerRef.current.clientWidth || dimensions?.width || 800;
+        const h = containerRef.current.clientHeight || dimensions?.height || 600;
+        const cam = camera || { x: 0, y: 0, scale: 1 };
+        
+        const indicators: { id: string; x: number; y: number; angle: number; isDestroyer: boolean; distance: number | null }[] = [];
+        
+        bots.forEach(bot => {
+            if (isDefenseMode) {
+                let minDist = 9999;
+                for (const ph of playerOwnedHexes) {
+                    const d = cubeDistance({ q: ph.q, r: ph.r }, { q: bot.q, r: bot.r });
+                    if (d < minDist) {
+                        minDist = d;
+                    }
+                }
+                if (minDist > 4) {
+                    return; // Bot is beyond visibility, skip offscreen indicator!
+                }
+            }
+            
+            const bHex = grid[`${bot.q},${bot.r}`];
+            if (!bHex) return;
+            
+            const SQRT3 = Math.sqrt(3);
+            const SQRT3_2 = SQRT3 / 2;
+            const ONE_POINT_FIVE = 1.5;
+            
+            const rawNX = HEX_SIZE * (SQRT3 * bot.q + SQRT3_2 * bot.r);
+            const rawNY = HEX_SIZE * (ONE_POINT_FIVE * bot.r);
+            
+            const angleOffset = rotation * (Math.PI / 180);
+            const cos = Math.cos(angleOffset);
+            const sin = Math.sin(angleOffset);
+            
+            const cx = rawNX * cos - rawNY * sin;
+            const cy = (rawNX * sin + rawNY * cos) * 0.8 + getHexVisualHeight(bHex.currentLevel);
+            
+            const botX = cam.x + cx * cam.scale;
+            const botY = cam.y + cy * cam.scale;
+            
+            const padding = 32;
+            const isOffscreen = botX < 0 || botX > w || botY < 0 || botY > h;
+            
+            if (isOffscreen) {
+                const centerX = w / 2;
+                const centerY = h / 2;
+                const dx = botX - centerX;
+                const dy = botY - centerY;
+                const angle = Math.atan2(dy, dx);
+                
+                let edgeX = centerX;
+                let edgeY = centerY;
+                
+                const slope = dx !== 0 ? dy / dx : 10000;
+                const halfW = w / 2 - padding;
+                const halfH = h / 2 - padding;
+                
+                if (Math.abs(dx) * halfH > Math.abs(dy) * halfW) {
+                    if (dx > 0) {
+                        edgeX = centerX + halfW;
+                        edgeY = centerY + halfW * slope;
+                    } else {
+                        edgeX = centerX - halfW;
+                        edgeY = centerY - halfW * slope;
+                    }
+                } else {
+                    if (dy > 0) {
+                        edgeY = centerY + halfH;
+                        edgeX = centerX + halfH / slope;
+                    } else {
+                        edgeY = centerY - halfH;
+                        edgeX = centerX - halfH / slope;
+                    }
+                }
+                
+                const isDestroyer = bot.memory?.botRole === 'DESTROYER' || bot.id.toLowerCase().includes('destroyer');
+                const distHexes = player ? cubeDistance(player, bot) : null;
+                
+                indicators.push({
+                    id: bot.id,
+                    x: edgeX,
+                    y: edgeY,
+                    angle: angle,
+                    isDestroyer,
+                    distance: distHexes
+                });
+            }
+        });
+        
+        return indicators;
+    }, [bots, grid, camera, rotation, dimensions, player]);
+
     return (
         <div 
             ref={containerRef} 
-            className="absolute inset-0 cursor-crosshair"
+            className="absolute inset-0 cursor-crosshair overflow-hidden"
             onClick={handleCanvasClick}
             onMouseMove={handleCanvasMouseMove}
             onMouseLeave={handleCanvasMouseLeave}
             onTouchStart={handleCanvasClick}
             style={{ width: '100%', height: '100%' }}
-        />
+        >
+            {/* Offscreen Bot Indicators */}
+            {offscreenBotIndicators.map(ind => (
+                <div 
+                    key={ind.id}
+                    className="absolute pointer-events-none flex flex-col items-center justify-center animate-pulse z-50"
+                    style={{
+                        left: `${ind.x}px`,
+                        top: `${ind.y}px`,
+                        transform: 'translate(-50%, -50%)',
+                    }}
+                >
+                    <div 
+                        className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[16px] border-b-red-500 shadow-md filter drop-shadow-[0_0_4px_rgba(239,68,68,0.5)]"
+                        style={{
+                            transform: `rotate(${ind.angle * (180 / Math.PI) - 90}deg)`,
+                        }}
+                    />
+                    <span className="mt-1 bg-red-950/90 text-red-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-red-500/40 uppercase tracking-wider whitespace-nowrap shadow-md scale-90">
+                        {ind.isDestroyer ? '👹 DESTROYER' : '🤖 BOT'} {ind.distance !== null ? `(${ind.distance} HEX)` : ''}
+                    </span>
+                </div>
+            ))}
+        </div>
     );
 };
 

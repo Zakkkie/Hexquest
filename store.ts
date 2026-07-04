@@ -40,6 +40,8 @@ export const useGameStore = create<GameStore>()(
       minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
       totalMinedMaterial: 0,
       storyMap: {},
+      savedSiegeMap: {},
+      unlockedBlueprintIndices: [0],
 
       campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES },
       campaignMode: 'STORY',
@@ -103,6 +105,8 @@ export const useGameStore = create<GameStore>()(
         totalMinedMaterial: state.totalMinedMaterial,
         claimedLevelRewards: state.claimedLevelRewards,
         storyMap: state.storyMap,
+        savedSiegeMap: state.savedSiegeMap,
+        unlockedBlueprintIndices: state.unlockedBlueprintIndices,
         campaignUpgrades: state.campaignUpgrades,
         skillPoints: state.skillPoints,
         isMusicMuted: state.isMusicMuted,

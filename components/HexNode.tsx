@@ -283,6 +283,13 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   // Void Animation Ref
   const voidOutlineRef = useRef<Konva.Path>(null);
+  const vortex1Ref = useRef<Konva.Circle>(null);
+  const vortex2Ref = useRef<Konva.Circle>(null);
+  const singularityRef = useRef<Konva.Circle>(null);
+  const spark1Ref = useRef<Konva.Circle>(null);
+  const spark2Ref = useRef<Konva.Circle>(null);
+  const voidRipple1Ref = useRef<Konva.Path>(null);
+  const voidRipple2Ref = useRef<Konva.Path>(null);
   const monumentGlowRef = useRef<Konva.Path>(null);
   const arrowRef = useRef<Konva.Group>(null);
   const shapeGlowRef = useRef<Konva.Path>(null);
@@ -709,18 +716,80 @@ const HexNodeComponent = (props: HexNodeProps) => {
 
   useEffect(() => {
     if (useGameStore.getState().isLiteMode) return;
-    if (isRealVoid && voidOutlineRef.current) {
-      const tween = new Konva.Tween({
-        node: voidOutlineRef.current,
-        duration: 0.8,
-        opacity: 0.4,
-        strokeWidth: 1.5,
-        yoyo: true,
-        easing: Konva.Easings.EaseInOut,
-      });
-      tween.play();
-      return () => tween.destroy();
-    }
+    if (!isRealVoid) return;
+
+    const v1 = vortex1Ref.current;
+    const v2 = vortex2Ref.current;
+    const sing = singularityRef.current;
+    const sp1 = spark1Ref.current;
+    const sp2 = spark2Ref.current;
+    const outline = voidOutlineRef.current;
+    const rip1 = voidRipple1Ref.current;
+    const rip2 = voidRipple2Ref.current;
+
+    const anim = new Konva.Animation((frame) => {
+      const time = frame?.time ?? 0;
+
+      // 1. Swirls
+      if (v1) {
+        v1.rotation((time / 1000) * 20); // 20 deg/sec clockwise
+      }
+      if (v2) {
+        v2.rotation(-(time / 1000) * 45); // 45 deg/sec counter-clockwise
+      }
+
+      // 2. Singularity Pulsation
+      if (sing) {
+        const pulse = Math.sin(time / 300); // cycle every ~1.88s
+        const scaleVal = 0.95 + pulse * 0.15; // scale from 0.8 to 1.1
+        sing.scale({ x: scaleVal, y: scaleVal });
+        sing.opacity(0.6 + pulse * 0.3); // opacity from 0.3 to 0.9
+      }
+
+      // 3. Orbiting Sparks
+      if (sp1) {
+        const angle1 = (time / 800) * 2 * Math.PI; // faster orbit
+        const r1 = HEX_SIZE * 0.42;
+        sp1.x(Math.cos(angle1) * r1);
+        sp1.y(Math.sin(angle1) * r1);
+        sp1.opacity(0.8 + Math.sin(time / 120) * 0.2);
+      }
+      if (sp2) {
+        const angle2 = -(time / 1300) * 2 * Math.PI; // slower counter-orbit
+        const rx = HEX_SIZE * 0.55;
+        const ry = HEX_SIZE * 0.35;
+        sp2.x(Math.cos(angle2) * rx);
+        sp2.y(Math.sin(angle2) * ry);
+        sp2.opacity(0.6 + Math.cos(time / 180) * 0.3);
+      }
+
+      // 4. Void Outline breathing glow
+      if (outline) {
+        const pulse = Math.sin(time / 400); // slower pulse
+        outline.opacity(0.5 + pulse * 0.4); // range [0.1, 0.9]
+        outline.strokeWidth(2 + pulse * 1); // range [1, 3]
+        outline.shadowBlur(8 + pulse * 6); // range [2, 14]
+      }
+
+      // 5. Hexagonal Gravitational Expanding Waves (Pulsing Top Animation)
+      if (rip1) {
+        const phase1 = ((time / 2200) % 1.0); // complete loop every 2.2s
+        rip1.scale({ x: phase1, y: phase1 });
+        rip1.opacity((1 - phase1) * 0.65);
+        rip1.strokeWidth(0.5 + (1 - phase1) * 2.5);
+      }
+      if (rip2) {
+        const phase2 = (((time + 1100) / 2200) % 1.0); // 1.1s phase offset
+        rip2.scale({ x: phase2, y: phase2 });
+        rip2.opacity((1 - phase2) * 0.65);
+        rip2.strokeWidth(0.5 + (1 - phase2) * 2.5);
+      }
+    }, v1?.getLayer() || v2?.getLayer() || sing?.getLayer() || outline?.getLayer() || rip1?.getLayer());
+
+    anim.start();
+    return () => {
+      anim.stop();
+    };
   }, [isRealVoid]);
 
   useEffect(() => {
@@ -918,23 +987,114 @@ const HexNodeComponent = (props: HexNodeProps) => {
               perfectDrawEnabled={false}
             />
 
+            {/* Outer Pulsing Event Horizon Outline */}
             <Path
               ref={voidOutlineRef}
               data={BASE_PATH_D}
               stroke="#ef4444"
               strokeWidth={3}
               opacity={1}
+              shadowColor="#ef4444"
+              shadowBlur={10}
+              shadowOpacity={0.8}
               listening={false}
               perfectDrawEnabled={false}
               shadowForStrokeEnabled={false}
             />
+
+            {/* Expanding Gravitational Pulsing Ripples */}
             <Path
+              ref={voidRipple1Ref}
               data={BASE_PATH_D}
-              scaleX={0.8}
-              scaleY={0.8}
-              stroke="rgba(56, 189, 248, 0.1)"
+              stroke="rgba(168, 85, 247, 0.7)"
+              strokeWidth={2}
+              shadowColor="#a855f7"
+              shadowBlur={8}
+              listening={false}
+              perfectDrawEnabled={false}
+              shadowForStrokeEnabled={false}
+            />
+
+            <Path
+              ref={voidRipple2Ref}
+              data={BASE_PATH_D}
+              stroke="rgba(239, 68, 68, 0.6)"
+              strokeWidth={2}
+              shadowColor="#ef4444"
+              shadowBlur={8}
+              listening={false}
+              perfectDrawEnabled={false}
+              shadowForStrokeEnabled={false}
+            />
+
+            {/* Rotating Outer Vortex Accretion Ring */}
+            <Circle
+              ref={vortex1Ref}
+              radius={HEX_SIZE * 0.85}
+              stroke="rgba(244, 63, 94, 0.25)"
+              strokeWidth={1.5}
+              dash={[15, 25]}
+              listening={false}
+              perfectDrawEnabled={false}
+            />
+
+            {/* Rotating Inner Vortex Accretion Ring */}
+            <Circle
+              ref={vortex2Ref}
+              radius={HEX_SIZE * 0.65}
+              stroke="rgba(168, 85, 247, 0.4)"
+              strokeWidth={2}
+              dash={[8, 12]}
+              listening={false}
+              perfectDrawEnabled={false}
+            />
+
+            {/* Dense Ambient Space-Time Warp */}
+            <Circle
+              radius={HEX_SIZE * 0.45}
+              stroke="rgba(56, 189, 248, 0.25)"
               strokeWidth={1}
-              dash={[2, 4]}
+              dash={[3, 6]}
+              listening={false}
+              perfectDrawEnabled={false}
+            />
+
+            {/* Event Horizon Central Gravity Singularity */}
+            <Circle
+              ref={singularityRef}
+              radius={HEX_SIZE * 0.28}
+              fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+              fillRadialGradientStartRadius={0}
+              fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+              fillRadialGradientEndRadius={HEX_SIZE * 0.28}
+              fillRadialGradientColorStops={[
+                0, "#000000",
+                0.3, "rgba(239, 68, 68, 0.85)", // Deep ruby red hot core
+                0.7, "rgba(124, 58, 237, 0.6)",  // Violet outer radiation glow
+                1, "transparent"
+              ]}
+              listening={false}
+              perfectDrawEnabled={false}
+            />
+
+            {/* Orbiting Golden Quantum Spark */}
+            <Circle
+              ref={spark1Ref}
+              radius={2.5}
+              fill="#fbbf24"
+              shadowColor="#fbbf24"
+              shadowBlur={6}
+              listening={false}
+              perfectDrawEnabled={false}
+            />
+
+            {/* Orbiting Sky Quantum Spark */}
+            <Circle
+              ref={spark2Ref}
+              radius={2}
+              fill="#38bdf8"
+              shadowColor="#38bdf8"
+              shadowBlur={4}
               listening={false}
               perfectDrawEnabled={false}
             />

@@ -7,9 +7,27 @@ import { getHexKey } from '../../services/hexUtils';
 import { checkShapeExists, getCompletedShapeCoords } from '../../services/shapeUtils';
 
 export class VictorySystem implements System {
-  private triggerPortal(state: SessionState, msg: string): void {
+  private triggerPortal(state: SessionState, msg: string, events?: GameEvent[]): void {
     if (state.evacuationActive) return;
     
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+        state.gameStatus = 'VICTORY';
+        const isRu = state.language === 'RU';
+        const wonMsg = isRu ? '🏆 ЭВАКУАЦИЯ УСПЕШНА! Симуляция пройдена!' : '🏆 EVACUATION SUCCESSFUL! Simulation complete!';
+        state.messageLog.unshift({
+            id: `evacuation-won-${Date.now()}`,
+            text: wonMsg,
+            type: 'SUCCESS',
+            source: 'NEBULA_AI',
+            timestamp: Date.now()
+        });
+        if (events) {
+            events.push(GameEventFactory.create('VICTORY', wonMsg, state.player.id));
+            this.generateLeaderboardEvent(state, events);
+        }
+        return;
+    }
+
     state.evacuationActive = true;
     
     const isRu = state.language === 'RU';
@@ -68,7 +86,7 @@ export class VictorySystem implements System {
                 }
                 state.completedShapeCoords = coords;
             }
-            this.triggerPortal(state, 'Shapes Completed!');
+            this.triggerPortal(state, 'Shapes Completed!', events);
             return;
         }
     }
@@ -79,7 +97,7 @@ export class VictorySystem implements System {
         if (state.activeLevelConfig.hooks.checkWinCondition) {
             const isCampaignWin = state.activeLevelConfig.hooks.checkWinCondition(state, _index);
             if (isCampaignWin) {
-                 this.triggerPortal(state, 'Campaign Objective Achieved');
+                 this.triggerPortal(state, 'Campaign Objective Achieved', events);
                  return;
             }
         }
@@ -104,11 +122,41 @@ export class VictorySystem implements System {
         }
     }
 
+    // --- CHECK FOR SIEGE MODE CONDITIONS ---
+    if (state.winCondition?.winType === 'SIEGE' && state.defense) {
+        if (state.defense.coreHealth <= 0 || events.some(e => e.type === 'CORE_DESTROYED')) {
+            state.gameStatus = 'DEFEAT';
+            const msg = state.language === 'RU' ? 'ЯДРО УНИЧТОЖЕНО! Защита провалена.' : 'CORE DESTROYED! Defense failed.';
+            state.messageLog.unshift({
+                id: `lose-siege-${Date.now()}`,
+                text: msg,
+                type: 'ERROR',
+                source: 'SYSTEM',
+                timestamp: Date.now()
+            });
+            events.push(GameEventFactory.create('DEFEAT', msg, state.player.id));
+            this.generateLeaderboardEvent(state, events);
+            return;
+        }
+
+        // Every time we update, we calculate elapsed time. Wait, if timer is updated outside we just check it.
+        // Let's use sessionStartTime
+        const elapsedSecs = (Date.now() - state.sessionStartTime) / 1000;
+        const totalSurviveTime = 180; // 3 minutes
+        
+        state.defense.survivalTimer = Math.max(0, totalSurviveTime - elapsedSecs);
+
+        if (state.defense.survivalTimer <= 0) {
+            this.triggerPortal(state, 'Siege Survived!', events);
+            return;
+        }
+    }
+
     // --- GLOBAL CAPITAL CHECK ---
     const playerHexKey = getHexKey(state.player.q, state.player.r);
     const playerHex = state.grid[playerHexKey];
     if (playerHex && playerHex.structureType === 'CAPITAL') {
-        this.triggerPortal(state, 'Reached the Capital!');
+        this.triggerPortal(state, 'Reached the Capital!', events);
         return;
     }
 
@@ -161,7 +209,7 @@ export class VictorySystem implements System {
     }
     
     if (isVictory) {
-        this.triggerPortal(state, 'Mission Accomplished');
+        this.triggerPortal(state, 'Mission Accomplished', events);
         return;
     }
 

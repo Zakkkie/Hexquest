@@ -2,6 +2,7 @@ import { Hex, Entity } from '../types';
 import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
+import { useGameStore } from '../store';
 
 interface ScoredTarget {
     hex: Hex;
@@ -86,7 +87,9 @@ const resolveDigChain = (
     depth: number
 ): ScoredTarget | null => {
     if (depth > MAX_RECURSION_DEPTH) return null;
-    if (target.structureType === 'VOID' || target.structureType === 'MONUMENT') return null;
+    if (target.structureType === 'VOID') return null;
+    const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+    if (!isDefenseMode && target.structureType === 'MONUMENT') return null;
 
     const nbs = getNeighbors(target.q, target.r);
     const check = checkDigCondition(target, bot, nbs, grid);
@@ -142,7 +145,7 @@ const findDestroyerTarget = (
         // --- DESTRUCTION LOGIC (Dynamic Scan) ---
         const scanRadiusForDestroyer = 3; 
         const structuresInSight = index.getHexesInRange({q: bot.q, r: bot.r}, scanRadiusForDestroyer)
-            .filter(h => h && h.ownerId === player.id && h.maxLevel > 0 && h.structureType !== 'VOID');
+            .filter(h => h && (h.isCore || (h.ownerId === player.id && h.maxLevel > 0)) && h.structureType !== 'VOID');
         
         if (structuresInSight.length > 0) {
             const lastDestroy = bot.memory?.lastDestroyTime || 0;
@@ -172,21 +175,27 @@ const findDestroyerTarget = (
         }
     }
 
-    // Fallback if no patrol path: scan in a small radius
-    const scanRadiusForDestroyerFallback = 3;
+    // Fallback if no patrol path: scan in a larger radius (use passed _scanRadius)
+    const scanRadiusForDestroyerFallback = _scanRadius > 3 ? _scanRadius : 3;
     const candidates = index.getHexesInRange({q:bot.q, r:bot.r}, scanRadiusForDestroyerFallback);
     let bestTarget: ScoredTarget | null = null;
     let maxScore = -9999;
+    const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
 
     for (const hex of candidates) {
-        if (hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
+        if (hex.structureType === 'VOID') continue;
+        if (!isDefenseMode && hex.structureType === 'MONUMENT') continue;
         
         // НОВОЕ ИСПРАВЛЕНИЕ: Игнорируем гексы, на которые бот не может залезть из-за ранга
-        if (hex.currentLevel > bot.playerLevel) continue;
+        // ИСКЛЮЧЕНИЕ: Боты в осаде могут атаковать любой гекс независимо от ранга!
+        if (!isDefenseMode && hex.currentLevel > bot.playerLevel) continue;
         
         let score = 0;
-        if (hex.ownerId === player.id) {
+        if (hex.ownerId === player.id || hex.isCore) {
             score += 100 + (hex.maxLevel * 20);
+            if (hex.isCore) {
+                score += 500;
+            }
         }
         
         const distToPlayer = cubeDistance(hex, player);
@@ -210,12 +219,12 @@ export const findHiveTarget = (
     bot: Entity,
     grid: Record<string, Hex>,
     index: WorldIndex,
-    role: 'BUILDER' | 'MINER' | 'DESTROYER',
+    role: 'BUILDER' | 'MINER' | 'DESTROYER' | 'SIEGE_RUNNER' | 'SIEGE_GRINDER' | 'SIEGE_TANK',
     scanRadius: number,
     player?: Entity
 ): ScoredTarget | null => {
     
-    if (role === 'DESTROYER' && player) {
+    if ((role === 'DESTROYER' || role.startsWith('SIEGE_')) && player) {
         return findDestroyerTarget(bot, grid, index, player, scanRadius);
     }
 
@@ -249,6 +258,8 @@ export const findHiveTarget = (
         const d = cubeDistance(bot, hex);
 
         if (role === 'MINER') {
+            // Solidarity: never dig friendly bot territory
+            if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
             // ИСПРАВЛЕНИЕ 3 (УМНАЯ ЗАЩИТА): Шахтер не должен сносить ПОСТРОЙКИ (свои или чужие).
             // Но природные ничейные горы (currentLevel > 0 без ownerId) копать МОЖНО!
             if (hex.currentLevel > 0 && hex.ownerId) continue;
@@ -320,6 +331,8 @@ export const findBestDigTargets = (
         if (hex.currentLevel > bot.playerLevel && cubeDistance(botPos, hex) > 0) continue;
 
         // 2. Защита: не копаем чужие базы (если мы не DESTROYER)
+        // Solidarity: never dig friendly bot territory
+        if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
         if (hex.ownerId && hex.ownerId !== bot.id && hex.maxLevel > 0) continue;
 
         const d = cubeDistance(botPos, hex);

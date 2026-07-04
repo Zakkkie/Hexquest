@@ -1,7 +1,7 @@
-import { GrowthSystem } from '../../../engine/systems/GrowthSystem';
-import { WorldIndex } from '../../../engine/WorldIndex';
-import { EntityType, EntityState } from '../../../types';
-import type { SessionState, Entity, Hex, GameEvent, WinCondition } from '../../../types';
+import { GrowthSystem } from '../../../../engine/systems/GrowthSystem';
+import { WorldIndex } from '../../../../engine/WorldIndex';
+import { EntityType, EntityState } from '../../../../types';
+import type { SessionState, Entity, Hex, GameEvent, WinCondition } from '../../../../types';
 
 // ---- Factories ----
 

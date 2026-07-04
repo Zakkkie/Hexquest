@@ -37,7 +37,21 @@ export class AiSystem implements System {
     // --- SPEED THROTTLE ---
     const baseInterval = GAME_CONFIG.BOT_ACTION_INTERVAL_MS;
     const isCampaign = !!state.activeLevelConfig;
-    const interval = (!isCampaign && bot.playerLevel < 3) ? baseInterval * 2 : baseInterval;
+    let interval = (!isCampaign && bot.playerLevel < 3) ? baseInterval * 2 : baseInterval;
+    
+    // Apply role-based modifiers
+    if (bot.memory?.botRole === 'SIEGE_RUNNER') {
+        interval = interval * 0.3; // 3x Faster action rate
+    } else if (bot.memory?.botRole === 'SIEGE_TANK') {
+        interval = interval * 2.0; // 2x Slower action rate
+    } else if (bot.memory?.botRole === 'SIEGE_GRINDER') {
+        interval = interval * 0.8; // Slightly faster to chop through defenses
+    }
+
+    // Slow down all bots significantly in Siege/Defense mode to allow strategic counterplay and better readability
+    if (state.defense?.isDefenseMode) {
+        interval = interval * 2.5;
+    }
     
     if (!bot.lastActionTime) {
       bot.lastActionTime = now - Math.floor(Math.random() * interval);
@@ -71,10 +85,14 @@ export class AiSystem implements System {
       }
 
       // Sync bot rank to its highest owned hex level (instant, no 3s delay)
-      const ownedHexes = index.getHexesByOwner(bot.id);
-      for (const hex of ownedHexes) {
-        if (hex.maxLevel > bot.playerLevel) {
-          bot.playerLevel = hex.maxLevel;
+      if (state.defense?.isDefenseMode) {
+        bot.playerLevel = 10;
+      } else {
+        const ownedHexes = index.getHexesByOwner(bot.id);
+        for (const hex of ownedHexes) {
+          if (hex.maxLevel > bot.playerLevel) {
+            bot.playerLevel = hex.maxLevel;
+          }
         }
       }
 

@@ -1,7 +1,7 @@
-import { VictorySystem } from '../../../engine/systems/VictorySystem';
-import { WorldIndex } from '../../../engine/WorldIndex';
-import { EntityType, EntityState } from '../../../types';
-import type { SessionState, Entity, Hex, GameEvent, LevelConfig, WinCondition } from '../../../types';
+import { VictorySystem } from '../../../../engine/systems/VictorySystem';
+import { WorldIndex } from '../../../../engine/WorldIndex';
+import { EntityType, EntityState } from '../../../../types';
+import type { SessionState, Entity, Hex, GameEvent, LevelConfig, WinCondition } from '../../../../types';
 
 // ---- Factories ----
 

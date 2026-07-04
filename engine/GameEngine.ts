@@ -7,6 +7,8 @@ import { GrowthSystem } from './systems/GrowthSystem';
 import { AiSystem } from './systems/AiSystem';
 import { VictorySystem } from './systems/VictorySystem';
 import { EntropySystem } from './systems/EntropySystem';
+import { TurretSystem } from './systems/TurretSystem';
+import { MeteorSystem } from './systems/MeteorSystem';
 import { ActionProcessor } from './ActionProcessor';
 import { TransactionQueue } from '../services/transactionQueue';
 import { SAFETY_CONFIG } from '../rules/config';
@@ -40,6 +42,8 @@ export class GameEngine {
       new AiSystem(this._transactionQueue), // Pass Queue to AI
       new MovementSystem(),
       new EntropySystem(), 
+      new TurretSystem(),
+      new MeteorSystem(),
       new VictorySystem()
     ];
   }
@@ -61,7 +65,7 @@ export class GameEngine {
       }
   }
 
-  public setPlayerIntent(isGrowing: boolean, intent: 'RECOVER' | 'UPGRADE' | 'DIG' | null) {
+  public setPlayerIntent(isGrowing: boolean, intent: 'RECOVER' | 'UPGRADE' | 'DIG' | 'TURRET' | null) {
       if (!this._state) return;
       const nextState = createDraft(this._state);
       nextState.isPlayerGrowing = isGrowing;
@@ -107,6 +111,11 @@ export class GameEngine {
     const nextState = createDraft(this._state);
     
     try {
+        if (nextState.defense?.isDefenseMode) {
+            const maxPlacedHexLevel = Object.values(nextState.grid).reduce((max, h) => Math.max(max, h.currentLevel ?? 0), 0);
+            nextState.player.playerLevel = Math.max(1, maxPlacedHexLevel);
+        }
+
         this._index.syncGrid(nextState.grid); 
 
         const tickEvents: GameEvent[] = [...nextState.outgoingEvents];
@@ -156,6 +165,11 @@ export class GameEngine {
             nextState.activeLevelConfig.hooks.onAfterAction(nextState, this._index);
         }
 
+        if (nextState.defense?.isDefenseMode) {
+            const maxPlacedHexLevel = Object.values(nextState.grid).reduce((max, h) => Math.max(max, h.currentLevel ?? 0), 0);
+            nextState.player.playerLevel = Math.max(1, maxPlacedHexLevel);
+        }
+
         this.enforceSafetyLimits(nextState);
 
         nextState.currentTurn++; 
@@ -191,6 +205,10 @@ export class GameEngine {
   }
 
   private enforceSafetyLimits(state: SessionState) {
+    if (state.activeLevelConfig?.id?.startsWith('1.')) {
+      state.entropy.current = state.entropy.max;
+    }
+
     // 1. Cleanup old effects every tick to prevent accumulation
     const now = Date.now();
     state.effects = state.effects.filter(e => now - e.startTime < e.lifetime);

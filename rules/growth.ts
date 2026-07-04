@@ -2,6 +2,7 @@
 import { Hex, Entity, HexCoord } from '../types';
 import { GAME_CONFIG, getLevelConfig } from './config';
 import { getHexKey } from '../services/hexUtils';
+import { useGameStore } from '../store';
 
 type GrowthCheckResult = {
   canGrow: boolean;
@@ -17,8 +18,25 @@ export function checkDigCondition(
   grid: Record<string, Hex>
 ): GrowthCheckResult {
   
+  const isBot = _entity.id?.startsWith('bot_') || (_entity as any).type === 'BOT';
+  const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+  if (isBot && isDefenseMode) {
+      if (hex.structureType === 'VOID') {
+          return { canGrow: false, reason: "CANNOT DIG VOID" };
+      }
+      return { canGrow: true };
+  }
+
   // IMPERATIVE: Monument Hexes are indestructible
-  if (hex.structureType === 'MONUMENT' || hex.isIndestructible) {
+  if (hex.structureType === 'MONUMENT') {
+      return { canGrow: false, reason: "INDESTRUCTIBLE AREA" };
+  }
+  
+  if (hex.isIndestructible) {
+      if (hex.isCore && _entity.id.startsWith('bot_')) {
+          // Bots can dig the core to damage it
+          return { canGrow: true };
+      }
       return { canGrow: false, reason: "INDESTRUCTIBLE AREA" };
   }
 
@@ -26,33 +44,11 @@ export function checkDigCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel - 1;
 
-  // 1. PIT ESCAPE CONSTRAINT (User Request)
-  // Ensure that if we dig down to targetLevel, there is at least one non-void passable neighbor
-  // we can safely transition to under the staircase rule (height difference <= 1) and of appropriate rank.
   const neighborHexes = neighbors
       .map(n => grid[getHexKey(n.q, n.r)])
       .filter((h): h is Hex => !!(h && h.structureType !== 'VOID' && h.isPassable !== false));
-  
-  const hasEscapeHex = neighborHexes.some(h => {
-      const hLevel = h.currentLevel ?? 0;
-      const heightDiff = Math.abs(targetLevel - hLevel);
-      const hasRank = hLevel <= _entity.playerLevel;
-      
-      // If we are at or above neighbors, we aren't trapped in a hole, 
-      // even if we can't jump to them yet (diff > 1), because we can keep digging down.
-      if (targetLevel >= hLevel) return true;
 
-      return heightDiff <= 1 && hasRank;
-  });
-
-  if (neighborHexes.length > 0 && !hasEscapeHex) {
-      return {
-          canGrow: false,
-          reason: `TRAPPED! No escape route if you dig here. Вы застрянете в яме (все соседи выше и нет выхода).`
-      };
-  }
-
-  // 2. HIGH GROUND RULE (User Request)
+  // 1. HIGH GROUND RULE (User Request)
   // "Dig up to not reaching 1 level to the level of the nearest hex"
   // Correction: Allow digging down TO the level of neighbors, but not BELOW them on high ground (L1+).
   if (currentLevel > 1) {
@@ -60,14 +56,35 @@ export function checkDigCondition(
           const minNeighborLevel = Math.min(...neighborHexes.map(h => h.currentLevel));
 
           // Exception: A player can always dig down if the target level is >= their Rank (Player Level).
-          if (targetLevel < minNeighborLevel && targetLevel < _entity.playerLevel) {
+          if (targetLevel < minNeighborLevel && targetLevel !== _entity.playerLevel) {
               return {
                   canGrow: false,
-                  reason: `Нельзя копать ниже соседей (L${minNeighborLevel})`,
+                  reason: `Нельзя копать ниже соседей (L${minNeighborLevel}) (Gradient Lock)`,
                   missingSupports: neighborHexes.filter(h => h.currentLevel > targetLevel + 1).map(h => ({q: h.q, r: h.r}))
               };
           }
       }
+  }
+
+  // 2. PIT ESCAPE CONSTRAINT (User Request)
+  // Ensure that if we dig down to targetLevel, there is at least one non-void passable neighbor
+  // we can safely transition to under the staircase rule (height difference <= 1) and of appropriate rank.
+  const hasEscapeHex = neighborHexes.some(h => {
+      const hLevel = h.currentLevel ?? 0;
+      const heightDiff = Math.abs(targetLevel - hLevel);
+      
+      // If we are at or above neighbors, we aren't trapped in a hole, 
+      // even if we can't jump to them yet (diff > 1), because we can keep digging down.
+      if (targetLevel >= hLevel) return true;
+
+      return heightDiff <= 1;
+  });
+
+  if (neighborHexes.length > 0 && !hasEscapeHex) {
+      return {
+          canGrow: false,
+          reason: `TRAPPED! No escape route if you dig here. Вы застрянете в яме (все соседи выше и нет выхода).`
+      };
   }
 
   // 3. FIRST CUT EXCEPTION (If not blocked by High Ground Rule above)
@@ -89,7 +106,7 @@ export function checkDigCondition(
       if (deepNeighbors.length < 2) {
           return { 
               canGrow: false, 
-              reason: `Нет опоры: нужны 2 соседа на уровне L${targetLevel}`,
+              reason: `Нет опоры: нужны 2 соседа на уровне L${targetLevel} (UNSTABLE)`,
           };
       }
   }
@@ -117,17 +134,12 @@ export function checkGrowthCondition(
 
   // 1. MATERIAL CHECK (Still costs material unless free status active)
   if (entity.storage < 1) {
-      const hasFreeBuild = entity.activeStatuses?.some(s => s.type === 'STATUS_FREE_BUILD' || s.label === 'Free Build');
+      const isBot = entity.id?.startsWith('bot_') || (entity as any).type === 'BOT';
+      const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+      const hasFreeBuild = entity.activeStatuses?.some(s => s.type === 'STATUS_FREE_BUILD' || s.label === 'Free Build') || (isBot && isDefenseMode);
       if (!hasFreeBuild) {
           return { canGrow: false, reason: "NEED MATERIAL (DIG)" };
       }
-  }
-
-  // Exception 1: Regrowth Exception
-  // If TargetLevel <= Hex.maxLevel, then all Rank and Neighborhood Support checks are COMPLETELY ignored.
-  const isRegrowth = hex.maxLevel !== undefined && targetLevel <= hex.maxLevel;
-  if (isRegrowth) {
-      return { canGrow: true };
   }
 
   // 2. RANK REQUIREMENT
@@ -164,13 +176,13 @@ export function checkGrowthCondition(
       if (!isDepressionRule) {
         const supportNeighbors = neighbors.filter(n => {
            const h = grid[getHexKey(n.q, n.r)];
-           return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) === currentLevel;
+           return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) >= currentLevel;
          });
 
         if (supportNeighbors.length < 2) {
           return {
             canGrow: false, 
-            reason: `Нет опоры: нужны 2 соседа на уровне L${targetLevel} или 5 более высоких соседей (правило впадины).`,
+            reason: `Нет опоры: нужны 2 соседа на уровне L${targetLevel} или 5 более высоких соседей (правило впадины). (UNSTABLE)`,
           };
         }
       }
@@ -195,7 +207,7 @@ export const getRecoveryReward = (hex: Hex): { moves: number; credits: number } 
 
 export const checkRecoveryCooldown = (hex: Hex, currentTime: number, session?: import('../types.ts').SessionState): { ready: boolean; remaining: number } => {
   // For L0-L3: No specific hex cooldown, handled by Entity's `recoveredCurrentHex` flag in System
-  if (hex.currentLevel < GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
+  if (hex.maxLevel < GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
     return { ready: true, remaining: 0 };
   }
   
@@ -223,9 +235,13 @@ export const checkRecoveryCooldown = (hex: Hex, currentTime: number, session?: i
  * Mutates the hex object (or returns props to update).
  */
 export const applyRecovery = (hex: Hex, currentTime: number, session?: import('../types.ts').SessionState): Partial<Hex> => {
-  if (hex.currentLevel < GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
-    // For L0-L3: Just mark time, entity flag handles the "once per visit" rule
-    return { lastRecoveryUseTime: currentTime };
+  const isDefense = session?.defense?.isDefenseMode;
+  if (hex.maxLevel < GAME_CONFIG.HIGH_LEVEL_RECOVERY_THRESHOLD) {
+    // For L0-L3: Just mark time, entity flag handles the "once per visit" rule, and keep level unchanged
+    return { 
+        lastRecoveryUseTime: currentTime,
+        currentLevel: hex.currentLevel
+    };
   } else {
     const capUpgrade = session?.campaignUpgrades?.reserveCapacitor || 0;
     const maxCharges = GAME_CONFIG.MAX_RECOVERY_POINTS + capUpgrade;
@@ -241,15 +257,18 @@ export const applyRecovery = (hex: Hex, currentTime: number, session?: import('.
         charges = maxCharges;
     }
 
-    charges = Math.max(0, charges - 1);
+    if (!isDefense) {
+        charges = Math.max(0, charges - 1);
+    }
     
     const updates: Partial<Hex> = {
         lastRecoveryUseTime: currentTime,
-        recoveryCharges: charges
+        recoveryCharges: isDefense ? maxCharges : charges,
+        currentLevel: hex.currentLevel
     };
     
     // If depleted, start cooldown
-    if (charges === 0) {
+    if (charges === 0 && !isDefense) {
       updates.cooldownEndTime = currentTime + cooldownMs;
     } else {
       // Ensure cooldown is cleared if we have charges (e.g. if we just reset from 0->3->2)

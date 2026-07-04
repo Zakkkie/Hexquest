@@ -10,6 +10,8 @@ import MonumentHintBanner from './hud/MonumentHintBanner.tsx';
 import SkirmishHintBanner from './hud/SkirmishHintBanner.tsx';
 import CentralTutorialBanner from './hud/CentralTutorialBanner.tsx';
 import { OnboardingTutorial } from './hud/OnboardingTutorial.tsx';
+import { DefenseSiegeBanner } from './hud/DefenseSiegeBanner.tsx';
+import { RadarWidget } from './hud/RadarWidget.tsx';
 import { Item } from '../types.ts';
 
 interface GameHUDProps {
@@ -97,9 +99,14 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                     setHelpTopic={setHelpTopic}
                 />
                 
+                {gameStatus === 'PLAYING' && session?.defense?.isDefenseMode && (
+                    <DefenseSiegeBanner />
+                )}
+
                 {gameStatus === 'PLAYING' && (
-                    <div className="absolute top-[calc(84px+env(safe-area-inset-top))] md:top-[104px] left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2.5">
-                        <CentralTutorialBanner onOpenHelpDetail={() => setActiveModal('MISSION')} />
+                    <div className="absolute left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2.5 transition-all duration-300 top-[calc(84px+env(safe-area-inset-top))] md:top-[104px]">
+                        {!session?.defense?.isDefenseMode && <CentralTutorialBanner onOpenHelpDetail={() => setActiveModal('MISSION')} />}
+                        {!session?.defense?.isDefenseMode && <RadarWidget />}
                         
                         {toast && !session?.activeLevelConfig && (
                             <div className="w-full flex justify-center pointer-events-auto">
@@ -114,8 +121,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                              </div>
                         )}
                         
-                        <MonumentHintBanner />
-                        <SkirmishHintBanner />
+                        {!session?.defense?.isDefenseMode && <MonumentHintBanner />}
+                        {!session?.defense?.isDefenseMode && <SkirmishHintBanner />}
                     </div>
                 )}
                 

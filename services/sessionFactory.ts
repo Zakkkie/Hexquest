@@ -201,6 +201,7 @@ export const createInitialSessionData = async (
       if (levelConfig.aiMode !== 'none') {
           if (levelConfig.id === '2.5') botCount = 2;
           else if (levelConfig.botRoutes) botCount = levelConfig.botRoutes.length;
+          else if (levelConfig.botSpawnPoints) botCount = levelConfig.botSpawnPoints.length;
           else botCount = 1;
       }
   } else {
@@ -244,7 +245,7 @@ export const createInitialSessionData = async (
         initialGrid[key].botRevealed = { ...initialGrid[key].botRevealed, 'SHARED_BOTS': true };
     }
 
-    const botStartMoves = levelConfig ? Math.max(5, startMoves) : startMoves;
+    const botStartMoves = levelConfig ? Math.max(5, startMoves) : Math.max(10, startMoves);
     const botStartStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0; 
     const botRoute = levelConfig?.botRoutes && levelConfig.botRoutes[i] ? levelConfig.botRoutes[i] : undefined;
 
@@ -434,6 +435,42 @@ export const createInitialSessionData = async (
         objectiveHexes: [{ q: finishHex.q, r: finishHex.r, targetLevel: 99, label: '↑', color: 'emerald' }]
       };
     }
+  }
+
+  // --- PUZZLE SETUP FOR SERIES 5 ---
+  if (levelConfig?.id?.startsWith('5.')) {
+      const allHexes = Object.values(session.grid).filter(h => h.structureType === 'NONE' && (Math.abs(h.q) + Math.abs(h.r)) >= 3);
+      const miniMonuments: any[] = [];
+      
+      while(miniMonuments.length < 3 && allHexes.length > 0) {
+        let idx = Math.floor(Math.random() * allHexes.length);
+        const candidate = allHexes[idx];
+        allHexes.splice(idx, 1);
+        
+        let valid = true;
+        for (const m of miniMonuments) {
+           // use cube distance
+           const dist = (Math.abs(m.q - candidate.q) + Math.abs(m.r - candidate.r) + Math.abs((m.q + m.r) - (candidate.q + candidate.r))) / 2;
+           if (dist < 3) {
+               valid = false;
+               break;
+           }
+        }
+        if (valid) {
+           miniMonuments.push(candidate);
+        }
+      }
+      
+      for (const m of miniMonuments) {
+         const key = `${m.q},${m.r}`;
+         if (session.grid[key]) {
+             session.grid[key].structureType = 'MINI_MONUMENT';
+             session.grid[key].isMiniMonument = true;
+             session.grid[key].currentLevel = 1;
+             session.grid[key].maxLevel = 1;
+         }
+      }
+      session.activatedMiniMonuments = [];
   }
 
   // Portal starts active for the merged Level 1.0

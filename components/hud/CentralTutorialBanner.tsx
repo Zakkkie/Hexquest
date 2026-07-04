@@ -57,7 +57,8 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
             activeLevelConfig.id.startsWith('1.') || 
             activeLevelConfig.id.startsWith('2.') || 
             activeLevelConfig.id.startsWith('3.') || 
-            activeLevelConfig.id.startsWith('4.')
+            activeLevelConfig.id.startsWith('4.') ||
+            activeLevelConfig.id.startsWith('5.')
         ) : false;
     }, [activeLevelConfig?.id]);
 
@@ -205,6 +206,11 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
              if ((player?.inventory?.length ?? 0) >= 2) goals++;
              if ((entropy?.current ?? 0) < 60) goals++;
              return { current: goals, target: 5, label: language === 'RU' ? 'СИНТЕЗ (5)' : 'SYNTHESIS (5)' };
+        }
+
+        if (levelId === '5.1') {
+            const count = session?.activatedMiniMonuments?.length || 0;
+            return { current: count, target: 3, label: language === 'RU' ? 'МОНУМЕНТЫ' : 'MONUMENTS' };
         }
 
         return null;

@@ -355,14 +355,16 @@ export const StoryHex: React.FC<{
         };
     }, [level]);
 
+    const isCore = q === 0 && r === 0;
+
     const topTexture = useMemo(() => {
         if (level === undefined) return null;
         try {
-            return textureService?.getTexture(level, q, r, undefined) || null;
+            return textureService?.getTexture(level, q, r, undefined, isCore ? 'CORE' : undefined) || null;
         } catch {
             return null;
         }
-    }, [level, q, r]);
+    }, [level, q, r, isCore]);
 
     // Height calculation - visual depth
     const activeLvl = useMemo(() => {
@@ -696,8 +698,8 @@ export const StoryHex: React.FC<{
                         fillPatternScale={{ x: ((GAME_CONFIG && GAME_CONFIG.HEX_SIZE) || 30) / 32, y: ((GAME_CONFIG && GAME_CONFIG.HEX_SIZE) || 30) / 32 }}
                         fillPatternOffset={{ x: 32, y: 32 }}
                         fillPatternRepeat="repeat"
-                        stroke="#06b6d4"
-                        strokeWidth={2.0}
+                        stroke={isCore ? '#f43f5e' : '#06b6d4'}
+                        strokeWidth={isCore ? 3.0 : 2.0}
                         perfectDrawEnabled={false}
                         shadowForStrokeEnabled={false}
                     />
@@ -705,27 +707,27 @@ export const StoryHex: React.FC<{
                     <Path
                         key="solid-top-face"
                         data={BASE_PATH_D}
-                        fill={isVoid ? 'rgba(5, 5, 12, 0.98)' : (isBuilt ? colors?.top : (isCenterInitially ? 'rgba(16, 185, 129, 0.18)' : (isEligible ? 'rgba(34, 211, 238, 0.04)' : 'rgba(255,255,255,0.01)')))}
-                        stroke={isVoid ? 'rgba(124, 58, 237, 0.25)' : (isBuilt ? '#06b6d4' : (isCenterInitially ? '#10b981' : (isBlueprint ? 'rgba(168, 85, 247, 0.75)' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)'))))}
-                        strokeWidth={isVoid ? 1.2 : (isBuilt ? 2.0 : (isCenterInitially ? 3.0 : (isBlueprint ? 1.5 : (isEligible ? 1.5 : 0.8))))}
+                        fill={isVoid ? 'rgba(5, 5, 12, 0.98)' : (isBuilt ? colors?.top : (isCore ? 'rgba(244, 63, 94, 0.22)' : (isCenterInitially ? 'rgba(16, 185, 129, 0.18)' : (isEligible ? 'rgba(34, 211, 238, 0.04)' : 'rgba(255,255,255,0.01)'))))}
+                        stroke={isVoid ? 'rgba(124, 58, 237, 0.25)' : (isBuilt ? (isCore ? '#f43f5e' : '#06b6d4') : (isCore ? '#f43f5e' : (isCenterInitially ? '#10b981' : (isBlueprint ? 'rgba(168, 85, 247, 0.75)' : (isEligible ? 'rgba(34, 211, 238, 0.55)' : 'rgba(255,255,255,0.075)')))))}
+                        strokeWidth={isVoid ? 1.2 : (isBuilt ? (isCore ? 3.0 : 2.0) : (isCore ? 3.0 : (isCenterInitially ? 3.0 : (isBlueprint ? 1.5 : (isEligible ? 1.5 : 0.8)))))}
                         perfectDrawEnabled={false}
                         shadowForStrokeEnabled={false}
-                        dash={isVoid ? [3, 4] : (isEligible || isBlueprint ? [5, 4] : [])}
+                        dash={isVoid ? [3, 4] : ((isEligible || isBlueprint) && !isCore ? [5, 4] : [])}
                     />
                 )}
                 
                 {/* Visual plus (+) for center initially and eligible targets */}
-                {!isBuilt && (isCenterInitially || isEligible) && (
+                {!isBuilt && (isCenterInitially || isEligible || isCore) && (
                     <Group listening={false}>
                         <Path 
                             data="M -5 0 L 5 0"
-                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.75)"}
+                            stroke={isCore ? '#f43f5e' : (isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.75)")}
                             strokeWidth={1.5}
                             listening={false}
                         />
                         <Path 
                             data="M 0 -5 L 0 5"
-                            stroke={isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.75)"}
+                            stroke={isCore ? '#f43f5e' : (isCenterInitially ? "#10b981" : "rgba(34, 211, 238, 0.75)")}
                             strokeWidth={1.5}
                             listening={false}
                         />

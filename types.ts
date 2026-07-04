@@ -8,8 +8,8 @@ export interface HexView {
   r: number;
   currentLevel: number;
   maxLevel: number;
-  // ДОБАВЛЕНО: MINI_MONUMENT
-  structureType?: 'NONE' | 'BARRIER' | 'CAPITAL' | 'VOID' | 'MONUMENT' | 'MINE' | 'MINI_MONUMENT';
+  // ДОБАВЛЕНО: MINI_MONUMENT, CORE, TURRET
+  structureType?: 'NONE' | 'BARRIER' | 'CAPITAL' | 'VOID' | 'MONUMENT' | 'MINE' | 'MINI_MONUMENT' | 'CORE' | 'TURRET';
   ownerId?: string; 
   neighborLevels?: number[];
   isExcavated?: boolean;
@@ -45,6 +45,24 @@ export interface Hex extends HexView {
   poiType?: string;
   isPassable?: boolean;
   isIndestructible?: boolean;
+
+  // BASE DEFENSE & MINI-MONUMENT FIELDS
+  isMiniMonument?: boolean;
+  isCore?: boolean;
+  isActivated?: boolean;
+  hologramTargetLevel?: number; // Целевая плита для голографического контура (Этап 3)
+  isTurret?: boolean;
+  turretRange?: number;
+  turretDamage?: number;
+  turretCooldown?: number;
+}
+
+export enum SpecialStructureType {
+  NONE = 'NONE',
+  MONUMENT = 'MONUMENT',
+  MINI_MONUMENT = 'MINI_MONUMENT',
+  CORE = 'CORE',
+  TURRET = 'TURRET'
 }
 
 export enum EntityType {
@@ -148,7 +166,7 @@ export interface BotMemory {
   lastPosKey?: string | null;
   stayStreak?: number;
   
-  botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER' | 'MINER' | 'DESTROYER' | 'GUARDIAN';
+  botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER' | 'MINER' | 'DESTROYER' | 'GUARDIAN' | 'SIEGE_RUNNER' | 'SIEGE_GRINDER' | 'SIEGE_TANK';
   mode?: 'GATHER' | 'BUILD' | 'AGGRESSOR';
   
   patrolPath?: HexCoord[];
@@ -226,7 +244,15 @@ export type GameEventType =
   | 'MONUMENT_REACHED'
   | 'MINI_MONUMENT_REACHED'
   | 'STATUS_APPLIED'
-  | 'ENTROPY_SHIFT'; 
+  | 'ENTROPY_SHIFT'
+  | 'CORE_DAMAGED'
+  | 'CORE_DESTROYED'
+  | 'TURRET_FIRED'
+  | 'PUZZLE_REVEALED'
+  | 'PUZZLE_COMPLETED'
+  | 'METEOR_WARN'
+  | 'METEOR_STRIKE'
+  | 'PLAYER_HIT_BY_METEOR'; 
 
 export interface GameEvent {
   id: string;
@@ -298,7 +324,7 @@ export interface WinCondition {
   botCount: number; 
   difficulty: Difficulty;
   queueSize: number;     
-  winType: 'OR' | 'AND' | 'SUMMIT'; 
+  winType: 'OR' | 'AND' | 'SUMMIT' | 'SIEGE' | 'PUZZLE'; 
   isTutorial?: boolean;
   initialStorage?: number; 
   mapType?: 'FLAT' | 'CHAOTIC'; 
@@ -328,6 +354,8 @@ export interface FloatingText {
   startTime: number;
   lifetime: number;
   icon?: 'UP' | 'PLUS' | 'WARN' | 'COIN' | 'DOWN' | 'PICKAXE' | 'GEM' | 'SKULL' | 'FOOTPRINTS';
+  sourceQ?: number;
+  sourceR?: number;
 }
 
 import type { WorldIndex } from './engine/WorldIndex';
@@ -400,6 +428,7 @@ export interface LevelConfig {
     wallStartRadius?: number; 
     wallStartLevel?: number;  
     wallType?: 'classic' | 'void_shatter' | 'pit_ring'; 
+    revealMode?: 'fog' | 'all'; 
     customLayout?: Partial<Hex>[];
   };
 
@@ -443,6 +472,30 @@ export interface EntropyState {
   threshold: number;
 }
 
+export interface DefenseState {
+  isDefenseMode: boolean; // запущен ли режим осады базы
+  coreHealth: number;     // здоровье ядра (0 - 100)
+  maxCoreHealth: number;  // максимальное здоровье
+  survivalTimer: number;   // оставшееся время в секундах / ходах
+  currentWave: number;    // текущая волна
+  maxWaves: number;       // максимум волн
+  waveSpawnTimer?: number; 
+  totalEliminated?: number;
+}
+
+export interface PuzzleState {
+  miniMonumentsActive: number; // количество активированных мини-монументов
+  isSchemeRevealed: boolean;   // раскрыта ли схема фигуры
+  targetShapeId?: string;      // ID целевой фигуры
+}
+
+export interface MeteorState {
+  id: string;
+  q: number;
+  r: number;
+  warnTicksRemaining: number;
+}
+
 export interface SessionState {
   stateVersion: number;
   sessionId: string; 
@@ -472,7 +525,7 @@ export interface SessionState {
   fullBotHistory: BotLogEntry[];
   lastBotActionTime: number; 
   isPlayerGrowing: boolean; 
-  playerGrowthIntent: 'RECOVER' | 'UPGRADE' | 'DIG' | null; 
+  playerGrowthIntent: 'RECOVER' | 'UPGRADE' | 'DIG' | 'TURRET' | null; 
   growingBotIds: string[]; 
   effects: FloatingText[]; 
   language: Language; 
@@ -489,6 +542,10 @@ export interface SessionState {
   activePoi: string | null;
   outgoingEvents: GameEvent[];
   campaignUpgrades?: CampaignUpgrades;
+
+  defense?: DefenseState;
+  puzzle?: PuzzleState;
+  activeMeteors?: MeteorState[];
 }
 
 export interface GameState {
@@ -511,6 +568,8 @@ export interface GameState {
   totalMinedMaterial?: number;
   totalGoldEarned?: number;
   storyMap: Record<string, number>;
+  savedSiegeMap: Record<string, number>;
+  unlockedBlueprintIndices: number[];
   claimedLevelRewards?: string[];
 
   hasActiveSession: boolean;

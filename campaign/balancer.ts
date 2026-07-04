@@ -38,6 +38,27 @@ class CampaignLoadBalancer {
             return res;
         };
     }
+
+    /**
+     * Checks if a campaign level is unlocked under strictly sequential progression.
+     */
+    public isLevelUnlocked(levelId: string, currentProgress: number, levels: { id: string }[]): boolean {
+        const idx = levels.findIndex(l => l.id === levelId);
+        if (idx === -1) return false;
+        return idx <= currentProgress;
+    }
+
+    /**
+     * Calculates the new progress value when a level is completed.
+     * Enforces strictly sequential unlocking (1.1 -> 1.2 -> ... -> 5.30).
+     */
+    public calculateNextProgress(levelId: string, currentProgress: number, levels: { id: string }[]): number {
+        const idx = levels.findIndex(l => l.id === levelId);
+        if (idx !== -1 && idx >= currentProgress) {
+            return Math.min(levels.length, idx + 1);
+        }
+        return currentProgress;
+    }
 }
 
 export const campaignLoadBalancer = new CampaignLoadBalancer();

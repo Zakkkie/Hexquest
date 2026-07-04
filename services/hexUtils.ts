@@ -334,7 +334,9 @@ export const findPath = (
   grid: Record<string, Hex>, 
   rank: number, 
   obstacles: HexCoord[],
-  hasVoidCore?: boolean
+  hasVoidCore?: boolean,
+  ignoreAllRules?: boolean,
+  isBot?: boolean
 ): PathResult => {
   const startKey = getHexKey(start.q, start.r);
   const endKey = getHexKey(end.q, end.r);
@@ -415,20 +417,35 @@ export const findPath = (
       const neighborHex = grid[nKey];
       
       // -- Game Rules --
-      // 0. Void Check: Cannot enter a destroyed hex
-      if (neighborHex && neighborHex.structureType === 'VOID') continue;
+      if (!ignoreAllRules) {
+        // 0. Void Check: Cannot enter a destroyed hex
+        if (neighborHex && neighborHex.structureType === 'VOID') continue;
 
-      // 1. Rank Check: Cannot enter hex higher than player rank
-      if (neighborHex && neighborHex.currentLevel > rank) {
-        blockedByRank = true;
-        continue; 
-      }
-      
-      // 2. Height/Jump Check: Cannot jump more than 1 level difference
-      const nextLevel = neighborHex ? neighborHex.currentLevel : 0;
-      if (!hasVoidCore && Math.abs(currentLevel - nextLevel) > 1) {
-        blockedByHeight = true;
-        continue;
+        // 1. Rank Check: Cannot enter hex higher than player rank
+        if (neighborHex && neighborHex.currentLevel > rank) {
+          blockedByRank = true;
+          continue; 
+        }
+        
+        // 2. Height/Jump Check: Cannot jump more than 1 level difference
+        const nextLevel = neighborHex ? neighborHex.currentLevel : 0;
+        if (!hasVoidCore && Math.abs(currentLevel - nextLevel) > 1) {
+          blockedByHeight = true;
+          continue;
+        }
+
+        // Siege mode check: Bots can only move on hexes that are lowered to level 1 and below
+        if (isBot) {
+          const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+          if (isDefenseMode && neighborHex && neighborHex.currentLevel > 1) {
+            // Allow the destination/target node of the path itself to be level > 1 
+            // so the bot can pathfind adjacent to it
+            const isDestination = nKey === endKey;
+            if (!isDestination) {
+              continue;
+            }
+          }
+        }
       }
 
       // -- Cost Calculation --
@@ -454,6 +471,117 @@ export const findPath = (
   if (blockedByHeight) finalReason = 'STEEP';
   
   return { path: null, reason: finalReason };
+};
+
+/**
+ * Finds the optimal route for siege bots to reach the player core (0,0).
+ * Chooses the fastest route taking into account standard movement,
+ * lowering high hexes (player walls) using DIG, and raising low hexes using UPGRADE.
+ */
+export const findSiegePath = (
+  start: HexCoord, 
+  end: HexCoord, 
+  grid: Record<string, Hex>
+): PathResult => {
+  const startKey = getHexKey(start.q, start.r);
+  const endKey = getHexKey(end.q, end.r);
+  
+  if (startKey === endKey) {
+    return { path: [] };
+  }
+  
+  const endHex = grid[endKey];
+  if (endHex && endHex.structureType === 'VOID') {
+    return { path: null, reason: 'VOID' };
+  }
+
+  if (cubeDistance(start, end) > SAFETY_CONFIG.MAX_PATH_LENGTH) {
+    return { path: null, reason: 'TOO_FAR' };
+  }
+
+  const openSet = new PriorityQueue<string>();
+  const cameFrom = new Map<string, HexCoord>();
+  const gScore = new Map<string, number>();
+
+  gScore.set(startKey, 0);
+  openSet.push(startKey, cubeDistance(start, end));
+
+  let iterations = 0;
+
+  while (openSet.length > 0) {
+    if (iterations++ > SAFETY_CONFIG.MAX_SEARCH_ITERATIONS) {
+      return { path: null, reason: 'TIMEOUT' };
+    }
+
+    const currentKey = openSet.pop()!;
+    // Allow slightly higher path costs because of digging/upgrading
+    if ((gScore.get(currentKey) || 0) > SAFETY_CONFIG.MAX_PATH_LENGTH * 8) continue;
+
+    if (currentKey === endKey) {
+      const path: HexCoord[] = [];
+      let currKey = endKey;
+      while (currKey !== startKey) {
+        const coords = getCoordinatesFromKey(currKey);
+        path.unshift(coords);
+        const parent = cameFrom.get(currKey);
+        if (!parent) break;
+        currKey = getHexKey(parent.q, parent.r);
+      }
+      return { path };
+    }
+
+    const currentCoord = getCoordinatesFromKey(currentKey);
+    const currentHex = grid[currentKey];
+    const currentLevel = currentHex ? currentHex.currentLevel : 0;
+    
+    const neighbors = getNeighbors(currentCoord.q, currentCoord.r);
+    
+    for (const neighbor of neighbors) {
+      const nKey = getHexKey(neighbor.q, neighbor.r);
+      const neighborHex = grid[nKey];
+      
+      if (!neighborHex) continue;
+      if (neighborHex.structureType === 'VOID') continue;
+
+      const neighborLevel = neighborHex.currentLevel;
+
+      // Base weight: 1 point for moving
+      let stepCost = 1;
+
+      // 1. Is it a player wall or elevated tile (level > 1)?
+      if (neighborLevel > 1) {
+        // Lowering player walls takes digs. Each dig costs 5 weight units.
+        const digsNeeded = neighborLevel - 1;
+        stepCost += digsNeeded * 5;
+      }
+
+      // 2. Is there a steep height jump?
+      const diff = neighborLevel - currentLevel;
+      if (Math.abs(diff) > 1) {
+        if (diff > 1) {
+          // Steep uphill: needs to be carved down (digs)
+          const digsNeeded = neighborLevel - (currentLevel + 1);
+          stepCost += digsNeeded * 5;
+        } else {
+          // Steep downhill: needs to be built up (upgrades)
+          const upgradesNeeded = (currentLevel - 1) - neighborLevel;
+          stepCost += upgradesNeeded * 5;
+        }
+      }
+
+      const tentativeG = (gScore.get(currentKey) ?? Infinity) + stepCost;
+
+      if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
+        cameFrom.set(nKey, currentCoord);
+        gScore.set(nKey, tentativeG);
+        
+        const fScore = tentativeG + cubeDistance(neighbor, end);
+        openSet.push(nKey, fScore);
+      }
+    }
+  }
+
+  return { path: null, reason: 'BLOCKED' };
 };
 
 /**

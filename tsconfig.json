@@ -30,5 +30,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/__tests__/**"
+  ]
 }

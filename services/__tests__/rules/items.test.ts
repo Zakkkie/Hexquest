@@ -1,5 +1,5 @@
-import { getRandomItem, ITEM_REGISTRY } from '../../rules/items';
-import type { ItemRarity } from '../../types';
+import { getRandomItem, ITEM_REGISTRY } from '../../../rules/items';
+import type { ItemRarity } from '../../../types';
 
 describe('ITEM_REGISTRY', () => {
   it('contains items', () => {

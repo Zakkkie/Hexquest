@@ -21,6 +21,67 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
     const playSound = useGameStore(state => state.playUiSound);
     const language = useGameStore(state => state.language);
 
+    // Static dictionaries to prevent Tailwind compile omitting-by-interpolation issues
+    const glowGradients: Record<string, string> = {
+        cyan: 'from-cyan-500/10 hover:from-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.05)]',
+        emerald: 'from-emerald-500/10 hover:from-emerald-500/20 shadow-[0_0_20px_rgba(52,211,153,0.05)]',
+        purple: 'from-purple-500/10 hover:from-purple-500/20 shadow-[0_0_20px_rgba(192,132,252,0.05)]',
+        pink: 'from-pink-500/10 hover:from-pink-500/20 shadow-[0_0_20px_rgba(244,114,182,0.05)]',
+        indigo: 'from-indigo-500/10 hover:from-indigo-500/20 shadow-[0_0_20px_rgba(129,140,248,0.05)]',
+        amber: 'from-amber-500/10 hover:from-amber-500/20 shadow-[0_0_20px_rgba(251,191,36,0.05)]',
+        orange: 'from-orange-500/10 hover:from-orange-500/20 shadow-[0_0_20px_rgba(251,146,60,0.05)]',
+        teal: 'from-teal-500/10 hover:from-teal-500/20 shadow-[0_0_20px_rgba(45,212,191,0.05)]',
+        red: 'from-red-500/10 hover:from-red-500/20 shadow-[0_0_20px_rgba(248,113,113,0.05)]',
+        blue: 'from-blue-500/10 hover:from-blue-500/20 shadow-[0_0_20px_rgba(96,165,250,0.05)]',
+        stone: 'from-stone-500/10 hover:from-stone-500/20 shadow-[0_0_20px_rgba(168,162,158,0.05)]',
+        yellow: 'from-yellow-500/10 hover:from-yellow-500/20 shadow-[0_0_20px_rgba(250,204,21,0.05)]',
+        fuchsia: 'from-fuchsia-500/10 hover:from-fuchsia-500/20 shadow-[0_0_20px_rgba(232,121,249,0.05)]',
+        violet: 'from-violet-500/10 hover:from-violet-500/20 shadow-[0_0_20px_rgba(167,139,250,0.05)]',
+        sky: 'from-sky-500/10 hover:from-sky-500/20 shadow-[0_0_20px_rgba(56,189,248,0.05)]',
+        lime: 'from-lime-500/10 hover:from-lime-500/20 shadow-[0_0_20px_rgba(163,230,53,0.05)]',
+        rose: 'from-rose-500/10 hover:from-rose-500/20 shadow-[0_0_20px_rgba(251,113,133,0.05)]',
+    };
+
+    const glowCircles: Record<string, string> = {
+        cyan: 'bg-cyan-500/5',
+        emerald: 'bg-emerald-500/5',
+        purple: 'bg-purple-500/5',
+        pink: 'bg-pink-500/5',
+        indigo: 'bg-indigo-500/5',
+        amber: 'bg-amber-500/5',
+        orange: 'bg-orange-500/5',
+        teal: 'bg-teal-500/5',
+        red: 'bg-red-500/5',
+        blue: 'bg-blue-500/5',
+        stone: 'bg-stone-500/5',
+        yellow: 'bg-yellow-500/5',
+        fuchsia: 'bg-fuchsia-500/5',
+        violet: 'bg-violet-500/5',
+        sky: 'bg-sky-500/5',
+        lime: 'bg-lime-500/5',
+        rose: 'bg-rose-500/5',
+    };
+
+    const hoverBorders: Record<string, string> = {
+        cyan: 'group-hover:border-cyan-400/30',
+        emerald: 'group-hover:border-emerald-400/30',
+        purple: 'group-hover:border-purple-400/30',
+        pink: 'group-hover:border-pink-400/30',
+        indigo: 'group-hover:border-indigo-400/30',
+        amber: 'group-hover:border-amber-400/30',
+        orange: 'group-hover:border-orange-400/30',
+        teal: 'group-hover:border-teal-400/30',
+        red: 'group-hover:border-red-400/30',
+        blue: 'group-hover:border-blue-400/30',
+        stone: 'group-hover:border-stone-400/30',
+        yellow: 'group-hover:border-yellow-400/30',
+        fuchsia: 'group-hover:border-fuchsia-400/30',
+        violet: 'group-hover:border-violet-400/30',
+        sky: 'group-hover:border-sky-400/30',
+        lime: 'group-hover:border-lime-400/30',
+        rose: 'group-hover:border-rose-400/30',
+    };
+
     const handleUpgrade = (key: keyof typeof upgrades, amount: number, cost: number) => {
         if (skillPoints >= cost) {
             playSound('SUCCESS');
@@ -119,14 +180,14 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
 
                  {/* Glowing Gradient Accent */}
                  {canAfford && !isMaxed && (
-                     <div className={`absolute inset-0 bg-gradient-to-br from-${glowColor}-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl md:rounded-[1.5rem] overflow-hidden`} />
+                     <div className={`absolute inset-0 bg-gradient-to-br ${glowGradients[glowColor] || 'from-indigo-500/10'} via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl md:rounded-[1.5rem] overflow-hidden`} />
                  )}
-                 <div className={`absolute -top-4 -right-4 w-24 h-24 bg-${glowColor}-500/10 blur-[30px] rounded-full pointer-events-none group-hover:opacity-100 transition-opacity duration-500`} />
+                 <div className={`absolute -top-4 -right-4 w-24 h-24 ${glowCircles[glowColor] || 'bg-indigo-500/5'} blur-[30px] rounded-full pointer-events-none group-hover:opacity-100 transition-opacity duration-500`} />
 
                  <div className="relative z-10 flex flex-col h-full gap-2">
                      {/* Header Section: Icon & Title & Level */}
                      <div className="flex items-start gap-2.5">
-                         <div className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-900 border border-slate-700/40 shadow-inner group-hover:border-${glowColor}-400/30 transition-all duration-300 shrink-0 ${colorClass}`}>
+                         <div className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-900 border border-slate-700/40 shadow-inner group-hover:${hoverBorders[glowColor] || 'border-indigo-400/30'} transition-all duration-300 shrink-0 ${colorClass}`}>
                              {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-5 h-5 md:w-6 md:h-6' })}
                          </div>
                          <div className="min-w-0 flex-1">
@@ -190,7 +251,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-xl"
+            className="absolute inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/95 backdrop-blur-xl"
         >
             {/* Background floating effects */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
@@ -199,9 +260,9 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
             </div>
 
             <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                initial={{ opacity: 0, scale: 0.96, y: 15 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: 10 }}
+                exit={{ opacity: 0, scale: 0.98, y: 15 }}
                 transition={{ type: "spring", damping: 28, stiffness: 300 }}
                 className="bg-slate-950 sm:border-2 sm:border-indigo-500/40 w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-6xl sm:rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] flex flex-col relative z-10 overflow-hidden group"
             >
@@ -214,29 +275,31 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                 {/* Scanline Effect */}
                 <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
 
-                {/* Header with Title and Skill Points */}
-                <div className="p-3 md:p-4 flex items-center justify-between border-b border-indigo-500/30 bg-indigo-905/10 relative z-20 gap-2">
+                {/* Header with Title and Skill Points: Notched-safe and beautiful layout */}
+                <div className="pt-[calc(env(safe-area-inset-top)+12px)] sm:pt-4 px-3 sm:px-5 pb-3 flex items-center justify-between border-b border-indigo-500/30 bg-slate-950 shrink-0 relative z-20 gap-2">
                     <div className="flex items-center gap-2 md:gap-4 pl-1 min-w-0">
                         <div className="flex flex-col min-w-0">
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-2.5 min-w-0">
                                 <div className="bg-indigo-500/15 p-1.5 rounded-lg border border-indigo-500/35 shrink-0">
                                     <Layers className="w-4 h-4 text-indigo-400" />
                                 </div>
-                                <h2 className="text-sm sm:text-base md:text-lg lg:text-xl font-black uppercase text-white tracking-[0.1em] sm:tracking-[0.15em] leading-none drop-shadow-md truncate">{language === 'RU' ? 'Узлы Развития' : 'Development Nodes'}</h2>
+                                <h2 className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl font-black uppercase text-white tracking-[0.1em] sm:tracking-[0.15em] leading-none drop-shadow-md truncate">
+                                    {language === 'RU' ? 'Узлы Развития' : 'Development Nodes'}
+                                </h2>
                             </div>
                             <p className="hidden sm:block text-indigo-400/50 text-[8px] font-mono tracking-[0.4em] uppercase ml-11 mt-1 leading-none">Exp_Protocol_v2.1</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-3 pr-1 shrink-0">
-                        {/* Lean SP Badge */}
-                        <div className="flex items-center gap-2 bg-slate-900/60 border border-indigo-500/20 rounded-lg px-2 py-1 md:px-3 md:py-2 transition-all shadow-inner">
+                        {/* Lean SP Badge: Tighter padding on mobile to save screen width */}
+                        <div className="flex items-center gap-1.5 xs:gap-2 bg-slate-900/60 border border-indigo-500/20 rounded-lg px-1.5 py-0.5 xs:px-2 xs:py-1 md:px-3 md:py-2 transition-all shadow-inner">
                             <div className="flex flex-col items-center leading-none">
-                                <span className="text-[5.5px] md:text-[7px] text-indigo-400/85 font-black uppercase leading-none">Skill</span>
-                                <span className="text-[5.5px] md:text-[7px] text-indigo-400/85 font-black uppercase leading-none">Points</span>
+                                <span className="text-[5px] xs:text-[6px] md:text-[7px] text-indigo-400/85 font-black uppercase leading-none">Skill</span>
+                                <span className="text-[5px] xs:text-[6px] md:text-[7px] text-indigo-400/85 font-black uppercase leading-none">Points</span>
                             </div>
                             <div className="w-[1px] h-3.5 bg-indigo-500/25 mx-0.5" />
-                            <span className="text-sm md:text-xl font-black text-white font-mono leading-none tracking-tighter drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]">{skillPoints}</span>
+                            <span className="text-xs xs:text-sm md:text-xl font-black text-white font-mono leading-none tracking-tighter drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]">{skillPoints}</span>
                         </div>
 
                         <button onClick={onClose} className="p-1.5 md:p-2 bg-slate-800/40 hover:bg-red-500/20 group rounded-lg border border-white/5 transition-all transform hover:scale-110 active:scale-95 cursor-pointer shrink-0">
@@ -245,7 +308,8 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                     </div>
                 </div>
 
-                <div className="p-3 sm:p-5 md:p-6 lg:p-8 overflow-y-auto no-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 relative z-10 flex-1 content-start">
+                {/* Grid layout shifts dynamically: 2 columns on mobile/medium, and up to 5 on desktop */}
+                <div className="p-3 sm:p-5 md:p-6 lg:p-8 pb-[calc(env(safe-area-inset-bottom)+20px)] sm:pb-6 overflow-y-auto no-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 relative z-10 flex-1 content-start">
                     {renderNode('startingEnergy', language === 'RU' ? 'Энергия' : 'Energy', language === 'RU' ? 'Базовый запас энергии на старте' : 'Base starting energy', <BatteryCharging />, 1, 1, 'text-cyan-400', 10, 0.05)}
                     {renderNode('startingMoves', language === 'RU' ? 'Ходы' : 'Moves', language === 'RU' ? 'Свободные очки перемещения' : 'Free movement points', <TrendingUp />, 1, 1, 'text-emerald-400', 5, 0.08)}
                     {renderNode('startingMaterials', language === 'RU' ? 'Материя' : 'Matter', language === 'RU' ? 'Запас материалов на старте' : 'Starting materials stock', <Layers />, 1, 1, 'text-purple-400', 10, 0.11)}

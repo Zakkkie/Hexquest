@@ -6,6 +6,8 @@ export interface Dictionary {
         SUBTITLE: string;
         CAMPAIGN: string;
         CAMPAIGN_SUB: string;
+        CONTINUE_GAME: string;
+        CONTINUE_GAME_SUB: string;
         SKIRMISH: string;
         SKIRMISH_SUB: string;
         RESUME: string;
@@ -430,6 +432,8 @@ export const TEXT: Record<Language, Dictionary> = {
             SUBTITLE: "Strategic Expansion Protocol",
             CAMPAIGN: "New Game",
             CAMPAIGN_SUB: "Develop your space",
+            CONTINUE_GAME: "Continue Game",
+            CONTINUE_GAME_SUB: "Resume your journey",
             SKIRMISH: "Battle",
             SKIRMISH_SUB: "Custom Conflict",
             RESUME: "Resume",
@@ -850,6 +854,8 @@ export const TEXT: Record<Language, Dictionary> = {
             SUBTITLE: "Протокол Расширения",
             CAMPAIGN: "Новая игра",
             CAMPAIGN_SUB: "Развивай свое пространство",
+            CONTINUE_GAME: "Продолжить игру",
+            CONTINUE_GAME_SUB: "Продолжить кампанию",
             SKIRMISH: "Битва",
             SKIRMISH_SUB: "Настраиваемое сражение",
             RESUME: "В Игру",

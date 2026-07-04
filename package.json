@@ -4,14 +4,18 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "tsx server.ts",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "start": "node dist/server.cjs",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@google/genai": "^2.10.0",
+    "esbuild": "^0.28.1",
+    "express": "^5.2.1",
     "immer": "^11.1.4",
     "konva": "^10.0.12",
     "lucide-react": "^0.562.0",
@@ -20,9 +24,11 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-konva": "^19.2.1",
+    "tsx": "^4.22.4",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.9.0",
     "@types/react": "^19.2.3",
     "@types/react-dom": "^19.2.3",

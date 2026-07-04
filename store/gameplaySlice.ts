@@ -2,6 +2,7 @@ import { GameStore, createDefaultProgress } from './types.ts';
 import { GameEngine } from '../engine/GameEngine.ts';
 import { audioService } from '../services/audioService.ts';
 import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
+import { campaignLoadBalancer } from '../campaign/balancer.ts';
 import { calculateMovementCost } from '../rules/movement.ts';
 import { generateMonumentRecipe } from '../rules/items.ts';
 import { effectPool } from '../services/effectPool.ts';
@@ -36,6 +37,9 @@ const EVENT_SOUND_MAP: Partial<Record<GameEventType, string>> = {
   'DEFEAT': 'ERROR',
   'ITEM_DROP': 'SUCCESS',
   'ITEM_DESTROYED': 'CRACK',
+  'METEOR_WARN': 'WARNING',
+  'METEOR_STRIKE': 'COLLAPSE',
+  'PLAYER_HIT_BY_METEOR': 'WARNING',
 };
 
 export const createGameplaySlice = (
@@ -111,6 +115,202 @@ export const createGameplaySlice = (
     set(() => ({ isCampaignLoading: false, loadingLevelId: null }));
   },
 
+  startDefenseSiege: async () => {
+    get().abandonSession();
+    resourceService.clear();
+
+    const siegeMap = get().storyMap;
+    const initialGrid = {} as any;
+    
+    // Find player's furthest built hex in the storyMap to dynamically set the map size
+    let maxBuiltDist = 0;
+    Object.keys(siegeMap).forEach(key => {
+        const lvl = siegeMap[key];
+        if (lvl !== undefined && lvl !== -999 && lvl > 0) {
+            const parts = key.split(',');
+            const q = parseInt(parts[0], 10);
+            const r = parseInt(parts[1], 10);
+            const d = cubeDistance({q: 0, r: 0}, {q, r});
+            if (d > maxBuiltDist) maxBuiltDist = d;
+        }
+    });
+
+    // Make map size dynamic! Map radius is maxBuiltDist + 6 (minimum 7, maximum 10)
+    const mapRadius = Math.max(7, Math.min(10, maxBuiltDist + 6));
+
+    for (let q = -mapRadius; q <= mapRadius; q++) {
+        for (let r = -mapRadius; r <= mapRadius; r++) {
+            if (Math.abs(q + r) <= mapRadius) {
+                const key = `${q},${r}`;
+                const siegeLvl = siegeMap[key];
+                const isCore = q === 0 && r === 0;
+
+                 if (siegeLvl !== undefined && siegeLvl !== -999) {
+                    initialGrid[key] = {
+                        q, r,
+                        currentLevel: siegeLvl,
+                        maxLevel: siegeLvl,
+                        progress: 0,
+                        structureType: isCore ? 'CORE' : 'NONE',
+                        isCore: isCore,
+                        isPassable: true,
+                        isExcavated: false,
+                        isIndestructible: isCore,
+                        revealed: true,
+                        ownerId: isCore ? 'player-1' : (siegeLvl > 0 ? 'player-1' : undefined) // Mark built base hexes as player's
+                    };
+                } else {
+                    // Generate rugged empty hexes between -1 and -3
+                    const randomDepth = -1 - Math.floor(Math.random() * 3); // -1, -2, or -3
+                    initialGrid[key] = {
+                        q, r,
+                        currentLevel: randomDepth,
+                        maxLevel: randomDepth,
+                        progress: 0,
+                        structureType: 'NONE',
+                        isPassable: true,
+                        isExcavated: true,
+                        revealed: true
+                    };
+                }
+            }
+        }
+    }
+    
+    // Ensure core exists if it wasn't placed
+    const coreKey = getHexKey(0, 0);
+    if (!initialGrid[coreKey] || initialGrid[coreKey].structureType !== 'CORE') {
+      initialGrid[coreKey] = {
+        q: 0, r: 0, currentLevel: 0, maxLevel: 0, progress: 0,
+        structureType: 'CORE', isCore: true, isPassable: true, isExcavated: false, isIndestructible: true, revealed: true, ownerId: 'player-1'
+      };
+    }
+
+    const stateUser = get().user;
+    const upgrades = get().campaignUpgrades;
+
+    const winCondition = {
+      levelId: -1, 
+      targetLevel: 99, 
+      targetCoins: 9999, 
+      label: "Siege Defense",
+      botCount: 4, 
+      difficulty: 'HARD' as const, 
+      queueSize: 2, 
+      winType: 'SIEGE' as const,
+      mapType: 'FLAT' as const
+    };
+
+    set(() => ({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME', isCampaignLoading: true }));
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    try {
+      const initialSessionState = await createInitialSessionData(winCondition, undefined, get().language, stateUser, upgrades);
+      initialSessionState.player.coins = 0;
+      initialSessionState.player.totalCoinsEarned = 0;
+      
+      const finalGrid = { ...initialGrid };
+      
+      // Find player's furthest built hex in the grid
+      let maxDist = 0;
+      Object.values(finalGrid).forEach((hex: any) => {
+          if (hex.ownerId === 'player-1') {
+              const d = cubeDistance({q: 0, r: 0}, {q: hex.q, r: hex.r});
+              if (d > maxDist) maxDist = d;
+          }
+      });
+      
+      const playerOwnedCells: any[] = Object.values(finalGrid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore);
+
+      const getSiegeSpawnPoint = (): { q: number; r: number } => {
+          const candidates: { q: number; r: number }[] = [];
+          for (let q = -mapRadius; q <= mapRadius; q++) {
+              for (let r = -mapRadius; r <= mapRadius; r++) {
+                  if (Math.abs(q + r) <= mapRadius) {
+                      let isEligible = true;
+                      for (const ph of playerOwnedCells) {
+                          if (cubeDistance({ q: (ph as any).q, r: (ph as any).r }, { q, r }) <= 4) {
+                              isEligible = false;
+                              break;
+                          }
+                      }
+                      if (isEligible) {
+                          candidates.push({ q, r });
+                      }
+                  }
+              }
+          }
+          if (candidates.length > 0) {
+              return candidates[Math.floor(Math.random() * candidates.length)];
+          }
+          // Fallback: spawn on outer rim
+          const angle = Math.random() * Math.PI * 2;
+          return {
+              q: Math.round(Math.cos(angle) * mapRadius),
+              r: Math.round(Math.sin(angle) * mapRadius)
+          };
+      };
+
+      // Ensure bot spawn points exist
+      initialSessionState.bots.forEach((bot) => {
+        const sp = getSiegeSpawnPoint();
+        bot.q = sp.q;
+        bot.r = sp.r;
+
+        const key = getHexKey(bot.q, bot.r);
+        if (!finalGrid[key] || finalGrid[key].structureType === 'VOID') {
+            const randomDepth = -1 - Math.floor(Math.random() * 3);
+            finalGrid[key] = { q: bot.q, r: bot.r, currentLevel: randomDepth, maxLevel: randomDepth, structureType: 'NONE', isPassable: true, isExcavated: true, revealed: false };
+        }
+        
+        // Setup initial generic bots as GRINDER initially
+        bot.avatarColor = '#EF4444'; // Red
+        bot.headIndex = 4;
+        bot.bodyIndex = 4;
+        bot.playerLevel = 10;
+        bot.moves = 10;
+        bot.memory = { 
+            lastPlayerPos: null,
+            stuckCounter: 0,
+            ...(bot.memory || {}), 
+            botRole: 'SIEGE_GRINDER' 
+        };
+      });
+
+      // Also ensure player start point exists (player starts at core)
+      const pKey = getHexKey(initialSessionState.player.q, initialSessionState.player.r);
+      if (!finalGrid[pKey] || finalGrid[pKey].structureType === 'VOID') {
+          finalGrid[pKey] = { q: initialSessionState.player.q, r: initialSessionState.player.r, currentLevel: 0, maxLevel: 0, structureType: 'NONE', isPassable: true, isExcavated: false, revealed: true };
+      }
+
+      initialSessionState.grid = finalGrid;
+      // Inject defense state
+      initialSessionState.defense = {
+        isDefenseMode: true,
+        coreHealth: 100,
+        maxCoreHealth: 100,
+        survivalTimer: 180, // 3 minutes
+        currentWave: 1,
+        maxWaves: 3,
+      };
+
+      // Set initial player rank equal to maximum placed hex level
+      const maxPlacedHexLevel = Object.values(finalGrid).reduce((max: number, h: any) => Math.max(max, h.currentLevel ?? 0), 0);
+      initialSessionState.player.playerLevel = Math.max(1, maxPlacedHexLevel);
+
+      engine = new GameEngine(initialSessionState); 
+      set(() => ({ 
+        session: engine!.state, 
+        hasActiveSession: true, 
+        isCampaignLoading: false,
+        uiState: 'GAME'
+      }));
+    } catch (err) {
+      console.error("Failed to start defense siege", err);
+      set(() => ({ isCampaignLoading: false, uiState: 'STORY_BUILDER' }));
+    }
+  },
+
   startMission: () => {
     if (engine) {
       engine.startMission();
@@ -150,7 +350,7 @@ export const createGameplaySlice = (
   },
 
   // --- ACTIONS ---
-  togglePlayerGrowth: (intent: 'RECOVER' | 'UPGRADE' | 'DIG' = 'RECOVER') => {
+  togglePlayerGrowth: (intent: 'RECOVER' | 'UPGRADE' | 'DIG' | 'TURRET' = 'RECOVER') => {
     if (!engine || !engine.state) return;
     
     const { isPlayerGrowing, playerGrowthIntent, player } = engine.state;
@@ -274,7 +474,7 @@ export const createGameplaySlice = (
     }
     
     // LEVEL RESTRICTIONS CHECKS
-    if (targetHex && targetHex.structureType !== 'VOID' && targetHex.currentLevel > session.player.playerLevel) {
+    if (!session.defense?.isDefenseMode && targetHex && targetHex.structureType !== 'VOID' && targetHex.currentLevel > session.player.playerLevel) {
       audioService.play('ERROR');
       set(() => ({ toast: { message: lConfig?.HUD?.ERROR_RANK || "Insufficient Rank", type: 'error', timestamp: Date.now() } }));
       return;
@@ -283,7 +483,7 @@ export const createGameplaySlice = (
     const hasVoidCore = (session.player.equipment && Object.values(session.player.equipment).some((item: any) => item && item.baseId === 'void_core')) ||
                         (session.player.activeStatuses && session.player.activeStatuses.some((s: any) => s.type === 'VOID_CORE' || s.label === 'Void Core'));
     const obstacles = session.bots.map(b => ({ q: b.q, r: b.r }));
-    const pathResult = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.player.playerLevel, obstacles, hasVoidCore);
+    const pathResult = findPath({ q: session.player.q, r: session.player.r }, { q: tq, r: tr }, session.grid, session.defense?.isDefenseMode ? 100 : session.player.playerLevel, obstacles, hasVoidCore);
     const path = pathResult.path;
     
     if (!path) {
@@ -404,6 +604,16 @@ export const createGameplaySlice = (
   closeMiniMonumentDialog: () => {
     audioService.play('UI_CLICK');
     set(() => ({ miniMonumentDialogState: { isOpen: false, hint: undefined } }));
+  },
+
+  oracleDialogOpen: false,
+  openOracleDialog: () => {
+    audioService.play('UI_CLICK');
+    set(() => ({ oracleDialogOpen: true }));
+  },
+  closeOracleDialog: () => {
+    audioService.play('UI_CLICK');
+    set(() => ({ oracleDialogOpen: false }));
   },
 
   openMonumentDialog: () => {
@@ -623,7 +833,7 @@ export const createGameplaySlice = (
           const isMeteor = (event.message && /meteor|метеор/i.test(event.message)) ||
                            (event.data && typeof event.data.type === 'string' && /meteor|метеор/i.test(event.data.type));
 
-          if (event.type === 'ENTROPY_SHIFT' || event.type === 'HEX_COLLAPSE' || isMeteor) {
+          if (event.type === 'ENTROPY_SHIFT' || event.type === 'HEX_COLLAPSE' || event.type === 'CORE_DAMAGED' || event.type === 'TURRET_FIRED' || isMeteor) {
             const visualType = isMeteor ? 'METEOR_STRIKE' : event.type;
             set(() => ({ lastVisualEvent: { type: visualType, time: now } }));
           }
@@ -635,28 +845,23 @@ export const createGameplaySlice = (
               const mode = get().campaignMode;
 
               if (mode === 'STORY') {
-                const idx = CAMPAIGN_LEVELS.findIndex(l => l.id === currentId);
-                if (idx !== -1 && idx >= get().campaignProgress) {
-                  const nextP = Math.min(CAMPAIGN_LEVELS.length, idx + 1);
-                  if (nextP > get().campaignProgress) {
-                    set((curr) => ({ 
-                      skillPoints: curr.skillPoints + 1,
-                      campaignProgress: nextP 
-                    }));
-                  }
+                const currentP = get().campaignProgress;
+                const nextP = campaignLoadBalancer.calculateNextProgress(currentId, currentP, CAMPAIGN_LEVELS);
+                if (nextP > currentP) {
+                  set((curr) => ({ 
+                    skillPoints: curr.skillPoints + 1,
+                    campaignProgress: nextP 
+                  }));
                 }
               } else {
                 // LEVELS mode
-                const missionLevels = CAMPAIGN_LEVELS;
-                const idx = missionLevels.findIndex(l => l.id === currentId);
-                if (idx !== -1 && idx >= get().levelsModeProgress) {
-                  const nextP = Math.min(missionLevels.length, idx + 1);
-                  if (nextP > get().levelsModeProgress) {
-                    set((curr) => ({ 
-                      skillPoints: curr.skillPoints + 1,
-                      levelsModeProgress: nextP 
-                    }));
-                  }
+                const currentP = get().levelsModeProgress;
+                const nextP = campaignLoadBalancer.calculateNextProgress(currentId, currentP, CAMPAIGN_LEVELS);
+                if (nextP > currentP) {
+                  set((curr) => ({ 
+                    skillPoints: curr.skillPoints + 1,
+                    levelsModeProgress: nextP 
+                  }));
                 }
               }
             }
@@ -699,14 +904,15 @@ export const createGameplaySlice = (
           }
 
           // FLOATING EFFECTS GRAPHICS
-          if (event.entityId || event.type === 'HEX_COLLAPSE') {
+          if (event.entityId || event.type === 'HEX_COLLAPSE' || event.type === 'METEOR_STRIKE' || event.type === 'PLAYER_HIT_BY_METEOR') {
             const entity = isPlayer ? result.state.player : result.state.bots.find(b => b.id === event.entityId);
             const targetQ = event.data?.q !== undefined ? Number(event.data.q) : (entity?.q || 0);
             const targetR = event.data?.r !== undefined ? Number(event.data.r) : (entity?.r || 0);
 
             // Visibility barrier
             const targetHex = result.state.grid[getHexKey(targetQ, targetR)];
-            if (!isPlayer && (!targetHex || !targetHex.revealed)) return;
+            const isDefenseMode = !!result.state.defense?.isDefenseMode;
+            if (!isPlayer && !isDefenseMode && (!targetHex || !targetHex.revealed)) return;
 
             let text = '';
             let color = '#fff';
@@ -786,11 +992,36 @@ export const createGameplaySlice = (
                 color = "#ef4444"; 
                 icon = 'DOWN'; 
                 break;
+              case 'METEOR_STRIKE':
+                text = lang === 'RU' ? "☄️ УДАР!" : "☄️ IMPACT!";
+                color = "#f97316";
+                icon = 'DOWN';
+                break;
+              case 'PLAYER_HIT_BY_METEOR':
+                text = lang === 'RU' ? "💥 РАНГ -1!" : "💥 RANK -1!";
+                color = "#ef4444";
+                icon = 'WARN';
+                break;
+              case 'CORE_DAMAGED': {
+                const dmg = Number(event.data?.damage || 10);
+                text = lang === 'RU' ? `⚠️ ЯДРО -${dmg}` : `⚠️ CORE -${dmg}`;
+                color = "#f43f5e";
+                icon = 'DOWN';
+                break;
+              }
               case 'ITEM_DROP': 
                 text = lang === 'RU' ? "ПРЕДМЕТ!" : "ITEM FOUND!"; 
                 color = "#fcd34d"; 
                 icon = 'GEM'; 
                 break;
+              case 'ACTION_DENIED':
+              case 'ERROR': {
+                const msg = event.message || '';
+                text = msg.toUpperCase();
+                color = "#f87171";
+                icon = 'WARN';
+                break;
+              }
             }
 
             if (text) {

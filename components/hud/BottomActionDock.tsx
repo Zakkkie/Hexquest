@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store';
-import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Clock } from 'lucide-react';
+import { Pickaxe, ChevronsUp, RefreshCw, Hourglass, Backpack, Clock, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import HexButton from '../HexButton';
 import { getHexKey, getNeighbors, getSecondsToGrow } from '../../services/hexUtils';
@@ -238,6 +238,25 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         }
     }, [currentHex, player, currentTurn]); // Use turn or tick for reactivity
 
+    const isDefenseMode = useGameStore(state => state.session?.defense?.isDefenseMode);
+
+    const turretCondition = useMemo(() => {
+        if (!currentHex || !player || !grid) return { canBuild: false, reason: 'Invalid Hex' };
+        if (currentHex.currentLevel < 2) {
+            return { canBuild: false, reason: language === 'RU' ? 'Требуется L2+ (Высота)' : 'Requires L2+ elevation' };
+        }
+        if (currentHex.structureType !== 'NONE' && currentHex.structureType !== undefined) {
+            return { canBuild: false, reason: language === 'RU' ? 'Занято сооружением' : 'Sector occupied' };
+        }
+        const hasFreeBuild = player.activeStatuses?.some(s => s.type === 'STATUS_FREE_BUILD');
+        if (!hasFreeBuild && player.storage < 3) {
+            return { canBuild: false, reason: language === 'RU' ? 'Нужно 3 Материала' : 'Need 3 Materials' };
+        }
+        return { canBuild: true, reason: '' };
+    }, [currentHex, player, grid, language]);
+
+    const canBuildTurret = turretCondition.canBuild;
+
     // Progress
     const timeData = useMemo(() => {
         if (!currentHex) return { percent: 0, mode: 'IDLE' };
@@ -250,6 +269,9 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         } else if (playerGrowthIntent === 'DIG') {
             mode = 'DIG';
             currentStepNeeded = 30; 
+        } else if (playerGrowthIntent === 'TURRET') {
+            mode = 'TURRET';
+            currentStepNeeded = 40;
         } else { 
             mode = 'UPGRADE';
             currentStepNeeded = getSecondsToGrow(currentHex.currentLevel + 1);
@@ -263,6 +285,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const digTooltip = isMoving ? (language === 'RU' ? "В движении" : "Unit moving") : (!digCondition.canGrow ? (digCondition.reason || (language === 'RU' ? "Заблокировано" : "Blocked")) : "Excavate");
     const upgradeTooltip = isMoving ? (language === 'RU' ? "В движении" : "Unit moving") : (!upgradeCondition.canGrow ? (upgradeCondition.reason || (language === 'RU' ? "Заблокировано" : "Blocked")) : "Upgrade");
     const recoverTooltip = isMoving ? (language === 'RU' ? "В движении" : "Unit moving") : (recoveryState.cooling ? (language === 'RU' ? "Охлаждение" : "Cooldown") : (!recoveryState.canRecover ? (language === 'RU' ? "Истощено" : "Done") : "Recover"));
+    const turretTooltip = isMoving ? (language === 'RU' ? "В движении" : "Unit moving") : (!canBuildTurret ? (turretCondition.reason || (language === 'RU' ? "Нельзя построить" : "Cannot build")) : "Place Turret");
 
     const digTooltipData = useMemo(() => {
         const nextLevel = (currentHex?.currentLevel ?? 0) - 1;
@@ -334,6 +357,25 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         };
     }, [currentHex, recoveryState, language]);
 
+    const turretTooltipData = useMemo(() => {
+        const hasFreeBuild = player?.activeStatuses?.some(s => s.type === 'STATUS_FREE_BUILD');
+        const costDesc = language === 'RU'
+            ? (hasFreeBuild ? '0 Материалов (Свободная постройка)' : '3 Материала')
+            : (hasFreeBuild ? '0 Materials (Free Build)' : '3 Materials');
+
+        return {
+            title: language === 'RU' ? 'ЗАЩИТА ЯДРА: ТУРЕЛЬ' : 'CORE DEFENSE: TURRET',
+            costText: costDesc,
+            rewardText: language === 'RU'
+                ? 'Размещает оборонительную турель на сектор L2+. Автоматически наносит 3 урона саботажникам.'
+                : 'Deploys combat turret on high ground L2+. Inflicts 3 damage to invaders within range.',
+            statusText: canBuildTurret
+                ? (language === 'RU' ? '🟢 ГОТОВО К СТРОИТЕЛЬСТВУ' : '🟢 READY TO DEPLOY')
+                : `🔴 LOCKED: ${turretCondition.reason}`,
+            statusType: (canBuildTurret ? 'success' : 'error') as any,
+        };
+    }, [currentHex, player, canBuildTurret, turretCondition, language]);
+
     const inventoryTooltipData = useMemo(() => {
         const occupied = player?.inventory ? player.inventory.filter(Boolean).length : 0;
         return {
@@ -369,11 +411,11 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     // Short labels under the mobile core icons — mobile has no hover tooltip,
     // so icon-only buttons are undiscoverable for new players.
     const coreLabels = language === 'RU'
-        ? { dig: 'Копать', up: 'Строить', rec: 'Заряд' }
-        : { dig: 'Dig', up: 'Build', rec: 'Charge' };
+        ? { dig: 'Копать', up: 'Строить', rec: 'Заряд', turret: 'Турель' }
+        : { dig: 'Dig', up: 'Build', rec: 'Charge', turret: 'Turret' };
 
     // Helper for Action Clicks
-    const handleActionClick = (intent: 'DIG' | 'UPGRADE' | 'RECOVER') => {
+    const handleActionClick = (intent: 'DIG' | 'UPGRADE' | 'RECOVER' | 'TURRET') => {
         togglePlayerGrowth(intent);
         onCenterPlayer();
 
@@ -418,7 +460,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                     </div>
 
                     {/* CORE BUTTONS + QUICK SLOTS (Bottom Row) */}
-                    <div className="bg-slate-950/45 saturate-[175%] backdrop-blur-2xl border border-slate-800/40 rounded-[1.5rem] p-2 px-3 flex items-center justify-between gap-3 relative overflow-visible animate-border-glow-premium transition-all duration-500">
+                    <div className={`bg-slate-950/45 saturate-[175%] backdrop-blur-2xl border border-slate-800/40 rounded-[1.5rem] ${isDefenseMode ? 'p-1.5 px-2 gap-1.5' : 'p-2 px-3 gap-3'} flex items-center justify-between relative overflow-visible animate-border-glow-premium transition-all duration-500`}>
                         
                         {/* ITEM SHORTCUT TRAY OR TIMER */}
                         {isTimedLevel && gameStatus === 'PLAYING' ? (
@@ -431,21 +473,21 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[140px] pr-2 border-r border-slate-800/50 shrink-0">
+                            <div className={`flex items-center gap-1 overflow-x-auto no-scrollbar ${isDefenseMode ? 'max-w-[85px] pr-1' : 'max-w-[140px] pr-2'} border-r border-slate-800/50 shrink-0`}>
                                 {inventoryList.map(index => {
                                     const item = player.inventory[index];
                                     return (
                                         <div 
                                             key={index}
                                             onClick={() => { if (item) { onInspectItem(item); playUiSound('CLICK'); } }}
-                                            className={`w-10 h-10 rounded-lg border flex items-center justify-center cursor-pointer transition-all active:scale-95 shrink-0 ${
+                                            className={`${isDefenseMode ? 'w-8 h-8 rounded-md' : 'w-10 h-10 rounded-lg'} border flex items-center justify-center cursor-pointer transition-all active:scale-95 shrink-0 ${
                                                 item 
                                                     ? `bg-slate-900 bg-opacity-80 ${getRarityBorder(item.rarity)} shadow-md` 
                                                     : 'bg-slate-950/45 border-slate-800/40 border-dashed'
                                             }`}
                                         >
                                             {item ? (
-                                                <ItemIcon item={item} size="w-10 h-10" />
+                                                <ItemIcon item={item} size={isDefenseMode ? "w-8 h-8" : "w-10 h-10"} />
                                             ) : (
                                                 <div className="w-1 h-1 rounded-full bg-slate-800/30" />
                                             )}
@@ -455,8 +497,8 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                             </div>
                         )}
 
-                        {/* CORE ACTION BUTTONS: DIG, UPGRADE, RECOVER (with w-12 h-12 = 48px ideal touch targets!) */}
-                        <div className="flex items-center gap-2.5 flex-1 justify-end shrink-0">
+                        {/* CORE ACTION BUTTONS: DIG, UPGRADE, RECOVER (with adaptive size on mobile!) */}
+                        <div className={`flex items-center ${isDefenseMode ? 'gap-1.5' : 'gap-2.5'} flex-1 justify-end shrink-0`}>
                             
                             {/* DIG Action */}
                             <div 
@@ -465,7 +507,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                             >
                                 <HexButton 
                                     variant="red" 
-                                    size="md" 
+                                    size={isDefenseMode ? "sm" : "md"} 
                                     onDisabledClick={digDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }}
                                     active={isPlayerGrowing && playerGrowthIntent === 'DIG'}
                                     disabled={!canDig}
@@ -475,9 +517,9 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''} !p-0 !m-0`}
                                     title={digDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : digTooltip}
                                 >
-                                    <div className="flex flex-col items-center justify-center gap-0.5 px-2.5 py-2">
-                                        <Pickaxe className={`w-5 h-5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12 text-white' : 'text-red-400'}`} />
-                                        <span className="text-[7px] font-black uppercase tracking-wide leading-none text-red-200/90">{coreLabels.dig}</span>
+                                    <div className={`flex flex-col items-center justify-center ${isDefenseMode ? 'gap-0 px-1 py-1' : 'gap-0.5 px-2.5 py-2'}`}>
+                                        <Pickaxe className={`transition-transform duration-300 ${isDefenseMode ? 'w-4 h-4' : 'w-5 h-5'} ${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'scale-110 rotate-12 text-white' : 'text-red-400'}`} />
+                                        <span className={`${isDefenseMode ? 'text-[6.5px]' : 'text-[7px]'} font-black uppercase tracking-wide leading-none text-red-200/90`}>{coreLabels.dig}</span>
                                     </div>
                                 </HexButton>
                             </div>
@@ -489,7 +531,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                             >
                                 <HexButton 
                                     variant="amber" 
-                                    size="md" 
+                                    size={isDefenseMode ? "sm" : "md"} 
                                     onDisabledClick={upgradeDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }}
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
                                     disabled={!canUpgrade}
@@ -499,9 +541,9 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'ring-2 ring-amber-500/30' : ''} !p-0 !m-0`}
                                     title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}
                                 >
-                                    <div className="flex flex-col items-center justify-center gap-0.5 px-2.5 py-2">
-                                        <ChevronsUp className={`w-5.5 h-5.5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-115 -translate-y-0.5 text-white' : 'text-amber-400'}`} />
-                                        <span className="text-[7px] font-black uppercase tracking-wide leading-none text-amber-200/90">{coreLabels.up}</span>
+                                    <div className={`flex flex-col items-center justify-center ${isDefenseMode ? 'gap-0 px-1 py-1' : 'gap-0.5 px-2.5 py-2'}`}>
+                                        <ChevronsUp className={`transition-transform duration-300 ${isDefenseMode ? 'w-4.5 h-4.5' : 'w-5.5 h-5.5'} ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-115 -translate-y-0.5 text-white' : 'text-amber-400'}`} />
+                                        <span className={`${isDefenseMode ? 'text-[6.5px]' : 'text-[7px]'} font-black uppercase tracking-wide leading-none text-amber-200/90`}>{coreLabels.up}</span>
                                     </div>
                                 </HexButton>
                             </div>
@@ -513,7 +555,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                             >
                                 <HexButton 
                                     variant="blue" 
-                                    size="md" 
+                                    size={isDefenseMode ? "sm" : "md"} 
                                     onDisabledClick={recoverDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }}
                                     active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'}
                                     disabled={!recoveryState.canRecover}
@@ -523,25 +565,51 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''} !p-0 !m-0`}
                                     title={recoverDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : recoverTooltip}
                                 >
-                                    <div className="flex flex-col items-center justify-center gap-0.5 px-2.5 py-2">
+                                    <div className={`flex flex-col items-center justify-center ${isDefenseMode ? 'gap-0 px-1 py-1' : 'gap-0.5 px-2.5 py-2'}`}>
                                         {recoveryState.cooling ? (
-                                            <Hourglass className="w-5 h-5 animate-spin-slow text-blue-300" />
+                                            <Hourglass className={`${isDefenseMode ? 'w-4 h-4' : 'w-5 h-5'} animate-spin-slow text-blue-300`} />
                                         ) : (
                                             <div className="relative flex flex-col items-center justify-center">
-                                                <RefreshCw className={`w-5 h-5 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 text-white font-bold' : 'text-blue-400'}`} />
+                                                <RefreshCw className={`transition-transform duration-300 ${isDefenseMode ? 'w-4 h-4' : 'w-5 h-5'} ${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'scale-110 text-white font-bold' : 'text-blue-400'}`} />
                                                 {recoveryState.label && (
-                                                    <span className="absolute -bottom-1 bg-slate-950 px-1 rounded-full text-[6.5px] font-black text-emerald-400 border border-emerald-950 border-opacity-40 font-mono">
+                                                    <span className={`absolute ${isDefenseMode ? '-bottom-0.5 px-0.5 text-[5.5px]' : '-bottom-1 px-1 text-[6.5px]'} bg-slate-950 rounded-full font-black text-emerald-400 border border-emerald-950 border-opacity-40 font-mono`}>
                                                         {recoveryState.label}
                                                     </span>
                                                 )}
                                             </div>
                                         )}
-                                        <span className="text-[7px] font-black uppercase tracking-wide leading-none text-blue-200/90">
+                                        <span className={`${isDefenseMode ? 'text-[6.5px]' : 'text-[7px]'} font-black uppercase tracking-wide leading-none text-blue-200/90`}>
                                             {recoveryState.cooling ? recoveryState.label : coreLabels.rec}
                                         </span>
                                     </div>
                                 </HexButton>
                             </div>
+
+                            {/* TURRET Action */}
+                            {isDefenseMode && (
+                                <div 
+                                    className="relative shrink-0"
+                                    onClick={() => handleActionClick('TURRET')}
+                                >
+                                    <HexButton 
+                                        variant="emerald" 
+                                        size="sm" 
+                                        onDisabledClick={() => { playUiSound('WARNING'); showToast(turretTooltip, 'error'); }}
+                                        active={isPlayerGrowing && playerGrowthIntent === 'TURRET'}
+                                        disabled={!canBuildTurret}
+                                        progress={timeData.mode === 'TURRET' ? timeData.percent : 0}
+                                        className={`${isPlayerGrowing && playerGrowthIntent === 'TURRET' ? 'ring-2 ring-emerald-500/30' : ''} !p-0 !m-0`}
+                                        title={turretTooltip}
+                                    >
+                                        <div className="flex flex-col items-center justify-center gap-0 px-1 py-1">
+                                            <Shield className={`transition-transform duration-300 w-4 h-4 ${isPlayerGrowing && playerGrowthIntent === 'TURRET' ? 'scale-110 text-white' : 'text-emerald-400'}`} />
+                                            <span className="text-[6.5px] font-black uppercase tracking-wide leading-none text-emerald-200/90">
+                                                {coreLabels.turret}
+                                            </span>
+                                        </div>
+                                    </HexButton>
+                                </div>
+                            )}
 
                         </div>
 
@@ -729,6 +797,37 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     align="right"
                                 />
                             </div>
+
+                            {/* TURRET TRIGGER */}
+                            {isDefenseMode && (
+                                <div 
+                                    className="relative shrink-0"
+                                    onMouseEnter={() => setHoveredId('turret')}
+                                    onMouseLeave={() => setHoveredId(null)}
+                                >
+                                    <HexButton 
+                                        variant="emerald" 
+                                        size={mainButtonSize} 
+                                        onClick={() => handleActionClick('TURRET')} 
+                                        onDisabledClick={() => { playUiSound('WARNING'); showToast(turretTooltip, 'error'); }} 
+                                        active={isPlayerGrowing && playerGrowthIntent === 'TURRET'} 
+                                        disabled={!canBuildTurret} 
+                                        progress={timeData.mode === 'TURRET' ? timeData.percent : 0} 
+                                        className={isPlayerGrowing && playerGrowthIntent === 'TURRET' ? 'ring-2 ring-emerald-500/30 font-bold' : ''} 
+                                        title={turretTooltip}
+                                    >
+                                        <div className="relative flex flex-col items-center justify-center font-bold">
+                                            <Shield className={`w-6 h-6 transition-transform duration-300 ${isPlayerGrowing && playerGrowthIntent === 'TURRET' ? 'scale-110 text-white' : 'text-emerald-400'}`} />
+                                        </div>
+                                    </HexButton>
+                                    <ActionTooltip 
+                                        visible={hoveredId === 'turret'} 
+                                        {...turretTooltipData} 
+                                        language={language}
+                                        align="right"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                     </div>

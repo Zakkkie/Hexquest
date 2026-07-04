@@ -97,7 +97,7 @@ const Leaderboard: React.FC = () => {
         <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
 
         {/* Header */}
-        <div className="p-4 md:p-6 border-b border-indigo-500/30 flex items-center justify-between bg-indigo-905/10 relative z-20 shrink-0">
+        <div className="p-4 md:p-6 border-b border-indigo-500/30 flex items-center justify-between bg-indigo-900/10 relative z-20 shrink-0">
           <div className="flex items-center gap-3 md:gap-4">
             <div className="p-2 md:p-3 bg-amber-500/15 rounded-xl border border-amber-500/35 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
               <Trophy className="w-5 h-5 md:w-8 md:h-8" />

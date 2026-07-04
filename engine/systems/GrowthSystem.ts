@@ -2,7 +2,7 @@
 import { System } from './System';
 import { GameEvent, EntityState, Entity, EntityType, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
-import { getHexKey, getStatusModifiers } from '../../services/hexUtils';
+import { getHexKey, getStatusModifiers, cubeDistance } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';
 import { checkGrowthCondition, checkDigCondition, checkRecoveryCooldown, applyRecovery, getRecoveryReward } from '../../rules/growth';
 import { getLevelConfig, GAME_CONFIG, ENTROPY_CONFIG } from '../../rules/config';
@@ -46,7 +46,17 @@ export class GrowthSystem implements System {
   private processEntity(entity: Entity, state: SessionState, index: WorldIndex, events: GameEvent[], queueSize: number): boolean {
     const hasUpgradeCmd = entity.movementQueue.length > 0 && entity.movementQueue[0].upgrade;
     const queuedIntent = hasUpgradeCmd ? entity.movementQueue[0].intent : null;
-    const key = getHexKey(entity.q, entity.r);
+    
+    // For bots (and maybe player queued actions), target could be adjacent
+    let targetQ = entity.q;
+    let targetR = entity.r;
+    
+    if (hasUpgradeCmd && entity.type !== 'PLAYER') {
+         targetQ = entity.movementQueue[0].q;
+         targetR = entity.movementQueue[0].r;
+    }
+
+    const key = getHexKey(targetQ, targetR);
     
     // We use 'let' here so we can update the reference if we perform maintenance
     let hex = state.grid[key];
@@ -57,6 +67,16 @@ export class GrowthSystem implements System {
          if (hasUpgradeCmd) entity.movementQueue.shift();
          entity.state = EntityState.IDLE;
          return false;
+    }
+
+    // In siege mode, bots can only act within a 1-hex radius
+    if (entity.type !== EntityType.PLAYER && state.defense?.isDefenseMode) {
+        const dist = cubeDistance(entity, { q: targetQ, r: targetR });
+        if (dist > 1) {
+            if (hasUpgradeCmd) entity.movementQueue.shift();
+            entity.state = EntityState.IDLE;
+            return false;
+        }
     }
 
     // --- MAINTENANCE: HIGH LEVEL COOLDOWN RESET ---
@@ -74,6 +94,10 @@ export class GrowthSystem implements System {
              // Update local reference for the rest of this function
              hex = state.grid[key];
         }
+    }
+
+    if (hex && (typeof hex.progress !== 'number' || isNaN(hex.progress))) {
+        hex.progress = 0;
     }
 
     // Determine Intent
@@ -94,7 +118,7 @@ export class GrowthSystem implements System {
     entity.state = EntityState.GROWING;
 
     // Determine Effective Intent
-    let effectiveIntent: 'UPGRADE' | 'RECOVER' | 'DIG' = 'RECOVER';
+    let effectiveIntent: 'UPGRADE' | 'RECOVER' | 'DIG' | 'TURRET' = 'RECOVER';
     
     if (entity.type === EntityType.PLAYER) {
         effectiveIntent = userIntentType || 'RECOVER';
@@ -111,7 +135,7 @@ export class GrowthSystem implements System {
         if (isHighLevel) {
             // L4+: Check Charges & Cooldown Timer
             const status = checkRecoveryCooldown(hex, now, state);
-            if (!status.ready) {
+            if (!status.ready && !state.defense?.isDefenseMode) {
                 // Cooldown Active
                 if (entity.type === EntityType.PLAYER) {
                     state.isPlayerGrowing = false;
@@ -131,7 +155,7 @@ export class GrowthSystem implements System {
             }
         } else {
             // L0-L3: Check Entity Flag
-            if (entity.recoveredCurrentHex) {
+            if (entity.recoveredCurrentHex && !state.defense?.isDefenseMode) {
                  if (entity.type === EntityType.PLAYER) {
                      state.isPlayerGrowing = false;
                      // Optional: Feedback "Move to reset"
@@ -161,7 +185,7 @@ export class GrowthSystem implements System {
             entity.totalCoinsEarned += coinReward;
             
             if (!isHighLevel) {
-                entity.recoveredCurrentHex = true; 
+                entity.recoveredCurrentHex = state.defense?.isDefenseMode ? false : true; 
             }
 
             // Update Hex State (Charges/Cooldown)
@@ -173,7 +197,7 @@ export class GrowthSystem implements System {
             let msg = "";
             if (isHighLevel) {
                 const chargesLeft = updates.recoveryCharges ?? 0;
-                msg = `${prefix} Recovered (Uses: ${chargesLeft}/${GAME_CONFIG.MAX_RECOVERY_POINTS})`;
+                msg = `${prefix} Recovered (Uses: ${chargesLeft}/${GAME_CONFIG.MAX_RECOVERY_POINTS}) - Level decreased to L${updates.currentLevel}`;
                 if (chargesLeft === 0) msg += " [COOLDOWN]";
             } else {
                 msg = `${prefix} Recovered 1 Move + ${coinReward} Credits`;
@@ -202,7 +226,7 @@ export class GrowthSystem implements System {
 
     // === BRANCH 2: DIG ACTION (Timed) ===
     if (effectiveIntent === 'DIG') {
-         const neighbors = index.getValidNeighbors(entity.q, entity.r).map(h => ({ q: h.q, r: h.r }));
+         const neighbors = index.getValidNeighbors(targetQ, targetR).map(h => ({ q: h.q, r: h.r }));
          const condition = checkDigCondition(hex, entity, neighbors, state.grid);
 
          if (!condition.canGrow) {
@@ -219,10 +243,30 @@ export class GrowthSystem implements System {
 
         // Logic for Dig Progress
         const { growthAccelerator } = getStatusModifiers(entity, state);
-        const needed = Math.max(10, 30 - (growthAccelerator * 5));
+        const isBot = entity.type !== EntityType.PLAYER;
+        const isDefenseMode = !!state.defense?.isDefenseMode;
+        const needed = (isBot && isDefenseMode) ? 3 : Math.max(10, 30 - (growthAccelerator * 5));
         if (hex.progress + 1 >= needed) {
              const newLevel = hex.currentLevel - 1;
              
+             // --- SIEGE CORE DAMAGE ---
+             if (hex.isCore) {
+                 if (state.defense) {
+                     state.defense.coreHealth = Math.max(0, state.defense.coreHealth - 10);
+                     events.push(GameEventFactory.create('CORE_DAMAGED', undefined, entity.id, { damage: 10, remaining: state.defense.coreHealth }));
+                     
+                     if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
+                     if (hasUpgradeCmd) entity.movementQueue.shift();
+                     entity.state = EntityState.IDLE;
+                     state.grid[key].progress = 0;
+                     
+                     if (state.defense.coreHealth === 0) {
+                         events.push(GameEventFactory.create('CORE_DESTROYED', undefined, entity.id));
+                     }
+                     return false;
+                 }
+             }
+
              // --- DIG STATUS CHECKS ---
              const { digRewardMultiplier, diggerLuck, doubleDigChance } = getStatusModifiers(entity, state);
              const hasBreakdownRisk = this.hasStatus(entity, 'STATUS_BREAKDOWN_RISK');
@@ -298,7 +342,23 @@ export class GrowthSystem implements System {
                          const questItem = createSpecificItem(secretMatch.itemBaseId, state.language);
                          loot = { type: 'ITEM', item: questItem };
                      } else {
-                         loot = rollForLoot(newLevel - diggerLuck, state.language);
+                         const levelId = state.activeLevelConfig?.id;
+                         if (levelId === '1.5' || levelId === '1.6') {
+                             // Boost drop chance and ensure useful drops in levels 1.5 and 1.6
+                             const roll = Math.random();
+                             if (roll < 0.80) {
+                                 // 80% chance to drop a highly useful item!
+                                 const possibleItemIds = ['reality_patch', 'fuel_cell', 'data_disc', 'raw_container'];
+                                 const randomItemId = possibleItemIds[Math.floor(Math.random() * possibleItemIds.length)];
+                                 const item = createSpecificItem(randomItemId, state.language);
+                                 loot = { type: 'ITEM', item };
+                             } else {
+                                 // 20% chance to drop solid capital!
+                                 loot = { type: 'COIN', amount: 25 };
+                             }
+                         } else {
+                             loot = rollForLoot(newLevel - diggerLuck, state.language);
+                         }
                      }
                      if (loot.type !== 'NONE') {
                          
@@ -383,7 +443,7 @@ export class GrowthSystem implements System {
 
     // === BRANCH 3: UPGRADE ACTION (Timed) ===
     if (effectiveIntent === 'UPGRADE') {
-        const neighbors = index.getValidNeighbors(entity.q, entity.r).map(h => ({ q: h.q, r: h.r }));
+        const neighbors = index.getValidNeighbors(targetQ, targetR).map(h => ({ q: h.q, r: h.r }));
         const occupied = index.getOccupiedHexesList();
         
         const condition = checkGrowthCondition(hex, entity, neighbors, state.grid, occupied, queueSize);
@@ -414,7 +474,9 @@ export class GrowthSystem implements System {
         const targetLevel = hex.currentLevel + 1;
         const config = getLevelConfig(targetLevel);
         const { growthAccelerator } = getStatusModifiers(entity, state);
-        const needed = Math.max(10, config.growthTime - (growthAccelerator * 5));
+        const isBot = entity.type !== EntityType.PLAYER;
+        const isDefenseMode = !!state.defense?.isDefenseMode;
+        const needed = (isBot && isDefenseMode) ? 3 : Math.max(10, config.growthTime - (growthAccelerator * 5));
 
         // Check Progress
         if (hex.progress + 1 >= needed) {
@@ -516,6 +578,7 @@ export class GrowthSystem implements System {
               currentLevel: targetLevel, 
               maxLevel: newMaxLevel, 
               progress: 0,
+              structureType: state.grid[key].structureType === 'VOID' ? undefined : state.grid[key].structureType,
               ownerId: newOwnerId,
               durability: newDurability,
               recoveryCharges: newRecoveryCharges,
@@ -539,6 +602,88 @@ export class GrowthSystem implements System {
         } else {
           state.grid[key].progress++;
           return true;
+        }
+    }
+
+    // === BRANCH 4: TURRET PLACEMENT ACTION (Timed) ===
+    if (effectiveIntent === 'TURRET') {
+        const hasFreeBuild = this.hasStatus(entity, 'STATUS_FREE_BUILD');
+        
+        // 1. Initial Validation
+        let canBuild = true;
+        let reason = "";
+
+        if (hex.currentLevel < 2) {
+            canBuild = false;
+            reason = "Hex level must be L2+ (Highland)";
+        } else if (hex.structureType !== 'NONE' && hex.structureType !== undefined) {
+            canBuild = false;
+            reason = `Already occupied by ${hex.structureType}`;
+        } else if (!hasFreeBuild && entity.storage < 3) {
+            canBuild = false;
+            reason = "Need 3 materials to construct turret";
+        }
+
+        if (!canBuild) {
+            if (hasUpgradeCmd) entity.movementQueue.shift();
+            entity.state = EntityState.IDLE;
+            if (entity.type === EntityType.PLAYER) {
+                state.messageLog.unshift({
+                    id: `turret-fail-${now}`,
+                    text: `Turret Build Failed: ${reason}`,
+                    type: 'WARN',
+                    source: 'SYSTEM',
+                    timestamp: now
+                });
+                events.push(GameEventFactory.create('ACTION_DENIED', reason, entity.id));
+                state.isPlayerGrowing = false;
+            }
+            return false;
+        }
+
+        // 2. Tick progress (needs 40 ticks)
+        const needed = 40;
+        if (hex.progress + 1 >= needed) {
+            // Deduct Materials
+            if (!hasFreeBuild) {
+                entity.storage = Math.max(0, entity.storage - 3);
+            }
+
+            // Build completed!
+            Object.assign(state.grid[key], {
+                structureType: 'TURRET',
+                isTurret: true,
+                turretRange: 2,
+                turretDamage: 3,
+                turretCooldown: 3000,
+                progress: 0,
+                isPlayerBuilt: true
+            });
+
+            const msg = `🛡️ Built Defensive Turret at (${hex.q}, ${hex.r})! Setup completed.`;
+            state.messageLog.unshift({
+                id: `turret-build-ok-${now}`,
+                text: msg,
+                type: 'SUCCESS',
+                source: entity.id,
+                timestamp: now
+            });
+
+            events.push({
+                type: 'TURRET_BUILT' as any,
+                actorId: entity.id,
+                gridKey: key,
+                payload: { q: hex.q, r: hex.r }
+            } as any);
+
+            // Reset action State
+            if (hasUpgradeCmd) entity.movementQueue.shift();
+            entity.state = EntityState.IDLE;
+            if (entity.type === EntityType.PLAYER) state.isPlayerGrowing = false;
+            return false;
+        } else {
+            state.grid[key].progress++;
+            return true;
         }
     }
 

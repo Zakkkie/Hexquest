@@ -1,4 +1,4 @@
-import { rollForLoot } from '../../rules/loot';
+import { rollForLoot } from '../../../rules/loot';
 
 describe('rollForLoot', () => {
   describe('depth 0', () => {

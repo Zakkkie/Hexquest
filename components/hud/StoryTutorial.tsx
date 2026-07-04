@@ -8,24 +8,24 @@ const TRANSLATE = {
     RU: [
         { 
             targetId: "tutorial-shape-list", 
-            text: "Шаг 1. Выбор высоты блоков и фигур", 
-            desc: "Внизу выберите нужную высоту (кликом по блоку с соответствующей уникальной геометрической фигурой):\n• L0 — Ровная плита (Без фигуры)\n• L1 — Круг\n• L2 — Квадрат\n• L3 — Треугольник\n• L4 — Ромб\n• L5 — Пятиугольник\n• L6 — Малый Шестиугольник\n• L7 — Двойное Кольцо\n• L8-L9 — Древние глифы/Звёзды ◆★\nВыбранный блок подсветится сияющим цветом.",
+            text: "Шаг 1. Гексы Инфраструктуры", 
+            desc: "Внизу выберите нужную высоту платформы:\n• L0 — Ровная плита\n• L1-L9 — Защитные стены и реакторы различных уровней\nВысотный блок подсветится сияющим цветом.",
             position: "above", 
             align: "center", 
             skipPos: "top" 
         },
         { 
             targetId: "tutorial-hex-board", 
-            text: "Шаг 2. Как строить без ошибок!", 
-            desc: "Кликните на гекс на поле, чтобы возвести выбранную фигуру/высоту:\n• Уровень L1 (Круг) доступен для установки в любом месте без ограничений.\n• Для уровня L2 и выше (Квадрат, Треугольник, Ромб и т.д.) требуются как минимум 2 соседних блока с такой же фигурой/высотой или выше для физической опоры, иначе конструкция разрушится!",
+            text: "Шаг 2. Размещение на Полигоне", 
+            desc: "Кликните на пустое место (или L0), чтобы возвести платформу и использовать материалы на 'Upgrade'.\nДля возведения L2 или выше (Квадрат, Ромб и т.д.) требуются как минимум 2 соседних блока такой же высоты или выше для физической опоры, иначе конструкция разрушится!",
             position: "above", 
             align: "center", 
             skipPos: "bottom" 
         },
         { 
             targetId: "tutorial-blueprint-tablet", 
-            text: "Шаг 3. Анализ Чертежа", 
-            desc: "Вам необходимо собрать правильную фигуру на игровом поле. Обратите внимание на инженерный планшет сборки в центре (нажмите на капсулу посередине сверху чтобы его развернуть). Как только вы повторите схему из планшета на поле — модель будет засчитана!",
+            text: "Шаг 3. Инженерный Терминал", 
+            desc: "Здесь нет строгий чертежей и фигур! Вы находитесь в режиме Свободного Проектирования Ядра. Спроектируйте свою идеальную оборону и накопите энергию к предстоящим миссиям Защиты ядра от вредоносных ботов. Терминал (кнопка сверху) показывает сводку вашей застройки.",
             position: "below", 
             align: "center", 
             skipPos: "bottom" 
@@ -33,7 +33,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-sp-badge", 
             text: "Шаг 4. Очки Навыков (SP) и Ранг", 
-            desc: "Каждая собранная фигура даёт +1 SP. Нажмите на фиолетовый индикатор вверху, чтобы улучшить Ранг инженера и открыть плиты с высокими цифрами и сложными геометриями!",
+            desc: "Вы получаете SP за успешное прохождение симуляций на глобальной карте, а не за фигуры. Нажмите на этот фиолетовый индикатор вверху, чтобы улучшить Ранг и открыть материалы с новыми модулями строительства!",
             position: "below", 
             align: "right", 
             skipPos: "bottom" 
@@ -41,33 +41,41 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-levels-btn", 
             text: "Шаг 5. Смена симуляций", 
-            desc: "Нажмите эту кнопку, чтобы вернуться на главную карту космических симуляций Nebula для выбора новых испытаний.",
-            position: "above", 
-            align: "center", 
-            skipPos: "top" 
-        }
-    ],
-    EN: [
-        { 
-            targetId: "tutorial-shape-list", 
-            text: "Step 1. Choose Heights & Figures", 
-            desc: "Select a level block at the bottom (blocks are stamped with unique geometric shapes corresponding to their height level):\n• L0 — Neutral plain (No shape)\n• L1 — Circle\n• L2 — Square\n• L3 — Triangle\n• L4 — Diamond\n• L5 — Pentagon\n• L6 — Small Hexagon\n• L7 — Double Ring\n• L8-L9 — Ancient Glyphs / Stars ◆★\nThe selected block highlights in vibrant cyan.",
+            desc: "Нажмите эту кнопку внизу, чтобы вернуться на главную карту космических симуляций Nebula и начать добычу.",
             position: "above", 
             align: "center", 
             skipPos: "top" 
         },
         { 
             targetId: "tutorial-hex-board", 
-            text: "Step 2. Smart Building & Stability", 
-            desc: "Click any grid cell to place your selected figure/height:\n• Level L1 (Circle) can be placed anywhere without restrictions.\n• Level L2 or higher (Square, Triangle, Diamond, etc.) requires at least 2 adjacent neighbor blocks of that figure/height or higher as support, or it collapses!",
+            text: "Шаг 6. Событие Защиты Ядра", 
+            desc: "Каждые 5 пройденных уровней симуляции активируют событие Защиты Ядра! В этот период в центре сверху загорается красная тревожная кнопка.\n\nЗапустите оборону, сдержите натиск роботов, защитите ядро и получите ценные трофеи: +3 SP и россыпь бонусных материалов!",
+            position: "above", 
+            align: "center", 
+            skipPos: "bottom" 
+        }
+    ],
+    EN: [
+        { 
+            targetId: "tutorial-shape-list", 
+            text: "Step 1. Infrastructure Hexes", 
+            desc: "Select a level block height at the bottom:\n• L0 — Neutral plain\n• L1-L9 — Defensive walls and reactors\nThe selected block highlights in vibrant cyan.",
+            position: "above", 
+            align: "center", 
+            skipPos: "top" 
+        },
+        { 
+            targetId: "tutorial-hex-board", 
+            text: "Step 2. Sandbox Placement", 
+            desc: "Click any empty grid cell to place your selected block height using 'Upgrade':\nPlacing Level L2 or higher requires at least 2 adjacent neighbor blocks of that height or higher as scaffold support, otherwise it will collapse!",
             position: "above", 
             align: "center", 
             skipPos: "bottom" 
         },
         { 
             targetId: "tutorial-blueprint-tablet", 
-            text: "Step 3. Blueprint Analysis", 
-            desc: "You need to build the correct figure on the field. Check the engineering blueprint tablet in the center (click the top-center capsule to expand it). Once you replicate the blueprint's pattern on the board, the shape will be completed!",
+            text: "Step 3. Engineering Terminal", 
+            desc: "There are no strict blueprints! You are currently in the Free Sandbox Building mode. Use this space to build the perfect defense for Core Defenses against malicious bots. Check the top terminal dropdown for a summary of your infrastructure.",
             position: "below", 
             align: "center", 
             skipPos: "bottom" 
@@ -75,18 +83,26 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-sp-badge", 
             text: "Step 4. Engineering Skill Tree (SP)", 
-            desc: "Solving patterns grants +1 Skill Point (SP). Click this glowing token to upgrade your Engineering Rank and access blocks with higher digits and complex shapes.",
+            desc: "You earn SP by completing actual simulations on the world map! Click this glowing token at the top to upgrade your Engineering Rank and unlock advanced construction mechanics.",
             position: "below", 
             align: "right", 
             skipPos: "bottom" 
         },
         { 
             targetId: "tutorial-levels-btn", 
-            text: "Step 5. Change Simulation", 
-            desc: "Press this navigation deck button to return to the simulation levels map to explore space zones and select challenges.",
+            text: "Step 5. Explore Simulations", 
+            desc: "Press this navigation deck button at the bottom to return to the galaxy simulations map and start exploring space zones.",
             position: "above", 
             align: "center", 
             skipPos: "top" 
+        },
+        { 
+            targetId: "tutorial-hex-board", 
+            text: "Step 6. Core Defense Event", 
+            desc: "Completing every 5 simulation levels triggers a Core Defense Event against malicious bots! A flashing crimson alert button is mounted at the top center.\n\nDeploy defenses, survive malicious bot cohorts, protect the central Reactor Core and claim supreme rewards: +3 SP and massive material drops!",
+            position: "above", 
+            align: "center", 
+            skipPos: "bottom" 
         }
     ]
 };
@@ -366,7 +382,7 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
             <div className="w-full flex flex-col gap-1 sm:gap-1.5 font-mono select-none my-1">
                 <div className="grid grid-cols-2 gap-1.5 sm:gap-2 border-b border-white/5 pb-1">
                     {/* ACCORDING TO PHYSICAL CO-SUPPORT (CORRECT) */}
-                    <div className="bg-emerald-955/20 rounded-xl border border-emerald-500/35 p-1.5 sm:p-2 flex flex-col items-center relative overflow-hidden h-26 sm:h-30 md:h-34 justify-between bg-slate-950/40">
+                    <div className="bg-emerald-950/20 rounded-xl border border-emerald-500/35 p-1.5 sm:p-2 flex flex-col items-center relative overflow-hidden h-26 sm:h-30 md:h-34 justify-between bg-slate-950/40">
                         <div className="text-emerald-400 font-black uppercase tracking-wider text-[7px] sm:text-[7.5px] flex items-center gap-1 self-start">
                             <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 flex items-center justify-center text-[5.5px] sm:text-[6px] text-black font-extrabold">✓</span>
                             {isRu ? 'СТАБИЛЬНО' : 'STABLE WAY'}
@@ -396,7 +412,7 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
                     </div>
 
                     {/* UNSTABLE CRITICAL BREAKDOWN (INCORRECT) */}
-                    <div className="bg-rose-955/20 rounded-xl border border-rose-500/30 p-1.5 sm:p-2 flex flex-col items-center relative overflow-hidden h-26 sm:h-30 md:h-34 justify-between bg-slate-950/40">
+                    <div className="bg-rose-950/20 rounded-xl border border-rose-500/30 p-1.5 sm:p-2 flex flex-col items-center relative overflow-hidden h-26 sm:h-30 md:h-34 justify-between bg-slate-950/40">
                         <div className="text-rose-400 font-black uppercase tracking-wider text-[7px] sm:text-[7.5px] flex items-center gap-1 self-start">
                             <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 flex items-center justify-center text-[5.5px] sm:text-[6px] text-black font-extrabold">✕</span>
                             {isRu ? 'ОБВАЛ' : 'UNSTABLE WAY'}
@@ -430,7 +446,7 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
                             </div>
                         </div>
 
-                        <span className="text-rose-405 text-[6px] sm:text-[6.5px] font-black uppercase text-center animate-pulse tracking-wide mt-1">
+                        <span className="text-rose-400 text-[6px] sm:text-[6.5px] font-black uppercase text-center animate-pulse tracking-wide mt-1">
                             {isRu ? 'КРАХ! НЕТ ОПОРЫ ⚠️' : 'CRASH! NO BASIS ⚠️'}
                         </span>
                     </div>
@@ -444,40 +460,17 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
             <div className="w-full bg-slate-950/80 rounded-xl border border-white/5 relative p-2 sm:p-2.5 flex flex-col items-center justify-center overflow-hidden font-mono text-[9px] select-none h-24 sm:h-28 md:h-32 my-1">
                 <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px]">
                     <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
-                    {isRu ? 'ПРИМЕРЫ СХЕМ (ЧЕРТЕЖЕЙ)' : 'BLUEPRINT EXAMPLES'}
+                    {isRu ? 'ОТЛИСТАЕМ НАЗАД: СВОБОДА ПРОЕКТИРОВАНИЯ' : 'FREE SANDBOX BUILDING'}
                 </div>
                 
-                <div className="flex items-center justify-center gap-4 sm:gap-6 w-full flex-1 mt-1">
-                    {/* Example Figure 1 (Small Line) */}
+                <div className="flex items-center justify-center gap-2 sm:gap-4 w-full flex-1 mt-1 text-slate-400 leading-tight">
                     <div className="flex flex-col items-center">
-                        <div className="relative flex items-center justify-center w-14 h-14 bg-slate-900 border border-slate-700 rounded-lg shadow-inner">
-                            <div className="absolute top-1.5 left-2"><TutorialHexagon level={0} size={9} isSelected={true}/></div>
-                            <div className="absolute top-1.5 right-2"><TutorialHexagon level={0} size={9} isSelected={true}/></div>
-                            <div className="absolute bottom-2"><TutorialHexagon level={0} size={9} isSelected={true}/></div>
+                        <div className="text-center font-sans tracking-wide text-indigo-300 font-black text-[10px]">
+                            {isRu ? 'Никаких шаблонов!' : 'No Blueprints!'}
                         </div>
-                        <span className="text-[5.5px] sm:text-[6px] text-pink-400 font-black mt-1 uppercase tracking-widest">
-                            {isRu ? 'ТРЕУГОЛЬНИК' : 'TRIANGLE'}
-                        </span>
-                    </div>
-
-                    <motion.div 
-                        animate={{ opacity: [0.3, 1, 0.3] }} 
-                        transition={{ repeat: Infinity, duration: 2 }}
-                    >
-                        <span className="text-slate-600 font-black">---&gt;</span>
-                    </motion.div>
-
-                    {/* Example Figure 2 (Rhombus/Diamond) */}
-                    <div className="flex flex-col items-center">
-                        <div className="relative flex items-center justify-center w-14 h-14 bg-slate-900 border border-slate-700 rounded-lg shadow-inner">
-                            <div className="absolute top-1"><TutorialHexagon level={0} size={8} isSelected={true}/></div>
-                            <div className="absolute left-1.5 top-5"><TutorialHexagon level={0} size={8} isSelected={true}/></div>
-                            <div className="absolute right-1.5 top-5"><TutorialHexagon level={0} size={8} isSelected={true}/></div>
-                            <div className="absolute bottom-1"><TutorialHexagon level={0} size={8} isSelected={true}/></div>
+                        <div className="text-center mt-1">
+                             {isRu ? 'Вы сами контролируете' : 'You are entirely in'} <br/> {isRu ? 'процесс своей базы' : 'control of your base'}
                         </div>
-                        <span className="text-[5.5px] sm:text-[6px] text-indigo-400 font-black mt-1 uppercase tracking-widest">
-                            {isRu ? 'РОМБ' : 'RHOMBUS'}
-                        </span>
                     </div>
                 </div>
             </div>
@@ -583,6 +576,20 @@ export const StoryTutorial: React.FC = () => {
         };
     }, [setIsTutorialActive]);
 
+    useEffect(() => {
+        if (isTutorialActive) {
+            if (step === 2) { // Step 3
+                if (typeof (window as any).setStoryNarrativeCollapsed === 'function') {
+                    (window as any).setStoryNarrativeCollapsed(false);
+                }
+            } else {
+                if (typeof (window as any).setStoryNarrativeCollapsed === 'function') {
+                    (window as any).setStoryNarrativeCollapsed(true);
+                }
+            }
+        }
+    }, [step, isTutorialActive]);
+
     const handleClose = () => {
         audioService.play('UI_CLICK');
         setIsTutorialActive(false);
@@ -635,37 +642,36 @@ export const StoryTutorial: React.FC = () => {
         }
 
         // Mobile styling - safe "fixed" orientation to guarantee visibility and prevent clipping
-        if (currentConfig?.targetId === "tutorial-shape-list") {
-            // Step 1: Bottom palette. Put explanation card high up on the screen.
+        if (currentConfig?.targetId === "tutorial-shape-list" || currentConfig?.targetId === "tutorial-levels-btn") {
+            // Target is at the bottom. Put explanation card high up on the screen.
             return {
                 position: 'fixed' as const,
-                top: '76px',
+                top: '90px',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: 'calc(100vw - 32px)',
-                maxWidth: '290px',
+                maxWidth: '320px',
             };
-        } else if (currentConfig?.targetId === "tutorial-hex-board") {
-            // Step 2: Main center board.
-            // On mobile, put it right at the lower portion of the board inside the empty space.
+        } else if (currentConfig?.targetId === "tutorial-blueprint-tablet" || currentConfig?.targetId === "tutorial-sp-badge") {
+            // Target is at the top. Put explanation card in responsive bottom section of the screen.
             return {
                 position: 'fixed' as const,
-                bottom: '45px',
+                bottom: '120px',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: 'calc(100vw - 32px)',
-                maxWidth: '290px',
+                maxWidth: '320px',
             };
         } else {
-            // Steps 3 & 4: Top elements (SP Badge, Simulation control).
-            // Put explanation card in responsive bottom section of the screen.
+             // Main center board.
+            // On mobile, put it right at the very bottom portion of the board.
             return {
                 position: 'fixed' as const,
-                bottom: '80px',
+                bottom: '110px',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: 'calc(100vw - 32px)',
-                maxWidth: '290px',
+                maxWidth: '320px',
             };
         }
     };
@@ -783,13 +789,7 @@ export const StoryTutorial: React.FC = () => {
                         
                         {/* Elegant Tooltip Card */}
                         <div 
-                            style={{
-                                ...getCardStyle(),
-                                paddingLeft: '10px',
-                                marginLeft: '0px',
-                                marginTop: '0px',
-                                marginBottom: '140px'
-                            }}
+                            style={getCardStyle()}
                             className="bg-slate-950/98 border border-emerald-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.92)] p-2.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2 max-w-[92vw] text-left backdrop-blur-xl transition-all duration-300 pointer-events-auto"
                         >
                             {/* Card Top Title bar */}

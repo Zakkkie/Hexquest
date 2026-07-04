@@ -10,6 +10,11 @@ export class EntropySystem implements System {
   update(state: SessionState, _index: WorldIndex, events: GameEvent[]): void {
     if (state.gameStatus !== 'PLAYING') return;
 
+    if (state.activeLevelConfig?.id?.startsWith('1.') || state.defense?.isDefenseMode) {
+      state.entropy.current = state.entropy.max;
+      return;
+    }
+
     // Check for Entropy Shift
     if (state.entropy.current <= 0) {
         this.triggerEntropyShift(state, events);
