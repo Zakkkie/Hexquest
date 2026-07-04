@@ -2948,17 +2948,42 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     meteorTelegraph.stroke({ width: 3, color: 0xef4444, alpha: 0.8 + pulse * 0.2 });
                     meteorTelegraph.fill({ color: 0xef4444, alpha: 0.25 + pulse * 0.15 });
 
-                    const maxTicks = 4;
+                    const maxTicks = targetedMeteor.maxWarnTicks || 4;
                     const ticksLeft = targetedMeteor.warnTicksRemaining;
+                    // Ratio from 1 (just spawned) to 0 (impact)
                     const collapseRatio = ticksLeft / maxTicks;
+                    const progress = 1 - collapseRatio;
                     
-                    const maxRadius = 32;
-                    const radius = 10 + maxRadius * collapseRatio;
+                    // Expanding shadow
+                    const maxShadowRadiusX = 40;
+                    const maxShadowRadiusY = 25;
                     
                     meteorTelegraph.beginPath();
-                    meteorTelegraph.ellipse(0, props.offsetY, radius * 1.3, radius * 0.8);
-                    meteorTelegraph.stroke({ width: 2.5, color: 0xf97316, alpha: 0.9 });
-                    meteorTelegraph.fill({ color: 0xf97316, alpha: 0.25 });
+                    meteorTelegraph.ellipse(0, props.offsetY, maxShadowRadiusX * progress, maxShadowRadiusY * progress);
+                    meteorTelegraph.stroke({ width: 2, color: 0x000000, alpha: 0.5 });
+                    meteorTelegraph.fill({ color: 0x000000, alpha: 0.7 * progress });
+
+                    // Falling fiery rock
+                    const startY = props.offsetY - 800; // Start high up
+                    const currentY = startY + (props.offsetY - startY) * Math.pow(progress, 2); // Accelerate downwards
+                    
+                    // Meteor rock
+                    meteorTelegraph.beginPath();
+                    meteorTelegraph.circle(0, currentY, 15);
+                    meteorTelegraph.fill({ color: 0xff5500, alpha: 1 });
+                    
+                    // Meteor core
+                    meteorTelegraph.beginPath();
+                    meteorTelegraph.circle(0, currentY, 8);
+                    meteorTelegraph.fill({ color: 0xffaa00, alpha: 1 });
+                    
+                    // Meteor trail
+                    meteorTelegraph.beginPath();
+                    meteorTelegraph.moveTo(-10, currentY);
+                    meteorTelegraph.lineTo(10, currentY);
+                    meteorTelegraph.lineTo(0, currentY - 80 - 100 * collapseRatio); // Trail stretches up
+                    meteorTelegraph.closePath();
+                    meteorTelegraph.fill({ color: 0xff4400, alpha: 0.6 });
                 } else {
                     if (meteorTelegraph) {
                         curContainer.removeChild(meteorTelegraph).destroy();
@@ -3265,7 +3290,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         // 4. SORT Z-INDEX DEPTH OF VISIBLE GRAPHICS (Ensure perfect 3D occlusion layering overlays)
         parent.sortChildren();
 
-    }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors]);
+    }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors, pendingConfirmation, recentGradientLock]);
 
     // Handle Pointer clicks and map page client pixels directly to local grid axial tiles
     const handleCanvasClick = (e: React.MouseEvent | React.TouchEvent) => {
@@ -3553,7 +3578,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             const botX = cam.x + cx * cam.scale;
             const botY = cam.y + cy * cam.scale;
             
-            const padding = 32;
+            const padding = 12;
             const isOffscreen = botX < 0 || botX > w || botY < 0 || botY > h;
             
             if (isOffscreen) {
@@ -3619,7 +3644,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             {offscreenBotIndicators.map(ind => (
                 <div 
                     key={ind.id}
-                    className="absolute pointer-events-none flex flex-col items-center justify-center animate-pulse z-50"
+                    className="absolute pointer-events-none flex items-center justify-center animate-pulse z-50"
                     style={{
                         left: `${ind.x}px`,
                         top: `${ind.y}px`,
@@ -3632,9 +3657,6 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                             transform: `rotate(${ind.angle * (180 / Math.PI) - 90}deg)`,
                         }}
                     />
-                    <span className="mt-1 bg-red-950/90 text-red-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-red-500/40 uppercase tracking-wider whitespace-nowrap shadow-md scale-90">
-                        {ind.isDestroyer ? '👹 DESTROYER' : '🤖 BOT'} {ind.distance !== null ? `(${ind.distance} HEX)` : ''}
-                    </span>
                 </div>
             ))}
         </div>

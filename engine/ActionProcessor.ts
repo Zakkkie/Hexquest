@@ -1,5 +1,5 @@
 
-import { GameAction, EntityState, ValidationResult, SessionState, Entity, MoveAction, Item } from '../types';
+import { GameAction, EntityState, ValidationResult, SessionState, Entity, MoveAction, Item, ActivateMiniMonumentAction } from '../types';
 import { VictorySystem } from './systems/VictorySystem';
 import { WorldIndex } from './WorldIndex';
 import { getHexKey, cubeDistance, getStatusModifiers } from '../services/hexUtils';
@@ -77,7 +77,7 @@ export class ActionProcessor {
           case 'ACTIVATE_MONUMENT':
               result = this.handleActivateMonument(state, index, actor, action); break;
           case 'ACTIVATE_MINI_MONUMENT':
-              result = this.handleActivateMiniMonument(state, index, actor, action as any); break;
+              result = this.handleActivateMiniMonument(state, index, actor, action); break;
           case 'ACTIVATE_PORTAL':
               result = this.handleActivatePortal(state, index, actor, action); break;
           case 'WAIT':
@@ -548,7 +548,7 @@ export class ActionProcessor {
       return { ok: true };
   }
 
-  private handleActivateMiniMonument(state: SessionState, _index: WorldIndex, actor: Entity, action: any): ValidationResult {
+  private handleActivateMiniMonument(state: SessionState, _index: WorldIndex, actor: Entity, action: ActivateMiniMonumentAction): ValidationResult {
       if (!state.grid[action.miniMonumentHexKey]) {
           return { ok: false, reason: 'Mini monument hex not found' };
       }

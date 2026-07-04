@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Compass, Sparkles, Navigation, ChevronUp, ChevronDown, Crown } from 'lucide-react';
 import { useCollapsibleHint } from './useCollapsibleHint.ts';
 
+import { getCampaignMetric } from '../../campaign/getCampaignMetric';
+
 interface CentralTutorialBannerProps {
     onOpenHelpDetail?: () => void;
 }
@@ -39,18 +41,12 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
     }, [playerExists, playerId, playerQ, playerR, playerCoins, playerLevel, playerInventory, playerStorage, playerMoves, playerRecoveredCurrentHex]);
 
     const grid = session?.grid;
-    const minedHexes = session?.minedHexes;
-    const restoredHexesCount = session?.restoredHexesCount || 0;
     const entropy = session?.entropy;
     const language = useGameStore(state => state.language);
     const playUiSound = useGameStore(state => state.playUiSound);
 
     const [prevHint, setPrevHint] = useState<string | null>(null);
     const [isPulsing, setIsPulsing] = useState(false);
-
-    const totalDigs = useMemo(() => {
-        return Object.values(minedHexes || {}).reduce((sum, val) => sum + val, 0);
-    }, [minedHexes]);
 
     const isCampaignLevel = useMemo(() => {
         return activeLevelConfig?.id ? (
@@ -75,146 +71,10 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
         return activeLevelConfig.goalText;
     }, [grid, player, activeLevelConfig, session]);
 
-    // Metrics computation matching the old CampaignHintBanner precisely
+    // Metrics computation matching getCampaignMetric precisely
     const metrics = useMemo(() => {
-        if (!grid || !player || !activeLevelConfig) return null;
-        const levelId = activeLevelConfig.id;
-        const ownedByLevel = (minLvl: number) =>
-            Object.values(grid).filter((h: any) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
-
-        if (levelId === '1.0') {
-            const wavePath = [
-                { q: 0, r: 0 },
-                { q: 1, r: 0 },
-                { q: 2, r: 0 },
-                { q: 3, r: 0 },
-                { q: 4, r: 0 },
-                { q: 5, r: 0 },
-                { q: 6, r: 0 },
-                { q: 6, r: 1 },
-                { q: 5, r: 2 },
-                { q: 4, r: 3 },
-                { q: 3, r: 3 },
-                { q: 2, r: 3 },
-                { q: 1, r: 3 },
-                { q: 0, r: 3 },
-                { q: -1, r: 3 },
-                { q: -2, r: 3 }
-            ];
-            const idx = wavePath.findIndex(p => p.q === player.q && p.r === player.r);
-            return { current: idx !== -1 ? idx : 0, target: 15, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
-        }
-        if (levelId === '1.2') return { current: Math.max(0, 2 - (grid[`0,0`]?.currentLevel ?? 2)), target: 2, label: language === 'RU' ? 'СРЕЗАННЫЕ СЛОИ' : 'DIG LAYERS' };
-        if (levelId === '1.3') return { current: grid[`0,0`]?.currentLevel ?? 0, target: 3, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
-        if (levelId === '1.4') return { current: player.coins, target: 100, label: language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS' };
-        if (levelId === '1.5') {
-            const depthOk = (grid['0,0']?.currentLevel ?? 0) <= -2 ? 1 : 0;
-            const healedOk = grid['1,-1']?.structureType !== 'VOID' ? 1 : 0;
-            return { current: depthOk + healedOk, target: 2, label: language === 'RU' ? 'ЗАДАЧИ' : 'OBJECTIVES' };
-        }
-        if (levelId === '1.6') {
-            return { current: (player.q === 8 && player.r === 0) ? 1 : 0, target: 1, label: language === 'RU' ? 'СТОЛИЦА' : 'CAPITAL' };
-        }
-        if (levelId === '1.7') {
-            const count = [grid['0,-1'], grid['0,0'], grid['0,1']].filter(h => (h?.currentLevel ?? 0) >= 2).length;
-            return { current: count, target: 3, label: language === 'RU' ? 'ОПОРЫ' : 'SUPPORTS' };
-        }
-        
-        if (levelId === '2.1') {
-            return { current: session?.portalActive ? 1 : 0, target: 1, label: language === 'RU' ? 'ПОРТАЛ' : 'PORTAL' };
-        }
-        if (levelId === '2.2') {
-            return { current: session?.portalActive ? 3 : Math.min(3, player.inventory?.length ?? 0), target: 3, label: language === 'RU' ? 'ПРЕДМЕТЫ' : 'ITEMS' };
-        }
-        if (levelId === '2.3') {
-            return { current: session?.portalActive ? 1 : 0, target: 1, label: language === 'RU' ? 'ПОРТАЛ' : 'PORTAL' };
-        }
-        if (levelId === '2.4') {
-            return { current: session?.portalActive ? 1 : Math.min(1, player.inventory?.length ?? 0), target: 1, label: language === 'RU' ? 'КЛЮЧИ' : 'KEYS' };
-        }
-        if (levelId === '2.5') {
-            const countL2 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 2 && h.ownerId === player.id).length;
-            return { current: session?.evacuationActive ? 3 : Math.min(3, countL2), target: 3, label: language === 'RU' ? 'ЛИНИЯ L2' : 'LINE L2' };
-        }
-        if (levelId === '2.6') {
-            const countL2 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 2 && h.ownerId === player.id).length;
-            return { current: session?.evacuationActive ? 3 : Math.min(3, countL2), target: 3, label: language === 'RU' ? 'ТРЕУГОЛЬНИК L2' : 'TRIANGLE L2' };
-        }
-        if (levelId === '2.7') {
-            const countL3 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 3 && h.ownerId === player.id).length;
-            return { current: session?.evacuationActive ? 4 : Math.min(4, countL3), target: 4, label: language === 'RU' ? 'РОМБ L3' : 'DIAMOND L3' };
-        }
-        if (levelId === '2.8') {
-            const countL3 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 3 && h.ownerId === player.id).length;
-            return { current: session?.evacuationActive ? 6 : Math.min(6, countL3), target: 6, label: language === 'RU' ? 'КОЛЬЦО L3' : 'RING L3' };
-        }
-        if (levelId === '2.9') {
-            const countL3 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 3 && h.ownerId === player.id).length;
-            return { current: session?.evacuationActive ? 6 : Math.min(6, countL3), target: 6, label: language === 'RU' ? 'ФИГУРЫ L3' : 'SHAPES L3' };
-        }
-        if (levelId === '2.10') {
-            return { current: session?.portalActive ? 1 : 0, target: 1, label: language === 'RU' ? 'ПОРТАЛ' : 'PORTAL' };
-        }
-
-        if (levelId === '3.1') return { current: session?.monumentRevealedSlots?.[0] ? 1 : 0, target: 1, label: language === 'RU' ? 'ОБЕЛИСК' : 'OBELISK' };
-        if (levelId === '3.2') return { current: session?.monumentRevealedSlots?.filter(Boolean).length || 0, target: 2, label: language === 'RU' ? 'МАЯКИ' : 'BEACONS' };
-        if (levelId === '3.3') return { current: session?.monumentRevealedSlots?.[0] ? 1 : 0, target: 1, label: language === 'RU' ? 'ОБЕЛИСК' : 'OBELISK' };
-        if (levelId === '3.4') return { current: session?.monumentRevealedSlots?.filter(Boolean).length || 0, target: 2, label: language === 'RU' ? 'ОБЕЛИСКИ' : 'OBELISKS' };
-        if (levelId === '3.5') return { current: session?.monumentRevealedSlots?.[0] ? 1 : 0, target: 1, label: language === 'RU' ? 'ОБЕЛИСК' : 'OBELISK' };
-        if (levelId === '3.6') {
-            const whisperCount = [
-                (session as any)?._ob1Visited,
-                (session as any)?._ob2Visited,
-                (session as any)?._ob3Visited
-            ].filter(Boolean).length;
-            return { current: whisperCount, target: 3, label: language === 'RU' ? 'ШЕПОТЫ' : 'WHISPERS' };
-        }
-        if (levelId === '3.7') return { current: session?.monumentRevealedSlots?.filter(Boolean).length || 0, target: 2, label: language === 'RU' ? 'ТАБЛИЦЫ' : 'TABLETS' };
-        if (levelId === '3.8') return { current: session?.monumentRevealedSlots?.filter(Boolean).length || 0, target: 3, label: language === 'RU' ? 'ЗАПИСИ' : 'RECORDS' };
-
-        if (levelId === '4.1') return { current: ownedByLevel(2), target: 3, label: language === 'RU' ? 'ГЕКСЫ L2' : 'L2 HEXES' };
-        if (levelId === '4.2') {
-            const hexA = grid[`-2,0`];
-            const hexB = grid[`2,0`];
-            let currentValue = 0;
-            if (hexA && hexA.ownerId === player.id && hexA.maxLevel >= 1) currentValue++;
-            if (hexB && hexB.ownerId === player.id && hexB.maxLevel >= 1) currentValue++;
-            return { current: currentValue, target: 2, label: language === 'RU' ? 'СИММЕТРИЯ' : 'SYMMETRY' };
-        }
-        if (levelId === '4.3') return { current: ownedByLevel(3), target: 2, label: language === 'RU' ? 'ГЕКСЫ L3' : 'L3 HEXES' };
-        if (levelId === '4.4') return { current: grid[`0,0`]?.maxLevel ?? 0, target: 4, label: language === 'RU' ? 'УРОВЕНЬ' : 'LEVEL' };
-        if (levelId === '4.5') {
-            let goals = 0;
-            if (ownedByLevel(2) >= 6) goals++;
-            if ((player?.coins ?? 0) >= 200) goals++;
-            const onMon = grid[`${player.q},${player.r}`]?.structureType === 'MONUMENT';
-            if (onMon) goals++;
-            return { current: goals, target: 2, label: language === 'RU' ? 'ЦЕЛИ' : 'GOALS' };
-        }
-        if (levelId === '4.6') return { current: ownedByLevel(3), target: 8, label: language === 'RU' ? 'ГЕКСЫ L3' : 'L3 HEXES' };
-        if (levelId === '4.7') {
-            const current = Math.min(4, ownedByLevel(3)) + Math.min(2, ownedByLevel(4));
-            return { current, target: 6, label: language === 'RU' ? 'РЕЗОНАНСЫ L3+L4' : 'RESONANCE L3+L4' };
-        }
-
-        if (levelId === '4.8') {
-             let goals = 0;
-             const onMon = grid[`${player.q},${player.r}`]?.structureType === 'MONUMENT';
-             if (onMon) goals++;
-             if (ownedByLevel(3) >= 3) goals++;
-             if ((player?.coins ?? 0) >= 300) goals++;
-             if ((player?.inventory?.length ?? 0) >= 2) goals++;
-             if ((entropy?.current ?? 0) < 60) goals++;
-             return { current: goals, target: 5, label: language === 'RU' ? 'СИНТЕЗ (5)' : 'SYNTHESIS (5)' };
-        }
-
-        if (levelId === '5.1') {
-            const count = session?.activatedMiniMonuments?.length || 0;
-            return { current: count, target: 3, label: language === 'RU' ? 'МОНУМЕНТЫ' : 'MONUMENTS' };
-        }
-
-        return null;
-    }, [grid, player, activeLevelConfig, language, entropy, totalDigs, restoredHexesCount, session]);
+        return getCampaignMetric(activeLevelConfig, grid, player, session, language, entropy?.current);
+    }, [grid, player, activeLevelConfig, language, entropy, session]);
 
     // Flashing effect on step/hint transition
     useEffect(() => {

@@ -494,6 +494,7 @@ export interface MeteorState {
   q: number;
   r: number;
   warnTicksRemaining: number;
+  maxWarnTicks: number;
 }
 
 export interface SessionState {

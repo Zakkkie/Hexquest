@@ -1042,6 +1042,11 @@ export const createGameplaySlice = (
       // For maximum smoothness of multi-bot activities & real-time animations, we commit the state on every single tick.
       // This eliminates rendering stutters, layout jitters, and visual delay offsets.
       set(() => ({ session: result.state, toast: newToast }));
+    } catch (err: any) {
+      console.error('Tick execution failed:', err);
+      set(() => ({
+        toast: { message: `Engine Error: ${err.message || 'Unknown tick failure'}`, type: 'error', timestamp: Date.now() }
+      }));
     } finally {
       isProcessingTick = false;
     }

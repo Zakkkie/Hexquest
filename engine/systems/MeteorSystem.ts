@@ -4,6 +4,18 @@ import { WorldIndex } from '../WorldIndex';
 import { GameEventFactory } from '../events';
 import { getHexKey, getNeighbors } from '../../services/hexUtils';
 
+const makeRng = (seed: number) => {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  s = (s * 16807) % 2147483647;
+  s = (s * 16807) % 2147483647;
+  s = (s * 16807) % 2147483647;
+  return () => {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+};
+
 export class MeteorSystem implements System {
   update(state: SessionState, index: WorldIndex, events: GameEvent[]): void {
     if (state.gameStatus !== 'PLAYING') return;
@@ -17,6 +29,9 @@ export class MeteorSystem implements System {
       state.activeMeteors = [];
     }
 
+    // (a0ea8cd) Контракт: все броски тика — из одного инстанса (не пересоздавать RNG каждый раз с тем же сидом)
+    const rng = makeRng(state.currentTurn);
+    
     const now = Date.now();
     const activeMeteors = [...state.activeMeteors];
     const remainingMeteors: any[] = [];
@@ -77,7 +92,13 @@ export class MeteorSystem implements System {
 
             // Check if player is standing on this hex
             if (state.player.q === meteor.q && state.player.r === meteor.r) {
-              // Direct hit on player -> -1 playerLevel (rank) + short knockback
+              if (state.player.playerLevel <= 1) {
+                state.gameStatus = "DEFEAT";
+                const deathMsg = state.language === "RU" ? "💥 ПРЯМОЕ ПОПАДАНИЕ! Метеор уничтожил вас!" : "💥 DIRECT HIT! Meteor crushed you!";
+                state.messageLog.unshift({ id: `player-death-meteor-${now}`, text: deathMsg, type: "ERROR", source: "SYSTEM", timestamp: now });
+                events.push(GameEventFactory.create("DEFEAT", deathMsg, state.player.id, { q: meteor.q, r: meteor.r }));
+              } else {
+                // Direct hit on player -> -1 playerLevel (rank) + short knockback
               state.player.playerLevel = Math.max(1, state.player.playerLevel - 1);
               
               // Knockback: move player to a valid adjacent neighbor
@@ -90,7 +111,7 @@ export class MeteorSystem implements System {
 
               let kbMsg = '';
               if (validNeighbors.length > 0) {
-                const chosen = validNeighbors[Math.floor(Math.random() * validNeighbors.length)];
+                const chosen = validNeighbors[Math.floor(rng() * validNeighbors.length)];
                 state.player.q = chosen.q;
                 state.player.r = chosen.r;
                 state.player.state = EntityState.IDLE;
@@ -115,6 +136,7 @@ export class MeteorSystem implements System {
               });
 
               events.push(GameEventFactory.create('PLAYER_HIT_BY_METEOR', kbMsg, state.player.id, { q: meteor.q, r: meteor.r }));
+              }
             }
 
             // Check bots standing on this hex
@@ -129,7 +151,7 @@ export class MeteorSystem implements System {
                 });
 
                 if (validNeighbors.length > 0) {
-                  const chosen = validNeighbors[Math.floor(Math.random() * validNeighbors.length)];
+                  const chosen = validNeighbors[Math.floor(rng() * validNeighbors.length)];
                   bot.q = chosen.q;
                   bot.r = chosen.r;
                   bot.state = EntityState.IDLE;
@@ -159,7 +181,7 @@ export class MeteorSystem implements System {
     // 0% entropy -> 0.15 (15% per tick, i.e., average 1.5 per second)
     const spawnChance = 0.002 + 0.148 * Math.pow(1 - entropyPercent, 2);
 
-    if (Math.random() < spawnChance && state.activeMeteors.length < 12) {
+    if (rng() < spawnChance && state.activeMeteors.length < 12) {
       // Find a target hex (not void, not monument, not currently targeted)
       const targetedHexes = new Set(state.activeMeteors.map(m => getHexKey(m.q, m.r)));
       const candidates = Object.values(state.grid).filter(hex => {
@@ -169,17 +191,18 @@ export class MeteorSystem implements System {
       });
 
       if (candidates.length > 0) {
-        const target = candidates[Math.floor(Math.random() * candidates.length)];
-        const meteorId = 'meteor-' + Math.random().toString(36).substring(7);
+        const target = candidates[Math.floor(rng() * candidates.length)];
+        const meteorId = 'meteor-' + rng().toString(36).substring(7);
         
-        // 4 ticks telegraph = 400ms (perfectly reaction/skill based)
-        const warnTicks = 4;
+        // 1.5s to 5s (15 to 50 ticks) depending on entropy
+        const warnTicks = Math.floor(15 + 35 * entropyPercent);
 
         state.activeMeteors.push({
           id: meteorId,
           q: target.q,
           r: target.r,
-          warnTicksRemaining: warnTicks
+          warnTicksRemaining: warnTicks,
+          maxWarnTicks: warnTicks
         });
 
         events.push(GameEventFactory.create('METEOR_WARN', undefined, undefined, {

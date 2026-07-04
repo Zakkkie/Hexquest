@@ -641,37 +641,45 @@ export const StoryTutorial: React.FC = () => {
             };
         }
 
-        // Mobile styling - safe "fixed" orientation to guarantee visibility and prevent clipping
-        if (currentConfig?.targetId === "tutorial-shape-list" || currentConfig?.targetId === "tutorial-levels-btn") {
-            // Target is at the bottom. Put explanation card high up on the screen.
-            return {
-                position: 'fixed' as const,
-                top: '90px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 'calc(100vw - 32px)',
-                maxWidth: '320px',
-            };
-        } else if (currentConfig?.targetId === "tutorial-blueprint-tablet" || currentConfig?.targetId === "tutorial-sp-badge") {
-            // Target is at the top. Put explanation card in responsive bottom section of the screen.
+        // Mobile styling - dynamic placement avoiding the cutout
+        const defaultWidth = {
+            width: 'calc(100vw - 32px)',
+            maxWidth: '320px',
+            left: '50%',
+            transform: 'translateX(-50%)'
+        };
+
+        if (!cutout) {
             return {
                 position: 'fixed' as const,
                 bottom: '120px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 'calc(100vw - 32px)',
-                maxWidth: '320px',
+                ...defaultWidth
             };
-        } else {
-             // Main center board.
-            // On mobile, put it right at the very bottom portion of the board.
+        }
+
+        const spaceAbove = cutout.y;
+        const spaceBelow = window.innerHeight - (cutout.y + cutout.h);
+
+        // HUD safe margins
+        const topMargin = 90;
+        const bottomMargin = 120;
+
+        const effectiveSpaceAbove = spaceAbove - topMargin;
+        const effectiveSpaceBelow = spaceBelow - bottomMargin;
+
+        if (effectiveSpaceAbove >= effectiveSpaceBelow) {
+            // Place above the cutout (use bottom to position it relative to bottom edge)
             return {
                 position: 'fixed' as const,
-                bottom: '110px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 'calc(100vw - 32px)',
-                maxWidth: '320px',
+                bottom: `${window.innerHeight - cutout.y + 16}px`,
+                ...defaultWidth
+            };
+        } else {
+            // Place below the cutout (use top to position it relative to top edge)
+            return {
+                position: 'fixed' as const,
+                top: `${cutout.y + cutout.h + 16}px`,
+                ...defaultWidth
             };
         }
     };

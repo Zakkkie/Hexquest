@@ -97,7 +97,7 @@ export const getStatusModifiers = (actor: Entity, session?: any): {
   let entropyResistance = 1.0;
   let restorationMaster = 0;
 
-  const isPlayer = actor && actor.id === 'player';
+  const isPlayer = actor && (actor.id === 'player' || actor.id === 'player-1' || actor.id.startsWith('player'));
   const upgrades = session?.campaignUpgrades;
   
   // --- FETCH MILSTONES EXTERNALLY FOR PASSIVES ---
