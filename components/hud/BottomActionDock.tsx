@@ -150,20 +150,48 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const [isMobile, setIsMobile] = useState(false);
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-    // Tutorial dimming & locks overrides
     const levelId = activeLevelConfig?.id;
+    const tutorialHint = useMemo(() => {
+        if (!activeLevelConfig || !activeLevelConfig.getTutorialHint) return "";
+        try {
+            return activeLevelConfig.getTutorialHint({ player, grid, language } as any);
+        } catch(e) {
+            return "";
+        }
+    }, [activeLevelConfig, player, grid, language]);
 
     const digDimmed = useMemo(() => {
+        if (!tutorialHint) return false;
+        const upper = tutorialHint.toUpperCase();
+        if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;
+        if (upper.includes('ИДИ НА УКАЗАТЕЛЬ') || upper.includes('MOVE TO TARGET') || upper.includes('MOVE:')) return true;
+        if (upper.includes('ПРИМЕНИ ЛОСКУТ') || upper.includes('USE PATCH')) return true;
+        if (upper.includes('СТРОЙ') || upper.includes('BUILD')) return true;
+        if (upper.includes('СБОР ЭНЕРГИИ') || upper.includes('RECOVER')) return true;
         return false;
-    }, []);
+    }, [tutorialHint]);
 
     const upgradeDimmed = useMemo(() => {
+        if (!tutorialHint) return false;
+        const upper = tutorialHint.toUpperCase();
+        if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;
+        if (upper.includes('ИДИ НА УКАЗАТЕЛЬ') || upper.includes('MOVE TO TARGET') || upper.includes('MOVE:')) return true;
+        if (upper.includes('ПРИМЕНИ ЛОСКУТ') || upper.includes('USE PATCH')) return true;
+        if (upper.includes('КОПАЙ') || upper.includes('DIG')) return true;
+        if (upper.includes('СБОР ЭНЕРГИИ') || upper.includes('RECOVER')) return true;
         return false;
-    }, []);
+    }, [tutorialHint]);
 
     const recoverDimmed = useMemo(() => {
+        if (!tutorialHint) return false;
+        const upper = tutorialHint.toUpperCase();
+        if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;
+        if (upper.includes('ИДИ НА УКАЗАТЕЛЬ') || upper.includes('MOVE TO TARGET') || upper.includes('MOVE:')) return true;
+        if (upper.includes('ПРИМЕНИ ЛОСКУТ') || upper.includes('USE PATCH')) return true;
+        if (upper.includes('СТРОЙ') || upper.includes('BUILD')) return true;
+        if (upper.includes('КОПАЙ') || upper.includes('DIG')) return true;
         return false;
-    }, []);
+    }, [tutorialHint]);
 
     const handleDimmedClick = useCallback(() => {
         playUiSound('WARNING');
