@@ -3,7 +3,11 @@ import { Hex, HexCoord, Entity, PathResult } from '../types';
 import { GAME_CONFIG, getLevelConfig, SAFETY_CONFIG } from '../rules/config';
 import { getItemDef } from '../rules/items';
 import { getMilestoneModifiers } from '../campaign/milestones.ts';
-import { useGameStore } from '../store.ts';
+
+let storeRef: any = null;
+export const registerGameStore = (store: any) => {
+  storeRef = store;
+};
 
 export const getHexKey = (q: number, r: number): string => `${q},${r}`;
 export const getCoordinatesFromKey = (key: string): HexCoord => {
@@ -104,7 +108,7 @@ export const getStatusModifiers = (actor: Entity, session?: any): {
   if (isPlayer) {
       let totalGoldEarned = 0;
       try {
-          totalGoldEarned = useGameStore.getState().totalGoldEarned || 0;
+          totalGoldEarned = (storeRef?.getState()?.totalGoldEarned) || session?.totalGoldEarned || 0;
       } catch (e) {
           // Fallback if accessed via tests/headless engine without Zustand
           totalGoldEarned = session?.totalGoldEarned || 0;
@@ -336,7 +340,8 @@ export const findPath = (
   obstacles: HexCoord[],
   hasVoidCore?: boolean,
   ignoreAllRules?: boolean,
-  isBot?: boolean
+  isBot?: boolean,
+  isDefenseMode?: boolean
 ): PathResult => {
   const startKey = getHexKey(start.q, start.r);
   const endKey = getHexKey(end.q, end.r);
@@ -436,8 +441,8 @@ export const findPath = (
 
         // Siege mode check: Bots can only move on hexes that are lowered to level 1 and below
         if (isBot) {
-          const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
-          if (isDefenseMode && neighborHex && neighborHex.currentLevel > 1) {
+          const activeDefenseMode = isDefenseMode !== undefined ? isDefenseMode : !!storeRef?.getState()?.session?.defense?.isDefenseMode;
+          if (activeDefenseMode && neighborHex && neighborHex.currentLevel > 1) {
             // Allow the destination/target node of the path itself to be level > 1 
             // so the bot can pathfind adjacent to it
             const isDestination = nKey === endKey;

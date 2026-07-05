@@ -82,6 +82,26 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
         rose: 'group-hover:border-rose-400/30',
     };
 
+    const glowTexts: Record<string, string> = {
+        cyan: 'text-cyan-400',
+        emerald: 'text-emerald-400',
+        purple: 'text-purple-400',
+        pink: 'text-pink-400',
+        indigo: 'text-indigo-400',
+        amber: 'text-amber-400',
+        orange: 'text-orange-400',
+        teal: 'text-teal-400',
+        red: 'text-red-400',
+        blue: 'text-blue-400',
+        stone: 'text-stone-400',
+        yellow: 'text-yellow-400',
+        fuchsia: 'text-fuchsia-400',
+        violet: 'text-violet-400',
+        sky: 'text-sky-400',
+        lime: 'text-lime-400',
+        rose: 'text-rose-400',
+    };
+
     const handleUpgrade = (key: keyof typeof upgrades, amount: number, cost: number) => {
         if (skillPoints >= cost) {
             playSound('SUCCESS');
@@ -219,7 +239,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                                 <span className="text-[10px] md:text-xs font-mono font-bold text-slate-400">{currentValue}</span>
                                 {!isMaxed && (
                                     <>
-                                        <TrendingUp className={`w-2.5 h-2.5 text-${glowColor}-400 opacity-60`} />
+                                        <TrendingUp className={`w-2.5 h-2.5 ${glowTexts[glowColor] || 'text-indigo-400'} opacity-60`} />
                                         <span className="text-[10px] md:text-xs font-mono font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
                                             {currentValue + amountPerUpgrade}
                                         </span>

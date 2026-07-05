@@ -58,7 +58,7 @@ const isObjectiveHexCompleted = (
         return !!portalActive;
     }
 
-    // Sim 1.0: Linear path
+    // New 8-Level Series 1 Custom Completion Checks:
     if (activeLevelId === '1.0') {
         const waveCoords = [
             "0,0", "1,0", "2,0", "3,0", "4,0", "5,0",
@@ -70,17 +70,10 @@ const isObjectiveHexCompleted = (
         let completedByPath = false;
         if (playerIdx !== -1 && hexIdx !== -1) {
             completedByPath = playerIdx >= hexIdx;
-        } else if (playerIdx !== -1 && hexIdx === -1) {
-             completedByPath = true; // should not happen 
         }
         
-        // However, for steps that require an action (Build at 1,0 or Dig at 3,0),
-        // we shouldn't consider the hex "completed" just by being ON it, until the action is done.
-        // Wait, if it's the NEXT step, playerIdx is < hexIdx. e.g. player at 0,0 (idx 0), target 1,0 (idx 1). 
-        // 0 >= 1 is false. So 1,0 is NOT completed, so it shows an arrow.
         if (playerIdx === hexIdx) {
-            // Player is ON the objective! Is it complete?
-            if (activeLevelId === '1.0' && gridCell) {
+            if (gridCell) {
                 if (objHex.label === 'Build') {
                     if (gridCell.currentLevel < objHex.targetLevel) return false;
                 }
@@ -90,35 +83,43 @@ const isObjectiveHexCompleted = (
             }
             return true;
         }
-
         return completedByPath;
     }
 
-    // Sim 1.1: Wave path checkpoints
     if (activeLevelId === '1.1') {
-        const waveCoords = ["0,0", "1,-1", "2,-1", "2,0", "1,1", "0,2", "-1,2", "-2,2", "-3,2", "-3,1", "-2,0"];
-        const playerIdx = waveCoords.indexOf(`${player.q},${player.r}`);
-        const hexIdx = waveCoords.indexOf(hexKey);
-        
-        if (playerIdx !== -1 && hexIdx !== -1) {
-            return playerIdx >= hexIdx;
+        if (objHex.label === 'Capital' || objHex.color === 'emerald') {
+            return player.q === objHex.q && player.r === objHex.r;
         }
-        return player.q === objHex.q && player.r === objHex.r;
+        if (gridCell && objHex.targetLevel) {
+            return gridCell.currentLevel >= objHex.targetLevel;
+        }
     }
 
-    // Sim 1.2: Reach Capital
     if (activeLevelId === '1.2') {
-        return player.q === objHex.q && player.r === objHex.r;
+        if (objHex.label === 'Goal') {
+            return gridCell ? gridCell.currentLevel <= 0 : false;
+        }
     }
 
-    // Sim 1.7: Reach Capital
-    if (activeLevelId === '1.7') {
-        return player.q === objHex.q && player.r === objHex.r;
+    if (activeLevelId === '1.3') {
+        if (objHex.label === 'Goal L3') {
+            return gridCell ? gridCell.currentLevel >= 3 : false;
+        }
     }
 
-    // Sim 1.9 (Rift repair): met when structureType is no longer VOID
-    if (activeLevelId === '1.9' && objHex.label === 'Rift') {
-        return !!gridCell && gridCell.structureType !== 'VOID';
+    if (activeLevelId === '1.5') {
+        if (objHex.label === 'Heal') {
+            return gridCell ? gridCell.structureType !== 'VOID' : false;
+        }
+        if (objHex.label === 'Deep Mine') {
+            return gridCell ? gridCell.currentLevel <= -2 : false;
+        }
+    }
+
+    if (activeLevelId === '1.6') {
+        if (objHex.label === 'Capital') {
+            return player.q === objHex.q && player.r === objHex.r;
+        }
     }
 
     // Default construction or excavation behavior
@@ -129,9 +130,6 @@ const isObjectiveHexCompleted = (
             return gridCell.currentLevel <= objHex.targetLevel;
         } else {
             // targetLevel === 0
-            if (activeLevelId === '1.3') {
-                return gridCell.currentLevel <= 0;
-            }
             if (objHex.label === 'Goal' || objHex.label === 'Capital' || objHex.color === 'emerald') {
                 return player.q === objHex.q && player.r === objHex.r;
             }
@@ -139,6 +137,17 @@ const isObjectiveHexCompleted = (
         }
     }
 
+    return false;
+};
+
+const isFinishTile = (q: number, r: number, activeLevelConfig: any): boolean => {
+    if (!activeLevelConfig) return false;
+    if (activeLevelConfig.id === '1.0' && q === -2 && r === 3) return true;
+    if (activeLevelConfig.id === '1.1' && q === -8 && r === 0) return true;
+    if (activeLevelConfig.id === '1.2' && q === 0 && r === 0) return true;
+    if (activeLevelConfig.id === '1.3' && q === 0 && r === 0) return true;
+    if (activeLevelConfig.id === '1.5' && q === 0 && r === 0) return true;
+    if (activeLevelConfig.id === '1.6' && q === 8 && r === 0) return true;
     return false;
 };
 
@@ -2271,7 +2280,6 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
                         const now = Date.now();
                         const isOnCooldown = hex.cooldownEndTime && now < hex.cooldownEndTime;
-                        const charges = hex.recoveryCharges !== undefined ? hex.recoveryCharges : 3;
 
                         const cy = props.offsetY - 2; // Slightly above face level
                         if (isOnCooldown) {
@@ -2286,30 +2294,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                             recoveryOverlay.ellipse(0, cy, 6, 4.8);
                             recoveryOverlay.fill({ color: 0xf43f5e, alpha: 0.6 });
                         } else {
-                            // Healthy state: draw bright cyan/blue charges!
-                            const dotRadius = 2.5;
-                            const spacing = 7;
-                            for (let j = 0; j < 3; j++) {
-                                const dx = (j - 1) * spacing;
-                                const dy = cy + 4; // placed neatly on top face
-                                
-                                const isCharged = j < charges;
-                                
-                                recoveryOverlay.beginPath();
-                                recoveryOverlay.ellipse(dx, dy, dotRadius, dotRadius * 0.8);
-                                if (isCharged) {
-                                    recoveryOverlay.fill({ color: 0x06b6d4, alpha: 0.95 });
-                                    recoveryOverlay.stroke({ width: 1, color: 0x22d3ee });
-                                } else {
-                                    recoveryOverlay.fill({ color: 0x1e293b, alpha: 0.6 });
-                                    recoveryOverlay.stroke({ width: 1, color: 0x475569 });
-                                }
-                            }
-
-                            // Draw a subtle ambient blue pulsing ring
-                            recoveryOverlay.beginPath();
-                            recoveryOverlay.ellipse(0, cy, 15, 12);
-                            recoveryOverlay.stroke({ width: 1.5, color: 0x06b6d4, alpha: 0.4 });
+                            // Healthy state: keep empty as requested to remove the 3 dots and ambient ring
                         }
                     } else {
                         const rOverlay = curContainer.getChildByName('recoveryOverlay');
@@ -2523,13 +2508,17 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
                 // Draw POI or Special structure Emojis
                 let emojiLayer = curContainer.getChildByName('emoji') as PIXI.Text;
-                const isSpecialStructure = props.structureType === 'MONUMENT' || props.structureType === 'MINI_MONUMENT' || props.structureType === 'CORE' || props.structureType === 'TURRET' || props.isCore || props.isMiniMonument || props.isTurret;
-                if (isRevealed && (props.poiType || isSpecialStructure)) {
+                const isFinish = isFinishTile(props.q, props.r, activeLevelConfig);
+                const isSpecialStructure = !isFinish && (props.structureType === 'MONUMENT' || props.structureType === 'MINI_MONUMENT' || props.structureType === 'CORE' || props.structureType === 'TURRET' || props.structureType === 'CAPITAL' || props.isCore || props.isMiniMonument || props.isTurret);
+                if (isRevealed && !isFinish && (props.poiType || isSpecialStructure)) {
                     let icon = '';
                     let colorVal = '#ffffff';
                     if (props.structureType === 'MONUMENT') {
                         icon = '★';
                         colorVal = '#f59e0b'; // Amber star
+                    } else if (props.structureType === 'CAPITAL') {
+                        icon = '🌌';
+                        colorVal = '#10b981'; // Emerald
                     } else if (props.structureType === 'MINI_MONUMENT' || props.isMiniMonument) {
                         const isA = props.isActivated || (activatedMiniMonuments && activatedMiniMonuments.includes(`${props.q},${props.r}`));
                         icon = isA ? '▲' : '△'; // filled vs empty triangle
@@ -2673,6 +2662,78 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     const existingArrow = curContainer.getChildByName('objective_arrow');
                     if (existingArrow) {
                         existingArrow.visible = false;
+                    }
+                }
+
+                // --- PERSISTENT FINISH BEACON ---
+                if (isFinish && isRevealed) {
+                    let finishBeacon = curContainer.getChildByName('finish_beacon') as PIXI.Container;
+                    if (!finishBeacon) {
+                        finishBeacon = new PIXI.Container();
+                        finishBeacon.name = 'finish_beacon';
+                        finishBeacon.zIndex = 38;
+                        curContainer.addChild(finishBeacon);
+
+                        // Draw a vertical beacon beam (a cone/cylinder of light)
+                        const beam = new PIXI.Graphics();
+                        beam.name = 'beam';
+                        finishBeacon.addChild(beam);
+
+                        // Draw a base glow ellipse
+                        const baseGlow = new PIXI.Graphics();
+                        baseGlow.name = 'baseGlow';
+                        finishBeacon.addChild(baseGlow);
+                    }
+
+                    finishBeacon.visible = true;
+
+                    // Update positions
+                    const beam = finishBeacon.getChildByName('beam') as PIXI.Graphics;
+                    const baseGlow = finishBeacon.getChildByName('baseGlow') as PIXI.Graphics;
+
+                    if (beam) {
+                        beam.clear();
+                        // Cone pointing down to faceY from the very top of the sky (1200px up)
+                        // It narrows at the top and expands at the bottom (hex), staying within its bounds
+                        const beamHeight = 1200;
+                        const pulse = Math.sin(Date.now() * 0.005) * 0.12 + 0.88; // shimmering scale
+                        const beamWidthTop = 4 * pulse;
+                        const beamWidthBottom = 26 * pulse;
+
+                        // Outer soft glowing white/cyan cone
+                        beam.beginPath();
+                        beam.moveTo(-beamWidthTop, faceY - beamHeight);
+                        beam.lineTo(beamWidthTop, faceY - beamHeight);
+                        beam.lineTo(beamWidthBottom, faceY);
+                        beam.lineTo(-beamWidthBottom, faceY);
+                        beam.closePath();
+                        beam.fill({ color: 0xffffff, alpha: 0.22 * pulse });
+                        beam.stroke({ width: 1.5, color: 0xffffff, alpha: 0.4 * pulse });
+
+                        // Inner super bright core cone
+                        const coreWidthTop = beamWidthTop * 0.4;
+                        const coreWidthBottom = beamWidthBottom * 0.4;
+                        beam.beginPath();
+                        beam.moveTo(-coreWidthTop, faceY - beamHeight);
+                        beam.lineTo(coreWidthTop, faceY - beamHeight);
+                        beam.lineTo(coreWidthBottom, faceY);
+                        beam.lineTo(-coreWidthBottom, faceY);
+                        beam.closePath();
+                        beam.fill({ color: 0xf0fdf4, alpha: 0.45 * pulse }); // warm white/emerald shine
+                    }
+
+                    if (baseGlow) {
+                        baseGlow.clear();
+                        const pulse = Math.sin(Date.now() * 0.005) * 0.15 + 1.0;
+                        baseGlow.ellipse(0, faceY, 26 * pulse, 15 * pulse);
+                        baseGlow.fill({ color: 0xffffff, alpha: 0.4 });
+                        baseGlow.ellipse(0, faceY, 13 * pulse, 7.5 * pulse);
+                        baseGlow.fill({ color: 0xa7f3d0, alpha: 0.6 }); // Emerald light core
+                    }
+                } else {
+                    const existingBeacon = curContainer.getChildByName('finish_beacon');
+                    if (existingBeacon) {
+                        existingBeacon.visible = false;
                     }
                 }
 
@@ -3264,6 +3325,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         shadow.y = targetZ;
                     }
                 }
+
 
                 curContainer.alpha = props.opacity;
             }

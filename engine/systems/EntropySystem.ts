@@ -2,12 +2,9 @@
 import { System } from './System';
 import { GameEvent, SessionState } from '../../types';
 import { WorldIndex } from '../WorldIndex';
-import { GameEventFactory } from '../events';
-import { ENTROPY_CONFIG } from '../../rules/config';
-import { getHexKey, getStatusModifiers } from '../../services/hexUtils';
 
 export class EntropySystem implements System {
-  update(state: SessionState, _index: WorldIndex, events: GameEvent[]): void {
+  update(state: SessionState, _index: WorldIndex, _events: GameEvent[]): void {
     if (state.gameStatus !== 'PLAYING') return;
 
     if (state.activeLevelConfig?.id?.startsWith('1.') || state.defense?.isDefenseMode) {

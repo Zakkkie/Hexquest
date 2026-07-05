@@ -3,12 +3,12 @@ import { useGameStore } from '../../store';
 import { Hourglass, Crosshair, HeartPulse, ChevronDown, ChevronUp, Terminal, RotateCcw, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export const DefenseSiegeBanner: React.FC = () => {
+export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ onOpenBriefing }) => {
     const session = useGameStore(state => state.session);
     const language = session?.language || 'EN';
     const startDefenseSiege = useGameStore(state => state.startDefenseSiege);
 
-    const [isCollapsed, setIsCollapsed] = useState(true);
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMinimizedDesktop, setIsMinimizedDesktop] = useState(false);
 
     if (!session?.defense?.isDefenseMode) return null;
@@ -142,6 +142,28 @@ export const DefenseSiegeBanner: React.FC = () => {
                                     />
                                 </div>
 
+                                {/* Level Objective */}
+                                <div className="bg-rose-950/10 border border-rose-500/20 p-2.5 rounded-xl flex flex-col gap-1 text-left">
+                                    <span className="text-[8px] font-black font-mono tracking-widest text-rose-400 uppercase">
+                                        {language === 'RU' ? 'ЦЕЛЬ УРОВНЯ' : 'LEVEL OBJECTIVE'}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-slate-200 font-sans uppercase leading-tight">
+                                        {session?.activeLevelConfig?.goalText || session?.activeLevelConfig?.description || (
+                                            language === 'RU'
+                                                ? 'Защищайте центральное Ядро (CORE) от наступающих волн противника. Не дайте прочности ядра упасть до нуля. Продержитесь 3 минуты!'
+                                                : 'Protect the central CORE from incoming enemy waves. Do not let the core health reach zero. Survive for 3 minutes!'
+                                        )}
+                                    </span>
+                                    {onOpenBriefing && session?.activeLevelConfig && (
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); onOpenBriefing(); }}
+                                            className="text-[9.5px] font-mono font-black text-rose-400 hover:text-rose-300 transition-colors uppercase cursor-pointer text-left underline decoration-dotted underline-offset-2 mt-1"
+                                        >
+                                            {language === 'RU' ? 'ПОКАЗАТЬ ПОДРОБНЫЙ ИНСТРУКТАЖ →' : 'SHOW DETAILED BRIEFING →'}
+                                        </button>
+                                    )}
+                                </div>
+
                                 {/* Progress Metrics */}
                                 <div className="grid grid-cols-2 gap-2 bg-slate-900/40 p-2 rounded-lg border border-slate-900/60 text-[10px] font-bold font-mono">
                                     <div className="flex flex-col gap-0.5 border-r border-slate-800/80 pr-2">
@@ -243,6 +265,28 @@ export const DefenseSiegeBanner: React.FC = () => {
                                 >
                                     <ChevronDown className="w-4 h-4 rotate-90" />
                                 </button>
+                            </div>
+
+                            {/* Level Objective */}
+                            <div className="bg-rose-950/15 border border-rose-500/30 p-3 rounded-xl flex flex-col gap-1.5 text-left">
+                                <span className="text-[9px] font-black font-mono tracking-widest text-rose-400 uppercase">
+                                    {language === 'RU' ? 'ЦЕЛЬ УРОВНЯ' : 'LEVEL OBJECTIVE'}
+                                </span>
+                                <span className="text-xs font-bold text-slate-100 font-sans uppercase leading-tight">
+                                    {session?.activeLevelConfig?.goalText || session?.activeLevelConfig?.description || (
+                                        language === 'RU'
+                                            ? 'Защищайте центральное Ядро (CORE) от наступающих волн противника. Не дайте прочности ядра упасть до нуля. Продержитесь 3 минуты!'
+                                            : 'Protect the central CORE from incoming enemy waves. Do not let the core health reach zero. Survive for 3 minutes!'
+                                    )}
+                                </span>
+                                {onOpenBriefing && session?.activeLevelConfig && (
+                                    <button 
+                                        onClick={onOpenBriefing}
+                                        className="text-[10px] font-mono font-black text-rose-400 hover:text-rose-300 transition-colors uppercase cursor-pointer text-left underline decoration-dotted underline-offset-4 mt-1"
+                                    >
+                                        {language === 'RU' ? 'ПОКАЗАТЬ ПОДРОБНЫЙ ИНСТРУКТАЖ →' : 'SHOW DETAILED BRIEFING →'}
+                                    </button>
+                                )}
                             </div>
 
                             {/* Circular / Linear Health Bar */}

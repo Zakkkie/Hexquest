@@ -100,7 +100,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                 />
                 
                 {gameStatus === 'PLAYING' && session?.defense?.isDefenseMode && (
-                    <DefenseSiegeBanner />
+                    <DefenseSiegeBanner onOpenBriefing={() => setActiveModal('MISSION')} />
                 )}
 
                 {gameStatus === 'PLAYING' && (

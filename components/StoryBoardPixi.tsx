@@ -163,6 +163,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     const cellsRef = useRef(cells);
     const transientRef = useRef(transient);
     const cameraRef = useRef(camera);
+    const lastAppliedLocalCamera = useRef<{ x: number; y: number; scale: number } | null>(null);
     const dimsRef = useRef(dimensions);
     const contrastRef = useRef(contrastHighlighting);
     const figureIndexRef = useRef(figureIndex);
@@ -410,9 +411,15 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     useEffect(() => {
         const world = worldRef.current;
         if (world && camera) {
+            // Avoid applying store updates that were triggered by our own local active dragging or zoom interactions (echoes)
+            const last = lastAppliedLocalCamera.current;
+            if (last && Math.abs(last.x - camera.x) < 0.1 && Math.abs(last.y - camera.y) < 0.1 && Math.abs(last.scale - camera.scale) < 0.001) {
+                return;
+            }
             world.x = camera.x;
             world.y = camera.y;
             world.scale.set(camera.scale, camera.scale);
+            cameraRef.current = camera;
         }
     }, [camera, isReady]);
 
@@ -1227,6 +1234,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
 
     const applyCamera = (cam: { x: number; y: number; scale: number }) => {
         cameraRef.current = cam;
+        lastAppliedLocalCamera.current = cam;
         const world = worldRef.current;
         if (world) {
             world.x = cam.x;
@@ -1259,6 +1267,12 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     };
 
     const handlePointerDown = (e: React.PointerEvent) => {
+        if (pinchStart.current) return;
+        const isMultiTouch = e.pointerType === 'touch' && (e.nativeEvent as any).touches && (e.nativeEvent as any).touches.length > 1;
+        if (isMultiTouch) {
+            isDragging.current = false;
+            return;
+        }
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         (e.target as Element).setPointerCapture?.(e.pointerId);
         isDragging.current = true;
@@ -1274,7 +1288,12 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             const key = hit ? getHexKey(hit.q, hit.r) : null;
             if (key !== transientRef.current.hoveredKey) onHoverRef.current(key);
         }
-        if (!isDragging.current) return;
+        if (!isDragging.current || pinchStart.current) return;
+        const isMultiTouch = e.pointerType === 'touch' && (e.nativeEvent as any).touches && (e.nativeEvent as any).touches.length > 1;
+        if (isMultiTouch) {
+            isDragging.current = false;
+            return;
+        }
         const ds = dragStart.current;
         const dx = e.clientX - ds.x;
         const dy = e.clientY - ds.y;
@@ -1350,7 +1369,10 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
-        if (e.touches.length < 2) pinchStart.current = null;
+        if (e.touches.length < 2) {
+            pinchStart.current = null;
+        }
+        isDragging.current = false; // Prevent drag jumps when fingers are lifted
     };
 
     return (

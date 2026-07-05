@@ -124,3 +124,6 @@ useGameStore.subscribe((state) => {
     saveProfileProgress(state.user.nickname, state);
   }
 });
+
+import { registerGameStore } from './services/hexUtils.ts';
+registerGameStore(useGameStore);

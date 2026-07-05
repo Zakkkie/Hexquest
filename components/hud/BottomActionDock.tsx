@@ -151,28 +151,19 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
     // Tutorial dimming & locks overrides
-    const isTutorialLevel1 = activeLevelConfig?.id ? activeLevelConfig.id.startsWith('1.') : false;
     const levelId = activeLevelConfig?.id;
 
     const digDimmed = useMemo(() => {
-        if (!isTutorialLevel1 || !levelId) return false;
-        if (levelId === '1.0' && (!player || player.q !== 3 || player.r !== 0)) return true;
-        if (['1.3', '1.4', '1.7'].includes(levelId)) return true;
         return false;
-    }, [isTutorialLevel1, levelId, player]);
+    }, []);
 
     const upgradeDimmed = useMemo(() => {
-        if (!isTutorialLevel1 || !levelId) return false;
-        if (levelId === '1.0' && (!player || player.q !== 1 || player.r !== 0)) return true;
-        if (['1.1', '1.2', '1.4', '1.5'].includes(levelId)) return true;
         return false;
-    }, [isTutorialLevel1, levelId, player]);
+    }, []);
 
     const recoverDimmed = useMemo(() => {
-        if (!isTutorialLevel1 || !levelId) return false;
-        if (['1.0', '1.1', '1.2', '1.3', '1.5', '1.6', '1.7'].includes(levelId)) return true;
         return false;
-    }, [isTutorialLevel1, levelId]);
+    }, []);
 
     const handleDimmedClick = useCallback(() => {
         playUiSound('WARNING');
@@ -512,7 +503,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'DIG'}
                                     disabled={!canDig}
                                     dimmed={digDimmed}
-                                    pulsate={levelId === '1.2' || levelId === '1.3' || levelId === '1.8'}
+                                    pulsate={levelId === '1.1' || levelId === '1.2' || levelId === '1.5' || levelId === '1.6'}
                                     progress={timeData.mode === 'DIG' ? timeData.percent : 0}
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''} !p-0 !m-0`}
                                     title={digDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : digTooltip}
@@ -536,7 +527,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
                                     disabled={!canUpgrade}
                                     dimmed={upgradeDimmed}
-                                    pulsate={levelId === '1.7' || (canUpgrade && !isPlayerGrowing)}
+                                    pulsate={levelId === '1.0' || levelId === '1.3' || levelId === '1.7' || (canUpgrade && !isPlayerGrowing)}
                                     progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0}
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'ring-2 ring-amber-500/30' : ''} !p-0 !m-0`}
                                     title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}
@@ -715,7 +706,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'DIG'} 
                                     disabled={!canDig} 
                                     dimmed={digDimmed}
-                                    pulsate={levelId === '1.2' || levelId === '1.3' || levelId === '1.8'}
+                                    pulsate={levelId === '1.1' || levelId === '1.2' || levelId === '1.5' || levelId === '1.6'}
                                     progress={timeData.mode === 'DIG' ? timeData.percent : 0} 
                                     className={isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''} 
                                     title={digDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : digTooltip}
@@ -744,7 +735,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} 
                                     disabled={!canUpgrade} 
                                     dimmed={upgradeDimmed}
-                                    pulsate={levelId === '1.7' || (canUpgrade && !isPlayerGrowing)} 
+                                    pulsate={levelId === '1.0' || levelId === '1.3' || levelId === '1.7' || (canUpgrade && !isPlayerGrowing)} 
                                     progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} 
                                     className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-0.5 ring-2 ring-amber-500/30 font-bold' : ''} 
                                     title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}

@@ -404,7 +404,7 @@ const CampaignMap: React.FC = () => {
                                       } opacity-75 blur-[12px] -z-10 pointer-events-none group-hover:opacity-100 transition-opacity duration-300`} />
 
                                       {/* Additional ambient subtle circle */}
-                                      <div className={`absolute top-0 w-24 h-24 bg-${isCompleted ? 'emerald' : (isCurrent ? 'amber' : 'indigo')}-500/5 blur-[25px] rounded-full pointer-events-none -translate-y-6 ${isMobile ? 'left-0' : (i % 2 === 0 ? 'left-0' : 'right-0')}`} />
+                                      <div className={`absolute top-0 w-24 h-24 blur-[25px] rounded-full pointer-events-none -translate-y-6 ${isMobile ? 'left-0' : (i % 2 === 0 ? 'left-0' : 'right-0')} ${isCompleted ? 'bg-emerald-500/5' : (isCurrent ? 'bg-amber-500/5' : 'bg-indigo-500/5')}`} />
 
                                       <div className="flex items-center gap-1.5 mb-1.5 shrink-0">
                                           <div className={`w-1.5 h-1.5 rounded-full ${isCompleted ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : (isCurrent ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b]' : 'bg-slate-600')}`} />
