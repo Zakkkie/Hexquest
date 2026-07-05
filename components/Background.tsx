@@ -216,7 +216,7 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
                const height = Math.max(0, rawH);
 
                let color = '#0f172a'; 
-               let stroke = `rgba(71, 85, 105, ${0.2 + height * 0.4})`;
+               const stroke = `rgba(71, 85, 105, ${0.2 + height * 0.4})`;
 
                if (height > 0.6) color = '#1e3a8a';
                if (height > 0.8) color = '#b45309';

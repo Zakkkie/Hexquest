@@ -777,7 +777,7 @@ export const createGameplaySlice = (
       const deltaGold = newEarned - prevEarned;
 
       set((curr) => {
-          let payload: Partial<GameStore> = { totalMinedMaterial: result.state.totalMinedMaterial };
+          const payload: Partial<GameStore> = { totalMinedMaterial: result.state.totalMinedMaterial };
           if (deltaGold > 0) {
               payload.totalGoldEarned = (curr.totalGoldEarned || 0) + deltaGold;
           }

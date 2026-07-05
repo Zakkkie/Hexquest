@@ -16,7 +16,7 @@ export const rollForLoot = (depth: number, language: 'EN' | 'RU' = 'EN'): LootRe
 
     // 1. CALCULATE DROP CHANCE (Finding ANYTHING)
     // -1: 20%, -2: 30% ... -9: 100%
-    let dropChance = Math.min(1.0, 0.10 + (d * 0.10)); 
+    const dropChance = Math.min(1.0, 0.10 + (d * 0.10)); 
     
     // Check if we found anything at all
     if (rand > dropChance) return { type: 'NONE' };

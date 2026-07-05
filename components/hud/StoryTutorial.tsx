@@ -157,9 +157,9 @@ const TutorialHexagon: React.FC<TutorialHexagonProps> = ({
     const colorTheme = LEVEL_COLORS[String(level)] || LEVEL_COLORS['0'];
     
     // Context-sensitive colors matching active modes
-    let strokeColor = isSelected ? '#22d3ee' : (isCorrect ? '#10b981' : (isIncorrect ? '#ef4444' : colorTheme.stroke));
-    let fillTop = isIncorrect ? '#4c0519' : (isCorrect ? '#064e3b' : colorTheme.top);
-    let fillSide = isIncorrect ? '#310413' : (isCorrect ? '#022c22' : colorTheme.side);
+    const strokeColor = isSelected ? '#22d3ee' : (isCorrect ? '#10b981' : (isIncorrect ? '#ef4444' : colorTheme.stroke));
+    const fillTop = isIncorrect ? '#4c0519' : (isCorrect ? '#064e3b' : colorTheme.top);
+    const fillSide = isIncorrect ? '#310413' : (isCorrect ? '#022c22' : colorTheme.side);
     
     const topPathD = `M ${points[0].x} ${points[0].y} ` +
                      `L ${points[1].x} ${points[1].y} ` +
@@ -194,7 +194,7 @@ const TutorialHexagon: React.FC<TutorialHexagonProps> = ({
             return <polygon points={`0,${-rx * 0.3} ${rx * 0.3},0 0,${rx * 0.3} ${-rx * 0.3},0`} fill="none" stroke={strokeColor} strokeWidth={1.2} transform="scale(1, 0.6)" opacity={0.65} />;
         }
         if (level === 5) {
-            let pts = [];
+            const pts = [];
             for (let i = 0; i < 5; i++) {
                 const a = (i * 72 - 90) * Math.PI / 180;
                 pts.push(`${(rx * 0.3 * Math.cos(a)).toFixed(1)},${(rx * 0.3 * Math.sin(a)).toFixed(1)}`);
@@ -202,7 +202,7 @@ const TutorialHexagon: React.FC<TutorialHexagonProps> = ({
             return <polygon points={pts.join(' ')} fill="none" stroke={strokeColor} strokeWidth={1.2} transform="scale(1, 0.6)" opacity={0.65} />;
         }
         if (level === 6) {
-            let pts = [];
+            const pts = [];
             for (let i = 0; i < 6; i++) {
                 const a = (i * 60 + 30) * Math.PI / 180;
                 pts.push(`${(rx * 0.3 * Math.cos(a)).toFixed(1)},${(rx * 0.3 * Math.sin(a)).toFixed(1)}`);

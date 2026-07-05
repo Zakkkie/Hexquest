@@ -518,6 +518,9 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     const particlesContainerRef = useRef<PIXI.Container | null>(null);
 
     const grid = useGameStore(state => state.session?.grid);
+    const sessionGrid = useGameStore(state => state.session?.grid);
+    const sessionDefenseMode = useGameStore(state => !!state.session?.defense?.isDefenseMode);
+    const sessionLanguage = useGameStore(state => state.session?.language);
     const player = useGameStore(state => state.session?.player);
     const bots = useGameStore(state => state.session?.bots);
     const effects = useGameStore(state => state.session?.effects);
@@ -550,6 +553,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     , [playerQ, playerR]);
 
     // Tracking variables for DisplayObject Pools
+    const hexPropsCache = useRef<WeakMap<PIXI.Container, any>>(new WeakMap());
     const hexCache = useRef<Map<string, PIXI.Container>>(new Map());
     const hoverRef = useRef<string | null>(null);
     const unitCache = useRef<Map<string, PIXI.Container>>(new Map());
@@ -663,11 +667,11 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     app.destroy(true, { children: true });
                 } catch (e) {
                     if (typeof (app as any)._cancelResize !== 'function') {
-                        (app as any)._cancelResize = () => {};
+                        (app as any)._cancelResize = () => { /* empty */ };
                     }
                     try {
                         app.destroy(true, { children: true });
-                    } catch (e2) {}
+                    } catch (e2) { /* empty */ }
                 }
                 return;
             }
@@ -715,7 +719,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             setIsPixiReady(false);
             if (activeActionParticles.current.length > 0) {
                 activeActionParticles.current.forEach(p => {
-                    try { p.graphics.destroy(); } catch (err) {}
+                    try { p.graphics.destroy(); } catch (err) { /* empty */ }
                 });
                 activeActionParticles.current = [];
             }
@@ -724,17 +728,17 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 if (app.ticker) {
                     try {
                         app.ticker.remove(tickerCallbackRef.current);
-                    } catch (e) {}
+                    } catch (e) { /* empty */ }
                 }
                 try {
                     app.destroy(true, { children: true });
                 } catch (e) {
                     if (typeof (app as any)._cancelResize !== 'function') {
-                        (app as any)._cancelResize = () => {};
+                        (app as any)._cancelResize = () => { /* empty */ };
                     }
                     try {
                         app.destroy(true, { children: true });
-                    } catch (e2) {}
+                    } catch (e2) { /* empty */ }
                 }
                 worldContainerRef.current = null;
                 renderItemsContainerRef.current = null;
@@ -844,7 +848,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
         // Group concurrent effects to stack vertically
         const sorted = [...effects].sort((a, b) => a.startTime - b.startTime);
-        const counts: Record<string, number> = {};
+        const counts: Record<string, number> = { /* empty */ };
         const activeEffectIds = new Set<string>();
 
         sorted.forEach(eff => {
@@ -894,7 +898,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
             const { x: basePx, y: basePy } = simpleHexToPixel(cached.q, cached.r);
             const verticalSpacing = 24;
-            let currentY = basePy - 20 - idx * verticalSpacing;
+            const currentY = basePy - 20 - idx * verticalSpacing;
 
             // Ease up and fade out
             const riseDistance = 80;
@@ -923,7 +927,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     const beamProgress = elapsed / beamLifetime;
                     const beamAlpha = 1.0 - beamProgress;
                     
-                    const gridObj = useGameStore.getState().session?.grid || {};
+                    const gridObj = sessionGrid || { /* empty */ };
                     
                     const sourceKey = getHexKey(eff.sourceQ, eff.sourceR);
                     const sourceHex = gridObj[sourceKey];
@@ -1037,7 +1041,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         activeActionParticles.current = activeActionParticles.current.filter(p => {
             p.life -= p.decay;
             if (p.life <= 0) {
-                try { p.graphics.destroy(); } catch (err) {}
+                try { p.graphics.destroy(); } catch (err) { /* empty */ }
                 return false;
             }
             p.graphics.x += p.vx;
@@ -1277,7 +1281,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     }
                     if (activeActionParticles.current.length > 0) {
                         activeActionParticles.current.forEach(p => {
-                            try { p.graphics.destroy(); } catch (err) {}
+                            try { p.graphics.destroy(); } catch (err) { /* empty */ }
                         });
                         activeActionParticles.current = [];
                     }
@@ -1765,7 +1769,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     if (!queue || queue.length === 0) return;
                     const targetCoord = queue[0];
 
-                    const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+                    const isDefenseMode = sessionDefenseMode;
                     if (isDefenseMode) {
                         const dist = cubeDistance({ q: bot.q, r: bot.r }, { q: targetCoord.q, r: targetCoord.r });
                         if (dist > 1) return;
@@ -1841,6 +1845,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         const cos = Math.cos(angleRad);
         const sin = Math.sin(angleRad);
 
+        const rotatedBasePoints = BASE_POINTS.map(pt => ({
+            x: pt.x * cos - pt.y * sin,
+            y: pt.x * sin + pt.y * cos
+        }));
         // Fetch the absolute active hover ID synchronously from the Ephemeral store
         const hoveredHexId = useEphemeralStore.getState().hoveredHexId;
 
@@ -1881,7 +1889,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 const costCoins = pendingConfirmation?.data?.costCoins;
                 const gradientLockStatus = !!recentGradientLock;
 
-                const cProps = (curContainer as any)._hexCacheProps;
+                const cProps = hexPropsCache.current.get(curContainer);
                 let isDirty = !cProps || 
                     cProps.rotation !== rotation ||
                     cProps.offsetY !== props.offsetY ||
@@ -1925,7 +1933,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     y: pt.x * sin + pt.y * cos
                 }));
 
-                (curContainer as any)._hexCacheProps = {
+                hexPropsCache.current.set(curContainer, {
                     rotation,
                     offsetY: props.offsetY,
                     level: props.level,
@@ -1949,7 +1957,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     costMoves,
                     costCoins,
                     gradientLockStatus,
-                };
+                });
 
                 // Graphics references
                 let baseLayer = curContainer.getChildByName('base') as PIXI.Graphics;
@@ -2236,26 +2244,26 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         
                         // Pseudo-random static procedural cracks
                         const prng = (s: number) => {
-                            let x = Math.sin((props.q + 1) * 12.9898 + (props.r + 1) * 78.233 + s) * 43758.5453;
+                            const x = Math.sin((props.q + 1) * 12.9898 + (props.r + 1) * 78.233 + s) * 43758.5453;
                             return x - Math.floor(x);
                         };
 
                         damageLayer.beginPath();
                         const numCracks = Math.min(5, 7 - props.durability); // e.g. 5 durability shows 2 cracks
                         for (let i = 0; i < numCracks; i++) {
-                            let cx = (prng(i) - 0.5) * 12;
-                            let cy = (prng(i + 10) - 0.5) * 12 + props.offsetY;
+                            const cx = (prng(i) - 0.5) * 12;
+                            const cy = (prng(i + 10) - 0.5) * 12 + props.offsetY;
                             damageLayer.moveTo(cx, cy);
                             
-                            let angle = prng(i + 20) * Math.PI * 2;
-                            let dist = 10 + prng(i + 30) * 15;
-                            let endX = cx + Math.cos(angle) * dist;
-                            let endY = cy + Math.sin(angle) * dist * 0.8;
+                            const angle = prng(i + 20) * Math.PI * 2;
+                            const dist = 10 + prng(i + 30) * 15;
+                            const endX = cx + Math.cos(angle) * dist;
+                            const endY = cy + Math.sin(angle) * dist * 0.8;
                             damageLayer.lineTo(endX, endY);
                             
                             if (prng(i + 40) > 0.4) {
-                                let angle2 = angle + (prng(i + 50) > 0.5 ? 0.7 : -0.7);
-                                let dist2 = 8 + prng(i + 60) * 8;
+                                const angle2 = angle + (prng(i + 50) > 0.5 ? 0.7 : -0.7);
+                                const dist2 = 8 + prng(i + 60) * 8;
                                 damageLayer.lineTo(endX + Math.cos(angle2) * dist2, 
                                                    endY + Math.sin(angle2) * dist2 * 0.8);
                             }
@@ -3357,9 +3365,9 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     // Handle Pointer clicks and map page client pixels directly to local grid axial tiles
     const handleCanvasClick = (e: React.MouseEvent | React.TouchEvent) => {
         const app = pixiAppRef.current;
-        if (!app || !app.renderer || !app.renderer.canvas || !grid) return;
+        if (!app || !app.renderer || !app.canvas || !grid) return;
 
-        const rect = app.renderer.canvas.getBoundingClientRect();
+        const rect = app.canvas.getBoundingClientRect();
         const clientX = 'clientX' in e ? e.clientX : e.touches?.[0]?.clientX;
         const clientY = 'clientY' in e ? e.clientY : e.touches?.[0]?.clientY;
 
@@ -3387,7 +3395,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         const fracS = -fracQ - fracR;
         let q = Math.round(fracQ);
         let r = Math.round(fracR);
-        let s = Math.round(fracS);
+        const s = Math.round(fracS);
         const qDiff = Math.abs(q - fracQ);
         const rDiff = Math.abs(r - fracR);
         const sDiff = Math.abs(s - fracS);
@@ -3446,9 +3454,9 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     // Tracks Pointer-moves to highlight hover states
     const handleCanvasMouseMove = (e: React.MouseEvent) => {
         const app = pixiAppRef.current;
-        if (!app || !app.renderer || !app.renderer.canvas || !grid) return;
+        if (!app || !app.renderer || !app.canvas || !grid) return;
 
-        const rect = app.renderer.canvas.getBoundingClientRect();
+        const rect = app.canvas.getBoundingClientRect();
         const canvasX = e.clientX - rect.left;
         const canvasY = e.clientY - rect.top;
 
@@ -3469,7 +3477,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         const fracS = -fracQ - fracR;
         let q = Math.round(fracQ);
         let r = Math.round(fracR);
-        let s = Math.round(fracS);
+        const s = Math.round(fracS);
         const qDiff = Math.abs(q - fracQ);
         const rDiff = Math.abs(r - fracR);
         const sDiff = Math.abs(s - fracS);

@@ -121,6 +121,10 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
             targetQ = -2;
             targetR = 3;
             found = true;
+        } else if (activeLevelConfig.id === '1.1') {
+            targetQ = -8;
+            targetR = 0;
+            found = true;
         } else if (activeLevelConfig.id === '1.7') {
             targetQ = 3;
             targetR = -1;

@@ -226,14 +226,14 @@ export const getStatusModifiers = (actor: Entity, session?: any): {
       if (status.expiresAt && status.expiresAt <= now) continue;
 
       switch (status.type) {
-          case 'STATUS_FATIGUE':
+          case 'STATUS_FATIGUE': {
               // Upgrade: Fatigue Resistance reduces the penalty
               let fatigueMult = 2.0;
               if (isPlayer && upgrades && upgrades.fatigueResistance) {
                   fatigueMult -= (upgrades.fatigueResistance * 0.25); // e.g. 2.0 -> 1.75 -> 1.5
               }
               moveCostMultiplier *= fatigueMult;
-              break;
+              break; }
           case 'STATUS_GOLD_RUSH':
               digRewardMultiplier *= 2.0;
               break;
@@ -298,6 +298,7 @@ class PriorityQueue<T> {
     let index = 0;
     const length = this._heap.length;
     const element = this._heap[0];
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const leftChildIdx = 2 * index + 1;
       const rightChildIdx = 2 * index + 2;

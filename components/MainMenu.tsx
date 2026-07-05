@@ -687,7 +687,7 @@ const MainMenu: React.FC = () => {
   };
 
   const renderAvatar = (color: string, head: number, body: number, size = 'md') => {
-    let dims = size === 'lg' ? 'w-16 h-16' : (size === 'sm' ? 'w-7 h-7' : 'w-10 h-10');
+    const dims = size === 'lg' ? 'w-16 h-16' : (size === 'sm' ? 'w-7 h-7' : 'w-10 h-10');
     return (
       <div className={`${dims} rounded-full flex items-center justify-center border-2 border-indigo-400/30 shadow-[0_0_12px_rgba(99,102,241,0.2)] bg-[#0c0d1e] overflow-hidden relative shrink-0`}>
          <div className="scale-50 translate-y-1">

@@ -2,15 +2,12 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { DeviceType } from './types.ts';
 import { GameStore, INITIAL_PLAYGROUND_SEED, DEFAULT_CAMPAIGN_UPGRADES } from './store/types.ts';
-
-// Import our new state slices
 import { createAuthSlice, saveProfileProgress } from './store/authSlice.ts';
 import { createUiSlice } from './store/uiSlice.ts';
 import { createCampaignSlice } from './store/campaignSlice.ts';
 import { createGameplaySlice } from './store/gameplaySlice.ts';
 import { audioService } from './services/audioService.ts';
 
-// Export types for background compatibility across components
 export type { UiSoundType, AuthResponse, GameStore } from './store/types.ts';
 
 const getDeviceType = (): DeviceType => {
@@ -21,28 +18,42 @@ const getDeviceType = (): DeviceType => {
   return 'DESKTOP';
 };
 
+// Safe localStorage wrapper to prevent crashes on quota limits or private browsing
+const safeStorage = {
+  getItem: (name: string): string | null => {
+    try { return localStorage.getItem(name); } 
+    catch { return null; }
+  },
+  setItem: (name: string, value: string): void => {
+    try { localStorage.setItem(name, value); } 
+    catch (error) { console.error('LocalStorage quota exceeded:', error); }
+  },
+  removeItem: (name: string): void => {
+    try { localStorage.removeItem(name); } 
+    catch { /* noop */ }
+  },
+};
+
 export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
-      // --- CORE GAME STATE (STORAGE) ---
+      // --- CORE GAME STATE ---
       uiState: 'MENU',
       introNextState: 'GAME',
       deviceType: getDeviceType(),
       user: null,
-      toast: null,
-      pendingConfirmation: null,
-      leaderboard: [], 
-      campaignProgress: 0, 
+      toast: null, // Ephemeral
+      pendingConfirmation: null, // Ephemeral
+      leaderboard: [],
+      campaignProgress: 0,
       levelsModeProgress: 0,
       skillPoints: 0,
-      
       collectedHexes: {},
       minedInSessionHexes: { ...INITIAL_PLAYGROUND_SEED },
       totalMinedMaterial: 0,
       storyMap: {},
       savedSiegeMap: {},
       unlockedBlueprintIndices: [0],
-
       campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES },
       campaignMode: 'STORY',
       hasActiveSession: false,
@@ -50,52 +61,53 @@ export const useGameStore = create<GameStore>()(
       isMusicMuted: false,
       isSfxMuted: false,
       isLiteMode: false,
-      session: null,
-      language: 'RU', 
-      voidDialogTarget: null,
-      monumentDialogState: { isOpen: false, slots: [null, null, null] },
-      miniMonumentDialogState: { isOpen: false },
-      lastVisualEvent: undefined,
-      isCampaignLoading: false,
-      loadingLevelId: null,
+      session: null, // Ephemeral
+      language: 'RU',
+      voidDialogTarget: null, // Ephemeral
+      monumentDialogState: { isOpen: false, slots: [null, null, null] }, // Ephemeral
+      miniMonumentDialogState: { isOpen: false }, // Ephemeral
+      lastVisualEvent: undefined, // Ephemeral
+      isCampaignLoading: false, // Ephemeral
+      loadingLevelId: null, // Ephemeral
+      
       isStoryTutorialActive: (() => {
         try {
-            return localStorage.getItem('hexopol_story_tutorial_completed') !== 'true';
+          return localStorage.getItem('hexopol_story_tutorial_completed') !== 'true';
         } catch { return true; }
       })(),
-
-      // Camera & Zoom Zustand Store integrations (Bypassing React re-renders)
-      cameraPos: { 
-        x: typeof window !== 'undefined' ? window.innerWidth / 2 : 400, 
-        y: typeof window !== 'undefined' ? window.innerHeight / 2 - 30 : 300 
+      
+      // Camera & Zoom (Bypassing React re-renders)
+      cameraPos: {
+        x: typeof window !== 'undefined' ? window.innerWidth / 2 : 400,
+        y: typeof window !== 'undefined' ? window.innerHeight / 2 - 30 : 300
       },
       zoomScale: typeof window !== 'undefined' ? (window.innerWidth < 768 ? 1.55 : 2.15) : 2.0,
       setCameraPos: (pos: { x: number; y: number }) => set({ cameraPos: pos }),
       setZoomScale: (scale: number) => set({ zoomScale: scale }),
-
-      // --- ASSEMBLE COMBINED ACTIONS VIA SLICES ---
+      
+      // --- SLICES ---
       ...createAuthSlice(set as any, get as any),
       ...createUiSlice(set as any, get as any),
       ...createCampaignSlice(set as any),
       ...createGameplaySlice(set as any, get as any),
     }),
     {
-      name: 'hexquest-storage-v4',
-      storage: createJSONStorage(() => localStorage),
+      name: 'hexquest-storage-v5', // Incremented version to avoid conflicts with old format
+      storage: createJSONStorage(() => safeStorage),
       onRehydrateStorage: (_state) => {
         return (rehydratedState, error) => {
           if (error) {
             console.error('Hydration error:', error);
           } else if (rehydratedState) {
             rehydratedState.setHasHydrated(true);
-            // Synchronize loaded settings with the local synthesizer
             audioService.setMusicMuted(!!rehydratedState.isMusicMuted);
             audioService.setSfxMuted(!!rehydratedState.isSfxMuted);
           }
         };
       },
-      partialize: (state) => ({ 
-        user: state.user, 
+      // ONLY persist non-ephemeral data
+      partialize: (state) => ({
+        user: state.user,
         leaderboard: state.leaderboard,
         campaignProgress: state.campaignProgress,
         levelsModeProgress: state.levelsModeProgress,
@@ -113,15 +125,20 @@ export const useGameStore = create<GameStore>()(
         isSfxMuted: state.isSfxMuted,
         isLiteMode: state.isLiteMode,
         language: state.language
+        // Ephemeral properties like toast, session, dialog states are intentionally excluded
       })
     }
   )
 );
 
-// Subscribe to state updates to automatically back up progress to the user's dedicated save slot
+// Throttle saveProfileProgress to avoid network spam on every state change
+let saveTimeout: NodeJS.Timeout | null = null;
 useGameStore.subscribe((state) => {
   if (state.user && state.user.nickname) {
-    saveProfileProgress(state.user.nickname, state);
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+      saveProfileProgress(state.user!.nickname, state);
+    }, 1000); // Save at most once per second
   }
 });
 

@@ -200,7 +200,7 @@ const GameView: React.FC = () => {
               intensityBase = 6;
           }
 
-          let start = Date.now();
+          const start = Date.now();
           const shakeAnim = new Konva.Animation((_frame) => {
               const now = Date.now();
               const elapsed = now - start;

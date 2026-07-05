@@ -58,8 +58,8 @@ export class MeteorSystem implements System {
           } else {
             const entropyPercent = state.entropy.current / state.entropy.max;
             
-            let isVoidImpact = entropyPercent < 0.3; // при очень низкой энтропии -> VOID
-            let prevLevel = hex.currentLevel;
+            const isVoidImpact = entropyPercent < 0.3; // при очень низкой энтропии -> VOID
+            const prevLevel = hex.currentLevel;
             let newLevel = prevLevel - 1;
             let structureType = hex.structureType;
 

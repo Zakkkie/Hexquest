@@ -101,8 +101,8 @@ export class GrowthSystem implements System {
     }
 
     // Determine Intent
-    let isUserIntentActive = entity.type === EntityType.PLAYER && state.isPlayerGrowing;
-    let userIntentType = entity.type === EntityType.PLAYER ? state.playerGrowthIntent : null;
+    const isUserIntentActive = entity.type === EntityType.PLAYER && state.isPlayerGrowing;
+    const userIntentType = entity.type === EntityType.PLAYER ? state.playerGrowthIntent : null;
     
     const shouldBeGrowing = hasUpgradeCmd || (entity.type === EntityType.PLAYER && isUserIntentActive);
 
@@ -322,7 +322,7 @@ export class GrowthSystem implements System {
              const newCooldown = undefined;
              
              // Determine new looted levels array to ensure persistence
-             let nextLootedLevels = hex.lootedLevels ? [...hex.lootedLevels] : [];
+             const nextLootedLevels = hex.lootedLevels ? [...hex.lootedLevels] : [];
 
              // --- LOOT LOGIC (BEFORE UPDATING STATE) ---
              // We process loot first to see if we need to update 'lootedLevels'
@@ -588,7 +588,7 @@ export class GrowthSystem implements System {
               isExcavated: entity.type === EntityType.PLAYER ? false : hex.isExcavated
           });
           
-          let shouldContinue = false;
+          const shouldContinue = false;
 
           if (!shouldContinue) {
              if (hasUpgradeCmd) entity.movementQueue.shift();

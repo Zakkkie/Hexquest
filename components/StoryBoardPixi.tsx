@@ -327,9 +327,9 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                     app.destroy(true, { children: true });
                 } catch (e) {
                     if (typeof (app as any)._cancelResize !== 'function') {
-                        (app as any)._cancelResize = () => {};
+                        (app as any)._cancelResize = () => { /* empty */ };
                     }
-                    try { app.destroy(true, { children: true }); } catch (e2) {}
+                    try { app.destroy(true, { children: true }); } catch (e2) { /* empty */ }
                 }
                 return;
             }
@@ -375,15 +375,15 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             if (appRef.current === app) {
                 appRef.current = null;
                 if (app.ticker) {
-                    try { app.ticker.remove(tickerCallbackRef.current); } catch (e) {}
+                    try { app.ticker.remove(tickerCallbackRef.current); } catch (e) { /* empty */ }
                 }
                 try {
                     app.destroy(true, { children: true });
                 } catch (e) {
                     if (typeof (app as any)._cancelResize !== 'function') {
-                        (app as any)._cancelResize = () => {};
+                        (app as any)._cancelResize = () => { /* empty */ };
                     }
-                    try { app.destroy(true, { children: true }); } catch (e2) {}
+                    try { app.destroy(true, { children: true }); } catch (e2) { /* empty */ }
                 }
                 worldRef.current = null;
                 boardRef.current = null;
@@ -394,7 +394,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 animStates.current.clear();
             }
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, []);
 
     // Resize.
@@ -787,7 +787,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 corePulseRing.visible = true;
             } else {
                 if (coreMarker) coreMarker.visible = false;
-                let corePulseRing = collapse.getChildByName('corePulseRing') as PIXI.Graphics;
+                const corePulseRing = collapse.getChildByName('corePulseRing') as PIXI.Graphics;
                 if (corePulseRing) corePulseRing.visible = false;
             }
 
@@ -934,7 +934,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
 
             // ----- Animation state triggers -----
             let st = animStates.current.get(key);
-            if (!st) { st = {}; animStates.current.set(key, st); }
+            if (!st) { st = { /* empty */ }; animStates.current.set(key, st); }
 
             if (isNew) {
                 if (st.spawnT === undefined) st.spawnT = 0;
@@ -992,7 +992,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     useEffect(() => {
         if (!isReady) return;
         rebuildCells();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [cells, transient, contrastHighlighting, figureIndex, isReady]);
 
     // ---------- Ticker: advance animations + nebula drift ----------
@@ -1170,7 +1170,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
         const fracS = -fracQ - fracR;
         let q = Math.round(fracQ);
         let r = Math.round(fracR);
-        let s = Math.round(fracS);
+        const s = Math.round(fracS);
         const qDiff = Math.abs(q - fracQ);
         const rDiff = Math.abs(r - fracR);
         const sDiff = Math.abs(s - fracS);

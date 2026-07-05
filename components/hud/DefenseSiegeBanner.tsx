@@ -11,7 +11,7 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMinimizedDesktop, setIsMinimizedDesktop] = useState(false);
 
-    if (!session?.defense?.isDefenseMode) return null;
+    
 
     const {
         coreHealth = 100,
@@ -57,6 +57,8 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
         expand: language === 'RU' ? 'РАЗВЕРНУТЬ' : 'EXPAND',
         minimize: language === 'RU' ? 'СВЕРНУТЬ' : 'MINIMIZE',
     };
+
+    if (!session?.defense?.isDefenseMode) return null;
 
     return (
         <>
@@ -186,7 +188,9 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
                                         {recentLogs.length > 0 ? (
                                             recentLogs.slice(0, 3).map((log) => {
                                                 const col = log.type === 'ERROR' ? 'text-rose-500 animate-pulse' : log.type === 'WARN' ? 'text-amber-400' : log.type === 'SUCCESS' ? 'text-emerald-400' : 'text-indigo-400';
-                                                return (
+                                                if (!session?.defense?.isDefenseMode) return null;
+
+    return (
                                                     <div key={log.id} className="text-[8.5px] font-mono leading-relaxed flex items-start gap-1">
                                                         <span className={`${col} font-black shrink-0`}>&gt;</span>
                                                         <span className="text-slate-300 break-words flex-1 leading-tight">{log.text}</span>
@@ -362,7 +366,9 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
                                                 DEBUG: 'text-slate-500'
                                             };
                                             const col = typeColors[log.type] || 'text-slate-300';
-                                            return (
+                                            if (!session?.defense?.isDefenseMode) return null;
+
+    return (
                                                 <div key={log.id} className="text-[9px] font-mono leading-relaxed flex items-start gap-1.5 border-b border-slate-900/30 pb-1.5 last:border-none last:pb-0">
                                                     <span className={`${col} font-black uppercase shrink-0`}>&gt;</span>
                                                     <span className="text-slate-300 break-words flex-1 leading-normal">{log.text}</span>

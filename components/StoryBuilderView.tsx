@@ -649,7 +649,7 @@ const StoryBuilderView: React.FC = () => {
                 setUnlockedFigureIndex(0);
                 try {
                     localStorage.setItem('hexopol_figure_index', '0');
-                } catch {}
+                } catch { /* empty */ }
             }
             
             setPopupCell(null);
@@ -816,7 +816,7 @@ const StoryBuilderView: React.FC = () => {
     // Build a lookup object from the active figure shape to avoid O(n) find() per cell per render
     const blueprintShapeMap = useMemo(() => {
         // Empty in sandbox mode so no violet blueprint outlines are shown. Shape building is in levels.
-        return {} as Record<string, number>;
+        return { /* empty */ } as Record<string, number>;
     }, []);
 
     // Count available blocks for the current build level (stable scalar, computed once per render)

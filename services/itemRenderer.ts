@@ -49,7 +49,7 @@ class ItemRenderer {
       ctx.shadowBlur = 10;
 
       switch(type) {
-          case 'CYLINDER':
+          case 'CYLINDER': {
               // Glass Tube Body
               ctx.lineWidth = 2;
               ctx.strokeStyle = '#94a3b8'; // Slate-400 frame
@@ -92,9 +92,9 @@ class ItemRenderer {
               ctx.beginPath();
               ctx.ellipse(0, 14, 10, 5, 0, 0, Math.PI * 2);
               ctx.fill();
-              break;
+              break; }
 
-          case 'CHIP':
+          case 'CHIP': {
               // PCB Base
               ctx.fillStyle = '#1e293b';
               ctx.strokeStyle = color;
@@ -135,9 +135,9 @@ class ItemRenderer {
                   ctx.fillRect(offset, -16, pinSize, pinSize); // T
                   ctx.fillRect(offset, 14, pinSize, pinSize);  // B
               }
-              break;
+              break; }
 
-          case 'BOX':
+          case 'BOX': {
               // Isometric Box
               // Back Face (Inside)
               ctx.fillStyle = '#0f172a';
@@ -171,9 +171,9 @@ class ItemRenderer {
               ctx.fill();
               ctx.fillStyle = '#000';
               ctx.fillRect(-1, 3, 2, 3);
-              break;
+              break; }
 
-          case 'PATCH':
+          case 'PATCH': {
               // Nano-Weave Patch
               ctx.fillStyle = color;
               ctx.strokeStyle = '#fff';
@@ -210,9 +210,9 @@ class ItemRenderer {
               }
               ctx.stroke();
               ctx.globalAlpha = 1.0;
-              break;
+              break; }
 
-          case 'SCANNER':
+          case 'SCANNER': {
               // Grip Handle
               ctx.fillStyle = '#334155';
               ctx.fillRect(-4, 6, 8, 12);
@@ -253,9 +253,9 @@ class ItemRenderer {
               // LED Tip
               ctx.fillStyle = '#ef4444';
               ctx.beginPath(); ctx.arc(16, -22, 2, 0, Math.PI*2); ctx.fill();
-              break;
+              break; }
 
-          case 'PRISM':
+          case 'PRISM': {
               // Crystalline Structure
               ctx.lineJoin = 'miter';
               
@@ -289,9 +289,9 @@ class ItemRenderer {
               ctx.globalAlpha = 0.8;
               ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI*2); ctx.fill();
               ctx.globalAlpha = 1.0;
-              break;
+              break; }
 
-          case 'DRILL':
+          case 'DRILL': {
               // Industrial Drill Bit
               // Shaft
               ctx.fillStyle = '#cbd5e1'; // Silver
@@ -323,9 +323,9 @@ class ItemRenderer {
               ctx.beginPath();
               ctx.moveTo(-5, 16); ctx.lineTo(5, 16); ctx.lineTo(0, 24);
               ctx.fill();
-              break;
+              break; }
 
-          case 'GENERATOR':
+          case 'GENERATOR': {
               // Main Core Housing
               ctx.fillStyle = '#334155';
               ctx.beginPath();
@@ -356,9 +356,9 @@ class ItemRenderer {
               ctx.fillRect(-3, 14, 6, 4);  // Bottom
               ctx.fillRect(-18, -3, 4, 6); // Left
               ctx.fillRect(14, -3, 4, 6);  // Right
-              break;
+              break; }
 
-          case 'PARTICLES':
+          case 'PARTICLES': {
               // Swarm of nanites
               for(let i=0; i<7; i++) {
                   const size = Math.random() * 2 + 1.5;
@@ -385,9 +385,9 @@ class ItemRenderer {
                   ctx.lineTo(px * 0.5, py * 0.5); 
                   ctx.stroke();
               }
-              break;
+              break; }
 
-          case 'SPINE':
+          case 'SPINE': {
               // Cybernetic Spine
               ctx.fillStyle = '#e2e8f0'; // Bone/Chrome
               
@@ -413,9 +413,9 @@ class ItemRenderer {
               // Port at top
               ctx.fillStyle = color;
               ctx.beginPath(); ctx.arc(0, -16, 3, 0, Math.PI*2); ctx.fill();
-              break;
+              break; }
 
-          case 'CORE':
+          case 'CORE': {
               // Containment Ring
               ctx.strokeStyle = '#475569';
               ctx.lineWidth = 3;
@@ -441,9 +441,9 @@ class ItemRenderer {
               ctx.fillRect(-size/2, magnetDist-size, size, size); // Bottom
               ctx.fillRect(-magnetDist, -size/2, size, size); // Left
               ctx.fillRect(magnetDist-size, -size/2, size, size); // Right
-              break;
+              break; }
 
-          case 'SKULL':
+          case 'SKULL': {
               // Stylized Cyber-Skull
               ctx.fillStyle = '#e2e8f0'; // Bone
               if (color === '#fbbf24') ctx.fillStyle = '#fcd34d'; // Gold override for Midas
@@ -491,8 +491,8 @@ class ItemRenderer {
                   ctx.fill();
                   ctx.shadowBlur = 0;
               }
-              break;
-          case 'ARMOR':
+              break; }
+          case 'ARMOR': {
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.moveTo(-14, -10);
@@ -520,8 +520,8 @@ class ItemRenderer {
               ctx.beginPath();
               ctx.arc(0, -12, 5, 0, Math.PI);
               ctx.fill();
-              break;
-          case 'BOOTS':
+              break; }
+          case 'BOOTS': {
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.moveTo(-12, -6);
@@ -547,8 +547,8 @@ class ItemRenderer {
               ctx.lineWidth = 1;
               ctx.strokeRect(-10, -4, 4, 8);
               ctx.strokeRect(6, -4, 4, 8);
-              break;
-          case 'RING':
+              break; }
+          case 'RING': {
               ctx.strokeStyle = '#fbbf24'; 
               if (itemId?.includes('silver')) ctx.strokeStyle = '#cbd5e1';
               ctx.lineWidth = 4;
@@ -568,8 +568,8 @@ class ItemRenderer {
               ctx.lineTo(-4, -4);
               ctx.closePath();
               ctx.fill();
-              break;
-          case 'NECKLACE':
+              break; }
+          case 'NECKLACE': {
               ctx.strokeStyle = '#fbbf24'; 
               if (itemId?.includes('silver') || itemId?.includes('diamond')) ctx.strokeStyle = '#cbd5e1';
               ctx.lineWidth = 2;
@@ -594,8 +594,8 @@ class ItemRenderer {
               ctx.lineTo(-2, 8);
               ctx.closePath();
               ctx.fill();
-              break;
-          case 'HELMET':
+              break; }
+          case 'HELMET': {
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.arc(0, 2, 12, Math.PI, 0);
@@ -617,8 +617,8 @@ class ItemRenderer {
                   ctx.fillRect(-2, -4, 4, 14);
                   ctx.fillRect(-8, -2, 16, 4);
               }
-              break;
-          case 'FOOD':
+              break; }
+          case 'FOOD': {
               if (itemId === 'food_banana') {
                   ctx.fillStyle = color;
                   ctx.beginPath();
@@ -663,8 +663,8 @@ class ItemRenderer {
                   ctx.fillStyle = '#22c55e';
                   ctx.fillRect(-2, -14, 4, 6);
               }
-              break;
-          case 'POTION':
+              break; }
+          case 'POTION': {
               ctx.strokeStyle = '#fff';
               ctx.lineWidth = 2;
               ctx.beginPath();
@@ -692,8 +692,8 @@ class ItemRenderer {
               ctx.beginPath();
               ctx.arc(-4, 6, 3, 0, Math.PI * 2);
               ctx.fill();
-              break;
-          case 'GEM':
+              break; }
+          case 'GEM': {
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.moveTo(0, -14);
@@ -718,8 +718,8 @@ class ItemRenderer {
               ctx.moveTo(0, -14); ctx.lineTo(-8, -4);
               ctx.moveTo(0, -14); ctx.lineTo(8, -4);
               ctx.stroke();
-              break;
-          case 'BAR':
+              break; }
+          case 'BAR': {
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.moveTo(-8, -6);
@@ -754,8 +754,8 @@ class ItemRenderer {
               ctx.moveTo(-8, -6); ctx.lineTo(8, -6); ctx.lineTo(12, 0);
               ctx.moveTo(-4, 0); ctx.lineTo(12, 0);
               ctx.stroke();
-              break;
-          case 'SWORD':
+              break; }
+          case 'SWORD': {
               ctx.translate(0, 0);
               ctx.rotate(Math.PI / 4);
               
@@ -786,8 +786,8 @@ class ItemRenderer {
               ctx.fill();
               
               ctx.rotate(-Math.PI / 4);
-              break;
-          case 'DAGGER':
+              break; }
+          case 'DAGGER': {
               ctx.rotate(Math.PI / 4);
               
               ctx.fillStyle = color;
@@ -817,8 +817,8 @@ class ItemRenderer {
               }
               
               ctx.rotate(-Math.PI / 4);
-              break;
-          case 'AXE':
+              break; }
+          case 'AXE': {
               ctx.rotate(Math.PI / 4);
               
               ctx.fillStyle = '#78350f';
@@ -860,8 +860,8 @@ class ItemRenderer {
               }
               
               ctx.rotate(-Math.PI / 4);
-              break;
-          case 'MACE':
+              break; }
+          case 'MACE': {
               ctx.rotate(Math.PI / 4);
               
               ctx.fillStyle = '#78350f';
@@ -881,8 +881,8 @@ class ItemRenderer {
               }
               
               ctx.rotate(-Math.PI / 4);
-              break;
-          case 'SPEAR':
+              break; }
+          case 'SPEAR': {
               ctx.rotate(Math.PI / 4);
               
               ctx.fillStyle = '#78350f';
@@ -897,8 +897,8 @@ class ItemRenderer {
               ctx.fill();
               
               ctx.rotate(-Math.PI / 4);
-              break;
-          case 'STAFF':
+              break; }
+          case 'STAFF': {
               ctx.rotate(Math.PI / 4);
               
               ctx.fillStyle = '#78350f';
@@ -915,8 +915,8 @@ class ItemRenderer {
               ctx.fill();
               
               ctx.rotate(-Math.PI / 4);
-              break;
-          case 'BOW':
+              break; }
+          case 'BOW': {
               ctx.rotate(Math.PI / 4);
               
               ctx.strokeStyle = '#78350f';
@@ -936,8 +936,8 @@ class ItemRenderer {
               ctx.fillRect(-4, -2, 4, 4);
               
               ctx.rotate(-Math.PI / 4);
-              break;
-          case 'GUN':
+              break; }
+          case 'GUN': {
               ctx.fillStyle = '#475569';
               ctx.fillRect(-8, 0, 6, 12);
               ctx.fillStyle = color;
@@ -948,8 +948,8 @@ class ItemRenderer {
               ctx.fillStyle = '#334155';
               ctx.fillRect(-10, -6, 2, 8);
               ctx.fillRect(-2, 2, 6, 2);
-              break;
-          case 'FIST':
+              break; }
+          case 'FIST': {
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.arc(0, 2, 10, 0, Math.PI * 2);
@@ -964,8 +964,8 @@ class ItemRenderer {
               ctx.fillRect(-8, -10, 4, 6);
               ctx.fillRect(-2, -12, 4, 6);
               ctx.fillRect(4, -10, 4, 6);
-              break;
-          case 'THROWING':
+              break; }
+          case 'THROWING': {
               ctx.rotate(Math.PI / 4);
               
               ctx.fillStyle = color;
@@ -987,8 +987,8 @@ class ItemRenderer {
               ctx.fill();
               
               ctx.rotate(-Math.PI / 4);
-              break;
-          case 'BOOK':
+              break; }
+          case 'BOOK': {
               ctx.fillStyle = '#78350f';
               ctx.fillRect(-12, -14, 24, 28);
               
@@ -1014,7 +1014,7 @@ class ItemRenderer {
                   ctx.moveTo(0, -5); ctx.lineTo(3, 0); ctx.lineTo(0, 5); ctx.lineTo(-3, 0);
                   ctx.fill();
               }
-              break;
+              break; }
 
       }
   }

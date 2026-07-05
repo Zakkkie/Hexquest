@@ -129,7 +129,7 @@ export const createInitialSessionData = async (
   // Apply Overworld Equipment Bonuses & Campaign Upgrades
   let startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;
   let startMoves = levelConfig ? levelConfig.startState.moves : GAME_CONFIG.INITIAL_MOVES;
-  let startRank = levelConfig ? levelConfig.startState.rank : 1;
+  const startRank = levelConfig ? levelConfig.startState.rank : 1;
   let startStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0;
 
   if (levelConfig && campaignUpgrades) {
@@ -149,7 +149,7 @@ export const createInitialSessionData = async (
       // Ignored for headless tests
   }
 
-  let activeStatuses: import('../types.ts').ActiveStatus[] = [];
+  const activeStatuses: import('../types.ts').ActiveStatus[] = [];
 
   // Player Position
   let startQ = 0, startR = 0;
@@ -318,7 +318,7 @@ export const createInitialSessionData = async (
       monumentRequirements = generateMonumentRecipe(difficulty);
   }
 
-  let initialEntropy = levelConfig?.startState.initialEntropy ?? ENTROPY_CONFIG.INITIAL_MAX;
+  const initialEntropy = levelConfig?.startState.initialEntropy ?? ENTROPY_CONFIG.INITIAL_MAX;
 
   const initialLog: LogEntry = {
     id: 'init-0',
@@ -443,7 +443,7 @@ export const createInitialSessionData = async (
       const miniMonuments: any[] = [];
       
       while(miniMonuments.length < 3 && allHexes.length > 0) {
-        let idx = Math.floor(Math.random() * allHexes.length);
+        const idx = Math.floor(Math.random() * allHexes.length);
         const candidate = allHexes[idx];
         allHexes.splice(idx, 1);
         

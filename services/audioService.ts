@@ -890,7 +890,7 @@ class AudioService {
                           osc.disconnect();
                           lfo.disconnect();
                           gain.disconnect();
-                      } catch (e) {}
+                      } catch (e) { /* empty */ }
                   }, 400);
               } else {
                   osc.stop();

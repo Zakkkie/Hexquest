@@ -133,6 +133,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     
     const [timeLeft, setTimeLeft] = useState(75);
     const isLevel3_2 = activeLevelConfig?.id === '3.2';
+    const isLevel1_1 = activeLevelConfig?.id === '1.1';
     const isTimedLevel = isLevel3_2;
 
     useEffect(() => {
@@ -192,6 +193,17 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         if (upper.includes('КОПАЙ') || upper.includes('DIG')) return true;
         return false;
     }, [tutorialHint]);
+    const locationRestricted = useMemo(() => {
+        if (!activeLevelConfig || activeLevelConfig.id !== "1.0") return false;
+        const objHex = activeLevelConfig.objectiveHexes?.find((h: any) => h.q === player.q && h.r === player.r);
+        if (!objHex && (player.q !== 0 || player.r !== 0)) return true;
+        return false;
+    }, [activeLevelConfig, player]);
+
+    const handleRestrictedClick = useCallback(() => {
+        playUiSound("WARNING");
+        showToast(language === "RU" ? "Нужно стоять на правильном гексе" : "Must stand on correct hex", "error");
+    }, [language, playUiSound, showToast]);
 
     const handleDimmedClick = useCallback(() => {
         playUiSound('WARNING');
@@ -522,15 +534,15 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                             {/* DIG Action */}
                             <div 
                                 className="relative shrink-0"
-                                onClick={digDimmed ? handleDimmedClick : () => handleActionClick('DIG')}
+                                onClick={digDimmed ? handleDimmedClick : locationRestricted ? handleRestrictedClick : () => handleActionClick('DIG')}
                             >
                                 <HexButton 
                                     variant="red" 
                                     size={isDefenseMode ? "sm" : "md"} 
-                                    onDisabledClick={digDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }}
+                                    onDisabledClick={digDimmed ? handleDimmedClick : isLevel1_1 ? () => { playUiSound('WARNING'); showToast(language === 'RU' ? 'Действия отключены на этом уровне' : 'Actions disabled on this level', 'info'); } : () => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }}
                                     active={isPlayerGrowing && playerGrowthIntent === 'DIG'}
-                                    disabled={!canDig}
-                                    dimmed={digDimmed}
+                                    disabled={!canDig || isLevel1_1}
+                                    dimmed={digDimmed || isLevel1_1}
                                     pulsate={levelId === '1.1' || levelId === '1.2' || levelId === '1.5' || levelId === '1.6'}
                                     progress={timeData.mode === 'DIG' ? timeData.percent : 0}
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'DIG' ? 'ring-2 ring-red-500/30' : ''} !p-0 !m-0`}
@@ -546,15 +558,15 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                             {/* UPGRADE Action */}
                             <div 
                                 className="relative shrink-0"
-                                onClick={upgradeDimmed ? handleDimmedClick : () => handleActionClick('UPGRADE')}
+                                onClick={upgradeDimmed ? handleDimmedClick : locationRestricted ? handleRestrictedClick : () => handleActionClick('UPGRADE')}
                             >
                                 <HexButton 
                                     variant="amber" 
                                     size={isDefenseMode ? "sm" : "md"} 
-                                    onDisabledClick={upgradeDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }}
+                                    onDisabledClick={upgradeDimmed ? handleDimmedClick : isLevel1_1 ? () => { playUiSound('WARNING'); showToast(language === 'RU' ? 'Действия отключены на этом уровне' : 'Actions disabled on this level', 'info'); } : () => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }}
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
-                                    disabled={!canUpgrade}
-                                    dimmed={upgradeDimmed}
+                                    disabled={!canUpgrade || isLevel1_1}
+                                    dimmed={upgradeDimmed || isLevel1_1}
                                     pulsate={levelId === '1.0' || levelId === '1.3' || levelId === '1.7' || (canUpgrade && !isPlayerGrowing)}
                                     progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0}
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'ring-2 ring-amber-500/30' : ''} !p-0 !m-0`}
@@ -575,10 +587,10 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 <HexButton 
                                     variant="blue" 
                                     size={isDefenseMode ? "sm" : "md"} 
-                                    onDisabledClick={recoverDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }}
+                                    onDisabledClick={recoverDimmed ? handleDimmedClick : isLevel1_1 ? () => { playUiSound('WARNING'); showToast(language === 'RU' ? 'Действия отключены на этом уровне' : 'Actions disabled on this level', 'info'); } : () => { playUiSound('WARNING'); showToast(recoverTooltip, 'error'); }}
                                     active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'}
-                                    disabled={!recoveryState.canRecover}
-                                    dimmed={recoverDimmed}
+                                    disabled={!recoveryState.canRecover || isLevel1_1}
+                                    dimmed={recoverDimmed || isLevel1_1}
                                     pulsate={levelId === '1.4'}
                                     progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0}
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''} !p-0 !m-0`}
@@ -729,7 +741,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 <HexButton 
                                     variant="red" 
                                     size={mainButtonSize} 
-                                    onClick={digDimmed ? handleDimmedClick : () => handleActionClick('DIG')} 
+                                    onClick={digDimmed ? handleDimmedClick : locationRestricted ? handleRestrictedClick : () => handleActionClick('DIG')} 
                                     onDisabledClick={digDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(digTooltip, 'error'); }} 
                                     active={isPlayerGrowing && playerGrowthIntent === 'DIG'} 
                                     disabled={!canDig} 
@@ -758,7 +770,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                 <HexButton 
                                     variant="amber" 
                                     size={mainButtonSize} 
-                                    onClick={upgradeDimmed ? handleDimmedClick : () => handleActionClick('UPGRADE')} 
+                                    onClick={upgradeDimmed ? handleDimmedClick : locationRestricted ? handleRestrictedClick : () => handleActionClick('UPGRADE')} 
                                     onDisabledClick={upgradeDimmed ? handleDimmedClick : () => { playUiSound('WARNING'); showToast(upgradeTooltip, 'error'); }} 
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} 
                                     disabled={!canUpgrade} 

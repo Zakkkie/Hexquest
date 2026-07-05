@@ -99,7 +99,7 @@ const Fireworks: React.FC<FireworksProps> = ({ onComplete }) => {
         const particles: StreamParticle[] = [];
         const pulses: PulseWave[] = [];
         let scannerY = 0;
-        let scannerSpeed = 4;
+        const scannerSpeed = 4;
 
         // Ticker variables
         const activeLogs: string[] = [];

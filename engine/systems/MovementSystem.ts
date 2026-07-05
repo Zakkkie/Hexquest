@@ -355,7 +355,7 @@ export class MovementSystem implements System {
             const key = getHexKey(n.q, n.r);
             if (!visited.has(key)) {
                 visited.add(key);
-                let hex = gridUpdates[key] || state.grid[key];
+                const hex = gridUpdates[key] || state.grid[key];
                 
                 if (!hex) {
                     // Generate new hex

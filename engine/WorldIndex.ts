@@ -206,7 +206,7 @@ export class WorldIndex {
             const hex = this.grid[id];
             if (hex) results.push(hex);
         }
-      } catch {}
+      } catch { /* empty */ }
       return results;
   }
 
@@ -220,7 +220,7 @@ export class WorldIndex {
             const hex = this.grid[id];
             if (hex) results.push(hex);
         }
-      } catch {}
+      } catch { /* empty */ }
       return results;
   }
 
@@ -257,7 +257,7 @@ export class WorldIndex {
                 }
             }
         }
-      } catch {}
+      } catch { /* empty */ }
       return results;
   }
 

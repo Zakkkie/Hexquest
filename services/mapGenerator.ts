@@ -50,7 +50,7 @@ export const generateSingleHex = (q: number, r: number, levelConfig?: LevelConfi
 
     let level = 0;
     let structureType: 'BARRIER' | 'VOID' | 'MONUMENT' | 'MINE' | undefined = undefined;
-    let biome: TerrainType = 'STANDARD';
+    const biome: TerrainType = 'STANDARD';
     let poiType: string | undefined = undefined;
     let isPassable = true;
     let forceReveal = !levelConfig || (levelConfig.mapConfig?.revealMode !== 'fog');
@@ -261,7 +261,7 @@ export const generateLevel11Map = (_levelConfig: LevelConfig): Record<string, He
         let currentLevel = 1;
         let maxLevel = 1;
         let durability: number | undefined = undefined;
-        let biome: TerrainType = 'STANDARD';
+        const biome: TerrainType = 'STANDARD';
         let isPassable = true;
         
         if (isStart) {

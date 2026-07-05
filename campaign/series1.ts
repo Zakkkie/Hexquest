@@ -168,26 +168,26 @@ export const series1Levels: LevelConfig[] = [
       size: 4,
       type: 'fixed',
       customLayout: [
-        { q: 1, r: -1, currentLevel: 2, maxLevel: 2, revealed: true, ownerId: 'player-1' }, // Start peak
-        { q: 0, r: 0, currentLevel: 0, maxLevel: 0, revealed: true }, // Fork 1
-        { q: -1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true }, // Fork 2
+        { q: 1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Start peak
+        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 }, // Fork 1
+        { q: -1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 }, // Fork 2
 
         // --- FRAGILE CENTER (Cracked tiles) ---
-        { q: -2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, durability: 1 },
-        { q: -3, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, durability: 1 },
-        { q: -4, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, durability: 1 },
-        { q: -5, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, durability: 1 },
-        { q: -6, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, durability: 1 },
-        { q: -7, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, durability: 1 },
+        { q: -2, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -3, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -4, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -5, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -6, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -7, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
 
         // --- SAFE SOUTH ---
-        { q: -1, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -2, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -3, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -4, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -5, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -6, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -7, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -1, r: 1, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -2, r: 1, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -3, r: 1, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -4, r: 2, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -5, r: 2, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -6, r: 2, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
+        { q: -7, r: 1, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
 
         // --- NORTHERN RIDGE ---
         { q: 0, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
@@ -204,6 +204,10 @@ export const series1Levels: LevelConfig[] = [
       ]
     },
     objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 1, label: 'Path', color: 'cyan' },
+      { q: -1, r: 0, targetLevel: 1, label: 'Path', color: 'cyan' },
+      { q: -2, r: 0, targetLevel: 1, label: 'Path', color: 'cyan' },
+      { q: -3, r: 0, targetLevel: 1, label: 'Path', color: 'cyan' },
       { q: -4, r: -1, targetLevel: 3, label: 'L3 Ridge', color: 'amber' },
       { q: -8, r: 0, targetLevel: 1, label: 'Capital', color: 'emerald' },
     ],

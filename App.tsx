@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useGameStore } from './store.ts';
 import { motion, AnimatePresence } from 'motion/react';
 import GameView from './components/GameView.tsx';
@@ -14,12 +13,30 @@ import Background from './components/Background.tsx';
 import { DeviceType } from './types.ts';
 
 const App: React.FC = () => {
-  // Use selectors to avoid re-rendering App on every single state change
   const uiState = useGameStore(state => state.uiState);
   const sessionId = useGameStore(state => state.session?.sessionId);
   const setDeviceType = useGameStore(state => state.setDeviceType);
 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
+
+  const handleResize = useCallback(() => {
+    const w = window.innerWidth;
+    let type: DeviceType = 'DESKTOP';
+    if (w < 768) type = 'MOBILE';
+    else if (w < 1024) type = 'TABLET';
+    setDeviceType(type);
+  }, [setDeviceType]);
+
+  // Throttled mouse move handler using requestAnimationFrame
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (rafRef.current) return; // Already scheduled
+    
+    rafRef.current = requestAnimationFrame(() => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+      rafRef.current = null;
+    });
+  }, []);
 
   useEffect(() => {
     // One-time migration: reset overworld progress for v1 users
@@ -28,179 +45,102 @@ const App: React.FC = () => {
         useGameStore.getState().resetProgress();
         localStorage.setItem('reset-v1', 'true');
       }
-    } catch { /* localStorage unavailable (e.g. private browsing) */ }
-
-    const handleResize = () => {
-      const w = window.innerWidth;
-      let type: DeviceType = 'DESKTOP';
-      if (w < 768) type = 'MOBILE';
-      else if (w < 1024) type = 'TABLET';
-      
-      setDeviceType(type);
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
+    } catch (error) {
+      console.warn('localStorage unavailable or reset failed:', error);
+    }
 
     window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize); // Handle rotation immediately
+    window.addEventListener('orientationchange', handleResize);
     window.addEventListener('mousemove', handleMouseMove);
+    
     handleResize(); // Init
 
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
     };
-  }, [setDeviceType]);
+  }, [handleResize, handleMouseMove]);
 
   return (
     <div className="relative w-screen h-screen supports-[height:100dvh]:h-[100dvh] bg-slate-950 overflow-hidden font-sans select-none">
-      
       {/* Background Ambience (Visible in Menu/Leaderboard) */}
       {uiState !== 'GAME' && (
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-           
-           {/* Tilted 2.5D Plane Container */}
-           <div className="absolute inset-0 perspective-container">
-             <div className="absolute inset-0 origin-center transform-3d rotate-x-60 scale-125 -top-[20%] h-[150%]">
-                 <Background variant="MENU" />
-             </div>
-           </div>
-
-           {/* Horizon Fog / Vignette Overlay */}
-           <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-transparent to-slate-950/90" />
-           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#020617_100%)]" />
+          <div className="absolute inset-0 perspective-container">
+            <div className="absolute inset-0 origin-center transform-3d rotate-x-60 scale-125 -top-[20%] h-[150%]">
+              <Background variant="MENU" />
+            </div>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-transparent to-slate-950/90" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#020617_100%)]" />
         </div>
       )}
 
-      {/* Global Glowing Light Blobs (Active in any mode!) */}
+      {/* Global Glowing Light Blobs */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none mix-blend-screen opacity-55">
-         <div className="absolute top-[-30%] left-[-10%] w-[90vw] h-[90vw] rounded-full bg-cyan-600/35 blur-[140px] animate-blob animate-delay-2000" />
-         <div className="absolute bottom-[-30%] right-[-10%] w-[90vw] h-[90vw] rounded-full bg-indigo-600/35 blur-[140px] animate-blob" />
-         <div className="absolute top-[15%] left-[25%] w-[60vw] h-[60vw] rounded-full bg-fuchsia-700/25 blur-[120px] animate-blob animation-delay-4000" />
-         <div className="absolute bottom-[20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-pink-700/15 blur-[110px] animate-blob" />
+        <div className="absolute top-[-30%] left-[-10%] w-[90vw] h-[90vw] rounded-full bg-cyan-600/35 blur-[140px] animate-blob animate-delay-2000" />
+        <div className="absolute bottom-[-30%] right-[-10%] w-[90vw] h-[90vw] rounded-full bg-indigo-600/35 blur-[140px] animate-blob" />
+        <div className="absolute top-[15%] left-[25%] w-[60vw] h-[60vw] rounded-full bg-fuchsia-700/25 blur-[120px] animate-blob animation-delay-4000" />
+        <div className="absolute bottom-[20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-pink-700/15 blur-[110px] animate-blob" />
       </div>
 
-      {/* Global Dynamic Cursor Light Glow (Active in any mode!) */}
+      {/* Global Dynamic Cursor Light Glow */}
       <motion.div
         className="hidden md:block absolute rounded-full bg-indigo-500/12 blur-[130px] pointer-events-none z-0 mix-blend-screen"
-        animate={{
-          x: mousePos.x - 250,
-          y: mousePos.y - 250,
-        }}
+        animate={{ x: mousePos.x - 250, y: mousePos.y - 250 }}
         transition={{ type: "tween", ease: "backOut", duration: 0.6 }}
-        style={{
-          width: 500,
-          height: 500,
-          left: 0,
-          top: 0,
-        }}
+        style={{ width: 500, height: 500, left: 0, top: 0 }}
       />
 
       {/* Main Content Switcher */}
       <div className="relative z-10 w-full h-full">
         <AnimatePresence mode="wait">
           {uiState === 'MENU' && (
-            <motion.div
-              key="MENU"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.02 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-              className="w-full h-full"
-            >
+            <motion.div key="MENU" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} transition={{ duration: 0.22, ease: "easeInOut" }} className="w-full h-full">
               <MainMenu />
             </motion.div>
           )}
           {uiState === 'GAME' && (
-            <motion.div
-              key={`GAME-${sessionId}`}
-              initial={{ opacity: 0, scale: 0.99 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.01 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-              className="w-full h-full"
-            >
+            <motion.div key={`GAME-${sessionId}`} initial={{ opacity: 0, scale: 0.99 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.01 }} transition={{ duration: 0.22, ease: "easeInOut" }} className="w-full h-full">
               <GameView key={sessionId} />
             </motion.div>
           )}
           {uiState === 'LEADERBOARD' && (
-            <motion.div
-              key="LEADERBOARD"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.02 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-              className="w-full h-full"
-            >
+            <motion.div key="LEADERBOARD" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} transition={{ duration: 0.22, ease: "easeInOut" }} className="w-full h-full">
               <Leaderboard />
             </motion.div>
           )}
           {uiState === 'CAMPAIGN_MAP' && (
-            <motion.div
-              key="CAMPAIGN_MAP"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.02 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-              className="w-full h-full"
-            >
+            <motion.div key="CAMPAIGN_MAP" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} transition={{ duration: 0.22, ease: "easeInOut" }} className="w-full h-full">
               <CampaignMap />
             </motion.div>
           )}
           {uiState === 'STORY_BUILDER' && (
-            <motion.div
-              key="STORY_BUILDER"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.02 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-              className="w-full h-full"
-            >
+            <motion.div key="STORY_BUILDER" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} transition={{ duration: 0.22, ease: "easeInOut" }} className="w-full h-full">
               <StoryBuilderView />
             </motion.div>
           )}
           {uiState === 'LEVEL_EDITOR' && (
-            <motion.div
-              key="LEVEL_EDITOR"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.02 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-              className="w-full h-full"
-            >
+            <motion.div key="LEVEL_EDITOR" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} transition={{ duration: 0.22, ease: "easeInOut" }} className="w-full h-full">
               <LevelEditorView />
             </motion.div>
           )}
           {uiState === 'INTRO' && (
-            <motion.div
-              key="INTRO"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.22 }}
-              className="w-full h-full"
-            >
+            <motion.div key="INTRO" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }} className="w-full h-full">
               <IntroSequence />
             </motion.div>
           )}
           {uiState === 'CAMPAIGN_LOADING' && (
-            <motion.div
-              key="CAMPAIGN_LOADING"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.22 }}
-              className="w-full h-full"
-            >
+            <motion.div key="CAMPAIGN_LOADING" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }} className="w-full h-full">
               <CampaignLoading />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
     </div>
   );
 };
