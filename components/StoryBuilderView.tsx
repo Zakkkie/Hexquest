@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { FIGURES_COLLECTION } from './StoryBuilderData.ts';
 import { textureService } from '../services/textureService.ts';
-import { getPixiTexture } from '../services/pixiHexRender.ts';
+import { getPixiTexture, getHeightOffset } from '../services/pixiHexRender.ts';
 
 
 
@@ -469,6 +469,7 @@ const StoryBuilderView: React.FC = () => {
         let minY = Infinity;
         let maxY = -Infinity;
 
+        // 1. Include active figure shape blueprint coordinates
         if (activeFigure && activeFigure.shape && activeFigure.shape.length > 0) {
             activeFigure.shape.forEach(pt => {
                 const pixel = hexToPixel(pt.q, pt.r);
@@ -479,23 +480,72 @@ const StoryBuilderView: React.FC = () => {
             });
         }
 
+        // 2. Always include the player's core matrix (0,0) as base player unit anchor
+        const corePixel = hexToPixel(0, 0);
+        const coreLvl = storyMap['0,0'] ?? 0;
+        const coreHeightOffset = getHeightOffset(coreLvl);
+        minX = Math.min(minX, corePixel.x);
+        maxX = Math.max(maxX, corePixel.x);
+        minY = Math.min(minY, corePixel.y + coreHeightOffset);
+        maxY = Math.max(maxY, corePixel.y);
+
+        // 3. Find and include all other built high-level structures in storyMap
+        let maxLvl = 0;
+        Object.entries(storyMap).forEach(([key, lvl]) => {
+            if (lvl !== undefined && lvl >= 0) {
+                if (lvl > maxLvl) maxLvl = lvl;
+                const [qStr, rStr] = key.split(',');
+                const q = parseInt(qStr);
+                const r = parseInt(rStr);
+                if (!isNaN(q) && !isNaN(r)) {
+                    const pixel = hexToPixel(q, r);
+                    const hOffset = getHeightOffset(lvl);
+                    
+                    if (pixel.x < minX) minX = pixel.x;
+                    if (pixel.x > maxX) maxX = pixel.x;
+                    
+                    const topY = pixel.y + hOffset;
+                    const baseY = pixel.y;
+                    if (topY < minY) minY = topY;
+                    if (baseY > maxY) maxY = baseY;
+                }
+            }
+        });
+
         const figureWidth = (maxX - minX > 0) ? (maxX - minX) : 100;
         const figureHeight = (maxY - minY > 0) ? (maxY - minY) : 100;
         const centerX = (minX + maxX) / 2;
         const centerY = (minY + maxY) / 2;
 
-        // "охватывать не менее 100% фигуры" means 100% of the figure should be fully visible and centered.
-        // We use a safe utilization factor of 80% (0.80) of the viewport width/height to guarantee 
-        // that 100% of the figure is comfortably inside the screen boundaries.
-        const scaleX = (w * 0.80) / figureWidth;
-        const scaleY = (h * 0.80) / figureHeight;
-        let targetZoom = Math.min(scaleX, scaleY);
-        // Clamp to a reasonable range (minimum 0.20 to support fitting the entire figure even on narrow mobile viewports)
-        targetZoom = Math.max(0.20, Math.min(2.5, targetZoom));
+        const isMobile = w < 768;
+        // Base utilization factor (safe screen percentage to center components and prevent clipping)
+        let utilization = 0.80;
+        
+        if (isMobile) {
+            // Give extra margin on mobile by default
+            utilization = 0.70;
+            // If the player builds high-level structures (level >= 3), zoom out further so they remain visible
+            if (maxLvl >= 3) {
+                utilization = Math.max(0.48, 0.70 - (maxLvl - 2) * 0.05);
+            }
+        } else {
+            if (maxLvl >= 3) {
+                utilization = Math.max(0.60, 0.80 - (maxLvl - 2) * 0.03);
+            }
+        }
 
+        // "охватывать не менее 100% фигуры" means 100% of the figure should be fully visible and centered.
+        const scaleX = (w * utilization) / figureWidth;
+        const scaleY = (h * utilization) / figureHeight;
+        let targetZoom = Math.min(scaleX, scaleY);
+        // Clamp to a reasonable range (minimum 0.15 to support fitting high structures even on very narrow/portrait mobile viewports)
+        targetZoom = Math.max(0.15, Math.min(2.5, targetZoom));
+
+        // Adjust centerY offset on mobile to comfortably lift high towers into clear viewport space
+        const vOffset = isMobile ? h * 0.03 : 0;
         const targetPos = { 
             x: w / 2 - centerX * targetZoom, 
-            y: h / 2 - centerY * targetZoom 
+            y: (h / 2 + vOffset) - centerY * targetZoom 
         };
 
         cameraPosRef.current = targetPos;
@@ -508,7 +558,7 @@ const StoryBuilderView: React.FC = () => {
         if (!silent) {
             playUiSound('CLICK');
         }
-    }, [activeFigure, playUiSound, updateTooltipPos]);
+    }, [activeFigure, storyMap, playUiSound, updateTooltipPos]);
 
     // Automatically fit camera to the shape on mount and when active figure changes
     useEffect(() => {
@@ -548,9 +598,9 @@ const StoryBuilderView: React.FC = () => {
                 const w = window.innerWidth;
                 const h = window.innerHeight;
                 setStageSize({ width: w, height: h });
-                const newPos = { x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) };
-                cameraPosRef.current = newPos;
-                useGameStore.getState().setCameraPos(newPos);
+                setTimeout(() => {
+                    handleResetCamera(true);
+                }, 10);
             };
             window.addEventListener('resize', handleResize);
             handleResize();
@@ -563,14 +613,14 @@ const StoryBuilderView: React.FC = () => {
             const w = Math.max(100, Math.floor(width));
             const h = Math.max(100, Math.floor(height));
             setStageSize({ width: w, height: h });
-            const newPos = { x: w / 2, y: h / 2 - (w < 768 ? 20 : 50) };
-            cameraPosRef.current = newPos;
-            useGameStore.getState().setCameraPos(newPos);
+            setTimeout(() => {
+                handleResetCamera(true);
+            }, 10);
         });
 
         observer.observe(container);
         return () => observer.disconnect();
-    }, []);
+    }, [handleResetCamera]);
 
     // Shape completeness check - checks if the placed level 0 or higher hexes match the active figure's coordinates
     // under any translation offset (allows random placement anywhere on the board!)

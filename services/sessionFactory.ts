@@ -479,5 +479,13 @@ export const createInitialSessionData = async (
     session.portalHex = { q: -2, r: 3 };
   }
 
+  if (levelConfig?.creepingVoid) {
+    session.creepingVoid = {
+      lastInfectTime: Date.now(),
+      infectedHexes: {},
+      sourceRestored: false
+    };
+  }
+
   return session;
 };

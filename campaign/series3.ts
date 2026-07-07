@@ -16,7 +16,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.1',
     title: 'Первая Надпись',
-    description: 'Активируйте Монумент по указаниям Обелисков.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Активируйте Монумент по указаниям Обелисков. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: -1, r: 2, targetLevel: 3, label: 'Obelisk', color: 'blue' },
       { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
@@ -143,7 +143,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.2',
     title: 'Близнецы-Маяки',
-    description: 'Активируйте Монумент с двумя слотами, посетив Обелиски.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Активируйте Монумент с двумя слотами, посетив Обелиски. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: -1, r: 1, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
       { q: 1, r: 1, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
@@ -290,7 +290,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.3',
     title: 'Глубина Затмения',
-    description: 'Активируйте Монумент необычным предметом по подсказке.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Активируйте Монумент необычным предметом по подсказке. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 0, r: 1, targetLevel: 3, label: 'Obelisk', color: 'blue' },
       { q: 0, r: -1, targetLevel: 5, label: 'Monument', color: 'emerald' }
@@ -410,7 +410,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.4',
     title: 'Энтропийная Депеша',
-    description: 'Активируйте Монумент с двумя слотами за минимальное число ходов.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Активируйте Монумент с двумя слотами за минимальное число ходов. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: -1, r: 1, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
       { q: 1, r: 1, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
@@ -557,7 +557,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.5',
     title: "Цитадель Стража",
-    description: 'Активируйте Монумент редким предметом, обходя ботов-стражей.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Активируйте Монумент редким предметом, обходя ботов-стражей. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: -1, r: 1, targetLevel: 3, label: 'Obelisk', color: 'blue' },
       { q: 0, r: -1, targetLevel: 5, label: 'Monument', color: 'emerald' }
@@ -683,7 +683,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.6',
     title: 'Три Шепота',
-    description: 'Активируйте Монумент одним из трех подходящих по подсказкам предметов.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Активируйте Монумент одним из трех подходящих по подсказкам предметов. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: -1, r: 1, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
       { q: 1, r: 1, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
@@ -812,7 +812,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.7',
     title: 'Господство',
-    description: 'Активируйте Монумент быстрее, чем бот-конкурент нарастит энтропию.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Активируйте Монумент быстрее, чем бот-конкурент нарастит энтропию. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: -1, r: 1, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
       { q: 1, r: 1, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
@@ -940,7 +940,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.8',
     title: 'Архив',
-    description: 'Активируйте сложный Монумент с тремя слотами, обходя патрули.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Активируйте сложный Монумент с тремя слотами, обходя патрули. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 0, r: 2, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
       { q: -1, r: 2, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
@@ -1091,7 +1091,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.9',
     title: 'Звезда Нексуса',
-    description: 'Возведите 6-лучевую звезду из плит Ур. 2 на сложной местности.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Возведите 6-лучевую звезду из плит Ур. 2 на сложной местности. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: {
       size: 5, type: 'procedural', generateWalls: true, wallStartRadius: 4, wallType: 'void_shatter'
@@ -1140,7 +1140,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.10',
     title: 'Печать Монолита',
-    description: 'Соберите требования всех трех Обелисков для активации Монумента.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Соберите требования всех трех Обелисков для активации Монумента. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: -2, r: 2, targetLevel: 3, label: 'Obelisk', color: 'blue' },
       { q: 2, r: 0, targetLevel: 3, label: 'Obelisk', color: 'blue' },
@@ -1232,7 +1232,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.11',
     title: 'Печать Монолита',
-    description: 'Одновременная инкрустация 2 артефактов на алтаре.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Одновременная инкрустация 2 артефактов на алтаре. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
     ],
@@ -1266,7 +1266,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.12',
     title: 'Изолированный Треугольник',
-    description: 'Соберите парящий треугольник уровня L3, отделенный пропастями VOID.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Соберите парящий треугольник уровня L3, отделенный пропастями VOID. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 4, type: 'procedural', generateWalls: true, wallType: 'pit_ring' },
     startState: { credits: 50, moves: 25, rank: 5, materials: 10, initialEntropy: 40 },
@@ -1292,7 +1292,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.13',
     title: 'Тектонический Крах',
-    description: 'Удержите чертеж Ромба собранным во время землетрясения.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Удержите чертеж Ромба собранным во время землетрясения. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 4, type: 'procedural' },
     startState: { credits: 40, moves: 15, rank: 5, materials: 8, initialEntropy: 20 },
@@ -1318,7 +1318,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.14',
     title: 'Космическое Выравнивание',
-    description: 'Приведите 4 хаотично разбросанных гекса к одинаковому уровню L4.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Приведите 4 хаотично разбросанных гекса к одинаковому уровню L4. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 4, type: 'procedural' },
     startState: { credits: 200, moves: 30, rank: 5, materials: 10, initialEntropy: 40 },
@@ -1340,7 +1340,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.15',
     title: 'Гексагональное Ожерелье',
-    description: 'Соберите кольцо из плит уровня L3.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Соберите кольцо из плит уровня L3. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 100, moves: 35, rank: 5, materials: 16, initialEntropy: 40 },
@@ -1362,7 +1362,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.16',
     title: 'Фрактальный Мост',
-    description: 'Постройте высокоуровневую эстакаду L4 через бездну VOID.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Постройте высокоуровневую эстакаду L4 через бездну VOID. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 5, type: 'procedural', generateWalls: true, wallType: 'void_shatter' },
     startState: { credits: 70, moves: 24, rank: 5, materials: 14, initialEntropy: 40 },
@@ -1384,7 +1384,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.17',
     title: 'Легендарный Осколок',
-    description: 'Отыщите артефакт на слое шахты -10.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Отыщите артефакт на слое шахты -10. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
     ],
@@ -1409,7 +1409,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.18',
     title: 'Бастион Судьбы',
-    description: 'Возведите крепость из 7 центральных плит уровня L4.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Возведите крепость из 7 центральных плит уровня L4. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 150, moves: 40, rank: 5, materials: 18, initialEntropy: 40 },
@@ -1431,7 +1431,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.19',
     title: 'Зеркальный Нексус',
-    description: 'Постройте Стрелу L3 и Ромб L2 на одной карте.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Постройте Стрелу L3 и Ромб L2 на одной карте. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 200, moves: 40, rank: 5, materials: 20, initialEntropy: 40 },
@@ -1456,7 +1456,7 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.20',
     title: 'Ритуал Триумфа',
-    description: 'Соберите Кольцо L3 вокруг Монумента и доставьте Stability Scanner.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Соберите Кольцо L3 вокруг Монумента и доставьте Stability Scanner. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
     ],

@@ -271,7 +271,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/95 backdrop-blur-xl"
+            className="absolute inset-0 z-[10050] flex items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/95 backdrop-blur-xl"
         >
             {/* Background floating effects */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">

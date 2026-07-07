@@ -160,6 +160,117 @@ export class GameEngine {
             });
         }
 
+        // --- CREEPING VOID TICKING ---
+        if (nextState.activeLevelConfig?.creepingVoid && nextState.gameStatus === 'PLAYING') {
+            const cvConfig = nextState.activeLevelConfig.creepingVoid;
+            if (!nextState.creepingVoid) {
+                nextState.creepingVoid = {
+                    lastInfectTime: Date.now(),
+                    infectedHexes: {},
+                    sourceRestored: false
+                };
+            }
+            
+            const cvState = nextState.creepingVoid;
+            const sourceKey = `${cvConfig.sourceQ},${cvConfig.sourceR}`;
+            const sourceHex = nextState.grid[sourceKey];
+            
+            if (!cvState.sourceRestored) {
+                if (sourceHex && sourceHex.structureType !== 'VOID') {
+                    cvState.sourceRestored = true;
+                    
+                    // Restore all infected hexes
+                    for (const [key, orig] of Object.entries(cvState.infectedHexes)) {
+                        if (nextState.grid[key]) {
+                            nextState.grid[key] = {
+                                ...nextState.grid[key],
+                                currentLevel: orig.currentLevel,
+                                maxLevel: orig.maxLevel,
+                                structureType: orig.structureType,
+                                durability: orig.durability
+                            };
+                        }
+                    }
+                    
+                    tickEvents.push({
+                        id: `void-restored-${Date.now()}`,
+                        type: 'MESSAGE',
+                        message: nextState.language === 'RU'
+                            ? '🌀 ИСТОЧНИК УСТРАНЕН: Пространство стабилизировано, все зараженные сектора восстановлены!'
+                            : '🌀 SOURCE RESOLVED: Space stabilized, all infected sectors have been restored!',
+                        timestamp: Date.now()
+                    });
+                } else {
+                    const intervalMs = cvConfig.intervalMs ?? 75000;
+                    const nowMs = Date.now();
+                    if (nowMs - cvState.lastInfectTime >= intervalMs) {
+                        cvState.lastInfectTime = nowMs;
+                        
+                        // Gather all current VOID keys
+                        const voidKeys = Object.keys(nextState.grid).filter(key => nextState.grid[key].structureType === 'VOID');
+                        
+                        const candidateKeys = new Set<string>();
+                        for (const key of voidKeys) {
+                            const [qStr, rStr] = key.split(',');
+                            const q = parseInt(qStr);
+                            const r = parseInt(rStr);
+                            
+                            const neighbors = [
+                                { q: q + 1, r: r }, { q: q - 1, r: r },
+                                { q: q, r: r + 1 }, { q: q, r: r - 1 },
+                                { q: q + 1, r: r - 1 }, { q: q - 1, r: r + 1 }
+                            ];
+                            
+                            for (const n of neighbors) {
+                                const nKey = `${n.q},${n.r}`;
+                                const nHex = nextState.grid[nKey];
+                                const reservedStructures = ['CAPITAL', 'MONUMENT', 'MINI_MONUMENT', 'CORE'];
+                                if (nHex && nHex.structureType !== 'VOID' && !reservedStructures.includes(nHex.structureType || '')) {
+                                    // Prevent infecting player or bots
+                                    const isPlayerOnIt = nextState.player.q === n.q && nextState.player.r === n.r;
+                                    const isBotOnIt = nextState.bots.some(b => b.q === n.q && b.r === n.r);
+                                    if (!isPlayerOnIt && !isBotOnIt) {
+                                        candidateKeys.add(nKey);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (candidateKeys.size > 0) {
+                            const candidates = Array.from(candidateKeys);
+                            const chosenKey = candidates[Math.floor(Math.random() * candidates.length)];
+                            const hexToInfect = nextState.grid[chosenKey];
+                            if (hexToInfect) {
+                                cvState.infectedHexes[chosenKey] = {
+                                    currentLevel: hexToInfect.currentLevel ?? 0,
+                                    maxLevel: hexToInfect.maxLevel ?? 0,
+                                    structureType: hexToInfect.structureType,
+                                    durability: hexToInfect.durability
+                                };
+                                
+                                nextState.grid[chosenKey] = {
+                                    ...hexToInfect,
+                                    currentLevel: 0,
+                                    maxLevel: 0,
+                                    structureType: 'VOID',
+                                    durability: undefined
+                                };
+                                
+                                tickEvents.push({
+                                    id: `void-infected-${Date.now()}`,
+                                    type: 'MESSAGE',
+                                    message: nextState.language === 'RU'
+                                        ? `⚠️ ПУСТОТА РАСПОЛЗАЕТСЯ: Сектор (${chosenKey}) поглощен бездной!`
+                                        : `⚠️ VOID CREEPING: Sector (${chosenKey}) has been consumed by the abyss!`,
+                                    timestamp: Date.now()
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // 4. Campaign Hook: onAfterAction
         if (nextState.activeLevelConfig?.hooks?.onAfterAction && this._index) {
             nextState.activeLevelConfig.hooks.onAfterAction(nextState, this._index);

@@ -123,6 +123,8 @@ class TextureService {
     // --- TOP TEXTURE ---
     if (poiId === 'CORE') {
         this.drawCore(ctx, size, level, seed);
+    } else if (poiId === 'PORTAL') {
+        this.drawPortal(ctx, size, seed);
     } else if (level > 0) {
         this.drawPositive(ctx, size, level, seed, terrainType, poiId);
     } else if (level < 0) {
@@ -567,10 +569,59 @@ class TextureService {
       ctx.globalAlpha = 1.0;
   }
 
+  private drawPortal(ctx: CanvasRenderingContext2D, size: number, seed: number) {
+      const cx = size / 2;
+      const cy = size / 2;
+
+      // 1. Deep Space Cosmic Background
+      const bgGrad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 32);
+      bgGrad.addColorStop(0, '#311042'); // Deep violet center
+      bgGrad.addColorStop(0.5, '#1e1b4b'); // Cosmic indigo
+      bgGrad.addColorStop(1, '#090514'); // Abyss dark edge
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, size, size);
+
+      // 2. Cosmic nebula gas / grid particles
+      ctx.fillStyle = 'rgba(217, 70, 239, 0.1)'; // magenta gas
+      for (let i = 0; i < size; i += 4) {
+          ctx.fillRect(i, 0, 1, size);
+      }
+
+      // 3. Spiraling swirling vortex in the center
+      const vortexGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, 22);
+      vortexGrad.addColorStop(0, '#ffffff'); // blinding white star center
+      vortexGrad.addColorStop(0.2, '#22d3ee'); // bright cyan event horizon
+      vortexGrad.addColorStop(0.6, '#d946ef'); // magenta spiral bands
+      vortexGrad.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = vortexGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 4. Hexagonal high-tech stabilization rings
+      ctx.strokeStyle = '#22d3ee'; // bright cyan
+      ctx.lineWidth = 1.5;
+      this.drawHexagon(ctx, cx, cy, 26);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#d946ef'; // neon magenta
+      ctx.lineWidth = 1.0;
+      this.drawHexagon(ctx, cx, cy, 29);
+      ctx.stroke();
+
+      // 5. Central glowing node
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fill();
+  }
+
   private getTerrainColors(type: string, poiId?: string): { base: string, accent: string, sec: string } {
       if (poiId) {
           switch(poiId) {
               case 'city_checkpoint': return { base: '#3f3f46', accent: '#a1a1aa', sec: '#52525b' }; // Gray
+              case 'PORTAL': return { base: '#1e1b4b', accent: '#a21caf', sec: '#311042' }; // Indigo/Magenta/Purple
           }
       }
 

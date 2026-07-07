@@ -101,7 +101,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 pointer-events-auto animate-in fade-in" onClick={onClose}>
-      <div className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] max-w-lg md:max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 relative group" onClick={e => e.stopPropagation()}>
+      <div className="bg-slate-950 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] max-w-lg md:max-w-5xl w-[94vw] max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 relative group" onClick={e => e.stopPropagation()}>
         {/* Cyber Corner Brackets */}
         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />

@@ -13,7 +13,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.1',
     title: 'Sim 4.1: Первая Кровь',
-    description: 'Выжить 30 ходов против агрессивного бота DESTROYER.',
+    description: 'ПРОТОКОЛ ВЫЖИВАНИЯ. Выжить 30 ходов против агрессивного бота DESTROYER. Активируйте защитные паттерны и следите за стабильностью сектора.',
     mapConfig: { size: 4, type: 'procedural', generateWalls: true, wallType: 'pit_ring' },
     startState: { credits: 0, moves: 30, rank: 2, materials: 10, initialEntropy: 0 },
     goalText: 'Survive 30 turns against bot',
@@ -36,7 +36,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.2',
     title: 'Sim 4.2: Оборона Высот',
-    description: 'Возвести и удержать 2 башни L4 под натиском бота.',
+    description: 'СТРУКТУРНОЕ ФОРМАТИРОВАНИЕ. Возвести и удержать 2 башни L4 под натиском бота. Требуется предельная точность позиционирования блоков в нестабильной зоне.',
     mapConfig: { size: 5, type: 'procedural', generateWalls: true },
     startState: { credits: 50, moves: 25, rank: 4, materials: 8 },
     goalText: 'Build and hold 2 Level 4 hexes',
@@ -59,7 +59,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.3',
     title: 'Sim 4.3: Вражеская Архитектура',
-    description: 'Остановите бота BUILDER и постройте свою башню L5.',
+    description: 'ТАКТИЧЕСКИЙ ПЕРЕХВАТ. Остановите бота BUILDER и постройте свою башню L5. ИИ-противник активен и использует агрессивные алгоритмы подавления.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 0, moves: 20, rank: 5, materials: 10 },
     goalText: 'Build Level 5 hex before bot',
@@ -80,7 +80,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.4',
     title: 'Sim 4.4: Захват Монолита',
-    description: 'Опередить бота GUARDIAN и активировать Монумент первым.',
+    description: 'ТАКТИЧЕСКИЙ ПЕРЕХВАТ. Опередить бота GUARDIAN и активировать Монумент первым. ИИ-противник активен и использует агрессивные алгоритмы подавления.',
     objectiveHexes: [ { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' } ],
     mapConfig: { size: 4, type: 'fixed', customLayout: [{q:0, r:0, maxLevel:5, currentLevel:5, structureType:'MONUMENT', revealed:true}] },
     startState: { credits: 50, moves: 35, rank: 5, materials: 5 },
@@ -105,7 +105,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.5',
     title: 'Sim 4.5: Чертеж в Тумане',
-    description: 'Собрать STAR_7 L2, отбиваясь от скрытого бота.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Собрать STAR_7 L2, отбиваясь от скрытого бота. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 5, type: 'procedural', revealMode: 'fog' },
     startState: { credits: 100, moves: 30, rank: 2, materials: 15 },
     goalText: 'Build STAR_7 shape (Level 2)',
@@ -124,7 +124,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.6',
     title: 'Sim 4.6: Охотники в Пустоте',
-    description: 'Поиск ключа Apex Core в тумане, преследуемый двумя ботами.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Поиск ключа Apex Core в тумане, преследуемый двумя ботами. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     objectiveHexes: [ { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' } ],
     mapConfig: { size: 6, type: 'procedural', revealMode: 'fog' },
     secretLootHexes: [{q: 0, r: -4, itemBaseId: 'apex_core', level: -3}],
@@ -146,7 +146,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.7',
     title: 'Sim 4.7: Гонка на Выживание',
-    description: 'Набрать 300 Кредитов раньше, чем бот накопит их.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Набрать 300 Кредитов раньше, чем бот накопит их. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 80, moves: 25, rank: 3, materials: 12 },
     goalText: 'Collect 300 Credits',
@@ -171,7 +171,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.8',
     title: 'Sim 4.8: Осада',
-    description: 'Собрать Бастион (HEXAGON_7 L3) под атакой пары ботов.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Собрать Бастион (HEXAGON_7 L3) под атакой пары ботов. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 4, type: 'procedural' },
     startState: { credits: 0, moves: 50, rank: 4, materials: 20 },
     goalText: 'Build HEXAGON_7 (Level 3)',
@@ -186,7 +186,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.9',
     title: 'Sim 4.9: Инверсия Ролей',
-    description: 'Опустить все плиты ИИ (уровня L3) до L0.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Опустить все плиты ИИ (уровня L3) до L0. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 50, moves: 30, rank: 5, materials: 8 },
     goalText: 'Destroy all Bot L3+ hexes',
@@ -211,7 +211,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.10',
     title: 'Sim 4.10: Сектор Омега',
-    description: 'Уничтожить главного бота-защитника. Впервые боты используют туман.',
+    description: 'ТАКТИЧЕСКИЙ ПЕРЕХВАТ. Уничтожить главного бота-защитника. Впервые боты используют туман. ИИ-противник активен и использует агрессивные алгоритмы подавления.',
     mapConfig: { size: 5, type: 'procedural', revealMode: 'fog' },
     startState: { credits: 150, moves: 40, rank: 5, materials: 15 },
     goalText: 'Defeat the Guardian Bot',
@@ -229,7 +229,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.11',
     title: 'Sim 4.11: Эскорт Ключа',
-    description: 'Доставить Stability Scanner к Монументу через территорию патруля GUARDIAN.',
+    description: 'ЛОГИСТИЧЕСКИЙ ВЕКТОР. Доставить Stability Scanner к Монументу через территорию патруля GUARDIAN. Избегайте столкновений с защитными подпрограммами ИИ.',
     objectiveHexes: [ { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' } ],
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 120, moves: 30, rank: 5, materials: 10, startInventory: ['stability_scanner'] },
@@ -246,7 +246,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.12',
     title: 'Sim 4.12: Темная Матрица',
-    description: 'Найти Обелиски в тумане и собрать DIAMOND_4 L3, избегая патрулей.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Найти Обелиски в тумане и собрать DIAMOND_4 L3, избегая патрулей. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 5, type: 'procedural', revealMode: 'fog' },
     startState: { credits: 80, moves: 35, rank: 3, materials: 12 },
     goalText: 'Build DIAMOND_4 (Level 3)',
@@ -261,7 +261,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.13',
     title: 'Sim 4.13: Тектонический Резонанс',
-    description: 'Собрать RING_6 L2 на карте с постоянными энтропийными сдвигами и активным BUILDER.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Собрать RING_6 L2 на карте с постоянными энтропийными сдвигами и активным BUILDER. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 100, moves: 40, rank: 3, materials: 15, initialEntropy: 80 },
     goalText: 'Build RING_6 (Level 2)',
@@ -276,7 +276,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.14',
     title: 'Sim 4.14: Ловушка Времени',
-    description: 'Продержаться 30 ходов, не потеряв ни одной плиты L2, против бота.',
+    description: 'ПРОТОКОЛ ВЫЖИВАНИЯ. Продержаться 30 ходов, не потеряв ни одной плиты L2, против бота. Активируйте защитные паттерны и следите за стабильностью сектора.',
     mapConfig: { size: 4, type: 'fixed', customLayout: [
         { q: 0, r: 0, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
         { q: 1, r: -1, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
@@ -305,7 +305,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.15',
     title: 'Sim 4.15: Захваченный Реактор',
-    description: 'Отбить у бота L5 плиту, понизить ее и построить свою L5 на другом конце карты.',
+    description: 'ТАКТИЧЕСКИЙ ПЕРЕХВАТ. Отбить у бота L5 плиту, понизить ее и построить свою L5 на другом конце карты. ИИ-противник активен и использует агрессивные алгоритмы подавления.',
     mapConfig: { size: 5, type: 'fixed', customLayout: [
         { q: 0, r: -4, maxLevel: 5, currentLevel: 5, ownerId: 'bot-1', revealed: true }
     ] },
@@ -325,7 +325,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.16',
     title: 'Sim 4.16: Двойная Спираль',
-    description: 'Собрать две линии LINE_3 L3 в тумане, борясь за ресурсы с ботом.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Собрать две линии LINE_3 L3 в тумане, борясь за ресурсы с ботом. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 6, type: 'procedural', revealMode: 'fog' },
     startState: { credits: 150, moves: 45, rank: 5, materials: 20 },
     goalText: 'Build two LINE_3 shapes (Level 3)',
@@ -340,7 +340,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.17',
     title: 'Sim 4.17: Синдикат',
-    description: 'Одновременно противостоять BUILDER, DIGGER и DESTROYER. Собрать TRIANGLE_3 L4.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Одновременно противостоять BUILDER, DIGGER и DESTROYER. Собрать TRIANGLE_3 L4. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 200, moves: 50, rank: 5, materials: 25 },
     goalText: 'Build TRIANGLE_3 (Level 4)',
@@ -355,7 +355,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.18',
     title: 'Sim 4.18: Темное Ядро',
-    description: 'Доставить Void Core на Монумент в условиях полной потери видимости.',
+    description: 'ЛОГИСТИЧЕСКИЙ ВЕКТОР. Доставить Void Core на Монумент в условиях полной потери видимости. Избегайте столкновений с защитными подпрограммами ИИ.',
     objectiveHexes: [ { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' } ],
     mapConfig: { size: 5, type: 'procedural', revealMode: 'fog' },
     startState: { credits: 100, moves: 35, rank: 5, materials: 12, startInventory: ['void_core'] },
@@ -372,7 +372,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.19',
     title: 'Sim 4.19: Гонка Резонанса',
-    description: 'Опередить ИИ в постройке Бастиона HEXAGON_7 L3.',
+    description: 'ТАКТИЧЕСКИЙ ПЕРЕХВАТ. Опередить ИИ в постройке Бастиона HEXAGON_7 L3. ИИ-противник активен и использует агрессивные алгоритмы подавления.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 180, moves: 40, rank: 5, materials: 18 },
     goalText: 'Build HEXAGON_7 (Level 3) before bot',
@@ -387,7 +387,7 @@ export const series4Levels: LevelConfig[] = [
   {
     id: '4.20',
     title: 'Sim 4.20: Автономный Фронт',
-    description: 'Эпическое сражение. Активировать Монумент, преодолевая отряды всех ботов.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Эпическое сражение. Активировать Монумент, преодолевая отряды всех ботов. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [ { q: 0, r: -4, targetLevel: 5, label: 'Monument', color: 'emerald' } ],
     mapConfig: { size: 6, type: 'fixed', customLayout: [
         { q: 0, r: -4, maxLevel: 5, currentLevel: 5, structureType: 'MONUMENT', revealed: true }

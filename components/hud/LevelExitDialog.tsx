@@ -96,7 +96,7 @@ export const LevelExitDialog: React.FC<LevelExitDialogProps> = ({
                         animate={{ scale: 1, y: 0, opacity: 1 }}
                         exit={{ scale: 0.9, y: 30, opacity: 0 }}
                         transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                        className="bg-slate-950/95 border-2 border-red-500/40 p-6 md:p-8 rounded-2xl shadow-[0_0_80px_rgba(239,68,68,0.3)] max-w-[380px] md:max-w-md w-full text-center relative overflow-hidden backdrop-blur-xl z-20 group"
+                        className="bg-slate-950/95 border-2 border-red-500/40 p-5 md:p-8 rounded-2xl shadow-[0_0_80px_rgba(239,68,68,0.3)] w-[92vw] max-w-[380px] md:max-w-md text-center relative overflow-hidden backdrop-blur-xl z-20 group"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Glowing neon top stripe */}

@@ -430,6 +430,41 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         return getCampaignMetric(activeLevelConfig, grid, player, session, language, entropy?.current);
     }, [grid, player, activeLevelConfig, language, entropy, session]);
 
+    const rewardSlots = useMemo(() => {
+        const isSiege = session?.winCondition?.winType === 'SIEGE';
+        if (isSiege) {
+            return [
+                { level: 1, count: '15' },
+                { level: 2, count: '10' },
+                { level: 3, count: '5' }
+            ];
+        }
+        
+        const requiredShapes = session?.activeLevelConfig?.requiredShapes || [];
+        const T = requiredShapes[0]?.level || winCondition?.targetLevel || player?.playerLevel || 1;
+        
+        const lvl0 = Math.max(0, T - 1);
+        const lvl1 = Math.max(1, T);
+        const lvl2 = Math.min(10, T + 1);
+        
+        return [
+            { level: lvl0, count: '5-15' },
+            { level: lvl1, count: '5-10' },
+            { level: lvl2, count: '1-5' }
+        ];
+    }, [session?.activeLevelConfig, session?.winCondition?.winType, winCondition?.targetLevel, player?.playerLevel]);
+
+    const getHexColorByLevel = (lvl: number) => {
+        const colors = [
+            { border: 'border-slate-500/30', text: 'text-slate-400', bg: 'bg-slate-950/40', bgGlow: 'from-slate-500/10 to-transparent', icon: 'text-slate-400' }, // L0
+            { border: 'border-emerald-500/30', text: 'text-emerald-400', bg: 'bg-emerald-950/20', bgGlow: 'from-emerald-500/10 to-transparent', icon: 'text-emerald-400' }, // L1
+            { border: 'border-blue-500/30', text: 'text-blue-400', bg: 'bg-blue-950/20', bgGlow: 'from-blue-500/10 to-transparent', icon: 'text-blue-400' }, // L2
+            { border: 'border-amber-500/30', text: 'text-amber-400', bg: 'bg-amber-950/20', bgGlow: 'from-amber-500/10 to-transparent', icon: 'text-amber-400' }, // L3
+            { border: 'border-purple-500/30', text: 'text-purple-400', bg: 'bg-purple-950/20', bgGlow: 'from-purple-500/10 to-transparent', icon: 'text-purple-400' }, // L4
+        ];
+        return colors[lvl % colors.length];
+    };
+
     const availableInventory = player?.inventory.filter(i => !monumentDialogState.slots.some(s => s?.id === i.id)) || [];
     const isMonumentReady = monumentDialogState.slots.every(s => s !== null);
 
@@ -460,7 +495,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* RESTART CONFIRMATION */}
             <AnimatePresence>
-                {activeModal === 'RESTART' && (
+                {activeModal === 'RESTART' && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
                     <div className="absolute inset-0 z-[200] flex items-center justify-center p-4 pointer-events-auto">
                         <motion.div 
                             initial={{ opacity: 0 }}
@@ -474,7 +509,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 15, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/90 border border-amber-500/30 p-6 md:p-8 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.15)] max-w-[340px] md:max-w-sm w-full text-center relative overflow-hidden backdrop-blur-xl"
+                            className="bg-slate-950/90 border border-amber-500/30 p-5 md:p-8 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.15)] w-[92vw] max-w-[340px] md:max-w-sm text-center relative overflow-hidden backdrop-blur-xl"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
@@ -507,7 +542,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* MISSION BRIEFING / DETAILS */}
             <AnimatePresence>
-                {(activeModal === 'MISSION' || gameStatus === 'BRIEFING') && (
+                {(activeModal === 'MISSION' || gameStatus === 'BRIEFING') && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
                     <div className="absolute inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 pointer-events-auto">
                         <motion.div 
                             initial={{ opacity: 0 }}
@@ -523,7 +558,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 25, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="relative bg-slate-950/98 border border-indigo-500/40 rounded-2xl shadow-[0_0_60px_rgba(79,70,229,0.3)] max-w-2xl w-full max-h-[82vh] sm:max-h-[85vh] md:max-h-[92vh] overflow-hidden flex flex-col backdrop-blur-2xl group"
+                            className="relative bg-slate-950/98 border border-indigo-500/40 rounded-2xl shadow-[0_0_60px_rgba(79,70,229,0.3)] w-[94vw] max-w-2xl max-h-[92vh] sm:max-h-[85vh] md:max-h-[92vh] overflow-hidden flex flex-col backdrop-blur-2xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
@@ -579,65 +614,71 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             </div>
 
                             {/* Scrollable Content */}
-                            <div className="flex-1 overflow-y-auto relative z-20 p-3 sm:p-4.5 flex flex-col gap-3 sm:gap-4 scrollbar-thin scrollbar-thumb-slate-800 select-none">
+                            <div className="flex-1 overflow-y-auto relative z-20 p-2.5 sm:p-3.5 flex flex-col gap-2.5 sm:gap-3.5 scrollbar-thin scrollbar-thumb-slate-800 select-none">
                                 
                                 {/* 1. Simulation Profile & Decrypted Briefing Description */}
-                                <div className="bg-slate-900/35 border border-slate-800 p-3 rounded-lg flex flex-col gap-1.5 relative overflow-hidden backdrop-blur-sm">
-                                    <div className="absolute top-0 left-0 w-0.5 h-full bg-indigo-500" />
-                                    <h2 className="text-xs sm:text-sm font-black text-slate-100 tracking-tight uppercase font-sans">
-                                        {activeLevelConfig?.title || (language === 'RU' ? 'Свободный Сектор' : 'Custom Sector')}
-                                    </h2>
-                                    <p className="text-[10px] sm:text-[11px] text-slate-300 leading-normal font-sans line-clamp-2">
-                                        {activeLevelConfig?.description || (language === 'RU' ? 'Пользовательская симуляция с хаотическими условиями.' : 'Standard simulation protocol with customizable variables.')}
+                                <div className="bg-slate-900/40 border border-indigo-500/20 p-3 sm:p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden shadow-lg shrink-0">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/80 shadow-[0_0_12px_rgba(99,102,241,0.8)]" />
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-2xl rounded-full pointer-events-none" />
+                                    <div className="flex items-center gap-2 mb-1 z-10">
+                                        <div className="p-1 bg-indigo-500/20 rounded-md border border-indigo-500/30">
+                                            <Terminal className="w-3.5 h-3.5 text-indigo-300" />
+                                        </div>
+                                        <h2 className="text-sm sm:text-base font-black text-white tracking-wide uppercase font-sans leading-none drop-shadow-md">
+                                            {activeLevelConfig?.title || (language === 'RU' ? 'Свободный Сектор' : 'Custom Sector')}
+                                        </h2>
+                                    </div>
+                                    <p className="text-[10px] sm:text-[11.5px] text-indigo-100/90 leading-relaxed font-sans font-medium mt-1 relative z-10">
+                                        {activeLevelConfig?.description || (language === 'RU' ? 'Пользовательская симуляция с хаотическими условиями. Соблюдайте осторожность.' : 'Standard simulation protocol with customizable variables. Proceed with caution.')}
                                     </p>
                                 </div>
 
                                 {/* Horizontal / Vertical Grid of parameters */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3.5">
                                     
                                     {/* Column A: Starts Allocations and AI threat warnings */}
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-2.5 sm:gap-3.5">
                                         {/* Starting Allocation */}
-                                        <div className="bg-slate-900/35 border border-slate-800/70 p-3 rounded-lg flex flex-col gap-2">
+                                        <div className="bg-slate-900/35 border border-slate-800/70 p-2.5 sm:p-3 rounded-lg flex flex-col gap-1.5 sm:gap-2">
                                             <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-indigo-400 font-mono flex items-center gap-1">
                                                 <Zap className="w-3 h-3 text-indigo-400 shrink-0" />
                                                 {language === 'RU' ? 'СТАРТОВАЯ КОМПЛЕКТАЦИЯ' : 'INITIAL SPEED ALLOCATION'}
                                             </span>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div className="bg-black/35 border border-slate-800/40 p-2 rounded-lg flex items-center gap-2">
+                                            <div className="grid grid-cols-4 md:grid-cols-2 gap-1.5 sm:gap-2">
+                                                <div className="bg-black/35 border border-slate-800/40 p-1.5 sm:p-2 rounded-lg flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2 min-w-0">
                                                     <div className="p-1 bg-sky-500/10 rounded border border-sky-500/20 shrink-0">
                                                         <Timer className="w-3.5 h-3.5 text-sky-400" />
                                                     </div>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-[7.5px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'РЕСУРС ХОДОВ' : 'MOVES BUDGET'}</span>
-                                                        <span className="text-[11px] sm:text-xs font-black text-sky-300 font-mono mt-0.5 leading-none">{activeLevelConfig?.startState.moves ?? winCondition?.queueSize ?? 0}</span>
+                                                    <div className="flex flex-col min-w-0 items-center sm:items-start text-center sm:text-left">
+                                                        <span className="text-[7px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'ХОДЫ' : 'MOVES'}</span>
+                                                        <span className="text-[10px] sm:text-xs font-black text-sky-300 font-mono mt-0.5 sm:mt-1 leading-none truncate">{activeLevelConfig?.startState.moves ?? winCondition?.queueSize ?? 0}</span>
                                                     </div>
                                                 </div>
-                                                <div className="bg-black/35 border border-slate-800/40 p-2 rounded-lg flex items-center gap-2">
+                                                <div className="bg-black/35 border border-slate-800/40 p-1.5 sm:p-2 rounded-lg flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2 min-w-0">
                                                     <div className="p-1 bg-amber-500/10 rounded border border-amber-500/20 shrink-0">
                                                         <Coins className="w-3.5 h-3.5 text-amber-400" />
                                                     </div>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-[7.5px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'НАЧ.КРЕДИТЫ' : 'START CREDITS'}</span>
-                                                        <span className="text-[11px] sm:text-xs font-black text-amber-300 font-mono mt-0.5 leading-none">{activeLevelConfig?.startState.credits ?? 0}</span>
+                                                    <div className="flex flex-col min-w-0 items-center sm:items-start text-center sm:text-left">
+                                                        <span className="text-[7px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS'}</span>
+                                                        <span className="text-[10px] sm:text-xs font-black text-amber-300 font-mono mt-0.5 sm:mt-1 leading-none truncate">{activeLevelConfig?.startState.credits ?? 0}</span>
                                                     </div>
                                                 </div>
-                                                <div className="bg-black/35 border border-slate-800/40 p-2 rounded-lg flex items-center gap-2">
+                                                <div className="bg-black/35 border border-slate-800/40 p-1.5 sm:p-2 rounded-lg flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2 min-w-0">
                                                     <div className="p-1 bg-emerald-500/10 rounded border border-emerald-500/20 shrink-0">
                                                         <Layers className="w-3.5 h-3.5 text-emerald-400" />
                                                     </div>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-[7.5px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'МАТЕРИАЛЫ' : 'RAW MATERIALS'}</span>
-                                                        <span className="text-[11px] sm:text-xs font-black text-emerald-300 font-mono mt-0.5 leading-none">{activeLevelConfig?.startState.materials ?? 5}</span>
+                                                    <div className="flex flex-col min-w-0 items-center sm:items-start text-center sm:text-left">
+                                                        <span className="text-[7px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'МАТ-ЛЫ' : 'MATS'}</span>
+                                                        <span className="text-[10px] sm:text-xs font-black text-emerald-300 font-mono mt-0.5 sm:mt-1 leading-none truncate">{activeLevelConfig?.startState.materials ?? 5}</span>
                                                     </div>
                                                 </div>
-                                                <div className="bg-black/35 border border-slate-800/40 p-2 rounded-lg flex items-center gap-2">
+                                                <div className="bg-black/35 border border-slate-800/40 p-1.5 sm:p-2 rounded-lg flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2 min-w-0">
                                                     <div className="p-1 bg-indigo-500/10 rounded border border-indigo-500/20 shrink-0">
                                                         <Crown className="w-3.5 h-3.5 text-indigo-400" />
                                                     </div>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-[7.5px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'ОГРАНИЧ.РАНГА' : 'RANK CAP'}</span>
-                                                        <span className="text-[11px] sm:text-xs font-black text-indigo-300 font-mono mt-0.5 leading-none">{activeLevelConfig?.startState.rank ?? 5}</span>
+                                                    <div className="flex flex-col min-w-0 items-center sm:items-start text-center sm:text-left">
+                                                        <span className="text-[7px] sm:text-[8px] font-black text-slate-500 uppercase leading-none truncate">{language === 'RU' ? 'ЛИМИТ' : 'LIMIT'}</span>
+                                                        <span className="text-[10px] sm:text-xs font-black text-indigo-300 font-mono mt-0.5 sm:mt-1 leading-none truncate">{activeLevelConfig?.startState.rank ?? 5}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -645,19 +686,20 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
                                         {/* Bot intelligence analysis */}
                                         {activeLevelConfig?.aiMode && activeLevelConfig.aiMode !== 'none' && (
-                                            <div className="bg-red-950/15 border border-red-500/20 p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden">
-                                                <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/5 blur-2xl rounded-full pointer-events-none animate-pulse" />
-                                                <span className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest text-red-400 font-mono flex items-center gap-1.5">
-                                                    <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                                    {language === 'RU' ? 'АНАЛИЗ АКТИВНОСТИ ИИ' : 'AI THREAT ANALYSIS'}
+                                            <div className="bg-red-950/10 border border-red-500/20 p-2.5 sm:p-3 rounded-lg flex flex-col gap-1.5 relative overflow-hidden text-left shadow-lg">
+                                                <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 blur-2xl rounded-full pointer-events-none animate-pulse" />
+                                                <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-red-400 font-mono flex items-center gap-1.5">
+                                                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+                                                    </span>
+                                                    {language === 'RU' ? 'АКТИВНА ИИ-УГРОЗА' : 'AI THREAT ACTIVE'}
                                                 </span>
-                                                <div className="flex items-center gap-3 mt-1.5 bg-black/45 p-2.5 rounded-lg border border-red-950/85">
-                                                    <Cpu className="w-7 h-7 text-red-400 shrink-0 animate-[spin_12s_linear_infinite]" />
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-[8px] font-black text-red-400 uppercase leading-none">
-                                                            {language === 'RU' ? 'СТРАТЕГИЯ ДРОНА:' : 'DRONE PROFILE:'}
-                                                        </span>
-                                                        <span className="text-[10.5px] sm:text-xs font-black text-white uppercase tracking-wider mt-1 font-mono">
+                                                <div className="flex items-center gap-2 bg-black/45 px-2 py-1 rounded border border-red-950/80">
+                                                    <Cpu className="w-4 h-4 text-red-400 shrink-0 animate-[spin_12s_linear_infinite]" />
+                                                    <div className="flex flex-col min-w-0 text-left">
+                                                        <span className="text-[6.5px] font-black text-red-400 uppercase leading-none">{language === 'RU' ? 'ПРОФИЛЬ ДРОНА' : 'DRONE PROFILE'}</span>
+                                                        <span className="text-[9px] sm:text-[10px] font-black text-white uppercase tracking-wider mt-0.5 truncate">
                                                             {activeLevelConfig?.botObjective ? (
                                                                 language === 'RU' ? (
                                                                     activeLevelConfig.botObjective === 'COMPETE_RANK' ? 'Гонка Рангов (Высота L9+)' :
@@ -678,9 +720,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <p className="text-[10px] sm:text-[11px] text-red-300/80 leading-relaxed font-sans">
+                                                <p className="text-[8.5px] sm:text-[9.5px] text-red-300/70 leading-snug font-sans">
                                                     {language === 'RU' 
-                                                        ? 'Региональная директива противника активирована. Искин будет пытаться заблокировать трафик. Конфликтные транзакции отдают приоритет игроку.' 
+                                                        ? 'Региональный Искин активен на кластере. ИИ пытается блокировать транзакции.' 
                                                         : 'Rival drone agent is active on this simulation cluster. AI coordinates will target key tiles.'}
                                                 </p>
                                             </div>
@@ -688,21 +730,21 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                     </div>
 
                                     {/* Column B: Goals & Rewards */}
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-2.5 sm:gap-3.5">
                                         {/* Goals Card */}
-                                        <div className="bg-slate-900/35 border border-amber-500/15 p-3 rounded-lg flex flex-col gap-2">
+                                        <div className="bg-slate-900/35 border border-amber-500/15 p-2.5 sm:p-3 rounded-lg flex flex-col gap-2">
                                             <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-amber-500 font-mono flex items-center gap-1">
                                                 <Target className="w-3 h-3 text-amber-500 shrink-0" />
                                                 {language === 'RU' ? 'УСЛОВИЯ АКТИВАЦИИ' : 'WIN CONDITION MATRIX'}
                                             </span>
                                             
                                             {activeLevelConfig?.goalText ? (
-                                                <h3 className="text-[10.5px] sm:text-xs font-black text-amber-300 uppercase leading-snug tracking-tight font-sans bg-amber-950/15 border border-amber-500/25 px-2.5 py-1.5 rounded-md flex items-center flex-wrap gap-1">
+                                                <h3 className="text-[9.5px] sm:text-[10.5px] font-black text-amber-300 uppercase leading-snug tracking-tight font-sans bg-amber-950/15 border border-amber-500/25 px-2 py-1 rounded-md flex items-center flex-wrap gap-1">
                                                     {activeLevelConfig.goalText.replace(/\(.*\)/, '')}
-                                                    {activeLevelConfig.goalText.match(/\(.*\)/) && <Crown className="w-4 h-4 text-amber-400 drop-shadow-md pb-0.5" />}
+                                                    {activeLevelConfig.goalText.match(/\(.*\)/) && <Crown className="w-3.5 h-3.5 text-amber-400 drop-shadow-md" />}
                                                 </h3>
                                             ) : (
-                                                <h3 className="text-[10.5px] sm:text-xs font-black text-amber-300 uppercase leading-snug tracking-tight font-sans bg-amber-950/15 border border-amber-500/25 px-2.5 py-1.5 rounded-md">
+                                                <h3 className="text-[9.5px] sm:text-[10.5px] font-black text-amber-300 uppercase leading-snug tracking-tight font-sans bg-amber-950/15 border border-amber-500/25 px-2 py-1 rounded-md">
                                                     {language === 'RU' ? 'Достигнуть установленной высоты или прибыли' : 'Reach target rank or funds'}
                                                 </h3>
                                             )}
@@ -813,39 +855,6 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                             </div>
                                         </div>
 
-                                        {/* Guaranteed Rewards Card */}
-                                        <div className="bg-slate-900/35 border border-emerald-500/15 p-3 rounded-lg flex flex-col gap-2 relative overflow-hidden text-left">
-                                            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 blur-2xl rounded-full pointer-events-none" />
-                                            <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-emerald-400 font-mono flex items-center gap-1">
-                                                <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
-                                                {language === 'RU' ? 'ДОСТУПНЫЕ НАГРАДЫ' : 'POTENTIAL REWARDS'}
-                                            </span>
-
-                                            <div className="grid grid-cols-3 gap-1.5">
-                                                {rewardHexCells.map(cell => (
-                                                    <motion.div 
-                                                        key={cell.id} 
-                                                        whileHover={{ y: -1, scale: 1.01 }}
-                                                        className="flex flex-col items-center justify-center bg-black/35 border border-indigo-500/10 p-1.5 rounded-md select-none cursor-help hover:border-indigo-500/25 hover:bg-slate-900/40 transition-colors"
-                                                    >
-                                                        <div className="w-5.5 h-5.5 rounded bg-indigo-950/20 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-black tracking-wide relative leading-none">
-                                                            ⬢
-                                                        </div>
-                                                        <div className="flex flex-col items-center mt-1">
-                                                            <span className="text-[6.5px] font-black text-indigo-300 font-mono tracking-wider leading-none">
-                                                                {language === 'RU' ? 'ГЕКС-ФОРМА' : 'HEX CORES'}
-                                                            </span>
-                                                        </div>
-                                                    </motion.div>
-                                                ))}
-                                            </div>
-                                            
-                                            <p className="text-[9px] sm:text-[9.5px] leading-normal text-slate-300 font-sans bg-emerald-950/10 p-2 rounded border border-emerald-500/15">
-                                                {language === 'RU' 
-                                                    ? 'Награда за победу: случайным образом гекс-форм: 0 уровня от 5 до 15 штук, 1 уровня от 5 до 10 штук, 2 уровня от 1 до 5 штук.' 
-                                                    : 'Victory Reward: Random hexagon forms: Level 0 (5 to 15 pcs), Level 1 (5 to 10 pcs), Level 2 (1 to 5 pcs).'}
-                                            </p>
-                                        </div>
                                     </div>
 
                                 </div>
@@ -891,7 +900,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* RANKINGS */}
             <AnimatePresence>
-                {activeModal === 'RANKINGS' && (
+                {activeModal === 'RANKINGS' && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
                     <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 pointer-events-auto">
                         <motion.div 
                             initial={{ opacity: 0 }}
@@ -905,7 +914,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 20, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/95 border-2 border-amber-500/40 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.25)] w-full max-w-[340px] md:max-w-md max-h-[82vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
+                            className="bg-slate-950/95 border-2 border-amber-500/40 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.25)] w-[92vw] max-w-[350px] md:max-w-md max-h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
@@ -970,7 +979,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* LOG */}
             <AnimatePresence>
-                {activeModal === 'LOG' && (
+                {activeModal === 'LOG' && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
                     <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 pointer-events-auto">
                         <motion.div 
                             initial={{ opacity: 0 }}
@@ -984,7 +993,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 20, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/95 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-[340px] md:max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
+                            className="bg-slate-950/95 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-[94vw] max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
@@ -1049,7 +1058,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* CODEX */}
             <AnimatePresence>
-                {activeModal === 'CODEX' && (
+                {activeModal === 'CODEX' && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
                     <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 pointer-events-auto">
                         <motion.div 
                             initial={{ opacity: 0 }}
@@ -1063,7 +1072,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 25, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/95 border-2 border-purple-500/40 rounded-2xl shadow-[0_0_50px_rgba(168,85,247,0.25)] w-full max-w-[340px] md:max-w-3xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
+                            className="bg-slate-950/95 border-2 border-purple-500/40 rounded-2xl shadow-[0_0_50px_rgba(168,85,247,0.25)] w-[94vw] max-w-3xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative backdrop-blur-xl group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
@@ -1121,7 +1130,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* HELP */}
             <AnimatePresence>
-                {helpTopic && helpData && (
+                {helpTopic && helpData && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
                     <div className="absolute inset-0 z-[150] flex items-center justify-center p-4 pointer-events-auto">
                         <motion.div 
                             initial={{ opacity: 0 }}
@@ -1135,7 +1144,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 15, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/90 border border-indigo-500/30 p-6 md:p-8 rounded-xl shadow-2xl max-w-[340px] md:max-w-sm w-full max-h-[90vh] overflow-y-auto relative backdrop-blur-xl"
+                            className="bg-slate-950/90 border border-indigo-500/30 p-5 md:p-8 rounded-xl shadow-2xl w-[92vw] max-w-[350px] md:max-w-sm max-h-[90vh] overflow-y-auto relative backdrop-blur-xl"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
@@ -1166,7 +1175,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
             {/* ITEM INSPECTION */}
             <AnimatePresence>
-                {inspectedItem && (
+                {inspectedItem && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
                     <div className="absolute inset-0 z-[150] flex items-center justify-center p-4 pointer-events-auto">
                         <motion.div 
                             initial={{ opacity: 0 }}
@@ -1180,7 +1189,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 15, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl max-w-[340px] md:max-w-sm w-full max-h-[92vh] overflow-y-auto relative flex flex-col gap-4 p-5 md:p-8 backdrop-blur-xl"
+                            className="bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl w-[92vw] max-w-[350px] md:max-w-sm max-h-[92vh] overflow-y-auto relative flex flex-col gap-4 p-4 md:p-8 backdrop-blur-xl"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Corner brackets */}
@@ -1225,7 +1234,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                     <div className={`absolute inset-0 bg-gradient-to-b opacity-25 pointer-events-none ${gameStatus === 'VICTORY' ? 'from-emerald-500/20 to-transparent shadow-[inset_0_0_100px_rgba(16,185,129,0.1)]' : 'from-red-500/20 to-transparent shadow-[inset_0_0_100px_rgba(239,68,68,0.1)]'}`} />
 
                     {/* Premium Sci-Fi Terminal Layout */}
-                    <div className="bg-slate-950/95 border-2 border-slate-800/80 rounded-2xl md:rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.05)] max-w-4xl w-full flex flex-col relative z-10 max-h-[98vh] overflow-y-auto no-scrollbar py-2 md:py-6 px-2 sm:px-6 md:px-8 border-t-indigo-500/30 group leading-tight">
+                    <div className="bg-slate-950/95 border-2 border-slate-800/80 rounded-2xl md:rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.05)] w-[96vw] max-w-4xl flex flex-col relative z-10 max-h-[96vh] overflow-y-auto no-scrollbar py-2 md:py-6 px-2 sm:px-6 md:px-8 border-t-indigo-500/30 group leading-tight">
                         {/* Corner brackets */}
                         <div className={`absolute top-0 left-0 w-3 h-3 md:w-5 md:h-5 border-t-2 border-l-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
                         <div className={`absolute top-0 right-0 w-3 h-3 md:w-5 md:h-5 border-t-2 border-r-2 z-30 pointer-events-none ${gameStatus === 'VICTORY' ? 'border-emerald-500/60' : 'border-red-500/60'}`} />
@@ -1472,9 +1481,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             )}
 
             {/* MINI MONUMENT DIALOG */}
-            {miniMonumentDialogState?.isOpen && (
+            {miniMonumentDialogState?.isOpen && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && activeModal !== 'EXIT' && activeModal !== 'RESTART' && !showResetConfirm && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 pointer-events-auto">
-                    <div className="bg-slate-950 border-2 border-indigo-500/40 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.25)] max-w-lg w-full relative overflow-hidden flex flex-col gap-4">
+                    <div className="bg-slate-950 border-2 border-indigo-500/40 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.25)] w-[92vw] max-w-lg relative overflow-hidden flex flex-col gap-4">
                         {/* Corner brackets */}
                         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/60 z-30 pointer-events-none" />
                         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/60 z-30 pointer-events-none" />
@@ -1500,9 +1509,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             )}
 
             {/* MONUMENT DIALOG */}
-            {monumentDialogState.isOpen && (
+            {monumentDialogState.isOpen && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && activeModal !== 'EXIT' && activeModal !== 'RESTART' && !showResetConfirm && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 pointer-events-auto">
-                    <div className="bg-slate-950 border-2 border-amber-500/40 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.25)] max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95 group">
+                    <div className="bg-slate-950 border-2 border-amber-500/40 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.25)] w-[94vw] max-w-2xl max-h-[94vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95 group">
                         {/* Corner brackets */}
                         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-500/60 z-30 pointer-events-none" />
                         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-500/60 z-30 pointer-events-none" />
@@ -1665,9 +1674,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             )}
 
             {/* VOID DIALOG */}
-            {voidDialogTarget && (
+            {voidDialogTarget && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && activeModal !== 'EXIT' && activeModal !== 'RESTART' && !showResetConfirm && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 pointer-events-auto" onClick={closeVoidDialog}>
-                    <div className="bg-slate-950 border-2 border-red-500/40 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.25)] max-w-lg w-full max-h-[95vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95 group" onClick={e => e.stopPropagation()}>
+                    <div className="bg-slate-950 border-2 border-red-500/40 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.25)] w-[94vw] max-w-lg max-h-[92vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 animate-in zoom-in-95 group" onClick={e => e.stopPropagation()}>
                         {/* Corner brackets */}
                         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-red-500/60 z-30 pointer-events-none" />
                         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-red-500/60 z-30 pointer-events-none" />
@@ -1718,7 +1727,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         initial={{ scale: 0.95, y: 10 }}
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.95, y: 10 }}
-                        className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative text-center z-10"
+                        className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 md:p-8 w-[90vw] max-w-sm shadow-2xl relative text-center z-10"
                     >
                         <div className="w-12 h-12 rounded-full border-2 border-red-500/30 flex items-center justify-center mx-auto mb-4 bg-red-500/10">
                             <AlertTriangle className="text-red-500 w-6 h-6" />
@@ -1768,7 +1777,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             </AnimatePresence>
 
             <OracleDialog
-                isOpen={useGameStore((state) => state.oracleDialogOpen)}
+                isOpen={useGameStore((state) => state.oracleDialogOpen) && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && activeModal !== 'EXIT' && activeModal !== 'RESTART' && !showResetConfirm}
                 onClose={useGameStore((state) => state.closeOracleDialog)}
             />
         </>

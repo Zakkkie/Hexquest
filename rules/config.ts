@@ -10,7 +10,7 @@ export const GAME_CONFIG = {
   L1_HEX_MAX_DURABILITY: 6, // Explicitly set to 6 as requested
   
   // High Level Recovery Logic
-  HIGH_LEVEL_RECOVERY_THRESHOLD: 4, // Level 4+ triggers advanced mechanics
+  HIGH_LEVEL_RECOVERY_THRESHOLD: 1, // Level 4+ triggers advanced mechanics
   RECOVERY_COOLDOWN_MS: 15000,      // 15 Seconds cooldown
   MAX_RECOVERY_POINTS: 3,           // Max uses before degradation
   

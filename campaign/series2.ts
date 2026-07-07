@@ -16,7 +16,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.1',
     title: 'Sim 2.1: Монолит',
-    description: 'Активируйте центральный Монолит, найдя обходной путь к нему.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. АРХЕОЛОГИЧЕСКИЙ ЦИКЛ. Центральный Монолит заблокирован непреодолимой стеной. Исследуйте внешние хребты и найдите обходной путь для его активации. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' }
     ],
@@ -111,7 +111,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.2',
     title: 'Sim 2.2: Погребенные Тайны',
-    description: 'Соберите три подземных артефакта и активируйте Монолит.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. ГЛУБИННОЕ СКАНИРОВАНИЕ. Ключи активации скрыты в недрах кластера. Проведите глубокое бурение, соберите артефакты и запустите Монолит. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' },
       { q: 1, r: 3, targetLevel: -1, label: 'Dig Site 1', color: 'red' },
@@ -216,7 +216,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.3',
     title: 'Sim 2.3: Растущая Энтропия',
-    description: 'Доберитесь до Монолита в условиях нестабильности. Стройте опоры для подъема.',
+    description: 'ВЕРТИКАЛЬНАЯ АДАПТАЦИЯ. Нестабильный сектор с резкими перепадами высот. Возводите ступенчатые опоры для безопасного восхождения к Монолиту.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 4, label: 'Monument', color: 'emerald' }
     ],
@@ -304,7 +304,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.4',
     title: 'Sim 2.4: Первый Сигнал',
-    description: 'Активируйте Обелиск для рассеивания барьера и запуска Монолита.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. ПОДАВЛЕНИЕ ПОЛЯ. Энергетический барьер блокирует Монолит. Сначала найдите и активируйте периферийный Обелиск для снятия защиты. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 1, r: 2, targetLevel: 2, label: 'Obelisk', color: 'blue' },
       { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' }
@@ -365,7 +365,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.5',
     title: 'Sim 2.5: Линейная Матрица',
-    description: 'Постройте цельную Линию из трех смежных возвышенных блоков.',
+    description: 'ГЕОМЕТРИЯ: ЛИНИЯ. Протокол требует создания линейного резонанса. Возведите цельную линию из трех смежных возвышенных платформ.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 2, label: 'Shape Node A', color: 'amber' },
       { q: 1, r: 0, targetLevel: 2, label: 'Shape Node B', color: 'amber' },
@@ -426,7 +426,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.6',
     title: 'Sim 2.6: Резонансный Треугольник',
-    description: 'Постройте Треугольник из возвышенных гексов и защитите плиты от бота.',
+    description: 'ГЕОМЕТРИЯ: ТРЕУГОЛЬНИК. Постройте треугольный контур. Внимание: зафиксирована активность враждебного ИИ. Защищайте свои платформы от разрушения.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 2, label: 'Triangle Node A', color: 'amber' },
       { q: 1, r: -1, targetLevel: 2, label: 'Triangle Node B', color: 'amber' },
@@ -493,7 +493,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.7',
     title: 'Sim 2.7: Ромб Эфира',
-    description: 'Выстройте геометрический Ромб из четырех смежных плит высокого уровня.',
+    description: 'ГЕОМЕТРИЯ: РОМБ. Сформируйте ромбовидную структуру из четырех смежных возвышенных плит для калибровки энергетической сети.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 3, label: 'Apex Node', color: 'amber' },
       { q: 1, r: -1, targetLevel: 3, label: 'Apex Left', color: 'amber' },
@@ -555,7 +555,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.8',
     title: 'Sim 2.8: Кольцо Пустоты',
-    description: 'Постройте замкнутое Кольцо вокруг центральной Пустоты.',
+    description: 'ГЕОМЕТРИЯ: КОЛЬЦО. Изолируйте центральную пространственную аномалию, выстроив вокруг нее сплошное замкнутое кольцо платформ.',
     objectiveHexes: [
       { q: 1, r: -1, targetLevel: 3, label: 'Ring Node 1', color: 'amber' },
       { q: 1, r: 0, targetLevel: 3, label: 'Ring Node 2', color: 'amber' },
@@ -632,7 +632,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.9',
     title: 'Sim 2.9: Двойная Динамика',
-    description: 'Сформируйте сложные геометрические конструкции, сдерживая разрушения бота.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. АРХИТЕКТУРНОЕ ПРОТИВОСТОЯНИЕ. Возведите сложные геометрические формации в условиях непрерывного саботажа со стороны вражеских дронов. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 3, label: 'Central Hub', color: 'amber' },
       { q: 1, r: -1, targetLevel: 3, label: 'North Node', color: 'amber' },
@@ -701,7 +701,7 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.10',
     title: 'Sim 2.10: Космическое Выравнивание',
-    description: 'Финальный синтез: активируйте защитные обелиски и запустите Монолит.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. СИНТЕЗ. Критическая фаза. Активируйте защитные обелиски по периметру и запустите Монолит до того, как кластер схлопнется. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: 3, r: -3, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
       { q: -3, r: 3, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },

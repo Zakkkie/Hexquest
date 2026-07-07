@@ -10,7 +10,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.1',
     title: 'Sim 5.1: Загадка Древних',
-    description: 'Активировать 3 мини-монумента в тумане, открыть чертеж и построить башни L2 на метках.',
+    description: 'СЕНСОРНАЯ ДЕПРИВАЦИЯ. Активировать 3 мини-монумента в тумане, открыть чертеж и построить башни L2 на метках. Оптические датчики отключены. Действуйте в условиях нулевой видимости.',
     mapConfig: { size: 5, type: 'procedural', generateWalls: true, revealMode: 'fog' },
     objectiveHexes: [
       { q: 0, r: 1, targetLevel: 2, label: 'Alpha', color: 'indigo' },
@@ -58,7 +58,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.2',
     title: 'Sim 5.2: Бестелесный Вектор',
-    description: 'Преодолеть стену высотой 5. Использование артефакта Void Core для телепортации.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Преодолеть стену высотой 5. Использование артефакта Void Core для телепортации. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     mapConfig: { size: 5, type: 'procedural', generateWalls: true, wallStartRadius: 2, wallStartLevel: 5 },
     objectiveHexes: [ { q: 0, r: -4, targetLevel: 1, label: 'Exit', color: 'emerald' } ],
     startState: { credits: 50, moves: 15, rank: 5, materials: 4, startInventory: ['void_core'] },
@@ -77,7 +77,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.3',
     title: 'Sim 5.3: Воздушный Замок',
-    description: 'Собрать Стрелу L4 (LINE_3) над пропастью VOID.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Собрать Стрелу L4 (LINE_3) над пропастью VOID. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 5, type: 'procedural', generateWalls: true, wallType: 'void_shatter' },
     startState: { credits: 80, moves: 20, rank: 5, materials: 8 },
     requiredShapes: [{ type: 'LINE_3', level: 4, hint: 'Build a LINE of 3 Level 4 hexes' }],
@@ -89,7 +89,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.4',
     title: 'Sim 5.4: Наниты Вечности',
-    description: 'Построить башню L5. Использование STATUS_FREE_BUILD для бесплатной постройки при 0 материалов.',
+    description: 'СТРУКТУРНОЕ ФОРМАТИРОВАНИЕ. Построить башню L5. Использование STATUS_FREE_BUILD для бесплатной постройки при 0 материалов. Требуется предельная точность позиционирования блоков в нестабильной зоне.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 0, moves: 12, rank: 5, materials: 0, startInventory: ['architect_nanites'] },
     aiMode: 'none',
@@ -104,7 +104,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.5',
     title: 'Sim 5.5: Инверсия Энтропии',
-    description: 'Инициировать Квантовый Сдвиг со STATUS_ENTROPY_INVERSION для созидания.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Инициировать Квантовый Сдвиг со STATUS_ENTROPY_INVERSION для созидания. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 100, moves: 20, rank: 5, materials: 8, initialEntropy: 90, startInventory: ['stability_scanner'] },
     aiMode: 'none',
@@ -119,7 +119,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.6',
     title: 'Sim 5.6: Золотое Проклятие',
-    description: 'Накопить 1500 Кредитов. Midas Chip дает золото, но убивает пассивный доход.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Накопить 1500 Кредитов. Midas Chip дает золото, но убивает пассивный доход. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 1000, moves: 30, rank: 5, materials: 10, startInventory: ['midas_chip'] },
     aiMode: 'none',
@@ -134,7 +134,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.7',
     title: 'Sim 5.7: Ромб Бездны',
-    description: 'Собрать Ромб L3 (DIAMOND_4), стоящий на хрупких плитах L1.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Собрать Ромб L3 (DIAMOND_4), стоящий на хрупких плитах L1. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 120, moves: 35, rank: 5, materials: 12 },
     requiredShapes: [{ type: 'DIAMOND_4', level: 3, hint: 'Build a DIAMOND shape of Level 3 hexes' }],
@@ -146,7 +146,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.8',
     title: 'Sim 5.8: Амнезия Overclocker\'а',
-    description: 'Получить Ранг 5. Использование Cortex Overclocker сбрасывает разведанную карту туманом.',
+    description: 'СЕНСОРНАЯ ДЕПРИВАЦИЯ. Получить Ранг 5. Использование Cortex Overclocker сбрасывает разведанную карту туманом. Оптические датчики отключены. Действуйте в условиях нулевой видимости.',
     mapConfig: { size: 6, type: 'procedural', revealMode: 'all' },
     startState: { credits: 150, moves: 25, rank: 4, materials: 12, startInventory: ['cortex_overclocker'] },
     aiMode: 'none',
@@ -161,7 +161,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.9',
     title: 'Sim 5.9: Хрупкое Равновесие',
-    description: 'Удержать стабильность строго на 50% в течение 15 секунд.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Удержать стабильность строго на 50% в течение 15 секунд. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 60, moves: 18, rank: 5, materials: 6, initialEntropy: 30 },
     aiMode: 'none',
@@ -186,7 +186,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.10',
     title: 'Sim 5.10: Лабиринт Клаустрофобии',
-    description: 'Достичь центра за 20 ходов. Узкий спиральный коридор, разрушающийся за спиной.',
+    description: 'ЛОГИСТИЧЕСКИЙ ВЕКТОР. Достичь центра за 20 ходов. Узкий спиральный коридор, разрушающийся за спиной. Избегайте столкновений с защитными подпрограммами ИИ.',
     mapConfig: { size: 5, type: 'procedural', generateWalls: true, wallType: 'pit_ring' },
     objectiveHexes: [ { q: 0, r: 0, targetLevel: 1, label: 'Center', color: 'emerald' } ],
     startState: { credits: 40, moves: 15, rank: 2, materials: 5 },
@@ -202,7 +202,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.11',
     title: 'Sim 5.11: Пирамида Хеопса',
-    description: 'Построить 3-ярусную ступенчатую пирамиду (PYRAMID_6 L3).',
+    description: 'СТРУКТУРНОЕ ФОРМАТИРОВАНИЕ. Построить 3-ярусную ступенчатую пирамиду (PYRAMID_6 L3). Требуется предельная точность позиционирования блоков в нестабильной зоне.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 200, moves: 40, rank: 5, materials: 25 },
     requiredShapes: [{ type: 'PYRAMID_6', level: 3, hint: 'Build a PYRAMID shape with peak at Level 3' }],
@@ -214,7 +214,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.12',
     title: 'Sim 5.12: Проклятие Apex Core',
-    description: 'Выжить 40 секунд. Активация Apex Core дает бессмертие, но затем обнуляет ресурсы.',
+    description: 'ПРОТОКОЛ ВЫЖИВАНИЯ. Выжить 40 секунд. Активация Apex Core дает бессмертие, но затем обнуляет ресурсы. Активируйте защитные паттерны и следите за стабильностью сектора.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 500, moves: 50, rank: 5, materials: 15, startInventory: ['apex_core'] },
     aiMode: 'none',
@@ -229,7 +229,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.13',
     title: 'Sim 5.13: Слияние Двух Миров',
-    description: 'Построить DIAMOND_4 в шахте L-2 и DIAMOND_4 на суше L2.',
+    description: 'СТРУКТУРНОЕ ФОРМАТИРОВАНИЕ. Построить DIAMOND_4 в шахте L-2 и DIAMOND_4 на суше L2. Требуется предельная точность позиционирования блоков в нестабильной зоне.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 100, moves: 30, rank: 5, materials: 10 },
     requiredShapes: [
@@ -244,7 +244,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.14',
     title: 'Sim 5.14: Термальный Предел',
-    description: 'Охладить (восстановить) 3 реактора L4+.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Охладить (восстановить) 3 реактора L4+. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     mapConfig: { size: 5, type: 'fixed', customLayout: [
         { q: 0, r: -2, maxLevel: 4, currentLevel: 4, ownerId: 'player-1', revealed: true },
         { q: 2, r: 0, maxLevel: 4, currentLevel: 4, ownerId: 'player-1', revealed: true },
@@ -263,7 +263,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.15',
     title: 'Sim 5.15: Глаз Бури',
-    description: 'Собрать Малое Кольцо L3 (RING_6), окруженное пустотой.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Собрать Малое Кольцо L3 (RING_6), окруженное пустотой. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 6, type: 'procedural', generateWalls: true, wallType: 'void_shatter' },
     startState: { credits: 150, moves: 45, rank: 5, materials: 20 },
     requiredShapes: [{ type: 'RING_6', level: 3, hint: 'Build a RING shape of Level 3 hexes' }],
@@ -275,7 +275,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.16',
     title: 'Sim 5.16: Танец с Тенью',
-    description: 'Избежать столкновения с ботом в тумане и собрать 200 Кредитов.',
+    description: 'СЕНСОРНАЯ ДЕПРИВАЦИЯ. Избежать столкновения с ботом в тумане и собрать 200 Кредитов. Оптические датчики отключены. Действуйте в условиях нулевой видимости.',
     mapConfig: { size: 6, type: 'procedural', revealMode: 'fog' },
     startState: { credits: 100, moves: 20, rank: 3, materials: 10 },
     aiMode: 'basic',
@@ -292,7 +292,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.17',
     title: 'Sim 5.17: Фрактальный Коллапс',
-    description: 'Собрать Стрелу L3 (LINE_3) во время сильных энтропийных сдвигов.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Собрать Стрелу L3 (LINE_3) во время сильных энтропийных сдвигов. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 120, moves: 35, rank: 4, materials: 12, initialEntropy: 95 },
     requiredShapes: [{ type: 'LINE_3', level: 3, hint: 'Build a LINE of 3 Level 3 hexes' }],
@@ -304,7 +304,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.18',
     title: 'Sim 5.18: Шахты Забвения',
-    description: 'Пробурить шахту до -10 под пассивным секундным износом ходов.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Пробурить шахту до -10 под пассивным секундным износом ходов. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 50, moves: 40, rank: 2, materials: 4 },
     aiMode: 'none',
@@ -322,7 +322,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.19',
     title: 'Sim 5.19: Тектонический Клин',
-    description: 'Выстроить 5 плит уровня L4 (LINE_3 L4).',
+    description: 'СТРУКТУРНОЕ ФОРМАТИРОВАНИЕ. Выстроить 5 плит уровня L4 (LINE_3 L4). Требуется предельная точность позиционирования блоков в нестабильной зоне.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 100, moves: 30, rank: 5, materials: 15 },
     requiredShapes: [{ type: 'LINE_3', level: 4, hint: 'Build a LINE of 3 Level 4 hexes' }],
@@ -334,7 +334,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.20',
     title: 'Sim 5.20: Силовая Капсула',
-    description: 'Зарядить Монумент 500 кредитами.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Зарядить Монумент 500 кредитами. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [ { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' } ],
     mapConfig: { size: 5, type: 'fixed', customLayout: [{q:0, r:0, maxLevel:5, currentLevel:5, structureType:'MONUMENT', revealed:true}] },
     startState: { credits: 300, moves: 25, rank: 5, materials: 6 },
@@ -361,7 +361,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.21',
     title: 'Sim 5.21: Проклятый Обелиск',
-    description: 'Нейтрализовать Обелиск, излучающий гравитационное поле.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Нейтрализовать Обелиск, излучающий гравитационное поле. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 90, moves: 20, rank: 5, materials: 10 },
     aiMode: 'none',
@@ -376,7 +376,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.22',
     title: 'Sim 5.22: Звездные Врата',
-    description: 'Построить 2 смежных кольца уровня L2 (RING_6).',
+    description: 'СТРУКТУРНОЕ ФОРМАТИРОВАНИЕ. Построить 2 смежных кольца уровня L2 (RING_6). Требуется предельная точность позиционирования блоков в нестабильной зоне.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 200, moves: 50, rank: 5, materials: 25 },
     requiredShapes: [
@@ -391,7 +391,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.23',
     title: 'Sim 5.23: Саботаж Энергосети',
-    description: 'Построить 5 реакторов (плит L4) под натиском ботов.',
+    description: 'СТРУКТУРНОЕ ФОРМАТИРОВАНИЕ. Построить 5 реакторов (плит L4) под натиском ботов. Требуется предельная точность позиционирования блоков в нестабильной зоне.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 80, moves: 22, rank: 5, materials: 12 },
     aiMode: 'basic',
@@ -408,7 +408,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.24',
     title: 'Sim 5.24: Квантовая Суперпозиция',
-    description: 'Удержать две башни L4, избегая случайных сдвигов.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Удержать две башни L4, избегая случайных сдвигов. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 110, moves: 28, rank: 5, materials: 14, initialEntropy: 85 },
     aiMode: 'none',
@@ -432,7 +432,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.25',
     title: 'Sim 5.25: Бесконечная Петля',
-    description: 'Собрать замкнутую восьмерку из 8 плит уровня L3 (STAR_7 L3).',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Собрать замкнутую восьмерку из 8 плит уровня L3 (STAR_7 L3). Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 180, moves: 40, rank: 5, materials: 20 },
     requiredShapes: [{ type: 'STAR_7', level: 3, hint: 'Build a STAR shape of Level 3 hexes' }],
@@ -444,7 +444,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.26',
     title: 'Sim 5.26: Нулевая Точка',
-    description: 'Накопить 50 Кредитов. Экстремальный старт без ресурсов. Поиск первой крохи материалов в завалах.',
+    description: 'МАТЕРИАЛЬНЫЙ СИНТЕЗ. Накопить 50 Кредитов. Экстремальный старт без ресурсов. Поиск первой крохи материалов в завалах. Оптимизируйте маршруты сбора, чтобы опередить деградацию кластера.',
     mapConfig: { size: 5, type: 'procedural' },
     startState: { credits: 0, moves: 0, rank: 1, materials: 0, startInventory: ['raw_container'] },
     aiMode: 'none',
@@ -459,7 +459,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.27',
     title: 'Sim 5.27: Могила Титанов',
-    description: 'Активировать Древний Монолит, доставив 3 легендарных ключа.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Активировать Древний Монолит, доставив 3 легендарных ключа. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [ { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' } ],
     secretLootHexes: [
         {q: 0, r: -5, itemBaseId: 'apex_core', level: -2},
@@ -478,7 +478,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.28',
     title: 'Sim 5.28: Логическая Петля',
-    description: 'Достичь точки (3,3). Нарушение последовательности высот телепортирует игрока назад.',
+    description: 'ЛОГИСТИЧЕСКИЙ ВЕКТОР. Достичь точки (3,3). Нарушение последовательности высот телепортирует игрока назад. Избегайте столкновений с защитными подпрограммами ИИ.',
     objectiveHexes: [ { q: 3, r: 3, targetLevel: 1, label: 'Target', color: 'emerald' } ],
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 130, moves: 25, rank: 5, materials: 10 },
@@ -494,7 +494,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.29',
     title: 'Sim 5.29: Избыточное Давление',
-    description: 'Возвести плиту L6. Требуется колоссальная, математически выверенная пирамида поддержки.',
+    description: 'СТРУКТУРНОЕ ФОРМАТИРОВАНИЕ. Возвести плиту L6. Требуется колоссальная, математически выверенная пирамида поддержки. Требуется предельная точность позиционирования блоков в нестабильной зоне.',
     mapConfig: { size: 6, type: 'procedural' },
     startState: { credits: 300, moves: 40, rank: 6, materials: 20 },
     aiMode: 'none',
@@ -509,7 +509,7 @@ export const series5Levels: LevelConfig[] = [
   {
     id: '5.30',
     title: 'Sim 5.30: Омега Синтез',
-    description: 'Великий Финал. Удержать 3 гекса на L3+, собрать 300 Кредитов, вставить 2 ключа, Энтропия <60%.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Великий Финал. Удержать 3 гекса на L3+, собрать 300 Кредитов, вставить 2 ключа, Энтропия <60%. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [ { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' } ],
     secretLootHexes: [
         {q: -3, r: 0, itemBaseId: 'apex_core', level: -2},

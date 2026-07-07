@@ -464,6 +464,11 @@ export interface LevelConfig {
   aiMode: 'none' | 'dummy' | 'basic';
   getTutorialHint?: (state: SessionState) => string | null;
   hooks: ScenarioHooks;
+  creepingVoid?: {
+    sourceQ: number;
+    sourceR: number;
+    intervalMs?: number;
+  };
 }
 
 export interface EntropyState {
@@ -547,6 +552,11 @@ export interface SessionState {
   defense?: DefenseState;
   puzzle?: PuzzleState;
   activeMeteors?: MeteorState[];
+  creepingVoid?: {
+    lastInfectTime: number;
+    infectedHexes: Record<string, { currentLevel: number; maxLevel: number; structureType?: any; durability?: number }>;
+    sourceRestored: boolean;
+  };
 }
 
 export interface GameState {

@@ -21,8 +21,10 @@ export class MeteorSystem implements System {
     if (state.gameStatus !== 'PLAYING') return;
 
     if (state.activeLevelConfig?.id?.startsWith('1.')) {
-      state.activeMeteors = [];
-      return;
+      state.activeMeteors = (state.activeMeteors || []).filter(m => m.id.startsWith('deadlock-'));
+      if (state.activeMeteors.length === 0) {
+        return;
+      }
     }
 
     if (!state.activeMeteors) {

@@ -35,8 +35,8 @@
 3.  **Construction (Amber)**: Spend **Material** to raise a hex's level. Higher levels grant Rank and Income.
     *   *Rule*: To build up, you need support neighbors at the same level.
 4.  **Recovery (Blue)**: Spend time on an owned hex to generate **Moves** and **Credits**.
-    *   **Standard Recovery (L0-L3)**: Single use per visit. Move away to reset.
-    *   **Advanced Recovery (L4+)**: High-level sectors have **3 Charges**. When depleted, they enter a **15s Cooldown**.
+    *   **Standard Recovery (L0 & Pits)**: Single use per visit. Move away to reset.
+    *   **Advanced Recovery (L1+)**: High-level sectors have **3 Charges**. When depleted, they enter a **15s Cooldown**.
 
 ### 🏆 Victory Conditions
 

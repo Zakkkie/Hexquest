@@ -182,7 +182,7 @@ export function checkGrowthCondition(
         if (supportNeighbors.length < 2) {
           return {
             canGrow: false, 
-            reason: `Нет опоры: нужны 2 соседа на уровне L${targetLevel} или 5 более высоких соседей (правило впадины). (UNSTABLE)`,
+            reason: `Нет опоры: нужны 2 соседа минимум на уровне L${currentLevel} или 5 более высоких соседей (правило впадины). (UNSTABLE)`,
           };
         }
       }

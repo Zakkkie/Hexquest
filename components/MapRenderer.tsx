@@ -148,7 +148,91 @@ const isFinishTile = (q: number, r: number, activeLevelConfig: any): boolean => 
     if (activeLevelConfig.id === '1.3' && q === 0 && r === 0) return true;
     if (activeLevelConfig.id === '1.5' && q === 0 && r === 0) return true;
     if (activeLevelConfig.id === '1.6' && q === 8 && r === 0) return true;
+
+    // Generic check for other levels:
+    // If there is an objectiveHex with color 'emerald' or containing 'capital' / 'portal' / 'goal' in its label
+    const objFinish = activeLevelConfig.objectiveHexes?.find((o: any) => {
+        const lbl = o.label?.toLowerCase() || '';
+        return o.color === 'emerald' || lbl.includes('capital') || lbl.includes('portal') || lbl.includes('goal');
+    });
+    if (objFinish && objFinish.q === q && objFinish.r === r) return true;
+
     return false;
+};
+
+const areAllConditionsMet = (
+    session: any,
+    activeLevelConfig: any
+): boolean => {
+    if (!session || !activeLevelConfig) return false;
+
+    // 1. If it's a monument-based portal level (like Series 2, 3, 4 etc.)
+    // the monument portal is active when state.portalActive is true
+    const hasMonument = Object.values(session.grid || {}).some((h: any) => h.structureType === 'MONUMENT');
+    if (hasMonument) {
+        return !!session.portalActive;
+    }
+
+    // 2. If the level has required shapes, check if they are built
+    if (activeLevelConfig.requiredShapes && activeLevelConfig.requiredShapes.length > 0) {
+        return !!(session.completedShapeCoords && session.completedShapeCoords.length > 0);
+    }
+
+    // 3. If there are objectiveHexes
+    if (activeLevelConfig.objectiveHexes && activeLevelConfig.objectiveHexes.length > 0) {
+        const nonFinishObjectives = activeLevelConfig.objectiveHexes.filter((o: any) => {
+            const labelLower = o.label?.toLowerCase() || '';
+            const isFinishObj = labelLower.includes('capital') || 
+                                labelLower.includes('portal') || 
+                                labelLower.includes('goal') || 
+                                o.color === 'emerald';
+            return !isFinishObj;
+        });
+
+        if (nonFinishObjectives.length > 0) {
+            const allPreCompleted = nonFinishObjectives.every((o: any) => 
+                isObjectiveHexCompleted(o, session.grid, session.player, activeLevelConfig.id, session.activatedMiniMonuments, session.portalActive)
+            );
+            if (!allPreCompleted) return false;
+        }
+    }
+
+    // 4. Simulate the player standing on the finish tile and checking win conditions
+    if (activeLevelConfig.hooks?.checkWinCondition) {
+        let finishQ = session.player.q;
+        let finishR = session.player.r;
+
+        if (activeLevelConfig.id === '1.0') { finishQ = -2; finishR = 3; }
+        else if (activeLevelConfig.id === '1.1') { finishQ = -8; finishR = 0; }
+        else if (activeLevelConfig.id === '1.2') { finishQ = 0; finishR = 0; }
+        else if (activeLevelConfig.id === '1.3') { finishQ = 0; finishR = 0; }
+        else if (activeLevelConfig.id === '1.5') { finishQ = 0; finishR = 0; }
+        else if (activeLevelConfig.id === '1.6') { finishQ = 8; finishR = 0; }
+        else {
+            const emeraldObj = activeLevelConfig.objectiveHexes?.find((o: any) => o.color === 'emerald' || o.label?.toLowerCase().includes('portal') || o.label?.toLowerCase().includes('capital'));
+            if (emeraldObj) {
+                finishQ = emeraldObj.q;
+                finishR = emeraldObj.r;
+            }
+        }
+
+        const simState = {
+            ...session,
+            player: {
+                ...session.player,
+                q: finishQ,
+                r: finishR
+            }
+        };
+
+        try {
+            return !!activeLevelConfig.hooks.checkWinCondition(simState);
+        } catch (e) {
+            return true;
+        }
+    }
+
+    return true;
 };
 
 const runLocalRenderCalculation = (
@@ -525,6 +609,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     const bots = useGameStore(state => state.session?.bots);
     const effects = useGameStore(state => state.session?.effects);
     const activeLevelConfig = useGameStore(state => state.session?.activeLevelConfig);
+    const session = useGameStore(state => state.session);
     const pendingConfirmation = useGameStore(state => state.pendingConfirmation);
     const isPlayerGrowing = useGameStore(state => state.session?.isPlayerGrowing);
     const playerGrowthIntent = useGameStore(state => state.session?.playerGrowthIntent);
@@ -1864,6 +1949,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 if (!hex) return;
 
                 const isRevealed = !!props.isRevealed;
+                const isFinish = isFinishTile(props.q, props.r, activeLevelConfig) || 
+                                 props.structureType === 'MONUMENT' || 
+                                 props.structureType === 'PORTAL' ||
+                                 (session?.portalHex && session.portalHex.q === props.q && session.portalHex.r === props.r);
                 let curContainer = hexCache.current.get(item.id);
 
                 if (!curContainer) {
@@ -2152,7 +2241,9 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 // Draw Top Face Polygon
                 let faceContainer = curContainer.getChildByName('faceContainer') as PIXI.Container;
                 if (!isRealVoid) {
-                    const topCanvas = textureService.getTexture(props.level, props.q, props.r, undefined);
+                    const topCanvas = isFinish
+                        ? textureService.getTexture(0, props.q, props.r, undefined, 'PORTAL')
+                        : textureService.getTexture(props.level, props.q, props.r, undefined);
                     const tex = getPixiTexture(topCanvas);
 
                     if (!faceContainer) {
@@ -2338,7 +2429,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 }
 
                 // Portal spinning neon particle ring
-                if (props.structureType === 'PORTAL' || (hex.biome as string) === 'BIOME_PORTAL') {
+                if (props.structureType === 'PORTAL' || (hex.biome as string) === 'BIOME_PORTAL' || isFinish) {
                     let portalNode = curContainer.getChildByName('portal') as PIXI.Graphics;
                     if (!portalNode) {
                         portalNode = new PIXI.Graphics();
@@ -2348,7 +2439,13 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     portalNode.clear();
                     portalNode.y = faceY;
                     portalNode.scale.set(1.0, 0.8);
-                    portalNode.strokeStyle = { width: 2.0, color: 0xd946ef };
+                    
+                    const met = areAllConditionsMet(session, activeLevelConfig);
+                    if (met) {
+                        portalNode.strokeStyle = { width: 3.0, color: 0xd946ef, alpha: 1.0 };
+                    } else {
+                        portalNode.strokeStyle = { width: 2.0, color: 0x475569, alpha: 0.5 };
+                    }
                     portalNode.beginPath();
                     portalNode.ellipse(0, 0, HEX_SIZE * 0.7, HEX_SIZE * 0.4);
                     portalNode.stroke();
@@ -2516,14 +2613,14 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
                 // Draw POI or Special structure Emojis
                 let emojiLayer = curContainer.getChildByName('emoji') as PIXI.Text;
-                const isFinish = isFinishTile(props.q, props.r, activeLevelConfig);
-                const isSpecialStructure = !isFinish && (props.structureType === 'MONUMENT' || props.structureType === 'MINI_MONUMENT' || props.structureType === 'CORE' || props.structureType === 'TURRET' || props.structureType === 'CAPITAL' || props.isCore || props.isMiniMonument || props.isTurret);
-                if (isRevealed && !isFinish && (props.poiType || isSpecialStructure)) {
+                const isSpecialStructure = !isFinish && (props.structureType === 'MINI_MONUMENT' || props.structureType === 'CORE' || props.structureType === 'TURRET' || props.structureType === 'CAPITAL' || props.isCore || props.isMiniMonument || props.isTurret);
+                if (isRevealed && (isFinish || props.poiType || isSpecialStructure)) {
                     let icon = '';
                     let colorVal = '#ffffff';
-                    if (props.structureType === 'MONUMENT') {
-                        icon = '★';
-                        colorVal = '#f59e0b'; // Amber star
+                    const met = areAllConditionsMet(session, activeLevelConfig);
+                    if (isFinish) {
+                        icon = '🌀';
+                        colorVal = met ? '#22d3ee' : '#475569';
                     } else if (props.structureType === 'CAPITAL') {
                         icon = '🌌';
                         colorVal = '#10b981'; // Emerald
@@ -2674,7 +2771,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 }
 
                 // --- PERSISTENT FINISH BEACON ---
-                if (isFinish && isRevealed) {
+                const metForBeacon = areAllConditionsMet(session, activeLevelConfig);
+                if (isFinish && isRevealed && metForBeacon) {
                     let finishBeacon = curContainer.getChildByName('finish_beacon') as PIXI.Container;
                     if (!finishBeacon) {
                         finishBeacon = new PIXI.Container();

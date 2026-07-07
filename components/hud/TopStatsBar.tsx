@@ -25,6 +25,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const isLevel14 = activeLevelConfig?.id === '1.4';
     const entropyCurrent = useGameStore(state => state.session?.entropy?.current);
     const entropyMax = useGameStore(state => state.session?.entropy?.max);
+    const creepingVoid = useGameStore(state => state.session?.creepingVoid);
     
     const player = playerExists ? {
         playerLevel,
@@ -521,6 +522,28 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                         </motion.div>
                     )}
                 </div>
+
+                {/* CREEPING VOID ALERT */}
+                {activeLevelConfig?.creepingVoid && creepingVoid && !creepingVoid.sourceRestored && (() => {
+                    const cvInterval = activeLevelConfig.creepingVoid.intervalMs ?? 75000;
+                    const elapsed = Date.now() - creepingVoid.lastInfectTime;
+                    const timeLeftMs = Math.max(0, cvInterval - elapsed);
+                    const timeLeftSeconds = Math.ceil(timeLeftMs / 1000);
+                    return (
+                        <div className="pointer-events-auto flex items-center gap-2 md:gap-3 bg-gradient-to-r from-red-950/90 to-rose-950/80 backdrop-blur-xl border border-red-500/50 rounded-xl px-2.5 py-1.5 md:px-4 md:py-2.5 shadow-[0_0_20px_rgba(239,68,68,0.35)] animate-pulse shrink-0 self-center">
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
+                            <div className="flex flex-col font-mono text-[10px] md:text-xs">
+                                <span className="text-[8px] md:text-[9px] font-black text-red-400 uppercase tracking-widest leading-none mb-0.5">
+                                    {language === 'RU' ? 'РАСПЛЕТЕНИЕ ПУСТОТЫ' : 'VOID EXPANSION'}
+                                </span>
+                                <span className="font-bold text-red-200 leading-none">
+                                    {language === 'RU' ? `Заражение через: ` : `Infection in: `}
+                                    <span className="font-black text-white text-xs md:text-sm">{timeLeftSeconds}s</span>
+                                </span>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {/* SYSTEM MENU */}
                 <div className="pointer-events-auto flex items-start shrink-0 relative z-50">

@@ -25,7 +25,7 @@ export const MiniMonumentDialog: React.FC<MiniMonumentDialogProps> = ({ isOpen, 
             initial={{ scale: 0.9, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.9, y: 20, opacity: 0 }}
-            className="bg-slate-900 border border-amber-500/50 p-6 rounded-xl shadow-2xl max-w-sm w-full text-center relative z-20"
+            className="bg-slate-900 border border-amber-500/50 p-5 md:p-6 rounded-xl shadow-2xl w-[90vw] max-w-sm text-center relative z-20"
           >
             <button onClick={onClose} className="absolute top-3 right-3 text-slate-400 hover:text-white">
               <X className="w-5 h-5" />

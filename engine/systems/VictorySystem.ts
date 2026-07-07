@@ -5,6 +5,7 @@ import { WorldIndex } from '../WorldIndex';
 import { GameEventFactory } from '../events';
 import { getHexKey } from '../../services/hexUtils';
 import { checkShapeExists, getCompletedShapeCoords } from '../../services/shapeUtils';
+import { isStranded } from '../../campaign/utils';
 
 export class VictorySystem implements System {
   private triggerPortal(state: SessionState, msg: string, events?: GameEvent[]): void {
@@ -106,6 +107,34 @@ export class VictorySystem implements System {
         if (state.activeLevelConfig.hooks.checkLossCondition) {
             const isCampaignLoss = state.activeLevelConfig.hooks.checkLossCondition(state, _index);
             if (isCampaignLoss) {
+                 if (isStranded(state)) {
+                     // Deadlock: trigger meteor strike on player (rank 1) instead of immediate failure screen
+                     state.player.playerLevel = 1;
+                     state.activeMeteors = state.activeMeteors || [];
+                     const hasMeteorOnPlayer = state.activeMeteors.some(m => m.q === state.player.q && m.r === state.player.r);
+                     if (!hasMeteorOnPlayer) {
+                         state.activeMeteors.push({
+                             id: 'deadlock-meteor-' + Date.now(),
+                             q: state.player.q,
+                             r: state.player.r,
+                             warnTicksRemaining: 1,
+                             maxWarnTicks: 1
+                         });
+                         const isRu = state.language === 'RU';
+                         const warningMsg = isRu 
+                           ? '⚠️ ТУПИК ОБНАРУЖЕН! Орбитальный метеорит наведен на вашу позицию!' 
+                           : '⚠️ DEADLOCK DETECTED! Orbital meteor locked onto your position!';
+                         state.messageLog.unshift({
+                             id: `deadlock-warn-${Date.now()}`,
+                             text: warningMsg,
+                             type: 'WARN',
+                             source: 'SYSTEM',
+                             timestamp: Date.now()
+                         });
+                     }
+                     return;
+                 }
+
                  state.gameStatus = 'DEFEAT';
                  const msg = 'Critical Mission Failure';
                  state.messageLog.unshift({
@@ -139,14 +168,19 @@ export class VictorySystem implements System {
             return;
         }
 
-        // Every time we update, we calculate elapsed time. Wait, if timer is updated outside we just check it.
-        // Let's use sessionStartTime
-        const elapsedSecs = (Date.now() - state.sessionStartTime) / 1000;
-        const totalSurviveTime = 180; // 3 minutes
-        
-        state.defense.survivalTimer = Math.max(0, totalSurviveTime - elapsedSecs);
+        if (state.defense.waveSpawnTimer) {
+            const elapsedWaveMs = Date.now() - state.defense.waveSpawnTimer;
+            const remainingSecs = Math.max(0, (60000 - elapsedWaveMs) / 1000);
+            
+            if (state.defense.currentWave === state.defense.maxWaves) {
+                state.defense.survivalTimer = 0; // Final wave: no countdown to next wave
+            } else {
+                state.defense.survivalTimer = remainingSecs;
+            }
+        }
 
-        if (state.defense.survivalTimer <= 0) {
+        // The player wins if they are on the final wave, and there are no active bots left
+        if (state.defense.currentWave === state.defense.maxWaves && state.bots.length === 0 && state.defense.waveSpawnTimer) {
             this.triggerPortal(state, 'Siege Survived!', events);
             return;
         }

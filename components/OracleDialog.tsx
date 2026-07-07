@@ -45,7 +45,7 @@ export const OracleDialog: React.FC<{
                         initial={{ scale: 0.9, y: 20 }}
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.9, y: 20 }}
-                        className="w-full max-w-xl bg-gray-900 border-2 border-[#ff3366]/30 shadow-[0_0_50px_rgba(255,51,102,0.15)] rounded-lg overflow-hidden flex flex-col"
+                        className="w-[94vw] max-w-xl bg-gray-900 border-2 border-[#ff3366]/30 shadow-[0_0_50px_rgba(255,51,102,0.15)] rounded-lg overflow-hidden flex flex-col"
                     >
                         <div className="flex items-center justify-between p-4 border-b border-white/10 bg-black/40">
                             <div className="flex items-center gap-3">

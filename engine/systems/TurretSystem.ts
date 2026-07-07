@@ -140,41 +140,37 @@ export class TurretSystem implements System {
     }
 
     const elapsedMs = now - state.defense.waveSpawnTimer;
-    // Spawn wave every 60 seconds (60000 ms)
+    const hasMoreWaves = state.defense.currentWave < state.defense.maxWaves;
+
     if (elapsedMs >= 60000) {
+      if (hasMoreWaves) {
+        state.defense.waveSpawnTimer = now;
+        state.defense.currentWave = (state.defense.currentWave ?? 1) + 1;
+        triggerSpawn = true;
+      }
+    } else if (state.bots.length === 0 && hasMoreWaves) {
+      // Player cleared all bots early! Trigger next wave immediately!
       state.defense.waveSpawnTimer = now;
       state.defense.currentWave = (state.defense.currentWave ?? 1) + 1;
       triggerSpawn = true;
+
+      const isRu = state.language === 'RU';
+      state.messageLog.unshift({
+        id: `wave-early-${now}`,
+        text: isRu 
+          ? `⚡ ВОЛНА ЗАЧИЩЕНА БЫСТРЕЕ ЧЕМ ЗА МИНУТУ! Запуск следующей волны!` 
+          : `⚡ WAVE CLEARED EARLY! Spawning next wave immediately!`,
+        type: 'SUCCESS',
+        source: 'SYSTEM',
+        timestamp: now
+      });
     }
 
     if (triggerSpawn) {
       const waveIndex = state.defense.currentWave;
-      
-      let spawnCount = 2;
-      if (state.difficulty === 'MEDIUM') spawnCount = 3;
-      if (state.difficulty === 'HARD') spawnCount = 4;
-
-      let botRole: 'SIEGE_GRINDER' | 'SIEGE_RUNNER' | 'SIEGE_TANK' = 'SIEGE_GRINDER';
-      let botColor = '#EF4444'; // Red
-      let botMoves = 15;
-      let botHead = 4;
-      let botBody = 4;
-      
-      if (waveIndex % 3 === 2) {
-          botRole = 'SIEGE_RUNNER';
-          botColor = '#EAB308'; // Yellow
-          botMoves = 6;
-          botHead = 2;
-          botBody = 1;
-          spawnCount += 2; // Runners spawn in swarm
-      } else if (waveIndex % 3 === 0) {
-          botRole = 'SIEGE_TANK';
-          botColor = '#8B5CF6'; // Purple
-          botMoves = 40;
-          botHead = 3;
-          botBody = 3;
-          spawnCount -= 1; // Tanks are rare
-      }
+      const waveSubIndex = (waveIndex - 1) % 3;
+      const waveGroup = Math.floor((waveIndex - 1) / 3) + 1;
+      const spawnCount = waveGroup * 3;
 
       // Determine dynamic radius based on player owned hexes or map size
       const playerOwned = Object.values(state.grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore);
@@ -235,6 +231,59 @@ export class TurretSystem implements System {
           };
         }
 
+        let botRole: 'SIEGE_GRINDER' | 'SIEGE_RUNNER' | 'SIEGE_TANK' = 'SIEGE_GRINDER';
+        let botColor = '#EF4444'; // Red
+        let botMoves = 15;
+        let botHead = 4;
+        let botBody = 4;
+
+        if (waveSubIndex === 0) {
+          // Simple wave: only Grinders
+          botRole = 'SIEGE_GRINDER';
+          botColor = '#EF4444';
+          botMoves = 15;
+          botHead = 4;
+          botBody = 4;
+        } else if (waveSubIndex === 1) {
+          // Mixed wave: cycle Grinder, Runner, Tank
+          const r = i % 3;
+          if (r === 0) {
+            botRole = 'SIEGE_GRINDER';
+            botColor = '#EF4444';
+            botMoves = 15;
+            botHead = 4;
+            botBody = 4;
+          } else if (r === 1) {
+            botRole = 'SIEGE_RUNNER';
+            botColor = '#EAB308'; // Yellow
+            botMoves = 6;
+            botHead = 2;
+            botBody = 1;
+          } else {
+            botRole = 'SIEGE_TANK';
+            botColor = '#8B5CF6'; // Purple
+            botMoves = 40;
+            botHead = 3;
+            botBody = 3;
+          }
+        } else {
+          // Hard wave: cycle Tank, Tank, Grinder
+          const r = i % 3;
+          if (r === 0 || r === 1) {
+            botRole = 'SIEGE_TANK';
+            botColor = '#8B5CF6';
+            botMoves = 40;
+            botHead = 3;
+            botBody = 3;
+          } else {
+            botRole = 'SIEGE_GRINDER';
+            botColor = '#EF4444';
+            botMoves = 15;
+            botHead = 4;
+            botBody = 4;
+          }
+        }
+
         // Spawn specialized bot
         const botId = `saboteur-w${state.defense.currentWave}-${i+1}`;
         state.bots.push({
@@ -267,10 +316,14 @@ export class TurretSystem implements System {
         spawnedCount++;
       }
 
-      const roleName = botRole === 'SIEGE_RUNNER' ? 'Runner' : botRole === 'SIEGE_TANK' ? 'Tank' : 'Grinder';
+      const isRu = state.language === 'RU';
+      const waveMsg = isRu
+        ? `⚠️ ОБНАРУЖЕНА ВОЛНА ${waveIndex}! На ядро напали ${spawnedCount} ботов!`
+        : `⚠️ WAVE ${waveIndex} DETECTED! ${spawnedCount} bots unleashed to attack the core!`;
+
       state.messageLog.unshift({
         id: `wave-${now}`,
-        text: `⚠️ WAVE ${state.defense.currentWave} DETECTED! ${spawnedCount} ${roleName} bots unleashed to attack the core!`,
+        text: waveMsg,
         type: 'WARN',
         source: 'SYSTEM',
         timestamp: now

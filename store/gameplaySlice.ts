@@ -189,11 +189,15 @@ export const createGameplaySlice = (
     const stateUser = get().user;
     const upgrades = get().campaignUpgrades;
 
+    const claimedLevelRewards = get().claimedLevelRewards || [];
+    const completedSiegesCount = claimedLevelRewards.filter(id => id.startsWith('siege_completed_')).length;
+    const siegeIndex = completedSiegesCount + 1;
+
     const winCondition = {
       levelId: -1, 
       targetLevel: 99, 
       targetCoins: 9999, 
-      label: "Siege Defense",
+      label: get().language === 'RU' ? `Оборона Ядра (Осада ${siegeIndex})` : `Core Defense (Siege ${siegeIndex})`,
       botCount: 4, 
       difficulty: 'HARD' as const, 
       queueSize: 2, 
@@ -289,9 +293,9 @@ export const createGameplaySlice = (
         isDefenseMode: true,
         coreHealth: 100,
         maxCoreHealth: 100,
-        survivalTimer: 180, // 3 minutes
+        survivalTimer: 60, // each wave is 60 seconds
         currentWave: 1,
-        maxWaves: 3,
+        maxWaves: siegeIndex,
       };
 
       // Set initial player rank equal to maximum placed hex level

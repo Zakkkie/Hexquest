@@ -10,6 +10,7 @@ import MapRenderer from './MapRenderer.tsx';
 import { audioService } from '../services/audioService.ts';
 import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
 import { safifyCoord } from '../utils/safeCoordinates.ts';
+import { getHeightOffset } from '../services/pixiHexRender.ts';
 
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
@@ -69,7 +70,9 @@ interface CameraState {
 
 const GameView: React.FC = () => {
   const hasGrid = useGameStore(state => !!state.session?.grid);
+  const grid = useGameStore(state => state.session?.grid);
   const player = useGameStore(state => state.session?.player);
+  const playerLevel = player && grid ? (grid[`${player.q},${player.r}`]?.currentLevel || 0) : 0;
   const winCondition = useGameStore(state => state.session?.winCondition);
   const deviceType = useGameStore(state => state.deviceType);
   const lastVisualEvent = useGameStore(state => state.lastVisualEvent);
@@ -279,31 +282,67 @@ const GameView: React.FC = () => {
 
   const centerOnPlayer = useCallback(() => {
       if (!player) return;
+      const isMobile = deviceType === 'MOBILE';
       const rot = currentCameraRef.current.rotation;
       const { x: px, y: py } = hexToPixel(player.q, player.r, rot);
       
-      const offset = getCenterOffset();
+      const offset = isMobile ? dimensions.height * 0.05 : getCenterOffset();
       const current = currentCameraRef.current;
       
+      const heightOffset = getHeightOffset(playerLevel);
+      const pyWithHeight = py + heightOffset;
+      
+      // Compute target scale
+      const targetScale = targetCameraRef.current.scale;
+      
       const visualX = px * current.scale + current.x;
-      const visualY = py * current.scale + current.y + offset;
+      const visualY = pyWithHeight * current.scale + current.y + offset;
       
       const centerX = dimensions.width / 2;
       const centerY = dimensions.height / 2;
       
-      const bufferX = dimensions.width * 0.40;
-      const bufferY = dimensions.height * 0.40;
+      const bufferX = isMobile ? 0 : dimensions.width * 0.40;
+      const bufferY = isMobile ? 0 : dimensions.height * 0.40;
       
       if (Math.abs(visualX - centerX) < bufferX && Math.abs(visualY - centerY) < bufferY) {
           return;
       }
       
-      const tx = (dimensions.width / 2) - (px * targetCameraRef.current.scale);
-      const ty = ((dimensions.height / 2) - offset) - (py * targetCameraRef.current.scale);
+      const tx = (dimensions.width / 2) - (px * targetScale);
+      const ty = ((dimensions.height / 2) + offset) - (pyWithHeight * targetScale);
       
       const safeT = { x: clamp(tx, -5000, 5000), y: clamp(ty, -5000, 5000) };
-      targetCameraRef.current = { ...targetCameraRef.current, x: safeT.x, y: safeT.y };
-  }, [player?.q, player?.r, dimensions, deviceType]);
+      targetCameraRef.current = { ...targetCameraRef.current, x: safeT.x, y: safeT.y, scale: targetScale };
+  }, [player, playerLevel, dimensions, deviceType]);
+
+  // Auto-center / track player on mobile whenever position or tower level changes
+  useEffect(() => {
+      if (!player) return;
+      if (deviceType !== 'MOBILE') return;
+      
+      const targetScale = targetCameraRef.current.scale;
+
+      const rot = targetCameraRef.current.rotation;
+      const { x: px, y: py } = hexToPixel(player.q, player.r, rot);
+
+      // Height offset of the high tower
+      const heightOffset = getHeightOffset(playerLevel);
+      const pyWithHeight = py + heightOffset;
+
+      // Center with an offset on mobile so the player/top has a bit of space
+      const offset = dimensions.height * 0.05; 
+
+      const tx = (dimensions.width / 2) - (px * targetScale);
+      const ty = ((dimensions.height / 2) + offset) - (pyWithHeight * targetScale);
+
+      const safeT = { x: clamp(tx, -5000, 5000), y: clamp(ty, -5000, 5000) };
+      targetCameraRef.current = { 
+          ...targetCameraRef.current, 
+          x: safeT.x, 
+          y: safeT.y, 
+          scale: targetScale 
+      };
+  }, [player?.q, player?.r, playerLevel, deviceType, dimensions.width, dimensions.height]);
   useEffect(() => {
       const anim = new Konva.Animation((frame) => {
           if (!frame) return;

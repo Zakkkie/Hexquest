@@ -6,7 +6,7 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.0',
     title: 'Sim 1.0: Инициация и Вертикаль',
-    description: 'Обучение азам и навигации по высотам. Цель: научитесь строить, раскапывать и преодолейте космическую улитку высот.',
+    description: 'БАЗОВЫЙ ПРОТОКОЛ. Изучите основы навигации в многоуровневом пространстве. Овладейте терраформингом (Строительство и Бурение), чтобы преодолеть спиральную аномалию и достичь Портала.',
     goalText: 'Reach the Portal',
     mapConfig: {
       size: 5,
@@ -162,7 +162,7 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.1',
     title: 'Sim 1.1: Сбор Материалов',
-    description: 'Добывайте строительные материалы и проложите путь к Столице холмов.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. СБОР РЕСУРСОВ. Локация нестабильна. Добывайте строительные материалы (ОД), избегая обрушения хрупких платформ, чтобы проложить безопасный маршрут к Столице. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     goalText: 'Доберитесь до Столицы',
     mapConfig: {
       size: 4,
@@ -259,7 +259,7 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.2',
     title: 'Sim 1.2: Замок Градиента',
-    description: 'Снизьте высоту центрального гекса, соблюдая правила геологической стабильности.',
+    description: 'ПРОТОКОЛ ВЫРАВНИВАНИЯ. Центральный сектор опасно возвышен. Используйте бурение для поэтапного снижения высоты до базового уровня, не нарушая геологический баланс.',
     goalText: 'Срежьте центральный сектор до базового уровня',
     mapConfig: {
       size: 2,
@@ -369,7 +369,7 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.3',
     title: 'Sim 1.3: Архитектура Опор',
-    description: 'Плотина высокого уровня требует крепкой конструкции. Постройте многоуровневый каскад поддерживающих плит, чтобы возвести башню L3.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Плотина высокого уровня требует крепкой конструкции. Постройте многоуровневый каскад поддерживающих плит, чтобы возвести башню L3. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     goalText: 'Возведите башню уровня L3 в центре',
     mapConfig: {
       size: 2,
@@ -403,25 +403,25 @@ export const series1Levels: LevelConfig[] = [
       }
 
       const centerNeighbors = ['1,-1', '1,0', '0,1', '-1,1', '-1,0', '0,-1'];
-      const l3Supports = centerNeighbors.filter(key => (state.grid[key]?.currentLevel ?? 0) >= 3).length;
+      const l2SupportsForL3 = centerNeighbors.filter(key => (state.grid[key]?.currentLevel ?? 0) >= 2).length;
       
       if (h00 === 2) {
-        if (l3Supports < 2) {
+        if (l2SupportsForL3 < 2) {
           return isRu
-            ? `СТРОЙ БАШНИ L3: Чтобы поднять Центр до L3, нужно возвести 2 соседние плиты до высоты L3! Готово: ${l3Supports}/2`
-            : `BUILD L3 TOWERS: Upgrade 2 neighboring tiles to height L3 to unlock the Center! Progress: ${l3Supports}/2`;
+            ? `СТРОЙ БАШНИ L3: Чтобы поднять Центр до L3, нужно возвести 2 соседние плиты до высоты L2! Готово: ${l2SupportsForL3}/2`
+            : `BUILD L3 TOWERS: Upgrade 2 neighboring tiles to height L2 to unlock the Center! Progress: ${l2SupportsForL3}/2`;
         }
         return isRu
           ? "ИДИ В ЦЕНТР: Ваши опоры готовы! Шагни в (0,0) и СТРОЙ до L3!"
           : "MOVE TO CENTER: Supports ready! Step in Center (0,0) and BUILD to L3!";
       }
 
-      const l2Supports = centerNeighbors.filter(key => (state.grid[key]?.currentLevel ?? 0) >= 2).length;
+      const l1SupportsForL2 = centerNeighbors.filter(key => (state.grid[key]?.currentLevel ?? 0) >= 1).length;
       if (h00 === 1) {
-        if (l2Supports < 2) {
+        if (l1SupportsForL2 < 2) {
           return isRu
-            ? `СТРОЙ ОПОРЫ L2: Чтобы поднять Центр до L2, нужно минимум 2 опорных гекса на уровне L2 вокруг! Готово: ${l2Supports}/2`
-            : `BUILD L2 SUPPORTS: Need at least 2 neighboring hexes at L2 to upgrade the Center! Ready: ${l2Supports}/2`;
+            ? `СТРОЙ ОПОРЫ L2: Чтобы поднять Центр до L2, нужно минимум 2 опорных гекса на уровне L1 вокруг! Готово: ${l1SupportsForL2}/2`
+            : `BUILD L2 SUPPORTS: Need at least 2 neighboring hexes at L1 to upgrade the Center! Ready: ${l1SupportsForL2}/2`;
         }
         return isRu
           ? "ИДИ В ЦЕНТР: Опоры готовы. Шагни на (0,0) и СТРОЙ до L2."
@@ -452,42 +452,42 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.4',
     title: 'Sim 1.4: Потоки Энергии',
-    description: 'Научитесь собирать энергию с реакторов и накопите необходимые кредиты.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Научитесь собирать энергию с реакторов и накопите необходимые кредиты. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     goalText: 'Накопите требуемые кредиты',
     mapConfig: {
       size: 3,
       type: 'fixed',
       customLayout: [
-        { q: 0, r: 0, currentLevel: 4, maxLevel: 4, revealed: true, ownerId: 'player-1' }, // Reactor L4
-        { q: 1, r: -1, currentLevel: 3, maxLevel: 3, revealed: true }, // Buffer L3
-        { q: -1, r: 1, currentLevel: 3, maxLevel: 3, revealed: true }, // Buffer L3
-        { q: 2, r: -2, currentLevel: 2, maxLevel: 2, revealed: true }, // Slide L2
-        { q: -2, r: 2, currentLevel: 2, maxLevel: 2, revealed: true }, // Slide L2
-        { q: 1, r: 0, currentLevel: 3, maxLevel: 3, revealed: true },
-        { q: -1, r: 0, currentLevel: 3, maxLevel: 3, revealed: true },
-        { q: 0, r: -1, currentLevel: 3, maxLevel: 3, revealed: true },
-        { q: 0, r: 1, currentLevel: 3, maxLevel: 3, revealed: true },
-        { q: 2, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
-        { q: -2, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
-        { q: 0, r: -2, currentLevel: 2, maxLevel: 2, revealed: true },
-        { q: 0, r: 2, currentLevel: 2, maxLevel: 2, revealed: true },
+        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Reactor L1
+        { q: 1, r: -1, currentLevel: 0, maxLevel: 0, revealed: true }, // Buffer L0
+        { q: -1, r: 1, currentLevel: 0, maxLevel: 0, revealed: true }, // Buffer L0
+        { q: 2, r: -2, currentLevel: -1, maxLevel: -1, revealed: true }, // Slide L-1
+        { q: -2, r: 2, currentLevel: -1, maxLevel: -1, revealed: true }, // Slide L-1
+        { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: -1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 2, r: 0, currentLevel: -1, maxLevel: -1, revealed: true },
+        { q: -2, r: 0, currentLevel: -1, maxLevel: -1, revealed: true },
+        { q: 0, r: -2, currentLevel: -1, maxLevel: -1, revealed: true },
+        { q: 0, r: 2, currentLevel: -1, maxLevel: -1, revealed: true },
       ]
     },
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 4, label: 'Reactor', color: 'blue' },
-      { q: 1, r: -1, targetLevel: 3, label: 'L3', color: 'blue' },
-      { q: -1, r: 1, targetLevel: 3, label: 'L3', color: 'blue' },
-      { q: 2, r: -2, targetLevel: 2, label: 'L2', color: 'blue' },
-      { q: -2, r: 2, targetLevel: 2, label: 'L2', color: 'blue' },
+      { q: 0, r: 0, targetLevel: 1, label: 'Reactor', color: 'blue' },
+      { q: 1, r: -1, targetLevel: 0, label: 'L0', color: 'blue' },
+      { q: -1, r: 1, targetLevel: 0, label: 'L0', color: 'blue' },
+      { q: 2, r: -2, targetLevel: -1, label: 'L-1', color: 'blue' },
+      { q: -2, r: 2, targetLevel: -1, label: 'L-1', color: 'blue' },
     ],
-    startState: { credits: 0, moves: 12, rank: 4, materials: 0, initialEntropy: 100 },
+    startState: { credits: 0, moves: 12, rank: 1, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
       const credits = state.player.coins;
       const reactor = state.grid['0,0'];
       
-      if (credits >= 100) {
+      if (credits >= 15) {
         return isRu ? "ПОБЕДА: Лимит набран!" : "VICTORY: Quota satisfied!";
       }
       
@@ -508,7 +508,7 @@ export const series1Levels: LevelConfig[] = [
     },
     hooks: {
       checkWinCondition: (state) => {
-        return state.player.coins >= 100;
+        return state.player.coins >= 15;
       },
       checkLossCondition: (state) => {
         return isStranded(state);
@@ -520,7 +520,7 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.5',
     title: 'Sim 1.5: Крах и Регенерация',
-    description: 'Заделайте пространственный разлом Ядром Реальности и выкопайте глубокую устойчивую шахту.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Заделайте пространственный разлом Ядром Реальности и выкопайте глубокую устойчивую шахту. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     goalText: 'Заделайте разлом и углубите шахту в центре до -2',
     mapConfig: {
       size: 2,
@@ -539,6 +539,11 @@ export const series1Levels: LevelConfig[] = [
       { q: 1, r: -1, targetLevel: 0, label: 'Heal', color: 'rose' },
       { q: 0, r: 0, targetLevel: -2, label: 'Deep Mine', color: 'emerald' },
     ],
+    creepingVoid: {
+      sourceQ: 1,
+      sourceR: -1,
+      intervalMs: 75000
+    },
     startState: {
       credits: 0,
       moves: 30,
@@ -595,7 +600,7 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.6',
     title: 'Sim 1.6: Три Столпа Реальности',
-    description: 'Доберитесь до 3-го столпа, добывая Лоскуты Реальности на глубине -2 и восстанавливая Бездны.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Доберитесь до 3-го столпа, добывая Лоскуты Реальности на глубине -2 и восстанавливая Бездны. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     goalText: 'Доберитесь до Столицы на 3-м столпе',
     mapConfig: {
       size: 6,
@@ -711,7 +716,7 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.7',
     title: 'Sim 1.7: Финал: Линия Суши',
-    description: 'Примените все полученные инженерные навыки и постройте линию блоков равной высоты.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Примените все полученные инженерные навыки и постройте линию блоков равной высоты. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     goalText: 'Выстройте линию плит высокого уровня',
     mapConfig: {
       size: 2,

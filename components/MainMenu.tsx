@@ -5,7 +5,7 @@ import {
   Trophy, LogOut, Ghost, ArrowRight, X, LogIn, Lock, Target, Gem, Crown, 
   Bot, Volume2, VolumeX, BookOpen, Music, ChevronLeft, ChevronRight, 
   Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, 
-  Mountain, Crosshair, Shuffle, Settings, Minus, Plus, Compass, Check
+  Mountain, Crosshair, Shuffle, Settings, Minus, Plus, Compass, Check, Cpu
 } from 'lucide-react';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
@@ -471,6 +471,7 @@ const MainMenu: React.FC = () => {
   const hasProgress = campaignProgress > 0 || Object.keys(storyMap || {}).length > 0;
   const isMusicMuted = useGameStore(state => state.isMusicMuted);
   const isSfxMuted = useGameStore(state => state.isSfxMuted);
+  const isLiteMode = useGameStore(state => state.isLiteMode);
   const language = useGameStore(state => state.language);
   const startNewGame = useGameStore(state => state.startNewGame);
   const setUIState = useGameStore(state => state.setUIState);
@@ -484,6 +485,7 @@ const MainMenu: React.FC = () => {
   const resetProgress = useGameStore(state => state.resetProgress);
   const toggleMusic = useGameStore(state => state.toggleMusic);
   const toggleSfx = useGameStore(state => state.toggleSfx);
+  const toggleLiteMode = useGameStore(state => state.toggleLiteMode);
   const playUiSound = useGameStore(state => state.playUiSound);
 
   const [authMode, setAuthMode] = useState<AuthMode>(null);
@@ -525,6 +527,11 @@ const MainMenu: React.FC = () => {
       const timer = setTimeout(() => {
           setLogoVisible(true);
       }, 100);
+      
+      // Ensure lite mode is disabled on menu load to restore the background
+      if (useGameStore.getState().isLiteMode) {
+          useGameStore.setState({ isLiteMode: false });
+      }
       
       audioService.startMusic();
       audioService.updateMusic(250, 500);
@@ -833,6 +840,23 @@ const MainMenu: React.FC = () => {
                                     <span className="text-[10px] font-black uppercase tracking-wider">{language === 'RU' ? 'Эффекты' : 'SFX'}</span>
                                 </div>
                                 <span className="text-[9px] font-mono leading-none font-bold">{isSfxMuted ? 'OFF' : 'ON'}</span>
+                            </motion.button>
+                        </div>
+                    </div>
+
+                    {/* Performance Settings */}
+                    <div className="flex flex-col gap-1.5 mt-1.5">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{language === 'RU' ? 'ПРОИЗВОДИТЕЛЬНОСТЬ' : 'PERFORMANCE'}</span>
+                        <div className="flex flex-col gap-1.5">
+                            <motion.button 
+                                onClick={() => { toggleLiteMode(); playUiSound('CLICK'); }} 
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all text-left cursor-pointer ${isLiteMode ? 'border-amber-500/30 bg-amber-950/20 text-amber-300 hover:bg-amber-950/30' : 'border-slate-800 bg-black/20 text-slate-500 hover:bg-slate-900/30'}`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Cpu className="w-3.5 h-3.5 text-amber-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{language === 'RU' ? 'Облегченный режим' : 'Lite Mode'}</span>
+                                </div>
+                                <span className="text-[9px] font-mono leading-none font-bold">{isLiteMode ? 'ON' : 'OFF'}</span>
                             </motion.button>
                         </div>
                     </div>
