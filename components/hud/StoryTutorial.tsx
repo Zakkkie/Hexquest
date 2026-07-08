@@ -9,7 +9,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-shape-list", 
             text: "Шаг 1. Гексы Инфраструктуры", 
-            desc: "Внизу выберите нужную высоту платформы:\n• L0 — Ровная плита\n• L1-L9 — Защитные стены и реакторы различных уровней\nВысотный блок подсветится сияющим цветом.",
+            desc: "Выберите высоту платформы на нижней панели:\n• L0 — Базовая ровная плита\n• L1-L9 — Стены и реакторы разных уровней\nВыбранный блок подсветится ярким цветом.",
             position: "above", 
             align: "center", 
             skipPos: "top" 
@@ -17,7 +17,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-hex-board", 
             text: "Шаг 2. Размещение на Полигоне", 
-            desc: "Кликните на пустое место (или L0), чтобы возвести платформу и использовать материалы на 'Upgrade'.\nДля возведения L2 или выше (Квадрат, Ромб и т.д.) требуются как минимум 2 соседних блока такой же высоты или выше для физической опоры, иначе конструкция разрушится!",
+            desc: "Кликните на пустое место (или L0), чтобы возвести платформу с помощью ресурсов.\nДля постройки L2 или выше нужны не менее 2 соседних блоков равного уровня для опоры, иначе конструкция разрушится!",
             position: "above", 
             align: "center", 
             skipPos: "bottom" 
@@ -25,7 +25,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-blueprint-tablet", 
             text: "Шаг 3. Инженерный Терминал", 
-            desc: "Здесь нет строгий чертежей и фигур! Вы находитесь в режиме Свободного Проектирования Ядра. Спроектируйте свою идеальную оборону и накопите энергию к предстоящим миссиям Защиты ядра от вредоносных ботов. Терминал (кнопка сверху) показывает сводку вашей застройки.",
+            desc: "Здесь свободное проектирование ядра. Постройте надежную защиту от вредоносных ботов. Сводку застройки можно посмотреть в терминале (кнопка вверху).",
             position: "below", 
             align: "center", 
             skipPos: "bottom" 
@@ -33,7 +33,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-sp-badge", 
             text: "Шаг 4. Очки Навыков (SP) и Ранг", 
-            desc: "Вы получаете SP за успешное прохождение симуляций на глобальной карте, а не за фигуры. Нажмите на этот фиолетовый индикатор вверху, чтобы улучшить Ранг и открыть материалы с новыми модулями строительства!",
+            desc: "Вы получаете SP за прохождение уровней симуляции на карте. Нажмите фиолетовый индикатор вверху, чтобы повысить ранг и открыть продвинутые строительные модули!",
             position: "below", 
             align: "right", 
             skipPos: "bottom" 
@@ -41,7 +41,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-levels-btn", 
             text: "Шаг 5. Смена симуляций", 
-            desc: "Нажмите эту кнопку внизу, чтобы вернуться на главную карту космических симуляций Nebula и начать добычу.",
+            desc: "Нажмите эту кнопку внизу, чтобы вернуться на главную карту симуляций Nebula и продолжить добычу.",
             position: "above", 
             align: "center", 
             skipPos: "top" 
@@ -49,7 +49,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-hex-board", 
             text: "Шаг 6. Событие Защиты Ядра", 
-            desc: "Каждые 5 пройденных уровней симуляции активируют событие Защиты Ядра! В этот период в центре сверху загорается красная тревожная кнопка.\n\nЗапустите оборону, сдержите натиск роботов, защитите ядро и получите ценные трофеи: +3 SP и россыпь бонусных материалов!",
+            desc: "Каждые 5 уровней симуляции активируют Защиту Ядра! Нажмите красную кнопку тревоги вверху, сдержите атаку ботов и получите +3 SP и бонусные материалы.",
             position: "above", 
             align: "center", 
             skipPos: "bottom" 
@@ -59,7 +59,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-shape-list", 
             text: "Step 1. Infrastructure Hexes", 
-            desc: "Select a level block height at the bottom:\n• L0 — Neutral plain\n• L1-L9 — Defensive walls and reactors\nThe selected block highlights in vibrant cyan.",
+            desc: "Select a block height at the bottom:\n• L0 — Base flat platform\n• L1-L9 — Advanced walls and reactors\nThe selected tier will glow in vibrant cyan.",
             position: "above", 
             align: "center", 
             skipPos: "top" 
@@ -67,7 +67,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-hex-board", 
             text: "Step 2. Sandbox Placement", 
-            desc: "Click any empty grid cell to place your selected block height using 'Upgrade':\nPlacing Level L2 or higher requires at least 2 adjacent neighbor blocks of that height or higher as scaffold support, otherwise it will collapse!",
+            desc: "Click any empty grid cell to build your selected block height:\nPlacing Level L2 or higher requires at least 2 adjacent neighbor blocks of the exact same level for support, otherwise it collapses!",
             position: "above", 
             align: "center", 
             skipPos: "bottom" 
@@ -75,7 +75,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-blueprint-tablet", 
             text: "Step 3. Engineering Terminal", 
-            desc: "There are no strict blueprints! You are currently in the Free Sandbox Building mode. Use this space to build the perfect defense for Core Defenses against malicious bots. Check the top terminal dropdown for a summary of your infrastructure.",
+            desc: "This is free core sandbox mode. Build defenses against malicious bot waves. A summary of your nodes is available in the terminal at the top.",
             position: "below", 
             align: "center", 
             skipPos: "bottom" 
@@ -83,7 +83,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-sp-badge", 
             text: "Step 4. Engineering Skill Tree (SP)", 
-            desc: "You earn SP by completing actual simulations on the world map! Click this glowing token at the top to upgrade your Engineering Rank and unlock advanced construction mechanics.",
+            desc: "You earn SP by completing levels on the world map. Click the purple badge at the top to upgrade your rank and unlock advanced modules!",
             position: "below", 
             align: "right", 
             skipPos: "bottom" 
@@ -91,7 +91,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-levels-btn", 
             text: "Step 5. Explore Simulations", 
-            desc: "Press this navigation deck button at the bottom to return to the galaxy simulations map and start exploring space zones.",
+            desc: "Click this button at the bottom to return to the Nebula simulations map and explore other sectors.",
             position: "above", 
             align: "center", 
             skipPos: "top" 
@@ -99,7 +99,7 @@ const TRANSLATE = {
         { 
             targetId: "tutorial-hex-board", 
             text: "Step 6. Core Defense Event", 
-            desc: "Completing every 5 simulation levels triggers a Core Defense Event against malicious bots! A flashing crimson alert button is mounted at the top center.\n\nDeploy defenses, survive malicious bot cohorts, protect the central Reactor Core and claim supreme rewards: +3 SP and massive material drops!",
+            desc: "Every 5 simulation levels triggers a Core Defense Event. Tap the red alert button at the top to start, survive the bot waves and claim rewards: +3 SP and massive materials.",
             position: "above", 
             align: "center", 
             skipPos: "bottom" 
@@ -810,12 +810,12 @@ export const StoryTutorial: React.FC = () => {
                             </div>
 
                             {/* Card Main Title */}
-                            <h4 className="text-[10px] sm:text-[13px] md:text-sm font-black font-sans text-white uppercase tracking-wider leading-none mt-0.5 sm:mt-1">
+                            <h4 className="text-[13px] sm:text-[15px] md:text-[16px] font-black font-sans text-white uppercase tracking-wider leading-none mt-0.5 sm:mt-1">
                                 {currentConfig.text}
                             </h4>
 
                             {/* Card Paragraph Detail */}
-                            <p className="text-slate-300 text-[9px] sm:text-[11px] md:text-xs font-sans font-medium leading-normal sm:leading-relaxed select-none whitespace-pre-line">
+                            <p className="text-slate-200 text-[11px] sm:text-[13px] md:text-[14px] font-sans font-medium leading-normal sm:leading-relaxed select-none whitespace-pre-line">
                                 {currentConfig.desc}
                             </p>
 

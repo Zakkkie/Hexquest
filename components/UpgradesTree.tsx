@@ -204,19 +204,19 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                  )}
                  <div className={`absolute -top-4 -right-4 w-24 h-24 ${glowCircles[glowColor] || 'bg-indigo-500/5'} blur-[30px] rounded-full pointer-events-none group-hover:opacity-100 transition-opacity duration-500`} />
 
-                 <div className="relative z-10 flex flex-col h-full gap-2">
+                 <div className="relative z-10 flex flex-col h-full gap-1.5 md:gap-3">
                      {/* Header Section: Icon & Title & Level */}
-                     <div className="flex items-start gap-2.5">
-                         <div className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-900 border border-slate-700/40 shadow-inner group-hover:${hoverBorders[glowColor] || 'border-indigo-400/30'} transition-all duration-300 shrink-0 ${colorClass}`}>
-                             {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-5 h-5 md:w-6 md:h-6' })}
+                     <div className="flex items-start gap-2 md:gap-3">
+                         <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-xl bg-slate-900 border border-slate-700/40 shadow-inner group-hover:${hoverBorders[glowColor] || 'border-indigo-400/30'} transition-all duration-300 shrink-0 ${colorClass}`}>
+                             {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6' })}
                          </div>
                          <div className="min-w-0 flex-1">
-                            <h3 className={`text-[10px] md:text-[12px] font-black uppercase tracking-wider leading-tight transition-colors duration-300 mb-1 line-clamp-1
+                            <h3 className={`text-[9.5px] sm:text-[11px] md:text-xs lg:text-sm font-black uppercase tracking-wider leading-tight transition-colors duration-300 mb-1 line-clamp-1
                                 ${canAfford && !isMaxed ? 'text-slate-100 group-hover:text-white' : 'text-slate-500'}
                             `}>
                                 {label}
                             </h3>
-                            <div className={`inline-flex items-center px-1.5 py-0.5 rounded-md border text-[8px] font-mono tracking-tighter uppercase font-bold
+                            <div className={`inline-flex items-center px-1 py-0.5 rounded border text-[7px] sm:text-[8px] md:text-[9.5px] font-mono tracking-tighter uppercase font-bold
                                ${isMaxed ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-slate-800/80 text-indigo-300/80 border-white/5 group-hover:border-white/10'}
                             `}>
                                 LVL {level + 1} {isMaxed && '(MAX)'}
@@ -226,34 +226,34 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
 
                      {/* Body Section: Description */}
                      <div className="flex-1">
-                         <p className="text-[9px] md:text-[11px] text-slate-400/80 font-medium leading-normal line-clamp-2 md:line-clamp-3">
+                         <p className="text-[8.5px] sm:text-[10px] md:text-xs text-slate-400/80 font-medium leading-normal line-clamp-2 md:line-clamp-3">
                              {resolvedDescription}
                          </p>
                      </div>
 
                      {/* Bottom Footer: Stats & Cost */}
-                     <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t border-white/5 group-hover:border-white/10 transition-colors">
+                     <div className="mt-auto flex items-center justify-between gap-1.5 pt-1.5 md:pt-3 border-t border-white/5 group-hover:border-white/10 transition-colors">
                         {/* Stats Preview */}
-                        <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
-                                <span className="text-[10px] md:text-xs font-mono font-bold text-slate-400">{currentValue}</span>
+                        <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1 bg-black/20 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md border border-white/5">
+                                <span className="text-[9px] sm:text-[11px] md:text-xs font-mono font-bold text-slate-400">{currentValue}</span>
                                 {!isMaxed && (
                                     <>
-                                        <TrendingUp className={`w-2.5 h-2.5 ${glowTexts[glowColor] || 'text-indigo-400'} opacity-60`} />
-                                        <span className="text-[10px] md:text-xs font-mono font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
+                                        <TrendingUp className={`w-2 h-2 sm:w-2.5 sm:h-2.5 ${glowTexts[glowColor] || 'text-indigo-400'} opacity-60`} />
+                                        <span className="text-[9px] sm:text-[11px] md:text-xs font-mono font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
                                             {currentValue + amountPerUpgrade}
                                         </span>
                                     </>
                                 )}
                             </div>
-                            <div className="text-[8px] font-mono text-slate-500 uppercase">
+                            <div className="text-[7.5px] sm:text-[8.5px] md:text-[9.5px] font-mono text-slate-500 uppercase">
                                 {language === 'RU' ? 'Потрачено:' : 'Spent:'} {spentSP} SP
                             </div>
                         </div>
 
                         {/* Upgrade Cost Button */}
                         {!isMaxed && (
-                            <div className={`px-2.5 py-1 rounded-lg border text-[10px] md:text-[11px] font-black tracking-tight transition-all duration-300
+                            <div className={`px-2 py-0.5 md:px-3 md:py-1 rounded-md md:rounded-lg border text-[9px] sm:text-[10px] md:text-xs font-black tracking-tight transition-all duration-300
                                 ${canAfford ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-white/20' : 'bg-slate-800/40 text-slate-600 border-slate-700/40'}
                             `}>
                                 {dynamicCost} SP

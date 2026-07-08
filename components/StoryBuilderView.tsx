@@ -178,15 +178,51 @@ const StoryBuilderView: React.FC = () => {
     const destroyTooltipRef = useRef<HTMLDivElement>(null);
 
     const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(true); // Optimized space by defaulting to true
+    const [panelZOrder, setPanelZOrder] = useState<('tablet' | 'terminal' | 'settings')[]>(['tablet', 'terminal', 'settings']);
+
+    const bringToFront = useCallback((panel: 'tablet' | 'terminal' | 'settings') => {
+        setPanelZOrder(prev => {
+            const filtered = prev.filter(p => p !== panel);
+            return [...filtered, panel];
+        });
+    }, []);
+
+    const toggleTablet = useCallback(() => {
+        setIsNarrativeCollapsed(prev => {
+            const next = !prev;
+            if (!next) {
+                bringToFront('tablet');
+            }
+            return next;
+        });
+    }, [bringToFront]);
+
+    const toggleSettings = useCallback(() => {
+        setIsSettingsOpen(prev => {
+            const next = !prev;
+            if (next) {
+                bringToFront('settings');
+            }
+            return next;
+        });
+    }, [bringToFront]);
+
+    const openTerminal = useCallback(() => {
+        setIsTerminalLogExpanded(true);
+        bringToFront('terminal');
+    }, [bringToFront]);
     
     useEffect(() => {
         (window as any).setStoryNarrativeCollapsed = (val: boolean) => {
             setIsNarrativeCollapsed(val);
+            if (!val) {
+                bringToFront('tablet');
+            }
         };
         return () => {
             delete (window as any).setStoryNarrativeCollapsed;
         };
-    }, []);
+    }, [bringToFront]);
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const showShapeHint = false;
@@ -1317,7 +1353,10 @@ const StoryBuilderView: React.FC = () => {
             </div>
             
             {/* TOP HEADER STATUS MENU BAR (ABOVE ALL OTHER WINDOWS) */}
-            <div className="absolute top-0 left-0 right-0 p-4 md:p-8 z-[9999] pointer-events-none">
+            <div 
+                className="absolute top-0 left-0 right-0 p-4 md:p-8 pointer-events-none"
+                style={{ zIndex: isSettingsOpen ? 100 + panelZOrder.indexOf('settings') * 10 : 9999 }}
+            >
                 <motion.div 
                     animate={{ y: isUiHidden ? -100 : 0, opacity: isUiHidden ? 0 : 1 }}
                     transition={{ duration: 0.3 }}
@@ -1362,7 +1401,7 @@ const StoryBuilderView: React.FC = () => {
                                 return (
                                     <button
                                         id="tutorial-blueprint-toggle"
-                                        onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(!isNarrativeCollapsed); }}
+                                        onClick={() => { playUiSound('CLICK'); toggleTablet(); }}
                                         className="flex flex-col justify-center text-center px-4 py-1 rounded-full bg-slate-900/40 hover:bg-indigo-950/20 border border-indigo-500/10 hover:border-indigo-400/30 cursor-pointer transition-all duration-200 active:scale-95 select-none"
                                     >
                                         <span className="text-[8px] font-mono tracking-[0.2em] text-indigo-400 font-black uppercase leading-none">
@@ -1390,9 +1429,9 @@ const StoryBuilderView: React.FC = () => {
                         </button>
 
                         {/* Settings Button */}
-                        <div id="settings-container" className="relative h-full flex items-center">
+                        <div id="settings-container" className="relative h-full flex items-center" onPointerDown={() => bringToFront('settings')}>
                             <button 
-                                onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(!isSettingsOpen); }}
+                                onClick={() => { playUiSound('CLICK'); toggleSettings(); }}
                                 className={`w-10 h-10 flex items-center justify-center backdrop-blur-md border rounded-xl transition-all duration-200 shadow-md active:scale-95 cursor-pointer ${
                                     isSettingsOpen 
                                         ? 'bg-slate-800 border-indigo-500/50 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]' 
@@ -1484,29 +1523,31 @@ const StoryBuilderView: React.FC = () => {
             <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-end overflow-hidden p-4 md:p-8">
 
                 {/* COMPACT FLOATING OPERATIONS LINK & LOGS PANEL (Centralized high-tech notification/info link, optimized for mobile screens) */}
-                <div id="operations-link-container" className="absolute top-[76px] md:top-[100px] left-4 right-4 sm:left-auto sm:right-8 z-[55] pointer-events-auto flex flex-col items-end sm:w-[320px] select-none">
+                <div 
+                    id="operations-link-container" 
+                    className="absolute top-[76px] md:top-[100px] left-4 right-4 sm:left-auto sm:right-8 pointer-events-auto flex flex-col items-end sm:w-[320px] select-none"
+                    style={{ zIndex: 100 + panelZOrder.indexOf('terminal') * 10 }}
+                    onPointerDown={() => bringToFront('terminal')}
+                >
                     
                     {/* Collapsed State Panel */}
                     {!isTerminalLogExpanded ? (
                         <motion.button
                             initial={{ opacity: 0, scale: 0.95, y: -5 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            onClick={() => { playUiSound('CLICK'); setIsTerminalLogExpanded(true); }}
-                            className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 bg-slate-950/90 border border-indigo-500/30 hover:border-indigo-400 rounded-xl shadow-2xl backdrop-blur-md transition-all active:scale-98 group cursor-pointer text-left"
+                            onClick={() => { playUiSound('CLICK'); openTerminal(); }}
+                            className="w-full flex items-center gap-3 px-3.5 py-2.5 bg-slate-950/90 border border-indigo-500/30 hover:border-indigo-400 rounded-xl shadow-2xl backdrop-blur-md transition-all active:scale-98 group cursor-pointer text-left"
                         >
                             <div className="flex items-center gap-2 overflow-hidden w-full">
-                                <span className="relative flex h-2 w-2 shrink-0">
+                                <span className="relative flex h-2.5 w-2.5 shrink-0">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400"></span>
                                 </span>
                                 <div className="flex flex-col overflow-hidden flex-1">
-                                    <span className="text-[10px] font-mono text-slate-200 font-medium tracking-tight truncate leading-tight block">
+                                    <span className="text-[13px] font-mono text-slate-100 font-semibold tracking-tight truncate leading-normal block">
                                         {systemLogs[0] ? (language === 'RU' ? systemLogs[0].textRU : systemLogs[0].textEN) : 'Initializing link...'}
                                     </span>
                                 </div>
-                            </div>
-                            <div className="p-1 bg-indigo-500/10 rounded-md border border-indigo-500/20 group-hover:bg-indigo-500/20 text-indigo-400 transition-all flex items-center shrink-0">
-                                <ChevronDown className="w-3.5 h-3.5" />
                             </div>
                         </motion.button>
                     ) : (
@@ -1530,17 +1571,17 @@ const StoryBuilderView: React.FC = () => {
                                         <Terminal className="w-3.5 h-3.5" />
                                     </div>
                                     <div className="flex flex-col text-left">
-                                        <span className="text-[7.5px] font-black uppercase text-indigo-400 tracking-widest leading-none">OPERATIONS LINK</span>
-                                        <span className="text-[10px] font-bold text-white uppercase tracking-tight leading-none mt-0.5">
+                                        <span className="text-[9.5px] font-black uppercase text-indigo-400 tracking-widest leading-none">OPERATIONS LINK</span>
+                                        <span className="text-[12px] font-bold text-white uppercase tracking-tight leading-none mt-0.5">
                                             {language === 'RU' ? 'СИСТЕМНЫЕ УВЕДОМЛЕНИЯ' : 'SYSTEM NOTIFICATIONS'}
                                         </span>
                                     </div>
                                 </div>
                                 <button 
                                     onClick={() => { playUiSound('CLICK'); setIsTerminalLogExpanded(false); }}
-                                    className="p-1 bg-slate-900/80 border border-white/5 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                                    className="p-1.5 bg-slate-900/80 border border-white/5 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
                                 >
-                                    <ChevronUp className="w-3.5 h-3.5" />
+                                    <ChevronUp className="w-4 h-4" />
                                 </button>
                             </div>
 
@@ -1557,26 +1598,26 @@ const StoryBuilderView: React.FC = () => {
                                     }
                                     let textCls = "text-slate-300";
                                     let dotCls = "bg-slate-400";
-                                    let containerCls = "bg-slate-950/40 border border-white/5 p-2 rounded-lg";
+                                    let containerCls = "bg-slate-950/40 border border-white/5 p-2.5 rounded-lg";
                                     if (log.type === 'success') {
                                         textCls = "text-emerald-400 font-semibold";
                                         dotCls = "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]";
-                                        containerCls = "bg-emerald-950/10 border border-emerald-500/20 p-2 rounded-lg";
+                                        containerCls = "bg-emerald-950/10 border border-emerald-500/20 p-2.5 rounded-lg";
                                     } else if (log.type === 'warning') {
                                         textCls = "text-rose-400 font-bold";
                                         dotCls = "bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]";
-                                        containerCls = "bg-rose-950/10 border border-rose-500/20 p-2 rounded-lg";
+                                        containerCls = "bg-rose-950/10 border border-rose-500/20 p-2.5 rounded-lg";
                                     }
                                     return (
-                                        <div key={log.id} className={`flex flex-col gap-1 text-left ${containerCls}`}>
-                                            <div className="flex justify-between items-center text-[8px] font-mono text-slate-500 border-b border-white/5 pb-1 mb-1">
-                                                <span className="flex items-center gap-1">
-                                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}`} />
-                                                    <span className="uppercase tracking-wider">{log.type}</span>
+                                        <div key={log.id} className={`flex flex-col gap-1.5 text-left ${containerCls}`}>
+                                            <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 border-b border-white/5 pb-1 mb-1">
+                                                <span className="flex items-center gap-1.5">
+                                                    <span className={`w-2 h-2 rounded-full shrink-0 ${dotCls}`} />
+                                                    <span className="uppercase tracking-wider font-bold">{log.type}</span>
                                                 </span>
-                                                <span>{log.time}</span>
+                                                <span className="font-semibold">{log.time}</span>
                                             </div>
-                                            <p className={`text-[11px] leading-relaxed break-words whitespace-pre-wrap ${textCls}`}>
+                                            <p className={`text-[13px] leading-relaxed break-words whitespace-pre-wrap ${textCls}`}>
                                                 {language === 'RU' ? log.textRU : log.textEN}
                                             </p>
                                         </div>
@@ -1651,7 +1692,9 @@ const StoryBuilderView: React.FC = () => {
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -15, scale: 0.95 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute top-[84px] md:top-[112px] left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-md max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-210px)] overflow-y-auto bg-slate-950/80 border border-white/10 hover:border-indigo-500/25 rounded-2xl shadow-2xl p-4 select-none backdrop-blur-xl z-[45] flex flex-col pointer-events-auto transition-all duration-300"
+                            className="absolute top-[84px] md:top-[112px] left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-md max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-210px)] overflow-y-auto bg-slate-950/80 border border-white/10 hover:border-indigo-500/25 rounded-2xl shadow-2xl p-4 select-none backdrop-blur-xl flex flex-col pointer-events-auto transition-all duration-300"
+                            style={{ zIndex: 100 + panelZOrder.indexOf('tablet') * 10 }}
+                            onPointerDown={() => bringToFront('tablet')}
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Sleek Top Edge Progress Line */}
@@ -1666,20 +1709,20 @@ const StoryBuilderView: React.FC = () => {
                             <div className="flex justify-between items-center mb-2 border-b border-white/5 pb-2 mt-1">
                                 <div className="flex flex-col text-left">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[7.5px] font-black text-cyan-400 uppercase tracking-widest leading-none">
+                                        <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest leading-none">
                                             {language === 'RU' ? 'ИНЖЕНЕРНЫЙ ТЕРМИНАЛ' : 'ENGINEERING TERMINAL'}
                                         </span>
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                     </div>
-                                    <span className="text-[6px] font-mono text-slate-500 uppercase tracking-wider">
+                                    <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wider mt-0.5">
                                         {language === 'RU' ? `ПРОЕКТИРОВАНИЕ ЯДРА` : `CORE SANDBOX`}
                                     </span>
                                 </div>
                                 <button 
                                     onClick={() => { playUiSound('CLICK'); setIsNarrativeCollapsed(true); }}
-                                    className="text-[7.5px] font-black text-slate-400 hover:text-white uppercase shrink-0 rounded hover:bg-white/5 px-2 py-1 transition-colors flex items-center gap-1 border border-white/5"
+                                    className="text-[9.5px] font-black text-slate-400 hover:text-white uppercase shrink-0 rounded hover:bg-white/5 px-2.5 py-1 transition-colors flex items-center gap-1.5 border border-white/5"
                                 >
-                                    <X className="w-2.5 h-2.5" />
+                                    <X className="w-3 h-3" />
                                     <span>{language === 'RU' ? 'СВЕРНУТЬ' : 'CLOSE'}</span>
                                 </button>
                             </div>
@@ -1696,7 +1739,7 @@ const StoryBuilderView: React.FC = () => {
                                         <button
                                             key={tab.id}
                                             onClick={() => { playUiSound('CLICK'); setTabletTab(tab.id as any); }}
-                                            className={`py-1.5 px-2 rounded-md font-black text-[8.5px] md:text-[10px] tracking-wider uppercase transition-all ${isActive ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                                            className={`py-1.5 px-2 rounded-md font-black text-[11px] md:text-[12.5px] tracking-wider uppercase transition-all ${isActive ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
                                         >
                                             {language === 'RU' ? tab.labelRU : tab.labelEN}
                                         </button>
@@ -1717,7 +1760,7 @@ const StoryBuilderView: React.FC = () => {
                                         <div className="absolute bottom-2.5 left-2.5 w-3 h-3 border-b-2 border-l-2 border-indigo-500/50 rounded-bl" />
                                         <div className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50 rounded-br" />
  
-                                        <div className="absolute top-2.5 left-7 text-[7px] font-mono tracking-wider text-indigo-400/40 uppercase">
+                                        <div className="absolute top-2.5 left-7 text-[9px] font-mono tracking-wider text-indigo-400/40 uppercase">
                                             {language === 'RU' ? 'ИНЖЕНЕРНАЯ СХЕМА УЗЛОВ' : 'ENGINEERING SCHEMATIC'}
                                         </div>
                                         
@@ -1740,8 +1783,8 @@ const StoryBuilderView: React.FC = () => {
                                                     <div className="flex-1 flex flex-col justify-center gap-2">
                                                         <div>
                                                             <div className="flex justify-between items-baseline mb-0.5">
-                                                                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest">{language === 'RU' ? 'СТРОИТЕЛЬНЫЕ УЗЛЫ' : 'CONSTRUCTION NODES'}</span>
-                                                                <span className="text-[10px] font-mono text-white font-bold">{placedNodes}</span>
+                                                                <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest">{language === 'RU' ? 'СТРОИТЕЛЬНЫЕ УЗЛЫ' : 'CONSTRUCTION NODES'}</span>
+                                                                <span className="text-[13px] font-mono text-white font-bold">{placedNodes}</span>
                                                             </div>
                                                             <div className="w-full bg-slate-800/80 h-1 rounded overflow-hidden">
                                                                 <div className="bg-cyan-500 h-full" style={{ width: `${Math.min(100, placedNodes)}%` }} />
@@ -1750,20 +1793,20 @@ const StoryBuilderView: React.FC = () => {
 
                                                         <div>
                                                             <div className="flex justify-between items-baseline mb-0.5">
-                                                                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest">{language === 'RU' ? 'ОБЪЕМ ПЛАТФОРМ' : 'PLATFORM VOLUME'}</span>
-                                                                <span className="text-[10px] font-mono text-white font-bold">{totalVolume}</span>
+                                                                <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest">{language === 'RU' ? 'ОБЪЕМ ПЛАТФОРМ' : 'PLATFORM VOLUME'}</span>
+                                                                <span className="text-[13px] font-mono text-white font-bold">{totalVolume}</span>
                                                             </div>
                                                             <div className="h-[2px] w-full border-b border-dashed border-indigo-500/30" />
                                                         </div>
 
                                                         <div className="grid grid-cols-2 gap-2 mt-1">
                                                             <div className="bg-slate-900/60 border border-white/5 rounded p-1.5 flex flex-col justify-center items-center">
-                                                                <span className="text-[6.5px] text-slate-500 tracking-wider mb-0.5">{language === 'RU' ? 'МАКС ВЫСОТА' : 'MAX HEIGHT'}</span>
-                                                                <span className="text-xs text-amber-400 font-black font-mono">L{maxLevelPlaced}</span>
+                                                                <span className="text-[8.5px] text-slate-500 tracking-wider mb-0.5">{language === 'RU' ? 'МАКС ВЫСОТА' : 'MAX HEIGHT'}</span>
+                                                                <span className="text-[13px] text-amber-400 font-black font-mono">L{maxLevelPlaced}</span>
                                                             </div>
                                                             <div className="bg-slate-900/60 border border-white/5 rounded p-1.5 flex flex-col justify-center items-center">
-                                                                <span className="text-[6.5px] text-slate-500 tracking-wider mb-0.5">{language === 'RU' ? 'ЯДРА (L5+)' : 'CORES L5+'}</span>
-                                                                <span className="text-xs text-rose-400 font-black font-mono">{highTiers}</span>
+                                                                <span className="text-[8.5px] text-slate-500 tracking-wider mb-0.5">{language === 'RU' ? 'ЯДРА (L5+)' : 'CORES L5+'}</span>
+                                                                <span className="text-[13px] text-rose-400 font-black font-mono">{highTiers}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1789,7 +1832,7 @@ const StoryBuilderView: React.FC = () => {
                                     <div className="bg-slate-900/40 border border-white/5 rounded-xl p-3">
                                         <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/5 gap-2">
                                             <div className="flex items-center gap-1.5">
-                                                <span className="text-[9.5px] font-black text-rose-400 uppercase tracking-widest leading-none">
+                                                <span className="text-[11px] font-black text-rose-400 uppercase tracking-widest leading-none">
                                                     {language === 'RU' ? 'ТЕСТИРОВАНИЕ ТЕКСТУР PIXIJS' : 'PIXIJS TEXTURE DIAGNOSTICS'}
                                                 </span>
                                                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -1807,13 +1850,13 @@ const StoryBuilderView: React.FC = () => {
                                                         totalElapsedMs: Number((end - start).toFixed(2))
                                                     });
                                                 }}
-                                                className="bg-indigo-600 hover:bg-indigo-500 font-extrabold text-[8px] tracking-wide uppercase px-2 py-1 rounded transition-colors text-white border border-indigo-400/30 font-sans cursor-pointer shadow-md select-none outline-none"
+                                                className="bg-indigo-600 hover:bg-indigo-500 font-extrabold text-[10px] tracking-wide uppercase px-2 py-1 rounded transition-colors text-white border border-indigo-400/30 font-sans cursor-pointer shadow-md select-none outline-none"
                                             >
                                                 {language === 'RU' ? 'ЗАПУСТИТЬ ТЕСТ' : 'RUN TEST'}
                                             </button>
                                         </div>
 
-                                        <p className="text-slate-400 text-[8.5px] font-medium leading-normal mb-3">
+                                        <p className="text-slate-400 text-[11px] font-medium leading-normal mb-3">
                                             {language === 'RU' 
                                                 ? 'Этот инструмент проверяет процедурную генерацию текстур услугой TextureService и их корректное сопоставление с WebGL контекстом рендерера PixiJS.' 
                                                 : 'This tool verifies procedural texture generation via TextureService and validates that HTML Canvas objects map correctly to PixiJS GPU textures.'}
@@ -1821,10 +1864,10 @@ const StoryBuilderView: React.FC = () => {
 
                                         {diagnosticsRun ? (
                                             <div className="flex flex-col gap-2">
-                                                <div className="flex items-center justify-between text-[8px] font-mono bg-slate-950/40 p-2 rounded border border-white/5">
+                                                <div className="flex items-center justify-between text-[10.5px] font-mono bg-slate-950/40 p-2 rounded border border-white/5">
                                                     <div>
                                                         <span className="text-slate-500 font-bold block">{language === 'RU' ? 'СТАТУС ПРОВЕРКИ:' : 'VERIFICATION STATUS:'}</span>
-                                                        <span className={`font-black uppercase text-[9px] ${diagnosticsRun.status === 'SUCCESS' ? 'text-emerald-400' : 'text-rose-500'}`}>
+                                                        <span className={`font-black uppercase text-[11.5px] ${diagnosticsRun.status === 'SUCCESS' ? 'text-emerald-400' : 'text-rose-500'}`}>
                                                             {diagnosticsRun.status === 'SUCCESS' ? 'PASS / УСПЕШНО' : 'FAIL / ОШИБКА'}
                                                         </span>
                                                     </div>
@@ -1837,7 +1880,7 @@ const StoryBuilderView: React.FC = () => {
                                                 <div className="flex flex-col gap-1.5 mt-1">
                                                     {diagnosticsRun.results.map((res) => {
                                                         return (
-                                                            <div key={res.level} className="bg-slate-950/25 border border-white/5 p-2 rounded-lg flex items-center justify-between text-[8px] font-mono hover:bg-slate-950/40 transition-colors">
+                                                            <div key={res.level} className="bg-slate-950/25 border border-white/5 p-2 rounded-lg flex items-center justify-between text-[10px] font-mono hover:bg-slate-950/40 transition-colors">
                                                                 <div className="flex items-center gap-2">
                                                                     <TexturePreview level={res.level} />
                                                                     <div>
@@ -1848,14 +1891,14 @@ const StoryBuilderView: React.FC = () => {
 
                                                                 <div className="flex flex-col gap-1 items-end">
                                                                     <div className="flex gap-1">
-                                                                        <span className={`px-1 rounded text-[7px] font-black uppercase ${res.canvasOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
+                                                                        <span className={`px-1 rounded text-[9px] font-black uppercase ${res.canvasOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
                                                                             Canvas
                                                                         </span>
-                                                                        <span className={`px-1 rounded text-[7px] font-black uppercase ${res.pixiOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
+                                                                        <span className={`px-1 rounded text-[9px] font-black uppercase ${res.pixiOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
                                                                             PixiJS
                                                                         </span>
                                                                     </div>
-                                                                    <span className="text-slate-500 text-[7px] font-bold">{res.elapsedMs} ms</span>
+                                                                    <span className="text-slate-500 text-[9px] font-bold">{res.elapsedMs} ms</span>
                                                                 </div>
                                                             </div>
                                                         );
@@ -1863,7 +1906,7 @@ const StoryBuilderView: React.FC = () => {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="flex flex-col items-center justify-center py-8 border border-dashed border-white/10 rounded-lg text-slate-500 font-medium text-[8.5px] gap-2">
+                                            <div className="flex flex-col items-center justify-center py-8 border border-dashed border-white/10 rounded-lg text-slate-500 font-medium text-[11px] gap-2">
                                                 <Info className="w-4 h-4 text-slate-600 animate-pulse" />
                                                 <span>{language === 'RU' ? 'Ожидание запуска диагностики...' : 'Awaiting manual trigger...'}</span>
                                             </div>
@@ -1876,49 +1919,49 @@ const StoryBuilderView: React.FC = () => {
                                 <div className="flex flex-col text-left mb-3.5">
                                     {/* Header Info */}
                                     <div className="mb-2.5">
-                                        <h3 className="text-[12px] font-black text-white uppercase tracking-tight leading-tight mb-0.5">
+                                        <h3 className="text-[14px] font-black text-white uppercase tracking-tight leading-tight mb-0.5">
                                             {language === 'RU' ? 'РЕЖИМ ПРОЕКТИРОВАНИЯ ЯДРА' : 'CORE SANDBOX ENGINEERING MODE'}
                                         </h3>
-                                        <p className="text-slate-400 text-[9.5px] leading-relaxed font-sans font-medium line-clamp-2">
+                                        <p className="text-slate-400 text-[11.5px] leading-relaxed font-sans font-medium">
                                             {language === 'RU' ? 'Здесь нет ограничений. Свободно стройте оборонительные платформы для предстоящих Защит ядра от вредоносных ботов.' : 'There are no limits here. Construct defensive platforms freely for upcoming Core Defense scenarios against malicious bots.'}
                                         </p>
                                     </div>
 
                                     {/* Step Guidelines Panel */}
-                                    <div className="p-2.5 bg-slate-950/40 border border-white/5 rounded-xl flex flex-col gap-2 text-[8px] text-slate-400 font-sans leading-relaxed font-medium">
-                                        <div className="text-[7px] font-black text-indigo-400 tracking-wider uppercase mb-0.5">
+                                    <div className="p-3 bg-slate-950/40 border border-white/5 rounded-xl flex flex-col gap-2.5 text-[11px] text-slate-400 font-sans leading-relaxed font-medium">
+                                        <div className="text-[9px] font-black text-indigo-400 tracking-wider uppercase mb-0.5">
                                             {language === 'RU' ? 'РУКОВОДСТВО ПО СТРОИТЕЛЬСТВУ' : 'CONSTRUCTION GUIDE RULES'}
                                         </div>
                                         <div className="flex items-start gap-2">
-                                            <span className="w-4 h-4 rounded-full bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-[7px] font-black text-cyan-400 shrink-0">1</span>
+                                            <span className="w-5 h-5 rounded-full bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-[9px] font-black text-cyan-400 shrink-0">1</span>
                                             <div>
-                                                <span className="text-slate-200 font-bold block">
+                                                <span className="text-slate-200 font-extrabold text-[12.5px] block">
                                                     {language === 'RU' ? 'Шаг 1. Платформы' : '1. Core Platforms'}
                                                 </span>
-                                                <span>
-                                                    {language === 'RU' ? 'Добавляйте новые ячейки (L0) или удаляйте старые для расширения платформ вокруг ядра и управления пространством.' : 'Place new Level 0 hexes or demolish existing ones to manage core topology and territory.'}
+                                                <span className="text-slate-400 text-[11px] font-sans">
+                                                    {language === 'RU' ? 'Размещайте блоки L0 или удаляйте их для настройки платформ ядра.' : 'Place Level 0 blocks or demolish them to shape territory around the core.'}
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-2">
-                                            <span className="w-4 h-4 rounded-full bg-purple-950 border border-purple-500/30 flex items-center justify-center text-[7px] font-black text-purple-400 shrink-0">2</span>
+                                            <span className="w-5 h-5 rounded-full bg-purple-950 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-400 shrink-0">2</span>
                                             <div>
-                                                <span className="text-slate-200 font-bold block">
+                                                <span className="text-slate-200 font-extrabold text-[12.5px] block">
                                                     {language === 'RU' ? 'Шаг 2. Подъем высоты' : '2. Elevate Heights'}
                                                 </span>
-                                                <span>
-                                                    {language === 'RU' ? 'Используйте материалы для усиления укреплений до L9+ для увеличения очков восстановления и награды.' : 'Extract and use materials to raise block heights up to L9+ for increased recovery values and durability.'}
+                                                <span className="text-slate-400 text-[11px] font-sans">
+                                                    {language === 'RU' ? 'Используйте материалы для усиления укреплений блоков до L9+.' : 'Use materials to elevate block heights up to L9+ for scaling rewards.'}
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-2">
-                                            <span className="w-4 h-4 rounded-full bg-amber-950 border border-amber-500/30 flex items-center justify-center text-[7px] font-black text-amber-400 shrink-0">3</span>
+                                            <span className="w-5 h-5 rounded-full bg-amber-950 border border-amber-500/30 flex items-center justify-center text-[9px] font-black text-amber-400 shrink-0">3</span>
                                             <div>
-                                                <span className="text-slate-200 font-bold block">
-                                                    {language === 'RU' ? 'Шаг 3. ЗАЩИТА ЯДРА' : '3. CORE DEFENSE'}
+                                                <span className="text-slate-200 font-extrabold text-[12.5px] block">
+                                                    {language === 'RU' ? 'Шаг 3. Защита ядра' : '3. Core Defense'}
                                                 </span>
-                                                <span>
-                                                    {language === 'RU' ? 'Каждые 5 пройденных сюжетных уровней активируется ЗАЩИТА ЯДРА от вредоносных ботов (кнопка в центре сверху). Постройте прочную защиту!' : 'Completing 5 simulated sequence levels triggers a CORE DEFENSE against malicious bots. Build sturdy protection around the core!'}
+                                                <span className="text-slate-400 text-[11px] font-sans">
+                                                    {language === 'RU' ? 'Каждые 5 уровней активируется атака ботов. Постройте прочную защиту!' : 'Every 5 simulated levels triggers a bot invasion. Build sturdy defenses!'}
                                                 </span>
                                             </div>
                                         </div>

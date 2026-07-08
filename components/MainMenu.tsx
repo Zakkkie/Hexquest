@@ -1264,113 +1264,128 @@ const MainMenu: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4 pointer-events-auto"
+            className="absolute inset-0 bg-slate-950/75 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 pointer-events-auto"
         >
           <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ type: "spring", damping: 25, stiffness: 280 }}
-              className="bg-[#04050e] border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.3)] w-full max-w-2xl h-fit max-h-[90vh] relative overflow-hidden flex flex-col"
+              className="bg-[#0b0c1e]/65 border border-white/10 md:border-indigo-500/30 backdrop-blur-xl md:backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-md sm:max-w-xl md:max-w-3xl h-full sm:h-auto max-h-[92vh] sm:max-h-[85vh] md:max-h-[90vh] relative overflow-hidden flex flex-col transition-all duration-300"
           >
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/40 pointer-events-none" />
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/40 pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/40 pointer-events-none" />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/40 pointer-events-none" />
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/10 blur-[60px] rounded-full pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-rose-500/10 blur-[60px] rounded-full pointer-events-none" />
+
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-indigo-500/50 pointer-events-none rounded-tl-2xl sm:rounded-tl-3xl" />
+              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-indigo-500/50 pointer-events-none rounded-tr-2xl sm:rounded-tr-3xl" />
+              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-indigo-500/50 pointer-events-none rounded-bl-2xl sm:rounded-bl-3xl" />
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-indigo-500/50 pointer-events-none rounded-br-2xl sm:rounded-br-3xl" />
 
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-indigo-500/25 bg-[#0d0f22]/60 shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-red-500/10 border border-red-500/30 rounded-xl">
-                        <Swords className="w-5 h-5 text-red-500" />
-                    </div>
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-white/5 md:border-indigo-500/20 bg-white/2 backdrop-blur-md shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-3.5">
+                    <motion.div 
+                        whileHover={{ rotate: 15, scale: 1.05 }}
+                        className="p-2 sm:p-2.5 bg-red-500/10 border border-red-500/20 md:border-red-500/35 rounded-xl sm:rounded-2xl shadow-[0_0_15px_rgba(239,68,68,0.15)]"
+                    >
+                        <Swords className="w-4 h-4 sm:w-5.5 sm:h-5.5 text-red-500" />
+                    </motion.div>
                     <div className="text-left">
-                        <h2 className="text-base font-black text-white uppercase tracking-tight">{t.CONFIG_TITLE}</h2>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <p className="text-[9px] text-emerald-400 uppercase tracking-widest font-mono font-bold">{t.TERMINAL_ACTIVE}</p>
+                        <h2 className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-tight bg-gradient-to-r from-white via-indigo-200 to-indigo-100 bg-clip-text text-transparent">{t.CONFIG_TITLE}</h2>
+                        <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            <p className="text-[8px] sm:text-[10px] text-emerald-400 uppercase tracking-widest font-mono font-black">{t.TERMINAL_ACTIVE}</p>
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button 
+                <div className="flex items-center gap-1.5 sm:gap-2.5">
+                    <motion.button 
+                        whileHover={{ scale: 1.05, rotate: 180 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={randomizeConfig} 
-                        className="p-2 text-slate-400 hover:text-white transition-colors rounded-full hover:bg-slate-800/60 border border-slate-800 hover:border-slate-600 cursor-pointer" 
+                        className="p-1.5 sm:p-2.5 text-slate-400 hover:text-white transition-colors rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-indigo-500/40 cursor-pointer" 
                         title="Randomize Parameters"
                     >
-                        <Shuffle className="w-4 h-4" />
-                    </button>
-                    <button 
+                        <Shuffle className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                    </motion.button>
+                    <motion.button 
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => setShowMissionConfig(false)} 
-                        className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800/60 cursor-pointer"
+                        className="text-slate-400 hover:text-rose-400 transition-colors p-1.5 sm:p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer"
                     >
-                        <X className="w-5 h-5" />
-                    </button>
+                        <X className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                    </motion.button>
                 </div>
               </div>
 
               {/* Scrollable Setup parameters */}
-              <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-5 text-left md:space-y-6">
+              <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 space-y-4 sm:space-y-6 text-left">
                   
                   {/* Goal tier selectors */}
                   <div>
-                    <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5 mb-2.5">
-                        <Target className="w-3.5 h-3.5 text-indigo-400" /> {t.COL_GOAL_TITLE}
+                    <h3 className="text-[8.5px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400/80 flex items-center gap-1.5 mb-2 sm:mb-3">
+                        <Target className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-indigo-400" /> {t.COL_GOAL_TITLE}
                     </h3>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
                         {[1, 2, 3].map(id => {
                               const tier = MISSION_TIERS[id as 1|2|3];
                               const isSelected = selectedTier === id;
                               const Icon = tier.icon;
                               return (
-                                <button 
+                                <motion.button 
+                                  whileHover={{ scale: 1.02, y: -2 }}
+                                  whileTap={{ scale: 0.98 }}
                                   key={id} 
                                   onClick={() => { setSelectedTier(id as 1|2|3); setDifficulty(tier.difficulty); playUiSound('CLICK'); }}
                                   className={`
-                                    relative flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 h-20 md:h-24 overflow-hidden cursor-pointer text-center
+                                    relative flex flex-col items-center justify-center p-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 h-14 sm:h-20 md:h-24 lg:h-26 overflow-hidden cursor-pointer text-center
                                     ${isSelected 
-                                        ? 'bg-gradient-to-b from-indigo-500/15 to-[#0b0c1e] border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.25)]' 
-                                        : 'bg-black/40 border-slate-800 hover:border-slate-600 hover:bg-[#070814]'}
+                                        ? 'bg-indigo-500/15 border-indigo-500/70 shadow-[0_0_20px_rgba(99,102,241,0.25)] text-white' 
+                                        : 'bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10 text-slate-400'}
                                   `}
                                 >
-                                   <Icon className={`w-4 h-4 md:w-5 md:h-5 mb-1.5 transition-all duration-300 ${isSelected ? 'text-indigo-400 scale-110' : 'text-slate-500'}`} />
-                                   <span className={`text-[9px] font-black uppercase tracking-wide leading-tight ${isSelected ? 'text-white' : 'text-slate-400'}`}>{tier.label}</span>
-                                   <span className={`text-[8px] font-mono mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-600'}`}>{tier.time}</span>
-                                </button>
+                                   {isSelected && (
+                                     <span className="absolute top-1.5 right-1.5 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-indigo-400 animate-ping" />
+                                   )}
+                                   <Icon className={`w-3.5 h-3.5 sm:w-5 sm:h-5 mb-1 sm:mb-1.5 transition-all duration-300 ${isSelected ? 'text-indigo-400 scale-110' : 'text-slate-500'}`} />
+                                   <span className={`text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wide leading-tight ${isSelected ? 'text-white' : 'text-slate-400'}`}>{tier.label}</span>
+                                   <span className={`text-[7px] sm:text-[8px] md:text-[9.5px] font-mono mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-600'}`}>{tier.time}</span>
+                                </motion.button>
                               );
                         })}
                     </div>
                   </div>
 
-                  <div className="h-px bg-slate-900 w-full" />
+                  <div className="h-px bg-white/5 w-full" />
 
                   {/* Settings Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-5">
                       
                       {/* Left: Terrain selection */}
-                      <div className="flex flex-col gap-4">
-                        <div className="bg-black/35 border border-slate-900 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-lg hover:border-slate-800/80 transition-all">
+                      <div className="flex flex-col">
+                        <div className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 shadow-lg hover:bg-white/8 transition-all h-full">
                             <div className="flex flex-col text-left">
-                                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                                    <MapIcon className="w-3.5 h-3.5 text-cyan-400" /> {language === 'RU' ? 'Рельеф Сектора' : 'Sector Terrain'}
+                                <h3 className="text-[8.5px] sm:text-[10.5px] md:text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                    <MapIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" /> {language === 'RU' ? 'Рельеф Сектора' : 'Sector Terrain'}
                                 </h3>
-                                <span className="text-[9px] text-slate-500 mt-1 font-mono uppercase tracking-wide leading-normal">
+                                <span className="text-[7.5px] sm:text-[9px] md:text-[10px] text-slate-500 mt-1 sm:mt-1.5 font-mono uppercase tracking-wide leading-relaxed">
                                     {mapType === 'FLAT' 
                                         ? (language === 'RU' ? 'Устойчивые ровные плиты' : 'Flat stable hex tiles') 
                                         : (language === 'RU' ? 'Крутые аномальные уступы' : 'Steep vertical heights')}
                                 </span>
                             </div>
 
-                            <div className="flex bg-black p-0.5 rounded-xl border border-slate-850 shrink-0 w-32 md:w-36">
+                            <div className="flex bg-black/40 p-0.5 rounded-lg sm:rounded-xl border border-white/5 shrink-0 w-24 sm:w-32 md:w-36">
                                 <button 
                                     onClick={() => { setMapType('FLAT'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 rounded-lg text-[8.5px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${mapType === 'FLAT' ? 'bg-slate-800 text-white shadow-[0_0_8px_rgba(255,255,255,0.1)]' : 'text-slate-600 hover:text-slate-400'}`}
+                                    className={`flex-1 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[7.5px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${mapType === 'FLAT' ? 'bg-slate-800 text-white shadow-[0_0_8px_rgba(255,255,255,0.1)]' : 'text-slate-500 hover:text-slate-300'}`}
                                 >
                                     {language === 'RU' ? 'Плоский' : 'Flat'}
                                 </button>
                                 <button 
                                     onClick={() => { setMapType('CHAOTIC'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 rounded-lg text-[8.5px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-400'}`}
+                                    className={`flex-1 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[7.5px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
                                 >
                                     {language === 'RU' ? 'Хаос' : 'Chaos'}
                                 </button>
@@ -1379,82 +1394,86 @@ const MainMenu: React.FC = () => {
                       </div>
 
                       {/* Right: Opponents count */}
-                      <div className="flex flex-col gap-4">
-                        <div className="bg-black/35 border border-slate-900 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-lg hover:border-slate-800/80 transition-all">
+                      <div className="flex flex-col">
+                        <div className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 shadow-lg hover:bg-white/8 transition-all h-full">
                             <div className="flex flex-col text-left flex-1">
-                                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                                    <Bot className="w-3.5 h-3.5 text-rose-500" /> {t.LBL_RIVALS}
+                                <h3 className="text-[8.5px] sm:text-[10.5px] md:text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                    <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500" /> {t.LBL_RIVALS}
                                 </h3>
-                                <span className="text-[9px] text-slate-500 font-mono mt-1 uppercase tracking-wide leading-none">
+                                <span className="text-[7.5px] sm:text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 sm:mt-1.5 uppercase tracking-wide leading-none">
                                     {getBotLabel(botCount)}
                                 </span>
                                 
-                                <div className="flex gap-1 mt-2.5">
+                                <div className="flex gap-0.5 sm:gap-1 mt-2 sm:mt-2.5">
                                     {Array.from({ length: 6 }).map((_, i) => (
                                         <div 
                                             key={i} 
-                                            className={`w-1 h-1.5 rounded-[1px] transition-all duration-300 ${i < botCount ? 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]' : 'bg-slate-800'}`} 
+                                            className={`w-1 sm:w-1.5 h-1.5 sm:h-2 rounded-[1px] transition-all duration-300 ${i < botCount ? 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]' : 'bg-slate-800'}`} 
                                         />
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="flex items-center bg-black p-0.5 border border-slate-850 rounded-xl shrink-0 w-24 md:w-28 justify-between">
-                                <button
+                            <div className="flex items-center bg-black/40 p-0.5 border border-white/5 rounded-lg sm:rounded-xl shrink-0 w-20 sm:w-24 md:w-28 justify-between">
+                                <motion.button
+                                    whileTap={{ scale: 0.85 }}
                                     onClick={() => { if (botCount > 1) { setBotCount(botCount - 1); playUiSound('CLICK'); } }}
                                     disabled={botCount <= 1}
-                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${botCount <= 1 ? 'text-slate-800 opacity-20' : 'text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 cursor-pointer'}`}
+                                    className={`w-5.5 h-5.5 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-all ${botCount <= 1 ? 'text-slate-800 opacity-20' : 'text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 cursor-pointer'}`}
                                 >
-                                    <Minus className="w-3.5 h-3.5" />
-                                </button>
-                                <span className="text-xs font-mono font-black text-rose-500">{botCount}</span>
-                                <button
+                                    <Minus className="w-3 sm:w-4 h-3 sm:h-4" />
+                                </motion.button>
+                                <span className="text-[10px] sm:text-xs font-mono font-black text-rose-500">{botCount}</span>
+                                <motion.button
+                                    whileTap={{ scale: 0.85 }}
                                     onClick={() => { if (botCount < 6) { setBotCount(botCount + 1); playUiSound('CLICK'); } }}
                                     disabled={botCount >= 6}
-                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${botCount >= 6 ? 'text-slate-800 opacity-20' : 'text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 cursor-pointer'}`}
+                                    className={`w-5.5 h-5.5 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-all ${botCount >= 6 ? 'text-slate-800 opacity-20' : 'text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 cursor-pointer'}`}
                                 >
-                                    <Plus className="w-3.5 h-3.5" />
-                                </button>
+                                    <Plus className="w-3 sm:w-4 h-3 sm:h-4" />
+                                </motion.button>
                             </div>
                         </div>
                       </div>
 
                       {/* Cargo Capacity Selection */}
-                      <div className="col-span-1 md:col-span-2 bg-black/35 border border-slate-900 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-lg hover:border-slate-800/80 transition-all">
+                      <div className="col-span-1 sm:col-span-2 bg-white/5 border border-white/5 hover:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 shadow-lg hover:bg-white/8 transition-all">
                           <div className="flex flex-col text-left flex-1">
-                              <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                                  <Box className="w-3.5 h-3.5 text-emerald-400" /> {t.CARGO_CAP}
+                              <h3 className="text-[8.5px] sm:text-[10.5px] md:text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                  <Box className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" /> {t.CARGO_CAP}
                               </h3>
-                              <span className="text-[9px] text-slate-500 font-mono mt-1 uppercase tracking-wide leading-none">
+                              <span className="text-[7.5px] sm:text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 sm:mt-1.5 uppercase tracking-wide leading-none">
                                   {language === 'RU' ? `Предел хранения: ${storageCap}` : `Inventory Slot Limit: ${storageCap}`}
                               </span>
                               
-                              <div className="flex gap-1 mt-2.5">
+                              <div className="flex gap-0.5 sm:gap-1 mt-2 sm:mt-2.5">
                                   {Array.from({ length: 6 }).map((_, i) => (
                                       <div 
                                           key={i} 
-                                          className={`w-1 h-1.5 rounded-[1px] transition-all duration-300 ${i < storageCap ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]' : 'bg-slate-800'}`} 
+                                          className={`w-1 sm:w-1.5 h-1.5 sm:h-2 rounded-[1px] transition-all duration-300 ${i < storageCap ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]' : 'bg-slate-800'}`} 
                                       />
                                   ))}
                               </div>
                           </div>
 
-                          <div className="flex items-center bg-black p-0.5 border border-slate-850 rounded-xl shrink-0 w-24 md:w-28 justify-between">
-                              <button
+                          <div className="flex items-center bg-black/40 p-0.5 border border-white/5 rounded-lg sm:rounded-xl shrink-0 w-20 sm:w-24 md:w-28 justify-between">
+                              <motion.button
+                                  whileTap={{ scale: 0.85 }}
                                   onClick={() => { if (storageCap > 3) { setStorageCap(storageCap - 1); playUiSound('CLICK'); } }}
                                   disabled={storageCap <= 3}
-                                  className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${storageCap <= 3 ? 'text-slate-800 opacity-20' : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer'}`}
+                                  className={`w-5.5 h-5.5 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-all ${storageCap <= 3 ? 'text-slate-800 opacity-20' : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer'}`}
                               >
-                                  <Minus className="w-3.5 h-3.5" />
-                              </button>
-                              <span className="text-xs font-mono font-black text-emerald-400">{storageCap}</span>
-                              <button
+                                  <Minus className="w-3 sm:w-4 h-3 sm:h-4" />
+                              </motion.button>
+                              <span className="text-[10px] sm:text-xs font-mono font-black text-emerald-400">{storageCap}</span>
+                              <motion.button
+                                  whileTap={{ scale: 0.85 }}
                                   onClick={() => { if (storageCap < 6) { setStorageCap(storageCap + 1); playUiSound('CLICK'); } }}
                                   disabled={storageCap >= 6}
-                                  className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${storageCap >= 6 ? 'text-slate-800 opacity-20' : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer'}`}
+                                  className={`w-5.5 h-5.5 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-all ${storageCap >= 6 ? 'text-slate-800 opacity-20' : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer'}`}
                               >
-                                  <Plus className="w-3.5 h-3.5" />
-                              </button>
+                                  <Plus className="w-3 sm:w-4 h-3 sm:h-4" />
+                              </motion.button>
                           </div>
                       </div>
 
@@ -1462,35 +1481,37 @@ const MainMenu: React.FC = () => {
               </div>
 
               {/* Footer action buttons */}
-              <div className="p-4 md:p-5 border-t border-indigo-500/20 bg-[#0d0f22]/60 backdrop-blur-md flex flex-wrap items-center justify-between gap-4 shrink-0">
+              <div className="p-3 sm:p-5 border-t border-white/5 md:border-indigo-500/20 bg-white/2 backdrop-blur-md flex items-center justify-between gap-3 shrink-0 flex-row">
                   <div className="flex flex-col text-left leading-tight">
-                      <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">{t.EST_REWARD}</span>
-                      <span className="text-sm font-mono font-black text-amber-400 flex items-center gap-1.5 mt-0.5">
-                        <Gem className="w-4 h-4 text-amber-400" />
+                      <span className="text-[7.5px] sm:text-[9px] text-slate-500 font-black uppercase tracking-wider">{t.EST_REWARD}</span>
+                      <span className="text-xs sm:text-sm md:text-base font-mono font-black text-amber-400 flex items-center gap-1 mt-0.5">
+                        <Gem className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-amber-400" />
                         {selectedTier === 3 ? t.REWARD_HIGH : (selectedTier === 2 ? t.REWARD_MED : t.REWARD_STD)}
                       </span>
                   </div>
 
-                  <div className="flex gap-3 ml-auto shrink-0">
-                     <button
+                  <div className="flex gap-2 sm:gap-3 shrink-0">
+                     <motion.button
+                        whileHover={{ scale: 1.02, y: -1 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => {
                           playUiSound('CLICK');
                           setShowMissionConfig(false);
                           setUIState('LEVEL_EDITOR');
                         }}
-                        className="px-4 py-2.5 bg-black/60 border border-indigo-500/30 hover:border-indigo-400 text-indigo-300 hover:text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5 font-mono cursor-pointer"
+                        className="px-3 py-1.5 sm:px-4 sm:py-2.5 bg-white/5 border border-white/10 hover:border-indigo-500/50 text-indigo-300 hover:text-white font-bold rounded-lg sm:rounded-xl text-[8.5px] sm:text-[10px] md:text-xs uppercase tracking-wider transition-all flex items-center gap-1 sm:gap-1.5 font-mono cursor-pointer"
                      >
-                        <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                        <Layers className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-400" />
                         {language === 'RU' ? 'Чертежи' : 'Level Editor'}
-                     </button>
+                     </motion.button>
 
                      <motion.button 
-                        whileHover={{ scale: 1.03 }}
+                        whileHover={{ scale: 1.03, y: -1, boxShadow: "0 0 20px rgba(99,102,241,0.5)" }}
                         whileTap={{ scale: 0.97 }}
                         onClick={confirmMissionStart}
-                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl border-t border-indigo-400/30 uppercase tracking-widest shadow-[0_4px_20px_rgba(99,102,241,0.35)] transition-all flex items-center justify-center gap-2 group text-xs cursor-pointer"
+                        className="px-4 py-1.5 sm:px-5 sm:py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-lg sm:rounded-xl border-t border-indigo-400/30 uppercase tracking-widest transition-all flex items-center justify-center gap-1 sm:gap-2 group text-[9px] sm:text-xs cursor-pointer shadow-[0_4px_15px_rgba(99,102,241,0.3)]"
                      >
-                        <Crosshair className="w-4 h-4 text-indigo-100 group-hover:rotate-90 transition-all duration-500" />
+                        <Crosshair className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-100 group-hover:rotate-90 transition-all duration-500" />
                         <span>{t.BTN_START}</span>
                      </motion.button>
                   </div>
