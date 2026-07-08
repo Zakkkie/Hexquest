@@ -135,7 +135,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                 setPrevStorage(player.storage);
             }
         }
-    }, [player?.storage, prevStorage]);
+    }, [player, prevStorage]);
 
     useEffect(() => {
         if (player) {
@@ -145,7 +145,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                 setPrevCoins(player.coins);
             }
         }
-    }, [player?.coins, prevCoins]);
+    }, [player, prevCoins]);
 
     const t = TEXT[language].HUD;
     const isMoving = player?.state === 'MOVING';

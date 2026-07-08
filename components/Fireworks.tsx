@@ -418,7 +418,7 @@ const Fireworks: React.FC<FireworksProps> = ({ onComplete }) => {
             window.removeEventListener('resize', handleResize);
             cancelAnimationFrame(animationFrameId);
         };
-    }, [language, logs]);
+    }, [language, logs, onComplete]);
 
     return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-[130]" />;
 };

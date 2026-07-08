@@ -15,6 +15,16 @@ import {
     getHeightOffset,
     getPixiTexture,
 } from '../services/pixiHexRender.ts';
+import {
+    NEIGHBOR_DIRECTIONS,
+    VOID_LEVEL_FLAG,
+    cubeDistance,
+    isObjectiveHexCompleted,
+    runLocalRenderCalculation,
+    isFinishTile,
+    areAllConditionsMet,
+} from '../services/mapRenderModel.ts';
+import { useMapInput } from '../hooks/useMapInput.ts';
 
 // Re-export so existing consumers (StoryBuilderView, StoryBuilderComponents) keep working.
 export { THEME_PALETTE };
@@ -24,538 +34,6 @@ const MAX_WALL_DEPTH = 200;
 // so floating tiles read as a solid plateau with a short 3D skirt instead of a
 // 200px thread dangling into the dark background.
 const VOID_SKIRT_DEPTH = 28;
-
-const NEIGHBOR_DIRECTIONS = [
-  { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 }, 
-  { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
-];
-
-const VOID_LEVEL_FLAG = -99;
-
-const cubeDistance = (a: { q: number; r: number }, b: { q: number; r: number }): number => {
-  return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
-};
-
-const isObjectiveHexCompleted = (
-    objHex: any,
-    grid: Record<string, Hex> | undefined,
-    player: Entity | undefined,
-    activeLevelId: string | undefined,
-    activatedMiniMonuments: string[] | undefined,
-    portalActive: boolean | undefined
-): boolean => {
-    if (!grid || !player) return false;
-    const hexKey = `${objHex.q},${objHex.r}`;
-    const gridCell = grid[hexKey];
-
-    // If it's a MINI_MONUMENT (Obelisk), check if it's already activated in state
-    if (gridCell?.structureType === 'MINI_MONUMENT' || objHex.label?.toLowerCase().includes('obelisk')) {
-        return !!(activatedMiniMonuments && activatedMiniMonuments.includes(hexKey));
-    }
-
-    // If it's a MONUMENT, check if the portal is already active
-    if (gridCell?.structureType === 'MONUMENT' || objHex.label?.toLowerCase().includes('monument')) {
-        return !!portalActive;
-    }
-
-    // New 8-Level Series 1 Custom Completion Checks:
-    if (activeLevelId === '1.0') {
-        const waveCoords = [
-            "0,0", "1,0", "2,0", "3,0", "4,0", "5,0",
-            "6,0", "6,1", "5,2", "4,3", "3,3", "2,3", "1,3", "0,3", "-1,3", "-2,3"
-        ];
-        const playerIdx = waveCoords.indexOf(`${player.q},${player.r}`);
-        const hexIdx = waveCoords.indexOf(hexKey);
-        
-        let completedByPath = false;
-        if (playerIdx !== -1 && hexIdx !== -1) {
-            completedByPath = playerIdx >= hexIdx;
-        }
-        
-        if (playerIdx === hexIdx) {
-            if (gridCell) {
-                if (objHex.label === 'Build') {
-                    if (gridCell.currentLevel < objHex.targetLevel) return false;
-                }
-                if (objHex.label === 'Dig') {
-                    if (gridCell.currentLevel > objHex.targetLevel) return false;
-                }
-            }
-            return true;
-        }
-        return completedByPath;
-    }
-
-    if (activeLevelId === '1.1') {
-        if (objHex.label === 'Capital' || objHex.color === 'emerald') {
-            return player.q === objHex.q && player.r === objHex.r;
-        }
-        if (gridCell && objHex.targetLevel) {
-            return gridCell.currentLevel >= objHex.targetLevel;
-        }
-    }
-
-    if (activeLevelId === '1.2') {
-        if (objHex.label === 'Goal') {
-            return gridCell ? gridCell.currentLevel <= 0 : false;
-        }
-    }
-
-    if (activeLevelId === '1.3') {
-        if (objHex.label === 'Goal L3') {
-            return gridCell ? gridCell.currentLevel >= 3 : false;
-        }
-    }
-
-    if (activeLevelId === '1.5') {
-        if (objHex.label === 'Heal') {
-            return gridCell ? gridCell.structureType !== 'VOID' : false;
-        }
-        if (objHex.label === 'Deep Mine') {
-            return gridCell ? gridCell.currentLevel <= -2 : false;
-        }
-    }
-
-    if (activeLevelId === '1.6') {
-        if (objHex.label === 'Capital') {
-            return player.q === objHex.q && player.r === objHex.r;
-        }
-    }
-
-    // Default construction or excavation behavior
-    if (gridCell) {
-        if (objHex.targetLevel > 0) {
-            return gridCell.currentLevel >= objHex.targetLevel;
-        } else if (objHex.targetLevel < 0) {
-            return gridCell.currentLevel <= objHex.targetLevel;
-        } else {
-            // targetLevel === 0
-            if (objHex.label === 'Goal' || objHex.label === 'Capital' || objHex.color === 'emerald') {
-                return player.q === objHex.q && player.r === objHex.r;
-            }
-            return gridCell.currentLevel === 0;
-        }
-    }
-
-    return false;
-};
-
-const isFinishTile = (q: number, r: number, activeLevelConfig: any): boolean => {
-    if (!activeLevelConfig) return false;
-    if (activeLevelConfig.id === '1.0' && q === -2 && r === 3) return true;
-    if (activeLevelConfig.id === '1.1' && q === -8 && r === 0) return true;
-    if (activeLevelConfig.id === '1.2' && q === 0 && r === 0) return true;
-    if (activeLevelConfig.id === '1.3' && q === 0 && r === 0) return true;
-    if (activeLevelConfig.id === '1.5' && q === 0 && r === 0) return true;
-    if (activeLevelConfig.id === '1.6' && q === 8 && r === 0) return true;
-
-    // Generic check for other levels:
-    // If there is an objectiveHex with color 'emerald' or containing 'capital' / 'portal' / 'goal' in its label
-    const objFinish = activeLevelConfig.objectiveHexes?.find((o: any) => {
-        const lbl = o.label?.toLowerCase() || '';
-        return o.color === 'emerald' || lbl.includes('capital') || lbl.includes('portal') || lbl.includes('goal');
-    });
-    if (objFinish && objFinish.q === q && objFinish.r === r) return true;
-
-    return false;
-};
-
-const areAllConditionsMet = (
-    session: any,
-    activeLevelConfig: any
-): boolean => {
-    if (!session || !activeLevelConfig) return false;
-
-    // 1. If it's a monument-based portal level (like Series 2, 3, 4 etc.)
-    // the monument portal is active when state.portalActive is true
-    const hasMonument = Object.values(session.grid || {}).some((h: any) => h.structureType === 'MONUMENT');
-    if (hasMonument) {
-        return !!session.portalActive;
-    }
-
-    // 2. If the level has required shapes, check if they are built
-    if (activeLevelConfig.requiredShapes && activeLevelConfig.requiredShapes.length > 0) {
-        return !!(session.completedShapeCoords && session.completedShapeCoords.length > 0);
-    }
-
-    // 3. If there are objectiveHexes
-    if (activeLevelConfig.objectiveHexes && activeLevelConfig.objectiveHexes.length > 0) {
-        const nonFinishObjectives = activeLevelConfig.objectiveHexes.filter((o: any) => {
-            const labelLower = o.label?.toLowerCase() || '';
-            const isFinishObj = labelLower.includes('capital') || 
-                                labelLower.includes('portal') || 
-                                labelLower.includes('goal') || 
-                                o.color === 'emerald';
-            return !isFinishObj;
-        });
-
-        if (nonFinishObjectives.length > 0) {
-            const allPreCompleted = nonFinishObjectives.every((o: any) => 
-                isObjectiveHexCompleted(o, session.grid, session.player, activeLevelConfig.id, session.activatedMiniMonuments, session.portalActive)
-            );
-            if (!allPreCompleted) return false;
-        }
-    }
-
-    // 4. Simulate the player standing on the finish tile and checking win conditions
-    if (activeLevelConfig.hooks?.checkWinCondition) {
-        let finishQ = session.player.q;
-        let finishR = session.player.r;
-
-        if (activeLevelConfig.id === '1.0') { finishQ = -2; finishR = 3; }
-        else if (activeLevelConfig.id === '1.1') { finishQ = -8; finishR = 0; }
-        else if (activeLevelConfig.id === '1.2') { finishQ = 0; finishR = 0; }
-        else if (activeLevelConfig.id === '1.3') { finishQ = 0; finishR = 0; }
-        else if (activeLevelConfig.id === '1.5') { finishQ = 0; finishR = 0; }
-        else if (activeLevelConfig.id === '1.6') { finishQ = 8; finishR = 0; }
-        else {
-            const emeraldObj = activeLevelConfig.objectiveHexes?.find((o: any) => o.color === 'emerald' || o.label?.toLowerCase().includes('portal') || o.label?.toLowerCase().includes('capital'));
-            if (emeraldObj) {
-                finishQ = emeraldObj.q;
-                finishR = emeraldObj.r;
-            }
-        }
-
-        const simState = {
-            ...session,
-            player: {
-                ...session.player,
-                q: finishQ,
-                r: finishR
-            }
-        };
-
-        try {
-            return !!activeLevelConfig.hooks.checkWinCondition(simState);
-        } catch (e) {
-            return true;
-        }
-    }
-
-    return true;
-};
-
-const runLocalRenderCalculation = (
-    grid: Record<string, Hex> | undefined,
-    player: Entity | undefined,
-    bots: Entity[] | undefined,
-    rotation: number,
-    pendingKey: string | null,
-    selectedHexId: string | null,
-    camera: { x: number; y: number; scale: number; rotation: number } | undefined,
-    dimensions: { width: number; height: number } | undefined,
-    isCampaign: boolean,
-    playerGrowthIntent?: 'RECOVER' | 'UPGRADE' | 'DIG' | 'TURRET' | null,
-    isDefenseMode?: boolean
-): any[] => {
-    if (!grid || !player) return [];
-
-    const items: any[] = [];
-
-    const angleRad = rotation * (Math.PI / 180);
-    const cos = Math.cos(angleRad);
-    const sin = Math.sin(angleRad);
-    const SQRT3 = Math.sqrt(3);
-    const SQRT3_2 = SQRT3 / 2;
-    const ONE_POINT_FIVE = 1.5;
-
-    const botPositions = new Set<string>();
-    if (bots) {
-        for (const b of bots) {
-            botPositions.add(`${b.q},${b.r}`);
-        }
-    }
-
-    const playerQ = player.q;
-    const playerR = player.r;
-
-    for (const hexId in grid) {
-        const hex = grid[hexId];
-        const hq = hex.q;
-        const hr = hex.r;
-        const distToPlayer = cubeDistance({ q: playerQ, r: playerR }, { q: hq, r: hr });
-        
-        const forceReveal = (isCampaign && useGameStore.getState().session?.activeLevelConfig?.mapConfig?.revealMode !== 'fog');
-        
-        let isRevealed = !!hex.revealed || forceReveal;
-        let finalVisibility = 0;
-
-        if (isDefenseMode) {
-            // Find player owned hexes to calculate nearest base distance
-            const playerOwnedHexes = Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore);
-            let distToPlayerBase = distToPlayer;
-            let minDist = 9999;
-            for (const ph of playerOwnedHexes) {
-                const d = cubeDistance({ q: ph.q, r: ph.r }, { q: hq, r: hr });
-                if (d < minDist) {
-                    minDist = d;
-                }
-            }
-            if (minDist !== 9999) {
-                distToPlayerBase = minDist;
-            }
-
-            if (distToPlayerBase <= 4) {
-                isRevealed = true;
-                if (distToPlayerBase <= 1) {
-                    finalVisibility = 1.0;
-                } else if (distToPlayerBase === 2) {
-                    finalVisibility = 0.70;
-                } else if (distToPlayerBase === 3) {
-                    finalVisibility = 0.40;
-                } else if (distToPlayerBase === 4) {
-                    finalVisibility = 0.15;
-                }
-            } else {
-                isRevealed = false;
-                finalVisibility = 0.0;
-            }
-        } else {
-            if (distToPlayer > 5 && !forceReveal) continue;
-            
-            if (forceReveal) {
-                finalVisibility = 1.0;
-            } else if (distToPlayer <= 2) {
-                finalVisibility = 1.0;
-            } else if (distToPlayer === 3) {
-                finalVisibility = 0.70;
-            } else if (distToPlayer === 4) {
-                finalVisibility = 0.40;
-            } else if (distToPlayer === 5) {
-                finalVisibility = 0.15;
-            }
-        }
-
-        const finalOpacity = finalVisibility;
-        const finalLighting = finalVisibility;
-
-        if (finalOpacity <= 0) continue;
-
-        const rawX = HEX_SIZE * (SQRT3 * hq + SQRT3_2 * hr);
-        const rawY = HEX_SIZE * (ONE_POINT_FIVE * hr);
-        
-        if (camera && dimensions) {
-            const x = rawX * cos - rawY * sin;
-            const y = (rawX * sin + rawY * cos) * 0.8;
-            
-            const screenX = camera.x + x * camera.scale;
-            const screenY = camera.y + y * camera.scale;
-            
-            const margin = HEX_SIZE * 4.0;
-            const scaledMargin = margin * camera.scale;
-            
-            if (
-                screenX < -scaledMargin ||
-                screenX > dimensions.width + scaledMargin ||
-                screenY < -scaledMargin ||
-                screenY > dimensions.height + scaledMargin
-            ) {
-                continue;
-            }
-        }
-
-        const baseDepth = (rawX * sin + rawY * cos) * 0.8;
-        const depth = baseDepth + (hex.currentLevel || 0) * 0.01;
-
-        const isVoid = hex.structureType === 'VOID';
-        const currentLevel = hex.currentLevel ?? 0;
-        const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : currentLevel);
-
-        const isOccupiedByPlayer = hq === playerQ && hr === playerR;
-        const neighborLevels = NEIGHBOR_DIRECTIONS.map(d => {
-            const nKey = getHexKey(hq + d.q, hr + d.r);
-            const nHex = grid[nKey];
-            const forceReveal = (isCampaign && useGameStore.getState().session?.activeLevelConfig?.mapConfig?.revealMode !== 'fog') || !!useGameStore.getState().session?.defense?.isDefenseMode;
-            if (!nHex || (!nHex.revealed && !forceReveal)) return VOID_LEVEL_FLAG;
-            if (nHex.structureType === 'VOID') return VOID_LEVEL_FLAG;
-            return nHex.currentLevel ?? 0;
-        });
-
-        let calculatedProgress = 0;
-        if (isRevealed && hex.progress > 0 && !isVoid) {
-            let needed = 30; // fallback
-            const actingEntity = (player && player.q === hq && player.r === hr)
-                ? player
-                : bots?.find((b: any) => b.q === hq && b.r === hr);
-
-            if (actingEntity) {
-                let intent: 'UPGRADE' | 'RECOVER' | 'DIG' | 'TURRET' | null = null;
-                if (actingEntity.type === 'PLAYER') {
-                    intent = playerGrowthIntent || null;
-                } else {
-                    const nextInQueue = actingEntity.movementQueue?.[0];
-                    if (nextInQueue && nextInQueue.intent) {
-                        intent = nextInQueue.intent;
-                    } else if (actingEntity.memory?.plan?.steps?.[0]?.type) {
-                        const stepType = actingEntity.memory.plan.steps[0].type;
-                        if (stepType === 'UPGRADE') intent = 'UPGRADE';
-                        else if (stepType === 'DIG') intent = 'DIG';
-                        else if (stepType === 'RECOVER') intent = 'RECOVER';
-                    }
-                }
-
-                if (intent) {
-                    const activeStatuses = actingEntity.activeStatuses || [];
-                    const hasScannerBuff = activeStatuses.some((s: any) => s.type === 'STATUS_SCANNER_BUFF');
-                    const hasGodMode = activeStatuses.some((s: any) => s.type === 'GOD_MODE');
-                    const growthAccelerator = hasGodMode ? 10 : (hasScannerBuff ? 2 : 0);
-
-                    if (intent === 'RECOVER') {
-                        const config = getLevelConfig(hex.maxLevel);
-                        needed = config.growthTime;
-                    } else if (intent === 'DIG') {
-                        needed = Math.max(10, 30 - (growthAccelerator * 5));
-                    } else if (intent === 'UPGRADE') {
-                        const config = getLevelConfig(hex.currentLevel + 1);
-                        needed = Math.max(10, config.growthTime - (growthAccelerator * 5));
-                    } else if (intent === 'TURRET') {
-                        needed = 40;
-                    }
-                }
-            }
-            calculatedProgress = Math.min(1.0, hex.progress / needed);
-        }
-
-        items.push({
-            type: 'HEX',
-            depth: depth,
-            id: hexId,
-            props: {
-                x: rawX, y: rawY,
-                q: hq, r: hr,
-                id: hexId,
-                offsetY: isRevealed ? offsetY : -10,
-                level: isRevealed ? currentLevel : 0,
-                maxLevel: isRevealed ? hex.maxLevel : 0,
-                structureType: isRevealed ? (hex.structureType as string) : 'NONE',
-                neighborLevels: isRevealed ? neighborLevels : [0,0,0,0,0,0],
-                isSelected: selectedHexId === hexId,
-                isPending: hexId === pendingKey,
-                isOccupied: isRevealed && (isOccupiedByPlayer || botPositions.has(`${hq},${hr}`)),
-                isGrowing: isRevealed && hex.progress > 0 && !isVoid,
-                isRankLocked: isRevealed && currentLevel > player.playerLevel,
-                progress: calculatedProgress,
-                durability: isRevealed ? hex.durability : 0,
-                artifactType: isRevealed ? hex.artifact?.type : undefined,
-                biome: isRevealed ? hex.biome : undefined,
-                poiType: isRevealed ? hex.poiType : undefined,
-                hologramTargetLevel: isRevealed ? hex.hologramTargetLevel : undefined,
-                isPassable: hex.isPassable,
-                isRevealed: isRevealed,
-                opacity: finalOpacity,
-                lighting: finalLighting
-            }
-        });
-    }
-
-    const allEntities = [{ ...player, isPlayer: true }, ...(bots || []).map((b: any) => ({ ...b, isPlayer: false }))];
-    const playerPos = { q: playerQ, r: playerR };
-
-    for (const u of allEntities) {
-        let uOpacity = 1.0;
-        const uQ = u.q;
-        const uR = u.r;
-
-        if (!u.isPlayer) {
-            if (isDefenseMode) {
-                // Find player owned hexes to calculate nearest base distance
-                const playerOwnedHexes = Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore);
-                let minDist = 9999;
-                for (const ph of playerOwnedHexes) {
-                    const d = cubeDistance({ q: ph.q, r: ph.r }, { q: uQ, r: uR });
-                    if (d < minDist) {
-                        minDist = d;
-                    }
-                }
-                if (minDist > 4) {
-                    continue; // Skip rendering/drawing the bot if it's beyond the visibility range!
-                }
-                // Apply fading opacity matching the tile's visibility
-                if (minDist <= 1) {
-                    uOpacity = 1.0;
-                } else if (minDist === 2) {
-                    uOpacity = 0.70;
-                } else if (minDist === 3) {
-                    uOpacity = 0.40;
-                } else if (minDist === 4) {
-                    uOpacity = 0.15;
-                }
-            } else {
-                const uHex = grid[getHexKey(uQ, uR)];
-                const isRevealed = uHex ? uHex.revealed : false;
-                if (!isRevealed) continue;
-
-                const distToPlayer = cubeDistance({ q: uQ, r: uR }, playerPos);
-                if (distToPlayer <= 2) {
-                    uOpacity = 1.0;
-                } else if (distToPlayer === 3) {
-                    uOpacity = 0.85;
-                } else if (distToPlayer === 4) {
-                    uOpacity = 0.65;
-                } else if (distToPlayer === 5) {
-                    uOpacity = 0.45;
-                } else {
-                    uOpacity = 0.30;
-                }
-            }
-        }
-
-        const rawX = HEX_SIZE * (SQRT3 * uQ + SQRT3_2 * uR);
-        const rawY = HEX_SIZE * (ONE_POINT_FIVE * uR);
-        
-        if (camera && dimensions) {
-            const x = rawX * cos - rawY * sin;
-            const y = (rawX * sin + rawY * cos) * 0.8;
-            const screenX = camera.x + x * camera.scale;
-            const screenY = camera.y + y * camera.scale;
-            const margin = HEX_SIZE * 4.0;
-            const scaledMargin = margin * camera.scale;
-            if (
-                screenX < -scaledMargin ||
-                screenX > dimensions.width + scaledMargin ||
-                screenY < -scaledMargin ||
-                screenY > dimensions.height + scaledMargin
-            ) {
-                continue;
-            }
-        }
-
-        const baseDepth = (rawX * sin + rawY * cos) * 0.8;
-        const uHex = grid[getHexKey(uQ, uR)];
-        const hLevel = uHex ? (uHex.currentLevel ?? 0) : 0;
-        const depthBias = 1; 
-
-        items.push({
-            type: 'UNIT',
-            depth: baseDepth + depthBias,
-            id: u.id,
-            props: {
-                id: u.id,
-                q: uQ, r: uR,
-                x: rawX, y: rawY,
-                isPlayer: u.isPlayer,
-                color: u.avatarColor,
-                hexLevel: hLevel,
-                totalCoinsEarned: u.totalCoinsEarned,
-                upgradePointCount: u.recentUpgrades?.length || 0,
-                headIndex: u.headIndex,
-                bodyIndex: u.bodyIndex,
-                opacity: uOpacity,
-                type: u.type
-            }
-        });
-    }
-
-    items.sort((a, b) => {
-        const depthDiff = a.depth - b.depth;
-        if (depthDiff !== 0) return depthDiff;
-        if (a.id < b.id) return -1;
-        if (a.id > b.id) return 1;
-        return 0;
-    });
-
-    return items;
-};
 
 // BASE_POINTS, THEME_PALETTE, and getTheme now come from services/pixiHexRender.ts.
 // getHexVisualHeight is an alias for the shared getHeightOffset (identical implementation).
@@ -708,6 +186,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
     const isCampaign = !!activeLevelConfig;
 
+    const forceReveal = useMemo(() => {
+        return (isCampaign && activeLevelConfig?.mapConfig?.revealMode !== 'fog') || !!isDefenseMode;
+    }, [isCampaign, activeLevelConfig, isDefenseMode]);
+
     const activeRenderItems = useMemo(() => {
         return runLocalRenderCalculation(
             grid,
@@ -720,9 +202,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             dimensions,
             isCampaign,
             playerGrowthIntent,
-            isDefenseMode
+            isDefenseMode,
+            forceReveal
         );
-    }, [grid, player, bots, rotation, pendingKey, selectedHexId, camera, dimensions, isCampaign, playerGrowthIntent, isDefenseMode]);
+    }, [grid, player, bots, rotation, pendingKey, selectedHexId, camera, dimensions, isCampaign, playerGrowthIntent, isDefenseMode, forceReveal]);
 
     // Initialize Pixi Application
     useEffect(() => {
@@ -730,6 +213,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
         const app = new PIXI.Application();
         pixiAppRef.current = app;
+
+        const tickerCallback = tickerCallbackRef.current;
 
         const initPixi = async () => {
             try {
@@ -787,7 +272,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
             // Starts high-frequency visual update tickers
             if (app.ticker) {
-                app.ticker.add(tickerCallbackRef.current);
+                app.ticker.add(tickerCallback);
             }
 
             // Sync with any dimensions change that happened during init
@@ -812,7 +297,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 pixiAppRef.current = null;
                 if (app.ticker) {
                     try {
-                        app.ticker.remove(tickerCallbackRef.current);
+                        app.ticker.remove(tickerCallback);
                     } catch (e) { /* empty */ }
                 }
                 try {
@@ -832,6 +317,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 particlesContainerRef.current = null;
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Window Resize Handler
@@ -920,11 +406,11 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             }
             graphics.stroke();
         }
-    }, [grid, player, isPlayerGrowing, rotation, campaignUpgrades, isPixiReady]);
+    }, [grid, player, isPlayerGrowing, rotation, campaignUpgrades]);
 
     useEffect(() => {
         drawConnections();
-    }, [grid, player, rotation, campaignUpgrades, isPixiReady]);
+    }, [drawConnections, isPixiReady]);
 
     // Renders active floating text effects
     const updateFloatingEffects = useCallback(() => {
@@ -989,74 +475,84 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             const riseDistance = 80;
             const currentRise = progress * riseDistance;
             
-            cached.container.x = basePx;
-            cached.container.y = currentY - currentRise;
+            if (cached.container && !cached.container.destroyed && !(cached.container as any)._destroyed) {
+                try {
+                    cached.container.x = basePx;
+                    cached.container.y = currentY - currentRise;
 
-            // Pops in quickly, then fades away smoothly
-            if (progress < 0.2) {
-                const scale = 0.5 + (progress / 0.2) * 0.5;
-                cached.container.scale.set(scale, scale);
-                cached.container.alpha = 1.0;
-            } else {
-                const fadeProgress = (progress - 0.2) / 0.8;
-                cached.container.alpha = 1.0 - fadeProgress;
-                cached.container.scale.set(1.0 + fadeProgress * 0.2, 1.0 + fadeProgress * 0.2);
+                    // Pops in quickly, then fades away smoothly
+                    if (progress < 0.2) {
+                        const scale = 0.5 + (progress / 0.2) * 0.5;
+                        cached.container.scale.set(scale, scale);
+                        cached.container.alpha = 1.0;
+                    } else {
+                        const fadeProgress = (progress - 0.2) / 0.8;
+                        cached.container.alpha = 1.0 - fadeProgress;
+                        cached.container.scale.set(1.0 + fadeProgress * 0.2, 1.0 + fadeProgress * 0.2);
+                    }
+                } catch (e) {
+                    /* empty */
+                }
             }
 
             // Draw laser beam if this effect has a source coordinate
-            if (cached.laserGraphics && eff.sourceQ !== undefined && eff.sourceR !== undefined) {
-                cached.laserGraphics.clear();
-                
-                const beamLifetime = 800; // Fades faster than floating text
-                if (elapsed < beamLifetime) {
-                    const beamProgress = elapsed / beamLifetime;
-                    const beamAlpha = 1.0 - beamProgress;
+            if (cached.laserGraphics && !cached.laserGraphics.destroyed && !(cached.laserGraphics as any)._destroyed && eff.sourceQ !== undefined && eff.sourceR !== undefined) {
+                try {
+                    cached.laserGraphics.clear();
                     
-                    const gridObj = sessionGrid || { /* empty */ };
-                    
-                    const sourceKey = getHexKey(eff.sourceQ, eff.sourceR);
-                    const sourceHex = gridObj[sourceKey];
-                    const sourceLevel = sourceHex ? (sourceHex.currentLevel ?? 0) : 0;
-                    const sourceZ = getHexVisualHeight(sourceLevel);
-                    
-                    const { x: sBasePx, y: sBasePy } = simpleHexToPixel(eff.sourceQ, eff.sourceR);
-                    const sX = sBasePx;
-                    const sY = sBasePy - sourceZ;
-                    
-                    const targetKey = getHexKey(eff.q, eff.r);
-                    const targetHex = gridObj[targetKey];
-                    const targetLevel = targetHex ? (targetHex.currentLevel ?? 0) : 0;
-                    const targetZ = getHexVisualHeight(targetLevel);
-                    
-                    const { x: tBasePx, y: tBasePy } = simpleHexToPixel(eff.q, eff.r);
-                    const tX = tBasePx;
-                    const tY = tBasePy - targetZ;
-                    
-                    // Main rose glow
-                    cached.laserGraphics.strokeStyle = { width: 4.5 * (1.0 - beamProgress), color: 0xF43F5E, alpha: beamAlpha * 0.75 };
-                    cached.laserGraphics.beginPath();
-                    cached.laserGraphics.moveTo(sX, sY);
-                    cached.laserGraphics.lineTo(tX, tY);
-                    cached.laserGraphics.stroke();
-                    
-                    // Core white beam
-                    cached.laserGraphics.strokeStyle = { width: 1.5 * (1.0 - beamProgress), color: 0xFFFFFF, alpha: beamAlpha * 0.95 };
-                    cached.laserGraphics.beginPath();
-                    cached.laserGraphics.moveTo(sX, sY);
-                    cached.laserGraphics.lineTo(tX, tY);
-                    cached.laserGraphics.stroke();
-                    
-                    // Muzzle flash circle at source turret
-                    cached.laserGraphics.fillStyle = { color: 0xF43F5E, alpha: beamAlpha * 0.9 };
-                    cached.laserGraphics.beginPath();
-                    cached.laserGraphics.circle(sX, sY, 8 * (1.0 - beamProgress));
-                    cached.laserGraphics.fill();
-                    
-                    // Impact burst circle at target bot
-                    cached.laserGraphics.fillStyle = { color: 0xF59E0B, alpha: beamAlpha * 0.9 };
-                    cached.laserGraphics.beginPath();
-                    cached.laserGraphics.circle(tX, tY, 10 * (1.0 - beamProgress));
-                    cached.laserGraphics.fill();
+                    const beamLifetime = 800; // Fades faster than floating text
+                    if (elapsed < beamLifetime) {
+                        const beamProgress = elapsed / beamLifetime;
+                        const beamAlpha = 1.0 - beamProgress;
+                        
+                        const gridObj = sessionGrid || { /* empty */ };
+                        
+                        const sourceKey = getHexKey(eff.sourceQ, eff.sourceR);
+                        const sourceHex = gridObj[sourceKey];
+                        const sourceLevel = sourceHex ? (sourceHex.currentLevel ?? 0) : 0;
+                        const sourceZ = getHexVisualHeight(sourceLevel);
+                        
+                        const { x: sBasePx, y: sBasePy } = simpleHexToPixel(eff.sourceQ, eff.sourceR);
+                        const sX = sBasePx;
+                        const sY = sBasePy - sourceZ;
+                        
+                        const targetKey = getHexKey(eff.q, eff.r);
+                        const targetHex = gridObj[targetKey];
+                        const targetLevel = targetHex ? (targetHex.currentLevel ?? 0) : 0;
+                        const targetZ = getHexVisualHeight(targetLevel);
+                        
+                        const { x: tBasePx, y: tBasePy } = simpleHexToPixel(eff.q, eff.r);
+                        const tX = tBasePx;
+                        const tY = tBasePy - targetZ;
+                        
+                        // Main rose glow
+                        cached.laserGraphics.strokeStyle = { width: 4.5 * (1.0 - beamProgress), color: 0xF43F5E, alpha: beamAlpha * 0.75 };
+                        cached.laserGraphics.beginPath();
+                        cached.laserGraphics.moveTo(sX, sY);
+                        cached.laserGraphics.lineTo(tX, tY);
+                        cached.laserGraphics.stroke();
+                        
+                        // Core white beam
+                        cached.laserGraphics.strokeStyle = { width: 1.5 * (1.0 - beamProgress), color: 0xFFFFFF, alpha: beamAlpha * 0.95 };
+                        cached.laserGraphics.beginPath();
+                        cached.laserGraphics.moveTo(sX, sY);
+                        cached.laserGraphics.lineTo(tX, tY);
+                        cached.laserGraphics.stroke();
+                        
+                        // Muzzle flash circle at source turret
+                        cached.laserGraphics.fillStyle = { color: 0xF43F5E, alpha: beamAlpha * 0.9 };
+                        cached.laserGraphics.beginPath();
+                        cached.laserGraphics.circle(sX, sY, 8 * (1.0 - beamProgress));
+                        cached.laserGraphics.fill();
+                        
+                        // Impact burst circle at target bot
+                        cached.laserGraphics.fillStyle = { color: 0xF59E0B, alpha: beamAlpha * 0.9 };
+                        cached.laserGraphics.beginPath();
+                        cached.laserGraphics.circle(tX, tY, 10 * (1.0 - beamProgress));
+                        cached.laserGraphics.fill();
+                    }
+                } catch (e) {
+                    /* empty */
                 }
             }
         });
@@ -1073,33 +569,40 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 effectCache.current.delete(id);
             }
         }
-    }, [effects, simpleHexToPixel]);
+    }, [effects, simpleHexToPixel, sessionGrid]);
 
     // Renders active dust particles
     const updateDustParticles = useCallback(() => {
         const now = Date.now();
         particlesList.current = particlesList.current.filter(item => {
+            if (!item.graphics || item.graphics.destroyed || (item.graphics as any)._destroyed) {
+                return false;
+            }
             const elapsed = now - item.startTime;
             if (elapsed >= item.duration) {
-                item.graphics.destroy();
+                try { item.graphics.destroy(); } catch (e) { /* empty */ }
                 return false;
             }
 
             const progress = elapsed / item.duration;
-            item.graphics.clear();
+            try {
+                item.graphics.clear();
 
-            item.puffs.forEach(puff => {
-                const cx = puff.vx * elapsed;
-                const cy = puff.vy * elapsed;
-                const radius = puff.radius * (1.0 - progress);
-                const alpha = puff.opacity * (1.0 - progress);
+                item.puffs.forEach(puff => {
+                    const cx = puff.vx * elapsed;
+                    const cy = puff.vy * elapsed;
+                    const radius = puff.radius * (1.0 - progress);
+                    const alpha = puff.opacity * (1.0 - progress);
 
-                item.graphics.beginPath();
-                item.graphics.circle(cx, cy, radius);
-                item.graphics.fill({ color: 0x94a3b8, alpha });
-            });
+                    item.graphics.beginPath();
+                    item.graphics.circle(cx, cy, radius);
+                    item.graphics.fill({ color: 0x94a3b8, alpha });
+                });
 
-            return true;
+                return true;
+            } catch (err) {
+                return false;
+            }
         });
     }, []);
 
@@ -1124,15 +627,22 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
         // Tick and update action particles
         activeActionParticles.current = activeActionParticles.current.filter(p => {
+            if (!p.graphics || p.graphics.destroyed || (p.graphics as any)._destroyed) {
+                return false;
+            }
             p.life -= p.decay;
             if (p.life <= 0) {
                 try { p.graphics.destroy(); } catch (err) { /* empty */ }
                 return false;
             }
-            p.graphics.x += p.vx;
-            p.graphics.y += p.vy;
-            p.graphics.alpha = p.life;
-            return true;
+            try {
+                p.graphics.x += p.vx;
+                p.graphics.y += p.vy;
+                p.graphics.alpha = p.life;
+                return true;
+            } catch (err) {
+                return false;
+            }
         });
 
         // Instant hover outline — toggled every frame so it tracks the cursor live,
@@ -1149,10 +659,15 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         }
 
         // 0. Animate bouncing objective arrows and swing crowns
+        const renderItemMap = new Map<string, any>();
+        activeRenderItems.forEach(item => {
+            renderItemMap.set(item.id, item);
+        });
+
         hexCache.current.forEach((container, hexId) => {
             const objArrow = container.getChildByName('objective_arrow') as PIXI.Container;
             if (objArrow && objArrow.visible) {
-                const hexItem = activeRenderItems.find(item => item.id === hexId);
+                const hexItem = renderItemMap.get(hexId);
                 const faceY = hexItem?.props?.offsetY ?? 0;
                 
                 const nowTime = Date.now();
@@ -3458,182 +2973,17 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         // 4. SORT Z-INDEX DEPTH OF VISIBLE GRAPHICS (Ensure perfect 3D occlusion layering overlays)
         parent.sortChildren();
 
-    }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors, pendingConfirmation, recentGradientLock]);
+    }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors, pendingConfirmation, recentGradientLock, playerGrowthIntent, session, simpleHexToPixel]);
 
-    // Handle Pointer clicks and map page client pixels directly to local grid axial tiles
-    const handleCanvasClick = (e: React.MouseEvent | React.TouchEvent) => {
-        const app = pixiAppRef.current;
-        if (!app || !app.renderer || !app.canvas || !grid) return;
-
-        const rect = app.canvas.getBoundingClientRect();
-        const clientX = 'clientX' in e ? e.clientX : e.touches?.[0]?.clientX;
-        const clientY = 'clientY' in e ? e.clientY : e.touches?.[0]?.clientY;
-
-        if (clientX === undefined || clientY === undefined) return;
-
-        const canvasX = clientX - rect.left;
-        const canvasY = clientY - rect.top;
-
-        const cam = camera || { x: 0, y: 0, scale: 1 };
-        const rx = (canvasX - cam.x) / cam.scale;
-        const ry = (canvasY - cam.y) / cam.scale;
-
-        // Un-project unrotated grid bounds
-        const angleRad = -rotation * (Math.PI / 180);
-        const uCos = Math.cos(angleRad);
-        const uSin = Math.sin(angleRad);
-        const unscaledY = ry / 0.8;
-        const rawX = rx * uCos - unscaledY * uSin;
-        const rawY = rx * uSin + unscaledY * uCos;
-
-        const fracR = rawY / (1.5 * HEX_SIZE);
-        const fracQ = rawX / (Math.sqrt(3) * HEX_SIZE) - fracR / 2;
-
-        // Axial rounding
-        const fracS = -fracQ - fracR;
-        let q = Math.round(fracQ);
-        let r = Math.round(fracR);
-        const s = Math.round(fracS);
-        const qDiff = Math.abs(q - fracQ);
-        const rDiff = Math.abs(r - fracR);
-        const sDiff = Math.abs(s - fracS);
-
-        if (qDiff > rDiff && qDiff > sDiff) {
-            q = -r - s;
-        } else if (rDiff > sDiff) {
-            r = -q - s;
-        }
-
-        // Scan Neighbors circle search for correct elevation heights
-        let bestHexKey: string | null = null;
-        let bestDist = Infinity;
-
-        for (let dq = -4; dq <= 4; dq++) {
-            for (let dr = Math.max(-4, -4 - dq); dr <= Math.min(4, 4 - dq); dr++) {
-                const hKey = getHexKey(q + dq, r + dr);
-                const cand = grid[hKey];
-                if (!cand) continue;
-
-                const forceReveal = (!!activeLevelConfig && activeLevelConfig.mapConfig?.revealMode !== 'fog') || !!useGameStore.getState().session?.defense?.isDefenseMode;
-                const isRevealed = !!cand.revealed || forceReveal;
-                if (!isRevealed) continue;
-
-                const rawXCenter = HEX_SIZE * (Math.sqrt(3) * cand.q + (Math.sqrt(3) / 2) * cand.r);
-                const rawYCenter = HEX_SIZE * (1.5 * cand.r);
-                const rAngleRad = rotation * (Math.PI / 180);
-                const cosC = Math.cos(rAngleRad);
-                const sinC = Math.sin(rAngleRad);
-
-                const px = rawXCenter * cosC - rawYCenter * sinC;
-                const isVoid = cand.structureType === 'VOID';
-                const offsetY = isVoid ? -10 : getHexVisualHeight(cand.currentLevel);
-                const py = (rawXCenter * sinC + rawYCenter * cosC) * 0.8 + offsetY;
-
-                const dist = Math.hypot(px - rx, py - ry);
-                if (dist < bestDist && dist < HEX_SIZE * 2.2) {
-                    bestDist = dist;
-                    bestHexKey = hKey;
-                }
-            }
-        }
-
-        if (bestHexKey && grid[bestHexKey]) {
-            const finalHex = grid[bestHexKey];
-            // A real hex was hit: stop the click bubbling to the stage container's
-            // onClick (handleStageClick -> cancelPendingAction). Otherwise the same
-            // click that creates the coin-move confirmation immediately cancels it,
-            // so a second tap can never confirm (coins never spent). Clicks on empty
-            // space still bubble up and cancel the pending action, as intended.
-            e.stopPropagation();
-            onHexClick(finalHex.q, finalHex.r);
-        }
-    };
-
-    // Tracks Pointer-moves to highlight hover states
-    const handleCanvasMouseMove = (e: React.MouseEvent) => {
-        const app = pixiAppRef.current;
-        if (!app || !app.renderer || !app.canvas || !grid) return;
-
-        const rect = app.canvas.getBoundingClientRect();
-        const canvasX = e.clientX - rect.left;
-        const canvasY = e.clientY - rect.top;
-
-        const cam = camera || { x: 0, y: 0, scale: 1 };
-        const rx = (canvasX - cam.x) / cam.scale;
-        const ry = (canvasY - cam.y) / cam.scale;
-
-        const angleRad = -rotation * (Math.PI / 180);
-        const uCos = Math.cos(angleRad);
-        const uSin = Math.sin(angleRad);
-        const unscaledY = ry / 0.8;
-        const rawX = rx * uCos - unscaledY * uSin;
-        const rawY = rx * uSin + unscaledY * uCos;
-
-        const fracR = rawY / (1.5 * HEX_SIZE);
-        const fracQ = rawX / (Math.sqrt(3) * HEX_SIZE) - fracR / 2;
-
-        const fracS = -fracQ - fracR;
-        let q = Math.round(fracQ);
-        let r = Math.round(fracR);
-        const s = Math.round(fracS);
-        const qDiff = Math.abs(q - fracQ);
-        const rDiff = Math.abs(r - fracR);
-        const sDiff = Math.abs(s - fracS);
-
-        if (qDiff > rDiff && qDiff > sDiff) {
-            q = -r - s;
-        } else if (rDiff > sDiff) {
-            r = -q - s;
-        }
-
-        let bestHexKey: string | null = null;
-        let bestDist = Infinity;
-
-        for (let dq = -4; dq <= 4; dq++) {
-            for (let dr = Math.max(-4, -4 - dq); dr <= Math.min(4, 4 - dq); dr++) {
-                const hKey = getHexKey(q + dq, r + dr);
-                const cand = grid[hKey];
-                if (!cand) continue;
-
-                const forceReveal = (!!activeLevelConfig && activeLevelConfig.mapConfig?.revealMode !== 'fog') || !!useGameStore.getState().session?.defense?.isDefenseMode;
-                const isRevealed = !!cand.revealed || forceReveal;
-                if (!isRevealed) continue;
-
-                const rawXCenter = HEX_SIZE * (Math.sqrt(3) * cand.q + (Math.sqrt(3) / 2) * cand.r);
-                const rawYCenter = HEX_SIZE * (1.5 * cand.r);
-                const rAngleRad = rotation * (Math.PI / 180);
-                const cosC = Math.cos(rAngleRad);
-                const sinC = Math.sin(rAngleRad);
-
-                const px = rawXCenter * cosC - rawYCenter * sinC;
-                const isVoid = cand.structureType === 'VOID';
-                const offsetY = isVoid ? -10 : getHexVisualHeight(cand.currentLevel);
-                const py = (rawXCenter * sinC + rawYCenter * cosC) * 0.8 + offsetY;
-
-                const dist = Math.hypot(px - rx, py - ry);
-                if (dist < bestDist && dist < HEX_SIZE * 2.2) {
-                    bestDist = dist;
-                    bestHexKey = hKey;
-                }
-            }
-        }
-
-        if (bestHexKey) {
-            if (useEphemeralStore.getState().hoveredHexId !== bestHexKey) {
-                onHover(bestHexKey);
-            }
-        } else {
-            if (useEphemeralStore.getState().hoveredHexId !== null) {
-                onHover(null);
-            }
-        }
-    };
-
-    const handleCanvasMouseLeave = () => {
-        if (useEphemeralStore.getState().hoveredHexId !== null) {
-            onHover(null);
-        }
-    };
+    const { handleCanvasClick, handleCanvasMouseMove, handleCanvasMouseLeave } = useMapInput({
+        grid,
+        rotation,
+        activeLevelConfig,
+        camera,
+        onHexClick,
+        onHover,
+        pixiAppRef,
+    });
 
     // Dispatch real-time screen coordinates of player to onboarding tutorials
     useEffect(() => {

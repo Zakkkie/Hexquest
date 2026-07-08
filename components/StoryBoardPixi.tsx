@@ -307,6 +307,10 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
         const app = new PIXI.Application();
         appRef.current = app;
 
+        const tickerCallback = tickerCallbackRef.current;
+        const cache = cellCache;
+        const states = animStates;
+
         const initPixi = async () => {
             try {
                 await app.init({
@@ -359,7 +363,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             world.y = cameraRef.current.y;
             world.scale.set(cameraRef.current.scale, cameraRef.current.scale);
 
-            app.ticker.add(tickerCallbackRef.current);
+            app.ticker.add(tickerCallback);
 
             if (app.renderer) {
                 app.renderer.resize(dimsRef.current.width, dimsRef.current.height);
@@ -375,7 +379,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             if (appRef.current === app) {
                 appRef.current = null;
                 if (app.ticker) {
-                    try { app.ticker.remove(tickerCallbackRef.current); } catch (e) { /* empty */ }
+                    try { app.ticker.remove(tickerCallback); } catch (e) { /* empty */ }
                 }
                 try {
                     app.destroy(true, { children: true });
@@ -390,8 +394,8 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 bgRef.current = null;
                 nebulaRef.current = null;
                 vignetteRef.current = null;
-                cellCache.current.clear();
-                animStates.current.clear();
+                cache.current.clear();
+                states.current.clear();
             }
         };
          
@@ -432,6 +436,8 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
         const contrast = contrastRef.current;
         const figIndex = figureIndexRef.current;
         const active = new Set<string>();
+
+        const hasAnyPlaceable = list.some(cell => cell.canPlaceHex);
 
         list.forEach(cell => {
             const { key, q, r, lvl, blueprintLevel, isEligible, isCenterInitially, canPlaceHex } = cell;
@@ -936,6 +942,9 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             let st = animStates.current.get(key);
             if (!st) { st = { /* empty */ }; animStates.current.set(key, st); }
 
+            const targetAlpha = (hasAnyPlaceable && !canPlaceHex) ? 0.35 : 1.0;
+            (container as any).targetAlpha = targetAlpha;
+
             if (isNew) {
                 if (st.spawnT === undefined) st.spawnT = 0;
                 if (st.rippleT === undefined) st.rippleT = 0;
@@ -944,7 +953,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 st.rippleT = undefined;
                 // ensure resting position/opacity
                 container.y = px.y;
-                container.alpha = 1;
+                container.alpha = targetAlpha;
             }
 
             if (isFlaring) {
@@ -1061,10 +1070,11 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 const e = backOut(st.spawnT);
                 container.y = (px.y - 60) + 60 * e;
                 // Konva tweens opacity with the same BackEaseOut curve (clamped 0..1).
-                container.alpha = e < 0 ? 0 : Math.min(1, e);
+                const targetAlpha = (container as any).targetAlpha ?? 1.0;
+                container.alpha = e < 0 ? 0 : Math.min(targetAlpha, e * targetAlpha);
                 if (st.spawnT >= 1) {
                     container.y = px.y;
-                    container.alpha = 1;
+                    container.alpha = targetAlpha;
                     st.spawnT = undefined;
                 }
             }
