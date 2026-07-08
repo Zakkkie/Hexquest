@@ -39,6 +39,11 @@ export class AiSystem implements System {
     const isCampaign = !!state.activeLevelConfig;
     let interval = (!isCampaign && bot.playerLevel < 3) ? baseInterval * 2 : baseInterval;
     
+    // RICH_VEINS mutator makes bots 30% faster
+    if (state.winCondition?.mutatorType === 'RICH_VEINS') {
+        interval = interval * 0.7;
+    }
+
     // Apply role-based modifiers
     if (bot.memory?.botRole === 'SIEGE_RUNNER') {
         interval = interval * 0.3; // 3x Faster action rate

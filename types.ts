@@ -328,6 +328,10 @@ export interface WinCondition {
   isTutorial?: boolean;
   initialStorage?: number; 
   mapType?: 'FLAT' | 'CHAOTIC'; 
+  startingArtifactId?: string;
+  startingCreditsBonus?: number;
+  startingMovesBonus?: number;
+  mutatorType?: 'NONE' | 'SUDDEN_DEATH' | 'RICH_VEINS' | 'FRAGILE_GROUND' | 'NANO_STORM';
 }
 
 export interface LeaderboardEntry {

@@ -78,7 +78,10 @@ export const calculateMovementCost = (
         // Terrain Cost Logic
         // Positive High Ground (>1): Costs height.
         // Flat (0, 1) or Negative (<0): Costs 1.
-        const stepCost = hasVoidCore ? 1 : ((nextHex?.currentLevel ?? 0) > 1 ? (nextHex?.currentLevel ?? 0) : 1);
+        let stepCost = hasVoidCore ? 1 : ((nextHex?.currentLevel ?? 0) > 1 ? (nextHex?.currentLevel ?? 0) : 1);
+        if (session && session.winCondition && session.winCondition.mutatorType === 'NANO_STORM') {
+            stepCost += 1;
+        }
         
         totalPoints += stepCost;
         

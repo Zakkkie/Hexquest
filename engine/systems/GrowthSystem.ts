@@ -363,11 +363,17 @@ export class GrowthSystem implements System {
                      if (loot.type !== 'NONE') {
                          
                          if (loot.type === 'COIN') {
-                             entity.coins += loot.amount;
-                             entity.totalCoinsEarned += loot.amount;
-                             const lootMsg = `FOUND: ${loot.amount} Coins!`;
+                             let finalAmount = loot.amount;
+                             if (state.winCondition?.mutatorType === 'SUDDEN_DEATH') {
+                                 finalAmount = Math.round(finalAmount * 1.5);
+                             } else if (state.winCondition?.mutatorType === 'RICH_VEINS') {
+                                 finalAmount = finalAmount * 2;
+                             }
+                             entity.coins += finalAmount;
+                             entity.totalCoinsEarned += finalAmount;
+                             const lootMsg = `FOUND: ${finalAmount} Coins!`;
                              state.messageLog.unshift({ id: `loot-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
-                             events.push(GameEventFactory.create('RECOVERY_USED', lootMsg, entity.id, { coins: loot.amount })); 
+                             events.push(GameEventFactory.create('RECOVERY_USED', lootMsg, entity.id, { coins: finalAmount })); 
                          } else if (loot.type === 'ITEM') {
                              if (!entity.inventory) entity.inventory = [];
                              
@@ -450,7 +456,7 @@ export class GrowthSystem implements System {
         
         // STATUS CHECK: FREE BUILD
         // If Free Build active, ignore "NEED MATERIAL" reason
-        const hasFreeBuild = this.hasStatus(entity, 'STATUS_FREE_BUILD');
+        const hasFreeBuild = this.hasStatus(entity, 'STATUS_FREE_BUILD') || state.winCondition?.mutatorType === 'NANO_STORM';
         let canGrow = condition.canGrow;
         if (!canGrow && hasFreeBuild && condition.reason?.includes("NEED MATERIAL")) {
             canGrow = true;
@@ -530,7 +536,11 @@ export class GrowthSystem implements System {
           entity.moves += 1;
 
           // --- ENTROPY COST ---
-          const baseEntropyCost = targetLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(targetLevel));
+          let baseCostMultiplier = 1;
+          if (state.winCondition?.mutatorType === 'SUDDEN_DEATH') {
+              baseCostMultiplier = 2;
+          }
+          const baseEntropyCost = (targetLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(targetLevel))) * baseCostMultiplier;
           const { entropyResistance } = getStatusModifiers(entity, state);
           const entropyCost = Math.max(0, baseEntropyCost * (1 - entropyResistance));
           
@@ -607,7 +617,7 @@ export class GrowthSystem implements System {
 
     // === BRANCH 4: TURRET PLACEMENT ACTION (Timed) ===
     if (effectiveIntent === 'TURRET') {
-        const hasFreeBuild = this.hasStatus(entity, 'STATUS_FREE_BUILD');
+        const hasFreeBuild = this.hasStatus(entity, 'STATUS_FREE_BUILD') || state.winCondition?.mutatorType === 'NANO_STORM';
         
         // 1. Initial Validation
         let canBuild = true;

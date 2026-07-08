@@ -120,14 +120,18 @@ export class ActionProcessor {
       const hasEntropyInversion = actor.activeStatuses?.some(s => s.type === 'STATUS_ENTROPY_INVERSION' && (!s.expiresAt || s.expiresAt > now));
 
       if (state.entropy.current > 0 || hasEntropyInversion) {
-          let entropyCost = ENTROPY_CONFIG.COST_ACTION_BASE;
+          let baseCost = ENTROPY_CONFIG.COST_ACTION_BASE;
+          if (state.winCondition?.mutatorType === 'SUDDEN_DEATH') {
+              baseCost *= 2;
+          }
+          let entropyCost = baseCost;
           
           // Iterate path to detect negative levels and increase tax
           for (const step of action.path) {
               const hex = state.grid[getHexKey(step.q, step.r)];
               if (hex && hex.currentLevel < 0) {
                   // Double the entropy impact for stepping on negative hexes
-                  entropyCost += ENTROPY_CONFIG.COST_ACTION_BASE;
+                  entropyCost += baseCost;
               }
           }
           

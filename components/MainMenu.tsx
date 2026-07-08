@@ -514,6 +514,10 @@ const MainMenu: React.FC = () => {
   const [botCount, setBotCount] = useState<number>(1);
   const [storageCap, setStorageCap] = useState<number>(4); 
   const [mapType, setMapType] = useState<'FLAT' | 'CHAOTIC'>('FLAT');
+  const [startingArtifactId, setStartingArtifactId] = useState<string>('NONE');
+  const [startingCreditsBonus, setStartingCreditsBonus] = useState<number>(0);
+  const [startingMovesBonus, setStartingMovesBonus] = useState<number>(0);
+  const [mutatorType, setMutatorType] = useState<'NONE' | 'SUDDEN_DEATH' | 'RICH_VEINS' | 'FRAGILE_GROUND' | 'NANO_STORM'>('NONE');
 
   const t = TEXT[language].MENU;
   
@@ -580,7 +584,7 @@ const MainMenu: React.FC = () => {
     }
   };
 
-  const randomizeConfig = () => {
+   const randomizeConfig = () => {
       playUiSound('CLICK');
       const rTier = (Math.floor(Math.random() * 3) + 1) as 1|2|3;
       const diffs: Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
@@ -589,11 +593,27 @@ const MainMenu: React.FC = () => {
       const rStor = Math.floor(Math.random() * 4) + 3;
       const rMap = Math.random() > 0.5 ? 'CHAOTIC' : 'FLAT';
 
+      const artifacts = ['NONE', 'fuel_cell', 'data_disc', 'raw_container', 'reality_patch', 'void_core', 'architect_nanites'];
+      const rArt = artifacts[Math.floor(Math.random() * artifacts.length)];
+
+      const creditsBonuses = [0, 20, 50, 100];
+      const rCredits = creditsBonuses[Math.floor(Math.random() * creditsBonuses.length)];
+
+      const movesBonuses = [0, 5, 10, 20];
+      const rMoves = movesBonuses[Math.floor(Math.random() * movesBonuses.length)];
+
+      const mutators: ('NONE' | 'SUDDEN_DEATH' | 'RICH_VEINS' | 'FRAGILE_GROUND' | 'NANO_STORM')[] = ['NONE', 'SUDDEN_DEATH', 'RICH_VEINS', 'FRAGILE_GROUND', 'NANO_STORM'];
+      const rMutator = mutators[Math.floor(Math.random() * mutators.length)];
+
       setSelectedTier(rTier);
       setDifficulty(rDiff);
       setBotCount(rBots);
       setStorageCap(rStor);
       setMapType(rMap);
+      setStartingArtifactId(rArt);
+      setStartingCreditsBonus(rCredits);
+      setStartingMovesBonus(rMoves);
+      setMutatorType(rMutator);
   };
 
   const confirmMissionStart = () => {
@@ -609,7 +629,11 @@ const MainMenu: React.FC = () => {
       queueSize: DIFFICULTY_SETTINGS[difficulty].queueSize,
       winType: 'SUMMIT',
       initialStorage: storageCap,
-      mapType: mapType
+      mapType: mapType,
+      startingArtifactId: startingArtifactId !== 'NONE' ? startingArtifactId : undefined,
+      startingCreditsBonus: startingCreditsBonus > 0 ? startingCreditsBonus : undefined,
+      startingMovesBonus: startingMovesBonus > 0 ? startingMovesBonus : undefined,
+      mutatorType: mutatorType !== 'NONE' ? mutatorType : undefined
     };
     
     startNewGame(winCondition);
@@ -1474,6 +1498,144 @@ const MainMenu: React.FC = () => {
                               >
                                   <Plus className="w-3 sm:w-4 h-3 sm:h-4" />
                               </motion.button>
+                          </div>
+                      </div>
+
+                      {/* STARTING ARTIFACT & BONUSES SECTION */}
+                      <div className="col-span-1 sm:col-span-2 border-t border-white/5 pt-4">
+                          <h3 className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+                              <Cpu className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-indigo-400" />
+                              {language === 'RU' ? 'ДЕСАНТНЫЕ СРЕДСТВА И СНАРЯЖЕНИЕ' : 'PRE-MISSION DEPLOYMENT & GEAR'}
+                          </h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Starting Gear (Artifacts) */}
+                              <div className="bg-white/2 border border-white/5 hover:border-indigo-500/15 rounded-xl p-3 sm:p-4 transition-all">
+                                  <span className="text-[8px] sm:text-[9.5px] font-black text-slate-300 uppercase tracking-widest block mb-2">
+                                      {language === 'RU' ? 'НАЧАЛЬНЫЙ АРТЕФАКТ' : 'STARTING ARTIFACT'}
+                                  </span>
+                                  <div className="grid grid-cols-4 gap-1.5">
+                                      {[
+                                          { id: 'NONE', label: language === 'RU' ? 'Нет' : 'None' },
+                                          { id: 'fuel_cell', label: language === 'RU' ? 'Топливо' : 'Fuel Cell' },
+                                          { id: 'data_disc', label: language === 'RU' ? 'Диск' : 'Data Disc' },
+                                          { id: 'raw_container', label: language === 'RU' ? 'Ящик' : 'Container' },
+                                          { id: 'reality_patch', label: language === 'RU' ? 'Патч' : 'Patch' },
+                                          { id: 'void_core', label: language === 'RU' ? 'Ядро' : 'Void Core' },
+                                          { id: 'architect_nanites', label: language === 'RU' ? 'Наниты' : 'Nanites' }
+                                      ].map(art => {
+                                          const isSelected = startingArtifactId === art.id;
+                                          return (
+                                              <button
+                                                  key={art.id}
+                                                  onClick={() => { setStartingArtifactId(art.id); playUiSound('CLICK'); }}
+                                                  className={`py-1.5 px-1 rounded-lg text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
+                                                      isSelected 
+                                                          ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-[0_0_10px_rgba(99,102,241,0.25)]' 
+                                                          : 'bg-black/30 border-white/5 text-slate-400 hover:border-white/10 hover:bg-black/40'
+                                                  }`}
+                                              >
+                                                  {art.label}
+                                              </button>
+                                          );
+                                      })}
+                                  </div>
+                                  <p className="text-[7.5px] sm:text-[9px] text-indigo-300 font-mono mt-2 uppercase tracking-wide min-h-[24px]">
+                                      {startingArtifactId === 'NONE' && (language === 'RU' ? 'Без снаряжения' : 'Begin the simulation without initial gear.')}
+                                      {startingArtifactId === 'fuel_cell' && (language === 'RU' ? '+3 Хода на старте | Штраф -15 Кредитов (в ущерб балансу)' : 'Spent Fuel Cell: +3 starting Moves, penalizes initial credits by -15')}
+                                      {startingArtifactId === 'data_disc' && (language === 'RU' ? '+15 Кредитов | Аннулирует и сжигает весь стартовый материал' : 'Fragmented Data Disc: +15 starting Credits, obliterates starting materials')}
+                                      {startingArtifactId === 'raw_container' && (language === 'RU' ? '+2 Материала | Отнимает -3 Хода на старте' : 'Raw Container: +2 starting Materials, costs -3 starting Moves')}
+                                      {startingArtifactId === 'reality_patch' && (language === 'RU' ? '+3% Стабильности щита | Штраф -10 Кредитов' : 'Reality Patch: +3% stability, costs -10 initial credits')}
+                                      {startingArtifactId === 'void_core' && (language === 'RU' ? 'Шунт гравитации: Свободный шаг сквозь стены и крутые уступы за 1 ход' : 'Void Core: Shunts gravity, enabling step movement through walls and cliffs')}
+                                      {startingArtifactId === 'architect_nanites' && (language === 'RU' ? 'Наниты: Позволяют строить БЕСПЛАТНО, но урезают доход на 100%' : 'Architect Nanites: Free tile upgrades, penalizes passive credits gain by 100%')}
+                                  </p>
+                              </div>
+
+                              {/* Starting Resource Bonuses */}
+                              <div className="bg-white/2 border border-white/5 rounded-xl p-3 sm:p-4 flex flex-col justify-between">
+                                  <div>
+                                      <span className="text-[8px] sm:text-[9.5px] font-black text-slate-300 uppercase tracking-widest block mb-1.5">
+                                          {language === 'RU' ? 'НАЧАЛЬНЫЕ СУБСИДИИ (КРЕДИТЫ)' : 'STARTING CREDIT ALLOCATIONS'}
+                                      </span>
+                                      <div className="flex gap-1 mb-3">
+                                          {[0, 20, 50, 100].map(val => (
+                                              <button
+                                                  key={val}
+                                                  onClick={() => { setStartingCreditsBonus(val); playUiSound('CLICK'); }}
+                                                  className={`flex-1 py-1 rounded-lg text-[8.5px] sm:text-[10px] font-mono font-black border cursor-pointer ${
+                                                      startingCreditsBonus === val 
+                                                          ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.2)]' 
+                                                          : 'bg-black/30 border-white/5 text-slate-500 hover:text-slate-300'
+                                                  }`}
+                                              >
+                                                  +{val} Cr
+                                              </button>
+                                          ))}
+                                      </div>
+
+                                      <span className="text-[8px] sm:text-[9.5px] font-black text-slate-300 uppercase tracking-widest block mb-1.5">
+                                          {language === 'RU' ? 'АВАРИЙНЫЕ ЭНЕРГО-РЕЗЕРВЫ (ХОДЫ)' : 'EMERGENCY ENERGY ALLOCATIONS'}
+                                      </span>
+                                      <div className="flex gap-1">
+                                          {[0, 5, 10, 20].map(val => (
+                                              <button
+                                                  key={val}
+                                                  onClick={() => { setStartingMovesBonus(val); playUiSound('CLICK'); }}
+                                                  className={`flex-1 py-1 rounded-lg text-[8.5px] sm:text-[10px] font-mono font-black border cursor-pointer ${
+                                                      startingMovesBonus === val 
+                                                          ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.2)]' 
+                                                          : 'bg-black/30 border-white/5 text-slate-500 hover:text-slate-300'
+                                                  }`}
+                                              >
+                                                  +{val} Mvs
+                                              </button>
+                                          ))}
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+
+                      {/* ANOMALY MUTATOR SELECTION */}
+                      <div className="col-span-1 sm:col-span-2 border-t border-white/5 pt-4">
+                          <h3 className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+                              <Compass className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-cyan-400" />
+                              {language === 'RU' ? 'АКТИВНЫЙ АНОМАЛЬНЫЙ МУТАТОР' : 'ACTIVE SECTOR ANOMALY MUTATOR'}
+                          </h3>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                              {[
+                                  { id: 'NONE', label: language === 'RU' ? 'Стандарт' : 'Standard' },
+                                  { id: 'SUDDEN_DEATH', label: language === 'RU' ? 'Внез. Смерть' : 'Sudden Death' },
+                                  { id: 'RICH_VEINS', label: language === 'RU' ? 'Бог. Жилы' : 'Rich Veins' },
+                                  { id: 'FRAGILE_GROUND', label: language === 'RU' ? 'Хрупкий Пол' : 'Fragile Ground' },
+                                  { id: 'NANO_STORM', label: language === 'RU' ? 'Нано-Шторм' : 'Nano-Storm' }
+                              ].map(mut => {
+                                  const isSelected = mutatorType === mut.id;
+                                  return (
+                                      <button
+                                          key={mut.id}
+                                          onClick={() => { setMutatorType(mut.id as any); playUiSound('CLICK'); }}
+                                          className={`py-2 px-1.5 rounded-xl text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider transition-all border flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                                              isSelected 
+                                                  ? 'bg-indigo-500/15 border-indigo-400 text-white shadow-lg' 
+                                                  : 'bg-white/5 border-white/5 text-slate-400 hover:border-white/10 hover:bg-white/8'
+                                          }`}
+                                      >
+                                          <span className={`font-black ${isSelected ? 'text-white' : ''}`}>{mut.label}</span>
+                                      </button>
+                                  );
+                              })}
+                          </div>
+
+                          <div className="mt-2.5 bg-black/40 border border-white/5 rounded-xl p-2.5">
+                              <p className="text-[7.5px] sm:text-[9.5px] text-slate-400 font-mono uppercase tracking-wide leading-relaxed">
+                                  {mutatorType === 'NONE' && (language === 'RU' ? 'Нет активных аномальных эффектов. Чистая симуляция по умолчанию.' : 'No active anomaly effects. Baseline environment.')}
+                                  {mutatorType === 'SUDDEN_DEATH' && (language === 'RU' ? 'ВНЕЗАПНАЯ СМЕРТЬ: Все действия (DIG/UPGRADE/RECOVER) вызывают ДВОЙНОЙ износ стабильности сектора (2x Entropy), но Кредиты при глубокой добыче (L < 0) увеличены на +50%!' : 'SUDDEN DEATH: All actions incur 2x higher Entropy impact on sector stability, but Deep Mined coins (L < 0) are boosted by +50%!')}
+                                  {mutatorType === 'RICH_VEINS' && (language === 'RU' ? 'БОГАТЫЕ ЖИЛЫ: Все глубинные руды и жилы удваивают денежные выплаты за добычу, но ИИ-боты ускорены на 30%!' : 'RICH VEINS: Double coins from all mineral veins, but rival bots make actions 30% faster!')}
+                                  {mutatorType === 'FRAGILE_GROUND' && (language === 'RU' ? 'ХРУПКИЙ ГРУНТ: Опорная прочность треснутых плит L1 снижена ВДВОЕ (3 шага до обрушения вместо 6)! Остерегайтесь бездны.' : 'FRAGILE GROUND: Cracked tiles L1 have half of their structural durability (3 steps to collapse instead of 6). Walk with care!')}
+                                  {mutatorType === 'NANO_STORM' && (language === 'RU' ? 'НАНО-ШТОРМ: Стоимость шагов на любых плитах повышена на +1 Ход, но нанотехнологическая буря делает UPGRADE абсолютно БЕСПЛАТНЫМ!' : 'NANO-STORM: Moves step cost increased by +1 on all levels, but Nanite Free Build is active for all entities!')}
+                              </p>
                           </div>
                       </div>
 

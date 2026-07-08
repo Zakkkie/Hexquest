@@ -129,6 +129,14 @@ export const createInitialSessionData = async (
   // Apply Overworld Equipment Bonuses & Campaign Upgrades
   let startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;
   let startMoves = levelConfig ? levelConfig.startState.moves : GAME_CONFIG.INITIAL_MOVES;
+  
+  if (winCondition?.startingCreditsBonus) {
+      startCredits += winCondition.startingCreditsBonus;
+  }
+  if (winCondition?.startingMovesBonus) {
+      startMoves += winCondition.startingMovesBonus;
+  }
+
   const startRank = levelConfig ? levelConfig.startState.rank : 1;
   let startStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0;
 
@@ -170,6 +178,28 @@ export const createInitialSessionData = async (
 
   // Generate Starting Inventory
   const initialInventory: Item[] = [];
+  if (winCondition?.startingArtifactId) {
+      const def = getItemDef(winCondition.startingArtifactId);
+      if (def) {
+          initialInventory.push({
+              id: `${winCondition.startingArtifactId}-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
+              baseId: def.idPrefix,
+              rarity: def.rarity,
+              name: def.name[language],
+              description: def.description[language],
+              timestamp: Date.now(),
+              visualType: def.visualType,
+              effectType: def.effectType,
+              effectValue: def.effectValue,
+              effectDescription: def.effectLabel[language],
+              effectDuration: def.effectDuration,
+              negativeEffectType: def.negativeEffectType,
+              negativeEffectValue: def.negativeEffectValue,
+              negativeEffectLabel: def.negativeEffectLabel[language],
+              negativeEffectDuration: def.negativeEffectDuration
+          });
+      }
+  }
   if (levelConfig && levelConfig.startState.startInventory) {
       levelConfig.startState.startInventory.forEach(baseId => {
           const def = getItemDef(baseId);
