@@ -211,7 +211,7 @@ export const series1Levels: LevelConfig[] = [
       { q: -4, r: -1, targetLevel: 3, label: 'L3 Ridge', color: 'amber' },
       { q: -8, r: 0, targetLevel: 1, label: 'Capital', color: 'emerald' },
     ],
-    startState: { credits: 0, moves: 40, rank: 10, materials: 0, initialEntropy: 100 },
+    startState: { credits: 0, moves: 40, rank: 7, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
@@ -365,10 +365,78 @@ export const series1Levels: LevelConfig[] = [
     }
   },
 
-  // 1.3: Архитектура Опор / Support Architecture
+  // 1.3: Съем энергии и Реакторы / Recovery Energy & Reactors
   {
     id: '1.3',
-    title: 'Sim 1.3: Архитектура Опор',
+    title: 'Sim 1.3: Потоки Энергии',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Научитесь собирать энергию с реакторов и накопите необходимые кредиты. Следуйте указаниям навигационного модуля и берегите ресурсы.',
+    goalText: 'Накопите требуемые кредиты',
+    mapConfig: {
+      size: 3,
+      type: 'fixed',
+      customLayout: [
+        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Reactor L1
+        { q: 1, r: -1, currentLevel: 0, maxLevel: 0, revealed: true }, // Buffer L0
+        { q: -1, r: 1, currentLevel: 0, maxLevel: 0, revealed: true }, // Buffer L0
+        { q: 2, r: -2, currentLevel: -1, maxLevel: -1, revealed: true }, // Slide L-1
+        { q: -2, r: 2, currentLevel: -1, maxLevel: -1, revealed: true }, // Slide L-1
+        { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: -1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 2, r: 0, currentLevel: -1, maxLevel: -1, revealed: true },
+        { q: -2, r: 0, currentLevel: -1, maxLevel: -1, revealed: true },
+        { q: 0, r: -2, currentLevel: -1, maxLevel: -1, revealed: true },
+        { q: 0, r: 2, currentLevel: -1, maxLevel: -1, revealed: true },
+      ]
+    },
+    objectiveHexes: [
+      { q: 0, r: 0, targetLevel: 1, label: 'Reactor', color: 'blue' },
+      { q: 1, r: -1, targetLevel: 0, label: 'L0', color: 'blue' },
+      { q: -1, r: 1, targetLevel: 0, label: 'L0', color: 'blue' },
+      { q: 2, r: -2, targetLevel: -1, label: 'L-1', color: 'blue' },
+      { q: -2, r: 2, targetLevel: -1, label: 'L-1', color: 'blue' },
+    ],
+    startState: { credits: 0, moves: 12, rank: 1, materials: 0, initialEntropy: 100 },
+    aiMode: 'none',
+    getTutorialHint: (state) => {
+      const isRu = state.language === 'RU';
+      const credits = state.player.coins;
+      const reactor = state.grid['0,0'];
+      
+      if (credits >= 15) {
+        return isRu ? "ПОБЕДА: Лимит набран!" : "VICTORY: Quota satisfied!";
+      }
+      
+      if (state.player.q === 0 && state.player.r === 0) {
+        if (reactor?.recoveryCharges && reactor.recoveryCharges > 0) {
+          return isRu
+            ? `СБОР ЭНЕРГИИ: Жми ВОССТАНОВИТЬ (Синяя кнопка) 3 раза! Заряды: ${reactor.recoveryCharges}/3`
+            : `RECOVER: Press RECOVER (Blue button) 3 times! Charges: ${reactor.recoveryCharges}/3`;
+        }
+        return isRu
+          ? "ИДИ НА УКАЗАТЕЛЬ: Реактор остывает! Покинь Центр и сними энергию на плитах ниже!"
+          : "MOVE: Reactor cooling down! Descend to buffer plates for recovery!";
+      }
+      
+      return isRu
+        ? "СБОР ЭНЕРГИИ: Жми ВОССТАНОВИТЬ, затем иди на следующий гекс!"
+        : "RECOVER: Press RECOVER, then move to the next hex!";
+    },
+    hooks: {
+      checkWinCondition: (state) => {
+        return state.player.coins >= 15;
+      },
+      checkLossCondition: (state) => {
+        return isStranded(state);
+      }
+    }
+  },
+
+  // 1.4: Архитектура Опор / Support Architecture
+  {
+    id: '1.4',
+    title: 'Sim 1.4: Архитектура Опор',
     description: 'СИСТЕМНАЯ ДИРЕКТИВА. Плотина высокого уровня требует крепкой конструкции. Постройте многоуровневый каскад поддерживающих плит, чтобы возвести башню L3. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     goalText: 'Возведите башню уровня L3 в центре',
     mapConfig: {
@@ -441,74 +509,6 @@ export const series1Levels: LevelConfig[] = [
     hooks: {
       checkWinCondition: (state) => {
         return (state.grid['0,0']?.currentLevel ?? 0) >= 3;
-      },
-      checkLossCondition: (state) => {
-        return isStranded(state);
-      }
-    }
-  },
-
-  // 1.4: Съем энергии и Реакторы / Recovery Energy & Reactors
-  {
-    id: '1.4',
-    title: 'Sim 1.4: Потоки Энергии',
-    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Научитесь собирать энергию с реакторов и накопите необходимые кредиты. Следуйте указаниям навигационного модуля и берегите ресурсы.',
-    goalText: 'Накопите требуемые кредиты',
-    mapConfig: {
-      size: 3,
-      type: 'fixed',
-      customLayout: [
-        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Reactor L1
-        { q: 1, r: -1, currentLevel: 0, maxLevel: 0, revealed: true }, // Buffer L0
-        { q: -1, r: 1, currentLevel: 0, maxLevel: 0, revealed: true }, // Buffer L0
-        { q: 2, r: -2, currentLevel: -1, maxLevel: -1, revealed: true }, // Slide L-1
-        { q: -2, r: 2, currentLevel: -1, maxLevel: -1, revealed: true }, // Slide L-1
-        { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: 0, r: -1, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: 2, r: 0, currentLevel: -1, maxLevel: -1, revealed: true },
-        { q: -2, r: 0, currentLevel: -1, maxLevel: -1, revealed: true },
-        { q: 0, r: -2, currentLevel: -1, maxLevel: -1, revealed: true },
-        { q: 0, r: 2, currentLevel: -1, maxLevel: -1, revealed: true },
-      ]
-    },
-    objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 1, label: 'Reactor', color: 'blue' },
-      { q: 1, r: -1, targetLevel: 0, label: 'L0', color: 'blue' },
-      { q: -1, r: 1, targetLevel: 0, label: 'L0', color: 'blue' },
-      { q: 2, r: -2, targetLevel: -1, label: 'L-1', color: 'blue' },
-      { q: -2, r: 2, targetLevel: -1, label: 'L-1', color: 'blue' },
-    ],
-    startState: { credits: 0, moves: 12, rank: 1, materials: 0, initialEntropy: 100 },
-    aiMode: 'none',
-    getTutorialHint: (state) => {
-      const isRu = state.language === 'RU';
-      const credits = state.player.coins;
-      const reactor = state.grid['0,0'];
-      
-      if (credits >= 15) {
-        return isRu ? "ПОБЕДА: Лимит набран!" : "VICTORY: Quota satisfied!";
-      }
-      
-      if (state.player.q === 0 && state.player.r === 0) {
-        if (reactor?.recoveryCharges && reactor.recoveryCharges > 0) {
-          return isRu
-            ? `СБОР ЭНЕРГИИ: Жми ВОССТАНОВИТЬ (Синяя кнопка) 3 раза! Заряды: ${reactor.recoveryCharges}/3`
-            : `RECOVER: Press RECOVER (Blue button) 3 times! Charges: ${reactor.recoveryCharges}/3`;
-        }
-        return isRu
-          ? "ИДИ НА УКАЗАТЕЛЬ: Реактор остывает! Покинь Центр и сними энергию на плитах ниже!"
-          : "MOVE: Reactor cooling down! Descend to buffer plates for recovery!";
-      }
-      
-      return isRu
-        ? "СБОР ЭНЕРГИИ: Жми ВОССТАНОВИТЬ, затем иди на следующий гекс!"
-        : "RECOVER: Press RECOVER, then move to the next hex!";
-    },
-    hooks: {
-      checkWinCondition: (state) => {
-        return state.player.coins >= 15;
       },
       checkLossCondition: (state) => {
         return isStranded(state);

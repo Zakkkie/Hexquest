@@ -23,7 +23,7 @@ export function getCampaignMetric(
   const evacuationActive = session?.evacuationActive || false;
   const monumentRevealedSlots = session?.monumentRevealedSlots || [];
 
-  if (levelId === '1.1') {
+  if (levelId === '1.0') {
     const wavePath = [
       { q: 0, r: 0 },
       { q: 1, r: 0 },
@@ -45,34 +45,34 @@ export function getCampaignMetric(
     const idx = wavePath.findIndex(p => p.q === player.q && p.r === player.r);
     return { current: idx !== -1 ? idx : 0, target: 15, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
   }
-  if (levelId === '1.2') {
+  if (levelId === '1.1') {
     return { current: (player.q === -8 && player.r === 0) ? 1 : 0, target: 1, label: language === 'RU' ? 'СТОЛИЦА' : 'CAPITAL' };
   }
-  if (levelId === '1.3') {
+  if (levelId === '1.2') {
     return { current: Math.max(0, 2 - (grid['0,0']?.currentLevel ?? 2)), target: 2, label: language === 'RU' ? 'СРЕЗАННЫЕ СЛОИ' : 'DIG LAYERS' };
   }
   if (levelId === '1.4') {
     return { current: grid['0,0']?.currentLevel ?? 0, target: 3, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
   }
-  if (levelId === '1.5') {
-    return { current: player.coins, target: 100, label: language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS' };
+  if (levelId === '1.3') {
+    return { current: player.coins, target: 15, label: language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS' };
   }
-  if (levelId === '1.6') {
+  if (levelId === '1.5') {
     const depthOk = (grid['0,0']?.currentLevel ?? 0) <= -2 ? 1 : 0;
     const healedOk = grid['1,-1']?.structureType !== 'VOID' ? 1 : 0;
     return { current: depthOk + healedOk, target: 2, label: language === 'RU' ? 'ЗАДАЧИ' : 'OBJECTIVES' };
   }
-  if (levelId === '1.7') {
+  if (levelId === '1.6') {
     return { current: (player.q === 8 && player.r === 0) ? 1 : 0, target: 1, label: language === 'RU' ? 'СТОЛИЦА' : 'CAPITAL' };
   }
-  if (levelId === '1.8') {
+  if (levelId === '1.7') {
     const count = [grid['0,-1'], grid['0,0'], grid['0,1']].filter(h => (h?.currentLevel ?? 0) >= 2).length;
     return { current: count, target: 3, label: language === 'RU' ? 'ОПОРЫ' : 'SUPPORTS' };
   }
-  if (levelId === '1.9') {
+  if (levelId === '1.8') {
     return { current: player.playerLevel, target: 2, label: language === 'RU' ? 'РАНГ' : 'RANK' };
   }
-  if (levelId === '1.10') {
+  if (levelId === '1.9') {
     const rankOk = player.playerLevel >= 3 ? 1 : 0;
     const coinsOk = player.coins >= 50 ? 1 : 0;
     return { current: rankOk + coinsOk, target: 2, label: language === 'RU' ? 'ЗАДАЧИ' : 'OBJECTIVES' };

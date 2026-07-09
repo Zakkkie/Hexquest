@@ -241,7 +241,7 @@ export const series2Levels: LevelConfig[] = [
           { q: -2, r: 2, maxLevel: -3, currentLevel: -3, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 2, rank: 3, materials: 4, initialEntropy: 15 },
+    startState: { credits: 0, moves: 2, rank: 3, materials: 2, initialEntropy: 15 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
@@ -323,7 +323,7 @@ export const series2Levels: LevelConfig[] = [
           { q: -1, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
       ]
     },
-    startState: { credits: 50, moves: 20, rank: 3, materials: 1 },
+    startState: { credits: 0, moves: 8, rank: 3, materials: 1 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
@@ -388,7 +388,7 @@ export const series2Levels: LevelConfig[] = [
     requiredShapes: [
       { type: 'LINE_3', level: 2, hint: 'Build a solid row of 3 tiles of L2+' }
     ],
-    startState: { credits: 200, moves: 40, rank: 2, materials: 4 },
+    startState: { credits: 20, moves: 12, rank: 2, materials: 1 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
@@ -453,7 +453,7 @@ export const series2Levels: LevelConfig[] = [
     botSpawnPoints: [{ q: 2, r: -2 }],
     aiMode: 'basic',
     botObjective: 'MONUMENT_RACE',
-    startState: { credits: 100, moves: 30, rank: 2, materials: 5, initialEntropy: 60 },
+    startState: { credits: 30, moves: 12, rank: 2, materials: 1, initialEntropy: 60 },
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
       if (state.evacuationActive) return isRu ? "ПОБЕДА: Треугольник сформирован!" : "VICTORY: Triangle complete!";
@@ -517,7 +517,7 @@ export const series2Levels: LevelConfig[] = [
     requiredShapes: [
       { type: 'DIAMOND_4', level: 3, hint: 'Build a diamond shape of 4 level 3+ tiles' }
     ],
-    startState: { credits: 150, moves: 50, rank: 3, materials: 8 },
+    startState: { credits: 40, moves: 15, rank: 3, materials: 1 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
@@ -586,7 +586,7 @@ export const series2Levels: LevelConfig[] = [
     requiredShapes: [
       { type: 'RING_6', level: 3, hint: 'Construct a ring of 6 level 3 tiles around the central Void' }
     ],
-    startState: { credits: 300, moves: 60, rank: 3, materials: 12, initialEntropy: 100 },
+    startState: { credits: 50, moves: 20, rank: 3, materials: 2, initialEntropy: 100 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
@@ -662,7 +662,7 @@ export const series2Levels: LevelConfig[] = [
     botSpawnPoints: [{ q: 0, r: -3 }],
     aiMode: 'basic',
     botObjective: 'DESTROY_PLAYER',
-    startState: { credits: 200, moves: 70, rank: 3, materials: 10, initialEntropy: 80 },
+    startState: { credits: 50, moves: 22, rank: 3, materials: 2, initialEntropy: 80 },
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
       if (state.evacuationActive) return isRu ? "ПОБЕДА: Фигуры построены!" : "VICTORY: Shapes built!";
@@ -734,7 +734,7 @@ export const series2Levels: LevelConfig[] = [
           { q: -1, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
       ]
     },
-    startState: { credits: 200, moves: 80, rank: 4, materials: 14, initialEntropy: 100 },
+    startState: { credits: 60, moves: 25, rank: 4, materials: 3, initialEntropy: 100 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';

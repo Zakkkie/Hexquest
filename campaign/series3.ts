@@ -1097,7 +1097,7 @@ export const series3Levels: LevelConfig[] = [
       size: 5, type: 'procedural', generateWalls: true, wallStartRadius: 4, wallType: 'void_shatter'
     },
     startState: {
-      credits: 120, moves: 35, rank: 5, materials: 15, initialEntropy: 60,
+      credits: 30, moves: 15, rank: 5, materials: 3, initialEntropy: 60,
       startInventory: []
     },
     goalText: 'Build a Level 2+ STAR_7 shape',
@@ -1139,7 +1139,7 @@ export const series3Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '3.10',
-    title: 'Печать Монолита',
+    title: 'Тройной Замок',
     description: 'СИСТЕМНАЯ ДИРЕКТИВА. Соберите требования всех трех Обелисков для активации Монумента. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [
       { q: -2, r: 2, targetLevel: 3, label: 'Obelisk', color: 'blue' },
@@ -1164,7 +1164,7 @@ export const series3Levels: LevelConfig[] = [
       ]
     },
     startState: {
-      credits: 150, moves: 30, rank: 5, materials: 12, initialEntropy: 30,
+      credits: 40, moves: 15, rank: 5, materials: 2, initialEntropy: 30,
       startInventory: ['fuel_cell', 'data_disc', 'reality_patch']
     },
     goalText: 'Activate Monument with 3 Items',
@@ -1238,7 +1238,7 @@ export const series3Levels: LevelConfig[] = [
     ],
     mapConfig: { size: 4, type: 'procedural', generateWalls: true, wallStartRadius: 3 },
     startState: {
-      credits: 80, moves: 20, rank: 5, materials: 10, initialEntropy: 30,
+      credits: 30, moves: 12, rank: 5, materials: 1, initialEntropy: 30,
       startInventory: ['fuel_cell', 'data_disc']
     },
     goalText: 'Activate Monument (Requires Fuel Cell and Data Disc)',
@@ -1269,7 +1269,7 @@ export const series3Levels: LevelConfig[] = [
     description: 'СИСТЕМНАЯ ДИРЕКТИВА. Соберите парящий треугольник уровня L3, отделенный пропастями VOID. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 4, type: 'procedural', generateWalls: true, wallType: 'pit_ring' },
-    startState: { credits: 50, moves: 25, rank: 5, materials: 10, initialEntropy: 40 },
+    startState: { credits: 20, moves: 12, rank: 5, materials: 1, initialEntropy: 40 },
     goalText: 'Build a Level 3 TRIANGLE_3 shape',
     aiMode: 'none',
     requiredShapes: [{ type: 'TRIANGLE_3', level: 3, hint: 'Construct a TRIANGLE shape of Level 3 hexes' }],
@@ -1295,7 +1295,7 @@ export const series3Levels: LevelConfig[] = [
     description: 'СИСТЕМНАЯ ДИРЕКТИВА. Удержите чертеж Ромба собранным во время землетрясения. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 4, type: 'procedural' },
-    startState: { credits: 40, moves: 15, rank: 5, materials: 8, initialEntropy: 20 },
+    startState: { credits: 15, moves: 10, rank: 5, materials: 1, initialEntropy: 20 },
     goalText: 'Build a Level 2 DIAMOND_4 shape',
     aiMode: 'none',
     requiredShapes: [{ type: 'DIAMOND_4', level: 2, hint: 'Construct a DIAMOND shape of Level 2 hexes' }],
@@ -1321,7 +1321,7 @@ export const series3Levels: LevelConfig[] = [
     description: 'СИСТЕМНАЯ ДИРЕКТИВА. Приведите 4 хаотично разбросанных гекса к одинаковому уровню L4. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 4, type: 'procedural' },
-    startState: { credits: 200, moves: 30, rank: 5, materials: 10, initialEntropy: 40 },
+    startState: { credits: 40, moves: 15, rank: 5, materials: 2, initialEntropy: 40 },
     goalText: 'Build a Level 4 SQUARE_4 shape',
     aiMode: 'none',
     requiredShapes: [{ type: 'SQUARE_4', level: 4, hint: 'Construct a SQUARE shape of Level 4 hexes' }],
@@ -1343,7 +1343,7 @@ export const series3Levels: LevelConfig[] = [
     description: 'СИСТЕМНАЯ ДИРЕКТИВА. Соберите кольцо из плит уровня L3. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 5, type: 'procedural' },
-    startState: { credits: 100, moves: 35, rank: 5, materials: 16, initialEntropy: 40 },
+    startState: { credits: 30, moves: 15, rank: 5, materials: 2, initialEntropy: 40 },
     goalText: 'Build a Level 3 RING_6 shape',
     aiMode: 'none',
     requiredShapes: [{ type: 'RING_6', level: 3, hint: 'Construct a RING shape of Level 3 hexes' }],
@@ -1365,7 +1365,7 @@ export const series3Levels: LevelConfig[] = [
     description: 'СИСТЕМНАЯ ДИРЕКТИВА. Постройте высокоуровневую эстакаду L4 через бездну VOID. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 5, type: 'procedural', generateWalls: true, wallType: 'void_shatter' },
-    startState: { credits: 70, moves: 24, rank: 5, materials: 14, initialEntropy: 40 },
+    startState: { credits: 25, moves: 12, rank: 5, materials: 2, initialEntropy: 40 },
     goalText: 'Build a Level 4 LINE_3 shape',
     aiMode: 'none',
     requiredShapes: [{ type: 'LINE_3', level: 4, hint: 'Construct a LINE of 3 Level 4 hexes' }],
@@ -1389,7 +1389,7 @@ export const series3Levels: LevelConfig[] = [
       { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
     ],
     mapConfig: { size: 5, type: 'procedural' },
-    startState: { credits: 300, moves: 25, rank: 5, materials: 6, initialEntropy: 40, startInventory: [] },
+    startState: { credits: 50, moves: 12, rank: 5, materials: 1, initialEntropy: 40, startInventory: [] },
     goalText: 'Dig to -10 and Activate Monument',
     aiMode: 'none',
     getTutorialHint: (state) => state.language === 'RU' ? "Копайте до уровня -10!" : "Dig down to Level -10!",
@@ -1412,7 +1412,7 @@ export const series3Levels: LevelConfig[] = [
     description: 'СИСТЕМНАЯ ДИРЕКТИВА. Возведите крепость из 7 центральных плит уровня L4. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 5, type: 'procedural' },
-    startState: { credits: 150, moves: 40, rank: 5, materials: 18, initialEntropy: 40 },
+    startState: { credits: 40, moves: 15, rank: 5, materials: 3, initialEntropy: 40 },
     goalText: 'Build a Level 4 HEXAGON_7 shape',
     aiMode: 'none',
     requiredShapes: [{ type: 'HEXAGON_7', level: 4, hint: 'Construct a HEXAGON of Level 4 hexes' }],
@@ -1431,10 +1431,10 @@ export const series3Levels: LevelConfig[] = [
   {
     id: '3.19',
     title: 'Зеркальный Нексус',
-    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Постройте Стрелу L3 и Ромб L2 на одной карте. Следуйте указаниям навигационного модуля и берегите ресурсы.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Постройте Линию L3 и Ромб L2 на одной карте. Следуйте указаниям навигационного модуля и берегите ресурсы.',
     objectiveHexes: [],
     mapConfig: { size: 6, type: 'procedural' },
-    startState: { credits: 200, moves: 40, rank: 5, materials: 20, initialEntropy: 40 },
+    startState: { credits: 50, moves: 18, rank: 5, materials: 3, initialEntropy: 40 },
     goalText: 'Build L3 LINE_3 and L2 DIAMOND_4',
     aiMode: 'none',
     requiredShapes: [
@@ -1461,7 +1461,7 @@ export const series3Levels: LevelConfig[] = [
       { q: 0, r: 0, targetLevel: 5, label: 'Monument', color: 'emerald' }
     ],
     mapConfig: { size: 6, type: 'procedural' },
-    startState: { credits: 180, moves: 30, rank: 5, materials: 15, initialEntropy: 40, startInventory: ['stability_scanner'] },
+    startState: { credits: 40, moves: 15, rank: 5, materials: 2, initialEntropy: 40, startInventory: ['stability_scanner'] },
     goalText: 'Build Level 3 RING_6 and Activate Monument',
     aiMode: 'none',
     requiredShapes: [{ type: 'RING_6', level: 3, hint: 'RING_6 Level 3' }],

@@ -48,6 +48,74 @@ async function startServer() {
     }
   });
 
+  app.post("/api/music", async (req, res) => {
+    try {
+      const { prompt, length = "clip" } = req.body;
+      
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+          return res.status(500).json({ error: "GEMINI_API_KEY environment variable is required. Please set it in the Settings > Secrets panel." });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+      
+      const model = length === "pro" ? "lyria-3-pro-preview" : "lyria-3-clip-preview";
+      
+      console.log(`Starting music generation with model ${model} for prompt: "${prompt}"`);
+      
+      const responseStream = await ai.models.generateContentStream({
+        model: model,
+        contents: prompt,
+        config: {
+          responseModalities: ['AUDIO']
+        }
+      });
+      
+      let audioBase64 = "";
+      let lyrics = "";
+      let mimeType = "audio/wav";
+      
+      for await (const chunk of responseStream) {
+        const parts = chunk.candidates?.[0]?.content?.parts;
+        if (!parts) continue;
+        
+        for (const part of parts) {
+          if (part.inlineData?.data) {
+            if (!audioBase64 && part.inlineData.mimeType) {
+              mimeType = part.inlineData.mimeType;
+            }
+            audioBase64 += part.inlineData.data;
+          }
+          if (part.text && !lyrics) {
+            lyrics = part.text;
+          }
+        }
+      }
+      
+      if (!audioBase64) {
+        return res.status(400).json({ error: "Music generation did not return any audio data." });
+      }
+      
+      console.log(`Music generation completed. Base64 length: ${audioBase64.length}, MimeType: ${mimeType}`);
+      
+      res.json({
+        audioBase64,
+        lyrics,
+        mimeType
+      });
+    } catch (e: any) {
+      console.error("Music generation error:", e);
+      res.status(500).json({ error: e.message || "Failed to generate music." });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

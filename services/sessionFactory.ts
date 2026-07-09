@@ -342,6 +342,9 @@ export const createInitialSessionData = async (
           case '4.4': monumentRequirements = []; break;
           case '4.5': monumentRequirements = []; break;
           case '4.8': monumentRequirements = ['ANY', 'ANY']; break;
+          case '5.20': monumentRequirements = []; break;
+          case '5.27': monumentRequirements = ['LEGENDARY', 'LEGENDARY', 'LEGENDARY']; break;
+          case '5.30': monumentRequirements = ['LEGENDARY', 'LEGENDARY']; break;
           default: monumentRequirements = undefined;
       }
   } else if (winCondition?.winType === 'SUMMIT') {
@@ -468,7 +471,7 @@ export const createInitialSessionData = async (
   }
 
   // --- PUZZLE SETUP FOR SERIES 5 ---
-  if (levelConfig?.id?.startsWith('5.')) {
+  if (levelConfig && ['5.1', '5.21', '5.27', '5.30'].includes(levelConfig.id)) {
       const allHexes = Object.values(session.grid).filter(h => h.structureType === 'NONE' && (Math.abs(h.q) + Math.abs(h.r)) >= 3);
       const miniMonuments: any[] = [];
       

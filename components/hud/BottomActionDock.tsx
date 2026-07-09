@@ -162,6 +162,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     }, [activeLevelConfig, player, grid, language]);
 
     const digDimmed = useMemo(() => {
+        if (!activeLevelConfig?.id?.startsWith('1.')) return false;
         if (!tutorialHint) return false;
         const upper = tutorialHint.toUpperCase();
         if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;
@@ -170,9 +171,10 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         if (upper.includes('СТРОЙ') || upper.includes('BUILD')) return true;
         if (upper.includes('СБОР ЭНЕРГИИ') || upper.includes('RECOVER')) return true;
         return false;
-    }, [tutorialHint]);
+    }, [tutorialHint, activeLevelConfig]);
 
     const upgradeDimmed = useMemo(() => {
+        if (!activeLevelConfig?.id?.startsWith('1.')) return false;
         if (!tutorialHint) return false;
         const upper = tutorialHint.toUpperCase();
         if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;
@@ -181,9 +183,10 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         if (upper.includes('КОПАЙ') || upper.includes('DIG')) return true;
         if (upper.includes('СБОР ЭНЕРГИИ') || upper.includes('RECOVER')) return true;
         return false;
-    }, [tutorialHint]);
+    }, [tutorialHint, activeLevelConfig]);
 
     const recoverDimmed = useMemo(() => {
+        if (!activeLevelConfig?.id?.startsWith('1.')) return false;
         if (!tutorialHint) return false;
         const upper = tutorialHint.toUpperCase();
         if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;
@@ -192,7 +195,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         if (upper.includes('СТРОЙ') || upper.includes('BUILD')) return true;
         if (upper.includes('КОПАЙ') || upper.includes('DIG')) return true;
         return false;
-    }, [tutorialHint]);
+    }, [tutorialHint, activeLevelConfig]);
     const locationRestricted = useMemo(() => {
         if (!activeLevelConfig || activeLevelConfig.id !== "1.0") return false;
         const objHex = activeLevelConfig.objectiveHexes?.find((h: any) => h.q === player.q && h.r === player.r);
@@ -493,32 +496,43 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                     {/* CORE BUTTONS + QUICK SLOTS (Bottom Row) */}
                     <div className={`bg-slate-950/45 saturate-[175%] backdrop-blur-2xl border border-slate-800/40 rounded-[1.5rem] ${isDefenseMode ? 'p-1.5 px-2 gap-1.5' : 'p-2 px-3 gap-3'} flex items-center justify-between relative overflow-visible animate-border-glow-premium transition-all duration-500`}>
                         
-                        {/* ITEM SHORTCUT TRAY OR TIMER */}
-                        {isTimedLevel && gameStatus === 'PLAYING' ? (
-                            <div className="flex items-center gap-2 pr-2 border-r border-slate-800/50 shrink-0 select-none">
-                                <div className={`flex items-center gap-2 px-3 py-1 bg-slate-950/80 border rounded-xl h-10 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)] ${timeLeft < 15 ? 'border-red-500 animate-pulse' : 'border-slate-800'}`}>
-                                    <Clock className={`w-4 h-4 ${timeLeft < 15 ? 'text-red-500 animate-bounce' : 'text-amber-400'}`} />
-                                    <span className={`text-base font-black font-mono leading-none tracking-tight ${timeLeft < 15 ? 'text-red-400' : 'text-slate-100'}`}>
+                        {/* ITEM SHORTCUT TRAY AND TIMER */}
+                        <div className={`flex items-center gap-1.5 ${isDefenseMode ? 'max-w-[110px] pr-1.5' : 'max-w-[170px] pr-2.5'} border-r border-slate-800/50 shrink-0`}>
+                            {isTimedLevel && gameStatus === 'PLAYING' && (
+                                <div className={`flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 border rounded-lg h-12 shadow-inner ${timeLeft < 15 ? 'border-red-500 animate-pulse' : 'border-slate-800'}`}>
+                                    <Clock className={`w-3.5 h-3.5 ${timeLeft < 15 ? 'text-red-500 animate-bounce' : 'text-amber-400'}`} />
+                                    <span className={`text-xs font-black font-mono leading-none tracking-tight ${timeLeft < 15 ? 'text-red-400' : 'text-slate-100'}`}>
                                         {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                                     </span>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className={`flex items-center gap-1 overflow-x-auto no-scrollbar ${isDefenseMode ? 'max-w-[85px] pr-1' : 'max-w-[140px] pr-2'} border-r border-slate-800/50 shrink-0`}>
-                                {inventoryList.map(index => {
+                            )}
+
+                            {/* Inventory cells as a compact 3x2 grid */}
+                            <div className="grid grid-cols-3 gap-0.5 shrink-0">
+                                {[0, 1, 2, 3, 4, 5].map(index => {
+                                    if (index === 5) {
+                                        // Symmetry helper
+                                        return (
+                                            <div 
+                                                key="slot-placeholder" 
+                                                className="w-6.5 h-6.5 rounded-md bg-slate-950/10 border border-slate-900/10 border-dashed"
+                                            />
+                                        );
+                                    }
                                     const item = player.inventory[index];
+                                    const slotSize = "w-6.5 h-6.5";
                                     return (
                                         <div 
                                             key={index}
                                             onClick={() => { if (item) { onInspectItem(item); playUiSound('CLICK'); } }}
-                                            className={`${isDefenseMode ? 'w-8 h-8 rounded-md' : 'w-10 h-10 rounded-lg'} border flex items-center justify-center cursor-pointer transition-all active:scale-95 shrink-0 ${
+                                            className={`${slotSize} rounded-md border flex items-center justify-center cursor-pointer transition-all active:scale-95 shrink-0 ${
                                                 item 
                                                     ? `bg-slate-900 bg-opacity-80 ${getRarityBorder(item.rarity)} shadow-md` 
                                                     : 'bg-slate-950/45 border-slate-800/40 border-dashed'
                                             }`}
                                         >
                                             {item ? (
-                                                <ItemIcon item={item} size={isDefenseMode ? "w-8 h-8" : "w-10 h-10"} />
+                                                <ItemIcon item={item} size="w-6.5 h-6.5" />
                                             ) : (
                                                 <div className="w-1 h-1 rounded-full bg-slate-800/30" />
                                             )}
@@ -526,7 +540,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     );
                                 })}
                             </div>
-                        )}
+                        </div>
 
                         {/* CORE ACTION BUTTONS: DIG, UPGRADE, RECOVER (with adaptive size on mobile!) */}
                         <div className={`flex items-center ${isDefenseMode ? 'gap-1.5' : 'gap-2.5'} flex-1 justify-end shrink-0`}>
@@ -680,51 +694,59 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                     {/* ROW 2: SIDE-BY-SIDE SLOTS & TRIGGERS */}
                     <div className="flex items-center justify-between gap-6 md:flex-row flex-row">
                         
-                        {/* LEFT PART: Inventory Slots tray OR TIMER */}
-                        <div className="flex-1 min-w-0 pointer-events-auto">
-                            {isTimedLevel && gameStatus === 'PLAYING' ? (
-                                <div className="flex items-center gap-2 select-none h-11">
-                                    <div className={`flex items-center gap-3 px-4 py-2 bg-slate-950/80 border rounded-xl shadow-[inset_0_1px_3px_rgba(255,255,255,0.01)] ${timeLeft < 20 ? 'border-red-500/80 animate-pulse' : 'border-slate-800'}`}>
-                                        <div className="relative flex items-center justify-center">
-                                            <Clock className={`w-5 h-5 ${timeLeft < 20 ? 'text-red-500 animate-pulse' : 'text-amber-400'}`} />
-                                            {timeLeft < 20 && (
-                                                <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-25 animate-ping" />
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[7.5px] font-bold font-mono tracking-wider text-slate-500 uppercase leading-none mb-0.5">
-                                                {language === 'RU' ? 'ПОДГРУЗКА ЯДРА (ТАЙМЕР)' : 'TIME LIMIT REMAINING'}
-                                            </span>
-                                            <span className={`text-xl font-black font-mono leading-none ${timeLeft < 20 ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.45)]' : 'text-slate-100'}`}>
-                                                {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-                                            </span>
-                                        </div>
+                        {/* LEFT PART: Inventory Slots tray AND TIMER */}
+                        <div className="flex-1 min-w-0 pointer-events-auto flex items-center gap-3">
+                            {isTimedLevel && gameStatus === 'PLAYING' && (
+                                <div className={`flex items-center gap-2 px-3 py-1 bg-slate-950/80 border rounded-xl shadow-[inset_0_1px_3px_rgba(255,255,255,0.01)] ${timeLeft < 20 ? 'border-red-500/80 animate-pulse' : 'border-slate-800'} h-14`}>
+                                    <div className="relative flex items-center justify-center shrink-0">
+                                        <Clock className={`w-4 h-4 ${timeLeft < 20 ? 'text-red-500 animate-pulse' : 'text-amber-400'}`} />
+                                        {timeLeft < 20 && (
+                                            <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-25 animate-ping" />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[6.5px] font-bold font-mono tracking-wider text-slate-500 uppercase leading-none mb-0.5 whitespace-nowrap">
+                                            {language === 'RU' ? 'ТАЙМЕР ЯДРА' : 'CORE TIMER'}
+                                        </span>
+                                        <span className={`text-base font-black font-mono leading-none ${timeLeft < 20 ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.45)]' : 'text-slate-100'}`}>
+                                            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                                        </span>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-linear-fade-right">
-                                    {inventoryList.map(index => {
-                                        const item = player.inventory[index];
-                                        const slotSize = "w-10 h-10"; 
+                            )}
+
+                            {/* Inventory cells as a compact 3x2 grid */}
+                            <div className="grid grid-cols-3 gap-0.5 shrink-0">
+                                {[0, 1, 2, 3, 4, 5].map(index => {
+                                    if (index === 5) {
+                                        // Symmetry helper
                                         return (
                                             <div 
-                                                key={index} 
-                                                onClick={() => { if(item) { onInspectItem(item); playUiSound('CLICK'); } }}
-                                                draggable={!!item}
-                                                onDragStart={(e) => { if(item) e.dataTransfer.setData("itemId", item.id); }}
-                                                className={`
-                                                    ${slotSize} rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all shrink-0 touch-manipulation active:scale-95
-                                                    ${item 
-                                                        ? `bg-slate-800/90 ${getRarityBorder(item.rarity)} shadow-md hover:scale-105` 
-                                                        : 'bg-slate-950/45 border-slate-800/40 border-dashed'}
-                                                `}
-                                            >
-                                                {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-800/40" />}
-                                            </div>
+                                                key="slot-placeholder" 
+                                                className="w-7 h-7 rounded-lg bg-slate-950/10 border border-slate-900/10 border-dashed"
+                                            />
                                         );
-                                    })}
-                                </div>
-                            )}
+                                    }
+                                    const item = player.inventory[index];
+                                    const slotSize = "w-7 h-7"; 
+                                    return (
+                                        <div 
+                                            key={index} 
+                                            onClick={() => { if(item) { onInspectItem(item); playUiSound('CLICK'); } }}
+                                            draggable={!!item}
+                                            onDragStart={(e) => { if(item) e.dataTransfer.setData("itemId", item.id); }}
+                                            className={`
+                                                ${slotSize} rounded-lg border flex items-center justify-center relative group cursor-pointer transition-all shrink-0 touch-manipulation active:scale-95
+                                                ${item 
+                                                    ? `bg-slate-800/90 ${getRarityBorder(item.rarity)} shadow-md hover:scale-105` 
+                                                    : 'bg-slate-950/45 border-slate-800/40 border-dashed'}
+                                            `}
+                                        >
+                                            {item ? <ItemIcon item={item} size={slotSize} /> : <div className="w-1 h-1 rounded-full bg-slate-800/40" />}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         {/* SLIGHT DIVIDER */}

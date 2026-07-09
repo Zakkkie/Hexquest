@@ -653,7 +653,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 const prev = hoverRef.current ? hexCache.current.get(hoverRef.current) : null;
                 if (prev) { const o = prev.getChildByName('hoverOutline'); if (o) o.visible = false; }
                 const cur = hid ? hexCache.current.get(hid) : null;
-                if (cur) { const o = cur.getChildByName('hoverOutline'); if (o) o.visible = true; }
+                if (cur) { 
+                    const o = cur.getChildByName('hoverOutline'); 
+                    if (o) o.visible = !!(cur as any).isRevealed; 
+                }
                 hoverRef.current = hid;
             }
         }
@@ -1477,6 +1480,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     parent.addChild(curContainer);
                     hexCache.current.set(item.id, curContainer);
                 }
+                (curContainer as any).isRevealed = isRevealed;
 
                 // Calculate projected flat visual coordinates
                 const cx = props.x * cos - props.y * sin;
@@ -1990,10 +1994,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 hoverOutline.fill({ color: 0xffffff, alpha: 0.16 });
                 hoverOutline.strokeStyle = { width: 3.0, color: 0xffffff, alpha: 1.0 };
                 hoverOutline.stroke();
-                hoverOutline.visible = (hoveredHexId === item.id);
+                hoverOutline.visible = (hoveredHexId === item.id) && isRevealed;
 
                 // Highlight Selected targets
-                if (props.isSelected) {
+                if (props.isSelected && isRevealed) {
                     borderLayer.beginPath();
                     rotatedBasePoints.forEach((pt, j) => {
                         const px = pt.x;
@@ -2007,7 +2011,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 }
 
                 // Progress loader ring for constructions
-                if (props.isGrowing) {
+                if (props.isGrowing && isRevealed) {
                     let needed = 30; // default/fallback
                     const hq = props.q;
                     const hr = props.r;
@@ -2069,7 +2073,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
                 // Campaign completed shape highlights
                 const isCompletedShapeHex = completedShapeCoords.some(c => c.q === props.q && c.r === props.r);
-                if (isCompletedShapeHex) {
+                if (isCompletedShapeHex && isRevealed) {
                     borderLayer.beginPath();
                     rotatedBasePoints.forEach((pt, j) => {
                         const px = pt.x;
@@ -2083,7 +2087,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 }
 
                 // Holographic Blueprint projection overlay (Step 3)
-                if (props.hologramTargetLevel !== undefined && activatedMiniMonuments?.length === 3) {
+                if (props.hologramTargetLevel !== undefined && activatedMiniMonuments?.length === 3 && isRevealed) {
                     // Flash cyan or blue depending on if it is fully assembled or just blueprint
                     const isConstructed = props.level >= props.hologramTargetLevel;
                     const holoColor = isConstructed ? 0x22d3ee : 0x4f46e5; // Cyan full, Indigo outline
@@ -2091,7 +2095,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     borderLayer.beginPath();
                     rotatedBasePoints.forEach((pt, j) => {
                         const px = pt.x * 0.9;
-                        const py = (pt.y * 0.8 + faceY) * 0.9;
+                        const py = pt.y * 0.8 * 0.9 + faceY;
                         if (j === 0) borderLayer.moveTo(px, py);
                         else borderLayer.lineTo(px, py);
                     });
@@ -2189,7 +2193,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 ));
                 
                 const objHex = activeLevelConfig?.objectiveHexes?.find((o: any) => o.q === props.q && o.r === props.r);
-                const showArrow = objHex && objHex === firstIncompleteObjHex;
+                const showArrow = objHex && objHex === firstIncompleteObjHex && !(activeLevelConfig?.id === '1.1' && props.q === -8 && props.r === 0);
                 
                 if (showArrow && isRevealed) {
                     let objArrow = curContainer.getChildByName('objective_arrow') as PIXI.Container;
@@ -2286,8 +2290,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 }
 
                 // --- PERSISTENT FINISH BEACON ---
-                const metForBeacon = areAllConditionsMet(session, activeLevelConfig);
-                if (isFinish && isRevealed && metForBeacon) {
+                if (isFinish && isRevealed) {
                     let finishBeacon = curContainer.getChildByName('finish_beacon') as PIXI.Container;
                     if (!finishBeacon) {
                         finishBeacon = new PIXI.Container();
@@ -2315,41 +2318,54 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     if (beam) {
                         beam.clear();
                         // Cone pointing down to faceY from the very top of the sky (1200px up)
-                        // It narrows at the top and expands at the bottom (hex), staying within its bounds
+                        // It starts as a point (apex) and expands at the bottom into a rounded elliptical base
                         const beamHeight = 1200;
                         const pulse = Math.sin(Date.now() * 0.005) * 0.12 + 0.88; // shimmering scale
-                        const beamWidthTop = 4 * pulse;
                         const beamWidthBottom = 26 * pulse;
+                        const rx = beamWidthBottom;
+                        const ry = rx * 0.577; // isometric projection radius ratio
 
-                        // Outer soft glowing white/cyan cone
-                        beam.beginPath();
-                        beam.moveTo(-beamWidthTop, faceY - beamHeight);
-                        beam.lineTo(beamWidthTop, faceY - beamHeight);
-                        beam.lineTo(beamWidthBottom, faceY);
-                        beam.lineTo(-beamWidthBottom, faceY);
-                        beam.closePath();
-                        beam.fill({ color: 0xffffff, alpha: 0.22 * pulse });
-                        beam.stroke({ width: 1.5, color: 0xffffff, alpha: 0.4 * pulse });
+                        // Check if conditions are met to make it fully active / intense!
+                        const met = areAllConditionsMet(session, activeLevelConfig);
+                        
+                        // Beam styling
+                        const beamColor = met ? 0x22d3ee : 0x06b6d4; // Intense cyan vs regular cyan
+                        const outerAlpha = met ? (0.35 * pulse) : (0.18 * pulse);
+                        const innerAlpha = met ? (0.6 * pulse) : (0.3 * pulse);
+                        const strokeAlpha = met ? (0.5 * pulse) : (0.25 * pulse);
 
-                        // Inner super bright core cone
-                        const coreWidthTop = beamWidthTop * 0.4;
-                        const coreWidthBottom = beamWidthBottom * 0.4;
+                        // Outer soft glowing white/cyan cone with curved round base
                         beam.beginPath();
-                        beam.moveTo(-coreWidthTop, faceY - beamHeight);
-                        beam.lineTo(coreWidthTop, faceY - beamHeight);
-                        beam.lineTo(coreWidthBottom, faceY);
-                        beam.lineTo(-coreWidthBottom, faceY);
+                        beam.moveTo(0, faceY - beamHeight); // Apex
+                        beam.lineTo(rx, faceY); // Right side
+                        beam.quadraticCurveTo(0, faceY + ry * 2, -rx, faceY); // Rounded bottom base
+                        beam.closePath(); // Left side back to apex
+                        beam.fill({ color: beamColor, alpha: outerAlpha });
+                        beam.stroke({ width: 1.5, color: 0xffffff, alpha: strokeAlpha });
+
+                        // Inner super bright core cone with curved round base
+                        const coreRx = rx * 0.4;
+                        const coreRy = coreRx * 0.577;
+                        beam.beginPath();
+                        beam.moveTo(0, faceY - beamHeight); // Apex
+                        beam.lineTo(coreRx, faceY);
+                        beam.quadraticCurveTo(0, faceY + coreRy * 2, -coreRx, faceY);
                         beam.closePath();
-                        beam.fill({ color: 0xf0fdf4, alpha: 0.45 * pulse }); // warm white/emerald shine
+                        beam.fill({ color: 0xf0fdf4, alpha: innerAlpha }); // warm white/emerald shine
                     }
 
                     if (baseGlow) {
                         baseGlow.clear();
+                        const met = areAllConditionsMet(session, activeLevelConfig);
                         const pulse = Math.sin(Date.now() * 0.005) * 0.15 + 1.0;
+                        
+                        const glowColor = met ? 0x22d3ee : 0x0891b2;
+                        const coreColor = met ? 0xa7f3d0 : 0x34d399;
+                        
                         baseGlow.ellipse(0, faceY, 26 * pulse, 15 * pulse);
-                        baseGlow.fill({ color: 0xffffff, alpha: 0.4 });
+                        baseGlow.fill({ color: glowColor, alpha: met ? 0.5 : 0.25 });
                         baseGlow.ellipse(0, faceY, 13 * pulse, 7.5 * pulse);
-                        baseGlow.fill({ color: 0xa7f3d0, alpha: 0.6 }); // Emerald light core
+                        baseGlow.fill({ color: coreColor, alpha: met ? 0.7 : 0.4 }); // Emerald light core
                     }
                 } else {
                     const existingBeacon = curContainer.getChildByName('finish_beacon');

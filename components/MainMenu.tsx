@@ -5,8 +5,9 @@ import {
   Trophy, LogOut, Ghost, ArrowRight, X, LogIn, Lock, Target, Gem, Crown, 
   Bot, Volume2, VolumeX, BookOpen, Music, ChevronLeft, ChevronRight, 
   Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, 
-  Mountain, Crosshair, Shuffle, Settings, Minus, Plus, Compass, Check, Cpu
+  Mountain, Crosshair, Shuffle, Settings, Minus, Plus, Compass, Check, Cpu, Sparkles
 } from 'lucide-react';
+import { AiMusicRadio } from './AiMusicRadio.tsx';
 import { WinCondition, Difficulty } from '../types.ts';
 import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
@@ -503,6 +504,7 @@ const MainMenu: React.FC = () => {
   const [confirmAction, setConfirmAction] = useState<{type: 'ABANDON_CAMPAIGN' | 'ABANDON_NEW_GAME' | 'LOGOUT' | 'RESET_PROGRESS_ALL', payload?: any} | null>(null);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAiRadioOpen, setIsAiRadioOpen] = useState(false);
   const settingsMenuRef = useRef<HTMLDivElement>(null);
 
   // Entrance animations state
@@ -864,6 +866,16 @@ const MainMenu: React.FC = () => {
                                     <span className="text-[10px] font-black uppercase tracking-wider">{language === 'RU' ? 'Эффекты' : 'SFX'}</span>
                                 </div>
                                 <span className="text-[9px] font-mono leading-none font-bold">{isSfxMuted ? 'OFF' : 'ON'}</span>
+                            </motion.button>
+                            <motion.button 
+                                onClick={() => { setIsSettingsOpen(false); setIsAiRadioOpen(true); playUiSound('CLICK'); }} 
+                                className="flex items-center justify-between px-3 py-2 rounded-xl border border-indigo-500/30 bg-indigo-950/20 text-indigo-300 hover:bg-indigo-950/30 transition-all text-left cursor-pointer"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{language === 'RU' ? 'ИИ Радио' : 'AI Radio'}</span>
+                                </div>
+                                <span className="text-[8px] font-bold bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono uppercase">LYRIA</span>
                             </motion.button>
                         </div>
                     </div>
@@ -1681,6 +1693,22 @@ const MainMenu: React.FC = () => {
 
           </motion.div>
         </motion.div>
+      )}
+      </AnimatePresence>
+
+      {/* AI Music Radio modal */}
+      <AnimatePresence>
+      {isAiRadioOpen && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
+              <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="w-full max-w-md max-h-[90vh] flex flex-col"
+              >
+                  <AiMusicRadio onClose={() => setIsAiRadioOpen(false)} />
+              </motion.div>
+          </div>
       )}
       </AnimatePresence>
 

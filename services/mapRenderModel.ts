@@ -475,10 +475,16 @@ export const isFinishTile = (q: number, r: number, activeLevelConfig: any): bool
     if (activeLevelConfig.id === '1.6' && q === 8 && r === 0) return true;
 
     // Generic check for other levels:
-    // If there is an objectiveHex with color 'emerald' or containing 'capital' / 'portal' / 'goal' in its label
+    // If there is an objectiveHex with color 'emerald' or containing 'capital' / 'portal' / 'goal' / 'exit' / 'finish' in its label
     const objFinish = activeLevelConfig.objectiveHexes?.find((o: any) => {
         const lbl = o.label?.toLowerCase() || '';
-        return o.color === 'emerald' || lbl.includes('capital') || lbl.includes('portal') || lbl.includes('goal');
+        return o.color === 'emerald' || 
+               lbl.includes('capital') || 
+               lbl.includes('portal') || 
+               lbl.includes('goal') || 
+               lbl.includes('exit') || 
+               lbl.includes('finish') ||
+               lbl.includes('endpoint');
     });
     if (objFinish && objFinish.q === q && objFinish.r === r) return true;
 

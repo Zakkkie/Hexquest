@@ -106,7 +106,7 @@ export function checkDigCondition(
       if (deepNeighbors.length < 2) {
           return { 
               canGrow: false, 
-              reason: `Нет опоры: нужны 2 соседа на уровне L${targetLevel} (UNSTABLE)`,
+              reason: `Нет опоры: нужны 2 соседа на уровне L${currentLevel} (UNSTABLE)`,
           };
       }
   }

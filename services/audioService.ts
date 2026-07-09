@@ -83,6 +83,23 @@ class AudioService {
   private isSfxMuted: boolean = false;
   private musicRunning: boolean = false;
   private whiteNoiseBuffer: AudioBuffer | null = null;
+
+  // AI Generative Music State (Lyria integration)
+  private aiAudio: HTMLAudioElement | null = null;
+  private aiMusicState: {
+      status: 'idle' | 'generating' | 'playing' | 'paused' | 'error';
+      prompt: string;
+      lyrics: string;
+      error: string;
+      length: 'clip' | 'pro';
+  } = {
+      status: 'idle',
+      prompt: 'Cinematic futuristic electronic track for a deep space exploration game',
+      lyrics: '',
+      error: '',
+      length: 'clip'
+  };
+  private aiMusicListeners: ((state: any) => void)[] = [];
   
   // Scheduler
   private lookahead = 25.0; // ms
@@ -115,7 +132,8 @@ class AudioService {
       hat: [] as boolean[],
       perc: [] as boolean[],
       bass: [] as number[], // Scale degrees
-      arp: [] as number[]   // Scale degrees
+      arp: [] as number[],  // Scale degrees
+      lead: [] as number[]  // Scale degrees
   };
 
   constructor() {
@@ -266,6 +284,22 @@ class AudioService {
 
   public setMusicMuted(muted: boolean) {
       this.isMusicMuted = muted;
+      
+      // Update AI Audio volume if exists
+      if (this.aiAudio) {
+          if (muted) {
+              this.aiAudio.volume = 0;
+              this.aiAudio.pause();
+              this.aiMusicState.status = 'paused';
+              this.notifyAiMusic();
+          } else {
+              this.aiAudio.volume = 0.6;
+              this.aiAudio.play().catch(() => {});
+              this.aiMusicState.status = 'playing';
+              this.notifyAiMusic();
+          }
+      }
+
       if (this.musicBus && this.ctx) {
           // Instant mute, smooth unmute
           const time = this.ctx.currentTime;
@@ -276,8 +310,10 @@ class AudioService {
           } else {
               this.musicBus.gain.setValueAtTime(0, time);
               this.musicBus.gain.linearRampToValueAtTime(0.5, time + 0.3);
-              // Restart logic if not running
-              if (!this.musicRunning) {
+              
+              // Only start procedural music if AI music is not playing/loaded
+              const isAiMusicActive = this.aiAudio && !this.aiAudio.paused;
+              if (!this.musicRunning && !isAiMusicActive) {
                   this.startMusic();
               }
           }
@@ -363,18 +399,44 @@ class AudioService {
       this.patterns.bass[10] = 0; // Root on 3.5
       if (Math.random() > 0.5) this.patterns.bass[14] = 4; // Fifth on end
 
-      // Arp: Random walk in scale
+      // Arp: Clean, melodic arpeggiator walks based on the current scale flavor
       this.patterns.arp = new Array(16).fill(-1);
       for(let i=0; i<16; i++) {
-          if (Math.random() > 0.6) {
-              this.patterns.arp[i] = Math.floor(Math.random() * 7); // Random scale degree
+          if (i % 2 === 1 && Math.random() > 0.4) {
+              // Pluck on syncopated 16th steps
+              const scaleSteps = [0, 2, 4, 7, 9, 11]; // Pentatonic highlights
+              this.patterns.arp[i] = scaleSteps[Math.floor(Math.random() * scaleSteps.length)];
           }
+      }
+
+      // Lead Melody hook: Memorable pentatonic syncopated riffs that loop and give structure
+      this.patterns.lead = new Array(16).fill(-1);
+      if (Math.random() > 0.2) {
+          const pentatonicDegrees = [0, 2, 4, 5, 7, 9, 11];
+          const hookNotes = [
+              pentatonicDegrees[Math.floor(Math.random() * pentatonicDegrees.length)],
+              pentatonicDegrees[Math.floor(Math.random() * pentatonicDegrees.length)],
+              pentatonicDegrees[Math.floor(Math.random() * pentatonicDegrees.length)],
+              pentatonicDegrees[Math.floor(Math.random() * pentatonicDegrees.length)]
+          ];
+
+          // Place them rhythmically at syncopated placements for high catchiness
+          const rhythmicPlacements = [0, 3, 6, 8, 11, 14];
+          rhythmicPlacements.forEach((step, idx) => {
+              if (Math.random() > 0.2) {
+                  this.patterns.lead[step] = hookNotes[idx % hookNotes.length];
+              }
+          });
       }
   }
 
   // --- AUDIO SCHEDULER ---
 
   public startMusic() {
+      // If AI music is active or playing, do not start procedural music
+      const isAiMusicActive = this.aiAudio && !this.aiAudio.paused;
+      if (isAiMusicActive) return;
+
       // Cancel any pending lazy stop
       if (this.stopTimerID !== null) {
           window.clearTimeout(this.stopTimerID);
@@ -521,6 +583,16 @@ class AudioService {
               this.triggerArp(time, freq);
           }
       }
+
+      // 6. LEAD MELODY (Memorable vocal-like synth hook)
+      if (sect === Section.MAIN || sect === Section.BREAKDOWN) {
+          const leadDegree = this.patterns.lead[beatNumber];
+          if (leadDegree !== -1) {
+              const freq = this.getFreq(leadDegree, 3); // Singing register
+              const stepDuration = (60 / this.context.bpm) * 0.25;
+              this.triggerLeadSynth(time, freq, stepDuration * 1.6);
+          }
+      }
   }
 
   // --- SYNTHESIS ENGINES ---
@@ -536,55 +608,79 @@ class AudioService {
   private triggerKick(time: number) {
       if (!this.ctx || !this.musicBus) return;
       
+      // Punchy sub body sweep
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       
-      osc.frequency.setValueAtTime(150, time);
-      osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(160, time);
+      osc.frequency.exponentialRampToValueAtTime(45, time + 0.15);
       
-      gain.gain.setValueAtTime(1.0, time);
-      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+      gain.gain.setValueAtTime(1.1, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
+
+      // Attack Transient Click Layer
+      const clickOsc = this.ctx.createOscillator();
+      const clickGain = this.ctx.createGain();
+      clickOsc.type = 'triangle';
+      clickOsc.frequency.setValueAtTime(1100, time);
+      clickOsc.frequency.exponentialRampToValueAtTime(110, time + 0.025);
+      
+      clickGain.gain.setValueAtTime(0.45, time);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
 
       osc.connect(gain);
-      gain.connect(this.musicBus);
-      osc.start(time);
-      osc.stop(time + 0.5);
+      clickOsc.connect(clickGain);
       
-      osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+      gain.connect(this.musicBus);
+      clickGain.connect(this.musicBus);
+      
+      osc.start(time);
+      clickOsc.start(time);
+      
+      osc.stop(time + 0.25);
+      clickOsc.stop(time + 0.04);
+      
+      osc.onended = () => { 
+          osc.disconnect(); 
+          gain.disconnect(); 
+          clickOsc.disconnect(); 
+          clickGain.disconnect(); 
+      };
   }
 
   private triggerFMBass(time: number, freq: number) {
       if (!this.ctx || !this.musicBus) return;
       
-      // Carrier
+      // Carrier - rich sawtooth waves
       const car = this.ctx.createOscillator();
-      car.type = 'sine';
+      car.type = 'sawtooth';
       car.frequency.value = freq;
 
-      // Modulator
+      // Modulator - sine wave harmonizer
       const mod = this.ctx.createOscillator();
-      mod.type = 'square'; // Gritty
-      mod.frequency.value = freq * 0.5; // Sub-octave mod
+      mod.type = 'sine';
+      mod.frequency.value = freq * 2.0;
       
       const modGain = this.ctx.createGain();
-      // FM Index envelope
-      modGain.gain.setValueAtTime(500, time); 
-      modGain.gain.exponentialRampToValueAtTime(1, time + 0.3);
+      modGain.gain.setValueAtTime(260, time); 
+      modGain.gain.exponentialRampToValueAtTime(1, time + 0.26);
 
       mod.connect(modGain);
       modGain.connect(car.frequency);
 
+      // Dynamic Filter sweep for fat analog "wub" shape
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.value = 3.5;
+      filter.frequency.setValueAtTime(freq * 1.6, time);
+      filter.frequency.exponentialRampToValueAtTime(freq * 0.75, time + 0.24);
+
       // Amp Envelope
       const amp = this.ctx.createGain();
       amp.gain.setValueAtTime(0, time);
-      amp.gain.linearRampToValueAtTime(0.6, time + 0.02);
-      amp.gain.exponentialRampToValueAtTime(0.01, time + 0.4);
-
-      // Lowpass Filter for "wub"
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(300, time);
-      filter.frequency.exponentialRampToValueAtTime(100, time + 0.3);
+      amp.gain.linearRampToValueAtTime(0.42, time + 0.012);
+      amp.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
 
       car.connect(filter);
       filter.connect(amp);
@@ -592,17 +688,23 @@ class AudioService {
 
       car.start(time);
       mod.start(time);
-      car.stop(time + 0.5);
-      mod.stop(time + 0.5);
+      car.stop(time + 0.3);
+      mod.stop(time + 0.3);
       
-      car.onended = () => { car.disconnect(); mod.disconnect(); modGain.disconnect(); amp.disconnect(); filter.disconnect(); };
+      car.onended = () => { 
+          car.disconnect(); 
+          mod.disconnect(); 
+          modGain.disconnect(); 
+          amp.disconnect(); 
+          filter.disconnect(); 
+      };
   }
 
   private triggerPadChord(time: number, chordDegrees: number[]) {
       if (!this.ctx || !this.musicBus) return;
 
-      const attack = 1.5;
-      const release = 1.5;
+      const attack = 1.6;
+      const release = 1.6;
       const dur = (60 / this.context.bpm) * 4; // 1 bar
 
       chordDegrees.forEach((deg, _i) => {
@@ -611,37 +713,47 @@ class AudioService {
           const osc1 = this.ctx!.createOscillator();
           osc1.type = 'sawtooth';
           osc1.frequency.value = freq;
-          osc1.detune.value = -10 + (Math.random() * 20); // Thick detune
+          osc1.detune.value = -12 + (Math.random() * 24);
 
           const osc2 = this.ctx!.createOscillator();
           osc2.type = 'triangle';
-          osc2.frequency.value = freq;
-          osc2.detune.value = -5 + (Math.random() * 10);
+          osc2.frequency.value = freq * 0.5; // sub octave warm layer
+          osc2.detune.value = -6 + (Math.random() * 12);
 
           const filter = this.ctx!.createBiquadFilter();
           filter.type = 'lowpass';
-          filter.frequency.value = 400 + (Math.random() * 200);
-          filter.Q.value = 1;
+          filter.frequency.value = 350 + (Math.random() * 150);
+          filter.Q.value = 1.6;
 
-          // Slight filter movement LFO
+          // Slow organic filter breathing
           const lfo = this.ctx!.createOscillator();
-          lfo.frequency.value = 0.2; // Slow breathe
+          lfo.frequency.value = 0.16;
           const lfoGain = this.ctx!.createGain();
-          lfoGain.gain.value = 200;
+          lfoGain.gain.value = 160;
           lfo.connect(lfoGain);
           lfoGain.connect(filter.frequency);
 
+          // Simulated rhythmic Sidechain Pumping synced to the 4/4 beats
+          const tremolo = this.ctx!.createGain();
+          const beatDur = 60 / this.context.bpm;
+          for (let b = 0; b < 4; b++) {
+              const pumpTime = time + (b * beatDur);
+              tremolo.gain.setValueAtTime(0.35, pumpTime);
+              tremolo.gain.linearRampToValueAtTime(1.0, pumpTime + (beatDur * 0.42));
+              tremolo.gain.setValueAtTime(1.0, pumpTime + beatDur - 0.02);
+          }
+
           const gain = this.ctx!.createGain();
           gain.gain.setValueAtTime(0, time);
-          gain.gain.linearRampToValueAtTime(0.08, time + attack);
-          gain.gain.setValueAtTime(0.08, time + dur - release);
+          gain.gain.linearRampToValueAtTime(0.05, time + attack);
+          gain.gain.setValueAtTime(0.05, time + dur - release);
           gain.gain.linearRampToValueAtTime(0, time + dur);
 
           osc1.connect(filter);
           osc2.connect(filter);
-          filter.connect(gain);
+          filter.connect(tremolo);
+          tremolo.connect(gain);
           
-          // Send to Reverb heavily
           if (this.reverbNode) gain.connect(this.reverbNode);
           else gain.connect(this.musicBus!);
 
@@ -654,54 +766,137 @@ class AudioService {
           osc2.stop(stopTime);
           lfo.stop(stopTime);
           
-          osc1.onended = () => { osc1.disconnect(); osc2.disconnect(); lfo.disconnect(); lfoGain.disconnect(); filter.disconnect(); gain.disconnect(); };
+          osc1.onended = () => { 
+              osc1.disconnect(); 
+              osc2.disconnect(); 
+              lfo.disconnect(); 
+              lfoGain.disconnect(); 
+              filter.disconnect(); 
+              tremolo.disconnect();
+              gain.disconnect(); 
+          };
       });
   }
 
   private triggerArp(time: number, freq: number) {
       if (!this.ctx || !this.musicBus) return;
 
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sine'; // Plucky sine
-      osc.frequency.value = freq;
+      // FM Bell synthesis
+      const car = this.ctx.createOscillator();
+      car.type = 'sine';
+      car.frequency.value = freq;
+
+      const mod = this.ctx.createOscillator();
+      mod.type = 'sine';
+      mod.frequency.value = freq * 3.5; // crystalline harmonic chime ratio
+
+      const modGain = this.ctx.createGain();
+      modGain.gain.setValueAtTime(300, time);
+      modGain.gain.exponentialRampToValueAtTime(1, time + 0.1);
+
+      mod.connect(modGain);
+      modGain.connect(car.frequency);
 
       const gain = this.ctx.createGain();
       gain.gain.setValueAtTime(0, time);
-      gain.gain.linearRampToValueAtTime(0.1, time + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+      gain.gain.linearRampToValueAtTime(0.07, time + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.16);
+
+      car.connect(gain);
+      if (this.delayNode) gain.connect(this.delayNode);
+      if (this.reverbNode) gain.connect(this.reverbNode);
+      gain.connect(this.musicBus);
+
+      car.start(time);
+      mod.start(time);
+      car.stop(time + 0.2);
+      mod.stop(time + 0.2);
+      
+      car.onended = () => { 
+          car.disconnect(); 
+          mod.disconnect(); 
+          modGain.disconnect(); 
+          gain.disconnect(); 
+      };
+  }
+
+  private triggerLeadSynth(time: number, freq: number, duration: number) {
+      if (!this.ctx || !this.musicBus) return;
+
+      // EXPRESSIVE SOLO LEAD SYNTH
+      const osc = this.ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, time);
+
+      // Melodic pitch vibrato (6Hz)
+      const vibrato = this.ctx.createOscillator();
+      vibrato.frequency.value = 6.2;
+      const vibratoGain = this.ctx.createGain();
+      vibratoGain.gain.value = 4.5;
+      
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(osc.frequency);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.09, time + 0.04);
+      gain.gain.setValueAtTime(0.09, time + duration - 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
 
       osc.connect(gain);
-      // Send to Delay
       if (this.delayNode) gain.connect(this.delayNode);
+      if (this.reverbNode) gain.connect(this.reverbNode);
       gain.connect(this.musicBus);
 
       osc.start(time);
-      osc.stop(time + 0.25);
-      
-      osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+      vibrato.start(time);
+      osc.stop(time + duration + 0.05);
+      vibrato.stop(time + duration + 0.05);
+
+      osc.onended = () => {
+          osc.disconnect();
+          vibrato.disconnect();
+          vibratoGain.disconnect();
+          gain.disconnect();
+      };
   }
 
   private triggerHat(time: number, accent: boolean) {
-      if (!this.ctx || !this.musicBus || !this.whiteNoiseBuffer) return;
+      if (!this.ctx || !this.musicBus) return;
       
-      const noise = this.ctx.createBufferSource();
-      noise.buffer = this.whiteNoiseBuffer;
+      // Pristine TR-808 style metallic synthesized high-hats
+      const oscs: OscillatorNode[] = [];
+      const gain = this.ctx.createGain();
+      const freqs = [3900, 5100, 6700, 8400, 10300];
+      
+      freqs.forEach(f => {
+          const osc = this.ctx!.createOscillator();
+          osc.type = 'square';
+          osc.frequency.value = f;
+          osc.connect(gain);
+          oscs.push(osc);
+      });
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'highpass';
-      filter.frequency.value = 8000;
+      filter.frequency.value = 7600;
+      filter.Q.value = 1.6;
 
-      const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(accent ? 0.15 : 0.05, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + (accent ? 0.05 : 0.03));
+      gain.connect(filter);
+      filter.connect(this.musicBus);
 
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.musicBus);
-      
-      noise.start(time);
-      noise.stop(time + (accent ? 0.05 : 0.03));
-      noise.onended = () => { noise.disconnect(); filter.disconnect(); gain.disconnect(); };
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(accent ? 0.075 : 0.028, time + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + (accent ? 0.07 : 0.035));
+
+      oscs.forEach(osc => osc.start(time));
+      oscs.forEach(osc => osc.stop(time + (accent ? 0.08 : 0.04)));
+
+      oscs[0].onended = () => {
+          oscs.forEach(osc => osc.disconnect());
+          gain.disconnect();
+          filter.disconnect();
+      };
   }
 
   // --- SFX METHODS ---
@@ -728,14 +923,135 @@ class AudioService {
     };
 
     switch (type) {
-      case 'UI_CLICK': playOsc(800, 'triangle', 0.1, 0.1); break;
-      case 'UI_HOVER': playOsc(400, 'sine', 0.05, 0.02); break;
-      case 'ERROR': playOsc(150, 'sawtooth', 0.2, 0.1); break;
-      case 'SUCCESS': 
-        playOsc(523, 'sine', 0.3, 0.1, t); 
-        playOsc(659, 'sine', 0.3, 0.1, t + 0.1);
-        break;
-      case 'COIN': playOsc(1200, 'sine', 0.4, 0.05); break;
+      case 'UI_CLICK': {
+          // Dual frequency organic tick
+          const osc1 = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(1300, t);
+          osc1.frequency.exponentialRampToValueAtTime(650, t + 0.04);
+          
+          osc2.type = 'triangle';
+          osc2.frequency.setValueAtTime(2600, t);
+          osc2.frequency.exponentialRampToValueAtTime(1300, t + 0.02);
+          
+          g.gain.setValueAtTime(0.07, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+          
+          osc1.connect(g);
+          osc2.connect(g);
+          g.connect(this.sfxBus);
+          
+          osc1.start(t);
+          osc2.start(t);
+          osc1.stop(t + 0.06);
+          osc2.stop(t + 0.06);
+          break;
+      }
+      case 'UI_HOVER': {
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, t);
+          osc.frequency.exponentialRampToValueAtTime(640, t + 0.04);
+          
+          g.gain.setValueAtTime(0.012, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+          
+          osc.connect(g);
+          g.connect(this.sfxBus);
+          osc.start(t);
+          osc.stop(t + 0.05);
+          break;
+      }
+      case 'ERROR': {
+          // Low grit warning buzzer
+          const osc1 = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const filter = this.ctx.createBiquadFilter();
+          const g = this.ctx.createGain();
+          
+          osc1.type = 'sawtooth';
+          osc1.frequency.setValueAtTime(130, t);
+          osc1.frequency.linearRampToValueAtTime(70, t + 0.25);
+          
+          osc2.type = 'square';
+          osc2.frequency.setValueAtTime(132, t);
+          osc2.frequency.linearRampToValueAtTime(72, t + 0.25);
+          
+          filter.type = 'peaking';
+          filter.frequency.value = 320;
+          filter.Q.value = 4.5;
+          
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.12, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+          
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(g);
+          g.connect(this.sfxBus);
+          
+          osc1.start(t);
+          osc2.start(t);
+          osc1.stop(t + 0.26);
+          osc2.stop(t + 0.26);
+          break;
+      }
+      case 'SUCCESS': {
+          // Celestial major arpeggio riser
+          const notes = [523.25, 659.25, 783.99, 1046.50];
+          notes.forEach((freq, idx) => {
+              const noteTime = t + (idx * 0.05);
+              const osc = this.ctx!.createOscillator();
+              const g = this.ctx!.createGain();
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(freq, noteTime);
+              osc.frequency.exponentialRampToValueAtTime(freq * 1.05, noteTime + 0.22);
+              
+              g.gain.setValueAtTime(0, noteTime);
+              g.gain.linearRampToValueAtTime(0.08, noteTime + 0.015);
+              g.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.25);
+              
+              osc.connect(g);
+              if (this.reverbNode) g.connect(this.reverbNode);
+              else g.connect(this.sfxBus!);
+              
+              osc.start(noteTime);
+              osc.stop(noteTime + 0.26);
+          });
+          break;
+      }
+      case 'COIN': {
+          // Pristine high-tech crystalline credit double-chirp
+          const osc1 = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(1046.50, t);
+          osc1.frequency.exponentialRampToValueAtTime(1396.91, t + 0.06);
+          
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(2093.00, t);
+          
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.06, t + 0.005);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          
+          osc1.connect(g);
+          osc2.connect(g);
+          if (this.reverbNode) g.connect(this.reverbNode);
+          else g.connect(this.sfxBus);
+          
+          osc1.start(t);
+          osc2.start(t);
+          osc1.stop(t + 0.36);
+          osc2.stop(t + 0.36);
+          break;
+      }
       case 'MOVE': 
         if (this.whiteNoiseBuffer) {
             const src = this.ctx.createBufferSource();
@@ -904,6 +1220,149 @@ class AudioService {
           }
           this.portalHumNode = null;
       }
+  }
+
+  // --- AI GENERATIVE MUSIC (LYRIA INTEGRATION) ---
+
+  public subscribeAiMusic(listener: (state: any) => void) {
+      this.aiMusicListeners.push(listener);
+      // Immediately notify
+      listener({ ...this.aiMusicState });
+      return () => {
+          this.aiMusicListeners = this.aiMusicListeners.filter(l => l !== listener);
+      };
+  }
+
+  private notifyAiMusic() {
+      this.aiMusicListeners.forEach(l => l({ ...this.aiMusicState }));
+  }
+
+  public getAiMusicState() {
+      return { ...this.aiMusicState };
+  }
+
+  public async generateAiMusic(prompt: string, length: 'clip' | 'pro' = 'clip') {
+      this.aiMusicState.status = 'generating';
+      this.aiMusicState.prompt = prompt;
+      this.aiMusicState.length = length;
+      this.aiMusicState.error = '';
+      this.notifyAiMusic();
+
+      // Pause regular music if running
+      const wasProceduralRunning = this.musicRunning;
+      if (wasProceduralRunning) {
+          this.stopMusic(true);
+      }
+
+      // Stop any existing AI Audio
+      this.stopAiMusic();
+
+      try {
+          const response = await fetch('/api/music', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt, length })
+          });
+
+          if (!response.ok) {
+              const errData = await response.json().catch(() => ({ error: 'Unknown server error' }));
+              throw new Error(errData.error || `HTTP error ${response.status}`);
+          }
+
+          const data = await response.json();
+          const { audioBase64, lyrics, mimeType } = data;
+
+          if (!audioBase64) {
+              throw new Error("No audio data returned from the server.");
+          }
+
+          // Decode base64 to Blob URL
+          const binary = atob(audioBase64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+              bytes[i] = binary.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: mimeType });
+          const audioUrl = URL.createObjectURL(blob);
+
+          this.aiAudio = new Audio(audioUrl);
+          this.aiAudio.loop = true;
+          this.aiAudio.volume = this.isMusicMuted ? 0 : 0.6;
+
+          this.aiAudio.onplay = () => {
+              this.aiMusicState.status = 'playing';
+              this.notifyAiMusic();
+          };
+
+          this.aiAudio.onpause = () => {
+              this.aiMusicState.status = 'paused';
+              this.notifyAiMusic();
+          };
+
+          this.aiAudio.onerror = (e) => {
+              console.error("AI Audio element playback error", e);
+              this.aiMusicState.status = 'error';
+              this.aiMusicState.error = 'Playback failed';
+              this.notifyAiMusic();
+          };
+
+          this.aiAudio.onended = () => {
+              this.aiMusicState.status = 'idle';
+              this.notifyAiMusic();
+          };
+
+          this.aiMusicState.lyrics = lyrics || '';
+          this.aiMusicState.status = 'playing';
+          this.notifyAiMusic();
+
+          await this.aiAudio.play();
+
+      } catch (err: any) {
+          console.error("AI Music generation failed:", err);
+          this.aiMusicState.status = 'error';
+          this.aiMusicState.error = err.message || "Failed to generate AI music";
+          this.notifyAiMusic();
+
+          // Resume procedural music if it was running before
+          if (wasProceduralRunning && !this.isMusicMuted) {
+              this.startMusic();
+          }
+      }
+  }
+
+  public playAiMusic() {
+      if (this.aiAudio) {
+          // Stop procedural music
+          this.stopMusic(true);
+          
+          this.aiAudio.volume = this.isMusicMuted ? 0 : 0.6;
+          this.aiAudio.play()
+              .then(() => {
+                  this.aiMusicState.status = 'playing';
+                  this.notifyAiMusic();
+              })
+              .catch(err => {
+                  console.error("Failed to play AI music", err);
+              });
+      }
+  }
+
+  public pauseAiMusic() {
+      if (this.aiAudio) {
+          this.aiAudio.pause();
+          this.aiMusicState.status = 'paused';
+          this.notifyAiMusic();
+      }
+  }
+
+  public stopAiMusic() {
+      if (this.aiAudio) {
+          this.aiAudio.pause();
+          this.aiAudio.src = '';
+          this.aiAudio = null;
+      }
+      this.aiMusicState.status = 'idle';
+      this.notifyAiMusic();
   }
 }
 

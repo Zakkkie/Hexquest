@@ -36,7 +36,10 @@ export const series6Levels: LevelConfig[] = [
         { q: 3, r: 0, currentLevel: 2, maxLevel: 2, structureType: 'NONE', revealed: true }, // вершина-выход L2
       ]
     },
-    objectiveHexes: [{ q: 3, r: 0, targetLevel: 2, label: 'Summit', color: 'emerald' }],
+    objectiveHexes: [
+      { q: 1, r: 0, targetLevel: 1, label: 'Ramp', color: 'amber' },
+      { q: 3, r: 0, targetLevel: 2, label: 'Summit', color: 'emerald' }
+    ],
     startState: { credits: 0, moves: 20, rank: 3, materials: 2 },
     aiMode: 'none',
     getTutorialHint: (state) => {
@@ -204,7 +207,7 @@ export const series6Levels: LevelConfig[] = [
       ]
     },
     objectiveHexes: [{ q: 0, r: 0, targetLevel: 3, label: 'Tower', color: 'amber' }],
-    startState: { credits: 0, moves: 120, rank: 5, materials: 40 },
+    startState: { credits: 0, moves: 30, rank: 5, materials: 18 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
@@ -240,7 +243,7 @@ export const series6Levels: LevelConfig[] = [
       ]
     },
     requiredShapes: [{ type: 'RING_6', level: 2, hint: 'Build a RING of Level 2 hexes' }],
-    startState: { credits: 0, moves: 160, rank: 5, materials: 60 },
+    startState: { credits: 0, moves: 35, rank: 5, materials: 18 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
@@ -272,7 +275,7 @@ export const series6Levels: LevelConfig[] = [
       ]
     },
     requiredShapes: [{ type: 'TRIANGLE_3', level: 3, hint: 'Build a TRIANGLE of Level 3 hexes' }],
-    startState: { credits: 0, moves: 200, rank: 5, materials: 80 },
+    startState: { credits: 0, moves: 40, rank: 5, materials: 24 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
