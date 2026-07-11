@@ -497,11 +497,11 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                     <div className={`bg-slate-950/45 saturate-[175%] backdrop-blur-2xl border border-slate-800/40 rounded-[1.5rem] ${isDefenseMode ? 'p-1.5 px-2 gap-1.5' : 'p-2 px-3 gap-3'} flex items-center justify-between relative overflow-visible animate-border-glow-premium transition-all duration-500`}>
                         
                         {/* ITEM SHORTCUT TRAY AND TIMER */}
-                        <div className={`flex items-center gap-1.5 ${isDefenseMode ? 'max-w-[110px] pr-1.5' : 'max-w-[170px] pr-2.5'} border-r border-slate-800/50 shrink-0`}>
+                        <div className="flex items-center gap-1.5 border-r border-slate-800/50 shrink-0 pr-1.5">
                             {isTimedLevel && gameStatus === 'PLAYING' && (
-                                <div className={`flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 border rounded-lg h-12 shadow-inner ${timeLeft < 15 ? 'border-red-500 animate-pulse' : 'border-slate-800'}`}>
-                                    <Clock className={`w-3.5 h-3.5 ${timeLeft < 15 ? 'text-red-500 animate-bounce' : 'text-amber-400'}`} />
-                                    <span className={`text-xs font-black font-mono leading-none tracking-tight ${timeLeft < 15 ? 'text-red-400' : 'text-slate-100'}`}>
+                                <div className={`flex items-center gap-1 px-1.5 py-0.5 bg-slate-950/80 border rounded-lg h-10 shadow-inner ${timeLeft < 15 ? 'border-red-500 animate-pulse' : 'border-slate-800'}`}>
+                                    <Clock className={`w-3 h-3 ${timeLeft < 15 ? 'text-red-500 animate-bounce' : 'text-amber-400'}`} />
+                                    <span className={`text-[10px] font-black font-mono leading-none tracking-tight ${timeLeft < 15 ? 'text-red-400' : 'text-slate-100'}`}>
                                         {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                                     </span>
                                 </div>
@@ -510,17 +510,17 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                             {/* Inventory cells as a compact 3x2 grid */}
                             <div className="grid grid-cols-3 gap-0.5 shrink-0">
                                 {[0, 1, 2, 3, 4, 5].map(index => {
+                                    const slotSize = isDefenseMode ? "w-6 h-6" : "w-7 h-7";
                                     if (index === 5) {
                                         // Symmetry helper
                                         return (
                                             <div 
                                                 key="slot-placeholder" 
-                                                className="w-6.5 h-6.5 rounded-md bg-slate-950/10 border border-slate-900/10 border-dashed"
+                                                className={`${slotSize} rounded-md bg-slate-950/10 border border-slate-900/10 border-dashed`}
                                             />
                                         );
                                     }
                                     const item = player.inventory[index];
-                                    const slotSize = "w-6.5 h-6.5";
                                     return (
                                         <div 
                                             key={index}
@@ -532,7 +532,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                             }`}
                                         >
                                             {item ? (
-                                                <ItemIcon item={item} size="w-6.5 h-6.5" />
+                                                <ItemIcon item={item} size={isDefenseMode ? "w-4 h-4" : "w-5 h-5"} />
                                             ) : (
                                                 <div className="w-1 h-1 rounded-full bg-slate-800/30" />
                                             )}
@@ -587,7 +587,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}
                                 >
                                     <div className={`flex flex-col items-center justify-center ${isDefenseMode ? 'gap-0 px-1 py-1' : 'gap-0.5 px-2.5 py-2'}`}>
-                                        <ChevronsUp className={`transition-transform duration-300 ${isDefenseMode ? 'w-4.5 h-4.5' : 'w-5.5 h-5.5'} ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-115 -translate-y-0.5 text-white' : 'text-amber-400'}`} />
+                                        <ChevronsUp className={`transition-transform duration-300 ${isDefenseMode ? 'w-4 h-4' : 'w-5 h-5'} ${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'scale-115 -translate-y-0.5 text-white' : 'text-amber-400'}`} />
                                         <span className={`${isDefenseMode ? 'text-[6.5px]' : 'text-[7px]'} font-black uppercase tracking-wide leading-none text-amber-200/90`}>{coreLabels.up}</span>
                                     </div>
                                 </HexButton>

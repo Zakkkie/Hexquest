@@ -450,16 +450,25 @@ export const series1Levels: LevelConfig[] = [
         { q: -1, r: 1, currentLevel: 0, maxLevel: 3, revealed: true },
         { q: -1, r: 0, currentLevel: 0, maxLevel: 3, revealed: true },
         { q: 0, r: -1, currentLevel: 0, maxLevel: 3, revealed: true },
+        // Radius 2 Ring
+        { q: 0, r: -2, currentLevel: 0, maxLevel: 3, revealed: true },
+        { q: 1, r: -2, currentLevel: 0, maxLevel: 3, revealed: true },
         { q: 2, r: -2, currentLevel: 0, maxLevel: 3, revealed: true },
         { q: 2, r: -1, currentLevel: 0, maxLevel: 3, revealed: true },
+        { q: 2, r: 0, currentLevel: 0, maxLevel: 3, revealed: true },
+        { q: 1, r: 1, currentLevel: 0, maxLevel: 3, revealed: true },
         { q: 0, r: 2, currentLevel: 0, maxLevel: 3, revealed: true },
+        { q: -1, r: 2, currentLevel: 0, maxLevel: 3, revealed: true },
         { q: -2, r: 2, currentLevel: 0, maxLevel: 3, revealed: true },
+        { q: -2, r: 1, currentLevel: 0, maxLevel: 3, revealed: true },
+        { q: -2, r: 0, currentLevel: 0, maxLevel: 3, revealed: true },
+        { q: -1, r: -1, currentLevel: 0, maxLevel: 3, revealed: true },
       ]
     },
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 3, label: 'Goal L3', color: 'emerald' },
     ],
-    startState: { credits: 0, moves: 50, rank: 3, materials: 14, initialEntropy: 100 },
+    startState: { credits: 0, moves: 80, rank: 3, materials: 30, initialEntropy: 100 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';

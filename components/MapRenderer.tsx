@@ -1337,7 +1337,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         hexCache.current.forEach(hContainer => {
             const voidFlickerNode = hContainer.getChildByName('voidFlicker') as PIXI.Graphics;
             if (voidFlickerNode) {
-                voidFlickerNode.alpha = 0.5 + 0.5 * Math.sin(now2 / 150);
+                voidFlickerNode.alpha = 0.5 + 0.3 * Math.sin(now2 / 200);
             }
             const voidCircleGlow = hContainer.getChildByName('voidCircleGlow') as PIXI.Graphics;
             if (voidCircleGlow) {
@@ -1622,10 +1622,31 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     if (!voidFlickerNode) {
                         voidFlickerNode = new PIXI.Graphics();
                         voidFlickerNode.name = 'voidFlicker';
-                        voidFlickerNode.zIndex = 15;
                         curContainer.addChild(voidFlickerNode);
                     }
+                    voidFlickerNode.zIndex = 22;
+                    voidFlickerNode.visible = true;
+                    curContainer.sortChildren();
                     voidFlickerNode.clear();
+
+                    // Draw concentric hexagons to create a smooth, beautiful gradient from center (highest red opacity) to boundaries (fades out)
+                    const numHexLayers = 15;
+                    for (let step = 0; step < numHexLayers; step++) {
+                        const s = 1.0 - (step / numHexLayers) * 0.95;
+                        const alphaVal = 0.03 + 0.65 * Math.pow(1.0 - s, 2.0);
+
+                        voidFlickerNode.beginPath();
+                        rotatedBasePoints.forEach((pt, j) => {
+                            const px = pt.x * s;
+                            const py = pt.y * 0.8 * s + faceY;
+                            if (j === 0) voidFlickerNode.moveTo(px, py);
+                            else voidFlickerNode.lineTo(px, py);
+                        });
+                        voidFlickerNode.closePath();
+                        voidFlickerNode.fill({ color: 0xef4444, alpha: alphaVal });
+                    }
+
+                    // Add a clean, crisp red hexagonal boundary stroke
                     voidFlickerNode.beginPath();
                     rotatedBasePoints.forEach((pt, j) => {
                         const px = pt.x;
@@ -1634,40 +1655,13 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         else voidFlickerNode.lineTo(px, py);
                     });
                     voidFlickerNode.closePath();
-                    voidFlickerNode.fill({ color: 0xef4444 });
                     voidFlickerNode.stroke({ width: 3.0, color: 0xef4444, alignment: 1.0 });
 
-                    // Pulsing Round Red Glimmer on top
-                    let voidCircleGlow = curContainer.getChildByName('voidCircleGlow') as PIXI.Graphics;
-                    if (!voidCircleGlow) {
-                        voidCircleGlow = new PIXI.Graphics();
-                        voidCircleGlow.name = 'voidCircleGlow';
-                        voidCircleGlow.zIndex = 16;
-                        curContainer.addChild(voidCircleGlow);
+                    // Clean up and remove voidCircleGlow if it exists
+                    const existingCircleGlow = curContainer.getChildByName('voidCircleGlow');
+                    if (existingCircleGlow) {
+                        curContainer.removeChild(existingCircleGlow).destroy();
                     }
-                    voidCircleGlow.x = 0;
-                    voidCircleGlow.y = faceY; // Positioned so scaling is around center
-                    voidCircleGlow.clear();
-                    
-                    // Inner glowing circle (scaled ellipse for isometric projection)
-                    voidCircleGlow.beginPath();
-                    voidCircleGlow.ellipse(0, 0, 15, 12);
-                    voidCircleGlow.fill({ color: 0xef4444, alpha: 0.85 });
-                    
-                    // Middle glowing circle
-                    voidCircleGlow.beginPath();
-                    voidCircleGlow.ellipse(0, 0, 28, 22.4);
-                    voidCircleGlow.fill({ color: 0xef4444, alpha: 0.45 });
-                    
-                    // Outer glowing circle
-                    voidCircleGlow.beginPath();
-                    voidCircleGlow.ellipse(0, 0, 42, 33.6);
-                    voidCircleGlow.fill({ color: 0xef4444, alpha: 0.20 });
-
-                    // Circular outline
-                    voidCircleGlow.beginPath();
-                    voidCircleGlow.ellipse(0, 0, 32, 25.6);
-                    voidCircleGlow.stroke({ width: 2.5, color: 0xff3b30, alpha: 0.95 });
 
                     // Draw Void boundaries (side walls)
                     for (let i = 0; i < 6; i++) {
@@ -1760,6 +1754,15 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 // Draw Top Face Polygon
                 let faceContainer = curContainer.getChildByName('faceContainer') as PIXI.Container;
                 if (!isRealVoid) {
+                    const voidFlickerNode = curContainer.getChildByName('voidFlicker');
+                    if (voidFlickerNode) {
+                        curContainer.removeChild(voidFlickerNode).destroy();
+                    }
+                    const voidCircleGlow = curContainer.getChildByName('voidCircleGlow');
+                    if (voidCircleGlow) {
+                        curContainer.removeChild(voidCircleGlow).destroy();
+                    }
+
                     const topCanvas = isFinish
                         ? textureService.getTexture(0, props.q, props.r, undefined, 'PORTAL')
                         : textureService.getTexture(props.level, props.q, props.r, undefined);
@@ -2290,7 +2293,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 }
 
                 // --- PERSISTENT FINISH BEACON ---
-                if (isFinish && isRevealed) {
+                const met = areAllConditionsMet(session, activeLevelConfig);
+                if (isFinish && isRevealed && met) {
                     let finishBeacon = curContainer.getChildByName('finish_beacon') as PIXI.Container;
                     if (!finishBeacon) {
                         finishBeacon = new PIXI.Container();
@@ -2324,9 +2328,6 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         const beamWidthBottom = 26 * pulse;
                         const rx = beamWidthBottom;
                         const ry = rx * 0.577; // isometric projection radius ratio
-
-                        // Check if conditions are met to make it fully active / intense!
-                        const met = areAllConditionsMet(session, activeLevelConfig);
                         
                         // Beam styling
                         const beamColor = met ? 0x22d3ee : 0x06b6d4; // Intense cyan vs regular cyan
@@ -2356,7 +2357,6 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
                     if (baseGlow) {
                         baseGlow.clear();
-                        const met = areAllConditionsMet(session, activeLevelConfig);
                         const pulse = Math.sin(Date.now() * 0.005) * 0.15 + 1.0;
                         
                         const glowColor = met ? 0x22d3ee : 0x0891b2;

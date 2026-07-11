@@ -68,6 +68,15 @@ const CampaignMap: React.FC = () => {
   const language = useGameStore(state => state.language);
   const skillPoints = useGameStore(state => state.skillPoints);
   const user = useGameStore(state => state.user);
+  const showToast = useGameStore(state => state.showToast);
+  const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards || []);
+
+  const isSiegeActive = useMemo(() => {
+    const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_')).length;
+    return completedNormalCount > 0 && 
+           completedNormalCount % 5 === 0 && 
+           !claimedLevelRewards.includes(`siege_completed_${completedNormalCount}`);
+  }, [claimedLevelRewards]);
   
   const currentProgress = campaignMode === 'STORY' ? campaignProgress : levelsModeProgress;
 
@@ -232,6 +241,16 @@ const CampaignMap: React.FC = () => {
                                         <motion.div 
                                             whileTap={isUnlocked ? { scale: 0.98 } : {}}
                                             onClick={() => {
+                                                if (isSiegeActive) {
+                                                    playUiSound('ERROR');
+                                                    showToast(
+                                                        language === 'RU' 
+                                                            ? 'АКТИВНА ЗАЩИТА ЯДРА! Завершите защиту, чтобы продолжить кампанию.' 
+                                                            : 'CORE DEFENSE ACTIVE! Complete the defense to continue campaign.', 
+                                                        'error'
+                                                    );
+                                                    return;
+                                                }
                                                 if (isUnlocked) {
                                                     startCampaignLevel(level.id);
                                                 } else {
@@ -390,7 +409,23 @@ const CampaignMap: React.FC = () => {
                                   <motion.div 
                                       whileHover={isUnlocked ? { scale: 1.03, y: -2, borderColor: isCurrent ? 'rgba(245,158,11,0.8)' : 'rgba(99,102,241,0.8)' } : {}}
                                       whileTap={isUnlocked ? { scale: 0.98 } : {}}
-                                      onClick={() => isUnlocked ? startCampaignLevel(pos.level.id) : playUiSound('ERROR')}
+                                      onClick={() => {
+                                          if (isSiegeActive) {
+                                              playUiSound('ERROR');
+                                              showToast(
+                                                  language === 'RU' 
+                                                      ? 'АКТИВНА ЗАЩИТА ЯДРА! Завершите защиту, чтобы продолжить кампанию.' 
+                                                      : 'CORE DEFENSE ACTIVE! Complete the defense to continue campaign.', 
+                                                  'error'
+                                              );
+                                              return;
+                                          }
+                                          if (isUnlocked) {
+                                              startCampaignLevel(pos.level.id);
+                                          } else {
+                                              playUiSound('ERROR');
+                                          }
+                                      }}
                                       className={`absolute flex flex-col bg-slate-950/35 backdrop-blur-[18px] border p-3.5 xs:p-4 rounded-2xl md:rounded-[1.5rem] shadow-[0_15px_35px_rgba(0,0,0,0.6)] w-[calc(100vw-110px)] max-w-[260px] md:w-[280px] transition-all duration-300 z-10
                                           ${isUnlocked ? 'cursor-pointer hover:bg-slate-900/60' : 'cursor-not-allowed opacity-[0.55]'}
                                           ${isCompleted ? 'border-emerald-500/20' : (isCurrent ? 'border-amber-500/50' : 'border-indigo-500/10')}
@@ -514,7 +549,23 @@ const CampaignMap: React.FC = () => {
                                             className={`group relative flex flex-col p-3 md:p-3.5 rounded-2xl md:rounded-[1.3rem] transition-all duration-300 h-full
                                                 ${isUnlocked ? 'cursor-pointer hover:shadow-[0_12px_24px_rgba(0,0,0,0.4)]' : 'opacity-65 grayscale-[40%] cursor-not-allowed'}
                                             `}
-                                            onClick={() => isUnlocked ? startCampaignLevel(level.id) : playUiSound('ERROR')}
+                                            onClick={() => {
+                                                if (isSiegeActive) {
+                                                    playUiSound('ERROR');
+                                                    showToast(
+                                                        language === 'RU' 
+                                                            ? 'АКТИВНА ЗАЩИТА ЯДРА! Завершите защиту, чтобы продолжить кампанию.' 
+                                                            : 'CORE DEFENSE ACTIVE! Complete the defense to continue campaign.', 
+                                                        'error'
+                                                    );
+                                                    return;
+                                                }
+                                                if (isUnlocked) {
+                                                    startCampaignLevel(level.id);
+                                                } else {
+                                                    playUiSound('ERROR');
+                                                }
+                                            }}
                                         >
                                             {/* Card Background - Glassmorphism */}
                                             <div className={`absolute inset-0 bg-slate-950/25 backdrop-blur-[18px] border border-white/5 transition-all duration-300 rounded-2xl md:rounded-[1.3rem] overflow-hidden
@@ -692,6 +743,40 @@ const CampaignMap: React.FC = () => {
               </motion.button>
           </div>
         </div>
+
+        <AnimatePresence>
+          {isSiegeActive && (
+              <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="bg-red-950/80 border-b border-red-500/40 backdrop-blur-xl px-4 md:px-8 py-2 md:py-3 flex items-center justify-between gap-3 shrink-0 text-red-100 z-10 overflow-hidden"
+              >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                      <ShieldAlert className="w-5 h-5 text-red-400 animate-pulse shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                          <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.15em] text-red-400 leading-none mb-1">
+                              {language === 'RU' ? 'АКТИВИРОВАНА СИСТЕМА ЗАЩИТЫ ЯДРА' : 'CORE DEFENSE MODE ENGAGED'}
+                          </span>
+                          <span className="text-xs md:text-sm font-semibold truncate leading-none text-red-200">
+                              {language === 'RU' 
+                                  ? 'Прохождение миссий заблокировано. Вернитесь на поле синтеза и отразите нападение автономных ИИ-ботов!' 
+                                  : 'Campaign missions are locked. Return to the canvas board to defend against autonomous AI bots!'}
+                          </span>
+                      </div>
+                  </div>
+                  <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => { useGameStore.getState().setUIState('STORY_BUILDER'); playUiSound('CLICK'); }}
+                      className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-200 rounded-lg border border-red-500/40 font-bold font-sans uppercase tracking-wider text-[9px] md:text-[10px] whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-lg shadow-red-950/50 flex items-center gap-1.5"
+                  >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>{language === 'RU' ? 'ЗАЩИТИТЬ ЯДРО' : 'DEFEND CORE'}</span>
+                  </motion.button>
+              </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence mode="wait">
             {campaignMode === 'STORY' ? renderStoryTimeline() : renderLevelGrid()}
