@@ -60,6 +60,51 @@ const getPoiIcon = (type: string): string => {
   }
 };
 
+function translateArrowLabel(label: string, isRu: boolean): string {
+    if (!isRu) return label;
+    const lower = label.toLowerCase().trim();
+    
+    // Exact matches
+    if (lower === 'build') return 'Строй';
+    if (lower === 'move') return 'Шаг';
+    if (lower === 'dig') return 'Бур';
+    if (lower === 'dig x2') return 'Бур x2';
+    if (lower === 'checkpoint') return 'Точка';
+    if (lower === 'portal') return 'Портал';
+    if (lower === 'path') return 'Путь';
+    if (lower === 'capital') return 'Капитолий';
+    if (lower === 'goal') return 'Цель';
+    if (lower === 'reactor') return 'Реактор';
+    if (lower === 'l3 ridge') return 'Хребет L3';
+    if (lower === 'goal l3') return 'Цель L3';
+    if (lower === 'heal') return 'Лечить';
+    if (lower === 'deep mine') return 'Шахта';
+    if (lower === 'monolith') return 'Монолит';
+    if (lower === 'shaft') return 'Шахта';
+    if (lower === 'obelisk') return 'Обелиск';
+    if (lower === 'sunken monolith') return 'Затонувший Монолит';
+    if (lower === 'stabilizer') return 'Стабилизатор';
+    if (lower === 'monument') return 'Монумент';
+    if (lower === 'alpha') return 'Альфа';
+    if (lower === 'beta') return 'Бета';
+    if (lower === 'gamma') return 'Гамма';
+    if (lower === 'exit') return 'Выход';
+    if (lower === 'center') return 'Центр';
+    if (lower === 'target') return 'Мишень';
+    if (lower === 'l2') return 'L2';
+    if (lower === 'l0') return 'L0';
+    if (lower === 'l-1') return 'L-1';
+    
+    // Partial translations for things with numbers or variable parts
+    let result = label;
+    result = result.replace(/Obelisk/gi, 'Обелиск');
+    result = result.replace(/Dig/gi, 'Бур');
+    result = result.replace(/Build/gi, 'Строй');
+    result = result.replace(/Move/gi, 'Шаг');
+    
+    return result;
+}
+
 interface MapRendererProps {
     rotation: number;
     onHexClick: (q: number, r: number) => void;
@@ -1526,6 +1571,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
         const activeHexIds = new Set<string>();
         const activeUnitIds = new Set<string>();
+        const isRu = sessionLanguage === 'RU';
         const angleRad = rotation * (Math.PI / 180);
         const cos = Math.cos(angleRad);
         const sin = Math.sin(angleRad);
@@ -2344,7 +2390,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
                         if (objHex.label) {
                             const lbl = new PIXI.Text({
-                                text: objHex.label,
+                                text: translateArrowLabel(objHex.label, isRu),
                                 style: {
                                     fontFamily: 'Inter, sans-serif',
                                     fontSize: 11,
@@ -2359,6 +2405,11 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                             lbl.y = -28;
                             objArrow.addChild(lbl);
                         }
+                    }
+
+                    const labelChild = objArrow.getChildByName('arrow_label') as PIXI.Text;
+                    if (labelChild && objHex.label) {
+                        labelChild.text = translateArrowLabel(objHex.label, isRu);
                     }
 
                     objArrow.visible = true;
@@ -2554,7 +2605,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
                         if (digLabel) {
                             const lbl = new PIXI.Text({
-                                text: digLabel,
+                                text: translateArrowLabel(digLabel, isRu),
                                 style: {
                                     fontFamily: 'Inter, sans-serif',
                                     fontSize: 10,
@@ -2569,6 +2620,11 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                             lbl.y = -24;
                             digArrow.addChild(lbl);
                         }
+                    }
+
+                    const digLabelChild = digArrow.getChildByName('dig_arrow_label') as PIXI.Text;
+                    if (digLabelChild && digLabel) {
+                        digLabelChild.text = translateArrowLabel(digLabel, isRu);
                     }
 
                     digArrow.visible = true;
@@ -3071,7 +3127,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         // 4. SORT Z-INDEX DEPTH OF VISIBLE GRAPHICS (Ensure perfect 3D occlusion layering overlays)
         parent.sortChildren();
 
-    }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors, pendingConfirmation, recentGradientLock, playerGrowthIntent, session, simpleHexToPixel]);
+    }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors, pendingConfirmation, recentGradientLock, playerGrowthIntent, session, simpleHexToPixel, sessionLanguage]);
 
     const { handleCanvasClick, handleCanvasMouseMove, handleCanvasMouseLeave } = useMapInput({
         grid,
