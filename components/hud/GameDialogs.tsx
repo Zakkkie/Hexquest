@@ -13,7 +13,7 @@ import Fireworks from '../Fireworks';
 import { MiniMonumentDialog } from './MiniMonumentDialog';
 import { LevelExitDialog } from './LevelExitDialog';
 import { audioService } from '../../services/audioService';
-import { OracleDialog } from '../OracleDialog';
+
 
 const getLevelIndexFromId = (id?: string | null): number => {
     if (!id) return 1;
@@ -1776,10 +1776,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
             )}
             </AnimatePresence>
 
-            <OracleDialog
-                isOpen={useGameStore((state) => state.oracleDialogOpen) && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && activeModal !== 'EXIT' && activeModal !== 'RESTART' && !showResetConfirm}
-                onClose={useGameStore((state) => state.closeOracleDialog)}
-            />
+
         </>
     );
 };

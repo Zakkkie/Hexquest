@@ -614,6 +614,12 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             sessionStartTimeRef.current = nowTime;
         }
 
+        if (worldContainerRef.current && camera) {
+            worldContainerRef.current.x = camera.x;
+            worldContainerRef.current.y = camera.y;
+            worldContainerRef.current.scale.set(camera.scale, camera.scale);
+        }
+
         if (gameStatus === 'VICTORY') {
             if (victoryStartTimeRef.current === null) {
                 victoryStartTimeRef.current = nowTime;
@@ -645,17 +651,92 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             }
         });
 
-        // Instant hover outline — toggled every frame so it tracks the cursor live,
+        // Instant hover outline and ghost preview — toggled every frame so it tracks the cursor live,
         // decoupled from the ~100ms render tick that previously delayed the highlight.
         {
             const hid = useEphemeralStore.getState().hoveredHexId;
             if (hid !== hoverRef.current) {
                 const prev = hoverRef.current ? hexCache.current.get(hoverRef.current) : null;
-                if (prev) { const o = prev.getChildByName('hoverOutline'); if (o) o.visible = false; }
+                if (prev) {
+                    const o = prev.getChildByName('hoverOutline');
+                    if (o) o.visible = false;
+                    
+                    const gp = prev.getChildByName('ghost_preview');
+                    if (gp) {
+                        try { prev.removeChild(gp).destroy(); } catch (e) { /* empty */ }
+                    }
+                    const gt = prev.getChildByName('ghost_text');
+                    if (gt) {
+                        try { prev.removeChild(gt).destroy(); } catch (e) { /* empty */ }
+                    }
+                }
                 const cur = hid ? hexCache.current.get(hid) : null;
                 if (cur) { 
                     const o = cur.getChildByName('hoverOutline'); 
                     if (o) o.visible = !!(cur as any).isRevealed; 
+                    
+                    if (playerGrowthIntent === 'UPGRADE' && !!(cur as any).isRevealed) {
+                        const cachedProps = hexPropsCache.current.get(cur);
+                        if (cachedProps) {
+                            let ghostPreview = cur.getChildByName('ghost_preview') as PIXI.Graphics;
+                            if (!ghostPreview) {
+                                ghostPreview = new PIXI.Graphics();
+                                ghostPreview.name = 'ghost_preview';
+                                ghostPreview.zIndex = 30;
+                                cur.addChild(ghostPreview);
+                            }
+                            ghostPreview.clear();
+                            
+                            const nextOffsetY = cachedProps.offsetY - 8;
+                            
+                            const angleRad = rotation * (Math.PI / 180);
+                            const cos = Math.cos(angleRad);
+                            const sin = Math.sin(angleRad);
+                            const rotatedBasePoints = BASE_POINTS.map(pt => ({
+                                x: pt.x * cos - pt.y * sin,
+                                y: pt.x * sin + pt.y * cos
+                            }));
+
+                            ghostPreview.beginPath();
+                            rotatedBasePoints.forEach((pt, j) => {
+                                const px = pt.x;
+                                const py = pt.y * 0.8 + nextOffsetY;
+                                if (j === 0) ghostPreview.moveTo(px, py);
+                                else ghostPreview.lineTo(px, py);
+                            });
+                            ghostPreview.closePath();
+                            
+                            ghostPreview.stroke({ width: 2.0, color: 0x10b981, alpha: 0.95 });
+                            ghostPreview.fill({ color: 0x10b981, alpha: 0.28 });
+                            
+                            rotatedBasePoints.forEach(pt => {
+                                ghostPreview.beginPath();
+                                ghostPreview.moveTo(pt.x, pt.y * 0.8 + cachedProps.offsetY);
+                                ghostPreview.lineTo(pt.x, pt.y * 0.8 + nextOffsetY);
+                                ghostPreview.stroke({ width: 1.0, color: 0x10b981, alpha: 0.5 });
+                            });
+                            
+                            let ghostText = cur.getChildByName('ghost_text') as PIXI.Text;
+                            if (!ghostText) {
+                                ghostText = new PIXI.Text({
+                                    text: `+L${cachedProps.level + 1}`,
+                                    style: {
+                                        fontFamily: 'monospace',
+                                        fontSize: 11,
+                                        fontWeight: 'bold',
+                                        fill: 0x10b981,
+                                        stroke: { color: 0x000000, width: 2.5 }
+                                    }
+                                });
+                                ghostText.name = 'ghost_text';
+                                ghostText.anchor.set(0.5, 0.5);
+                                ghostText.zIndex = 31;
+                                cur.addChild(ghostText);
+                            }
+                            ghostText.y = nextOffsetY - 12;
+                            ghostText.visible = true;
+                        }
+                    }
                 }
                 hoverRef.current = hid;
             }
@@ -897,12 +978,13 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                     }
                     actionOverlay.visible = true;
                     
-                    const pZ = getHexVisualHeight(state.targetLevel);
+                    // Fetch progress data from selected hex
+                    const currentHex = grid && selectedHexId ? grid[selectedHexId] : null;
+                    const levelVal = currentHex ? currentHex.currentLevel : state.targetLevel;
+                    const pZ = getHexVisualHeight(levelVal);
                     actionOverlay.y = pZ;
                     
-                    // Fetch progress data from selected hex
                     const isRu = useGameStore.getState().session?.language === 'RU';
-                    const currentHex = grid && selectedHexId ? grid[selectedHexId] : null;
                     const growthType = playerGrowthIntent || 'UPGRADE';
                     
                     let currentStepNeeded = 30;

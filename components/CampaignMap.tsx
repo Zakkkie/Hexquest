@@ -681,7 +681,7 @@ const CampaignMap: React.FC = () => {
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="relative z-10 w-full h-full lg:h-[94vh] lg:w-[96vw] max-w-[1600px] flex flex-col md:bg-slate-900/60 md:backdrop-blur-2xl md:border md:border-indigo-500/30 md:rounded-3xl md:shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(99,102,241,0.1)] overflow-hidden box-border"
       >
-        <div className="px-4 md:px-8 pt-[calc(env(safe-area-inset-top)+14px)] pb-3 md:py-4 border-b border-indigo-500/20 flex items-center justify-between bg-slate-900/40 shrink-0 z-20 backdrop-blur-xl gap-3">
+        <div className="px-4 md:px-8 py-4 md:py-8 h-14 box-content border-b border-indigo-500/20 flex items-center justify-between bg-slate-900/40 shrink-0 z-20 backdrop-blur-xl gap-3">
           <div className="flex items-center gap-3 md:gap-4 min-w-0">
              <motion.button 
                 whileHover={{ scale: 1.05 }}

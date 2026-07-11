@@ -610,15 +610,7 @@ export const createGameplaySlice = (
     set(() => ({ miniMonumentDialogState: { isOpen: false, hint: undefined } }));
   },
 
-  oracleDialogOpen: false,
-  openOracleDialog: () => {
-    audioService.play('UI_CLICK');
-    set(() => ({ oracleDialogOpen: true }));
-  },
-  closeOracleDialog: () => {
-    audioService.play('UI_CLICK');
-    set(() => ({ oracleDialogOpen: false }));
-  },
+
 
   openMonumentDialog: () => {
     const state = get().session;

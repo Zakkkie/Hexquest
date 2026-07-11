@@ -163,6 +163,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 
     const digDimmed = useMemo(() => {
         if (!activeLevelConfig?.id?.startsWith('1.')) return false;
+        if (activeLevelConfig?.id === '1.6') return false;
         if (!tutorialHint) return false;
         const upper = tutorialHint.toUpperCase();
         if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;
@@ -175,6 +176,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 
     const upgradeDimmed = useMemo(() => {
         if (!activeLevelConfig?.id?.startsWith('1.')) return false;
+        if (activeLevelConfig?.id === '1.6') return false;
         if (!tutorialHint) return false;
         const upper = tutorialHint.toUpperCase();
         if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;
@@ -187,6 +189,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 
     const recoverDimmed = useMemo(() => {
         if (!activeLevelConfig?.id?.startsWith('1.')) return false;
+        if (activeLevelConfig?.id === '1.6') return false;
         if (!tutorialHint) return false;
         const upper = tutorialHint.toUpperCase();
         if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;

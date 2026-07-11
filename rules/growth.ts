@@ -132,6 +132,16 @@ export function checkGrowthCondition(
   const currentLevel = hex.currentLevel ?? 0;
   const targetLevel = currentLevel + 1;
 
+  const activeLevelId = useGameStore.getState().session?.activeLevelConfig?.id;
+  if (activeLevelId === '1.6' && targetLevel > 2) {
+      return { 
+          canGrow: false, 
+          reason: useGameStore.getState().language === 'RU' 
+              ? "ЗАПРЕЩЕНО: На Sim 1.6 нельзя строить выше уровня L2!" 
+              : "BANNED: Building above L2 is prohibited in Sim 1.6!" 
+      };
+  }
+
   // 1. MATERIAL CHECK (Still costs material unless free status active)
   if (entity.storage < 1) {
       const isBot = entity.id?.startsWith('bot_') || (entity as any).type === 'BOT';

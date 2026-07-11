@@ -16,43 +16,60 @@ export const series2Levels: LevelConfig[] = [
   {
     id: '2.1',
     title: 'Sim 2.1: Монолит',
-    description: 'СИСТЕМНАЯ ДИРЕКТИВА. АРХЕОЛОГИЧЕСКИЙ ЦИКЛ. Центральный Монолит заблокирован непреодолимой стеной. Исследуйте внешние хребты и найдите обходной путь для его активации. Следуйте указаниям навигационного модуля и берегите ресурсы.',
+    description: 'Активируйте Монолит: перепрыгнуть стену нельзя — поднимайтесь лестницей, уступ за уступом.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.1) — «Лестница + цена подъёма»
+    //  Единственный маршрут: (0,0)L0 →(1,0)L1 →(2,0)L2 →(3,0)MON L3.
+    //  Стоимость входа: L≤1 = 1 ход, L>1 = высота. 1 + 2 + 3 = 6 ходов.
+    //  Бюджет 7 (запас 1). Тупики: (1,-1)L3 — Δ2 от L1 (STEEP, войти
+    //  нельзя); (0,1)→(0,2) — ложная лестница в никуда (перерасход).
+    //  Декор (Δ≥2 от всех проходимых, чистая эстетика): NE-гряда кристаллов
+    //  L4/L5 за Монолитом + SW-каньон (ямы L-2..-4) под стартовой равниной.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' }
+      { q: 3, r: 0, targetLevel: 3, label: 'Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 5, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
+      size: 6, type: 'fixed',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
-          { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: -1, r: 4, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 1, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          // GOLDEN PATH
-          { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: -1, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },
-          // BLOCKER
-          { q: 0, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 0, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
-          // CHAOS
-          { q: 1, r: 2, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 1, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: -2, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
-          { q: -2, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: 0, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
+          // START
+          { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
+          // RAMP — the only route: L1 → L2 → L3 monument
+          { q: 1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 2, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+          { q: 3, r: 0, currentLevel: 3, maxLevel: 3, structureType: 'MONUMENT', revealed: true },
+          // STEEP DECOY off the ramp — Δ2 from (1,0)L1, unenterable
+          { q: 1, r: -1, currentLevel: 3, maxLevel: 3, revealed: true },
+          // FAKE NORTH RAMP — climbs to nowhere (budget trap)
+          { q: 0, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 0, r: 2, currentLevel: 2, maxLevel: 2, revealed: true },
+          // ── DECOR: NE crystal ridge behind the Monolith (Δ≥2, scenery) ──
+          { q: 3, r: -2, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 4, r: -2, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 4, r: -1, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 2, r: 1, currentLevel: 5, maxLevel: 5, revealed: true },
+          // ── DECOR: SW canyon below the start plain (Δ≥2, scenery) ──
+          { q: 0, r: -1, currentLevel: -2, maxLevel: -2, revealed: true },
+          { q: -1, r: 0, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: -1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: -1, r: 2, currentLevel: -4, maxLevel: -4, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
+    startState: { credits: 0, moves: 7, rank: 2, materials: 0 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.portalActive) return isRu ? "ПОБЕДА: Портал активирован!" : "VICTORY: Portal activated!";
-      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Ты на Монолите! Жми АКТИВИРОВАТЬ!" : "ACTIVATE: Press ACTIVATE on Monolith!";
-      return isRu 
-        ? "ИДИ НА УКАЗАТЕЛЬ: Обойди барьер по хребту и дойди до Монолита!" 
-        : "MOVE TO TARGET: Bypass barrier on ridge to reach Monolith!";
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const p = state.player;
+      if (p.q === 3 && p.r === 0) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      if (p.r === 0 && p.q >= 1 && p.q <= 2) {
+        return isRu
+          ? 'ЛЕСТНИЦА: продолжайте подъём — каждый уступ на 1 выше. Верхний шаг на L3 стоит 3 хода.'
+          : 'STAIRCASE: keep climbing — each step is +1 higher. The top L3 step costs 3 moves.';
+      }
+      return isRu
+        ? 'ИДИ НА УКАЗАТЕЛЬ: стену L3 не перепрыгнуть с L0. Иди на восток лестницей (1,0)→(2,0)→(3,0). Северный подъём — тупик.'
+        : 'MOVE TO TARGET: an L3 wall cannot be jumped from L0. Take the east staircase (1,0)→(2,0)→(3,0). The north climb is a dead-end.';
     },
     hooks: {
       checkWinCondition: (state) => !!state.portalActive,
@@ -60,44 +77,14 @@ export const series2Levels: LevelConfig[] = [
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
-        
         if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-21-1-${Date.now()}`,
-            text: isRu 
-              ? 'ИИ-Помощник: Энергетическая подпись Монолита стабильна. Однако прямой путь к координатам (0,0) преграждает непреодолимый барьер Уровня 4. Используйте левый обходной хребет (высоты 1 → 2 → 3).'
-              : 'AI-Assistant: Monolith energy signature is stable. However, a massive Level 4 barrier blocks the direct path to (0,0). Use the western ridge staircase (levels 1 → 2 → 3) to bypass.',
+            id: `msg-21-intro-${Date.now()}`,
+            text: isRu
+              ? 'NEBULA_AI: Прямой прыжок на Монолит невозможен — перепад высот больше 1. Стройте маршрут по лестнице: L1 → L2 → L3. Вход на высокий уступ стоит его высоту в ходах.'
+              : 'NEBULA_AI: A direct jump onto the Monolith is impossible — the height gap exceeds 1. Route along the staircase: L1 → L2 → L3. Entering a high step costs its height in moves.',
             type: 'INFO',
             source: 'NEBULA_AI',
-            timestamp: Date.now()
-          });
-        }
-
-        // Welcome player to the ridge top
-        if (state.player.q === -1 && state.player.r === 0 && !(state as any)._visitedRidge) {
-          (state as any)._visitedRidge = true;
-          state.messageLog.unshift({
-            id: `msg-21-ridge-${Date.now()}`,
-            text: isRu
-              ? 'Датчик: Вы достигли вершины хребта. Монолит прямо перед вами на Уровне 3. Можете заходить на него и Активировать!'
-              : 'Sensor: You reached the ridge top. The Monolith is directly ahead at Level 3. Step on it and press Activate!',
-            type: 'SUCCESS',
-            source: 'SYSTEM',
-            timestamp: Date.now()
-          });
-        }
-
-        // Secret cache at crater (1, 0)
-        if (state.player.q === 1 && state.player.r === 0 && !(state as any)._visitedCrater) {
-          (state as any)._visitedCrater = true;
-          state.player.coins += 25;
-          state.messageLog.unshift({
-            id: `msg-21-cache-${Date.now()}`,
-            text: isRu
-              ? 'ТАЙНИК: В गहरे кратера (1,0) обнаружен забытый контейнер снабжения! Получено +25 Кредитов.'
-              : 'CACHE: Deep inside the crater (1,0), a forgotten supply container was scanned! Received +25 Credits.',
-            type: 'SUCCESS',
-            source: 'SYSTEM',
             timestamp: Date.now()
           });
         }
@@ -110,101 +97,80 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.2',
-    title: 'Sim 2.2: Погребенные Тайны',
-    description: 'СИСТЕМНАЯ ДИРЕКТИВА. ГЛУБИННОЕ СКАНИРОВАНИЕ. Ключи активации скрыты в недрах кластера. Проведите глубокое бурение, соберите артефакты и запустите Монолит. Следуйте указаниям навигационного модуля и берегите ресурсы.',
+    title: 'Sim 2.2: Погребённый ключ',
+    description: 'Ходов не хватает на подъём. Пробурите шахту — глубина возвращает ходы, — затем взойдите к Монолиту.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.2) — «Копай, чтобы взойти»
+    //  Копка регенерирует ходы: +max(1,|L|) за уступ вниз. Реверс-лестница
+    //  требует 2 соседей того же уровня для спуска ниже -1.
+    //  План: dig(1,0)→-1, dig(0,1)→-1, dig(0,0)→-1, dig(0,0)→-2 (+2).
+    //  Затем подъём (0,0)L-2 →(1,0)-1 →(2,0)0 →(3,0)1 →(4,0)2 →(5,0)MON L3
+    //  = 1+1+1+2+3 = 8 ходов, оплаченных банком раскопок. Бюджет 6.
+    //  Тупики: (1,-1)L4 — Δ4 от старта (STEEP); подъём без копки = 8>6
+    //  (без банка ходов не хватает — доказано starvation-тестом).
+    //  Декор (Δ≥2): NE-гряда L4/L5 за Монолитом + S-каньон (ямы) под шахтой.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' },
-      { q: 1, r: 3, targetLevel: -1, label: 'Dig Site 1', color: 'red' },
-      { q: -1, r: 3, targetLevel: -1, label: 'Dig Site 2', color: 'red' },
-      { q: 1, r: 2, targetLevel: -1, label: 'Dig Site 3', color: 'red' },
-      { q: -1, r: 2, targetLevel: -1, label: 'Dig Site 4', color: 'red' }
+      { q: 0, r: 0, targetLevel: -2, label: 'Shaft', color: 'red' },
+      { q: 5, r: 0, targetLevel: 3, label: 'Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
+      size: 6, type: 'fixed',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
-          { q: 0, r: 3, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          // STAIRCASE
-          { q: 0, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          // DIG SITES (4 × L0, near path)
-          { q: 1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: 1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 2, maxLevel: 0, currentLevel: 0, revealed: true },
-          // WALLS
-          { q: -1, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: -1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 1, r: 1, maxLevel: 4, currentLevel: 4, revealed: true },
-          { q: 1, r: 0, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 0, r: -1, maxLevel: -2, currentLevel: -2, revealed: true },
+          // START + DIG CLUSTER (mine these to bank moves & supports)
+          { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
+          { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+          { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
+          // ASCENDING RAMP out of the shaft to the Monolith
+          { q: 2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+          { q: 3, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 4, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+          { q: 5, r: 0, currentLevel: 3, maxLevel: 3, structureType: 'MONUMENT', revealed: true },
+          // STEEP SURFACE WALL — the shaft cannot be skipped on the surface
+          { q: 1, r: -1, currentLevel: 4, maxLevel: 4, revealed: true },
+          // ── DECOR: NE crystal ridge behind the Monolith (Δ≥2) ──
+          { q: 5, r: -1, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 6, r: -2, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 4, r: 1, currentLevel: 5, maxLevel: 5, revealed: true },
+          // ── DECOR: south canyon under the shaft (Δ≥2) ──
+          { q: 0, r: 2, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: 1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: -1, r: 1, currentLevel: -4, maxLevel: -4, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 3, rank: 2, materials: 0 },
+    startState: { credits: 0, moves: 6, rank: 2, materials: 0 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.portalActive) return isRu ? "ПОБЕДА: Портал активирован!" : "VICTORY: Portal activated!";
-      if (state.player.inventory.length < 3) {
-        return isRu 
-          ? `КОПАЙ: Найди 3 предметы под землей (L-1, L-2)! Найдено: ${state.player.inventory.length}/3` 
-          : `DIG: Find 3 items underground (L-1, L-2)! Found: ${state.player.inventory.length}/3`;
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const p = state.player;
+      if (p.q === 5 && p.r === 0) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      const centre = state.grid?.['0,0']?.currentLevel ?? 0;
+      if (centre <= -2) {
+        return isRu
+          ? 'ПОДЪЁМ: шахта пробита, ходы в банке. Выходи на восток: (1,0)→(2,0)→(3,0)→(4,0)→(5,0) к Монолиту.'
+          : 'ASCEND: shaft banked your moves. Climb out east: (1,0)→(2,0)→(3,0)→(4,0)→(5,0) to the Monolith.';
       }
-      if (state.player.q === 0 && state.player.r === 0) {
-        return isRu ? "АКТИВИРУЙ: Активируй Монолит!" : "ACTIVATE: Activate the Monolith!";
-      }
-      return isRu 
-        ? "ИДИ В ЦЕНТР: Предметы собраны! Иди на (0,0) и активируй Монолит." 
-        : "MOVE TO CENTER: Items gathered! Walk to (0,0) and activate Monolith.";
+      return isRu
+        ? 'КОПАЙ ШАХТУ: спуск возвращает ходы. Прокопай (1,0) и (0,1) до -1, затем центр (0,0) до -2. Стену L4 не перейти.'
+        : 'DIG THE SHAFT: descending refunds moves. Dig (1,0) & (0,1) to -1, then centre (0,0) to -2. The L4 wall is impassable.';
     },
     hooks: {
-      checkWinCondition: () => false,
+      checkWinCondition: (state) => !!state.portalActive,
       checkLossCondition: (state) => isStranded(state),
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
-
         if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-22-1-${Date.now()}`,
+            id: `msg-22-intro-${Date.now()}`,
             text: isRu
-              ? 'ИИ-Помощник: Энергетические слоты Монолита пусты. Под слоем почвы на глубинах (-1, -2 и ниже) зафиксированы сигналы древнего хлама. КОПАЙТЕ (Красная кнопка) на гексах Ур. 0 для добычи.'
-              : 'AI-Assistant: Monolith energy slots are empty. Ancient garbage signals mapped beneath the surface at depths -1, -2 and below. DIG (Red button) on Level 0 hexes to loot.',
+              ? 'NEBULA_AI: Ходов мало, а стена L4 глушит поверхность. Каждый спуск в шахту ВОЗВРАЩАЕТ ходы (+глубина). Прокопай соседей до -1, затем центр до -2 — и запаса хватит на подъём к Монолиту.'
+              : 'NEBULA_AI: Moves are scarce and an L4 wall blocks the surface. Each descent REFUNDS moves (+depth). Dig neighbours to -1, then the centre to -2 — the bank will fund the climb to the Monolith.',
             type: 'INFO',
             source: 'NEBULA_AI',
             timestamp: Date.now()
           });
-        }
-
-        // Guaranteed loot spot at (-1, 3) on deep dig
-        const targetHex = state.grid[getHexKey(-1, 3)];
-        if (targetHex && targetHex.currentLevel < 0 && !(state as any)._geothermalGuaranteedLoot) {
-          (state as any)._geothermalGuaranteedLoot = true;
-          // Inject an item
-          if (!state.player.inventory) state.player.inventory = [];
-          if (state.player.inventory.length < 5) {
-            state.player.inventory.push({
-              id: `item-guaranteed-${Date.now()}`,
-              baseId: 'fuel_cell',
-              rarity: 'COMMON',
-              name: isRu ? 'Топливный Элемент' : 'Spent Fuel Cell',
-              description: isRu ? 'Увеличивает запас хода.' : 'Increases move capacity.',
-              timestamp: Date.now(),
-              visualType: 'CYLINDER',
-              effectType: 'ADD_MOVES',
-              effectValue: 10,
-              effectDescription: isRu ? '+10 Ходов' : '+10 Moves'
-            } as any);
-            state.messageLog.unshift({
-              id: `msg-22-guaranteed-${Date.now()}`,
-              text: isRu
-                ? 'АНОМАЛИЯ: Из глубины гекса (-1, 3) извлечен неповрежденный Топливный Элемент! Настоящий джекпот!'
-                : 'ANOMALY: Extracted an intact Spent Fuel Cell from hex (-1, 3)! What a jackpot!',
-              type: 'SUCCESS',
-              source: 'LOOT',
-              timestamp: Date.now()
-            });
-          }
         }
       }
     }
@@ -215,81 +181,110 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.3',
-    title: 'Sim 2.3: Растущая Энтропия',
-    description: 'ВЕРТИКАЛЬНАЯ АДАПТАЦИЯ. Нестабильный сектор с резкими перепадами высот. Возводите ступенчатые опоры для безопасного восхождения к Монолиту.',
+    title: 'Sim 2.3: Брешь Обелиска',
+    description: 'Монолит за стеной L4. Взломайте периферийный Обелиск — стена падёт, и только тогда откроется активация.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.3) — «Обелиск как ключ»
+    //  Обелиск (0,2)L2 — ключ. onBeforeAction блокирует активацию Монолита,
+    //  пока (0,2) не взломан; активация Обелиска требует стоять на нём.
+    //  onAfterAction опускает стену (1,0) L4→L1 после взлома.
+    //  Маршрут: (0,1)L1 →(0,2)OBL L2 = 1+2 = 3; взлом; назад
+    //  (0,1)→(0,0)→(1,0)L1 →(2,0)MON L2 = 1+1+1+2 = 5. Итого 8. Бюджет 9.
+    //  Тупики: (1,0)L4 — Δ4 от старта (STEEP, к Монолиту не пройти); ранняя
+    //  активация Монолита — отклонена файрволом (gated).
+    //  Декор (Δ≥2): пилоны L4 у Монолита, гряда за Обелиском, каньон.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 4, label: 'Monument', color: 'emerald' }
+      { q: 0, r: 2, targetLevel: 2, label: 'Obelisk', color: 'blue' },
+      { q: 2, r: 0, targetLevel: 2, label: 'Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 4, wallType: 'pit_ring',
+      size: 6, type: 'fixed',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 4, currentLevel: 4, structureType: 'MONUMENT', revealed: true },
-          { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          // SHORT PATH (4 actions)
-          { q: 0, r: 2, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 1, r: 1, maxLevel: 3, currentLevel: 3, revealed: true },
-          { q: 1, r: 0, maxLevel: 4, currentLevel: 4, revealed: true },
-          // LONG PATH (6 actions)
-          { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true },
-          { q: -1, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: -1, r: 0, maxLevel: 3, currentLevel: 3, revealed: true },
-          { q: 0, r: -1, maxLevel: 4, currentLevel: 4, revealed: true },
-          // CHAOS
-          { q: 0, r: 1, maxLevel: -3, currentLevel: -3, revealed: true },
-          { q: 1, r: 2, maxLevel: 5, currentLevel: 5, revealed: true },
-          { q: -2, r: 2, maxLevel: -3, currentLevel: -3, revealed: true },
+          // START
+          { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
+          // OBELISK RAMP (north)
+          { q: 0, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 0, r: 2, currentLevel: 2, maxLevel: 2, structureType: 'MINI_MONUMENT', revealed: true },
+          // BARRIER + MONOLITH (east) — wall drops to L1 once the obelisk is hacked
+          { q: 1, r: 0, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 2, r: 0, currentLevel: 2, maxLevel: 2, structureType: 'MONUMENT', revealed: true },
+          // ── DECOR: pillars flanking the Monolith (Δ≥2) ──
+          { q: 2, r: -1, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 2, r: 1, currentLevel: 4, maxLevel: 4, revealed: true },
+          // ── DECOR: ridge behind the Obelisk (Δ≥2) ──
+          { q: 0, r: 3, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: -1, r: 3, currentLevel: 5, maxLevel: 5, revealed: true },
+          // ── DECOR: west canyon (Δ≥2) ──
+          { q: -1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: 0, r: -1, currentLevel: -2, maxLevel: -2, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 2, rank: 3, materials: 2, initialEntropy: 15 },
+    startState: { credits: 0, moves: 9, rank: 2, materials: 0 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.portalActive) return isRu ? "ПОБЕДА: Портал активирован!" : "VICTORY: Portal activated!";
-      if (!(state as any)._entropyDischarged) {
-        return isRu 
-          ? "ИДИ НА УКАЗАТЕЛЬ: Доберись до пика L5 (1,2), чтобы восстановить запас Стабильности!"
-          : "MOVE TO TARGET: Reach L5 peak at (1,2) to restore Stability!";
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const p = state.player;
+      const hacked = state.activatedMiniMonuments?.includes('0,2');
+      if (!hacked) {
+        if (p.q === 0 && p.r === 2) return isRu ? 'ВЗЛОМ: жми АКТИВИРОВАТЬ на Обелиске, чтобы снять стену!' : 'HACK: press ACTIVATE on the Obelisk to drop the wall!';
+        return isRu
+          ? 'ИДИ К ОБЕЛИСКУ: стена L4 у (1,0) непроходима. Поднимись на север (0,1)→(0,2) и взломай Обелиск.'
+          : 'GO TO THE OBELISK: the L4 wall at (1,0) is impassable. Climb north (0,1)→(0,2) and hack the Obelisk.';
       }
-      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
-      return isRu 
-        ? "ИДИ НА УКАЗАТЕЛЬ: Иди в Центр (0,0) и активируй Монолит!" 
-        : "MOVE TO CENTER: Go to Center (0,0) and activate Monolith!";
+      if (p.q === 2 && p.r === 0) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      return isRu
+        ? 'ПУТЬ ОТКРЫТ: стена пала. Иди на восток (0,0)→(1,0)→(2,0) и активируй Монолит.'
+        : 'PATH OPEN: the wall is down. Head east (0,0)→(1,0)→(2,0) and activate the Monolith.';
     },
     hooks: {
-      checkWinCondition: () => false, 
-      checkLossCondition: (state) => {
-        const currentHex = state.grid[getHexKey(state.player.q, state.player.r)];
-        if (currentHex?.structureType === 'VOID') return true;
-        if (state.entropy.current <= 0) return true;
-        return isStranded(state);
+      checkWinCondition: (state) => !!state.portalActive,
+      checkLossCondition: (state) => isStranded(state),
+      onBeforeAction: (state, action) => {
+        const isRu = state.language === 'RU';
+        const p = state.player;
+        if (action.type === 'ACTIVATE_MINI_MONUMENT') {
+          const key = (action as any).miniMonumentHexKey;
+          if (key !== `${p.q},${p.r}`) {
+            return { ok: false, reason: isRu ? 'Подойдите к Обелиску, чтобы взломать его' : 'Stand on the Obelisk to hack it' };
+          }
+        }
+        if (action.type === 'ACTIVATE_MONUMENT') {
+          if (!state.activatedMiniMonuments?.includes('0,2')) {
+            return { ok: false, reason: isRu ? 'ФАЙРВОЛ: сначала взломайте Обелиск (0,2), чтобы снять барьер' : 'FIREWALL: hack the Obelisk (0,2) first to drop the barrier' };
+          }
+        }
+        return null;
       },
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
-        if (turn === 1) {
-          state.messageLog.unshift({
-            id: `msg-23-1-${Date.now()}`,
-            text: isRu
-              ? 'ЭНТРОПИЙНЫЙ ДАТЧИК: Стабильность ядра: 15%. Каждое действие деградирует структуру. Встаньте на высокий пик (1,2) Уровня 5, чтобы сбросить энтропийный заряд на +20 пунктов!'
-              : 'ENTROPY DETECTOR: Core stability: 15%. Every action degrades the local coordinates. Touch the high peak (1,2) of Level 5 to discharge and restore +20 Entropy points!',
-            type: 'WARN',
-            source: 'SYSTEM',
-            timestamp: Date.now()
-          });
+        // Wall (1,0) drops from L4 to L1 the moment the obelisk is hacked (idempotent).
+        if (state.activatedMiniMonuments?.includes('0,2')) {
+          const wall = state.grid[getHexKey(1, 0)];
+          if (wall && wall.currentLevel === 4) {
+            state.grid[getHexKey(1, 0)] = { ...wall, currentLevel: 1 };
+            state.messageLog.unshift({
+              id: `msg-23-wall-${Date.now()}`,
+              text: isRu
+                ? 'БАРЬЕР СНЯТ: стена у (1,0) опустилась до L1 — путь к Монолиту открыт.'
+                : 'BARRIER DOWN: the wall at (1,0) lowered to L1 — the path to the Monolith is open.',
+              type: 'SUCCESS',
+              source: 'SYSTEM',
+              timestamp: Date.now()
+            });
+          }
         }
 
-        // Stepping on height 5 at (1, 2) recharges stability!
-        if (state.player.q === 1 && state.player.r === 2 && !(state as any)._entropyDischarged) {
-          (state as any)._entropyDischarged = true;
-          state.entropy.current = Math.min(state.entropy.max ?? 100, state.entropy.current + 20);
+        if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-23-recharge-${Date.now()}`,
+            id: `msg-23-intro-${Date.now()}`,
             text: isRu
-              ? 'РАЗРЯДКА: Высота 5 поглотила флуктуации! Энтропия восстановлена на +20 пунктов.'
-              : 'DISCHARGE: Height level 5 absorbed the fluctuations! Entropy restored by +20 points.',
-            type: 'SUCCESS',
+              ? 'NEBULA_AI: Монолит закрыт файрволом — стена L4 у (1,0) непроходима, а активация отклоняется. Ключ — Обелиск на севере (0,2). Взломай его: барьер опустится и активация разблокируется.'
+              : 'NEBULA_AI: The Monolith is firewalled — the L4 wall at (1,0) is impassable and activation is refused. The key is the Obelisk to the north (0,2). Hack it: the barrier lowers and activation unlocks.',
+            type: 'INFO',
             source: 'NEBULA_AI',
             timestamp: Date.now()
           });
@@ -303,53 +298,67 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.4',
-    title: 'Sim 2.4: Первый Сигнал',
-    description: 'СИСТЕМНАЯ ДИРЕКТИВА. ПОДАВЛЕНИЕ ПОЛЯ. Энергетический барьер блокирует Монолит. Сначала найдите и активируйте периферийный Обелиск для снятия защиты. Следуйте указаниям навигационного модуля и берегите ресурсы.',
+    title: 'Sim 2.4: Реактор',
+    description: 'Ходов не хватит на переход. Перевали через пик-реактор L4: три заряда дают кредиты — ими оплатишь спуск к Монолиту.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.4) — «Реактор L4 + овердрафт»
+    //  Путь идёт ЧЕРЕЗ пик: подъём (1,0)(2,0)(3,0)(4,0)L4 = 1+2+3+4 = 10;
+    //  спуск (5,0)(6,0)(7,0)(8,0) = 3+2+1+1 = 7. Всего 17 ходов.
+    //  Реактор L4 = 3 заряда: каждый +1 ход и +20 кредитов (5·4).
+    //  Бюджет 12. Без реактора: 12<17 → сухо на спуске (тупик доказан).
+    //  С реактором: +3 хода +60 кредитов (=12 ходов) → хватает ровно.
+    //  Декор (Δ≥2): парные шпили L5 у реактора, ямы каньона.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 1, r: 2, targetLevel: 2, label: 'Obelisk', color: 'blue' },
-      { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' }
+      { q: 4, r: 0, targetLevel: 4, label: 'Reactor', color: 'blue' },
+      { q: 8, r: 0, targetLevel: 0, label: 'Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
+      size: 7, type: 'fixed',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true },
-          { q: 0, r: 3, maxLevel: 0, currentLevel: 0, ownerId: 'player-1', revealed: true },
-          { q: 1, r: 2, maxLevel: 2, currentLevel: 2, structureType: 'MINI_MONUMENT', revealed: true },
-          // STAIRS
-          { q: 0, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: -1, r: 3, maxLevel: 0, currentLevel: 0, revealed: true }, // The secret cache
-          { q: 1, r: 3, maxLevel: -1, currentLevel: -1, revealed: true },
-          { q: -1, r: 2, maxLevel: -2, currentLevel: -2, revealed: true },
+          { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
+          // ASCENT to the reactor peak
+          { q: 1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 2, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+          { q: 3, r: 0, currentLevel: 3, maxLevel: 3, revealed: true },
+          { q: 4, r: 0, currentLevel: 4, maxLevel: 4, revealed: true },   // REACTOR (3 charges)
+          // DESCENT to the Monolith
+          { q: 5, r: 0, currentLevel: 3, maxLevel: 3, revealed: true },
+          { q: 6, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+          { q: 7, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 8, r: 0, currentLevel: 0, maxLevel: 0, structureType: 'MONUMENT', revealed: true },
+          // ── DECOR: twin reactor spires + canyon pits (Δ≥2) ──
+          { q: 4, r: -1, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 4, r: 1, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 2, r: -1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: 6, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 8, rank: 3, materials: 1 },
+    startState: { credits: 0, moves: 12, rank: 2, materials: 0 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.portalActive) return isRu ? "ПОБЕДА: Портал активирован!" : "VICTORY: Portal activated!";
-      if (!state.monumentRevealedSlots?.[0]) {
-        if (state.player.q === 1 && state.player.r === 2) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ на Обелиске!" : "ACTIVATE: Press ACTIVATE on Obelisk!";
-        return isRu ? "ИДИ НА УКАЗАТЕЛЬ: Иди к Обелиску (1,2) и взломай его!" : "MOVE TO TARGET: Head to Obelisk at (1,2) and hack it!";
-      }
-      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
-      return isRu 
-        ? "ИДИ НА УКАЗАТЕЛЬ: Возвращайся к Монолиту (0,0)!" 
-        : "MOVE TO CENTER: Return to the Monolith (0,0)!";
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const p = state.player;
+      if (p.q === 8 && p.r === 0) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      if (p.q === 4 && p.r === 0) return isRu ? 'РЕАКТОР: жми ВОССТАНОВЛЕНИЕ трижды — 3 заряда дадут кредиты на спуск.' : 'REACTOR: press RECOVER three times — 3 charges give the credits for the descent.';
+      if (p.q > 4) return isRu ? 'СПУСК: кредиты реактора оплатят шаги (5:1). Иди к Монолиту (8,0).' : 'DESCENT: reactor credits pay your steps (5:1). Head to the Monolith (8,0).';
+      return isRu
+        ? 'К РЕАКТОРУ: поднимись на пик L4 (4,0). Там 3 заряда — сними их ВОССТАНОВЛЕНИЕМ ради кредитов, иначе спуска не оплатить.'
+        : 'TO THE REACTOR: climb the L4 peak (4,0). It holds 3 charges — RECOVER them for credits, or the descent is unaffordable.';
     },
     hooks: {
-      checkWinCondition: () => false,
+      checkWinCondition: (state) => !!state.portalActive,
       checkLossCondition: (state) => isStranded(state),
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
-
         if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-24-tut-${Date.now()}`,
+            id: `msg-24-intro-${Date.now()}`,
             text: isRu
-              ? 'ИНСТРУКТАЖ: Центральный Монолит заблокирован файрволом. Направляйтесь на восток к Обелиску (1, 2) на высоте 2. Активируйте его, чтобы взломать систему и подсветить координаты секретного контейнера!'
-              : 'BRIEFING: The central Monolith is locked. Head east to the Obelisk (1, 2) at level 2. Activate it to breach the grid and ping the secret container location!',
+              ? 'NEBULA_AI: Ходов на весь переход не хватит. Пик (4,0) — термореактор L4 на 3 заряда: каждый даёт ход и кредиты. Сними все три ВОССТАНОВЛЕНИЕМ, затем спускайся — при нуле ходов шаги оплатятся кредитами (5:1).'
+              : 'NEBULA_AI: You lack the moves for the whole crossing. Peak (4,0) is an L4 reactor with 3 charges — each yields a move and credits. RECOVER all three, then descend — at zero moves steps auto-pay with credits (5:1).',
             type: 'INFO',
             source: 'NEBULA_AI',
             timestamp: Date.now()
@@ -364,53 +373,64 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.5',
-    title: 'Sim 2.5: Линейная Матрица',
-    description: 'ГЕОМЕТРИЯ: ЛИНИЯ. Протокол требует создания линейного резонанса. Возведите цельную линию из трех смежных возвышенных платформ.',
+    title: 'Sim 2.5: Обменный курс',
+    description: 'Ходов почти нет — зато полон кошелёк. Каждый шаг покупается (5 кредитов = 1 ход). Выбирай самый дешёвый подъём.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.5) — «Кредиты = ходы (5:1)»
+    //  Прямой рывок (1,0)L3 — Δ3 от старта L0 (STEEP). Единственный путь —
+    //  дешёвая полка L1: (0,1)(1,1)(2,1)(3,1) →(3,0)L2 →(3,-1)MON L3.
+    //  Σ = 1+1+1+1+2+3 = 9. Бюджет: 2 хода + 35 кредитов (=7 ходов) = 9.
+    //  Тупик: (1,0)L3 не войти; любой крюк выводит счёт за 35 → нехватка.
+    //  Декор (Δ≥2): пики NE, каньон под полкой.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 2, label: 'Shape Node A', color: 'amber' },
-      { q: 1, r: 0, targetLevel: 2, label: 'Shape Node B', color: 'amber' },
-      { q: -1, r: 0, targetLevel: 2, label: 'Shape Node C', color: 'amber' }
+      { q: 3, r: -1, targetLevel: 3, label: 'Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 5, type: 'fixed', generateWalls: false,
+      size: 6, type: 'fixed',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 2, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -2, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
+          { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
+          // DIRECT DECOY — steep wall (Δ3 from start, Δ2 from shelf)
+          { q: 1, r: 0, currentLevel: 3, maxLevel: 3, revealed: true },
+          // CHEAP SHELF (the only route): L1×4 → L2 → L3 monument
+          { q: 0, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 1, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 2, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 3, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 3, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+          { q: 3, r: -1, currentLevel: 3, maxLevel: 3, structureType: 'MONUMENT', revealed: true },
+          // ── DECOR: NE peaks + S canyon (Δ≥2) ──
+          { q: 4, r: -1, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 4, r: -2, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 2, r: -1, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: -1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: 0, r: -1, currentLevel: -2, maxLevel: -2, revealed: true },
+          { q: 1, r: 2, currentLevel: -3, maxLevel: -3, revealed: true },
       ]
     },
-    requiredShapes: [
-      { type: 'LINE_3', level: 2, hint: 'Build a solid row of 3 tiles of L2+' }
-    ],
-    startState: { credits: 20, moves: 12, rank: 2, materials: 1 },
+    startState: { credits: 35, moves: 2, rank: 2, materials: 0 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.evacuationActive) return isRu ? "ПОБЕДА: Линия сформирована!" : "VICTORY: Line complete!";
-      const countL2 = Object.values(state.grid).filter((h: any) => h.currentLevel >= 2 && h.ownerId === state.player.id).length;
-      return isRu 
-        ? `СТРОЙ: Подними 3 гекса в одну линию до L2! Готово гексов L2: ${Math.min(3, countL2)}/3` 
-        : `BUILD: Upgrade 3 hexes in a straight line to L2! Built L2: ${Math.min(3, countL2)}/3`;
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const p = state.player;
+      if (p.q === 3 && p.r === -1) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      return isRu
+        ? 'КРЕДИТЫ = ХОДЫ: рывок (1,0) заблокирован (Δ3). Иди дешёвой полкой L1 на юг: (0,1)→(1,1)→(2,1)→(3,1)→(3,0)→(3,-1). Кошелёк оплатит ходы 5:1.'
+        : 'CREDITS = MOVES: the (1,0) dash is walled (Δ3). Take the cheap L1 shelf south: (0,1)→(1,1)→(2,1)→(3,1)→(3,0)→(3,-1). Your purse pays 5:1.';
     },
     hooks: {
-      checkWinCondition: () => false,
+      checkWinCondition: (state) => !!state.portalActive,
       checkLossCondition: (state) => isStranded(state),
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
-
         if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-25-tut-${Date.now()}`,
+            id: `msg-25-intro-${Date.now()}`,
             text: isRu
-              ? 'ФИГУРА КАНАЛИЗАЦИИ: Инженерный ранг установлен на Ранг 2. Повысьте три гекса, образующие прямую линию, до Уровня 2 (например Q=0 R=0, Q=1 R=0, Q=2 R=0).'
-              : 'SHAPE CODING: Engineering Rank is set to 2. Elevate three hexes in a straight row (such as Q=0 R=0, Q=1 R=0, Q=2 R=0) to Level 2 to align the vectors.',
+              ? 'NEBULA_AI: Всего 2 хода, но 35 кредитов. При нуле ходов шаг автоматически покупается за кредиты (5 за 1). Прямой путь заблокирован стеной — иди дешёвой полкой L1, и кошелька хватит ровно до Монолита.'
+              : 'NEBULA_AI: Only 2 moves, but 35 credits. At zero moves each step is auto-bought with credits (5 per move). The direct path is walled — take the cheap L1 shelf and the purse lasts exactly to the Monolith.',
             type: 'INFO',
             source: 'NEBULA_AI',
             timestamp: Date.now()
@@ -425,61 +445,65 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.6',
-    title: 'Sim 2.6: Резонансный Треугольник',
-    description: 'ГЕОМЕТРИЯ: ТРЕУГОЛЬНИК. Постройте треугольный контур. Внимание: зафиксирована активность враждебного ИИ. Защищайте свои платформы от разрушения.',
+    title: 'Sim 2.6: Замок глубины',
+    description: 'Монолит на дне шахты (L-3). Выройте посадку по порядку: замок градиента не даст углубиться раньше опор.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.6) — «Замок + реверс-лестница»
+    //  Монолит (2,0) на L-3 достижим только с посадки L-2 (Δ1). Чтобы
+    //  опустить (1,0) до -2, нужны 2 соседа на -1: (0,1) и (1,-1).
+    //  Порядок: dig(0,1)→-1, dig(1,-1)→-1, dig(1,0)→-1, dig(1,0)→-2, шаг(2,0).
+    //  Копка возвращает ходы, поэтому решает не бюджет (4), а ПОРЯДОК.
+    //  Тупик: dig(1,0)→-2 без опор → UNSTABLE (отказ); прямой шаг Δ3 STEEP.
+    //  Декор (Δ≥2): пики обода + более глубокие ямы каньона.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 2, label: 'Triangle Node A', color: 'amber' },
-      { q: 1, r: -1, targetLevel: 2, label: 'Triangle Node B', color: 'amber' },
-      { q: 1, r: 0, targetLevel: 2, label: 'Triangle Node C', color: 'amber' }
+      { q: 2, r: 0, targetLevel: -3, label: 'Sunken Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
+      size: 6, type: 'fixed',
       customLayout: [
-          { q: -2, r: 2, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },
-          { q: 2, r: -2, maxLevel: 1, currentLevel: 1, revealed: true }, // Bot spawn point
-          // The potential construction area (0,0 center)
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
+          { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
+          // DIG CLUSTER: two supports + the landing
+          { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },   // support A → -1
+          { q: 1, r: -1, currentLevel: 0, maxLevel: 0, revealed: true },  // support B → -1
+          { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },   // landing → -2
+          // SUNKEN MONOLITH at the shaft floor
+          { q: 2, r: 0, currentLevel: -3, maxLevel: -3, structureType: 'MONUMENT', revealed: true },
+          // ── DECOR: rim peaks + deeper canyon pits (Δ≥2) ──
+          { q: 2, r: -1, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 1, r: 1, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 0, r: -1, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: -1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: -1, r: 0, currentLevel: -3, maxLevel: -3, revealed: true },
       ]
     },
-    requiredShapes: [
-      { type: 'TRIANGLE_3', level: 2, hint: 'Compile a triangle of 3 adjacent tiles of Level 2+' }
-    ],
-    botSpawnPoints: [{ q: 2, r: -2 }],
-    aiMode: 'basic',
-    botObjective: 'MONUMENT_RACE',
-    startState: { credits: 30, moves: 12, rank: 2, materials: 1, initialEntropy: 60 },
+    startState: { credits: 0, moves: 4, rank: 2, materials: 0 },
+    aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.evacuationActive) return isRu ? "ПОБЕДА: Треугольник сформирован!" : "VICTORY: Triangle complete!";
-      const countL2 = Object.values(state.grid).filter((h: any) => h.currentLevel >= 2 && h.ownerId === state.player.id).length;
-      return isRu 
-        ? `СТРОЙ: Выстрой Треугольник (3 гекса) до L2! Остерегайся бота. Готово: ${Math.min(3, countL2)}/3` 
-        : `BUILD: Upgrade a Triangle (3 hexes) to L2! Beware of the bot. Built L2: ${Math.min(3, countL2)}/3`;
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const p = state.player;
+      if (p.q === 2 && p.r === 0) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      const landing = state.grid?.['1,0']?.currentLevel ?? 0;
+      if (landing <= -2) return isRu ? 'СПУСК: посадка на -2 готова. Шагни на Монолит (2,0) на дне.' : 'DESCEND: the -2 landing is ready. Step onto the Monolith (2,0) at the floor.';
+      return isRu
+        ? 'ПОРЯДОК КОПКИ: сначала опусти соседей (0,1) и (1,-1) до -1, только потом (1,0) до -2. Ниже соседей копать нельзя (замок градиента).'
+        : 'DIG ORDER: lower the neighbours (0,1) and (1,-1) to -1 FIRST, only then (1,0) to -2. You cannot dig below your neighbours (gradient lock).';
     },
     hooks: {
-      checkWinCondition: () => false,
-      checkLossCondition: (state) => {
-        if (state.entropy.current <= 0) return true;
-        return isStranded(state);
-      },
+      checkWinCondition: (state) => !!state.portalActive,
+      checkLossCondition: (state) => isStranded(state),
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
-
         if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-26-start-${Date.now()}`,
+            id: `msg-26-intro-${Date.now()}`,
             text: isRu
-              ? 'ТЕКТНИКА И СКАНИР: Проклятый Бот-Строитель проснулся на северо-востоке (2,-2). Он попытается саботировать ваши линии. Выстройте треугольник TRIANGLE_3 на уровне L2+ для запуска портала!'
-              : 'TECTONICS ON: Hostile Architect drone is active at (2,-2). It will try to sabotage your structures. Build a TRIANGLE_3 shape at Level 2+ to activate escape.',
-            type: 'WARN',
-            source: 'ENEMY_AI',
+              ? 'NEBULA_AI: Монолит на дне шахты (L-3). Замок градиента запрещает копать глубже соседей. Сначала опусти двух соседей посадки до -1, затем саму посадку до -2 — и спустишься к нему. Копка возвращает ходы.'
+              : 'NEBULA_AI: The Monolith rests at the shaft floor (L-3). The gradient lock forbids digging below your neighbours. Lower the two landing-neighbours to -1 first, then the landing to -2 — then descend. Digging refunds moves.',
+            type: 'INFO',
+            source: 'NEBULA_AI',
             timestamp: Date.now()
           });
         }
@@ -492,54 +516,65 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.7',
-    title: 'Sim 2.7: Ромб Эфира',
-    description: 'ГЕОМЕТРИЯ: РОМБ. Сформируйте ромбовидную структуру из четырех смежных возвышенных плит для калибровки энергетической сети.',
+    title: 'Sim 2.7: Хрупкая переправа',
+    description: 'Хрупкие плиты рушатся после одного прохода. На развилке лишь одна ветка ведёт к Монолиту — назад пути нет.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.7) — «Односторонний мост»
+    //  Плиты L1 durability 1: при сходе рушатся в VOID. Верный путь —
+    //  (1,0)(2,0)(3,0) →(3,-1) →(4,-2)MON = 5 ходов (бюджет 6).
+    //  Тупик: восточная ветка (4,0)(5,0) — сход с (3,0) рушит его в VOID,
+    //  связь с Монолитом обрывается → checkLoss → DEFEAT.
+    //  Декор (Δ≥2): пики над мостом, пропасть под ним.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 3, label: 'Apex Node', color: 'amber' },
-      { q: 1, r: -1, targetLevel: 3, label: 'Apex Left', color: 'amber' },
-      { q: 0, r: 1, targetLevel: 3, label: 'Apex Right', color: 'amber' },
-      { q: 1, r: 0, targetLevel: 3, label: 'Apex Base', color: 'amber' }
+      { q: 4, r: -2, targetLevel: 1, label: 'Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: false,
+      size: 6, type: 'fixed',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 2, currentLevel: 2, ownerId: 'player-1', revealed: true },
-          { q: 1, r: -1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 0, r: 1, maxLevel: 2, currentLevel: 2, revealed: true },
-          { q: 1, r: 0, maxLevel: 2, currentLevel: 2, revealed: true },
-          // Rest of paths
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
+          { q: 0, r: 0, currentLevel: 1, maxLevel: 1, durability: 5, ownerId: 'player-1', revealed: true },
+          // MAIN SPAN (brittle, durability 1)
+          { q: 1, r: 0, currentLevel: 1, maxLevel: 1, durability: 1, revealed: true },
+          { q: 2, r: 0, currentLevel: 1, maxLevel: 1, durability: 1, revealed: true },
+          { q: 3, r: 0, currentLevel: 1, maxLevel: 1, durability: 1, revealed: true }, // branch point
+          // CORRECT FORK (north) → Monolith
+          { q: 3, r: -1, currentLevel: 1, maxLevel: 1, durability: 1, revealed: true },
+          { q: 4, r: -2, currentLevel: 1, maxLevel: 1, durability: 5, structureType: 'MONUMENT', revealed: true },
+          // DECOY FORK (east) — dead-end, severs the route on the way back
+          { q: 4, r: 0, currentLevel: 1, maxLevel: 1, durability: 1, revealed: true },
+          { q: 5, r: 0, currentLevel: 1, maxLevel: 1, durability: 1, revealed: true },
+          // ── DECOR: peaks above the span + chasm below (Δ≥2) ──
+          { q: 3, r: 1, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 5, r: -1, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 1, r: -1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: 0, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
       ]
     },
-    requiredShapes: [
-      { type: 'DIAMOND_4', level: 3, hint: 'Build a diamond shape of 4 level 3+ tiles' }
-    ],
-    startState: { credits: 40, moves: 15, rank: 3, materials: 1 },
+    startState: { credits: 0, moves: 6, rank: 2, materials: 0 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.evacuationActive) return isRu ? "ПОБЕДА: Ромб сформирован!" : "VICTORY: Diamond complete!";
-      const countL3 = Object.values(state.grid).filter((h: any) => h.currentLevel >= 3 && h.ownerId === state.player.id).length;
-      return isRu 
-        ? `СТРОЙ РОМБ: Подними 4 гекса в форме Ромба до L3! Готово L3: ${Math.min(4, countL3)}/4` 
-        : `BUILD DIAMOND: Upgrade 4 hexes in a Diamond shape to L3! Built L3: ${Math.min(4, countL3)}/4`;
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const p = state.player;
+      if (p.q === 4 && p.r === -2) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      return isRu
+        ? 'НЕ ВОЗВРАЩАЙСЯ: плиты рушатся после прохода. На развилке (3,0) сверни на СЕВЕР: (3,-1)→(4,-2). Восточная ветка (4,0) — тупик, обрывающий путь.'
+        : 'NEVER BACKTRACK: tiles collapse after one crossing. At the fork (3,0) turn NORTH: (3,-1)→(4,-2). The east branch (4,0) is a dead-end that severs the route.';
     },
     hooks: {
-      checkWinCondition: () => false,
-      checkLossCondition: (state) => isStranded(state),
+      checkWinCondition: (state) => !!state.portalActive,
+      checkLossCondition: (state) =>
+        isStranded(state) ||
+        (state.player.r === 0 && state.player.q >= 4 && state.grid[getHexKey(3, 0)]?.structureType === 'VOID'),
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
-
         if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-27-start-${Date.now()}`,
+            id: `msg-27-intro-${Date.now()}`,
             text: isRu
-              ? 'ЭФИРНЫЙ МОДУЛЬ: Вы начинаете прямо по центру частично подготовленной площадки Уровня 2. Улучшите эти 4 опорных гекса до Уровня 3, чтобы сплести ромб!'
-              : 'AETHER ARRAY: You start in the middle of a partially prepared Level 2 zone. Push these 4 adjoining tiles to Level 3 to trigger the Diamond grid!',
+              ? 'NEBULA_AI: Мост из хрупких плит — каждая выдерживает один проход и обрушивается в Пустоту. Иди только вперёд. На развилке (3,0) верный поворот — на север к Монолиту; восточный рукав обрывает возврат.'
+              : 'NEBULA_AI: A bridge of brittle plates — each survives one crossing then falls into the Void. Go forward only. At the fork (3,0) the correct turn is north to the Monolith; the east arm severs your return.',
             type: 'INFO',
             source: 'NEBULA_AI',
             timestamp: Date.now()
@@ -554,72 +589,106 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.8',
-    title: 'Sim 2.8: Кольцо Пустоты',
-    description: 'ГЕОМЕТРИЯ: КОЛЬЦО. Изолируйте центральную пространственную аномалию, выстроив вокруг нее сплошное замкнутое кольцо платформ.',
+    title: 'Sim 2.8: Три обелиска',
+    description: 'Монолит за тремя стенами. Каждый Обелиск снимает одну — и открывает путь к следующему. Порядок задан геометрией.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.8) — «Три ключа по порядку»
+    //  A(0,2) снимает стену1 (1,0); B(2,-1) — стену2 (3,0); C(4,-1) —
+    //  стену3 (5,0). Монолит (6,0) активируется лишь при всех трёх ключах
+    //  (onBeforeAction). Стены L4 = STEEP: неверный порядок физически
+    //  заблокирован. Решает ПОРЯДОК, бюджет ходов щедрый (30).
+    //  Декор (Δ≥2): пилоны у обелисков, ямы между рукавами.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 1, r: -1, targetLevel: 3, label: 'Ring Node 1', color: 'amber' },
-      { q: 1, r: 0, targetLevel: 3, label: 'Ring Node 2', color: 'amber' },
-      { q: 0, r: 1, targetLevel: 3, label: 'Ring Node 3', color: 'amber' },
-      { q: -1, r: 1, targetLevel: 3, label: 'Ring Node 4', color: 'amber' },
-      { q: -1, r: 0, targetLevel: 3, label: 'Ring Node 5', color: 'amber' },
-      { q: 0, r: -1, targetLevel: 3, label: 'Ring Node 6', color: 'amber' }
+      { q: 0, r: 2, targetLevel: 2, label: 'Obelisk A', color: 'blue' },
+      { q: 2, r: -1, targetLevel: 2, label: 'Obelisk B', color: 'blue' },
+      { q: 4, r: -1, targetLevel: 2, label: 'Obelisk C', color: 'blue' },
+      { q: 6, r: 0, targetLevel: 2, label: 'Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
+      size: 7, type: 'fixed',
       customLayout: [
-          { q: 0, r: 0, maxLevel: -5, currentLevel: -5, structureType: 'VOID', revealed: true }, // CENTRAL BLACK HOLE
-          { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },   // PLAYER START
-          
-          // RING POSITIONS (must be built to level 3)
-          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-
-          // ACCESS PATHS
-          { q: 0, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: -2, maxLevel: 1, currentLevel: 1, revealed: true },
+          { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
+          // A spur (north)
+          { q: 0, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 0, r: 2, currentLevel: 2, maxLevel: 2, structureType: 'MINI_MONUMENT', revealed: true },
+          // WALL1 + corridor to B
+          { q: 1, r: 0, currentLevel: 4, maxLevel: 4, revealed: true },   // WALL1 → L1 on A
+          { q: 2, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 2, r: -1, currentLevel: 2, maxLevel: 2, structureType: 'MINI_MONUMENT', revealed: true }, // B
+          // WALL2 + corridor to C
+          { q: 3, r: 0, currentLevel: 4, maxLevel: 4, revealed: true },   // WALL2 → L1 on B
+          { q: 4, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 4, r: -1, currentLevel: 2, maxLevel: 2, structureType: 'MINI_MONUMENT', revealed: true }, // C
+          // WALL3 + Monolith
+          { q: 5, r: 0, currentLevel: 4, maxLevel: 4, revealed: true },   // WALL3 → L1 on C
+          { q: 6, r: 0, currentLevel: 2, maxLevel: 2, structureType: 'MONUMENT', revealed: true },
+          // ── DECOR (Δ≥2) ──
+          { q: 0, r: 3, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 2, r: -2, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 4, r: -2, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 3, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: 1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
       ]
     },
-    requiredShapes: [
-      { type: 'RING_6', level: 3, hint: 'Construct a ring of 6 level 3 tiles around the central Void' }
-    ],
-    startState: { credits: 50, moves: 20, rank: 3, materials: 2, initialEntropy: 100 },
+    startState: { credits: 0, moves: 30, rank: 2, materials: 0 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.evacuationActive) return isRu ? "ПОБЕДА: Кольцо герметизации создано!" : "VICTORY: Containment Ring complete!";
-      const countL3 = Object.values(state.grid).filter((h: any) => h.currentLevel >= 3 && h.ownerId === state.player.id).length;
-      return isRu 
-        ? `СТРОЙ КОЛЬЦО: Выстрой 6 гексов кольцом вокруг Бездны до уровня L3! Готово: ${Math.min(6, countL3)}/6` 
-        : `BUILD RING: Construct 6 hexes in a ring around the Void to L3! Built: ${Math.min(6, countL3)}/6`;
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const done = state.activatedMiniMonuments || [];
+      const n = ['0,2', '2,-1', '4,-1'].filter(k => done.includes(k)).length;
+      if (state.player.q === 6 && state.player.r === 0) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      return isRu
+        ? `ОБЕЛИСКИ ПО ПОРЯДКУ (${n}/3): взломай A(0,2)→откроется путь к B(2,-1)→затем C(4,-1). Каждый снимает свою стену L4.`
+        : `OBELISKS IN ORDER (${n}/3): hack A(0,2)→opens the way to B(2,-1)→then C(4,-1). Each drops its own L4 wall.`;
     },
     hooks: {
-      checkWinCondition: () => false,
-      checkLossCondition: (state) => {
-        if (state.entropy.current <= 0) return true;
-        return isStranded(state);
+      checkWinCondition: (state) => !!state.portalActive,
+      checkLossCondition: (state) => isStranded(state),
+      onBeforeAction: (state, action) => {
+        const isRu = state.language === 'RU';
+        const p = state.player;
+        if (action.type === 'ACTIVATE_MINI_MONUMENT') {
+          const key = (action as any).miniMonumentHexKey;
+          if (key !== `${p.q},${p.r}`) {
+            return { ok: false, reason: isRu ? 'Подойдите к Обелиску, чтобы взломать его' : 'Stand on the Obelisk to hack it' };
+          }
+        }
+        if (action.type === 'ACTIVATE_MONUMENT') {
+          const done = state.activatedMiniMonuments || [];
+          if (!['0,2', '2,-1', '4,-1'].every(k => done.includes(k))) {
+            return { ok: false, reason: isRu ? 'ФАЙРВОЛ: активируйте все три Обелиска' : 'FIREWALL: activate all three Obelisks first' };
+          }
+        }
+        return null;
       },
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
-
-        // Drain 1 additional entropy per action to simulate rapid collapse
-        if (turn > 0) {
-          state.entropy.current = Math.max(0, state.entropy.current - 1);
+        const done = state.activatedMiniMonuments || [];
+        const drops: [string, number, number][] = [['0,2', 1, 0], ['2,-1', 3, 0], ['4,-1', 5, 0]];
+        for (const [k, wq, wr] of drops) {
+          if (done.includes(k)) {
+            const wk = getHexKey(wq, wr);
+            const w = state.grid[wk];
+            if (w && w.currentLevel === 4) {
+              state.grid[wk] = { ...w, currentLevel: 1 };
+              state.messageLog.unshift({
+                id: `msg-28-wall-${wk}-${Date.now()}`,
+                text: isRu ? `БАРЬЕР СНЯТ: стена (${wq},${wr}) опустилась.` : `BARRIER DOWN: wall (${wq},${wr}) lowered.`,
+                type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now()
+              });
+            }
+          }
         }
-
         if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-28-tut-${Date.now()}`,
+            id: `msg-28-intro-${Date.now()}`,
             text: isRu
-              ? 'ВНИМАНИЕ: Центральная Чёрная Дыра (0,0) уничтожает мерность. Быстро выстройте 6 её соседей до Уровня 3 (Кольцо), чтобы загерметизировать пробитие, пока стабильность не иссякла!'
-              : 'ALERT: The Central Singularity (0,0) is melting space. Construct the 6 surrounding tiles to Level 3 (Ring of Containment) to seal the breach before stability drains!',
-            type: 'WARN',
-            source: 'SYSTEM',
-            timestamp: Date.now()
+              ? 'NEBULA_AI: Три стены L4 отделяют вас от Монолита. Каждый Обелиск снимает одну и открывает следующий рукав — иди строго A→B→C. Пока не взломаны все три, Монолит отвергает активацию.'
+              : 'NEBULA_AI: Three L4 walls separate you from the Monolith. Each Obelisk drops one and opens the next arm — go strictly A→B→C. Until all three are hacked, the Monolith refuses activation.',
+            type: 'INFO', source: 'NEBULA_AI', timestamp: Date.now()
           });
         }
       }
@@ -631,64 +700,80 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.9',
-    title: 'Sim 2.9: Двойная Динамика',
-    description: 'СИСТЕМНАЯ ДИРЕКТИВА. АРХИТЕКТУРНОЕ ПРОТИВОСТОЯНИЕ. Возведите сложные геометрические формации в условиях непрерывного саботажа со стороны вражеских дронов. Следуйте указаниям навигационного модуля и берегите ресурсы.',
+    title: 'Sim 2.9: Энтропийный обход',
+    description: 'Каждое действие точит Энтропию. Успей к Монолиту прежде, чем она обнулится — по пути перезаряди Стабилизатор.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.9) — «Часы Энтропии»
+    //  Дренаж 2 Энтропии за ДЕЙСТВИЕ (actionsTaken). Старт 6.
+    //  Прямой пандус (1,0)(2,0)(3,0): 3 действия × 2 = -6 → Энтропия 0 у
+    //  вершины (DEFEAT). Обход к Стабилизатору (0,-2) даёт +20 — тогда
+    //  часов хватает на подъём. Стабилизатор ОБЯЗАТЕЛЕН (доказано тестом).
+    //  Декор (Δ≥2): пики над пандусом, ямы каньона.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 3, label: 'Central Hub', color: 'amber' },
-      { q: 1, r: -1, targetLevel: 3, label: 'North Node', color: 'amber' },
-      { q: 1, r: 0, targetLevel: 3, label: 'East Node', color: 'amber' },
-      { q: -1, r: 0, targetLevel: 3, label: 'West Node', color: 'amber' }
+      { q: 0, r: -1, targetLevel: 1, label: 'Stabilizer', color: 'blue' },
+      { q: 3, r: 0, targetLevel: 3, label: 'Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 6, type: 'fixed', generateWalls: true, wallStartRadius: 5, wallType: 'pit_ring',
+      size: 6, type: 'fixed',
       customLayout: [
-          { q: 0, r: 3, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true }, // PLAYER START
-          { q: 0, r: -3, maxLevel: 2, currentLevel: 2, revealed: true }, // BOT SPAWN
-          
-          // CONSTR FIELD
-          { q: 0, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
+          { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
+          // RAMP to the Monolith
+          { q: 1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 2, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+          { q: 3, r: 0, currentLevel: 3, maxLevel: 3, structureType: 'MONUMENT', revealed: true },
+          // STABILIZER (north, 1 step) — +40 Stability once
+          { q: 0, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
+          // ── DECOR (Δ≥2) ──
+          { q: 1, r: -1, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 3, r: -1, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: -1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: 1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
       ]
     },
-    requiredShapes: [
-      { type: 'LINE_3', level: 3, hint: 'Build a Line of 3 hexes L3+' },
-      { type: 'TRIANGLE_3', level: 3, hint: 'Build a Triangle of 3 hexes L3+' }
-    ],
-    botSpawnPoints: [{ q: 0, r: -3 }],
-    aiMode: 'basic',
-    botObjective: 'DESTROY_PLAYER',
-    startState: { credits: 50, moves: 22, rank: 3, materials: 2, initialEntropy: 80 },
+    // initialEntropy pinned high: this level's timer is the private _clock, and
+    // engine entropy must stay > 0 or EntropySystem fires a terrain-eroding shift.
+    startState: { credits: 0, moves: 20, rank: 2, materials: 0, initialEntropy: 100 },
+    aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.evacuationActive) return isRu ? "ПОБЕДА: Фигуры построены!" : "VICTORY: Shapes built!";
-      return isRu 
-        ? "СТРОЙ ФИГУРЫ: Сформируй одновременно Треугольник (L3) и Линию (L3)!" 
-        : "BUILD SHAPES: Complete a Triangle (L3) and a Line (L3) simultaneously!";
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const p = state.player;
+      if (p.q === 3 && p.r === 0) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      if ((state as any)._discharged) { const ent = (state as any)._clock ?? 6; return isRu ? `СТАБИЛЬНОСТЬ ${ent}%: часы пополнены, поднимайся к Монолиту (1,0)→(2,0)→(3,0).` : `STABILITY ${ent}%: clock topped up, climb to the Monolith (1,0)→(2,0)→(3,0).`; }
+      return isRu
+        ? 'СТАБИЛЬНОСТЬ ПАДАЕТ: прямого пути не хватит по времени. Сначала шагни на север к Стабилизатору (0,-1) за +40, только потом на пандус к Монолиту.'
+        : 'STABILITY FALLING: the direct path runs out of time. Step north to the Stabilizer (0,-1) for +40 first, only then up the ramp to the Monolith.';
     },
     hooks: {
-      checkWinCondition: () => false,
-      checkLossCondition: (state) => {
-        if (state.entropy.current <= 0) return true;
-        return isStranded(state);
-      },
+      checkWinCondition: (state) => !!state.portalActive,
+      checkLossCondition: (state) => (((state as any)._clock ?? 6) <= 0) || isStranded(state),
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
 
+        // Stability clock = pure function of actionsTaken (no persisted delta
+        // counter → immune to immer draft-persistence quirks; NOT engine entropy,
+        // so no probabilistic EntropySystem shifts). Discharge is a set-once flag.
+        const S = state as any;
+        const acts = (state.player as any).actionsTaken ?? 0;
+        if (state.player.q === 0 && state.player.r === -1 && !S._discharged) {
+          S._discharged = true;
+          state.messageLog.unshift({
+            id: `msg-29-charge-${Date.now()}`,
+            text: isRu ? 'РАЗРЯДКА: Стабилизатор восстановил +40 Стабильности.' : 'DISCHARGE: the Stabilizer restored +40 Stability.',
+            type: 'SUCCESS', source: 'NEBULA_AI', timestamp: Date.now()
+          });
+        }
+        S._clock = 6 + (S._discharged ? 40 : 0) - 3 * acts;
+
         if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-29-warn-${Date.now()}`,
+            id: `msg-29-intro-${Date.now()}`,
             text: isRu
-              ? 'СЕНСОР: Проклятый Саботажник Scout-Destroyer десантировался на юге. Он будет выслеживать и срывать ваши постройки! Быстро создайте одновременно Линию LINE_3 и Треугольник TRIANGLE_3 Уровня 3.'
-              : 'SENSOR: Enemy Scout-Destroyer drone has landed. It will actively seek and dig down your structures! Rush construction of both a LINE_3 and a TRIANGLE_3 at level 3+.',
-            type: 'ERROR',
-            source: 'ENEMY_AI',
-            timestamp: Date.now()
+              ? 'NEBULA_AI: Стабильность ядра 6% и падает на 3 за каждое действие. Прямого пандуса не хватит — сначала шагни на север к Стабилизатору (0,-1) за +40, затем поднимайся к Монолиту.'
+              : 'NEBULA_AI: Core stability is 6% and drops 3 per action. The direct ramp is not enough — step north to the Stabilizer (0,-1) for +40 first, then climb to the Monolith.',
+            type: 'WARN', source: 'SYSTEM', timestamp: Date.now()
           });
         }
       }
@@ -700,94 +785,77 @@ export const series2Levels: LevelConfig[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     id: '2.10',
-    title: 'Sim 2.10: Космическое Выравнивание',
-    description: 'СИСТЕМНАЯ ДИРЕКТИВА. СИНТЕЗ. Критическая фаза. Активируйте защитные обелиски по периметру и запустите Монолит до того, как кластер схлопнется. Следуйте указаниям навигационного модуля и берегите ресурсы.',
+    title: 'Sim 2.10: Космическое выравнивание',
+    description: 'Экзамен: два Обелиска снимают барьеры, кредиты оплачивают финальный подъём, а Энтропия торопит. Проходит лишь выверенный маршрут.',
+    // ─────────────────────────────────────────────────────────────────
+    //  ИТОГОВЫЙ ПРОСЧЁТ ДВИЖЕНИЯ (spec §3 2.10) — КАПСТОУН
+    //  Врата: A(0,2) снимает стену1 (1,0); B(2,-1) — стену2 (3,0).
+    //  Монолит (5,0)L3 активируется лишь при обоих ключах (onBeforeAction).
+    //  Экономия: финальный подъём (4,0)L2 (5,0)L3 оплачивается кредитами
+    //  (овердрафт). Σ ≈ 16 ходов = 8 ходов + 40 кредитов (=8). Часы Энтропии
+    //  (дренаж 1/действие, старт 40) торопят. Тупики: стены L4 STEEP до
+    //  ключей; ранняя активация Монолита — файрвол.
+    //  Декор (Δ≥2): шпили L5, пилоны L4, ямы каньона.
+    // ─────────────────────────────────────────────────────────────────
     objectiveHexes: [
-      { q: 3, r: -3, targetLevel: 3, label: 'Obelisk 1', color: 'blue' },
-      { q: -3, r: 3, targetLevel: 3, label: 'Obelisk 2', color: 'blue' },
-      { q: 0, r: -3, targetLevel: 3, label: 'Obelisk 3', color: 'blue' },
-      { q: 0, r: 0, targetLevel: 3, label: 'Monument', color: 'emerald' }
+      { q: 0, r: 2, targetLevel: 2, label: 'Obelisk A', color: 'blue' },
+      { q: 2, r: -1, targetLevel: 2, label: 'Obelisk B', color: 'blue' },
+      { q: 5, r: 0, targetLevel: 3, label: 'Monolith', color: 'emerald' }
     ],
     mapConfig: {
-      size: 7, type: 'fixed', generateWalls: true, wallStartRadius: 6, wallType: 'pit_ring',
+      size: 7, type: 'fixed',
       customLayout: [
-          { q: 0, r: 0, maxLevel: 3, currentLevel: 3, structureType: 'MONUMENT', revealed: true }, // CENTRAL CORE
-          { q: 0, r: 4, maxLevel: 1, currentLevel: 1, ownerId: 'player-1', revealed: true },   // PLAYER START
-          
-          // 3 MINI MONUMENTS
-          { q: 3, r: -3, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },
-          { q: -3, r: 3, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },
-          { q: 0, r: -3, maxLevel: 3, currentLevel: 3, structureType: 'MINI_MONUMENT', revealed: true },
-
-          // INNER RING GRID
-          { q: 1, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 1, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 0, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: -1, maxLevel: 1, currentLevel: 1, revealed: true },
-
-          // SPURS AND BRIDGES
-          { q: 0, r: 2, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 0, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: 1, r: -3, maxLevel: 1, currentLevel: 1, revealed: true },
-          { q: -1, r: 3, maxLevel: 1, currentLevel: 1, revealed: true },
+          { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
+          // A spur (north)
+          { q: 0, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 0, r: 2, currentLevel: 2, maxLevel: 2, structureType: 'MINI_MONUMENT', revealed: true },
+          // WALL1 + corridor to B
+          { q: 1, r: 0, currentLevel: 4, maxLevel: 4, revealed: true },   // WALL1 → L1 on A
+          { q: 2, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+          { q: 2, r: -1, currentLevel: 2, maxLevel: 2, structureType: 'MINI_MONUMENT', revealed: true }, // B
+          // WALL2 + final climb
+          { q: 3, r: 0, currentLevel: 4, maxLevel: 4, revealed: true },   // WALL2 → L1 on B
+          { q: 4, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+          { q: 5, r: 0, currentLevel: 3, maxLevel: 3, structureType: 'MONUMENT', revealed: true },
+          // ── DECOR (Δ≥2) ──
+          { q: 0, r: 3, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 2, r: -2, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 5, r: -1, currentLevel: 5, maxLevel: 5, revealed: true },
+          { q: 4, r: 1, currentLevel: 4, maxLevel: 4, revealed: true },
+          { q: 1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
+          { q: 3, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
       ]
     },
-    startState: { credits: 60, moves: 25, rank: 4, materials: 3, initialEntropy: 100 },
+    startState: { credits: 40, moves: 8, rank: 2, materials: 0, initialEntropy: 40 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      if (state.portalActive) return isRu ? "ПОБЕДА: Монолит запущен!" : "VICTORY: Monolith online!";
-      
-      const activatedCount = state.monumentRevealedSlots?.filter(Boolean).length || 0;
-      if (activatedCount < 3) {
-        return isRu 
-          ? `АКТИВИРУЙ ОБЕЛИСКИ: Найди и взломай 3 периферийных Обелиска! Готово: ${activatedCount}/3` 
-          : `ACTIVATE OBELISKS: Find and hack 3 peripheral Obelisks! Activated: ${activatedCount}/3`;
-      }
-      
-      const ringKeys = ['1,-1', '1,0', '0,1', '-1,1', '-1,0', '0,-1'];
-      const ringCount = ringKeys.filter(k => {
-        const h = state.grid[k];
-        return h && h.currentLevel >= 3 && h.ownerId === state.player.id;
-      }).length;
-      
-      if (ringCount < 6) {
-        return isRu 
-          ? `СТРОЙ КОЛЬЦО: Возведи кольцо L3 вокруг Монолита (0,0)! Готово: ${ringCount}/6` 
-          : `BUILD RING: Construct an L3 ring around the Monolith (0,0)! Built: ${ringCount}/6`;
-      }
-
-      if (state.player.q === 0 && state.player.r === 0) return isRu ? "АКТИВИРУЙ: Жми АКТИВИРОВАТЬ Портал!" : "ACTIVATE: Press ACTIVATE Portal!";
-      return isRu 
-        ? "ИДИ В ЦЕНТР: Ступай на Монолит (0,0) и Активируй его!" 
-        : "MOVE TO CENTER: Step on Monolith (0,0) and Activate it!";
+      if (state.portalActive) return isRu ? 'ПОБЕДА: Монолит активирован!' : 'VICTORY: Monolith activated!';
+      const p = state.player;
+      const done = state.activatedMiniMonuments || [];
+      if (p.q === 5 && p.r === 0) return isRu ? 'АКТИВИРУЙ: жми АКТИВИРОВАТЬ на Монолите!' : 'ACTIVATE: press ACTIVATE on the Monolith!';
+      const n = ['0,2', '2,-1'].filter(k => done.includes(k)).length;
+      const ent = state.entropy?.current ?? 0;
+      return isRu
+        ? `КАПСТОУН (${n}/2): взломай Обелиск A(0,2)→стена падёт→B(2,-1)→стена падёт. Финальный подъём к (5,0) оплатят кредиты. Энтропия ${ent}% — не мешкай.`
+        : `CAPSTONE (${n}/2): hack Obelisk A(0,2)→wall drops→B(2,-1)→wall drops. Credits pay the final climb to (5,0). Entropy ${ent}% — don't dawdle.`;
     },
     hooks: {
-      checkWinCondition: () => false,
-      checkLossCondition: (state) => {
-        if (state.entropy.current <= 0) return true;
-        return isStranded(state);
-      },
+      checkWinCondition: (state) => !!state.portalActive,
+      checkLossCondition: (state) => state.entropy.current <= 0 || isStranded(state),
       onBeforeAction: (state, action) => {
         const isRu = state.language === 'RU';
-        
+        const p = state.player;
+        if (action.type === 'ACTIVATE_MINI_MONUMENT') {
+          const key = (action as any).miniMonumentHexKey;
+          if (key !== `${p.q},${p.r}`) {
+            return { ok: false, reason: isRu ? 'Подойдите к Обелиску, чтобы взломать его' : 'Stand on the Obelisk to hack it' };
+          }
+        }
         if (action.type === 'ACTIVATE_MONUMENT') {
-          // Verify that RING_6 of Level 3 is fully constructed around (0,0)
-          const ringKeys = ['1,-1', '1,0', '0,1', '-1,1', '-1,0', '0,-1'];
-          const ringCorrect = ringKeys.every(k => {
-            const h = state.grid[k];
-            return h && h.currentLevel >= 3 && h.ownerId === state.player.id;
-          });
-          
-          if (!ringCorrect) {
-            return {
-              ok: false,
-              reason: isRu
-                ? 'ФАЙРВОЛ: Вы не сотворили фокусирующее Кольцо (6 гексов Ур.3) вокруг Монолита!'
-                : 'FIREWALL: You have not built the Focusing Containment Ring (RING_6 of L3+) around the central Monolith!'
-            };
+          const done = state.activatedMiniMonuments || [];
+          if (!['0,2', '2,-1'].every(k => done.includes(k))) {
+            return { ok: false, reason: isRu ? 'ФАЙРВОЛ: активируйте оба Обелиска' : 'FIREWALL: activate both Obelisks first' };
           }
         }
         return null;
@@ -795,16 +863,28 @@ export const series2Levels: LevelConfig[] = [
       onAfterAction: (state) => {
         const turn = state.currentTurn ?? 0;
         const isRu = state.language === 'RU';
-
+        const done = state.activatedMiniMonuments || [];
+        const drops: [string, number, number][] = [['0,2', 1, 0], ['2,-1', 3, 0]];
+        for (const [k, wq, wr] of drops) {
+          if (done.includes(k)) {
+            const wk = getHexKey(wq, wr);
+            const w = state.grid[wk];
+            if (w && w.currentLevel === 4) state.grid[wk] = { ...w, currentLevel: 1 };
+          }
+        }
+        const acts = (state.player as any).actionsTaken ?? 0;
+        const seen = (state as any)._entSeen ?? 0;
+        if (acts > seen) {
+          (state as any)._entSeen = acts;
+          state.entropy.current = Math.max(0, state.entropy.current - (acts - seen));
+        }
         if (turn === 1) {
           state.messageLog.unshift({
-            id: `msg-210-start-${Date.now()}`,
+            id: `msg-210-intro-${Date.now()}`,
             text: isRu
-              ? 'ГЛОБАЛЬНЫЙ ИНСТРУКТАЖ: Стены защиты Монолита неприступны. Активируйте 3 Обелиска по краям (3,-3), (-3,3), (0,-3) и выстройте кольцо (6 гексов Ур 3) вокруг (0,0) для победы!'
-              : 'GLOBAL DIRECTIVE: Central core defenses are impenetrable. Run to activate the 3 peripheral Obelisks at (3,-3), (-3,3), (0,-3) and align the ring shape of Level 3 around (0,0).',
-            type: 'INFO',
-            source: 'NEBULA_AI',
-            timestamp: Date.now()
+              ? 'NEBULA_AI: Финал. Два Обелиска (0,2) и (2,-1) снимают барьеры к Монолиту. Взломай оба по очереди, затем оплати финальный подъём кредитами (овердрафт). Энтропия тикает — действуй без лишних шагов.'
+              : 'NEBULA_AI: The finale. Two Obelisks (0,2) and (2,-1) drop the barriers to the Monolith. Hack both in turn, then pay the final climb with credits (overdraft). Entropy is ticking — waste no steps.',
+            type: 'INFO', source: 'NEBULA_AI', timestamp: Date.now()
           });
         }
       }

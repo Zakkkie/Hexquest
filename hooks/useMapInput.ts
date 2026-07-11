@@ -1,4 +1,4 @@
-import { ReactMouseEvent, TouchEvent } from 'react';
+import { ReactMouseEvent, TouchEvent, useRef, useEffect } from 'react';
 import { useGameStore } from '../store.ts';
 import { useEphemeralStore } from '../store/ephemeralStore.ts';
 import { getHexKey } from '../services/hexUtils.ts';
@@ -27,12 +27,29 @@ export const useMapInput = ({
 }: UseMapInputProps) => {
 
   const getHexVisualHeight = getHeightOffset;
+  const rectRef = useRef<DOMRect | null>(null);
+
+  // Clear cached rect on window resize or scroll to ensure layout bounds stay correct
+  useEffect(() => {
+    const handleResizeOrScroll = () => {
+      rectRef.current = null;
+    };
+    window.addEventListener('resize', handleResizeOrScroll);
+    window.addEventListener('scroll', handleResizeOrScroll, true);
+    return () => {
+      window.removeEventListener('resize', handleResizeOrScroll);
+      window.removeEventListener('scroll', handleResizeOrScroll, true);
+    };
+  }, []);
 
   const handleCanvasClick = (e: React.MouseEvent | React.TouchEvent) => {
     const app = pixiAppRef.current;
     if (!app || !app.renderer || !app.canvas || !grid) return;
 
-    const rect = app.canvas.getBoundingClientRect();
+    if (!rectRef.current) {
+      rectRef.current = app.canvas.getBoundingClientRect();
+    }
+    const rect = rectRef.current!;
     const clientX = 'clientX' in e ? e.clientX : (e as any).touches?.[0]?.clientX;
     const clientY = 'clientY' in e ? e.clientY : (e as any).touches?.[0]?.clientY;
 
@@ -75,6 +92,10 @@ export const useMapInput = ({
     let bestHexKey: string | null = null;
     let bestDist = Infinity;
 
+    const rAngleRad = rotation * (Math.PI / 180);
+    const cosC = Math.cos(rAngleRad);
+    const sinC = Math.sin(rAngleRad);
+
     for (let dq = -4; dq <= 4; dq++) {
       for (let dr = Math.max(-4, -4 - dq); dr <= Math.min(4, 4 - dq); dr++) {
         const hKey = getHexKey(q + dq, r + dr);
@@ -87,17 +108,16 @@ export const useMapInput = ({
 
         const rawXCenter = HEX_SIZE * (Math.sqrt(3) * cand.q + (Math.sqrt(3) / 2) * cand.r);
         const rawYCenter = HEX_SIZE * (1.5 * cand.r);
-        const rAngleRad = rotation * (Math.PI / 180);
-        const cosC = Math.cos(rAngleRad);
-        const sinC = Math.sin(rAngleRad);
 
         const px = rawXCenter * cosC - rawYCenter * sinC;
         const isVoid = cand.structureType === 'VOID';
         const offsetY = isVoid ? -10 : getHexVisualHeight(cand.currentLevel);
         const py = (rawXCenter * sinC + rawYCenter * cosC) * 0.8 + offsetY;
 
-        const dist = Math.hypot(px - rx, py - ry);
-        if (dist < bestDist && dist < HEX_SIZE * 2.2) {
+        const dx = px - rx;
+        const dy = (py - ry) / 0.8;
+        const dist = Math.hypot(dx, dy);
+        if (dist < bestDist && dist < HEX_SIZE * 1.25) {
           bestDist = dist;
           bestHexKey = hKey;
         }
@@ -115,7 +135,10 @@ export const useMapInput = ({
     const app = pixiAppRef.current;
     if (!app || !app.renderer || !app.canvas || !grid) return;
 
-    const rect = app.canvas.getBoundingClientRect();
+    if (!rectRef.current) {
+      rectRef.current = app.canvas.getBoundingClientRect();
+    }
+    const rect = rectRef.current!;
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
 
@@ -150,6 +173,10 @@ export const useMapInput = ({
     let bestHexKey: string | null = null;
     let bestDist = Infinity;
 
+    const rAngleRad = rotation * (Math.PI / 180);
+    const cosC = Math.cos(rAngleRad);
+    const sinC = Math.sin(rAngleRad);
+
     for (let dq = -4; dq <= 4; dq++) {
       for (let dr = Math.max(-4, -4 - dq); dr <= Math.min(4, 4 - dq); dr++) {
         const hKey = getHexKey(q + dq, r + dr);
@@ -162,17 +189,16 @@ export const useMapInput = ({
 
         const rawXCenter = HEX_SIZE * (Math.sqrt(3) * cand.q + (Math.sqrt(3) / 2) * cand.r);
         const rawYCenter = HEX_SIZE * (1.5 * cand.r);
-        const rAngleRad = rotation * (Math.PI / 180);
-        const cosC = Math.cos(rAngleRad);
-        const sinC = Math.sin(rAngleRad);
 
         const px = rawXCenter * cosC - rawYCenter * sinC;
         const isVoid = cand.structureType === 'VOID';
         const offsetY = isVoid ? -10 : getHexVisualHeight(cand.currentLevel);
         const py = (rawXCenter * sinC + rawYCenter * cosC) * 0.8 + offsetY;
 
-        const dist = Math.hypot(px - rx, py - ry);
-        if (dist < bestDist && dist < HEX_SIZE * 2.2) {
+        const dx = px - rx;
+        const dy = (py - ry) / 0.8;
+        const dist = Math.hypot(dx, dy);
+        if (dist < bestDist && dist < HEX_SIZE * 1.25) {
           bestDist = dist;
           bestHexKey = hKey;
         }

@@ -133,9 +133,7 @@ export interface GameStore extends GameState {
   rerollSingleMonumentRequirement: (slotIndex: number) => void;
   activateMonument: () => void;
   
-  oracleDialogOpen: boolean;
-  openOracleDialog: () => void;
-  closeOracleDialog: () => void;
+
 
   setHasHydrated: (val: boolean) => void;
   

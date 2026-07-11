@@ -6,7 +6,7 @@ import StoryBoardPixi from './StoryBoardPixi.tsx';
 import { UpgradesTree } from './UpgradesTree.tsx';
 import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle, Hexagon, Terminal, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AiMusicRadio } from './AiMusicRadio.tsx';
+
 
 import { FIGURES_COLLECTION } from './StoryBuilderData.ts';
 import { textureService } from '../services/textureService.ts';
@@ -77,7 +77,7 @@ const StoryBuilderView: React.FC = () => {
     const setUIState = useGameStore(state => state.setUIState);
     const playUiSound = useGameStore(state => state.playUiSound);
     const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
-    const [isAiRadioOpen, setIsAiRadioOpen] = useState(false);
+
     const [exitTargetState, setExitTargetState] = useState<'MENU' | 'CAMPAIGN_MAP' | null>(null);
     const minedInSessionHexes = useGameStore(state => state.minedInSessionHexes);
     const collectedHexes = useGameStore(state => state.collectedHexes);
@@ -598,13 +598,18 @@ const StoryBuilderView: React.FC = () => {
         }
     }, [activeFigure, storyMap, playUiSound, updateTooltipPos]);
 
+    const handleResetCameraRef = useRef(handleResetCamera);
+    useEffect(() => {
+        handleResetCameraRef.current = handleResetCamera;
+    }, [handleResetCamera]);
+
     // Automatically fit camera to the shape on mount and when active figure changes
     useEffect(() => {
         const timer = setTimeout(() => {
-            handleResetCamera(true);
+            handleResetCameraRef.current(true);
         }, 100);
         return () => clearTimeout(timer);
-    }, [activeFigure, handleResetCamera]);
+    }, [activeFigure]);
 
     const handleScrollLeft = useCallback(() => {
         if (totalInventoryTiles === 0) {
@@ -637,7 +642,7 @@ const StoryBuilderView: React.FC = () => {
                 const h = window.innerHeight;
                 setStageSize({ width: w, height: h });
                 setTimeout(() => {
-                    handleResetCamera(true);
+                    handleResetCameraRef.current(true);
                 }, 10);
             };
             window.addEventListener('resize', handleResize);
@@ -652,13 +657,13 @@ const StoryBuilderView: React.FC = () => {
             const h = Math.max(100, Math.floor(height));
             setStageSize({ width: w, height: h });
             setTimeout(() => {
-                handleResetCamera(true);
+                handleResetCameraRef.current(true);
             }, 10);
         });
 
         observer.observe(container);
         return () => observer.disconnect();
-    }, [handleResetCamera]);
+    }, []);
 
     // Shape completeness check - checks if the placed level 0 or higher hexes match the active figure's coordinates
     // under any translation offset (allows random placement anywhere on the board!)
@@ -1515,34 +1520,12 @@ const StoryBuilderView: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="h-px bg-white/5 my-0.5" />
 
-                                        <button 
-                                            onClick={() => { playUiSound('CLICK'); setIsSettingsOpen(false); setIsAiRadioOpen(true); }}
-                                            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-900 hover:text-white transition-all w-full text-center font-black uppercase text-[9px] tracking-[0.1em]"
-                                        >
-                                            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse shrink-0" />
-                                            <span>{language === 'RU' ? 'ИИ РАДИО' : 'AI RADIO'}</span>
-                                        </button>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
 
-                            {/* AI Music Radio modal */}
-                            <AnimatePresence>
-                                {isAiRadioOpen && (
-                                    <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-[200] pointer-events-auto">
-                                        <motion.div 
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                            className="w-full max-w-md max-h-[90vh] flex flex-col"
-                                        >
-                                            <AiMusicRadio onClose={() => setIsAiRadioOpen(false)} />
-                                        </motion.div>
-                                    </div>
-                                )}
-                            </AnimatePresence>
+
                         </div>
                     </div>
                 </motion.div>
