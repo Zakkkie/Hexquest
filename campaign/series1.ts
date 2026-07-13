@@ -721,62 +721,44 @@ export const series1Levels: LevelConfig[] = [
     }
   },
 
-  // 1.7: Финал: Линия Суши
+  // 1.7: Финал: Квантовый Пик L4
   {
     id: '1.7',
-    title: 'Sim 1.7: Финал: Линия Суши',
-    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Примените все полученные инженерные навыки и постройте линию блоков равной высоты. Следуйте указаниям навигационного модуля и берегите ресурсы.',
-    goalText: 'Выстройте линию плит высокого уровня',
+    title: 'Sim 1.7: Финал: Квантовый Пик L4',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. Для возведения центрального гекса до уровня L4 требуется пирамидальное основание со строгим соблюдением правил боковой поддержки. Математический расчёт показывает, что минимально необходимая площадка составляет ровно 7 гексов (центральный гекс и 6 его непосредственных соседей, образующие плотный кластер радиуса 1). Для завершения строительства до уровня L4 потребуется совершить как минимум 16 улучшений плит (10 материалов даются на старте, а остальные можно восполнить с помощью добычи или энергообмена).',
+    goalText: 'Возведите центральную плиту до уровня L4',
     mapConfig: {
       size: 2,
       type: 'fixed',
       customLayout: [
-        { q: 0, r: -1, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Start point L1
-        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true }, // Center L1
-        { q: 0, r: 1, currentLevel: 1, maxLevel: 1, revealed: true }, // Step L1
-        { q: 1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
-        { q: -1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
-        { q: 1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: 0, r: 0, currentLevel: 0, maxLevel: 0, revealed: true, ownerId: 'player-1' }, // Center starting point L0
+        { q: 0, r: -1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 1, r: -1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -1, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
       ]
     },
     objectiveHexes: [
-      { q: 0, r: -1, targetLevel: 2, label: 'L2', color: 'amber' },
-      { q: 0, r: 0, targetLevel: 2, label: 'L2', color: 'amber' },
-      { q: 0, r: 1, targetLevel: 2, label: 'L2', color: 'amber' },
+      { q: 0, r: 0, targetLevel: 4, label: 'L4', color: 'amber' },
     ],
-    startState: { credits: 0, moves: 30, rank: 2, materials: 6, initialEntropy: 100 },
+    startState: { credits: 0, moves: 80, rank: 3, materials: 10, initialEntropy: 100 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      const key1 = '0,-1';
-      const key2 = '0,0';
-      const key3 = '0,1';
-      const l1 = state.grid[key1]?.currentLevel ?? 0;
-      const l2 = state.grid[key2]?.currentLevel ?? 0;
-      const l3 = state.grid[key3]?.currentLevel ?? 0;
-      
-      const ready = (l1 >= 2 && l2 >= 2 && l3 >= 2);
-      if (ready) {
-        return isRu ? "ПОБЕДА: Выстроена успешная линия L2!" : "VICTORY: Perfect L2 cascade sequence complete!";
+      const level = state.grid['0,0']?.currentLevel ?? 0;
+      if (level >= 4) {
+        return isRu ? "ПОБЕДА: Вы успешно возвели пик до L4!" : "VICTORY: Perfect L4 peak complete!";
       }
-      
-      const supports = ['1,-1', '-1,0', '1,0'].filter(k => (state.grid[k]?.currentLevel ?? 0) >= 2).length;
-      if (supports < 3) {
-           return isRu
-            ? `СТРОЙ: Улучши боковые плиты до L2, чтобы использовать их как опоры. Готово: ${supports}/3`
-            : `BUILD: Upgrade side plates to L2 to use them as supports. Progress: ${supports}/3`;
-      }
-
       return isRu
-        ? `СТРОЙ ЦЕЛЕВЫЕ: Улучши целевую линию из трех центральных гексов до уровня L2! Статус: ${l1}/2, ${l2}/2, ${l3}/2`
-        : `BUILD CORES: Raise the central target line blocks to L2! Current: ${l1}/2, ${l2}/2, ${l3}/2`;
+        ? `ПОСТРОЙ ПИК L4: Улучши центральный гекс (0,0) до уровня L4! Текущий уровень: L${level}. (Требуется 16 улучшений, 10 материалов дано на старте, добывайте новые материалы из соседних плит).`
+        : `BUILD L4 PEAK: Upgrade the central hex (0,0) to Level L4! Current: L${level}. (Requires 16 upgrades, 10 materials provided on start, mine more materials from adjacent tiles).`;
     },
     hooks: {
       checkWinCondition: (state) => {
-        const l1 = state.grid['0,-1']?.currentLevel ?? 0;
-        const l2 = state.grid['0,0']?.currentLevel ?? 0;
-        const l3 = state.grid['0,1']?.currentLevel ?? 0;
-        return l1 >= 2 && l2 >= 2 && l3 >= 2;
+        const level = state.grid['0,0']?.currentLevel ?? 0;
+        return level >= 4;
       },
       checkLossCondition: (state) => {
         return isStranded(state);

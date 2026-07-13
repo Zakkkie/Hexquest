@@ -20,7 +20,6 @@ export function getCampaignMetric(
     Object.values(grid).filter((h: any) => h.ownerId === player.id && h.maxLevel >= minLvl).length;
 
   const portalActive = session?.portalActive || false;
-  const evacuationActive = session?.evacuationActive || false;
   const monumentRevealedSlots = session?.monumentRevealedSlots || [];
 
   if (levelId === '1.0') {
@@ -51,11 +50,11 @@ export function getCampaignMetric(
   if (levelId === '1.2') {
     return { current: Math.max(0, 2 - (grid['0,0']?.currentLevel ?? 2)), target: 2, label: language === 'RU' ? 'СРЕЗАННЫЕ СЛОИ' : 'DIG LAYERS' };
   }
-  if (levelId === '1.4') {
-    return { current: grid['0,0']?.currentLevel ?? 0, target: 3, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
-  }
   if (levelId === '1.3') {
     return { current: player.coins, target: 15, label: language === 'RU' ? 'КРЕДИТЫ' : 'CREDITS' };
+  }
+  if (levelId === '1.4') {
+    return { current: grid['0,0']?.currentLevel ?? 0, target: 3, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
   }
   if (levelId === '1.5') {
     const depthOk = (grid['0,0']?.currentLevel ?? 0) <= -2 ? 1 : 0;
@@ -66,52 +65,13 @@ export function getCampaignMetric(
     return { current: (player.q === 8 && player.r === 0) ? 1 : 0, target: 1, label: language === 'RU' ? 'СТОЛИЦА' : 'CAPITAL' };
   }
   if (levelId === '1.7') {
-    const count = [grid['0,-1'], grid['0,0'], grid['0,1']].filter(h => (h?.currentLevel ?? 0) >= 2).length;
-    return { current: count, target: 3, label: language === 'RU' ? 'ОПОРЫ' : 'SUPPORTS' };
-  }
-  if (levelId === '1.8') {
-    return { current: player.playerLevel, target: 2, label: language === 'RU' ? 'РАНГ' : 'RANK' };
-  }
-  if (levelId === '1.9') {
-    const rankOk = player.playerLevel >= 3 ? 1 : 0;
-    const coinsOk = player.coins >= 50 ? 1 : 0;
-    return { current: rankOk + coinsOk, target: 2, label: language === 'RU' ? 'ЗАДАЧИ' : 'OBJECTIVES' };
+    return { current: grid['0,0']?.currentLevel ?? 0, target: 4, label: language === 'RU' ? 'ВЫСОТА ЦЕНТРА' : 'CENTER HEIGHT' };
   }
   
-  if (levelId === '2.1') {
-    return { current: portalActive ? 1 : 0, target: 1, label: language === 'RU' ? 'ПОРТАЛ' : 'PORTAL' };
-  }
-  if (levelId === '2.2') {
-    return { current: portalActive ? 3 : Math.min(3, player.inventory?.length ?? 0), target: 3, label: language === 'RU' ? 'ПРЕДМЕТЫ' : 'ITEMS' };
-  }
-  if (levelId === '2.3') {
-    return { current: portalActive ? 1 : 0, target: 1, label: language === 'RU' ? 'ПОРТАЛ' : 'PORTAL' };
-  }
-  if (levelId === '2.4') {
-    return { current: portalActive ? 1 : Math.min(1, player.inventory?.length ?? 0), target: 1, label: language === 'RU' ? 'КЛЮЧИ' : 'KEYS' };
-  }
-  if (levelId === '2.5') {
-    const countL2 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 2 && h.ownerId === player.id).length;
-    return { current: evacuationActive ? 3 : Math.min(3, countL2), target: 3, label: language === 'RU' ? 'ЛИНИЯ L2' : 'LINE L2' };
-  }
-  if (levelId === '2.6') {
-    const countL2 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 2 && h.ownerId === player.id).length;
-    return { current: evacuationActive ? 3 : Math.min(3, countL2), target: 3, label: language === 'RU' ? 'ТРЕУГОЛЬНИК L2' : 'TRIANGLE L2' };
-  }
-  if (levelId === '2.7') {
-    const countL3 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 3 && h.ownerId === player.id).length;
-    return { current: evacuationActive ? 4 : Math.min(4, countL3), target: 4, label: language === 'RU' ? 'РОМБ L3' : 'DIAMOND L3' };
-  }
-  if (levelId === '2.8') {
-    const countL3 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 3 && h.ownerId === player.id).length;
-    return { current: evacuationActive ? 6 : Math.min(6, countL3), target: 6, label: language === 'RU' ? 'КОЛЬЦО L3' : 'RING L3' };
-  }
-  if (levelId === '2.9') {
-    const countL3 = Object.values(grid).filter((h: any) => (h?.currentLevel ?? 0) >= 3 && h.ownerId === player.id).length;
-    return { current: evacuationActive ? 6 : Math.min(6, countL3), target: 6, label: language === 'RU' ? 'ФИГУРЫ L3' : 'SHAPES L3' };
-  }
-  if (levelId === '2.10') {
-    return { current: portalActive ? 1 : 0, target: 1, label: language === 'RU' ? 'ПОРТАЛ' : 'PORTAL' };
+  // Series 2 (all 60 levels): the objective is always to activate the Monolith
+  // (portalActive). Keyed by the id prefix so it survives difficulty-renumbering.
+  if (/^2\.\d+$/.test(levelId)) {
+    return { current: portalActive ? 1 : 0, target: 1, label: language === 'RU' ? 'МОНОЛИТ' : 'MONOLITH' };
   }
 
   if (levelId === '3.1') return { current: monumentRevealedSlots?.[0] ? 1 : 0, target: 1, label: language === 'RU' ? 'ОБЕЛИСК' : 'OBELISK' };

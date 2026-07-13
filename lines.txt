@@ -1,0 +1,6 @@
+import { useCollapsibleHint } from './useCollapsibleHint.ts';
+
+import { getCampaignMetric } from '../../campaign/getCampaignMetric';
+
+interface CentralTutorialBannerProps {
+    onOpenHelpDetail?: () => void;

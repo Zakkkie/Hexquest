@@ -556,6 +556,7 @@ export interface SessionState {
   defense?: DefenseState;
   puzzle?: PuzzleState;
   activeMeteors?: MeteorState[];
+  lastMeteorTick?: number;
   creepingVoid?: {
     lastInfectTime: number;
     infectedHexes: Record<string, { currentLevel: number; maxLevel: number; structureType?: any; durability?: number }>;

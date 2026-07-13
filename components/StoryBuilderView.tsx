@@ -4,7 +4,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import StoryBoardPixi from './StoryBoardPixi.tsx';
 import { UpgradesTree } from './UpgradesTree.tsx';
-import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle, Hexagon, Terminal, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle, Hexagon, Terminal, ChevronDown, ChevronUp, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 
@@ -94,6 +94,8 @@ const StoryBuilderView: React.FC = () => {
     const setLanguage = useGameStore(state => state.setLanguage);
     const isMusicMuted = useGameStore(state => state.isMusicMuted);
     const isSfxMuted = useGameStore(state => state.isSfxMuted);
+    const uiScale = useGameStore(state => state.uiScale);
+    const setUiScale = useGameStore(state => state.setUiScale);
     const toggleMusic = useGameStore(state => state.toggleMusic);
     const toggleSfx = useGameStore(state => state.toggleSfx);
     const contrastHighlighting = useGameStore(state => state.campaignUpgrades?.contrastHighlighting || 0);
@@ -1359,6 +1361,17 @@ const StoryBuilderView: React.FC = () => {
                 />
             </div>
             
+            {/* HUD AND OVERLAYS WITH INTERFACE SCALE */}
+            <div 
+                className="absolute inset-0 pointer-events-none z-10 overflow-hidden" 
+                style={{ 
+                    transform: `scale(${uiScale})`, 
+                    transformOrigin: 'top left',
+                    width: `${100 / uiScale}%`,
+                    height: `${100 / uiScale}%`,
+                }}
+            >
+            
             {/* TOP HEADER STATUS MENU BAR (ABOVE ALL OTHER WINDOWS) */}
             <div 
                 className="absolute top-0 left-0 right-0 p-4 md:p-8 pointer-events-none"
@@ -1414,7 +1427,7 @@ const StoryBuilderView: React.FC = () => {
                                         <span className="text-[8px] font-mono tracking-[0.2em] text-indigo-400 font-black uppercase leading-none">
                                             {language === 'RU' ? 'ПОЛИГОН НЕБЬЮЛА' : 'NEBULA PROVING GROUND'}
                                         </span>
-                                        <span className="text-[12.5px] font-black tracking-tight text-white leading-none mt-1 shadow-sm uppercase font-sans flex items-center gap-1 justify-center">
+                                        <span className="text-[10.5px] leading-[13.5px] font-sans no-underline not-italic font-bold text-center tracking-tight text-white mt-1 shadow-sm uppercase flex items-center gap-1 justify-center">
                                             {language === 'RU' ? 'Проектирование ядра' : 'Core Engineering'}
                                             <span className="text-[8px] text-indigo-400 animate-pulse">▼</span>
                                         </span>
@@ -1499,6 +1512,50 @@ const StoryBuilderView: React.FC = () => {
 
                                         <div className="h-px bg-white/5 my-0.5" />
 
+                                        {/* Interface Scale Controls */}
+                                        <div className="flex flex-col gap-1 border-t border-b border-white/5 py-2 my-1">
+                                            <span className="text-[8px] font-black uppercase text-slate-500 tracking-wider pl-1">
+                                                {language === 'RU' ? 'МАСШТАБ ИНТЕРФЕЙСА' : 'INTERFACE SCALE'}
+                                            </span>
+                                            <div className="flex items-center justify-between gap-1.5 bg-slate-950/60 rounded-lg p-1 border border-white/5">
+                                                <button 
+                                                    onClick={() => { 
+                                                        const SCALES = [0.75, 0.85, 1.0, 1.15, 1.30];
+                                                        const idx = SCALES.indexOf(uiScale);
+                                                        if (idx > 0) {
+                                                            setUiScale(SCALES[idx - 1]);
+                                                            playUiSound('CLICK');
+                                                        } else {
+                                                            playUiSound('ERROR');
+                                                        }
+                                                    }}
+                                                    disabled={uiScale <= 0.75}
+                                                    className="w-6 h-6 flex items-center justify-center rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-35 disabled:pointer-events-none text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                                >
+                                                    <ZoomOut className="w-3.5 h-3.5" />
+                                                </button>
+                                                <span className="text-[10px] font-black font-mono text-indigo-400 tracking-tight select-none">
+                                                    {Math.round(uiScale * 100)}%
+                                                </span>
+                                                <button 
+                                                    onClick={() => { 
+                                                        const SCALES = [0.75, 0.85, 1.0, 1.15, 1.30];
+                                                        const idx = SCALES.indexOf(uiScale);
+                                                        if (idx < SCALES.length - 1 && idx !== -1) {
+                                                            setUiScale(SCALES[idx + 1]);
+                                                            playUiSound('CLICK');
+                                                        } else {
+                                                            playUiSound('ERROR');
+                                                        }
+                                                    }}
+                                                    disabled={uiScale >= 1.30}
+                                                    className="w-6 h-6 flex items-center justify-center rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-35 disabled:pointer-events-none text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                                >
+                                                    <ZoomIn className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         <div className="px-1 py-1 flex flex-col gap-1">
                                             <div className="flex items-center gap-2 text-[8px] font-black uppercase text-slate-500 tracking-widest pl-1">
                                                 <Languages className="w-3 h-3" />
@@ -1531,12 +1588,12 @@ const StoryBuilderView: React.FC = () => {
                 </motion.div>
             </div>
 
-            <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-end overflow-hidden p-4 md:p-8">
+                <div className="absolute inset-0 pointer-events-none flex flex-col justify-end overflow-hidden">
 
                 {/* COMPACT FLOATING OPERATIONS LINK & LOGS PANEL (Centralized high-tech notification/info link, optimized for mobile screens) */}
                 <div 
                     id="operations-link-container" 
-                    className="absolute top-[76px] md:top-[100px] left-4 right-4 sm:left-auto sm:right-8 pointer-events-auto flex flex-col items-end sm:w-[320px] select-none"
+                    className="absolute top-[76px] md:top-[100px] left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center w-[92vw] max-w-[340px] md:max-w-md select-none"
                     style={{ zIndex: 100 + panelZOrder.indexOf('terminal') * 10 }}
                     onPointerDown={() => bringToFront('terminal')}
                 >
@@ -1703,7 +1760,7 @@ const StoryBuilderView: React.FC = () => {
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -15, scale: 0.95 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute top-[84px] md:top-[112px] left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-md max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-210px)] overflow-y-auto bg-slate-950/80 border border-white/10 hover:border-indigo-500/25 rounded-2xl shadow-2xl p-4 select-none backdrop-blur-xl flex flex-col pointer-events-auto transition-all duration-300"
+                            className="absolute top-[84px] md:top-[112px] left-1/2 -translate-x-1/2 w-[92vw] max-w-md max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-210px)] overflow-y-auto bg-slate-950/80 border border-white/10 hover:border-indigo-500/25 rounded-2xl shadow-2xl p-4 select-none backdrop-blur-xl flex flex-col pointer-events-auto transition-all duration-300"
                             style={{ zIndex: 100 + panelZOrder.indexOf('tablet') * 10 }}
                             onPointerDown={() => bringToFront('tablet')}
                             onClick={(e) => e.stopPropagation()}
@@ -2302,6 +2359,7 @@ const StoryBuilderView: React.FC = () => {
                 language={language === 'RU' ? 'RU' : 'EN'}
                 playUiSound={playUiSound}
             />
+            </div>
         </div>
     );
 };

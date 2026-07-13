@@ -71,6 +71,8 @@ export interface GameStore extends GameState {
   setZoomScale: (scale: number) => void;
   
   // UI & System
+  uiScale: number;
+  setUiScale: (scale: number) => void;
   setUIState: (state: UIState) => void;
   setIsStoryTutorialActive: (active: boolean) => void;
   setDeviceType: (type: DeviceType) => void;

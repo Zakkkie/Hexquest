@@ -5,6 +5,7 @@ import { Compass, Sparkles, Navigation, ChevronUp, ChevronDown, Crown } from 'lu
 import { useCollapsibleHint } from './useCollapsibleHint.ts';
 
 import { getCampaignMetric } from '../../campaign/getCampaignMetric';
+import { useMonumentProgress } from './useMonumentProgress.ts';
 
 interface CentralTutorialBannerProps {
     onOpenHelpDetail?: () => void;
@@ -75,6 +76,8 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
     const metrics = useMemo(() => {
         return getCampaignMetric(activeLevelConfig, grid, player, session, language, entropy?.current);
     }, [grid, player, activeLevelConfig, language, entropy, session]);
+
+    const { monument, info: monumentInfo, progressValueText, currentProgressPercent } = useMonumentProgress();
 
     // Flashing effect on step/hint transition
     useEffect(() => {
@@ -230,11 +233,15 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
 
                     <div className="flex items-center gap-2.5 shrink-0">
                         {/* Inline current progress metrics in collapsed state */}
-                        {metrics && !toast && (
+                        {!toast && (monument && monumentInfo ? (
+                            <span className="text-[10px] font-mono font-bold text-amber-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                {progressValueText}
+                            </span>
+                        ) : metrics ? (
                             <span className="text-[10px] font-mono font-bold text-amber-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
                                 {metrics.current} / {metrics.target} {metrics.label}
                             </span>
-                        )}
+                        ) : null)}
 
                         <div className="p-0.5 rounded bg-slate-900/60 border border-slate-800 text-slate-400">
                             <ChevronDown className="w-3.5 h-3.5" />
@@ -377,26 +384,33 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
                     </div>
  
                     {/* Unified campaign goal progress indicator */}
-                    {metrics && !toast && (
+                    {(metrics || monument) && !toast && (
                         <div 
                             className="mt-1.5 p-2 rounded-lg bg-slate-900/50 border border-slate-800/80 flex flex-col gap-1.5"
                             onClick={(e) => e.stopPropagation()} /* Do not collapse when clicking individual metrics area */
                         >
                             <div className="flex items-center justify-between text-[10px] font-mono font-bold leading-none">
                                 <span className="text-slate-400 uppercase">
-                                    {isRu ? 'ТЕКУЩАЯ ЗАДАЧА' : 'CURRENT GOAL'}
+                                    {monument && monumentInfo ? monumentInfo.title : isRu ? 'ТЕКУЩАЯ ЗАДАЧА' : 'CURRENT GOAL'}
                                 </span>
-                                <span className="text-amber-400 font-bold font-mono">
-                                    {metrics.current} / {metrics.target} <span className="text-slate-400 uppercase text-[9px] ml-0.5">{metrics.label}</span>
+                                <span className="text-amber-400 font-bold font-mono flex items-center gap-1">
+                                    {monument && monumentInfo ? progressValueText : `${metrics?.current} / ${metrics?.target}`}
+                                    {!monument && <span className="text-slate-400 uppercase text-[9px] ml-0.5">{metrics?.label}</span>}
                                 </span>
                             </div>
                             
                             <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-900/60">
                                 <div 
                                     className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-500"
-                                    style={{ width: `${Math.min(100, (metrics.current / metrics.target) * 100)}%` }}
+                                    style={{ width: `${monument ? currentProgressPercent : Math.min(100, (metrics!.current / metrics!.target) * 100)}%` }}
                                 />
                             </div>
+                            
+                            {monument && monumentInfo && (
+                                <p className="text-[9px] text-slate-400 font-mono mt-0.5 opacity-80 leading-tight">
+                                    {monumentInfo.text}
+                                </p>
+                            )}
                         </div>
                     )}
  

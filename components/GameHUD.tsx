@@ -6,7 +6,6 @@ import TopStatsBar from './hud/TopStatsBar.tsx';
 import BottomActionDock from './hud/BottomActionDock.tsx';
 import GameDialogs from './hud/GameDialogs.tsx';
 import InventoryModal from './InventoryModal.tsx';
-import MonumentHintBanner from './hud/MonumentHintBanner.tsx';
 import SkirmishHintBanner from './hud/SkirmishHintBanner.tsx';
 import CentralTutorialBanner from './hud/CentralTutorialBanner.tsx';
 import { OnboardingTutorial } from './hud/OnboardingTutorial.tsx';
@@ -20,6 +19,7 @@ interface GameHUDProps {
 
 const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
   const session = useGameStore(state => state.session);
+  const uiScale = useGameStore(state => state.uiScale);
   const gameStatus = session?.gameStatus;
   const player = session?.player;
   const toast = useGameStore(state => state.toast);
@@ -83,7 +83,15 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
   const isHudVisible = victoryStage === 'HIDDEN' && gameStatus !== 'BRIEFING';
 
   return (
-    <>
+    <div 
+        className="absolute inset-0 pointer-events-none z-20 overflow-hidden animate-fade-in"
+        style={{
+            transform: `scale(${uiScale})`,
+            transformOrigin: 'top left',
+            width: `${100 / uiScale}%`,
+            height: `${100 / uiScale}%`,
+        }}
+    >
         {showSpBadge && (
             <div className="absolute top-[calc(20px+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[150] pointer-events-none">
                 <div className="bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 text-slate-950 font-black font-mono text-sm px-5 py-2.5 rounded-full shadow-[0_0_30px_rgba(16,185,129,0.8)] border border-white/40 flex items-center gap-2 select-none animate-in fade-in slide-in-from-top-4 duration-500">
@@ -121,7 +129,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                              </div>
                         )}
                         
-                        {!session?.defense?.isDefenseMode && <MonumentHintBanner />}
                         {!session?.defense?.isDefenseMode && <SkirmishHintBanner />}
                     </div>
                 )}
@@ -152,7 +159,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
             victoryStage={victoryStage}
             setVictoryStage={setVictoryStage}
         />
-    </>
+    </div>
   );
 };
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
-import { Crown, Box, Wallet, Coins, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, RotateCcw, Zap, HelpCircle } from 'lucide-react';
+import { Crown, Box, Wallet, Coins, Footprints, Settings, X, Music, VolumeX, Volume2, Globe, BookOpen, Trophy, FileText, LogOut, RotateCcw, Zap, HelpCircle, ZoomIn, ZoomOut } from 'lucide-react';
 import { motion } from 'motion/react';
 import EntropyGauge from '../EntropyGauge';
 import { StorageBlocks } from './HudShared';
@@ -45,6 +45,8 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     const isMusicMuted = useGameStore(state => state.isMusicMuted);
     const isSfxMuted = useGameStore(state => state.isSfxMuted);
     const isLiteMode = useGameStore(state => state.isLiteMode);
+    const uiScale = useGameStore(state => state.uiScale);
+    const setUiScale = useGameStore(state => state.setUiScale);
     
     const setLanguage = useGameStore(state => state.setLanguage);
     const toggleMusic = useGameStore(state => state.toggleMusic);
@@ -74,14 +76,14 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
             MATERIAL: { title: "CONSTRUCTION MATERIAL", desc: "Collect by digging levels L >= 1. Used to build upwards.", theme: "text-emerald-400 border-emerald-500/30 bg-emerald-950/40" },
             COINS: { title: "ENERGY CREDITS", desc: "Used to buy items or auto-buy movement turns (5cr = 1 turn).", theme: "text-amber-400 border-amber-500/30 bg-amber-950/40" },
             MOVES: { title: "MOVEMENT TURNS", desc: "Allows actions and footsteps. Dig deeper layers (L < 0) for moves.", theme: "text-blue-400 border-blue-500/30 bg-blue-950/40" },
-            ENTROPY: { title: "STABILITY MONITOR", desc: "Core stability level. Crit state (<30%) risks rapid cave collapse.", theme: "text-rose-400 border-rose-500/30 bg-rose-950/40" }
+            ENTROPY: { title: "STABILITY MONITOR", desc: "Core stability level. Drop below 85% triggers risk of orbital meteor strikes! Crit state (<30%) risks rapid cave collapse.", theme: "text-rose-400 border-rose-500/30 bg-rose-950/40" }
         },
         RU: {
             RANK: { title: "РАНГ ИНЖЕНЕРА", desc: "Ограничивает максимальный уровень строительства гексов.", theme: "text-indigo-400 border-indigo-500/30 bg-indigo-950/40" },
             MATERIAL: { title: "МАТЕРИАЛЫ КОРПУСА", desc: "Добывайте копанием плит выше L >= 1. Тратятся на стройку.", theme: "text-emerald-400 border-emerald-500/30 bg-emerald-950/40" },
             COINS: { title: "ЭНЕРГЕТИЧЕСКИЕ КРЕДИТЫ", desc: "Нужны для рынка и авто-конвертации в ходы (5 кр = 1 ход).", theme: "text-amber-400 border-amber-500/30 bg-amber-950/40" },
             MOVES: { title: "ЗАПАС ХОДОВ И ЗАДОРА", desc: "Очки действий. Бурите шахты в глубину (L < 0) для восполнения.", theme: "text-blue-400 border-blue-500/30 bg-blue-950/40" },
-            ENTROPY: { title: "СТАБИЛЬНОСТЬ ЯДРА", desc: "Метрика распада. Крит (<30%) вызывает квантовый сдвиг и осыпь.", theme: "text-rose-400 border-rose-500/30 bg-rose-950/40" }
+            ENTROPY: { title: "СТАБИЛЬНОСТЬ ЯДРА", desc: "Метрика стабильности. Снижение ниже 85% активирует риск орбитальных метеоритных ударов! Крит (<30%) вызывает квантовый сдвиг и осыпь.", theme: "text-rose-400 border-rose-500/30 bg-rose-950/40" }
         }
     };
 
@@ -172,6 +174,10 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
             <style>{`
                 .stats-scroll-hide::-webkit-scrollbar { display: none; }
                 .stats-scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+                @keyframes wave-slide-x {
+                    0% { background-position-x: 0px; }
+                    100% { background-position-x: 100px; }
+                }
             `}</style>
             <div className="w-full flex justify-between items-start gap-2 md:gap-4 max-w-7xl mx-auto relative pointer-events-none">
                 
@@ -179,6 +185,70 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                 <div className="flex flex-col gap-1 flex-1 min-w-0 md:flex-none md:w-fit relative pointer-events-auto" ref={statsBarRef} id="top-stats-bar">
                     <div className="flex items-center justify-between md:justify-start bg-slate-950/85 backdrop-blur-xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-1.5 py-1 pt-1 md:pt-1 md:px-4 md:py-2 gap-1 md:gap-4 transition-all duration-300 hover:border-slate-700/60 overflow-x-auto overflow-y-hidden stats-scroll-hide w-full h-[38.2px] md:h-auto md:shrink-0 relative">
                         
+                        {/* Dynamic Entropy Progress Background */}
+                        {entropy && (
+                            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden rounded-xl md:rounded-[1.25rem]">
+                                {/* Subtle static background */}
+                                <div className="absolute inset-0 bg-slate-900/40" />
+
+                                <motion.div 
+                                    className="absolute left-0 top-0 bottom-0 opacity-25"
+                                    animate={{
+                                        width: `${(entropy.current / entropy.max) * 100}%`,
+                                        background: entropy.current / entropy.max <= 0.3 
+                                            ? 'linear-gradient(90deg, rgba(239,68,68,0) 0%, rgba(239,68,68,1) 100%)' 
+                                            : entropy.current / entropy.max <= 0.6 
+                                            ? 'linear-gradient(90deg, rgba(245,158,11,0) 0%, rgba(245,158,11,1) 100%)'
+                                            : 'linear-gradient(90deg, rgba(16,185,129,0) 0%, rgba(16,185,129,1) 100%)'
+                                    }}
+                                    transition={{ duration: 1, ease: 'easeOut' }}
+                                >
+                                    {/* Continuous sine wave animation */}
+                                    <div 
+                                        className="absolute inset-y-0 right-0 w-[200px]"
+                                        style={{
+                                            background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 100 100\' preserveAspectRatio=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0,50 Q25,30 50,50 T100,50 L100,100 L0,100 Z\' fill=\'white\' opacity=\'0.3\'/%3E%3C/svg%3E")',
+                                            backgroundSize: '100px 100%',
+                                            animation: 'wave-slide-x 1.5s linear infinite',
+                                            transform: 'scaleX(-1)'
+                                        }}
+                                    />
+                                    {entropy.current / entropy.max <= 0.85 && (
+                                        <motion.div 
+                                            className="absolute inset-0 bg-red-500/30 mix-blend-overlay"
+                                            animate={{ opacity: [0, 0.8, 0] }}
+                                            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                                        />
+                                    )}
+                                </motion.div>
+
+                                {/* Bottom glowing thick line */}
+                                <motion.div 
+                                    className="absolute left-0 bottom-0 h-1 md:h-1.5 shadow-[0_0_10px_rgba(255,255,255,0.5)] z-10"
+                                    animate={{
+                                        width: `${(entropy.current / entropy.max) * 100}%`,
+                                        backgroundColor: entropy.current / entropy.max <= 0.3 
+                                            ? '#ef4444' 
+                                            : entropy.current / entropy.max <= 0.6 
+                                            ? '#f59e0b'
+                                            : '#10b981'
+                                    }}
+                                    transition={{ duration: 1, ease: 'easeOut' }}
+                                >
+                                    {/* Particle effect head */}
+                                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 md:w-3 md:h-3 rounded-full bg-white shadow-[0_0_10px_#fff]" />
+                                </motion.div>
+
+                                {/* 85% Marker for Meteor Events */}
+                                <div className="absolute bottom-0 h-2 md:h-3 w-[2px] bg-red-500 z-10 shadow-[0_0_8px_rgba(239,68,68,1)]" style={{ left: '85%' }}>
+                                    <div className="absolute -top-4 -left-3 flex flex-col items-center animate-bounce">
+                                        <div className="w-1 h-1 bg-red-500 rounded-full" />
+                                        <div className="w-px h-2 bg-gradient-to-b from-red-500 to-transparent" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* RANK widget */}
                         <div 
                             onClick={() => handleInteraction('RANK', 'click')}
@@ -556,6 +626,50 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                                 <div className="flex gap-2">
                                     <button onClick={() => { toggleMusic(); playUiSound('CLICK'); }} className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isMusicMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-indigo-900/40 border-indigo-500/50 text-indigo-400'}`}>{isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}</button>
                                     <button onClick={() => { toggleSfx(); playUiSound('CLICK'); }} className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isSfxMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-emerald-900/40 border-emerald-500/50 text-emerald-400'}`}>{isSfxMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</button>
+                                </div>
+                                
+                                {/* Interface Scale Controls */}
+                                <div className="flex flex-col gap-1 border-t border-b border-slate-800/60 py-2 my-1">
+                                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-wider">
+                                        {language === 'RU' ? 'МАСШТАБ ИНТЕРФЕЙСА' : 'INTERFACE SCALE'}
+                                    </span>
+                                    <div className="flex items-center justify-between gap-1.5 bg-slate-950/60 rounded-lg p-1 border border-slate-800">
+                                        <button 
+                                            onClick={() => { 
+                                                const SCALES = [0.75, 0.85, 1.0, 1.15, 1.30];
+                                                const idx = SCALES.indexOf(uiScale);
+                                                if (idx > 0) {
+                                                    setUiScale(SCALES[idx - 1]);
+                                                    playUiSound('CLICK');
+                                                } else {
+                                                    playUiSound('ERROR');
+                                                }
+                                            }}
+                                            disabled={uiScale <= 0.75}
+                                            className="w-6 h-6 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-35 disabled:pointer-events-none text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                        >
+                                            <ZoomOut className="w-3.5 h-3.5" />
+                                        </button>
+                                        <span className="text-[10px] font-black font-mono text-indigo-400 tracking-tight select-none">
+                                            {Math.round(uiScale * 100)}%
+                                        </span>
+                                        <button 
+                                            onClick={() => { 
+                                                const SCALES = [0.75, 0.85, 1.0, 1.15, 1.30];
+                                                const idx = SCALES.indexOf(uiScale);
+                                                if (idx < SCALES.length - 1 && idx !== -1) {
+                                                    setUiScale(SCALES[idx + 1]);
+                                                    playUiSound('CLICK');
+                                                } else {
+                                                    playUiSound('ERROR');
+                                                }
+                                            }}
+                                            disabled={uiScale >= 1.30}
+                                            className="w-6 h-6 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-35 disabled:pointer-events-none text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                        >
+                                            <ZoomIn className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
                                 </div>
                                 <button onClick={() => { setLanguage(language === 'EN' ? 'RU' : 'EN'); playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
                                     <Globe className="w-4 h-4 text-sky-400" />

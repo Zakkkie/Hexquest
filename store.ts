@@ -85,6 +85,9 @@ export const useGameStore = create<GameStore>()(
       setCameraPos: (pos: { x: number; y: number }) => set({ cameraPos: pos }),
       setZoomScale: (scale: number) => set({ zoomScale: scale }),
       
+      uiScale: 1.0,
+      setUiScale: (scale: number) => set({ uiScale: scale }),
+      
       // --- SLICES ---
       ...createAuthSlice(set as any, get as any),
       ...createUiSlice(set as any, get as any),
@@ -124,7 +127,8 @@ export const useGameStore = create<GameStore>()(
         isMusicMuted: state.isMusicMuted,
         isSfxMuted: state.isSfxMuted,
         isLiteMode: state.isLiteMode,
-        language: state.language
+        language: state.language,
+        uiScale: state.uiScale
         // Ephemeral properties like toast, session, dialog states are intentionally excluded
       })
     }

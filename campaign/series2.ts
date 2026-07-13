@@ -1,6 +1,7 @@
 import { LevelConfig } from '../types';
 import { getHexKey } from '../services/hexUtils';
 import { isStranded } from './utils';
+import { series2Generated } from './series2.gen';
 
 /**
  * ============================================================================
@@ -8,7 +9,7 @@ import { isStranded } from './utils';
  * ============================================================================
  */
 
-export const series2Levels: LevelConfig[] = [
+const series2Base: LevelConfig[] = [
 
   // ═══════════════════════════════════════════════════════════════════
   //  2.1  THE MONOLITH — Staircase Navigation + Recovery Bootstrap
@@ -891,3 +892,32 @@ export const series2Levels: LevelConfig[] = [
     }
   }
 ];
+
+// Baked MoveCalc difficulty (score, min move-points) for the 10 hand-authored
+// levels, from the solver's difficulty report (see docs .../2026-07-13-series2-…).
+const BASE_SCORES: Record<string, number> = {
+  '2.1': 52, '2.2': 44, '2.3': 50, '2.4': 49, '2.5': 55,
+  '2.6': 32, '2.7': 44, '2.8': 43, '2.9': 36, '2.10': 43,
+};
+const BASE_MIN: Record<string, number> = {
+  '2.1': 6, '2.2': 8, '2.3': 7, '2.4': 17, '2.5': 8,
+  '2.6': 3, '2.7': 4, '2.8': 15, '2.9': 8, '2.10': 14,
+};
+series2Base.forEach(l => { l.difficultyScore = BASE_SCORES[l.id]; l.movePointCost = BASE_MIN[l.id]; });
+
+// Series 2 = 10 hand-authored + 50 procedurally generated levels, ordered by
+// baked difficulty so play progression runs easy → hard (no solver at runtime).
+// Tie-break by raw execution length (movePointCost) for a stable, sensible order.
+export const series2Levels: LevelConfig[] = [...series2Base, ...series2Generated]
+  .sort((a, b) => (a.difficultyScore ?? 0) - (b.difficultyScore ?? 0)
+    || (a.movePointCost ?? 0) - (b.movePointCost ?? 0));
+
+// Renumber id + title sequentially in difficulty order so both run 2.1 … 2.60
+// (id number = difficulty rank = play position). Level hooks key off coords, not
+// id, so reassigning here is safe; id-keyed consumers (getCampaignMetric, the
+// solve-test) are generic / look levels up by stable title-name instead.
+series2Levels.forEach((l, i) => {
+  const n = i + 1;
+  l.id = `2.${n}`;
+  l.title = l.title.replace(/Sim 2\.\d+:/, `Sim 2.${n}:`);
+});
