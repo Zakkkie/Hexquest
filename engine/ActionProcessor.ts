@@ -3,7 +3,7 @@ import { GameAction, EntityState, ValidationResult, SessionState, Entity, MoveAc
 import { VictorySystem } from './systems/VictorySystem';
 import { WorldIndex } from './WorldIndex';
 import { getHexKey, cubeDistance, getStatusModifiers } from '../services/hexUtils';
-import { ENTROPY_CONFIG } from '../rules/config';
+import { ENTROPY_CONFIG, getScaledEntropyBaseCost } from '../rules/config';
 import { calculateMovementCost } from '../rules/movement';
 import { GameEventFactory } from './events';
 import { getItemDef } from '../rules/items';
@@ -106,6 +106,20 @@ export class ActionProcessor {
       actor.coins -= cost.deductCoins;
       actor.totalCoinsEarned += 0; 
 
+      if (cost.deductCoins > 0 && actor.type === 'PLAYER') {
+          // EMERGENCY COIN EXCHANGE PENALTY
+          state.entropy.current = Math.max(0, state.entropy.current - 5.0);
+          state.messageLog.unshift({
+              id: `emergency-shunt-${Date.now()}`,
+              text: state.language === 'RU'
+                  ? `⚡ ЭКСТРЕННЫЙ ШУНТ: Перемещения оплачены кредитами. Энтропия снижена на -5%!`
+                  : `⚡ EMERGENCY SHUNT: Paid credits for moves. Stability dropped -5%!`,
+              type: 'WARN',
+              source: 'NEBULA_AI',
+              timestamp: Date.now()
+          });
+      } 
+
       // Queue Movement
       actor.movementQueue = [...action.path.map(p => ({ q: p.q, r: p.r }))];
       actor.state = EntityState.MOVING;
@@ -120,7 +134,8 @@ export class ActionProcessor {
       const hasEntropyInversion = actor.activeStatuses?.some(s => s.type === 'STATUS_ENTROPY_INVERSION' && (!s.expiresAt || s.expiresAt > now));
 
       if (state.entropy.current > 0 || hasEntropyInversion) {
-          let baseCost = ENTROPY_CONFIG.COST_ACTION_BASE;
+          const gridSize = Object.keys(state.grid).length;
+          let baseCost = getScaledEntropyBaseCost(gridSize);
           if (state.winCondition?.mutatorType === 'SUDDEN_DEATH') {
               baseCost *= 2;
           }
@@ -360,7 +375,58 @@ export class ActionProcessor {
           };
           
           state.restoredHexesCount = (state.restoredHexesCount || 0) + 1;
-          state.entropy.current = Math.min(state.entropy.max, state.entropy.current + ENTROPY_CONFIG.GAIN_RESTORE_SUCCESS);
+
+          let coDependentCount = 0;
+          if (state.activeLevelConfig?.creepingVoid) {
+              const cvConfig = state.activeLevelConfig.creepingVoid;
+              if (action.coord.q === cvConfig.sourceQ && action.coord.r === cvConfig.sourceR) {
+                  // This is the root void hex!
+                  if (state.creepingVoid) {
+                      state.creepingVoid.sourceRestored = true;
+                      for (const [infKey, orig] of Object.entries(state.creepingVoid.infectedHexes)) {
+                          const infHex = state.grid[infKey];
+                          if (infHex && infHex.structureType === 'VOID') {
+                              state.grid[infKey] = {
+                                  ...infHex,
+                                  currentLevel: orig.currentLevel,
+                                  maxLevel: orig.maxLevel,
+                                  structureType: orig.structureType,
+                                  durability: orig.durability
+                              };
+                              coDependentCount++;
+                              state.restoredHexesCount = (state.restoredHexesCount || 0) + 1;
+                          }
+                      }
+                  }
+                  
+                  const rootMsg = state.language === 'RU'
+                      ? '🌀 ИСТОЧНИК УСТРАНЕН: Пространство стабилизировано, все зараженные сектора восстановлены!'
+                      : '🌀 SOURCE RESOLVED: Space stabilized, all infected sectors have been restored!';
+                  
+                  state.messageLog.unshift({
+                      id: `void-restored-manual-${Date.now()}`,
+                      text: rootMsg,
+                      type: 'SUCCESS',
+                      source: 'SYSTEM',
+                      timestamp: Date.now()
+                  });
+              }
+          }
+
+          const totalHealed = 1 + coDependentCount;
+          const restoredEntropyAmount = ENTROPY_CONFIG.GAIN_RESTORE_SUCCESS * totalHealed;
+          state.entropy.current = Math.min(state.entropy.max, state.entropy.current + restoredEntropyAmount);
+
+          state.effects = state.effects || [];
+          state.effects.push({
+              id: `restore-float-${Date.now()}-${action.coord.q}-${action.coord.r}`,
+              q: actor.q,
+              r: actor.r,
+              text: state.language === 'RU' ? `x${totalHealed} восстановление` : `x${totalHealed} recovery`,
+              color: '#10B981', // Clean bright green/teal
+              startTime: Date.now(),
+              lifetime: 1800
+          });
           
           // APPLY POSITIVE
           this.applyEffect(state, index, actor, item.effectType, item.effectValue, item.effectDescription, item.effectDuration);

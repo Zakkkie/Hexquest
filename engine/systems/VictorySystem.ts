@@ -50,6 +50,43 @@ export class VictorySystem implements System {
         return;
     }
 
+    // --- CHECK PLAYER DESTRUCTION (COLLAPSE/METEOR OR RANK DROP) ---
+    if (state.player.playerLevel <= 0) {
+        state.gameStatus = 'DEFEAT';
+        const msg = state.language === 'RU'
+            ? '💥 ПОРАЖЕНИЕ: Ваш ранг снизился до 0!'
+            : '💥 DEFEAT: Your rank dropped to 0!';
+        state.messageLog.unshift({
+            id: `player-rank-defeat-${Date.now()}`,
+            text: msg,
+            type: 'ERROR',
+            source: 'SYSTEM',
+            timestamp: Date.now()
+        });
+        events.push(GameEventFactory.create('DEFEAT', msg, state.player.id));
+        this.generateLeaderboardEvent(state, events);
+        return;
+    }
+
+    const pHexKey = getHexKey(state.player.q, state.player.r);
+    const pCustomHex = state.grid[pHexKey];
+    if (pCustomHex && pCustomHex.structureType === 'VOID') {
+        state.gameStatus = 'DEFEAT';
+        const msg = state.language === 'RU'
+            ? '💥 ПОРАЖЕНИЕ: Гекс под вами уничтожен!'
+            : '💥 DEFEAT: The hex under you was destroyed!';
+        state.messageLog.unshift({
+            id: `player-void-defeat-${Date.now()}`,
+            text: msg,
+            type: 'ERROR',
+            source: 'SYSTEM',
+            timestamp: Date.now()
+        });
+        events.push(GameEventFactory.create('DEFEAT', msg, state.player.id));
+        this.generateLeaderboardEvent(state, events);
+        return;
+    }
+
     // --- CHECK EVACUATION COMPLETION ---
     if (state.evacuationActive) {
         if (!state.evacuationCompletionTime) {
@@ -107,46 +144,46 @@ export class VictorySystem implements System {
         if (state.activeLevelConfig.hooks.checkLossCondition) {
             const isCampaignLoss = state.activeLevelConfig.hooks.checkLossCondition(state, _index);
             if (isCampaignLoss) {
-                 if (isStranded(state)) {
-                     // Deadlock: trigger meteor strike on player (rank 1) instead of immediate failure screen
-                     state.player.playerLevel = 1;
-                     state.activeMeteors = state.activeMeteors || [];
-                     const hasMeteorOnPlayer = state.activeMeteors.some(m => m.q === state.player.q && m.r === state.player.r);
-                     if (!hasMeteorOnPlayer) {
-                         state.activeMeteors.push({
-                             id: 'deadlock-meteor-' + Date.now(),
-                             q: state.player.q,
-                             r: state.player.r,
-                             warnTicksRemaining: 1,
-                             maxWarnTicks: 1
-                         });
-                         const isRu = state.language === 'RU';
-                         const warningMsg = isRu 
-                           ? '⚠️ ТУПИК ОБНАРУЖЕН! Орбитальный метеорит наведен на вашу позицию!' 
-                           : '⚠️ DEADLOCK DETECTED! Orbital meteor locked onto your position!';
-                         state.messageLog.unshift({
-                             id: `deadlock-warn-${Date.now()}`,
-                             text: warningMsg,
-                             type: 'WARN',
-                             source: 'SYSTEM',
-                             timestamp: Date.now()
-                         });
-                     }
-                     return;
-                 }
+                const lvlId = state.activeLevelConfig.id;
+                let allowed = false;
+                let customMsg: string | undefined = undefined;
 
-                 state.gameStatus = 'DEFEAT';
-                 const msg = 'Critical Mission Failure';
-                 state.messageLog.unshift({
-                    id: `lose-camp-${Date.now()}`,
-                    text: msg,
-                    type: 'ERROR',
-                    source: 'SYSTEM',
-                    timestamp: Date.now()
-                 });
-                 events.push(GameEventFactory.create('DEFEAT', msg, state.player.id));
-                 this.generateLeaderboardEvent(state, events);
-                 return;
+                // Rule 1: Time/Turn Limit
+                if (lvlId === '2.9' && (((state as any)._clock ?? 6) <= 0)) {
+                    allowed = true;
+                    customMsg = state.language === 'RU' ? '⏱️ ПОРАЖЕНИЕ: Время вышло!' : '⏱️ DEFEAT: Time is up!';
+                }
+                if (lvlId === '3.2' && (Date.now() - state.sessionStartTime >= 180000)) {
+                    allowed = true;
+                    customMsg = state.language === 'RU' ? '⏱️ ПОРАЖЕНИЕ: Лимит времени (180с) исчерпан!' : '⏱️ DEFEAT: Time limit (180s) exceeded!';
+                }
+                if (lvlId === '5.5' && ((state.currentTurn ?? 0) >= 20)) {
+                    allowed = true;
+                    customMsg = state.language === 'RU' ? '⏱️ ПОРАЖЕНИЕ: Превышен лимит в 20 ходов!' : '⏱️ DEFEAT: 20-turn limit exceeded!';
+                }
+
+                // Rule 3: Bot activated final monument first
+                const onMon = state.bots?.some((b: any) => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT');
+                if (onMon) {
+                    allowed = true;
+                    customMsg = state.language === 'RU' ? '🤖 ПОРАЖЕНИЕ: Соперник активировал Монумент первым!' : '🤖 DEFEAT: Rival activated the Monument first!';
+                }
+
+                // If this is an allowed campaign failure, trigger defeat
+                if (allowed) {
+                    state.gameStatus = 'DEFEAT';
+                    const msg = customMsg || 'Critical Mission Failure';
+                    state.messageLog.unshift({
+                        id: `lose-camp-${Date.now()}`,
+                        text: msg,
+                        type: 'ERROR',
+                        source: 'SYSTEM',
+                        timestamp: Date.now()
+                    });
+                    events.push(GameEventFactory.create('DEFEAT', msg, state.player.id));
+                    this.generateLeaderboardEvent(state, events);
+                    return;
+                }
             }
         }
     }

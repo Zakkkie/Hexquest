@@ -24,6 +24,79 @@ const AVATAR_COLORS = [
   '#ec4899'  
 ];
 
+// Styles block for high-performance GPU animations inside the Main Menu
+const MainMenuStyleBlock: React.FC = () => {
+  return (
+    <style dangerouslySetInnerHTML={{ __html: `
+      @keyframes float-particle {
+        0% {
+          transform: translate3d(0, 0, 0) scale(1);
+          opacity: 0.15;
+        }
+        50% {
+          transform: translate3d(var(--float-x), -150px, 0) scale(1.4);
+          opacity: 0.7;
+        }
+        100% {
+          transform: translate3d(0, -300px, 0) scale(1);
+          opacity: 0.15;
+        }
+      }
+
+      @keyframes nebula-slow-1 {
+        0% { transform: translate3d(0, 0, 0) scale(1); }
+        33% { transform: translate3d(30px, -20px, 0) scale(1.1); }
+        66% { transform: translate3d(-15px, 40px, 0) scale(0.9); }
+        100% { transform: translate3d(0, 0, 0) scale(1); }
+      }
+
+      @keyframes nebula-slow-2 {
+        0% { transform: translate3d(0, 0, 0) scale(1); }
+        50% { transform: translate3d(-40px, 30px, 0) scale(1.15); }
+        100% { transform: translate3d(0, 0, 0) scale(1); }
+      }
+
+      @keyframes nebula-slow-3 {
+        0% { transform: translate3d(0, 0, 0) scale(1); }
+        50% { transform: translate3d(20px, -30px, 0) scale(1.2); }
+        100% { transform: translate3d(0, 0, 0) scale(1); }
+      }
+
+      @keyframes float-hex {
+        0% {
+          transform: translate3d(0, 0, 0) rotate(var(--hex-rot)) scale(0.8);
+          opacity: 0.03;
+        }
+        50% {
+          transform: translate3d(var(--hex-x), -100px, 0) rotate(calc(var(--hex-rot) + 180deg)) scale(1.15);
+          opacity: 0.18;
+        }
+        100% {
+          transform: translate3d(0, -200px, 0) rotate(calc(var(--hex-rot) + 360deg)) scale(0.8);
+          opacity: 0.03;
+        }
+      }
+
+      @keyframes grid-slow {
+        0% { transform: rotateX(12deg) translate3d(0, 0, 0); }
+        50% { transform: rotateX(16deg) translate3d(0, -15px, 0); }
+        100% { transform: rotateX(12deg) translate3d(0, 0, 0); }
+      }
+
+      @keyframes spin-sweep {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      @keyframes glint-sweep {
+        0% { transform: translate3d(-100%, 0, 0) skewX(-20deg); }
+        30% { transform: translate3d(200%, 0, 0) skewX(-20deg); }
+        100% { transform: translate3d(200%, 0, 0) skewX(-20deg); }
+      }
+    `}} />
+  );
+};
+
 // Moving futuristic nebula backdrop with blurred glowing fields
 const NebulaBackground: React.FC = () => {
   return (
@@ -32,47 +105,29 @@ const NebulaBackground: React.FC = () => {
       <div className="absolute inset-0 bg-transparent" />
       
       {/* Violet/Indigo Nebula Core */}
-      <motion.div 
+      <div 
         className="absolute top-[-10%] left-[-15%] w-[70vw] h-[70vw] rounded-full bg-indigo-900/20 blur-[120px]"
-        animate={{
-          x: [0, 40, -20, 0],
-          y: [0, -30, 50, 0],
-          scale: [1, 1.15, 0.9, 1],
-        }}
-        transition={{
-          duration: 30,
-          repeat: Infinity,
-          ease: "easeInOut",
+        style={{
+          animation: 'nebula-slow-1 30s infinite ease-in-out',
+          willChange: 'transform',
         }}
       />
 
       {/* Fuchsia/Magenta Nebula Accent */}
-      <motion.div 
+      <div 
         className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-fuchsia-950/20 blur-[130px]"
-        animate={{
-          x: [0, -50, 30, 0],
-          y: [0, 40, -40, 0],
-          scale: [1, 0.9, 1.1, 1],
-        }}
-        transition={{
-          duration: 25,
-          repeat: Infinity,
-          ease: "easeInOut",
+        style={{
+          animation: 'nebula-slow-2 25s infinite ease-in-out',
+          willChange: 'transform',
         }}
       />
 
       {/* Cyan Tactical Pulse Spot */}
-      <motion.div 
+      <div 
         className="absolute top-[40%] right-[20%] w-[50vw] h-[50vw] rounded-full bg-cyan-950/15 blur-[100px]"
-        animate={{
-          x: [0, -30, -10, 0],
-          y: [0, -20, 30, 0],
-          scale: [1, 1.2, 0.85, 1],
-        }}
-        transition={{
-          duration: 22,
-          repeat: Infinity,
-          ease: "easeInOut",
+        style={{
+          animation: 'nebula-slow-3 22s infinite ease-in-out',
+          willChange: 'transform',
         }}
       />
     </div>
@@ -90,9 +145,10 @@ const FloatingParticles: React.FC = () => {
         const initialY = Math.random() * 100;
         const duration = Math.random() * 12 + 10;
         const delay = Math.random() * -12;
+        const floatX = Math.random() * 30 - 15;
         
         return (
-          <motion.div
+          <div
             key={i}
             className="absolute rounded-full bg-indigo-400/20 blur-[0.5px]"
             style={{
@@ -101,19 +157,11 @@ const FloatingParticles: React.FC = () => {
               left: `${initialX}%`,
               top: `${initialY}%`,
               boxShadow: '0 0 6px rgba(129, 140, 248, 0.5)',
-            }}
-            animate={{
-              y: [0, -150, 0],
-              x: [0, Math.random() * 30 - 15, 0],
-              opacity: [0.15, 0.6, 0.15],
-              scale: [1, 1.4, 1],
-            }}
-            transition={{
-              duration: duration,
-              repeat: Infinity,
-              delay: delay,
-              ease: "easeInOut",
-            }}
+              animation: `float-particle ${duration}s infinite ease-in-out`,
+              animationDelay: `${delay}s`,
+              willChange: 'transform, opacity',
+              '--float-x': `${floatX}px`,
+            } as React.CSSProperties}
           />
         );
       })}
@@ -134,19 +182,12 @@ const GridAtmosphere: React.FC = () => {
         perspective: '1000px',
       }}
     >
-      <motion.div 
+      <div 
         className="absolute inset-0"
         style={{
           transformStyle: "preserve-3d",
-        }}
-        animate={{
-          rotateX: [12, 16, 12],
-          y: [0, -15, 0],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          ease: "easeInOut",
+          animation: 'grid-slow 20s infinite ease-in-out',
+          willChange: 'transform',
         }}
       />
     </div>
@@ -164,9 +205,10 @@ const FloatingHexagons: React.FC = () => {
         const duration = Math.random() * 20 + 20;
         const delay = Math.random() * -20;
         const rotate = Math.random() * 360;
+        const hexX = Math.random() * 40 - 20;
         
         return (
-          <motion.div
+          <div
             key={i}
             className="absolute text-indigo-500/15"
             style={{
@@ -174,23 +216,15 @@ const FloatingHexagons: React.FC = () => {
               height: size,
               left: `${initialX}%`,
               top: `${initialY}%`,
-            }}
-            animate={{
-              y: [0, -100, 0],
-              x: [0, Math.random() * 40 - 20, 0],
-              rotate: [rotate, rotate + 360],
-              scale: [0.8, 1.15, 0.8],
-              opacity: [0.03, 0.18, 0.03],
-            }}
-            transition={{
-              duration: duration,
-              repeat: Infinity,
-              delay: delay,
-              ease: "easeInOut",
-            }}
+              animation: `float-hex ${duration}s infinite ease-in-out`,
+              animationDelay: `${delay}s`,
+              willChange: 'transform',
+              '--hex-rot': `${rotate}deg`,
+              '--hex-x': `${hexX}px`,
+            } as React.CSSProperties}
           >
             <Hexagon className="w-full h-full stroke-current fill-none" strokeWidth={0.8} />
-          </motion.div>
+          </div>
         );
       })}
     </div>
@@ -202,21 +236,21 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.15
+      staggerChildren: 0.05,
+      delayChildren: 0.05
     }
   }
 } as const;
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 15 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       type: "spring",
-      stiffness: 110,
-      damping: 15
+      stiffness: 140,
+      damping: 16
     }
   }
 } as const;
@@ -746,6 +780,7 @@ const MainMenu: React.FC = () => {
 
   return (
     <div className="relative w-full h-full flex items-center justify-center pointer-events-auto overflow-hidden font-sans">
+      <MainMenuStyleBlock />
       {/* Background Ambience Layering */}
       <NebulaBackground />
       <GridAtmosphere />

@@ -56,6 +56,14 @@ export const ENTROPY_CONFIG = {
   SHIFT_FILL_CHANCE: 0.5 // 50%
 };
 
+export const getScaledEntropyBaseCost = (gridSize: number): number => {
+  const count = gridSize || 30;
+  // If map is small (e.g., 15 hexes), scale is 60/15 = 4.0x
+  // If map is large (e.g., 100 hexes), scale is 1.0x (clamped)
+  const scale = Math.max(1.0, Math.min(15.0, 60.0 / count));
+  return ENTROPY_CONFIG.COST_ACTION_BASE * scale;
+};
+
 export const DIFFICULTY_SETTINGS = {
   EASY:   { queueSize: 1, maxStorage: 5 },
   MEDIUM: { queueSize: 2, maxStorage: 4 },

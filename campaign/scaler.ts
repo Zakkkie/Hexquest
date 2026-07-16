@@ -89,38 +89,8 @@ class CampaignScaler {
      * If they are winning very easily, we can scale parameters to maintain engagement (unless it's a tutorial).
      */
     public scaleLevelConfig(rawConfig: LevelConfig): LevelConfig {
-        const h = this.history[rawConfig.id];
-        if (!h || h.consecutiveFailures === 0) {
-            // No scaling adjustment needed yet
-            return { ...rawConfig };
-        }
-
-        const scaleDownFactor = Math.min(3, h.consecutiveFailures);
-        const tunedConfig = { ...rawConfig };
-
-        // Duplicate start state safely
-        if (tunedConfig.startState) {
-            tunedConfig.startState = { ...tunedConfig.startState };
-
-            // Dynamically scale parameters based on consecutive failures
-            const initialMovesBonus = scaleDownFactor * 2; // +2 moves per failure
-            const initialMaterialsBonus = Math.floor(scaleDownFactor / 2); // +1 material per 2 failures
-            const initialCreditsBonus = scaleDownFactor * 5; // +5 credits per failure
-
-            tunedConfig.startState.moves += initialMovesBonus;
-            tunedConfig.startState.materials = (tunedConfig.startState.materials ?? 0) + initialMaterialsBonus;
-            tunedConfig.startState.credits = (tunedConfig.startState.credits ?? 0) + initialCreditsBonus;
-
-            campaignLogger.info(
-                'DYNAMIC_SCALING_APPLIED',
-                `Scaled level ${tunedConfig.id} configuration due to ${h.consecutiveFailures} failures. ` +
-                `Added +${initialMovesBonus} moves, +${initialMaterialsBonus} materials, +${initialCreditsBonus} credits.`,
-                undefined,
-                `Original materials: ${rawConfig.startState?.materials}. New materials: ${tunedConfig.startState.materials}`
-            );
-        }
-
-        return tunedConfig;
+        // Dynamic scaling has been disabled as per user request.
+        return { ...rawConfig };
     }
 
     /**

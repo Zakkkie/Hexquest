@@ -510,6 +510,7 @@ export interface SessionState {
   stateVersion: number;
   sessionId: string; 
   sessionStartTime: number; 
+  lastPlayerActionTime?: number; 
   
   winCondition: WinCondition | null;
   activeLevelConfig?: LevelConfig; 

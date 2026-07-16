@@ -62,12 +62,11 @@ export class MeteorSystem implements System {
             
             const isVoidImpact = true; // На месте падения метеорита образуется войд гекс.
             const prevLevel = hex.currentLevel;
-            let newLevel = prevLevel - 1;
+            const newLevel = prevLevel; // Keep the last height level it had!
             let structureType = hex.structureType;
 
             if (isVoidImpact) {
               structureType = 'VOID';
-              newLevel = 0;
             }
 
             state.grid[targetKey] = {
@@ -174,19 +173,28 @@ export class MeteorSystem implements System {
     state.activeMeteors = remainingMeteors;
 
     // 2. Spawn new meteors
-    const entropyPercent = state.entropy.current / state.entropy.max;
+    const entropyPercent = Math.max(0, state.entropy.current / state.entropy.max);
     
     let spawnChance = 0;
     
     // Метеориты не начинают падать пока энтропия не достигнет 85%
     if (entropyPercent <= 0.85) {
-      // С увеличением шанса каждые 5%
-      const steps = Math.floor((0.85 - entropyPercent) / 0.05) + 1;
-      spawnChance = steps * 0.0005; // 0.0005 at 85%, up to 0.009 at 0%
-      
-      // Не более 1 раза в 30 секунд (300 тиков)
-      if (state.currentTurn - (state.lastMeteorTick || -9999) < 300) {
-        spawnChance = 0;
+      if (entropyPercent === 0) {
+        spawnChance = 0.08; // High frequency when entropy reaches 0!
+        
+        // Cooldown reduced to just 15 ticks (1.5 seconds) when at 0% entropy
+        if (state.currentTurn - (state.lastMeteorTick || -9999) < 15) {
+          spawnChance = 0;
+        }
+      } else {
+        // С увеличением шанса каждые 5%
+        const steps = Math.floor((0.85 - entropyPercent) / 0.05) + 1;
+        spawnChance = steps * 0.0005; // 0.0005 at 85%, up to 0.009 at 0%
+        
+        // Не более 1 раза в 30 секунд (300 тиков)
+        if (state.currentTurn - (state.lastMeteorTick || -9999) < 300) {
+          spawnChance = 0;
+        }
       }
     }
 

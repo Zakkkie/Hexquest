@@ -8,6 +8,7 @@ import {
     getTheme,
     getHeightOffset,
     getPixiTexture,
+    clearPixiTextureCache,
     backOut,
     easeOut,
     easeInOut,
@@ -32,6 +33,19 @@ export interface StoryCellData {
     isCenterInitially: boolean;
     canPlaceHex: boolean;
     isCore?: boolean;
+}
+
+export interface NaniteParticle {
+    graphic: PIXI.Graphics;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    alpha: number;
+    life: number;
+    maxLife: number;
+    color: number;
+    scale: number;
 }
 
 interface StoryBoardPixiProps {
@@ -184,6 +198,56 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     onHoverRef.current = onHover;
     onCameraChangeRef.current = onCameraChange;
     onBackgroundClickRef.current = onBackgroundClick;
+
+    // ---------- Nanite particles and Painting state refs ----------
+    const particleContainerRef = useRef<PIXI.Container | null>(null);
+    const activeParticles = useRef<NaniteParticle[]>([]);
+    const prevLastPlacedKey = useRef<string | null>(null);
+    const prevFlareKeysSize = useRef(0);
+    const isPainting = useRef(false);
+    const lastPaintedKey = useRef<string | null>(null);
+
+    const triggerNaniteBurst = (q: number, r: number, count = 25) => {
+        const pContainer = particleContainerRef.current;
+        if (!pContainer) return;
+
+        const px = hexToPixel(q, r);
+        const cell = cellsRef.current.find(c => c.q === q && c.r === r);
+        const lvl = cell?.lvl !== undefined ? cell.lvl : 0;
+        const hOffset = getHeightOffset(lvl);
+        const topY = px.y + hOffset;
+
+        const colors = getTheme(lvl);
+        const particleColor = PIXI.Color.shared.setValue(colors.light || '#22d3ee').toNumber();
+
+        for (let i = 0; i < count; i++) {
+            const pg = new PIXI.Graphics();
+            const size = 1.5 + Math.random() * 3.5;
+            pg.beginPath();
+            pg.circle(0, 0, size);
+            pg.fill({ color: 0xffffff });
+            pg.tint = particleColor;
+            pg.x = px.x;
+            pg.y = topY;
+            pContainer.addChild(pg);
+
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.9;
+            const speed = 0.5 + Math.random() * 2.0;
+
+            activeParticles.current.push({
+                graphic: pg,
+                x: px.x,
+                y: topY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 0.8,
+                alpha: 1.0,
+                life: 0,
+                maxLife: 800 + Math.random() * 700,
+                color: particleColor,
+                scale: 1.0,
+            });
+        }
+    };
 
     // ---------- Nebula background (drawn once, drift+pulse in ticker) ----------
     const nebulaRef = useRef<PIXI.Container | null>(null);
@@ -356,6 +420,11 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             boardRef.current = board;
             world.addChild(board);
 
+            const pContainer = new PIXI.Container();
+            pContainer.name = 'particles';
+            particleContainerRef.current = pContainer;
+            world.addChild(pContainer);
+
             buildBackground();
 
             // Apply initial camera.
@@ -394,8 +463,11 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 bgRef.current = null;
                 nebulaRef.current = null;
                 vignetteRef.current = null;
+                particleContainerRef.current = null;
+                activeParticles.current = [];
                 cache.current.clear();
                 states.current.clear();
+                clearPixiTextureCache();
             }
         };
          
@@ -428,7 +500,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     }, [camera, isReady]);
 
     // ---------- Per-cell scene build (rebuild on cells/transient change) ----------
-    const rebuildCells = () => {
+    const rebuildCells = () => { console.log("rebuildCells called, cells:", cellsRef.current.length);
         const board = boardRef.current;
         if (!board) return;
         const list = cellsRef.current;
@@ -570,7 +642,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             let faceSolid = topGroup.getChildByName('faceSolid') as PIXI.Graphics;
             const topTexture = (() => {
                 if (lvl === undefined) return null;
-                try { return textureService.getTexture(lvl, q, r, undefined, isCore ? 'CORE' : undefined) || null; } catch { return null; }
+                try { return textureService.getTexture(lvl ?? 0, q, r, undefined, isCore ? 'CORE' : undefined) || null; } catch { return null; }
             })();
 
             if (isBuilt && topTexture) {
@@ -616,21 +688,21 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                     : isCore ? 'rgba(244, 63, 94, 0.22)'
                     : isCenterInitially ? 'rgba(16, 185, 129, 0.18)'
                     : isEligible ? 'rgba(34, 211, 238, 0.15)'
-                    : 'rgba(255,255,255,0.01)';
+                    : 'rgba(255,255,255,0.03)';
                 const strokeColor =
                     isBuilt ? (isCore ? '#f43f5e' : '#06b6d4')
                     : isCore ? '#f43f5e'
                     : isCenterInitially ? '#10b981'
                     : isBlueprint ? 'rgba(168, 85, 247, 0.75)'
                     : isEligible ? 'rgba(34, 211, 238, 0.85)'
-                    : 'rgba(255,255,255,0.075)';
+                    : 'rgba(255,255,255,0.15)';
                 const strokeWidth =
                     isBuilt ? (isCore ? 3.0 : 2.0)
                     : isCore ? 3.0
                     : isCenterInitially ? 3.0
                     : isBlueprint ? 1.5
                     : isEligible ? 2.5
-                    : 0.8;
+                    : 1.0;
                 const dash = (isEligible || isBlueprint) && !isCore;
 
                 // fill (parse rgba)
@@ -1001,7 +1073,27 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     useEffect(() => {
         if (!isReady) return;
         rebuildCells();
-         
+
+        // 1. Trigger particles for newly placed single blocks
+        const currentPlacedKey = transient.lastPlacedKey;
+        if (currentPlacedKey && currentPlacedKey !== prevLastPlacedKey.current) {
+            prevLastPlacedKey.current = currentPlacedKey;
+            const [q, r] = currentPlacedKey.split(',').map(Number);
+            triggerNaniteBurst(q, r, 20);
+        } else if (!currentPlacedKey) {
+            prevLastPlacedKey.current = null;
+        }
+
+        // 2. Trigger particles when a figure is successfully completed (all flareKeys activate)
+        const currentFlareKeys = transient.flareKeys;
+        const currentSize = currentFlareKeys ? currentFlareKeys.size : 0;
+        if (currentSize > 0 && prevFlareKeysSize.current === 0) {
+            currentFlareKeys.forEach(key => {
+                const [q, r] = key.split(',').map(Number);
+                triggerNaniteBurst(q, r, 15); // 15 particles per completed cell
+            });
+        }
+        prevFlareKeysSize.current = currentSize;
     }, [cells, transient, contrastHighlighting, figureIndex, isReady]);
 
     // ---------- Ticker: advance animations + nebula drift ----------
@@ -1009,6 +1101,35 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
         const app = appRef.current;
         if (!app) return;
         const dtMs = app.ticker.deltaMS;
+
+        // Update nanite particles
+        const particles = activeParticles.current;
+        const pContainer = particleContainerRef.current;
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.life += dtMs;
+            if (p.life >= p.maxLife) {
+                if (pContainer) {
+                    try { pContainer.removeChild(p.graphic); } catch (err) {}
+                }
+                p.graphic.destroy();
+                particles.splice(i, 1);
+            } else {
+                const pct = p.life / p.maxLife;
+                p.x += p.vx * (dtMs / 16.6667);
+                p.y += p.vy * (dtMs / 16.6667);
+                p.vx *= Math.pow(0.98, dtMs / 16.6667);
+                p.vy += -0.025 * (dtMs / 16.6667); // Float upwards gently
+
+                p.alpha = 1.0 - pct;
+                p.scale = 1.0 - pct * 0.4;
+
+                p.graphic.x = p.x;
+                p.graphic.y = p.y;
+                p.graphic.alpha = p.alpha;
+                p.graphic.scale.set(p.scale, p.scale);
+            }
+        }
 
         // Nebula drift + vignette pulse.
         const nebula = nebulaRef.current;
@@ -1281,10 +1402,25 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
         const isMultiTouch = e.pointerType === 'touch' && (e.nativeEvent as any).touches && (e.nativeEvent as any).touches.length > 1;
         if (isMultiTouch) {
             isDragging.current = false;
+            isPainting.current = false;
             return;
         }
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         (e.target as Element).setPointerCapture?.(e.pointerId);
+
+        const hit = hitTest(e.clientX, e.clientY);
+        if (hit) {
+            const hitKey = getHexKey(hit.q, hit.r);
+            const cell = cellsRef.current.find(c => c.key === hitKey);
+            if (cell && cell.canPlaceHex) {
+                isPainting.current = true;
+                lastPaintedKey.current = hitKey;
+                onCellClickRef.current(hit.q, hit.r);
+                dragMoved.current = false;
+                return;
+            }
+        }
+
         isDragging.current = true;
         dragMoved.current = false;
         const cam = cameraRef.current;
@@ -1293,11 +1429,27 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
 
     const handlePointerMove = (e: React.PointerEvent) => {
         // hover (mouse only)
-        if (e.pointerType === 'mouse' && !isDragging.current) {
+        if (e.pointerType === 'mouse' && !isDragging.current && !isPainting.current) {
             const hit = hitTest(e.clientX, e.clientY);
             const key = hit ? getHexKey(hit.q, hit.r) : null;
             if (key !== transientRef.current.hoveredKey) onHoverRef.current(key);
         }
+
+        if (isPainting.current) {
+            const hit = hitTest(e.clientX, e.clientY);
+            if (hit) {
+                const hitKey = getHexKey(hit.q, hit.r);
+                if (hitKey !== lastPaintedKey.current) {
+                    const cell = cellsRef.current.find(c => c.key === hitKey);
+                    if (cell && cell.canPlaceHex) {
+                        lastPaintedKey.current = hitKey;
+                        onCellClickRef.current(hit.q, hit.r);
+                    }
+                }
+            }
+            return;
+        }
+
         if (!isDragging.current || pinchStart.current) return;
         const isMultiTouch = e.pointerType === 'touch' && (e.nativeEvent as any).touches && (e.nativeEvent as any).touches.length > 1;
         if (isMultiTouch) {
@@ -1314,6 +1466,12 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     };
 
     const handlePointerUp = (e: React.PointerEvent) => {
+        if (isPainting.current) {
+            isPainting.current = false;
+            lastPaintedKey.current = null;
+            return;
+        }
+
         const wasDrag = dragMoved.current;
         isDragging.current = false;
         dragMoved.current = false;
@@ -1337,6 +1495,8 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     };
 
     const handlePointerLeave = () => {
+        isPainting.current = false;
+        lastPaintedKey.current = null;
         if (transientRef.current.hoveredKey !== null) onHoverRef.current(null);
     };
 

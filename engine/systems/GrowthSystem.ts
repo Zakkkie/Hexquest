@@ -5,7 +5,7 @@ import { WorldIndex } from '../WorldIndex';
 import { getHexKey, getStatusModifiers, cubeDistance } from '../../services/hexUtils';
 import { GameEventFactory } from '../events';
 import { checkGrowthCondition, checkDigCondition, checkRecoveryCooldown, applyRecovery, getRecoveryReward } from '../../rules/growth';
-import { getLevelConfig, GAME_CONFIG, ENTROPY_CONFIG } from '../../rules/config';
+import { getLevelConfig, GAME_CONFIG, ENTROPY_CONFIG, getScaledEntropyBaseCost } from '../../rules/config';
 import { rollForLoot } from '../../rules/loot';
 import { createSpecificItem } from '../../rules/items';
 
@@ -140,9 +140,14 @@ export class GrowthSystem implements System {
                 if (entity.type === EntityType.PLAYER) {
                     state.isPlayerGrowing = false;
                     const seconds = Math.ceil(status.remaining / 1000);
+                    // Reactor melt shock penalty
+                    state.entropy.current = Math.max(0, state.entropy.current - 10.0);
+                    const errorLabel = state.language === 'RU'
+                        ? `💥 РЕАКТОРНЫЙ ШОК: Попытка съема энергии перегретого сектора снижает стабильность на -10%!`
+                        : `💥 REACTOR SHOCK: Attempting recovery of overheating sector drops stability by -10%!`;
                     state.messageLog.unshift({
                         id: `cd-${now}`,
-                        text: `Sector Recharging: ${seconds}s left`,
+                        text: `${state.language === 'RU' ? `Сектор на перезарядке: осталось ${seconds}с` : `Sector Recharging: ${seconds}s left`}. ${errorLabel}`,
                         type: 'WARN',
                         source: 'SYSTEM',
                         timestamp: now
@@ -234,7 +239,12 @@ export class GrowthSystem implements System {
              entity.state = EntityState.IDLE;
              if (entity.type === EntityType.PLAYER) {
                  const msg = condition.reason || "Dig Failed";
-                 state.messageLog.unshift({ id: `dig-fail-${Date.now()}`, text: msg, type: 'WARN', source: 'SYSTEM', timestamp: Date.now() });
+                 // Deduct entropy for player error / drilling mistake!
+                 state.entropy.current = Math.max(0, state.entropy.current - 5.0);
+                 const errorLabel = state.language === 'RU'
+                     ? `⚠️ СЕЙСМИЧЕСКАЯ ОШИБКА: Ошибка бурения дестабилизирует стабильность ядра (-5% энтропии)!`
+                     : `⚠️ SEISMIC ERROR: Excavation failure destabilizes the core stability (-5% entropy)!`;
+                 state.messageLog.unshift({ id: `dig-fail-${Date.now()}`, text: `${msg}. ${errorLabel}`, type: 'WARN', source: 'SYSTEM', timestamp: Date.now() });
                  events.push(GameEventFactory.create('ACTION_DENIED', msg, entity.id));
                  state.isPlayerGrowing = false;
              }
@@ -410,7 +420,9 @@ export class GrowthSystem implements System {
              });
              
              // --- ENTROPY COST ---
-             const entropyCost = hex.currentLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(hex.currentLevel));
+             const gridSize = Object.keys(state.grid).length;
+             const scaledBaseCost = getScaledEntropyBaseCost(gridSize);
+             const entropyCost = hex.currentLevel === 0 ? scaledBaseCost : (scaledBaseCost * Math.abs(hex.currentLevel));
              const hasEntropyInversion = this.hasStatus(entity, 'STATUS_ENTROPY_INVERSION');
              
              if (hasEntropyInversion) {
@@ -469,7 +481,12 @@ export class GrowthSystem implements System {
           
           if (entity.type === EntityType.PLAYER) {
              const msg = condition.reason || "Growth Conditions Not Met";
-             state.messageLog.unshift({ id: `denied-${Date.now()}`, text: `Growth Failed: ${msg}`, type: 'WARN', source: 'SYSTEM', timestamp: Date.now() });
+             // Deduct entropy for player error / invalid build attempt!
+             state.entropy.current = Math.max(0, state.entropy.current - 5.0);
+             const errorLabel = state.language === 'RU'
+                 ? `⚠️ СТРУКТУРНЫЙ СБОЙ: Попытка неверного строительства дестабилизирует эфир (-5% энтропии)!`
+                 : `⚠️ STRUCTURAL FAILURE: Invalid construction attempt destabilizes the field (-5% entropy)!`;
+             state.messageLog.unshift({ id: `denied-${Date.now()}`, text: `Growth Failed: ${msg}. ${errorLabel}`, type: 'WARN', source: 'SYSTEM', timestamp: Date.now() });
              events.push(GameEventFactory.create('ACTION_DENIED', msg, entity.id));
              state.isPlayerGrowing = false; 
           }
@@ -512,9 +529,7 @@ export class GrowthSystem implements System {
                     const vKey = getHexKey(victim.q, victim.r);
                     state.grid[vKey] = {
                         ...state.grid[vKey],
-                        structureType: 'VOID',
-                        maxLevel: 0,
-                        currentLevel: 0
+                        structureType: 'VOID'
                     };
                     events.push(GameEventFactory.create('HEX_COLLAPSE', 'Soil Eater consumed land', entity.id, { q: victim.q, r: victim.r }));
                 }
@@ -540,7 +555,9 @@ export class GrowthSystem implements System {
           if (state.winCondition?.mutatorType === 'SUDDEN_DEATH') {
               baseCostMultiplier = 2;
           }
-          const baseEntropyCost = (targetLevel === 0 ? ENTROPY_CONFIG.COST_ACTION_BASE : (ENTROPY_CONFIG.COST_ACTION_BASE * Math.abs(targetLevel))) * baseCostMultiplier;
+          const gridSize = Object.keys(state.grid).length;
+          const scaledBaseCost = getScaledEntropyBaseCost(gridSize);
+          const baseEntropyCost = (targetLevel === 0 ? scaledBaseCost : (scaledBaseCost * Math.abs(targetLevel))) * baseCostMultiplier;
           const { entropyResistance } = getStatusModifiers(entity, state);
           const entropyCost = Math.max(0, baseEntropyCost * (1 - entropyResistance));
           

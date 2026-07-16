@@ -413,6 +413,58 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
                             )}
                         </div>
                     )}
+
+                    {/* Loss Condition Indicator */}
+                    {!toast && activeLevelConfig && (
+                        <div 
+                            className="mt-1.5 p-2 rounded-lg bg-rose-950/15 border border-rose-500/15 flex flex-col gap-1.5"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-1.5 text-[9px] font-mono font-black text-rose-400 uppercase leading-none">
+                                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                                </span>
+                                <span>{isRu ? 'Критерий поражения' : 'Loss Conditions'}</span>
+                            </div>
+                            <p className="text-[10px] text-slate-300 font-sans leading-relaxed mt-0.5">
+                                {(() => {
+                                    const lvlId = activeLevelConfig.id;
+                                    const isSiege = activeLevelConfig.botObjective === 'DESTROY_PLAYER';
+                                    const isRace = activeLevelConfig.botObjective === 'MONUMENT_RACE';
+                                    
+                                    if (lvlId === '2.9') {
+                                        return isRu
+                                            ? 'Окончание времени раунда (таймер), крах ранга до 0 или уничтожение плитки под вами.'
+                                            : 'Round time limit reached, rank collapse to 0, or destruction of the hex under you.';
+                                    }
+                                    if (lvlId === '3.2') {
+                                        return isRu
+                                            ? 'Превышение лимита времени в 180 секунд, крах ранга до 0 или уничтожение плитки под вами.'
+                                            : 'Time limit of 180 seconds exceeded, rank collapse to 0, or destruction of the hex under you.';
+                                    }
+                                    if (lvlId === '5.5') {
+                                        return isRu
+                                            ? 'Превышение предела в 20 ходов, крах ранга до 0 или уничтожение плитки под вами.'
+                                            : 'Exceeding the 20-turn limit, rank collapse to 0, or destruction of the hex under you.';
+                                    }
+                                    if (isSiege) {
+                                        return isRu
+                                            ? 'Разрушение защищаемого ядра вашей базы, крах ранга до 0 или уничтожение плитки под вами.'
+                                            : 'Destruction of your base core, rank collapse to 0, or destruction of the hex under you.';
+                                    }
+                                    if (isRace) {
+                                        return isRu
+                                            ? 'Соперник занял и активировал Монумент первым, крах ранга до 0 или уничтожение плитки под вами.'
+                                            : 'Rival activates the final Monument first, rank collapse to 0, or destruction of the hex under you.';
+                                    }
+                                    return isRu
+                                        ? 'Крах инженерного ранга до 0 или уничтожение опорной плитки непосредственно под вашим вектором.'
+                                        : 'Engineering rank collapse to 0 or destruction of the support hex directly beneath your vector.';
+                                })()}
+                            </p>
+                        </div>
+                    )}
  
                     {isPulsing && !toast && (
                         <div className="absolute top-1 right-2 flex items-center gap-1 text-[8px] font-mono text-emerald-300 uppercase select-none pointer-events-none">

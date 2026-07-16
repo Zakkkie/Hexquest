@@ -73,6 +73,9 @@ const TexturePreview: React.FC<{ level: number }> = ({ level }) => {
     return <div ref={containerRef} className="w-6 h-6 rounded bg-slate-900 border border-white/10 overflow-hidden flex items-center justify-center pointer-events-none select-none" />;
 };
 
+const EMPTY_ARRAY: string[] = [];
+const EMPTY_NUMBERS: number[] = [];
+
 const StoryBuilderView: React.FC = () => {
     const setUIState = useGameStore(state => state.setUIState);
     const playUiSound = useGameStore(state => state.playUiSound);
@@ -99,7 +102,25 @@ const StoryBuilderView: React.FC = () => {
     const toggleMusic = useGameStore(state => state.toggleMusic);
     const toggleSfx = useGameStore(state => state.toggleSfx);
     const contrastHighlighting = useGameStore(state => state.campaignUpgrades?.contrastHighlighting || 0);
-    const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards) || [];
+    const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards || EMPTY_ARRAY);
+
+    const bottomToolbarRef = useRef<HTMLDivElement>(null);
+    const [toolbarDimensions, setToolbarDimensions] = useState({ width: 448, height: 96 });
+
+    useEffect(() => {
+        const el = bottomToolbarRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const { width, height } = entry.contentRect;
+                if (width > 0 && height > 0) {
+                    setToolbarDimensions({ width, height });
+                }
+            }
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
 
     const totalInventoryTiles = useMemo(() => {
         let sum = 0;
@@ -822,13 +843,46 @@ const StoryBuilderView: React.FC = () => {
         }
     }, [hasAnyHex, unlockedFigureIndex]);
 
+    // Pre-calculate and cache the neighbor levels for each coordinate in a flat lookup map
+    const storyMapNeighboursCache = useMemo(() => {
+        const cache: Record<string, number[]> = {};
+        const neighborsOffsets = [
+            { dq: 1, dr: -1 }, { dq: 1, dr: 0 }, { dq: 0, dr: 1 },
+            { dq: -1, dr: 1 }, { dq: -1, dr: 0 }, { dq: 0, dr: -1 }
+        ];
+        
+        for (const [key, lvl] of Object.entries(storyMap)) {
+            if (lvl === undefined || lvl < 0) continue; // Skip empty/void/deleted
+            
+            if (!cache[key]) {
+                cache[key] = [];
+            }
+            
+            const parts = key.split(',');
+            if (parts.length !== 2) continue;
+            const q = parseInt(parts[0], 10);
+            const r = parseInt(parts[1], 10);
+            if (isNaN(q) || isNaN(r)) continue;
+            
+            for (const n of neighborsOffsets) {
+                const nKey = getHexKey(q + n.dq, r + n.dr);
+                if (!cache[nKey]) {
+                    cache[nKey] = [];
+                }
+                cache[nKey].push(lvl);
+            }
+        }
+        return cache;
+    }, [storyMap]);
+
     // Direct placement eligibility calculation
     const isEligibleForPlacement = useCallback((q: number, r: number, forceLevel?: number) => {
         const lvlToBuild = forceLevel !== undefined ? forceLevel : selectedBuildLevel;
         const currentMap = storyMap;
         if (lvlToBuild === -999) return false; // Demolish is not a placement
 
-        const currentLvl = currentMap[getHexKey(q, r)];
+        const currentKey = getHexKey(q, r);
+        const currentLvl = currentMap[currentKey];
         if (currentLvl === -999) return false; // Void tile cannot be built upon!
 
         const currentlyBuilt = currentLvl !== undefined && currentLvl >= 0;
@@ -849,23 +903,9 @@ const StoryBuilderView: React.FC = () => {
             // Upgrade rule from battle: must upgrade step-by-step
             if (lvlToBuild !== currentLvl + 1) return false;
         }
-        
-        const neighbors = [
-            { dq: 1, dr: -1 }, { dq: 1, dr: 0 }, { dq: 0, dr: 1 },
-            { dq: -1, dr: 1 }, { dq: -1, dr: 0 }, { dq: 0, dr: -1 }
-        ];
 
-        let hasValidNeighbor = false;
-        const neighborLevels: number[] = [];
-
-        for (const n of neighbors) {
-            const nLvl = currentMap[getHexKey(q + n.dq, r + n.dr)];
-            
-            if (nLvl !== undefined && nLvl >= 0) {
-                hasValidNeighbor = true;
-                neighborLevels.push(nLvl);
-            }
-        }
+        const neighborLevels = storyMapNeighboursCache[currentKey] || EMPTY_NUMBERS;
+        const hasValidNeighbor = neighborLevels.length > 0;
 
         if (!currentlyBuilt && !hasValidNeighbor) {
             return false;
@@ -887,7 +927,7 @@ const StoryBuilderView: React.FC = () => {
         }
 
         return true;
-    }, [storyMap, selectedBuildLevel, hasAnyHex, startCenterPoint]);
+    }, [storyMap, selectedBuildLevel, hasAnyHex, startCenterPoint, storyMapNeighboursCache]);
 
     const gridPoints = useMemo(() => {
         const points = [];
@@ -2043,7 +2083,7 @@ const StoryBuilderView: React.FC = () => {
                 </AnimatePresence>
 
                 {/* BOTTOM CONTENT - Compact Inventory Carousel with floating SP island */}
-                <div className="mt-auto flex flex-col items-center justify-end pointer-events-none pt-4 w-full max-w-5xl mx-auto px-4 md:px-0 select-none pb-2">
+                <div className="mt-auto flex flex-col items-center justify-end pointer-events-none pt-4 w-full max-w-5xl mx-auto px-6 md:px-0 select-none pb-2 md:pb-4">
                     
                     {/* "Levels" (Уровни) buttons down the bottom region */}
                     {!isUiHidden && (
@@ -2052,6 +2092,7 @@ const StoryBuilderView: React.FC = () => {
                                 id="tutorial-levels-btn"
                                 initial={{ y: 20, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
+                                style={{ marginTop: '0px', marginBottom: '-9px' }}
                                 onClick={() => { playUiSound('CLICK'); setUIState('CAMPAIGN_MAP'); }}
                                 className="px-5 py-2.5 bg-gradient-to-r rounded-xl backdrop-blur-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2 from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-indigo-200 hover:text-white shadow-[0_4px_25px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]"
                             >
@@ -2072,58 +2113,222 @@ const StoryBuilderView: React.FC = () => {
                         transition={{ duration: 0.3 }}
                         className="w-full md:max-w-md lg:max-w-xl flex flex-col items-stretch pointer-events-auto"
                     >
-                        <div id="tutorial-shape-list" className="w-full bg-slate-950/45 border rounded-2xl p-2 backdrop-blur-xl animate-border-glow-premium relative transition-all duration-300">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500/20 to-transparent" />
-                            
-                            {/* Carousel Wrapper */}
-                            <div className="relative flex items-center w-full px-5">
-                                
-                                {/* Left Scroll Command */}
-                                <button
-                                    onClick={handleScrollLeft}
-                                    className={`absolute left-0 -translate-x-[calc(100%-1px)] top-1/2 -translate-y-1/2 z-20 w-5 h-12 rounded-l-xl bg-[#090d22]/95 border border-r-0 flex items-center justify-center transition-all ${
-                                        totalInventoryTiles > 0
-                                            ? 'border-cyan-400/50 text-cyan-400 hover:text-white hover:bg-cyan-950/40 shadow-[-8px_0_12px_-4px_rgba(34,211,238,0.5)] hover:shadow-[-8px_0_20px_-4px_rgba(34,211,238,0.8)] active:scale-95 cursor-pointer'
-                                            : 'border-slate-800 text-slate-600 opacity-40 cursor-not-allowed'
-                                    }`}
-                                    title={language === 'RU' ? 'Назад' : 'Prev'}
-                                    disabled={totalInventoryTiles === 0}
-                                >
-                                    <ChevronLeft className="w-3.5 h-3.5 -mr-0.5" />
-                                </button>
+                        {/* Custom SVG border glow style injection */}
+                        <style dangerouslySetInnerHTML={{ __html: `
+                            @keyframes svg-border-glow-anim {
+                                0%, 100% {
+                                    stroke: rgba(99, 102, 241, 0.45);
+                                    filter: drop-shadow(0 0 3px rgba(99, 102, 241, 0.3)) drop-shadow(0 0 8px rgba(99, 102, 241, 0.15));
+                                }
+                                50% {
+                                    stroke: rgba(34, 211, 238, 0.85);
+                                    filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.6)) drop-shadow(0 0 12px rgba(34, 211, 238, 0.3));
+                                }
+                            }
+                            .animate-svg-glow {
+                                animation: svg-border-glow-anim 4.5s infinite ease-in-out;
+                            }
+                        `}} />
 
-                                {/* Scrolling container */}
-                                <div 
-                                    ref={carouselRef}
-                                    className="w-full flex flex-row gap-1.5 overflow-x-auto pt-3 pb-1 px-1 scrollbar-none flex-nowrap scroll-smooth"
-                                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                                >
-                                    {Array.from({ length: 10 }).map((_, lvl) => {
-                                        const sessionQty = minedInSessionHexes[lvl] || (minedInSessionHexes as any)[String(lvl)] || 0;
-                                        const permaQty = collectedHexes[lvl] || (collectedHexes as any)[String(lvl)] || 0;
-                                        const qty = sessionQty + permaQty;
-                                        const isSelected = selectedBuildLevel === lvl;
-                                        const theme = THEME_PALETTE[String(lvl)] || THEME_PALETTE['0'];
-                                        const isPlaceable = placeableLevels.has(lvl);
-                                        const canTransmute = qty >= 3 && lvl < 9;
-                                        
-                                        // Dynamic tooltip descriptions
-                                        const tooltipText = qty <= 0
-                                            ? (language === 'RU' ? 'Нет в наличии' : 'Out of stock')
-                                            : isPlaceable
-                                                ? (language === 'RU' ? `Уровень ${lvl}: готов к установке` : `Level ${lvl}: ready to place`)
-                                                : (language === 'RU' ? `Уровень ${lvl} (Недоступно): постройте сначала опорные блоки` : `Level ${lvl} (Locked): build parent support blocks first`);
+                        <div 
+                            id="tutorial-shape-list" 
+                            ref={bottomToolbarRef}
+                            className="w-full bg-transparent border-0 rounded-2xl pt-2.5 pb-2 px-0 backdrop-blur-xl relative transition-all duration-300"
+                        >
+                            {(() => {
+                                const P = 2; // Padding to avoid clipping of stroke
+                                const Ew = 20; // Ear width (w-5)
+                                const Eh = 48; // Ear height (h-12)
+                                const R = 16;  // Corner radius of central container
+                                const Re = 8;  // Corner radius of ear
 
-                                        return (
-                                            <div key={lvl} className="flex flex-col items-center shrink-0">
-                                                <div className="relative">
+                                const tw = toolbarDimensions.width;
+                                const th = toolbarDimensions.height;
+
+                                const xLeftEar = P;
+                                const xLeftMain = Ew + P;
+                                const xRightMain = Ew + tw + P;
+                                const xRightEar = 2 * Ew + tw + P;
+
+                                const yTop = th / 2 - Eh / 2 + P;
+                                const yBottom = th / 2 + Eh / 2 + P;
+                                const yMax = th + P;
+                                const yMin = P;
+
+                                const svgPath = `
+                                    M ${xLeftMain + R} ${yMin}
+                                    L ${xRightMain - R} ${yMin}
+                                    A ${R} ${R} 0 0 1 ${xRightMain} ${yMin + R}
+                                    L ${xRightMain} ${yTop - 8}
+                                    C ${xRightMain} ${yTop - 4} ${xRightMain + 4} ${yTop} ${xRightMain + 8} ${yTop}
+                                    L ${xRightEar - Re} ${yTop}
+                                    A ${Re} ${Re} 0 0 1 ${xRightEar} ${yTop + Re}
+                                    L ${xRightEar} ${yBottom - Re}
+                                    A ${Re} ${Re} 0 0 1 ${xRightEar - Re} ${yBottom}
+                                    L ${xRightMain + 8} ${yBottom}
+                                    C ${xRightMain + 4} ${yBottom} ${xRightMain} ${yBottom + 4} ${xRightMain} ${yBottom + 8}
+                                    L ${xRightMain} ${yMax - R}
+                                    A ${R} ${R} 0 0 1 ${xRightMain - R} ${yMax}
+                                    L ${xLeftMain + R} ${yMax}
+                                    A ${R} ${R} 0 0 1 ${xLeftMain} ${yMax - R}
+                                    L ${xLeftMain} ${yBottom + 8}
+                                    C ${xLeftMain} ${yBottom + 4} ${xLeftMain - 4} ${yBottom} ${xLeftMain - 8} ${yBottom}
+                                    L ${xLeftEar + Re} ${yBottom}
+                                    A ${Re} ${Re} 0 0 1 ${xLeftEar} ${yBottom - Re}
+                                    L ${xLeftEar} ${yTop + Re}
+                                    A ${Re} ${Re} 0 0 1 ${xLeftEar + Re} ${yTop}
+                                    L ${xLeftMain - 8} ${yTop}
+                                    C ${xLeftMain - 4} ${yTop} ${xLeftMain} ${yTop - 4} ${xLeftMain} ${yTop - 8}
+                                    L ${xLeftMain} ${yMin + R}
+                                    A ${R} ${R} 0 0 1 ${xLeftMain + R} ${yMin}
+                                    Z
+                                `.replace(/\s+/g, ' ').trim();
+
+                                return (
+                                    <svg 
+                                        className="absolute pointer-events-none select-none z-0 overflow-visible animate-svg-glow"
+                                        style={{ left: -Ew - P, top: -P }}
+                                        width={tw + 2 * Ew + 2 * P}
+                                        height={th + 2 * P}
+                                        viewBox={`0 0 ${tw + 2 * Ew + 2 * P} ${th + 2 * P}`}
+                                    >
+                                        <path 
+                                            d={svgPath}
+                                            fill="rgba(5, 8, 22, 0.75)"
+                                            strokeWidth="1.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                );
+                            })()}
+
+                            {/* Left Scroll Command - aligned perfectly inside left ear */}
+                            <button
+                                onClick={handleScrollLeft}
+                                style={{ left: -20, width: 20, height: 48, paddingTop: '0px', marginTop: '-8px' }}
+                                className="absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center text-cyan-400 hover:text-white hover:scale-110 active:scale-90 cursor-pointer transition-all duration-200"
+                                title={language === 'RU' ? 'Назад' : 'Prev'}
+                            >
+                                <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                            </button>
+
+                            {/* Scrolling container */}
+                            <div 
+                                ref={carouselRef}
+                                className="w-full flex flex-row gap-1.5 overflow-x-auto scrollbar-none flex-nowrap scroll-smooth relative z-10"
+                                style={{ 
+                                    scrollbarWidth: 'none', 
+                                    msOverflowStyle: 'none',
+                                    paddingLeft: '16px',
+                                    paddingTop: '0px',
+                                    marginTop: '0px',
+                                    marginLeft: '0px',
+                                    marginRight: '0px',
+                                    marginBottom: '17px',
+                                    paddingBottom: '0px'
+                                }}
+                            >
+                                {Array.from({ length: 10 }).map((_, lvl) => {
+                                    const sessionQty = minedInSessionHexes[lvl] || (minedInSessionHexes as any)[String(lvl)] || 0;
+                                    const permaQty = collectedHexes[lvl] || (collectedHexes as any)[String(lvl)] || 0;
+                                    const qty = sessionQty + permaQty;
+                                    const isSelected = selectedBuildLevel === lvl;
+                                    const theme = THEME_PALETTE[String(lvl)] || THEME_PALETTE['0'];
+                                    const isPlaceable = placeableLevels.has(lvl);
+                                    const canTransmute = qty >= 3 && lvl < 9;
+                                    
+                                    // Dynamic tooltip descriptions
+                                    const tooltipText = qty <= 0
+                                        ? (language === 'RU' ? 'Нет в наличии' : 'Out of stock')
+                                        : isPlaceable
+                                            ? (language === 'RU' ? `Уровень ${lvl}: готов к установке` : `Level ${lvl}: ready to place`)
+                                            : (language === 'RU' ? `Уровень ${lvl} (Недоступно): постройте сначала опорные блоки` : `Level ${lvl} (Locked): build parent support blocks first`);
+
+                                    return (
+                                        <div key={lvl} className="flex flex-col items-center shrink-0">
+                                            <div className="relative">
+                                            <button
+                                                onClick={() => {
+                                                    if (isSiegeActive) {
+                                                        playUiSound('ERROR');
+                                                        const alertMsg = language === 'RU'
+                                                            ? "⚠️ Защита ядра активна! Строительство запрещено до ее завершения."
+                                                            : "⚠️ Core defense is active! Construction is blocked until complete.";
+                                                        setErrorMessage(alertMsg);
+                                                        useGameStore.getState().showToast(alertMsg, 'error');
+                                                        setTimeout(() => {
+                                                            setErrorMessage(curr => curr === alertMsg ? null : curr);
+                                                        }, 5000);
+                                                        return;
+                                                    }
+                                                    
+                                                    playUiSound('CLICK'); 
+                                                    setSelectedBuildLevel(lvl); 
+                                                }}
+                                                title={tooltipText}
+                                                className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 p-1 rounded-xl border text-center transition-all w-13 h-17 relative cursor-pointer outline-none group ${
+                                                    isSelected
+                                                        ? isPlaceable
+                                                            ? 'bg-indigo-950/45 border-cyan-400/70 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102 font-bold'
+                                                            : 'bg-slate-950/35 border-red-500/30 text-rose-400/60 scale-100'
+                                                        : qty > 0 
+                                                            ? isPlaceable 
+                                                                ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
+                                                                : 'bg-slate-950/20 border-white/5 text-slate-400 scale-98 hover:bg-[#0f1530]/20'
+                                                            : 'bg-slate-950/10 border-white/5 text-slate-500 scale-95 hover:bg-[#0f1530]/15'
+                                                }`}
+                                            >
+                                                <div className={`w-10 h-11 flex items-center justify-center select-none pointer-events-none transition-all ${
+                                                    isSelected
+                                                        ? isPlaceable
+                                                            ? ''
+                                                            : 'opacity-40 brightness-[0.5] grayscale saturate-50'
+                                                        : qty > 0
+                                                            ? isPlaceable
+                                                                ? ''
+                                                                : 'opacity-30 brightness-[0.45] grayscale saturate-[20%]'
+                                                            : 'opacity-20 brightness-[0.35] grayscale saturate-0'
+                                                }`}>
+                                                    {drawInventoryHex(lvl, theme)}
+                                                </div>
+
+                                                <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none transition-all ${
+                                                    qty > 0 
+                                                        ? isPlaceable 
+                                                            ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)] font-bold' 
+                                                            : 'text-amber-500 font-medium' 
+                                                        : 'text-slate-300 font-medium opacity-90'
+                                                }`}>
+                                                    x{qty}
+                                                </span>
+                                            </button>
+                                            
+                                            {/* Transmutation Button */}
+                                            {lvl < 9 && (
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!canTransmute) {
+                                                            playUiSound('ERROR');
+                                                            const alertMsg = language === 'RU'
+                                                                ? `⚠️ Нужно минимум 3 гекса L${lvl} для сплавления в L${lvl + 1}!`
+                                                                : `⚠️ Need at least 3x L${lvl} hexes to transmute into L${lvl + 1}!`;
+                                                            setErrorMessage(alertMsg);
+                                                            useGameStore.getState().showToast(alertMsg, 'warning');
+                                                            setTimeout(() => {
+                                                                setErrorMessage(curr => curr === alertMsg ? null : curr);
+                                                            }, 4000);
+                                                            return;
+                                                        }
+                                                        
+                                                        playUiSound('SUCCESS'); // use a nice sound
+                                                        
                                                         if (isSiegeActive) {
                                                             playUiSound('ERROR');
                                                             const alertMsg = language === 'RU'
-                                                                ? "⚠️ Защита ядра активна! Строительство запрещено до ее завершения."
-                                                                : "⚠️ Core defense is active! Construction is blocked until complete.";
+                                                                ? "⚠️ Защита ядра активна! Трансмутация запрещена до ее завершения."
+                                                                : "⚠️ Core defense is active! Transmutation is blocked until complete.";
                                                             setErrorMessage(alertMsg);
                                                             useGameStore.getState().showToast(alertMsg, 'error');
                                                             setTimeout(() => {
@@ -2131,95 +2336,34 @@ const StoryBuilderView: React.FC = () => {
                                                             }, 5000);
                                                             return;
                                                         }
-                                                        
-                                                        playUiSound('CLICK'); 
-                                                        setSelectedBuildLevel(lvl); 
+                                                        transmuteHexes(lvl, lvl + 1, 1);
                                                     }}
-                                                    title={tooltipText}
-                                                    className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 p-1 rounded-xl border text-center transition-all w-13 h-17 relative cursor-pointer outline-none group ${
-                                                        isSelected
-                                                            ? isPlaceable
-                                                                ? 'bg-indigo-950/45 border-cyan-400/70 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102 font-bold'
-                                                                : 'bg-slate-950/35 border-red-500/30 text-rose-400/60 scale-100'
-                                                            : qty > 0 
-                                                                ? isPlaceable 
-                                                                    ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
-                                                                    : 'bg-slate-950/20 border-white/5 text-slate-400 scale-98 hover:bg-[#0f1530]/20'
-                                                                : 'bg-slate-950/10 border-white/5 text-slate-500 scale-95 hover:bg-[#0f1530]/15'
+                                                    title={language === 'RU' ? `Сплавить 3 гекса L${lvl} в 1 гекс L${lvl + 1}` : `Transmute 3x L${lvl} into 1x L${lvl + 1}`}
+                                                    className={`absolute -top-2 left-1/2 -translate-x-1/2 rounded-full p-0.5 z-30 transition-all group overflow-hidden ${
+                                                        canTransmute
+                                                            ? "bg-cyan-900 border border-cyan-400 hover:bg-cyan-700 hover:scale-110 active:scale-95 shadow-[0_0_10px_rgba(34,211,238,0.5)] cursor-pointer"
+                                                            : "bg-slate-950/60 border border-slate-800/40 opacity-30 hover:opacity-60 cursor-pointer"
                                                     }`}
+                                                    style={{ width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 >
-                                                    <div className={`w-10 h-11 flex items-center justify-center select-none pointer-events-none transition-all ${
-                                                        isSelected
-                                                            ? isPlaceable
-                                                                ? ''
-                                                                : 'opacity-40 brightness-[0.5] grayscale saturate-50'
-                                                            : qty > 0
-                                                                ? isPlaceable
-                                                                    ? ''
-                                                                    : 'opacity-30 brightness-[0.45] grayscale saturate-[20%]'
-                                                                : 'opacity-20 brightness-[0.35] grayscale saturate-0'
-                                                    }`}>
-                                                        {drawInventoryHex(lvl, theme)}
-                                                    </div>
-
-                                                    <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none transition-all ${
-                                                        qty > 0 
-                                                            ? isPlaceable 
-                                                                ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)] font-bold' 
-                                                                : 'text-amber-500 font-medium' 
-                                                            : 'text-slate-300 font-medium opacity-90'
-                                                    }`}>
-                                                        x{qty}
-                                                    </span>
+                                                    <RefreshCw className={`w-2.5 h-2.5 transition-colors ${canTransmute ? "text-cyan-200 group-hover:text-white" : "text-slate-500"}`} />
                                                 </button>
-                                                
-                                                {/* Transmutation Button */}
-                                                {canTransmute && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            playUiSound('SUCCESS'); // use a nice sound
-                                                            
-                                                            if (isSiegeActive) {
-                                                                playUiSound('ERROR');
-                                                                const alertMsg = language === 'RU'
-                                                                    ? "⚠️ Защита ядра активна! Трансмутация запрещена до ее завершения."
-                                                                    : "⚠️ Core defense is active! Transmutation is blocked until complete.";
-                                                                setErrorMessage(alertMsg);
-                                                                useGameStore.getState().showToast(alertMsg, 'error');
-                                                                setTimeout(() => {
-                                                                    setErrorMessage(curr => curr === alertMsg ? null : curr);
-                                                                }, 5000);
-                                                                return;
-                                                            }
-                                                            transmuteHexes(lvl, lvl + 1, 1);
-                                                        }}
-                                                        title={language === 'RU' ? `Сплавить 3 гекса L${lvl} в 1 гекс L${lvl + 1}` : `Transmute 3x L${lvl} into 1x L${lvl + 1}`}
-                                                        className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-cyan-900 border border-cyan-400 p-0.5 z-30 hover:bg-cyan-700 hover:scale-110 active:scale-95 transition-all shadow-[0_0_10px_rgba(34,211,238,0.5)] group overflow-hidden pt-[2px] -mt-[4px]"
-                                                    >
-                                                        <RefreshCw className="w-3 h-3 text-cyan-200 group-hover:text-white" />
-                                                    </button>
-                                                )}
-                                                </div>
+                                            )}
                                             </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Right Scroll Command */}
-                                <button
-                                    onClick={handleScrollRight}
-                                    className={`absolute right-0 translate-x-[calc(100%-1px)] top-1/2 -translate-y-1/2 z-20 w-5 h-12 rounded-r-xl bg-[#090d22]/95 border border-l-0 flex items-center justify-center transition-all ${
-                                        totalInventoryTiles > 0
-                                            ? 'border-cyan-400/50 text-cyan-400 hover:text-white hover:bg-cyan-950/40 shadow-[8px_0_12px_-4px_rgba(34,211,238,0.5)] hover:shadow-[8px_0_20px_-4px_rgba(34,211,238,0.8)] active:scale-95 cursor-pointer'
-                                            : 'border-slate-800 text-slate-600 opacity-40 cursor-not-allowed'
-                                    }`}
-                                    title={language === 'RU' ? 'Вперед' : 'Next'}
-                                    disabled={totalInventoryTiles === 0}
-                                >
-                                    <ChevronRight className="w-3.5 h-3.5 -ml-0.5" />
-                                </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
+
+                            {/* Right Scroll Command - aligned perfectly inside right ear */}
+                            <button
+                                onClick={handleScrollRight}
+                                style={{ right: -20, width: 20, height: 48, marginTop: '-8px' }}
+                                className="absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center text-cyan-400 hover:text-white hover:scale-110 active:scale-90 cursor-pointer transition-all duration-200"
+                                title={language === 'RU' ? 'Вперед' : 'Next'}
+                            >
+                                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                            </button>
                         </div>
                     </motion.div>
                 </div>

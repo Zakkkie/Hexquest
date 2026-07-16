@@ -74,13 +74,45 @@ export const getHeightOffset = (level: number) => {
 
 // CACHE SHARING DOM Texture -> WebGL textures.
 const textureCache = new Map<HTMLCanvasElement | HTMLImageElement, PIXI.Texture>();
+const keyTextureCache = new Map<string, PIXI.Texture>();
+
 export const getPixiTexture = (canvas: HTMLCanvasElement | HTMLImageElement): PIXI.Texture => {
+    const key = (canvas as any).__cacheKey;
+    if (key) {
+        let tex = keyTextureCache.get(key);
+        if (!tex) {
+            tex = PIXI.Texture.from(canvas);
+            keyTextureCache.set(key, tex);
+        }
+        return tex;
+    }
+
     let tex = textureCache.get(canvas);
     if (!tex) {
         tex = PIXI.Texture.from(canvas);
         textureCache.set(canvas, tex);
     }
     return tex;
+};
+
+export const clearPixiTextureCache = () => {
+    for (const tex of keyTextureCache.values()) {
+        try {
+            tex.destroy(true);
+        } catch (e) {
+            // ignore
+        }
+    }
+    keyTextureCache.clear();
+
+    for (const tex of textureCache.values()) {
+        try {
+            tex.destroy(true);
+        } catch (e) {
+            // ignore
+        }
+    }
+    textureCache.clear();
 };
 
 // --- Easing utilities (normalized: f(p) where p in [0,1] -> eased fraction) ---

@@ -15,6 +15,8 @@ import { LevelExitDialog } from './LevelExitDialog';
 import { audioService } from '../../services/audioService';
 
 
+const EMPTY_ARRAY: string[] = [];
+
 const getLevelIndexFromId = (id?: string | null): number => {
     if (!id) return 1;
     const parts = id.split('.');
@@ -198,7 +200,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     } | null>(null);
     const [wasRewardPreviouslyClaimed, setWasRewardPreviouslyClaimed] = useState(false);
 
-    const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards) || [];
+    const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards || EMPTY_ARRAY);
     const claimLevelReward = useGameStore(state => state.claimLevelReward);
 
     useEffect(() => {
@@ -851,6 +853,97 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                     ) : (
                                                         <p className="text-[10px] sm:text-xs text-slate-500 italic">No objectives assigned.</p>
                                                     )
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Loss Conditions Card */}
+                                        <div className="bg-slate-900/40 border border-rose-500/10 p-2.5 sm:p-3 rounded-lg flex flex-col gap-2 mt-0.5 shadow-inner">
+                                            <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest text-rose-500 font-mono flex items-center gap-1">
+                                                <ShieldAlert className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                                {language === 'RU' ? 'КРИТЕРИИ ПОРАЖЕНИЯ' : 'LOSS CONDITION MATRIX'}
+                                            </span>
+                                            
+                                            <div className="flex flex-col gap-1.5 font-sans text-[10px] sm:text-[11px] font-medium leading-relaxed text-slate-300">
+                                                {/* 1. Core Structural Integrity & Inactivity */}
+                                                <div className="flex items-start gap-2 bg-rose-950/10 border border-rose-500/10 p-1.5 sm:p-2 rounded-lg">
+                                                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-rose-300 leading-tight uppercase text-[9px] font-mono">
+                                                            {language === 'RU' ? 'КРАХ РАНГА ИЛИ СТИРАНИЕ ГЕКСА' : 'RANK COLLAPSE / HEX VOID'}
+                                                        </span>
+                                                        <span className="text-[9px] sm:text-[10px] text-slate-400/80 mt-0.5 leading-normal">
+                                                            {language === 'RU' 
+                                                                ? 'Поражение наступает при снижении инженерного ранга до 0 или аннигиляции опорной плиты под вами (переход в VOID).' 
+                                                                : 'Loss occurs if your engineering rank drops to 0 or the hex beneath you is annihilated (becomes VOID).'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* 2. 5-Minute Idle Inactivity Rule */}
+                                                <div className="flex items-start gap-2 bg-rose-950/10 border border-rose-500/10 p-1.5 sm:p-2 rounded-lg">
+                                                    <Timer className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-rose-300 leading-tight uppercase text-[9px] font-mono">
+                                                            {language === 'RU' ? 'ПЯТИМИНУТНЫЙ ТАЙМАУТ АКТИВНОСТИ' : '5-MINUTE IDLE TIMEOUT'}
+                                                        </span>
+                                                        <span className="text-[9px] sm:text-[10px] text-slate-400/80 mt-0.5 leading-normal">
+                                                            {language === 'RU' 
+                                                                ? 'Бездействие в течение 5 минут сбрасывает Энтропию сектора до 0%, запуская сокрушительный метеоритный шторм.' 
+                                                                : 'Idle or inactive status for 5 minutes drops sector Stability to 0%, triggering an endless orbital meteor storm.'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* 3. Custom clock / timer limits */}
+                                                {activeLevelConfig && (activeLevelConfig.id === '2.9' || activeLevelConfig.id === '3.2' || activeLevelConfig.id === '5.5') && (
+                                                    <div className="flex items-start gap-2 bg-rose-950/10 border border-rose-500/10 p-1.5 sm:p-2 rounded-lg">
+                                                        <Timer className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-rose-300 leading-tight uppercase text-[9px] font-mono">
+                                                                {language === 'RU' ? 'ВРЕМЕННОЙ ЛИМИТ ИСТЕК' : 'TIME/TURN LIMIT EXCEEDED'}
+                                                            </span>
+                                                            <span className="text-[9px] sm:text-[10px] text-slate-400/80 mt-0.5 leading-normal">
+                                                                {activeLevelConfig.id === '2.9' && (language === 'RU' ? 'Лимит времени на завершение цикла.' : 'Time limit to complete the cycle.')}
+                                                                {activeLevelConfig.id === '3.2' && (language === 'RU' ? 'Лимит времени (180 секунд) на восстановление ядра.' : 'Time limit (180s) to restore core.')}
+                                                                {activeLevelConfig.id === '5.5' && (language === 'RU' ? 'Превышение предела в 20 ходов.' : 'Turn limit (20 turns) exceeded.')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* 4. Rival Monument Check */}
+                                                {activeLevelConfig && activeLevelConfig.botObjective === 'MONUMENT_RACE' && (
+                                                    <div className="flex items-start gap-2 bg-rose-950/10 border border-rose-500/10 p-1.5 sm:p-2 rounded-lg">
+                                                        <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-rose-300 leading-tight uppercase text-[9px] font-mono">
+                                                                {language === 'RU' ? 'АКТИВАЦИЯ МОНУМЕНТА БОТОМ' : 'RIVAL MONUMENT ACTIVATION'}
+                                                            </span>
+                                                            <span className="text-[9px] sm:text-[10px] text-slate-400/80 mt-0.5 leading-normal">
+                                                                {language === 'RU' 
+                                                                    ? 'Если автономный ИИ-бот успеет занять и активировать финальный Монумент раньше вас.' 
+                                                                    : 'If an AI bot reaches and activates the final Monument before you do.'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* 5. Core Defense Check */}
+                                                {activeLevelConfig && activeLevelConfig.botObjective === 'DESTROY_PLAYER' && (
+                                                    <div className="flex items-start gap-2 bg-rose-950/10 border border-rose-500/10 p-1.5 sm:p-2 rounded-lg">
+                                                        <ShieldAlert className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-rose-300 leading-tight uppercase text-[9px] font-mono">
+                                                                {language === 'RU' ? 'РАЗРУШЕНИЕ ЦЕНТРАЛЬНОГО ЯДРА' : 'CORE STRUCTURAL DESTRUCTION'}
+                                                            </span>
+                                                            <span className="text-[9px] sm:text-[10px] text-slate-400/80 mt-0.5 leading-normal">
+                                                                {language === 'RU' 
+                                                                    ? 'Если прочность защищаемого центрального ядра упадет до 0%.' 
+                                                                    : 'If the core durability of your base falls to 0%.'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>

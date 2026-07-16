@@ -111,7 +111,7 @@ export const series6Levels: LevelConfig[] = [
         { q: -1, r: 1, currentLevel: 0, maxLevel: 0, structureType: 'NONE', revealed: true },
       ]
     },
-    objectiveHexes: [{ q: 0, r: 0, targetLevel: -2, label: 'Shaft', color: 'red' }],
+    objectiveHexes: [{ q: 0, r: 0, targetLevel: -2, label: 'Shaft', color: 'amber' }],
     startState: { credits: 0, moves: 40, rank: 2, materials: 0 },
     aiMode: 'none',
     getTutorialHint: (state) => {

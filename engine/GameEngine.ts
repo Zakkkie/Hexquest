@@ -70,6 +70,7 @@ export class GameEngine {
       const nextState = createDraft(this._state);
       nextState.isPlayerGrowing = isGrowing;
       nextState.playerGrowthIntent = intent;
+      nextState.lastPlayerActionTime = Date.now();
       nextState.stateVersion++;
       this._state = finishDraft(nextState) as SessionState;
   }
@@ -79,6 +80,7 @@ export class GameEngine {
       const nextState = createDraft(this._state);
       nextState.gameStatus = 'PLAYING';
       nextState.sessionStartTime = Date.now();
+      nextState.lastPlayerActionTime = Date.now();
       nextState.stateVersion++;
       this._state = finishDraft(nextState) as SessionState;
   }
@@ -89,6 +91,10 @@ export class GameEngine {
     
     const validation = this._actionProcessor.validateAction(this._state, this._index, actorId, action);
     if (!validation.ok) return validation;
+
+    if (actorId === this._state.player.id) {
+        this._state.lastPlayerActionTime = Date.now();
+    }
 
     const priority = actorId === this._state.player.id ? 100 : 50;
     this._transactionQueue.enqueue({
@@ -111,6 +117,10 @@ export class GameEngine {
     const nextState = createDraft(this._state);
     
     try {
+        if (nextState.isPlayerGrowing) {
+            nextState.lastPlayerActionTime = Date.now();
+        }
+
         if (nextState.defense?.isDefenseMode) {
             const maxPlacedHexLevel = Object.values(nextState.grid).reduce((max, h) => Math.max(max, h.currentLevel ?? 0), 0);
             nextState.player.playerLevel = Math.max(1, maxPlacedHexLevel);
@@ -250,8 +260,6 @@ export class GameEngine {
                                 
                                 nextState.grid[chosenKey] = {
                                     ...hexToInfect,
-                                    currentLevel: 0,
-                                    maxLevel: 0,
                                     structureType: 'VOID',
                                     durability: undefined
                                 };

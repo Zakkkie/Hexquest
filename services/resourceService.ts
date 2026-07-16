@@ -49,6 +49,7 @@ class ResourceService {
         }
 
         const texture = generator();
+        (texture as any).__cacheKey = key;
         this.cache.set(key, texture);
 
         return texture;

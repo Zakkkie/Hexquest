@@ -65,7 +65,7 @@ export const series1Levels: LevelConfig[] = [
     objectiveHexes: [
       { q: 1, r: 0, targetLevel: 1, label: 'Build', color: 'amber' },
       { q: 2, r: 0, targetLevel: 2, label: 'Move', color: 'cyan' },
-      { q: 3, r: 0, targetLevel: 1, label: 'Dig', color: 'red' },
+      { q: 3, r: 0, targetLevel: 1, label: 'Dig', color: 'orange' },
       { q: 4, r: 0, targetLevel: 0, label: 'Move', color: 'cyan' },
       { q: 5, r: 0, targetLevel: 0, label: 'Checkpoint', color: 'amber' },
       { q: 6, r: 0, targetLevel: 1, label: 'Move', color: 'cyan' },
@@ -293,7 +293,7 @@ export const series1Levels: LevelConfig[] = [
       ]
     },
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 0, label: 'Goal', color: 'red' },
+      { q: 0, r: 0, targetLevel: 0, label: 'Goal', color: 'amber' },
     ],
     startState: { credits: 0, moves: 30, rank: 2, materials: 0, initialEntropy: 100 },
     aiMode: 'none',

@@ -268,7 +268,7 @@ export const runLocalRenderCalculation = (
 
         const isVoid = hex.structureType === 'VOID';
         const currentLevel = hex.currentLevel ?? 0;
-        const offsetY = isVoid ? -10 : getHeightOffset(isVoid ? 0 : currentLevel);
+        const offsetY = getHeightOffset(currentLevel);
 
         const isOccupiedByPlayer = hq === playerQ && hr === playerR;
         const neighborLevels = NEIGHBOR_DIRECTIONS.map(d => {
