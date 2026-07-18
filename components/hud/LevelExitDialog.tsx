@@ -96,20 +96,20 @@ export const LevelExitDialog: React.FC<LevelExitDialogProps> = ({
                         animate={{ scale: 1, y: 0, opacity: 1 }}
                         exit={{ scale: 0.9, y: 30, opacity: 0 }}
                         transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                        className="bg-slate-950/95 border-2 border-red-500/40 p-5 md:p-8 rounded-2xl shadow-[0_0_80px_rgba(239,68,68,0.3)] w-[92vw] max-w-[380px] md:max-w-md text-center relative overflow-hidden backdrop-blur-xl z-20 group"
+                        className="bg-slate-950/45 backdrop-blur-xl border border-red-500/25 p-5 md:p-8 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.15)] w-[92vw] max-w-[380px] md:max-w-md text-center relative overflow-hidden z-20 group"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Glowing neon top stripe */}
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 via-amber-500 to-red-500" />
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600/30 via-red-500/60 to-red-600/30 pointer-events-none" />
 
                         {/* Scanline pattern overlay */}
                         <div className="absolute inset-0 bg-scanlines opacity-[0.06] pointer-events-none" />
 
                         {/* Tech Corner notches */}
-                        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-red-500/60" />
-                        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-red-500/60" />
-                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-red-500/60" />
-                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-red-500/60" />
+                        <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-red-500/50 pointer-events-none" />
+                        <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-red-500/50 pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-red-500/50 pointer-events-none" />
+                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-red-500/50 pointer-events-none" />
 
                         {/* Interactive sweeping laser scan effect */}
                         <motion.div

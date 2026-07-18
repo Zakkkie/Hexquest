@@ -141,9 +141,9 @@ const CampaignLoading: React.FC = () => {
             <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent shadow-[0_0_20px_rgba(6,182,212,0.1)]" />
             
-            <div className="relative w-full max-w-xl px-12 z-10">
+            <div className="relative w-full max-w-xl p-6 xs:p-8 sm:p-10 z-10 bg-slate-950/45 backdrop-blur-xl border border-indigo-500/20 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.15)] mx-4">
                 {/* Header Section */}
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
                         <div className="relative">
                             <div className="absolute inset-0 bg-cyan-500/20 blur-lg rounded-full animate-pulse" />

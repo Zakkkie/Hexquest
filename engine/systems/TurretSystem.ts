@@ -17,7 +17,7 @@ export class TurretSystem implements System {
     this.recycleDeadBots(state, now, events);
 
     // 3. Process each turret firing
-    for (const key of Object.keys(grid)) {
+    for (const key in grid) {
       const cell = grid[key];
       if (cell.structureType === 'TURRET' || cell.isTurret) {
         // Enforce cooldown

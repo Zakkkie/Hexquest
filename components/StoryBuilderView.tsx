@@ -1643,6 +1643,7 @@ const StoryBuilderView: React.FC = () => {
                         <motion.button
                             initial={{ opacity: 0, scale: 0.95, y: -5 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
+                            style={{ paddingBottom: '10px', marginRight: '0px', marginTop: '-6px' }}
                             onClick={() => { playUiSound('CLICK'); openTerminal(); }}
                             className="w-full flex items-center gap-3 px-3.5 py-2.5 bg-slate-950/90 border border-indigo-500/30 hover:border-indigo-400 rounded-xl shadow-2xl backdrop-blur-md transition-all active:scale-98 group cursor-pointer text-left"
                         >
@@ -2092,7 +2093,7 @@ const StoryBuilderView: React.FC = () => {
                                 id="tutorial-levels-btn"
                                 initial={{ y: 20, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
-                                style={{ marginTop: '0px', marginBottom: '-9px' }}
+                                style={{ marginTop: '0px', marginBottom: '-6px' }}
                                 onClick={() => { playUiSound('CLICK'); setUIState('CAMPAIGN_MAP'); }}
                                 className="px-5 py-2.5 bg-gradient-to-r rounded-xl backdrop-blur-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2 from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-indigo-200 hover:text-white shadow-[0_4px_25px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]"
                             >

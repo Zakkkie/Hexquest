@@ -297,6 +297,9 @@ export const createGameplaySlice = (
         currentWave: 1,
         maxWaves: siegeIndex,
       };
+      
+      // Force briefing state initially for explanation of core defense rules
+      initialSessionState.gameStatus = 'BRIEFING';
 
       // Set initial player rank equal to maximum placed hex level
       const maxPlacedHexLevel = Object.values(finalGrid).reduce((max: number, h: any) => Math.max(max, h.currentLevel ?? 0), 0);

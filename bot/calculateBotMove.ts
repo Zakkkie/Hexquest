@@ -79,7 +79,8 @@ const executeStep = (
     monument: Hex | null,
     claimedSet: Set<string>,
     allBots: Entity[],
-    reachable: Set<string>
+    reachable: Set<string>,
+    player: Entity
 ): AiResult | 'STEP_DONE' | 'STEP_FAILED' => {
     if (step.type === 'RECOVER') {
         if (!bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID') return { action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'RECOVER', stateVersion }, debug: 'Recover', memory: mem };
@@ -106,6 +107,20 @@ const executeStep = (
         const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles, hasVoidCore, false, true);
         const path = pathResult.path;
         if (!path || path.length === 0) {
+            const testPathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, [], hasVoidCore, false, true);
+            if (testPathResult.path && testPathResult.path.length > 0) {
+                const nextStep = testPathResult.path[0];
+                const isBlockedByEntity = allBots.some(b => b.q === nextStep.q && b.r === nextStep.r) || (player.q === nextStep.q && player.r === nextStep.r);
+                if (isBlockedByEntity) {
+                    return { action: { type: 'WAIT', stateVersion }, debug: 'WaitPeer', memory: mem };
+                } else {
+                    const cost = calculateMovementCost(bot, [nextStep], grid);
+                    if (cost.canAfford) {
+                        return { action: { type: 'MOVE', path: [nextStep], stateVersion }, debug: 'QueueMove', memory: { ...mem, waitStreak: 0 } };
+                    }
+                }
+            }
+
             if (cubeDistance(bot, target) === 1 && bot.storage > 0) {
                 const ch = currentHex(bot, grid);
                 if (ch && target.maxLevel > ch.maxLevel + 1 && checkGrowthCondition(ch, bot, getNeighbors(bot.q, bot.r), grid, navObstacles).canGrow) {
@@ -321,7 +336,7 @@ export const calculateBotMove = (
     }
 
     while (mem.plan && mem.plan.steps.length > 0) {
-        const result = executeStep(mem.plan.steps[0], bot, grid, index, navObs, stateVersion, mem, monument, claimed, bots, getReachable());
+        const result = executeStep(mem.plan.steps[0], bot, grid, index, navObs, stateVersion, mem, monument, claimed, bots, getReachable(), player);
         
         if (result === 'STEP_DONE') { 
             mem.plan.steps.shift(); 

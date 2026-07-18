@@ -92,14 +92,6 @@ const SkirmishHintBanner: React.FC = () => {
         return { progressPercent: avgPercent, rankPercent: rp, coinsPercent: cp };
     }, [winCondition, player]);
 
-    // Background gradient states depending on status
-    const themeColor = useMemo(() => {
-        if (isAccomplished) {
-            return 'from-emerald-500/15 to-teal-500/5 hover:border-emerald-500/40 border-slate-800 text-emerald-300';
-        }
-        return 'from-indigo-500/10 to-purple-500/5 hover:border-indigo-500/40 border-slate-800 text-indigo-300';
-    }, [isAccomplished]);
-
     const { isCollapsed, setIsCollapsed, handleToggleCollapse } = useCollapsibleHint(progressText, playUiSound);
 
     // Auto-minimize expanded banner on global click/touch outside
@@ -137,11 +129,22 @@ const SkirmishHintBanner: React.FC = () => {
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.2 }}
                     onClick={handleToggleCollapse}
-                    className={`pointer-events-auto cursor-pointer w-full p-2.5 rounded-xl border bg-slate-950/90 backdrop-blur-md shadow-lg flex items-center justify-between gap-3 text-white transition-all select-none group bg-gradient-to-r ${themeColor}`}
+                    className={`pointer-events-auto cursor-pointer w-full p-2.5 rounded-xl border bg-slate-950/45 backdrop-blur-xl shadow-[0_0_50px_rgba(99,102,241,0.05)] flex items-center justify-between gap-3 text-white transition-all select-none group relative overflow-hidden ${
+                        isAccomplished ? 'border-emerald-500/25 text-emerald-300' : 'border-indigo-500/25 text-indigo-300'
+                    }`}
                     title={language === 'RU' ? 'Развернуть' : 'Expand'}
                 >
-                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <div className="p-1.5 rounded-lg bg-slate-900/95 border border-slate-800 shrink-0">
+                    {/* Corner decors */}
+                    <div className={`absolute top-0 left-0 w-2.5 h-2.5 border-t border-l pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
+                    <div className={`absolute top-0 right-0 w-2.5 h-2.5 border-t border-r pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
+                    <div className={`absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
+                    <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
+
+                    {/* Scanlines layer */}
+                    <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
+
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0 relative z-10">
+                        <div className="p-1.5 rounded-lg bg-slate-950/60 border border-white/5 shrink-0">
                             {isAccomplished ? (
                                 <Trophy className="w-4 h-4 text-emerald-400 animate-bounce" />
                             ) : (
@@ -153,13 +156,13 @@ const SkirmishHintBanner: React.FC = () => {
                                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 truncate">
                                     {title}
                                 </span>
-                                <span className={`text-[10px] font-mono font-bold whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800/60 leading-none ${isAccomplished ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                <span className={`text-[10px] font-mono font-bold whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-950/60 border border-white/5 leading-none ${isAccomplished ? 'text-emerald-400' : 'text-amber-450'}`}>
                                     {isAccomplished ? (language === 'RU' ? 'ВЫПОЛНЕНО' : 'COMPLETE') : `${Math.floor(progressPercent)}%`}
                                 </span>
                             </div>
                             
                             {/* Horizontal progress bar */}
-                            <div className="w-full bg-slate-950 h-1.5 rounded-full mt-2 overflow-hidden border border-slate-800/65">
+                            <div className="w-full bg-slate-950/60 h-1.5 rounded-full mt-2 overflow-hidden border border-white/5">
                                 <div 
                                     className={`h-full rounded-full transition-all duration-500 ${isAccomplished ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                                     style={{ width: `${progressPercent}%` }}
@@ -168,7 +171,7 @@ const SkirmishHintBanner: React.FC = () => {
                         </div>
                     </div>
                     {/* Expand indicator */}
-                    <div className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-400 group-hover:text-white transition-colors shrink-0 flex items-center justify-center">
+                    <div className="p-1 rounded bg-slate-950/60 border border-white/5 text-slate-400 group-hover:text-white transition-colors shrink-0 flex items-center justify-center relative z-10">
                         <ChevronDown className="w-3.5 h-3.5" />
                     </div>
                 </motion.div>
@@ -182,11 +185,22 @@ const SkirmishHintBanner: React.FC = () => {
                     className="pointer-events-auto w-full"
                     id="skirmish-hint-banner-expanded"
                 >
-                    <div className={`p-4 rounded-xl border bg-slate-950/92 backdrop-blur-md shadow-2xl flex flex-col gap-3 transition-all duration-300 relative overflow-hidden group border-slate-800/70`}>
+                    <div className={`p-4 rounded-xl border bg-slate-950/45 backdrop-blur-xl shadow-[0_0_50px_rgba(99,102,241,0.15)] flex flex-col gap-3 transition-all duration-300 relative overflow-hidden group ${
+                        isAccomplished ? 'border-emerald-500/25' : 'border-indigo-500/25'
+                    }`}>
+                        {/* Corner decors */}
+                        <div className={`absolute top-0 left-0 w-3 h-3 border-t border-l pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
+                        <div className={`absolute top-0 right-0 w-3 h-3 border-t border-r pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
+                        <div className={`absolute bottom-0 left-0 w-3 h-3 border-b border-l pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
+                        <div className={`absolute bottom-0 right-0 w-3 h-3 border-b border-r pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
+
+                        {/* Scanlines layer */}
+                        <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
+
                         {/* Header container */}
-                        <div className="flex items-center justify-between gap-2.5 border-b border-slate-900 pb-2.5">
+                        <div className="flex items-center justify-between gap-2.5 border-b border-white/5 pb-2.5 relative z-10">
                             <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                <div className="p-1.5 rounded-lg bg-slate-900/95 border border-slate-800 shrink-0">
+                                <div className="p-1.5 rounded-lg bg-slate-950/60 border border-white/5 shrink-0">
                                     {isAccomplished ? (
                                         <Trophy className="w-5 h-5 text-emerald-400 animate-bounce" />
                                     ) : (
@@ -206,7 +220,7 @@ const SkirmishHintBanner: React.FC = () => {
                             {/* Collapse Button */}
                             <button 
                                 onClick={handleToggleCollapse}
-                                className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
+                                className="p-1 rounded bg-slate-950/60 border border-white/5 text-slate-400 hover:text-white hover:bg-slate-800 transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
                                 title={language === 'RU' ? 'Свернуть' : 'Collapse'}
                             >
                                 <ChevronUp className="w-3.5 h-3.5" />
@@ -214,12 +228,12 @@ const SkirmishHintBanner: React.FC = () => {
                         </div>
 
                         {/* Text explanation */}
-                        <p className="text-xs text-slate-200 font-medium leading-relaxed font-mono">
+                        <p className="text-xs text-slate-200 font-medium leading-relaxed font-mono relative z-10">
                             {progressText}
                         </p>
 
                         {/* Rich Split Progress bar for Rank & Credits if WinType is and/or */}
-                        <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-slate-900/50 border border-slate-800/80 mt-0.5">
+                        <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-slate-950/40 border border-white/5 mt-0.5 relative z-10">
                             {/* Rank Tracker */}
                             <div className="flex flex-col gap-1">
                                 <div className="flex items-center justify-between text-[10px] font-mono font-bold leading-none">
@@ -228,7 +242,7 @@ const SkirmishHintBanner: React.FC = () => {
                                         {player.playerLevel} / {winCondition.targetLevel}
                                     </span>
                                 </div>
-                                <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-900/70">
+                                <div className="w-full bg-slate-950/60 h-1.5 rounded-full overflow-hidden border border-white/5">
                                     <div 
                                         className={`h-full rounded-full transition-all duration-500 ${player.playerLevel >= winCondition.targetLevel ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                                         style={{ width: `${rankPercent}%` }}
@@ -238,14 +252,14 @@ const SkirmishHintBanner: React.FC = () => {
 
                             {/* Coin/Credits Tracker */}
                             {winCondition.targetCoins > 0 && (
-                                <div className="flex flex-col gap-1 border-t border-slate-950/20 pt-1.5">
+                                <div className="flex flex-col gap-1 border-t border-white/5 pt-1.5">
                                     <div className="flex items-center justify-between text-[10px] font-mono font-bold leading-none">
                                         <span className="text-slate-400 uppercase">{language === 'RU' ? 'КРЕДИТНЫЙ БАЛАНС' : 'CREDIT BALANCE'}</span>
-                                        <span className={player.coins >= winCondition.targetCoins ? 'text-emerald-400' : 'text-amber-450'}>
+                                        <span className={player.coins >= winCondition.targetCoins ? 'text-emerald-400' : 'text-indigo-400'}>
                                             {player.coins} / {winCondition.targetCoins}
                                         </span>
                                     </div>
-                                    <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-900/70">
+                                    <div className="w-full bg-slate-950/60 h-1.5 rounded-full overflow-hidden border border-white/5">
                                         <div 
                                             className={`h-full rounded-full transition-all duration-500 ${player.coins >= winCondition.targetCoins ? 'bg-emerald-500' : 'bg-amber-500'}`}
                                             style={{ width: `${coinsPercent}%` }}
@@ -255,7 +269,7 @@ const SkirmishHintBanner: React.FC = () => {
                             )}
                         </div>
 
-                        <span className="text-[8.5px] text-slate-500 font-bold uppercase tracking-wider font-mono select-none flex items-center gap-1.5">
+                        <span className="text-[8.5px] text-slate-500 font-bold uppercase tracking-wider font-mono select-none flex items-center gap-1.5 relative z-10">
                             <HelpCircle className="w-3 h-3 text-slate-600" /> 
                             {language === 'RU' ? 'Выполните требования для активации выхода' : 'Meet the parameters to establish exit portal trace'}
                         </span>

@@ -2282,7 +2282,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         icon = '⎔'; // Hex Nucleus Core
                         colorVal = '#ec4899'; // Pink
                     } else if (props.structureType === 'TURRET' || props.isTurret) {
-                        icon = '⌖'; // Target Reticle / Turret
+                        icon = ''; // Bypassed: rendered as 3D graphics model below
                         colorVal = '#a855f7'; // Purple
                     } else {
                         icon = getPoiIcon(props.poiType || '');
@@ -2308,9 +2308,63 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         emojiLayer.style.fill = colorVal;
                     }
                     emojiLayer.y = faceY - 5;
-                    emojiLayer.visible = true;
+                    emojiLayer.visible = icon !== '';
                 } else {
                     if (emojiLayer) emojiLayer.visible = false;
+                }
+
+                // Render 3D Custom Turret Model (PIXI.Graphics)
+                let turretLayer = curContainer.getChildByName('turret3d') as PIXI.Graphics;
+                if (isRevealed && (props.structureType === 'TURRET' || props.isTurret)) {
+                    if (!turretLayer) {
+                        turretLayer = new PIXI.Graphics();
+                        turretLayer.name = 'turret3d';
+                        turretLayer.zIndex = 32;
+                        curContainer.addChild(turretLayer);
+                    }
+                    turretLayer.clear();
+                    
+                    const cx = 0;
+                    const cy = faceY - 6;
+
+                    // 1. Sleek elliptical base ring with high-contrast glowing outline
+                    turretLayer.ellipse(cx, cy, 13, 7.5);
+                    turretLayer.fill({ color: 0x1e293b }); // slate-800
+                    turretLayer.stroke({ color: 0xa855f7, width: 2 }); // purple pulse outline
+
+                    // 2. High-tech supporting vertical bracket column
+                    turretLayer.rect(cx - 3, cy - 13, 6, 13);
+                    turretLayer.fill({ color: 0x334155 }); // slate-700
+                    turretLayer.stroke({ color: 0x475569, width: 1 }); // slate-600
+
+                    // 3. Round swivel-head mount
+                    turretLayer.circle(cx, cy - 13, 7);
+                    turretLayer.fill({ color: 0x6b21a8 }); // purple-800
+                    turretLayer.stroke({ color: 0xd8b4fe, width: 1 }); // purple-300 highlights
+
+                    // 4. Twin high-tech plasma barrels pointing up and forward
+                    turretLayer.rect(cx - 5, cy - 22, 3.2, 10);
+                    turretLayer.fill({ color: 0x0f172a }); // slate-900 (dark gunmetal)
+                    turretLayer.stroke({ color: 0x3b0764, width: 0.8 }); // deep purple border
+                    
+                    turretLayer.rect(cx + 1.8, cy - 22, 3.2, 10);
+                    turretLayer.fill({ color: 0x0f172a }); // slate-900
+                    turretLayer.stroke({ color: 0x3b0764, width: 0.8 }); // deep purple border
+
+                    // 5. Glowing charge energy core on the barrels (plasma tips)
+                    turretLayer.circle(cx - 3.4, cy - 22, 1.6);
+                    turretLayer.fill({ color: 0xf3e8ff }); // bright lilac glow
+
+                    turretLayer.circle(cx + 3.4, cy - 22, 1.6);
+                    turretLayer.fill({ color: 0xf3e8ff }); // bright lilac glow
+
+                    // Core lens glow
+                    turretLayer.circle(cx, cy - 13, 2.5);
+                    turretLayer.fill({ color: 0xd8b4fe }); // glowing purple core center
+
+                    turretLayer.visible = true;
+                } else {
+                    if (turretLayer) turretLayer.visible = false;
                 }
 
                 // Render dynamic campaign objective arrows/indicators

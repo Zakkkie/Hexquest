@@ -122,7 +122,13 @@ export class GameEngine {
         }
 
         if (nextState.defense?.isDefenseMode) {
-            const maxPlacedHexLevel = Object.values(nextState.grid).reduce((max, h) => Math.max(max, h.currentLevel ?? 0), 0);
+            let maxPlacedHexLevel = 0;
+            for (const key in nextState.grid) {
+                const lvl = nextState.grid[key].currentLevel ?? 0;
+                if (lvl > maxPlacedHexLevel) {
+                    maxPlacedHexLevel = lvl;
+                }
+            }
             nextState.player.playerLevel = Math.max(1, maxPlacedHexLevel);
         }
 
@@ -285,7 +291,13 @@ export class GameEngine {
         }
 
         if (nextState.defense?.isDefenseMode) {
-            const maxPlacedHexLevel = Object.values(nextState.grid).reduce((max, h) => Math.max(max, h.currentLevel ?? 0), 0);
+            let maxPlacedHexLevel = 0;
+            for (const key in nextState.grid) {
+                const lvl = nextState.grid[key].currentLevel ?? 0;
+                if (lvl > maxPlacedHexLevel) {
+                    maxPlacedHexLevel = lvl;
+                }
+            }
             nextState.player.playerLevel = Math.max(1, maxPlacedHexLevel);
         }
 

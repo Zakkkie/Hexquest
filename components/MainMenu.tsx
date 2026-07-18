@@ -406,7 +406,6 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
     );
 };
 
-// Premium Menu Action Button
 const MenuButton: React.FC<{ 
   onClick: () => void; 
   icon: React.ReactNode; 
@@ -416,6 +415,18 @@ const MenuButton: React.FC<{
   className?: string;
   style?: React.CSSProperties;
 }> = ({ onClick, icon, label, subLabel, variant = 'default', className = '', style }) => {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setCoords({ x, y });
+  };
+
   const getStyle = () => {
     switch(variant) {
       case 'primary': 
@@ -455,9 +466,24 @@ const MenuButton: React.FC<{
     }
   };
 
+  const getSpotlightColor = () => {
+    switch(variant) {
+      case 'primary': return 'rgba(99,102,241,0.12)';
+      case 'campaign': return 'rgba(168,85,247,0.12)';
+      case 'battle': return 'rgba(244,63,94,0.12)';
+      case 'resume': return 'rgba(245,158,11,0.12)';
+      case 'danger': return 'rgba(239,68,68,0.1)';
+      default: return 'rgba(129,140,248,0.08)';
+    }
+  };
+
   return (
     <motion.button 
+      ref={buttonRef}
       onClick={onClick}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       whileHover={{ scale: 1.02, x: 4 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 350, damping: 14 }}
@@ -466,6 +492,22 @@ const MenuButton: React.FC<{
     >
       {/* Visual left accent light strip */}
       <div className={`absolute left-0 top-0 bottom-0 w-[4px] transition-all duration-300 ${getLedColor()}`} />
+
+      {/* Interactive Spotlight Radial Glow */}
+      <AnimatePresence>
+        {isHovered && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+            style={{
+              background: `radial-gradient(130px circle at ${coords.x}px ${coords.y}px, ${getSpotlightColor()}, transparent)`,
+              mixBlendMode: 'screen'
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       <div className={`p-3 rounded-xl transition-all duration-300 relative z-10 ${getIconStyle()}`}>
         {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-5 h-5 md:w-5 md:h-5 drop-shadow-md' })}
@@ -483,7 +525,7 @@ const MenuButton: React.FC<{
       </div>
       
       {/* Right chevron interactive layout accent */}
-      <div className="ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300 text-white/50">
+      <div className="ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300 text-white/50 relative z-10">
         <ChevronRight className="w-4 h-4" />
       </div>
 
@@ -542,6 +584,25 @@ const MainMenu: React.FC = () => {
 
   // Entrance animations state
   const [logoVisible, setLogoVisible] = useState(false);
+
+  // Background Parallax Offset State
+  const [parallaxOffset, setParallaxOffset] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (isLiteMode) {
+      setParallaxOffset({ x: 0, y: 0 });
+      return;
+    }
+    const handleMouseMove = (e: MouseEvent) => {
+      const { innerWidth, innerHeight } = window;
+      const x = (e.clientX / innerWidth - 0.5) * 18; 
+      const y = (e.clientY / innerHeight - 0.5) * 18;
+      setParallaxOffset({ x, y });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [isLiteMode]);
 
   // Config State
   const [selectedTier, setSelectedTier] = useState<1 | 2 | 3>(1);
@@ -781,11 +842,20 @@ const MainMenu: React.FC = () => {
   return (
     <div className="relative w-full h-full flex items-center justify-center pointer-events-auto overflow-hidden font-sans">
       <MainMenuStyleBlock />
-      {/* Background Ambience Layering */}
-      <NebulaBackground />
-      <GridAtmosphere />
-      <FloatingHexagons />
-      <FloatingParticles />
+      {/* Background Ambience Layering with Hardware-Accelerated 3D Parallax */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          transform: `translate3d(${parallaxOffset.x}px, ${parallaxOffset.y}px, 0)`,
+          transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)',
+          willChange: 'transform'
+        }}
+      >
+        <NebulaBackground />
+        <GridAtmosphere />
+        <FloatingHexagons />
+        <FloatingParticles />
+      </div>
       
       {/* TOP SYSTEM NAV BAR */}
       <div className="absolute top-0 left-0 w-full p-4 md:p-6 pt-[calc(env(safe-area-inset-top)+14px)] flex justify-between items-center z-50 pointer-events-auto">
@@ -951,55 +1021,95 @@ const MainMenu: React.FC = () => {
             className="md:col-span-6 lg:col-span-7 flex flex-col items-center md:items-start text-center md:text-left select-none relative"
         >
             {/* Rotating Tech HUD and Hologram Core */}
-            <div className="relative w-28 h-28 md:w-36 md:h-36 mb-5 flex items-center justify-center select-none group">
+            <motion.div 
+                whileHover="hover"
+                className="relative w-28 h-28 md:w-36 md:h-36 mb-5 flex items-center justify-center select-none group cursor-pointer"
+            >
                 {/* Background glow shadow */}
                 <div className="absolute w-32 h-32 md:w-44 md:h-44 bg-indigo-500/20 blur-[30px] md:blur-[45px] rounded-full animate-[pulse_4s_ease-in-out_infinite]" />
 
                 {/* Rotating Outer Ring Slices */}
-                <svg className="absolute w-full h-full animate-[spin_25s_linear_infinite]" viewBox="0 0 100 100">
+                <motion.svg 
+                    variants={{
+                        hover: { rotate: 360, transition: { duration: 15, repeat: Infinity, ease: "linear" } }
+                    }}
+                    className="absolute w-full h-full animate-[spin_25s_linear_infinite]" 
+                    viewBox="0 0 100 100"
+                >
                     <circle cx="50" cy="50" r="44" stroke="#4f46e5" strokeWidth="1.2" strokeDasharray="6 8 36 8 16 12" fill="none" opacity="0.4" />
                     <circle cx="50" cy="50" r="44" stroke="#c084fc" strokeWidth="2" strokeDasharray="2 18" fill="none" opacity="0.6" />
-                </svg>
+                </motion.svg>
 
                 {/* Counter-Clockwise Dotted Ring */}
-                <div className="absolute inset-1.5 border border-dotted border-indigo-400/30 rounded-full animate-[spin_12s_linear_infinite_reverse]" />
+                <motion.div 
+                    variants={{
+                        hover: { rotate: -360, transition: { duration: 8, repeat: Infinity, ease: "linear" } }
+                    }}
+                    className="absolute inset-1.5 border border-dotted border-indigo-400/30 rounded-full animate-[spin_12s_linear_infinite_reverse]" 
+                />
 
                 {/* Inner Compass Ticks */}
                 <div className="absolute inset-3 border border-dashed border-indigo-500/20 rounded-full animate-[spin_18s_linear_infinite]" />
 
                 {/* Central Hexagonal Core with Hologram */}
-                <div className="relative z-10 p-1 bg-[#060714]/90 rounded-2xl border-2 border-indigo-500/40 shadow-[inset_0_0_15px_rgba(99,102,241,0.4)] transition-all duration-500 group-hover:scale-105 group-hover:border-indigo-400">
+                <motion.div 
+                    variants={{
+                        hover: { scale: 1.1, borderColor: "rgba(129, 140, 248, 0.8)", boxShadow: "0 0 20px rgba(99, 102, 241, 0.6)" }
+                    }}
+                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                    className="relative z-10 p-1 bg-[#060714]/90 rounded-2xl border-2 border-indigo-500/40 shadow-[inset_0_0_15px_rgba(99,102,241,0.4)] transition-all duration-300"
+                >
                     <Hexagon className="w-14 h-14 md:w-16 md:h-16 text-indigo-400 drop-shadow-[0_0_12px_rgba(99,102,241,0.6)] fill-indigo-950/50" strokeWidth={1} />
                     <div className="absolute inset-0 flex items-center justify-center animate-pulse">
                         <Target className="w-5 h-5 md:w-6 md:h-6 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Tactical HUD markings */}
                 <div className="absolute top-1 left-1 text-[7px] text-indigo-400/40 font-mono">X+12.4</div>
                 <div className="absolute bottom-1 right-1 text-[7px] text-indigo-400/40 font-mono">Y-45.9</div>
-            </div>
+            </motion.div>
 
             {/* Typography & Title */}
             <div className="flex flex-col items-center md:items-start mt-2 relative">
                 <div className="relative flex items-center">
                     <span className="hidden md:inline-block text-indigo-500/30 text-4xl lg:text-5xl font-mono mr-3 select-none leading-none animate-pulse">[</span>
                     
-                    <h1 
-                        className="relative text-5xl sm:text-6xl md:text-5xl lg:text-7xl xl:text-8xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-indigo-50 to-indigo-200 select-none uppercase"
-                        style={{ 
-                            WebkitTextStroke: '1.2px rgba(255,255,255,0.22)',
-                            filter: 'drop-shadow(0 0 15px rgba(99,102,241,0.35))'
-                        }}
-                    >
-                        {t.TITLE}
+                    <h1 className="relative flex select-none uppercase font-black italic tracking-tighter">
+                        {Array.from(t.TITLE || "HEXQUEST").map((char, index) => (
+                          <motion.span
+                            key={index}
+                            initial={{ opacity: 0, y: 15, rotateX: -45 }}
+                            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 140,
+                              damping: 12,
+                              delay: index * 0.04 + 0.15
+                            }}
+                            whileHover={{ 
+                              scale: 1.15, 
+                              y: -4,
+                              color: '#818cf8',
+                              textShadow: '0 0 20px rgba(129, 140, 248, 0.8)',
+                              transition: { type: "spring", stiffness: 300, damping: 10 } 
+                            }}
+                            className="inline-block text-5xl sm:text-6xl md:text-5xl lg:text-7xl xl:text-8xl text-transparent bg-clip-text bg-gradient-to-b from-white via-indigo-50 to-indigo-200 cursor-default"
+                            style={{ 
+                              WebkitTextStroke: '1.2px rgba(255,255,255,0.25)',
+                              filter: 'drop-shadow(0 0 12px rgba(99,102,241,0.3))'
+                            }}
+                          >
+                            {char === ' ' ? '\u00A0' : char}
+                          </motion.span>
+                        ))}
                         
                         {/* Scanning Gloss Glint */}
                         <motion.div 
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent pointer-events-none mix-blend-color-dodge"
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent pointer-events-none mix-blend-color-dodge"
                             initial={{ x: '-100%', skewX: -20 }}
                             animate={{ x: '200%' }}
-                            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut", repeatDelay: 1 }}
+                            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut", repeatDelay: 1.5 }}
                         />
                     </h1>
 
@@ -1105,23 +1215,23 @@ const MainMenu: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/85 backdrop-blur-xl z-50 flex items-center justify-center p-4 pointer-events-auto"
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-xl z-50 flex items-center justify-center p-4 pointer-events-auto"
         >
           <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ type: "spring", damping: 25, stiffness: 280 }}
-              className="bg-[#060712] border-2 border-indigo-500/35 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-sm relative overflow-hidden flex flex-col"
+              className="bg-slate-950/45 border border-indigo-500/25 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.15)] w-full max-w-sm relative overflow-hidden flex flex-col backdrop-blur-xl"
           >
               {/* Corner decors */}
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/40 pointer-events-none" />
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/40 pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/40 pointer-events-none" />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/40 pointer-events-none" />
+              <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-indigo-500/40 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-indigo-500/40 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-indigo-500/40 pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-indigo-500/40 pointer-events-none" />
 
               {/* Scanlines layer */}
-              <div className="absolute inset-0 bg-scanlines opacity-5 pointer-events-none" />
+              <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
               
             {/* Modal tab navigation */}
             <div className="grid grid-cols-2 border-b border-indigo-500/20 bg-[#0d0f22]/60 shrink-0">
@@ -1274,7 +1384,7 @@ const MainMenu: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 pointer-events-auto"
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-xl z-[60] flex items-center justify-center p-4 pointer-events-auto"
             onClick={cancelConfirmAction}
           >
             <motion.div 
@@ -1282,8 +1392,16 @@ const MainMenu: React.FC = () => {
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.95, y: 10 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-[#0b0c16] border border-indigo-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative text-center"
+                className="bg-slate-950/45 border border-amber-500/25 rounded-2xl p-6 max-w-sm w-full shadow-[0_0_50px_rgba(245,158,11,0.15)] relative text-center backdrop-blur-xl overflow-hidden"
             >
+                {/* Corner decors */}
+                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40 pointer-events-none" />
+                <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-amber-500/40 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-amber-500/40 pointer-events-none" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/40 pointer-events-none" />
+
+                {/* Scanlines layer */}
+                <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
                 <div className="w-12 h-12 rounded-full border-2 border-amber-500/30 flex items-center justify-center mx-auto mb-3 bg-amber-500/10 animate-bounce">
                     <span className="text-amber-500 text-xl font-bold font-mono">!</span>
                 </div>
@@ -1325,22 +1443,25 @@ const MainMenu: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-slate-950/75 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 pointer-events-auto"
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-xl z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 pointer-events-auto"
         >
           <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ type: "spring", damping: 25, stiffness: 280 }}
-              className="bg-[#0b0c1e]/65 border border-white/10 md:border-indigo-500/30 backdrop-blur-xl md:backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_0_50px_rgba(79,70,229,0.25)] w-full max-w-md sm:max-w-xl md:max-w-3xl h-full sm:h-auto max-h-[92vh] sm:max-h-[85vh] md:max-h-[90vh] relative overflow-hidden flex flex-col transition-all duration-300"
+              className="bg-slate-950/45 border border-indigo-500/25 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-[0_0_50px_rgba(99,102,241,0.15)] w-full max-w-md sm:max-w-xl md:max-w-3xl h-full sm:h-auto max-h-[92vh] sm:max-h-[85vh] md:max-h-[90vh] relative overflow-hidden flex flex-col transition-all duration-300"
           >
               <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/10 blur-[60px] rounded-full pointer-events-none" />
               <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-rose-500/10 blur-[60px] rounded-full pointer-events-none" />
 
-              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-indigo-500/50 pointer-events-none rounded-tl-2xl sm:rounded-tl-3xl" />
-              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-indigo-500/50 pointer-events-none rounded-tr-2xl sm:rounded-tr-3xl" />
-              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-indigo-500/50 pointer-events-none rounded-bl-2xl sm:rounded-bl-3xl" />
-              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-indigo-500/50 pointer-events-none rounded-br-2xl sm:rounded-br-3xl" />
+              <div className="absolute top-0 left-0 w-6 h-6 border-t border-l border-indigo-500/40 pointer-events-none rounded-tl-2xl sm:rounded-tl-3xl" />
+              <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-indigo-500/40 pointer-events-none rounded-tr-2xl sm:rounded-tr-3xl" />
+              <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-indigo-500/40 pointer-events-none rounded-bl-2xl sm:rounded-bl-3xl" />
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-indigo-500/40 pointer-events-none rounded-br-2xl sm:rounded-br-3xl" />
+
+              {/* Scanlines layer */}
+              <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
 
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-white/5 md:border-indigo-500/20 bg-white/2 backdrop-blur-md shrink-0">

@@ -331,13 +331,17 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
     if (step === 0) {
         return (
             <div className="w-full bg-slate-950/80 rounded-xl border border-white/5 relative p-2 sm:p-2.5 flex flex-col items-center justify-center overflow-hidden font-mono text-[9px] select-none h-24 sm:h-28 md:h-32 my-1">
-                <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 sm:mb-2 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px]">
+                {/* Tactical grid background overlay */}
+                <div className="absolute inset-0 bg-grid-pattern opacity-15 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/20 pointer-events-none" />
+                
+                <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 sm:mb-2 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px] relative z-10">
                     <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                     {isRu ? 'ВЫСОТА И ЦВЕТ ГЕКСАГРАММЫ (0...9)' : 'HEXAGON HEIGHT & COLORS (0...9)'}
                 </div>
                 
                 {/* Visual carousel list with click animation using high-fidelity hexagons */}
-                <div className="relative flex gap-3 sm:gap-4 items-center justify-center w-full h-12 sm:h-16 md:h-20 mt-1">
+                <div className="relative flex gap-3 sm:gap-4 items-center justify-center w-full h-12 sm:h-16 md:h-20 mt-1 z-10">
                     {[0, 1, 2, 3].map((lvl) => {
                         const isSel = lvl === 2;
                         return (
@@ -458,18 +462,31 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
     if (step === 2) {
         return (
             <div className="w-full bg-slate-950/80 rounded-xl border border-white/5 relative p-2 sm:p-2.5 flex flex-col items-center justify-center overflow-hidden font-mono text-[9px] select-none h-24 sm:h-28 md:h-32 my-1">
-                <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px]">
+                {/* Advanced Neon Blueprint background */}
+                <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.08]">
+                    <svg className="w-full h-full rotate-12" viewBox="0 0 100 100">
+                        <polygon points="50,15 80,32 80,68 50,85 20,68 20,32" fill="none" stroke="#6366f1" strokeWidth="2" />
+                        <line x1="50" y1="15" x2="50" y2="85" stroke="#6366f1" strokeWidth="1" />
+                        <line x1="20" y1="32" x2="80" y2="68" stroke="#6366f1" strokeWidth="1" />
+                        <line x1="20" y1="68" x2="80" y2="32" stroke="#6366f1" strokeWidth="1" />
+                        <circle cx="50" cy="50" r="25" fill="none" stroke="#6366f1" strokeWidth="1" strokeDasharray="3,3" />
+                    </svg>
+                </div>
+
+                <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px] relative z-10">
                     <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
-                    {isRu ? 'ОТЛИСТАЕМ НАЗАД: СВОБОДА ПРОЕКТИРОВАНИЯ' : 'FREE SANDBOX BUILDING'}
+                    {isRu ? 'СВОБОДА ПРОЕКТИРОВАНИЯ И ИНЖЕНЕРИИ' : 'FREE SANDBOX BUILDING'}
                 </div>
                 
-                <div className="flex items-center justify-center gap-2 sm:gap-4 w-full flex-1 mt-1 text-slate-400 leading-tight">
+                <div className="flex items-center justify-center gap-2 sm:gap-4 w-full flex-1 mt-1 text-slate-300 leading-tight relative z-10">
                     <div className="flex flex-col items-center">
-                        <div className="text-center font-sans tracking-wide text-indigo-300 font-black text-[10px]">
-                            {isRu ? 'Никаких шаблонов!' : 'No Blueprints!'}
+                        <div className="text-center font-sans tracking-wide text-indigo-300 font-black text-[11px] uppercase">
+                            {isRu ? 'Полный Креатив!' : 'Total Creative Freedom!'}
                         </div>
-                        <div className="text-center mt-1">
-                             {isRu ? 'Вы сами контролируете' : 'You are entirely in'} <br/> {isRu ? 'процесс своей базы' : 'control of your base'}
+                        <div className="text-center mt-1 text-[10px] text-slate-400">
+                             {isRu ? 'Стройте и сносите блоки без чертежей.' : 'Erect and level blocks free of instructions.'} <br/> 
+                             {isRu ? 'Конструируйте защитный периметр.' : 'Design custom high-rise strongholds.'}
                         </div>
                     </div>
                 </div>
@@ -549,6 +566,95 @@ const TutorialVisualDemo: React.FC<{ step: number; language: string }> = ({ step
                     {/* Node 2 */}
                     <div className="relative">
                         <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-indigo-950/40 border border-indigo-500/20 flex items-center justify-center text-[6.5px] sm:text-[7.5px] text-indigo-400">1.2</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 5) {
+        return (
+            <div className="w-full bg-slate-950/80 rounded-xl border border-white/5 relative p-2 sm:p-2.5 flex flex-col items-center justify-center overflow-hidden font-mono text-[9px] select-none h-24 sm:h-28 md:h-32 my-1">
+                {/* Attack / Warning pulse background overlay */}
+                <div className="absolute inset-0 bg-red-950/5 pointer-events-none" />
+                <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
+                
+                <div className="text-slate-400 font-extrabold uppercase tracking-widest mb-1 sm:mb-2 flex items-center gap-1.5 self-start text-[7.5px] sm:text-[9px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                    {isRu ? 'ОБОРОНА ЯДРА И АТАКИ БОТОВ' : 'CORE SHIELD & BOT SIEGE'}
+                </div>
+                <div className="relative w-full flex-1 flex items-center justify-center mt-1">
+                    {/* Glowing Core Node */}
+                    <div className="relative z-10 mr-4">
+                        <motion.div 
+                            className="w-10 h-10 rounded-full bg-rose-950/50 border-2 border-rose-500 flex items-center justify-center shadow-[0_0_15px_rgba(239,68,68,0.5)]"
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                        >
+                            <span className="text-[8px] text-white font-extrabold tracking-tight">CORE</span>
+                        </motion.div>
+                        {/* Animated pulse rings */}
+                        <div className="absolute -inset-2 border border-rose-500/20 rounded-full animate-ping duration-[2.2s]" />
+                        <div className="absolute -inset-4 border border-rose-500/10 rounded-full animate-ping duration-[3.3s]" />
+                    </div>
+
+                    {/* Threat Vector (Malicious wave) hitting shield */}
+                    <div className="relative w-20 h-10">
+                        <svg className="w-full h-full" viewBox="0 0 80 40">
+                            {/* Shield Vector arc */}
+                            <motion.path 
+                                d="M 30, 5 A 25,25 0 0,0 30,35" 
+                                fill="none" 
+                                stroke="#38bdf8" 
+                                strokeWidth="2.5" 
+                                strokeLinecap="round"
+                                opacity={0.8}
+                                animate={{ opacity: [0.4, 1, 0.4] }}
+                                transition={{ repeat: Infinity, duration: 1.5 }}
+                            />
+                            
+                            {/* Bot threat vector */}
+                            <motion.circle 
+                                r="2.5" 
+                                fill="#ef4444"
+                                animate={{
+                                    cx: [70, 30],
+                                    cy: [20, 20],
+                                    opacity: [0, 1, 0.2, 0]
+                                }}
+                                transition={{
+                                    repeat: Infinity,
+                                    duration: 1.6,
+                                    ease: "linear"
+                                }}
+                            />
+
+                            {/* Deflection sparkles */}
+                            <motion.circle
+                                cx="30"
+                                cy="20"
+                                r="2"
+                                fill="#38bdf8"
+                                animate={{
+                                    scale: [0, 2, 0],
+                                    opacity: [0, 1, 0]
+                                }}
+                                transition={{
+                                    repeat: Infinity,
+                                    duration: 1.6,
+                                    delay: 0.8
+                                }}
+                            />
+                        </svg>
+                    </div>
+
+                    <div className="absolute right-2 text-right">
+                        <span className="text-rose-400 font-extrabold uppercase leading-none tracking-wider animate-pulse block text-[8px]">
+                            {isRu ? 'ВТОРЖЕНИЕ ИИ' : 'BOT WAVE'}
+                        </span>
+                        <span className="text-cyan-400 font-bold uppercase block text-[7px] mt-1">
+                            {isRu ? 'ЩИТ АКТИВЕН' : 'SHIELD OK'}
+                        </span>
                     </div>
                 </div>
             </div>

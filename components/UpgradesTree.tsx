@@ -534,7 +534,6 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
     const activeSectorObj = SECTORS.find(s => s.id === activeSector)!;
 
     return (
-        <AnimatePresence>
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -759,6 +758,5 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                 </div>
             </motion.div>
         </motion.div>
-        </AnimatePresence>
     );
 };

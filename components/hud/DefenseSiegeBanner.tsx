@@ -22,6 +22,8 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
         totalEliminated = 0
     } = session.defense || {};
 
+    const activeBotsCount = session?.bots?.length || 0;
+
     const messageLog = session.messageLog || [];
 
     // Health Percent/State
@@ -79,10 +81,10 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
                             </span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full">
-                            <Hourglass className="w-3 h-3 text-amber-500 animate-spin-slow shrink-0" />
-                            <span className="text-[11px] font-black font-mono text-amber-400 tracking-wider leading-none">
-                                {timeFormatted}
+                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-500/10 border border-rose-500/25 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.15)] animate-pulse">
+                            <Crosshair className="w-3 h-3 text-rose-500 shrink-0" />
+                            <span className="text-[11px] font-black font-mono text-rose-400 tracking-wider leading-none uppercase">
+                                {activeBotsCount} {language === 'RU' ? 'ВРАГОВ' : 'HOSTILES'}
                             </span>
                         </div>
 
@@ -235,7 +237,9 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
                             </div>
                             <div className="flex flex-col items-start leading-none text-left font-mono">
                                 <span className="text-[10px] font-black text-rose-400 tracking-wider uppercase">{text.warningTitle}</span>
-                                <span className="text-[9px] text-amber-500 font-bold tracking-tight mt-1">{timeFormatted} | {text.wave} {currentWave}/{maxWaves}</span>
+                                <span className="text-[9px] text-rose-400 font-bold tracking-tight mt-1">
+                                    {activeBotsCount} {language === 'RU' ? 'ВРАГОВ' : 'HOSTILES'} | {text.wave} {currentWave}/{maxWaves}
+                                </span>
                             </div>
                             <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 ml-1" />
                         </motion.button>
@@ -317,12 +321,12 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
                             <div className="grid grid-cols-3 gap-2 bg-slate-900/40 p-2.5 rounded-xl border border-slate-900/60 font-mono text-center">
                                 <div className="flex flex-col items-center justify-center border-r border-slate-800/80 py-1">
                                     <span className="text-[8px] font-black tracking-wider text-slate-500 uppercase leading-none mb-1">
-                                        {language === 'RU' ? 'ВРЕМЯ' : 'TIMER'}
+                                        {language === 'RU' ? 'АКТИВНЫЕ ДРОНЫ' : 'HOSTILES'}
                                     </span>
                                     <div className="flex items-center gap-1">
-                                        <Hourglass className="w-3.5 h-3.5 text-amber-500 animate-spin-slow shrink-0" />
-                                        <span className="text-xs font-black text-amber-400 tracking-wider">
-                                            {timeFormatted}
+                                        <Crosshair className="w-3.5 h-3.5 text-rose-500 animate-pulse shrink-0" />
+                                        <span className="text-xs font-black text-rose-400 tracking-wider">
+                                            {activeBotsCount}
                                         </span>
                                     </div>
                                 </div>

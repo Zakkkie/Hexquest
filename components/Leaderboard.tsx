@@ -86,7 +86,7 @@ const Leaderboard: React.FC = () => {
 
   return (
     <div className="w-full h-full flex items-center justify-center p-2 md:p-12 pointer-events-auto bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-4xl bg-slate-950 border-2 border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.25)] overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh] relative group">
+      <div className="w-full max-w-4xl bg-slate-950/45 backdrop-blur-xl border border-indigo-500/25 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.2)] overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh] relative group">
         {/* Cyber Corner Brackets */}
         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
