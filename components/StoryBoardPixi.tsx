@@ -307,6 +307,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
         ];
         radarCircles.forEach(circle => {
             const rg = new PIXI.Graphics();
+            rg.beginPath();
             const segs = 180;
             const dashOn = circle.dash[0];
             const dashOff = circle.dash[1];
@@ -500,7 +501,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     }, [camera, isReady]);
 
     // ---------- Per-cell scene build (rebuild on cells/transient change) ----------
-    const rebuildCells = () => { console.log("rebuildCells called, cells:", cellsRef.current.length);
+    const rebuildCells = () => {
         const board = boardRef.current;
         if (!board) return;
         const list = cellsRef.current;
@@ -548,6 +549,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 board.addChild(container);
                 cellCache.current.set(key, container);
             }
+            container.visible = true;
             container.x = px.x;
             container.y = px.y; // baseline; spawn anim adjusts via collapse/spawn groups
             // Depth sort: deeper (larger y) drawn on top, matching Konva paint order.
@@ -1014,7 +1016,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             let st = animStates.current.get(key);
             if (!st) { st = { /* empty */ }; animStates.current.set(key, st); }
 
-            const targetAlpha = (hasAnyPlaceable && !canPlaceHex) ? 0.35 : 1.0;
+            const targetAlpha = 1.0; // User requested: Убери полупрозрачность в уровнях
             (container as any).targetAlpha = targetAlpha;
 
             if (isNew) {
@@ -1056,13 +1058,10 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             }
         });
 
-        // Evict stale cells.
+        // Evict stale cells (Pooling optimization: just hide them instead of destroying)
         for (const [id, container] of cellCache.current.entries()) {
             if (!active.has(id)) {
-                board.removeChild(container);
-                container.destroy({ children: true });
-                cellCache.current.delete(id);
-                animStates.current.delete(id);
+                container.visible = false;
             }
         }
 

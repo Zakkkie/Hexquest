@@ -14,6 +14,8 @@ import {
     getTheme,
     getHeightOffset,
     getPixiTexture,
+    getPoiIcon,
+    translateArrowLabel,
 } from '../services/pixiHexRender.ts';
 import {
     NEIGHBOR_DIRECTIONS,
@@ -26,84 +28,11 @@ import {
 } from '../services/mapRenderModel.ts';
 import { useMapInput } from '../hooks/useMapInput.ts';
 
-// Re-export so existing consumers (StoryBuilderView, StoryBuilderComponents) keep working.
 export { THEME_PALETTE };
 
 const MAX_WALL_DEPTH = 200;
-// Skirt depth for elevated hexes that border VOID. Far smaller than MAX_WALL_DEPTH
-// so floating tiles read as a solid plateau with a short 3D skirt instead of a
-// 200px thread dangling into the dark background.
 const VOID_SKIRT_DEPTH = 28;
-
-// BASE_POINTS, THEME_PALETTE, and getTheme now come from services/pixiHexRender.ts.
-// getHexVisualHeight is an alias for the shared getHeightOffset (identical implementation).
 const getHexVisualHeight = getHeightOffset;
-
-const getPoiIcon = (type: string): string => {
-  switch (type) {
-    case "city_hub": return "🏛️";
-    case "tavern_travelers": return "🍺";
-    case "bulletin_board": return "📋";
-    case "guard_post": return "🛡️";
-    case "forge": return "⚒️";
-    case "alchemist": return "🧪";
-    case "watchtower": return "🔭";
-    case "market": return "⚖️";
-    case "warehouse": return "📦";
-    case "healer": return "🩹";
-    case "temple": return "⛪";
-    case "archive": return "📜";
-    case "tavern_spirit": return "🍷";
-    case "RIFT_S1_2": return "🌀";
-    case "RIFT_S3_4": return "🌋";
-    default: return "📍";
-  }
-};
-
-function translateArrowLabel(label: string, isRu: boolean): string {
-    if (!isRu) return label;
-    const lower = label.toLowerCase().trim();
-    
-    // Exact matches
-    if (lower === 'build') return 'Строй';
-    if (lower === 'move') return 'Шаг';
-    if (lower === 'dig') return 'Бур';
-    if (lower === 'dig x2') return 'Бур x2';
-    if (lower === 'checkpoint') return 'Точка';
-    if (lower === 'portal') return 'Портал';
-    if (lower === 'path') return 'Путь';
-    if (lower === 'capital') return 'Капитолий';
-    if (lower === 'goal') return 'Цель';
-    if (lower === 'reactor') return 'Реактор';
-    if (lower === 'l3 ridge') return 'Хребет L3';
-    if (lower === 'goal l3') return 'Цель L3';
-    if (lower === 'heal') return 'Лечить';
-    if (lower === 'deep mine') return 'Шахта';
-    if (lower === 'monolith') return 'Монолит';
-    if (lower === 'shaft') return 'Шахта';
-    if (lower === 'obelisk') return 'Обелиск';
-    if (lower === 'sunken monolith') return 'Затонувший Монолит';
-    if (lower === 'stabilizer') return 'Стабилизатор';
-    if (lower === 'monument') return 'Монумент';
-    if (lower === 'alpha') return 'Альфа';
-    if (lower === 'beta') return 'Бета';
-    if (lower === 'gamma') return 'Гамма';
-    if (lower === 'exit') return 'Выход';
-    if (lower === 'center') return 'Центр';
-    if (lower === 'target') return 'Мишень';
-    if (lower === 'l2') return 'L2';
-    if (lower === 'l0') return 'L0';
-    if (lower === 'l-1') return 'L-1';
-    
-    // Partial translations for things with numbers or variable parts
-    let result = label;
-    result = result.replace(/Obelisk/gi, 'Обелиск');
-    result = result.replace(/Dig/gi, 'Бур');
-    result = result.replace(/Build/gi, 'Строй');
-    result = result.replace(/Move/gi, 'Шаг');
-    
-    return result;
-}
 
 interface MapRendererProps {
     rotation: number;
@@ -112,8 +41,6 @@ interface MapRendererProps {
     camera?: { x: number; y: number; scale: number; rotation: number };
     dimensions?: { width: number; height: number };
 }
-
-// getPixiTexture (DOM -> WebGL texture cache) now comes from services/pixiHexRender.ts.
 
 export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, onHover, camera, dimensions }) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -125,8 +52,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     const particlesContainerRef = useRef<PIXI.Container | null>(null);
 
     const grid = useGameStore(state => state.session?.grid);
-    const sessionGrid = useGameStore(state => state.session?.grid);
-    const sessionDefenseMode = useGameStore(state => !!state.session?.defense?.isDefenseMode);
+    const isDefenseMode = useGameStore(state => !!state.session?.defense?.isDefenseMode);
     const sessionLanguage = useGameStore(state => state.session?.language);
     const player = useGameStore(state => state.session?.player);
     const bots = useGameStore(state => state.session?.bots);
@@ -144,7 +70,6 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     const messageLog = useGameStore(state => state.session?.messageLog);
     const sessionId = useGameStore(state => state.session?.sessionId);
     const activeMeteors = useGameStore(state => state.session?.activeMeteors);
-    const isDefenseMode = useGameStore(state => !!state.session?.defense?.isDefenseMode);
 
     const recentGradientLock = useMemo(() => {
         if (!messageLog || messageLog.length === 0 || !player) return null;
@@ -156,72 +81,36 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
     const playerQ = player?.q ?? 0;
     const playerR = player?.r ?? 0;
-    const selectedHexId = useMemo(() => 
-        (playerQ !== undefined && playerR !== undefined) ? getHexKey(playerQ, playerR) : null
-    , [playerQ, playerR]);
+    const selectedHexId = useMemo(() => (playerQ !== undefined && playerR !== undefined) ? getHexKey(playerQ, playerR) : null, [playerQ, playerR]);
 
-    // Tracking variables for DisplayObject Pools
     const hexPropsCache = useRef<WeakMap<PIXI.Container, any>>(new WeakMap());
     const hexCache = useRef<Map<string, PIXI.Container>>(new Map());
     const hoverRef = useRef<string | null>(null);
     const unitCache = useRef<Map<string, PIXI.Container>>(new Map());
-    const unitAnimStates = useRef<Map<string, {
-        startQ: number;
-        startR: number;
-        startTime: number;
-        isMoving: boolean;
-        startLevel: number;
-        targetQ: number;
-        targetR: number;
-        targetLevel: number;
-        facingLeft: boolean;
-        currentQ: number;
-        currentR: number;
-        currentLevel: number;
-        stepDuration: number;
-        moveMode: 'SINGLE' | 'FIRST' | 'MIDDLE' | 'LAST';
-    }>>(new Map());
+    const unitAnimStates = useRef<Map<string, any>>(new Map());
+    const effectCache = useRef<Map<string, any>>(new Map());
+    const particlesList = useRef<any[]>([]);
+    const activeActionParticles = useRef<any[]>([]);
+    const economicParticlesRef = useRef<any[]>([]);
 
-    const effectCache = useRef<Map<string, {
-        container: PIXI.Container;
-        text: PIXI.Text;
-        startTime: number;
-        lifetime: number;
-        q: number;
-        r: number;
-        stackIndex: number;
-        laserGraphics?: PIXI.Graphics;
-    }>>(new Map());
-
-    const particlesList = useRef<{
-        graphics: PIXI.Graphics;
-        startTime: number;
-        duration: number;
-        puffs: { x: number; y: number; vx: number; vy: number; radius: number; opacity: number }[];
-    }[]>([]);
-
-    const activeActionParticles = useRef<{
-        graphics: PIXI.Graphics;
-        vx: number;
-        vy: number;
-        life: number;
-        decay: number;
-    }[]>([]);
-
+    const lastPlayerCoinsRef = useRef<number>(0);
+    const lastPlayerStorageRef = useRef<number>(0);
+    const lastPeriodicPulseRef = useRef<number>(0);
     const lastSessionIdRef = useRef<string | null>(null);
     const sessionStartTimeRef = useRef<number>(0);
     const victoryStartTimeRef = useRef<number | null>(null);
 
+    // Screen Shake State
+    const shakeIntensityRef = useRef<number>(0);
+
     const [isPixiReady, setIsPixiReady] = useState(false);
 
-    // Coordinate conversion mathematics
     const simpleHexToPixel = useCallback((q: number, r: number) => {
         const rawX = HEX_SIZE * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r);
         const rawY = HEX_SIZE * (1.5 * r);
         const angleRad = rotation * (Math.PI / 180);
         const cos = Math.cos(angleRad);
         const sin = Math.sin(angleRad);
-        
         const x = rawX * cos - rawY * sin;
         const y = (rawX * sin + rawY * cos) * 0.8;
         return safifyCoord(x, y);
@@ -231,72 +120,31 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
     const pendingKey = pendingTarget ? getHexKey(pendingTarget.q, pendingTarget.r) : null;
     const isCampaign = !!activeLevelConfig;
 
-    const forceReveal = useMemo(() => {
-        return (isCampaign && activeLevelConfig?.mapConfig?.revealMode !== 'fog') || !!isDefenseMode;
-    }, [isCampaign, activeLevelConfig, isDefenseMode]);
+    const forceReveal = useMemo(() => (isCampaign && activeLevelConfig?.mapConfig?.revealMode !== 'fog') || !!isDefenseMode, [isCampaign, activeLevelConfig, isDefenseMode]);
 
     const activeRenderItems = useMemo(() => {
-        return runLocalRenderCalculation(
-            grid,
-            player,
-            bots,
-            rotation,
-            pendingKey,
-            selectedHexId,
-            camera,
-            dimensions,
-            isCampaign,
-            playerGrowthIntent,
-            isDefenseMode,
-            forceReveal
-        );
+        return runLocalRenderCalculation(grid, player, bots, rotation, pendingKey, selectedHexId, camera, dimensions, isCampaign, playerGrowthIntent, isDefenseMode, forceReveal);
     }, [grid, player, bots, rotation, pendingKey, selectedHexId, camera, dimensions, isCampaign, playerGrowthIntent, isDefenseMode, forceReveal]);
 
     // Initialize Pixi Application
     useEffect(() => {
         if (!containerRef.current) return;
-
-        const app = new PIXI.Application();
-        pixiAppRef.current = app;
-
-        const tickerCallback = tickerCallbackRef.current;
+        let app: PIXI.Application | null = null;
+        let isDestroyed = false;
+        pixiAppRef.current = new PIXI.Application();
+        app = pixiAppRef.current;
 
         const initPixi = async () => {
             try {
-                await app.init({
-                    width: dimensions?.width || window.innerWidth,
-                    height: dimensions?.height || window.innerHeight,
-                    backgroundAlpha: 0,
-                    antialias: true,
-                    resolution: window.devicePixelRatio || 1,
-                    autoDensity: true,
-                });
-            } catch (err) {
-                console.error("Failed to initialize Pixi:", err);
-                return;
-            }
+                await app!.init({ width: dimensions?.width || window.innerWidth, height: dimensions?.height || window.innerHeight, backgroundAlpha: 0, antialias: true, resolution: window.devicePixelRatio || 1, autoDensity: true });
+            } catch (err) { console.error("Failed to initialize Pixi:", err); return; }
 
-            // Guard against unmount/destruction happening while 'app.init' was awaiting
-            if (!containerRef.current || pixiAppRef.current !== app) {
-                try {
-                    app.destroy(true, { children: true });
-                } catch (e) {
-                    if (typeof (app as any)._cancelResize !== 'function') {
-                        (app as any)._cancelResize = () => { /* empty */ };
-                    }
-                    try {
-                        app.destroy(true, { children: true });
-                    } catch (e2) { /* empty */ }
-                }
-                return;
-            }
+            if (isDestroyed || !containerRef.current) { try { app!.destroy(true, { children: true }); } catch (e) {} return; }
+            containerRef.current.appendChild(app!.canvas);
 
-            containerRef.current.appendChild(app.canvas);
-
-            // Container Hierarchy
             const world = new PIXI.Container();
             worldContainerRef.current = world;
-            app.stage.addChild(world);
+            app!.stage.addChild(world);
 
             const renderItems = new PIXI.Container();
             renderItems.sortableChildren = true;
@@ -315,64 +163,29 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             particlesContainerRef.current = particlesContainer;
             world.addChild(particlesContainer);
 
-            // Starts high-frequency visual update tickers
-            if (app.ticker) {
-                app.ticker.add(tickerCallback);
-            }
-
-            // Sync with any dimensions change that happened during init
-            if (dimensions && app.renderer) {
-                app.renderer.resize(dimensions.width, dimensions.height);
-            }
-
+            if (app!.ticker) app!.ticker.add(tickerCallbackRef.current);
+            if (dimensions && app!.renderer) app!.renderer.resize(dimensions.width, dimensions.height);
             setIsPixiReady(true);
         };
 
         initPixi();
 
         return () => {
+            isDestroyed = true;
             setIsPixiReady(false);
-            if (activeActionParticles.current.length > 0) {
-                activeActionParticles.current.forEach(p => {
-                    try { p.graphics.destroy(); } catch (err) { /* empty */ }
-                });
-                activeActionParticles.current = [];
-            }
+            if (activeActionParticles.current.length > 0) { activeActionParticles.current.forEach(p => { try { p.graphics.destroy(); } catch (err) {} }); activeActionParticles.current = []; }
             if (pixiAppRef.current === app) {
                 pixiAppRef.current = null;
-                if (app.ticker) {
-                    try {
-                        app.ticker.remove(tickerCallback);
-                    } catch (e) { /* empty */ }
-                }
-                try {
-                    app.destroy(true, { children: true });
-                } catch (e) {
-                    if (typeof (app as any)._cancelResize !== 'function') {
-                        (app as any)._cancelResize = () => { /* empty */ };
-                    }
-                    try {
-                        app.destroy(true, { children: true });
-                    } catch (e2) { /* empty */ }
-                }
-                worldContainerRef.current = null;
-                renderItemsContainerRef.current = null;
-                connectionsGraphicsRef.current = null;
-                effectsContainerRef.current = null;
-                particlesContainerRef.current = null;
+                if (app?.ticker) { try { app.ticker.remove(tickerCallbackRef.current); } catch (e) {} }
+                try { app?.destroy(true, { children: true }); } catch (e) {}
+                worldContainerRef.current = null; renderItemsContainerRef.current = null; connectionsGraphicsRef.current = null; effectsContainerRef.current = null; particlesContainerRef.current = null;
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Window Resize Handler
-    useEffect(() => {
-        if (pixiAppRef.current && pixiAppRef.current.renderer && dimensions) {
-            pixiAppRef.current.renderer.resize(dimensions.width, dimensions.height);
-        }
-    }, [dimensions]);
+    useEffect(() => { if (pixiAppRef.current && pixiAppRef.current.renderer && dimensions) pixiAppRef.current.renderer.resize(dimensions.width, dimensions.height); }, [dimensions]);
 
-    // Live sync camera state
     useEffect(() => {
         if (worldContainerRef.current && camera) {
             worldContainerRef.current.x = camera.x;
@@ -381,21 +194,13 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         }
     }, [camera, isPixiReady]);
 
-    // Renders physical move connection outlines
     const drawConnections = useCallback(() => {
         const graphics = connectionsGraphicsRef.current;
-        if (!graphics || !grid || !player || isPlayerGrowing || player.state === EntityState.MOVING) {
-            graphics?.clear();
-            return;
-        }
-
+        if (!graphics || !grid || !player || isPlayerGrowing || player.state === EntityState.MOVING) { graphics?.clear(); return; }
         graphics.clear();
         const angleRad = rotation * (Math.PI / 180);
-        const cos = Math.cos(angleRad);
-        const sin = Math.sin(angleRad);
-        const SQRT3 = Math.sqrt(3);
-        const SQRT3_2 = SQRT3 / 2;
-        const ONE_POINT_FIVE = 1.5;
+        const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
+        const SQRT3 = Math.sqrt(3), SQRT3_2 = SQRT3 / 2, ONE_POINT_FIVE = 1.5;
 
         const rawPX = HEX_SIZE * (SQRT3 * player.q + SQRT3_2 * player.r);
         const rawPY = HEX_SIZE * (ONE_POINT_FIVE * player.r);
@@ -408,43 +213,23 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
         for (const n of neighbors) {
             const nHex = grid[getHexKey(n.q, n.r)];
-            const isReallyVoid = nHex?.structureType === 'VOID';
-            const isBlocked = nHex?.isPassable === false;
-            
-            if (isReallyVoid || isBlocked) continue;
-
+            if (nHex?.structureType === 'VOID' || nHex?.isPassable === false) continue;
             const rawNX = HEX_SIZE * (SQRT3 * n.q + SQRT3_2 * n.r);
             const rawNY = HEX_SIZE * (ONE_POINT_FIVE * n.r);
             const npx = rawNX * cos - rawNY * sin;
             const npy = (rawNX * sin + rawNY * cos) * 0.8;
-
             const endH = nHex ? (10 + nHex.currentLevel * 10) : 10;
-            
-            const currentLevel = pHex ? pHex.currentLevel : 0;
-            const nextLevel = nHex ? nHex.currentLevel : 0;
-            if (Math.abs(currentLevel - nextLevel) > 1) continue;
+            if (Math.abs((pHex?.currentLevel ?? 0) - (nHex?.currentLevel ?? 0)) > 1) continue;
 
-            const cost = nextLevel > 1 ? nextLevel : 1;
+            const cost = (nHex?.currentLevel ?? 0) > 1 ? (nHex?.currentLevel ?? 0) : 1;
             const { exchangeRate } = getStatusModifiers(player, { campaignUpgrades });
             const canAfford = player.moves >= cost || player.coins >= (cost * exchangeRate);
 
-            graphics.strokeStyle = {
-                width: 2.0,
-                color: canAfford ? 0x34d399 : 0xef4444,
-                alpha: (nHex && nHex.currentLevel > player.playerLevel) ? 0.2 : 0.6,
-            };
-
-            // Dotted look
-            const startX = ppx;
-            const startY = ppy - startH;
-            const endX = npx;
-            const endY = npy - endH;
-
-            const segmentCount = 6;
-            for (let s = 0; s < segmentCount; s++) {
+            graphics.strokeStyle = { width: 2.0, color: canAfford ? 0x34d399 : 0xef4444, alpha: (nHex && nHex.currentLevel > player.playerLevel) ? 0.2 : 0.6 };
+            const startX = ppx, startY = ppy - startH, endX = npx, endY = npy - endH;
+            for (let s = 0; s < 6; s++) {
                 if (s % 2 === 0) {
-                    const t1 = s / segmentCount;
-                    const t2 = (s + 1) / segmentCount;
+                    const t1 = s / 6, t2 = (s + 1) / 6;
                     graphics.moveTo(startX + (endX - startX) * t1, startY + (endY - startY) * t1);
                     graphics.lineTo(startX + (endX - startX) * t2, startY + (endY - startY) * t2);
                 }
@@ -453,1105 +238,507 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         }
     }, [grid, player, isPlayerGrowing, rotation, campaignUpgrades]);
 
-    useEffect(() => {
-        drawConnections();
-    }, [drawConnections, isPixiReady]);
+    useEffect(() => { drawConnections(); }, [drawConnections, isPixiReady]);
 
-    // Renders active floating text effects
     const updateFloatingEffects = useCallback(() => {
         const parent = effectsContainerRef.current;
         if (!parent || !effects) return;
-
-        // Group concurrent effects to stack vertically
         const sorted = [...effects].sort((a, b) => a.startTime - b.startTime);
-        const counts: Record<string, number> = { /* empty */ };
+        const counts: Record<string, number> = {};
         const activeEffectIds = new Set<string>();
 
         sorted.forEach(eff => {
             const key = `${eff.q},${eff.r}`;
-            const idx = counts[key] || 0;
-            counts[key] = idx + 1;
+            const idx = counts[key] || 0; counts[key] = idx + 1;
             activeEffectIds.add(eff.id);
-
             let cached = effectCache.current.get(eff.id);
             if (!cached) {
                 const container = new PIXI.Container();
-                const text = new PIXI.Text({
-                    text: eff.text,
-                    style: {
-                        fontFamily: 'Inter, sans-serif',
-                        fontSize: 16,
-                        fontWeight: 'bold',
-                        fill: eff.color,
-                        align: 'center'
-                    }
-                });
-                text.anchor.set(0.5, 0.5);
-                container.addChild(text);
-                parent.addChild(container);
-
+                const text = new PIXI.Text({ text: eff.text, style: { fontFamily: 'Inter, sans-serif', fontSize: 16, fontWeight: 'bold', fill: eff.color, align: 'center' } });
+                text.anchor.set(0.5, 0.5); container.addChild(text); parent.addChild(container);
                 let laserGraphics: PIXI.Graphics | undefined = undefined;
-                if (eff.sourceQ !== undefined && eff.sourceR !== undefined) {
-                    laserGraphics = new PIXI.Graphics();
-                    parent.addChild(laserGraphics);
-                }
-
-                cached = {
-                    container,
-                    text,
-                    startTime: Date.now(),
-                    lifetime: eff.lifetime,
-                    q: eff.q,
-                    r: eff.r,
-                    stackIndex: idx,
-                    laserGraphics
-                };
+                if (eff.sourceQ !== undefined && eff.sourceR !== undefined) { laserGraphics = new PIXI.Graphics(); parent.addChild(laserGraphics); }
+                cached = { container, text, startTime: Date.now(), lifetime: eff.lifetime, q: eff.q, r: eff.r, stackIndex: idx, laserGraphics };
                 effectCache.current.set(eff.id, cached);
             }
-
             const elapsed = Date.now() - cached.startTime;
             const progress = Math.min(1.0, elapsed / cached.lifetime);
-
             const { x: basePx, y: basePy } = simpleHexToPixel(cached.q, cached.r);
-            const verticalSpacing = 24;
-            const currentY = basePy - 20 - idx * verticalSpacing;
-
-            // Ease up and fade out
-            const riseDistance = 80;
-            const currentRise = progress * riseDistance;
-            
-            if (cached.container && !cached.container.destroyed && !(cached.container as any)._destroyed) {
-                try {
-                    cached.container.x = basePx;
-                    cached.container.y = currentY - currentRise;
-
-                    // Pops in quickly, then fades away smoothly
-                    if (progress < 0.2) {
-                        const scale = 0.5 + (progress / 0.2) * 0.5;
-                        cached.container.scale.set(scale, scale);
-                        cached.container.alpha = 1.0;
-                    } else {
-                        const fadeProgress = (progress - 0.2) / 0.8;
-                        cached.container.alpha = 1.0 - fadeProgress;
-                        cached.container.scale.set(1.0 + fadeProgress * 0.2, 1.0 + fadeProgress * 0.2);
-                    }
-                } catch (e) {
-                    /* empty */
-                }
+            const currentY = basePy - 20 - idx * 24;
+            const currentRise = progress * 80;
+            if (cached.container && !cached.container.destroyed) {
+                cached.container.x = basePx; cached.container.y = currentY - currentRise;
+                if (progress < 0.2) { const scale = 0.5 + (progress / 0.2) * 0.5; cached.container.scale.set(scale, scale); cached.container.alpha = 1.0; }
+                else { const fp = (progress - 0.2) / 0.8; cached.container.alpha = 1.0 - fp; cached.container.scale.set(1.0 + fp * 0.2, 1.0 + fp * 0.2); }
             }
-
-            // Draw laser beam if this effect has a source coordinate
-            if (cached.laserGraphics && !cached.laserGraphics.destroyed && !(cached.laserGraphics as any)._destroyed && eff.sourceQ !== undefined && eff.sourceR !== undefined) {
-                try {
-                    cached.laserGraphics.clear();
-                    
-                    const beamLifetime = 800; // Fades faster than floating text
-                    if (elapsed < beamLifetime) {
-                        const beamProgress = elapsed / beamLifetime;
-                        const beamAlpha = 1.0 - beamProgress;
-                        
-                        const gridObj = sessionGrid || { /* empty */ };
-                        
-                        const sourceKey = getHexKey(eff.sourceQ, eff.sourceR);
-                        const sourceHex = gridObj[sourceKey];
-                        const sourceLevel = sourceHex ? (sourceHex.currentLevel ?? 0) : 0;
-                        const sourceZ = getHexVisualHeight(sourceLevel);
-                        
-                        const { x: sBasePx, y: sBasePy } = simpleHexToPixel(eff.sourceQ, eff.sourceR);
-                        const sX = sBasePx;
-                        const sY = sBasePy - sourceZ;
-                        
-                        const targetKey = getHexKey(eff.q, eff.r);
-                        const targetHex = gridObj[targetKey];
-                        const targetLevel = targetHex ? (targetHex.currentLevel ?? 0) : 0;
-                        const targetZ = getHexVisualHeight(targetLevel);
-                        
-                        const { x: tBasePx, y: tBasePy } = simpleHexToPixel(eff.q, eff.r);
-                        const tX = tBasePx;
-                        const tY = tBasePy - targetZ;
-                        
-                        // Main rose glow
-                        cached.laserGraphics.strokeStyle = { width: 4.5 * (1.0 - beamProgress), color: 0xF43F5E, alpha: beamAlpha * 0.75 };
-                        cached.laserGraphics.beginPath();
-                        cached.laserGraphics.moveTo(sX, sY);
-                        cached.laserGraphics.lineTo(tX, tY);
-                        cached.laserGraphics.stroke();
-                        
-                        // Core white beam
-                        cached.laserGraphics.strokeStyle = { width: 1.5 * (1.0 - beamProgress), color: 0xFFFFFF, alpha: beamAlpha * 0.95 };
-                        cached.laserGraphics.beginPath();
-                        cached.laserGraphics.moveTo(sX, sY);
-                        cached.laserGraphics.lineTo(tX, tY);
-                        cached.laserGraphics.stroke();
-                        
-                        // Muzzle flash circle at source turret
-                        cached.laserGraphics.fillStyle = { color: 0xF43F5E, alpha: beamAlpha * 0.9 };
-                        cached.laserGraphics.beginPath();
-                        cached.laserGraphics.circle(sX, sY, 8 * (1.0 - beamProgress));
-                        cached.laserGraphics.fill();
-                        
-                        // Impact burst circle at target bot
-                        cached.laserGraphics.fillStyle = { color: 0xF59E0B, alpha: beamAlpha * 0.9 };
-                        cached.laserGraphics.beginPath();
-                        cached.laserGraphics.circle(tX, tY, 10 * (1.0 - beamProgress));
-                        cached.laserGraphics.fill();
-                    }
-                } catch (e) {
-                    /* empty */
+            if (cached.laserGraphics && !cached.laserGraphics.destroyed && eff.sourceQ !== undefined && eff.sourceR !== undefined) {
+                cached.laserGraphics.clear();
+                const beamLifetime = 800;
+                if (elapsed < beamLifetime) {
+                    const bp = elapsed / beamLifetime, ba = 1.0 - bp;
+                    const gridObj = grid || {};
+                    const sourceHex = gridObj[getHexKey(eff.sourceQ, eff.sourceR)];
+                    const sZ = getHexVisualHeight(sourceHex ? (sourceHex.currentLevel ?? 0) : 0);
+                    const { x: sBasePx, y: sBasePy } = simpleHexToPixel(eff.sourceQ, eff.sourceR);
+                    const sX = sBasePx, sY = sBasePy - sZ;
+                    const targetHex = gridObj[getHexKey(eff.q, eff.r)];
+                    const tZ = getHexVisualHeight(targetHex ? (targetHex.currentLevel ?? 0) : 0);
+                    const { x: tBasePx, y: tBasePy } = simpleHexToPixel(eff.q, eff.r);
+                    const tX = tBasePx, tY = tBasePy - tZ;
+                    cached.laserGraphics.strokeStyle = { width: 4.5 * (1.0 - bp), color: 0xF43F5E, alpha: ba * 0.75 };
+                    cached.laserGraphics.beginPath(); cached.laserGraphics.moveTo(sX, sY); cached.laserGraphics.lineTo(tX, tY); cached.laserGraphics.stroke();
+                    cached.laserGraphics.strokeStyle = { width: 1.5 * (1.0 - bp), color: 0xFFFFFF, alpha: ba * 0.95 };
+                    cached.laserGraphics.beginPath(); cached.laserGraphics.moveTo(sX, sY); cached.laserGraphics.lineTo(tX, tY); cached.laserGraphics.stroke();
+                    cached.laserGraphics.fillStyle = { color: 0xF43F5E, alpha: ba * 0.9 };
+                    cached.laserGraphics.beginPath(); cached.laserGraphics.circle(sX, sY, 8 * (1.0 - bp)); cached.laserGraphics.fill();
+                    cached.laserGraphics.fillStyle = { color: 0xF59E0B, alpha: ba * 0.9 };
+                    cached.laserGraphics.beginPath(); cached.laserGraphics.circle(tX, tY, 10 * (1.0 - bp)); cached.laserGraphics.fill();
                 }
             }
         });
-
-        // Cull expired effects
         for (const [id, value] of effectCache.current.entries()) {
-            if (!activeEffectIds.has(id)) {
-                parent.removeChild(value.container);
-                value.container.destroy({ children: true });
-                if (value.laserGraphics) {
-                    parent.removeChild(value.laserGraphics);
-                    value.laserGraphics.destroy();
-                }
-                effectCache.current.delete(id);
-            }
+            if (!activeEffectIds.has(id)) { parent.removeChild(value.container); value.container.destroy({ children: true }); if (value.laserGraphics) { parent.removeChild(value.laserGraphics); value.laserGraphics.destroy(); } effectCache.current.delete(id); }
         }
-    }, [effects, simpleHexToPixel, sessionGrid]);
+    }, [effects, simpleHexToPixel, grid]);
 
-    // Renders active dust particles
     const updateDustParticles = useCallback(() => {
         const now = Date.now();
         particlesList.current = particlesList.current.filter(item => {
-            if (!item.graphics || item.graphics.destroyed || (item.graphics as any)._destroyed) {
-                return false;
-            }
+            if (!item.graphics || item.graphics.destroyed) return false;
             const elapsed = now - item.startTime;
-            if (elapsed >= item.duration) {
-                try { item.graphics.destroy(); } catch (e) { /* empty */ }
-                return false;
-            }
-
+            if (elapsed >= item.duration) { try { item.graphics.destroy(); } catch (e) {} return false; }
             const progress = elapsed / item.duration;
             try {
                 item.graphics.clear();
-
-                item.puffs.forEach(puff => {
-                    const cx = puff.vx * elapsed;
-                    const cy = puff.vy * elapsed;
-                    const radius = puff.radius * (1.0 - progress);
-                    const alpha = puff.opacity * (1.0 - progress);
-
-                    item.graphics.beginPath();
-                    item.graphics.circle(cx, cy, radius);
-                    item.graphics.fill({ color: 0x94a3b8, alpha });
+                item.puffs.forEach((puff: any) => {
+                    const cx = puff.vx * elapsed, cy = puff.vy * elapsed, radius = puff.radius * (1.0 - progress), alpha = puff.opacity * (1.0 - progress);
+                    item.graphics.beginPath(); item.graphics.circle(cx, cy, radius); item.graphics.fill({ color: 0x94a3b8, alpha });
                 });
-
                 return true;
-            } catch (err) {
-                return false;
-            }
+            } catch (err) { return false; }
         });
     }, []);
 
-    // Main Pixi update ticker loop executed every frame
+    const updateEconomicParticles = useCallback(() => {
+        const parent = particlesContainerRef.current;
+        if (!parent || !grid) return;
+        const now = Date.now();
+        const curCoins = player?.coins || 0, curStorage = player?.storage || 0;
+        let coinsIncreased = false, deltaCoins = 0;
+        if (lastPlayerCoinsRef.current > 0 && curCoins > lastPlayerCoinsRef.current) { coinsIncreased = true; deltaCoins = curCoins - lastPlayerCoinsRef.current; }
+        let storageIncreased = false, deltaStorage = 0;
+        if (lastPlayerStorageRef.current > 0 && curStorage > lastPlayerStorageRef.current) { storageIncreased = true; deltaStorage = curStorage - lastPlayerStorageRef.current; }
+        lastPlayerCoinsRef.current = curCoins; lastPlayerStorageRef.current = curStorage;
+        let shouldSpawnAmbient = false;
+        if (now - lastPeriodicPulseRef.current > 1200) { shouldSpawnAmbient = true; lastPeriodicPulseRef.current = now; }
+
+        const spawnResourceParticle = (hq: number, hr: number, type: 'COIN' | 'MATERIAL' | 'AMBIENT', customVal?: number) => {
+            const { x: basePx, y: basePy } = simpleHexToPixel(hq, hr);
+            const hexCell = grid[getHexKey(hq, hr)];
+            const yOffset = getHeightOffset(hexCell ? (hexCell.currentLevel || 0) : 0);
+            const px = basePx, py = basePy - yOffset - 15;
+            const container = new PIXI.Container();
+            if (type === 'COIN') {
+                const text = new PIXI.Text({ text: customVal ? `+${customVal}¢` : "+¢", style: { fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 'bold', fill: 0x10b981, stroke: { color: 0xffffff, width: 2 } } });
+                text.anchor.set(0.5, 0.5); container.addChild(text);
+                const aura = new PIXI.Graphics(); aura.circle(0, 0, 11); aura.fill({ color: 0xfbbf24, alpha: 0.35 }); container.addChildAt(aura, 0);
+            } else if (type === 'MATERIAL') {
+                const text = new PIXI.Text({ text: customVal ? `+${customVal}⚙️` : "+⚙️", style: { fontFamily: 'Inter, sans-serif', fontSize: 13, fontWeight: 'bold', fill: 0xa855f7, stroke: { color: 0xffffff, width: 2 } } });
+                text.anchor.set(0.5, 0.5); container.addChild(text);
+                const aura = new PIXI.Graphics(); aura.rect(-8, -8, 16, 16); aura.fill({ color: 0xc084fc, alpha: 0.3 }); container.addChildAt(aura, 0);
+            } else { const dot = new PIXI.Graphics(); dot.circle(0, 0, 2.5 + Math.random() * 2); dot.fill({ color: Math.random() > 0.5 ? 0xf59e0b : 0x10b981 }); container.addChild(dot); }
+            container.x = px; container.y = py; container.alpha = 0.95; container.scale.set(0.75);
+            parent.addChild(container);
+            economicParticlesRef.current.push({ id: Math.random(), x: px, y: py, vx: (Math.random() - 0.5) * 0.45, vy: -1.0 - Math.random() * 0.8, scale: 0.75, alpha: 0.95, age: 0, maxAge: type === 'AMBIENT' ? 45 + Math.random() * 25 : 55, container });
+        };
+
+        for (const key in grid) {
+            const hex = grid[key];
+            const isCore = hex.structureType === 'CORE' || hex.isCore;
+            const isTurret = hex.structureType === 'TURRET' || hex.isTurret;
+            if (isCore || isTurret) {
+                if (coinsIncreased) { const count = isCore ? 4 : 2; for (let i = 0; i < count; i++) { setTimeout(() => { if (particlesContainerRef.current && grid[key]) spawnResourceParticle(hex.q, hex.r, 'COIN', deltaCoins); }, i * 140); } }
+                if (storageIncreased) { const count = isCore ? 3 : 1; for (let i = 0; i < count; i++) { setTimeout(() => { if (particlesContainerRef.current && grid[key]) spawnResourceParticle(hex.q, hex.r, 'MATERIAL', deltaStorage); }, i * 140); } }
+                if (shouldSpawnAmbient && Math.random() < (isCore ? 0.8 : 0.45)) spawnResourceParticle(hex.q, hex.r, 'AMBIENT');
+            }
+        }
+        economicParticlesRef.current = economicParticlesRef.current.filter(p => {
+            if (!p.container || p.container.destroyed) return false;
+            p.age += 1;
+            if (p.age >= p.maxAge) { try { p.container.destroy({ children: true }); } catch (e) {} return false; }
+            p.x += p.vx; p.y += p.vy; p.container.x = p.x; p.container.y = p.y;
+            const lr = p.age / p.maxAge; p.container.alpha = 1.0 - lr; p.container.scale.set(0.75 + lr * 0.45);
+            return true;
+        });
+    }, [player, grid, simpleHexToPixel]);
+
     const updateSceneLoop = () => {
         const nowTime = Date.now();
-        if (sessionId && sessionId !== lastSessionIdRef.current) {
-            lastSessionIdRef.current = sessionId;
-            sessionStartTimeRef.current = nowTime;
-        }
-
+        if (sessionId && sessionId !== lastSessionIdRef.current) { lastSessionIdRef.current = sessionId; sessionStartTimeRef.current = nowTime; }
+        
+        // Screen Shake Logic
         if (worldContainerRef.current && camera) {
-            worldContainerRef.current.x = camera.x;
-            worldContainerRef.current.y = camera.y;
+            let shakeX = 0, shakeY = 0;
+            if (shakeIntensityRef.current > 0.1) {
+                shakeX = (Math.random() - 0.5) * shakeIntensityRef.current;
+                shakeY = (Math.random() - 0.5) * shakeIntensityRef.current;
+                shakeIntensityRef.current *= 0.9; // Decay
+            } else {
+                shakeIntensityRef.current = 0;
+            }
+            worldContainerRef.current.x = camera.x + shakeX;
+            worldContainerRef.current.y = camera.y + shakeY;
             worldContainerRef.current.scale.set(camera.scale, camera.scale);
         }
 
-        if (gameStatus === 'VICTORY') {
-            if (victoryStartTimeRef.current === null) {
-                victoryStartTimeRef.current = nowTime;
-            }
-        } else {
-            victoryStartTimeRef.current = null;
-        }
+        if (gameStatus === 'VICTORY') { if (victoryStartTimeRef.current === null) victoryStartTimeRef.current = nowTime; } else { victoryStartTimeRef.current = null; }
 
         updateFloatingEffects();
         updateDustParticles();
+        updateEconomicParticles();
 
-        // Tick and update action particles
         activeActionParticles.current = activeActionParticles.current.filter(p => {
-            if (!p.graphics || p.graphics.destroyed || (p.graphics as any)._destroyed) {
-                return false;
-            }
+            if (!p.graphics || p.graphics.destroyed) return false;
             p.life -= p.decay;
-            if (p.life <= 0) {
-                try { p.graphics.destroy(); } catch (err) { /* empty */ }
-                return false;
-            }
-            try {
-                p.graphics.x += p.vx;
-                p.graphics.y += p.vy;
-                p.graphics.alpha = p.life;
-                return true;
-            } catch (err) {
-                return false;
-            }
+            if (p.life <= 0) { try { p.graphics.destroy(); } catch (err) {} return false; }
+            try { p.graphics.x += p.vx; p.graphics.y += p.vy; p.graphics.alpha = p.life; return true; } catch (err) { return false; }
         });
 
-        // Instant hover outline and ghost preview — toggled every frame so it tracks the cursor live,
-        // decoupled from the ~100ms render tick that previously delayed the highlight.
-        {
-            const hid = useEphemeralStore.getState().hoveredHexId;
-            if (hid !== hoverRef.current) {
-                const prev = hoverRef.current ? hexCache.current.get(hoverRef.current) : null;
-                if (prev) {
-                    const o = prev.getChildByName('hoverOutline');
-                    if (o) o.visible = false;
-                    
-                    const gp = prev.getChildByName('ghost_preview');
-                    if (gp) {
-                        try { prev.removeChild(gp).destroy(); } catch (e) { /* empty */ }
-                    }
-                    const gt = prev.getChildByName('ghost_text');
-                    if (gt) {
-                        try { prev.removeChild(gt).destroy(); } catch (e) { /* empty */ }
-                    }
-                }
-                const cur = hid ? hexCache.current.get(hid) : null;
-                if (cur) { 
-                    const o = cur.getChildByName('hoverOutline'); 
-                    if (o) o.visible = !!(cur as any).isRevealed; 
-                    
-                    if (playerGrowthIntent === 'UPGRADE' && !!(cur as any).isRevealed) {
-                        const cachedProps = hexPropsCache.current.get(cur);
-                        if (cachedProps) {
-                            let ghostPreview = cur.getChildByName('ghost_preview') as PIXI.Graphics;
-                            if (!ghostPreview) {
-                                ghostPreview = new PIXI.Graphics();
-                                ghostPreview.name = 'ghost_preview';
-                                ghostPreview.zIndex = 30;
-                                cur.addChild(ghostPreview);
-                            }
-                            ghostPreview.clear();
-                            
-                            const nextOffsetY = cachedProps.offsetY - 8;
-                            
-                            const angleRad = rotation * (Math.PI / 180);
-                            const cos = Math.cos(angleRad);
-                            const sin = Math.sin(angleRad);
-                            const rotatedBasePoints = BASE_POINTS.map(pt => ({
-                                x: pt.x * cos - pt.y * sin,
-                                y: pt.x * sin + pt.y * cos
-                            }));
-
-                            ghostPreview.beginPath();
-                            rotatedBasePoints.forEach((pt, j) => {
-                                const px = pt.x;
-                                const py = pt.y * 0.8 + nextOffsetY;
-                                if (j === 0) ghostPreview.moveTo(px, py);
-                                else ghostPreview.lineTo(px, py);
-                            });
-                            ghostPreview.closePath();
-                            
-                            ghostPreview.stroke({ width: 2.0, color: 0x10b981, alpha: 0.95 });
-                            ghostPreview.fill({ color: 0x10b981, alpha: 0.28 });
-                            
-                            rotatedBasePoints.forEach(pt => {
-                                ghostPreview.beginPath();
-                                ghostPreview.moveTo(pt.x, pt.y * 0.8 + cachedProps.offsetY);
-                                ghostPreview.lineTo(pt.x, pt.y * 0.8 + nextOffsetY);
-                                ghostPreview.stroke({ width: 1.0, color: 0x10b981, alpha: 0.5 });
-                            });
-                            
-                            let ghostText = cur.getChildByName('ghost_text') as PIXI.Text;
-                            if (!ghostText) {
-                                ghostText = new PIXI.Text({
-                                    text: `+L${cachedProps.level + 1}`,
-                                    style: {
-                                        fontFamily: 'monospace',
-                                        fontSize: 11,
-                                        fontWeight: 'bold',
-                                        fill: 0x10b981,
-                                        stroke: { color: 0x000000, width: 2.5 }
-                                    }
-                                });
-                                ghostText.name = 'ghost_text';
-                                ghostText.anchor.set(0.5, 0.5);
-                                ghostText.zIndex = 31;
-                                cur.addChild(ghostText);
-                            }
-                            ghostText.y = nextOffsetY - 12;
-                            ghostText.visible = true;
-                        }
-                    }
-                }
-                hoverRef.current = hid;
+        const hid = useEphemeralStore.getState().hoveredHexId;
+        if (hid !== hoverRef.current) {
+            const prev = hoverRef.current ? hexCache.current.get(hoverRef.current) : null;
+            if (prev) {
+                const o = prev.getChildByName('hoverOutline'); if (o) o.visible = false;
+                const gp = prev.getChildByName('ghost_preview'); if (gp) { try { gp.visible = false; } catch (e) {} }
+                const gt = prev.getChildByName('ghost_text'); if (gt) { try { gt.visible = false; } catch (e) {} }
             }
+            const cur = hid ? hexCache.current.get(hid) : null;
+            if (cur) {
+                const o = cur.getChildByName('hoverOutline');
+                if (o) o.visible = !!(cur as any).isRevealed;
+                if (playerGrowthIntent === 'UPGRADE' && !!(cur as any).isRevealed) {
+                    const cachedProps = hexPropsCache.current.get(cur);
+                    if (cachedProps) {
+                        let ghostPreview = cur.getChildByName('ghost_preview') as PIXI.Graphics;
+                        if (!ghostPreview) { ghostPreview = new PIXI.Graphics(); ghostPreview.name = 'ghost_preview'; ghostPreview.zIndex = 30; cur.addChild(ghostPreview); }
+                        ghostPreview.visible = true; ghostPreview.clear();
+                        const nextOffsetY = cachedProps.offsetY - 8;
+                        const angleRad = rotation * (Math.PI / 180);
+                        const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
+                        const rbp = BASE_POINTS.map(pt => ({ x: pt.x * cos - pt.y * sin, y: pt.x * sin + pt.y * cos }));
+                        ghostPreview.beginPath();
+                        rbp.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + nextOffsetY; if (j === 0) ghostPreview.moveTo(px, py); else ghostPreview.lineTo(px, py); });
+                        ghostPreview.closePath();
+                        ghostPreview.stroke({ width: 2.0, color: 0x10b981, alpha: 0.95 });
+                        ghostPreview.fill({ color: 0x10b981, alpha: 0.28 });
+                        rbp.forEach(pt => { ghostPreview.beginPath(); ghostPreview.moveTo(pt.x, pt.y * 0.8 + cachedProps.offsetY); ghostPreview.lineTo(pt.x, pt.y * 0.8 + nextOffsetY); ghostPreview.stroke({ width: 1.0, color: 0x10b981, alpha: 0.5 }); });
+                        let ghostText = cur.getChildByName('ghost_text') as PIXI.Text;
+                        if (!ghostText) { ghostText = new PIXI.Text({ text: `+L${cachedProps.level + 1}`, style: { fontFamily: 'monospace', fontSize: 11, fontWeight: 'bold', fill: 0x10b981, stroke: { color: 0x000000, width: 2.5 } } }); ghostText.name = 'ghost_text'; ghostText.anchor.set(0.5, 0.5); ghostText.zIndex = 31; cur.addChild(ghostText); }
+                        ghostText.visible = true; ghostText.y = nextOffsetY - 12;
+                    }
+                }
+            }
+            hoverRef.current = hid;
         }
 
-        // 0. Animate bouncing objective arrows and swing crowns
         const renderItemMap = new Map<string, any>();
-        activeRenderItems.forEach(item => {
-            renderItemMap.set(item.id, item);
-        });
+        activeRenderItems.forEach(item => renderItemMap.set(item.id, item));
 
         hexCache.current.forEach((container, hexId) => {
-            const objArrow = container.getChildByName('objective_arrow') as PIXI.Container;
-            if (objArrow && objArrow.visible) {
-                const hexItem = renderItemMap.get(hexId);
-                const faceY = hexItem?.props?.offsetY ?? 0;
-                
-                const nowTime = Date.now();
-                const bounceAmt = Math.sin(nowTime * 0.006) * 6;
-                objArrow.y = faceY - 35 + Math.min(0, bounceAmt);
+            const objArrow = (container as any).objectiveArrowNode || container.getChildByName('objective_arrow');
+            if (objArrow) {
+                (container as any).objectiveArrowNode = objArrow;
+                if (objArrow.visible) {
+                    const hexItem = renderItemMap.get(hexId);
+                    const faceY = hexItem?.props?.offsetY ?? 0;
+                    objArrow.y = faceY - 35 + Math.min(0, Math.sin(nowTime * 0.006) * 6);
+                    const arrowArt = (objArrow as any).arrowArtNode || objArrow.getChildByName('arrow_art');
+                    if (arrowArt) { (objArrow as any).arrowArtNode = arrowArt; if (arrowArt instanceof PIXI.Text) arrowArt.rotation = Math.sin(nowTime * 0.003) * 0.15; }
+                }
+            }
+            const portalNode = (container as any).portalNode || container.getChildByName('portal');
+            if (portalNode) { (container as any).portalNode = portalNode; if (portalNode.visible) portalNode.rotation += 0.05; }
+            
+            // Void Flicker Animation (Deep Abyss Pulse)
+            const voidFlickerNode = (container as any).voidFlickerNode || container.getChildByName('voidFlicker');
+            if (voidFlickerNode) {
+                (container as any).voidFlickerNode = voidFlickerNode;
+                if (voidFlickerNode.visible) {
+                    voidFlickerNode.alpha = 0.6 + 0.4 * Math.sin(nowTime / 200);
+                    voidFlickerNode.scale.set(1.0 + 0.05 * Math.sin(nowTime / 150), 1.0 + 0.05 * Math.sin(nowTime / 150));
+                }
+            }
+            
+            // Damage Layer Pulse (Warning Effect)
+            const damageLayer = (container as any).damageLayerNode || container.getChildByName('damageLayer');
+            if (damageLayer && damageLayer.visible) {
+                const isC = (container as any).isCriticalDamage;
+                damageLayer.alpha = isC ? (0.5 + 0.5 * Math.sin(nowTime / 80)) : (0.8 + 0.2 * Math.sin(nowTime / 300));
+            }
 
-                const arrowArt = objArrow.getChildByName('arrow_art');
-                if (arrowArt) {
-                    const isCrown = arrowArt instanceof PIXI.Text;
-                    if (isCrown) {
-                        arrowArt.rotation = Math.sin(nowTime * 0.003) * 0.15;
-                    }
+            // L4+ Face Pulse (Reactor Overdrive)
+            const faceContainer = container.getChildByName('faceContainer');
+            if (faceContainer && faceContainer.visible) {
+                const cachedProps = hexPropsCache.current.get(container);
+                if (cachedProps && cachedProps.level >= 4) {
+                    faceContainer.alpha = 0.9 + 0.1 * Math.sin(nowTime / 400);
                 }
             }
         });
 
-        // 1. ANIMATE UNITS walking JUMPS and squashing physics
         const now = Date.now();
         const angleRad = rotation * (Math.PI / 180);
-        const cos = Math.cos(angleRad);
-        const sin = Math.sin(angleRad);
+        const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
 
-        unitAnimStates.current.forEach((state, unitId) => {
+        unitAnimStates.current.forEach((state: any, unitId: string) => {
             const container = unitCache.current.get(unitId);
             if (!container) return;
-
             const shadow = container.getChildByName('shadow') as PIXI.Graphics;
             const ring = container.getChildByName('ring') as PIXI.Graphics;
             const sprite = container.getChildByName('sprite') as PIXI.Sprite;
 
-            // Calculate staggered offsets relative to player position
             const uQ = state.isMoving ? state.currentQ : state.targetQ;
             const uR = state.isMoving ? state.currentR : state.targetR;
             const distToPlayer = cubeDistance({ q: playerQ, r: playerR }, { q: uQ, r: uR });
-
             const sessionElapsed = now - sessionStartTimeRef.current;
-            const entranceDuration = 1200;
-
             let entranceYOffset = 0;
-            if (sessionElapsed < entranceDuration + 600) {
-                const staggerDelay = distToPlayer * 100;
-                const elapsedForUnit = Math.max(0, sessionElapsed - staggerDelay);
-                const dropDuration = 800;
-                if (elapsedForUnit < dropDuration) {
-                    const p = elapsedForUnit / dropDuration;
-                    entranceYOffset = -500 * Math.pow(1 - p, 3);
-                }
-            }
-
+            if (sessionElapsed < 1800) { const e = Math.max(0, sessionElapsed - distToPlayer * 100); if (e < 800) entranceYOffset = -500 * Math.pow(1 - e / 800, 3); }
             let victoryYOffset = 0;
-            if (victoryStartTimeRef.current !== null) {
-                const victoryElapsed = now - victoryStartTimeRef.current;
-                const staggerDelay = distToPlayer * 100;
-                const elapsedForUnit = Math.max(0, victoryElapsed - staggerDelay);
-                if (elapsedForUnit > 0) {
-                    victoryYOffset = elapsedForUnit * 0.18;
-                }
-            }
+            if (victoryStartTimeRef.current !== null) { const e = Math.max(0, now - victoryStartTimeRef.current - distToPlayer * 100); if (e > 0) victoryYOffset = e * 0.18; }
 
             if (state.isMoving) {
                 const elapsed = now - state.startTime;
-                const duration = state.stepDuration;
-                const progress = Math.min(1.0, elapsed / duration);
-
-                // Select correct easing based on current move mode
+                const progress = Math.min(1.0, elapsed / state.stepDuration);
                 let ease = progress;
-                const m = state.moveMode;
-                if (m === 'MIDDLE') {
-                    ease = progress;
-                } else if (m === 'FIRST') {
-                    ease = progress * progress * (1.5 - 0.5 * progress);
-                } else if (m === 'LAST') {
-                    ease = 1.5 * progress - 0.5 * (progress * progress * progress);
-                } else {
-                    ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-                }
+                if (state.moveMode === 'FIRST') ease = progress * progress * (1.5 - 0.5 * progress);
+                else if (state.moveMode === 'LAST') ease = 1.5 * progress - 0.5 * (progress * progress * progress);
+                else if (state.moveMode === 'SINGLE') ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+                const ec = Math.max(0, Math.min(1, ease));
 
-                const easeClamped = Math.max(0, Math.min(1, ease));
-
-                // Position Interpolation in flat projected space
                 const startRawX = HEX_SIZE * (Math.sqrt(3) * state.startQ + Math.sqrt(3)/2 * state.startR);
                 const startRawY = HEX_SIZE * 1.5 * state.startR;
                 const startPx = startRawX * cos - startRawY * sin;
                 const startPy = (startRawX * sin + startRawY * cos) * 0.8;
-
                 const targetRawX = HEX_SIZE * (Math.sqrt(3) * state.targetQ + Math.sqrt(3)/2 * state.targetR);
                 const targetRawY = HEX_SIZE * 1.5 * state.targetR;
                 const targetPx = targetRawX * cos - targetRawY * sin;
                 const targetPy = (targetRawX * sin + targetRawY * cos) * 0.8;
 
-                const curX = startPx + (targetPx - startPx) * easeClamped;
-                const curY = startPy + (targetPy - startPy) * easeClamped;
+                state.currentQ = state.startQ + (state.targetQ - state.startQ) * ec;
+                state.currentR = state.startR + (state.targetR - state.startR) * ec;
+                state.currentLevel = state.startLevel + (state.targetLevel - state.startLevel) * ec;
 
-                state.currentQ = state.startQ + (state.targetQ - state.startQ) * easeClamped;
-                state.currentR = state.startR + (state.targetR - state.startR) * easeClamped;
-                state.currentLevel = state.startLevel + (state.targetLevel - state.startLevel) * easeClamped;
-
-                container.x = curX;
-                container.y = curY + entranceYOffset + victoryYOffset;
-                const tieBreaker = (state.currentQ * 0.0001) + (state.currentR * 0.00001);
-                container.zIndex = curY + 1 + tieBreaker;
+                container.x = startPx + (targetPx - startPx) * ec;
+                container.y = startPy + (targetPy - startPy) * ec + entranceYOffset + victoryYOffset;
+                container.zIndex = container.y + 1 + (state.currentQ * 0.0001) + (state.currentR * 0.00001);
                 
-                // Height/Jump arcs
                 const startZ = getHexVisualHeight(state.startLevel);
                 const targetZ = getHexVisualHeight(state.targetLevel);
-                const curGroundZ = startZ + (targetZ - startZ) * easeClamped;
+                const curGroundZ = startZ + (targetZ - startZ) * ec;
+                let jumpY = 0, scaleX = state.facingLeft ? -1 : 1, scaleY = 1.0;
 
-                let jumpY = 0;
-                let scaleX = state.facingLeft ? -1 : 1;
-                let scaleY = 1.0;
-
-                const isLateral = state.startQ !== state.targetQ || state.startR !== state.targetR;
-                if (isLateral) {
-                    const jumpPeak = 80;
-                    const arc = Math.sin(progress * Math.PI);
-                    jumpY = -arc * jumpPeak;
-
-                    // Squash & Stretch
-                    if (progress < 0.15) {
-                        const squash = 0.2 * Math.sin((progress / 0.15) * Math.PI);
-                        scaleY = 1.0 - squash;
-                        scaleX = (state.facingLeft ? -1.0 : 1.0) * (1.0 + squash * 0.5);
-                    } else if (progress < 0.85) {
-                        const stretch = 0.15 * Math.sin(((progress - 0.15) / 0.7) * Math.PI);
-                        scaleY = 1.0 + stretch;
-                        scaleX = (state.facingLeft ? -1.0 : 1.0) * (1.0 - stretch * 0.4);
-                    } else {
-                        const squash = 0.25 * Math.sin(((progress - 0.85) / 0.15) * Math.PI);
-                        scaleY = 1.0 - squash;
-                        scaleX = (state.facingLeft ? -1.0 : 1.0) * (1.0 + squash * 0.6);
-                    }
+                if (state.startQ !== state.targetQ || state.startR !== state.targetR) {
+                    jumpY = -Math.sin(progress * Math.PI) * 80;
+                    if (progress < 0.15) { const s = 0.2 * Math.sin((progress / 0.15) * Math.PI); scaleY = 1.0 - s; scaleX = (state.facingLeft ? -1.0 : 1.0) * (1.0 + s * 0.5); }
+                    else if (progress < 0.85) { const s = 0.15 * Math.sin(((progress - 0.15) / 0.7) * Math.PI); scaleY = 1.0 + s; scaleX = (state.facingLeft ? -1.0 : 1.0) * (1.0 - s * 0.4); }
+                    else { const s = 0.25 * Math.sin(((progress - 0.85) / 0.15) * Math.PI); scaleY = 1.0 - s; scaleX = (state.facingLeft ? -1.0 : 1.0) * (1.0 + s * 0.6); }
                 }
 
-                // Apply animations directly to children Pivot points
-                if (sprite) {
-                    sprite.y = curGroundZ + jumpY;
-                    sprite.scale.set(scaleX, scaleY);
-                }
-
-                if (ring) {
-                    ring.y = curGroundZ + jumpY;
-                    ring.scale.set(scaleX, scaleY);
-                }
-
-                if (shadow && isLateral) {
-                    shadow.y = curGroundZ;
-                    const arc = Math.sin(progress * Math.PI);
-                    const shadowScale = (1.0 - arc * 0.5) / Math.abs(scaleX);
-                    shadow.scale.set(shadowScale, shadowScale);
-                    shadow.alpha = 0.4 - arc * 0.25;
-                }
+                if (sprite) { sprite.y = curGroundZ + jumpY; sprite.scale.set(scaleX, scaleY); }
+                if (ring) { ring.y = curGroundZ + jumpY; ring.scale.set(scaleX, scaleY); }
+                if (shadow) { shadow.y = curGroundZ; const arc = Math.sin(progress * Math.PI); shadow.scale.set((1.0 - arc * 0.5) / Math.abs(scaleX), (1.0 - arc * 0.5) / Math.abs(scaleX)); shadow.alpha = 0.4 - arc * 0.25; }
 
                 if (progress >= 1.0) {
                     state.isMoving = false;
-                    state.startQ = state.targetQ;
-                    state.startR = state.targetR;
-                    state.startLevel = state.targetLevel;
-                    state.currentQ = state.targetQ;
-                    state.currentR = state.targetR;
-                    state.currentLevel = state.targetLevel;
-
-                    // Perfect snapping to target positions
-                    container.x = targetPx;
-                    container.y = targetPy + entranceYOffset + victoryYOffset;
-
-                    // Snaps to perfect rest frame
-                    const finalTieBreaker = (state.targetQ * 0.0001) + (state.targetR * 0.00001);
-                    container.zIndex = targetPy + 1 + finalTieBreaker;
-                    if (sprite) {
-                        sprite.y = targetZ;
-                        sprite.scale.set(state.facingLeft ? -1.0 : 1.0, 1.0);
-                    }
-                    if (shadow) {
-                        shadow.y = targetZ;
-                        shadow.scale.set(1.0, 1.0);
-                        shadow.alpha = 0.4;
-                    }
+                    state.startQ = state.targetQ; state.startR = state.targetR; state.startLevel = state.targetLevel;
+                    state.currentQ = state.targetQ; state.currentR = state.targetR; state.currentLevel = state.targetLevel;
+                    container.x = targetPx; container.y = targetPy + entranceYOffset + victoryYOffset;
+                    container.zIndex = targetPy + 1 + (state.targetQ * 0.0001) + (state.targetR * 0.00001);
+                    if (sprite) { sprite.y = targetZ; sprite.scale.set(state.facingLeft ? -1.0 : 1.0, 1.0); }
+                    if (shadow) { shadow.y = targetZ; shadow.scale.set(1, 1); shadow.alpha = 0.4; }
                 }
             } else {
-                // Ensure perfect alignment is maintained continuously (e.g. during zoom, rotation, or shake)
                 const targetRawX = HEX_SIZE * (Math.sqrt(3) * state.targetQ + Math.sqrt(3)/2 * state.targetR);
                 const targetRawY = HEX_SIZE * 1.5 * state.targetR;
                 const targetPx = targetRawX * cos - targetRawY * sin;
                 const targetPy = (targetRawX * sin + targetRawY * cos) * 0.8;
-                container.x = targetPx;
-                container.y = targetPy + entranceYOffset + victoryYOffset;
-
-                const finalTieBreaker = (state.targetQ * 0.0001) + (state.targetR * 0.00001);
-                container.zIndex = targetPy + 1 + finalTieBreaker;
-
-                // If not moving physically, still process idle float / hover loops
+                container.x = targetPx; container.y = targetPy + entranceYOffset + victoryYOffset;
+                container.zIndex = targetPy + 1 + (state.targetQ * 0.0001) + (state.targetR * 0.00001);
                 const targetZ = getHexVisualHeight(state.targetLevel);
-                if (sprite) {
-                    sprite.y = targetZ;
-                }
-                if (shadow) {
-                    shadow.y = targetZ;
-                    shadow.scale.set(1.0, 1.0);
-                    shadow.alpha = 0.4;
-                }
+                if (sprite) sprite.y = targetZ;
+                if (shadow) { shadow.y = targetZ; shadow.scale.set(1, 1); shadow.alpha = 0.4; }
             }
 
-            // --- PRODUCTION GRADE QUALITY PROGRESSION HUD & PARTICLES SYSTEM ---
             if (unitId === player?.id) {
                 let actionOverlay = container.getChildByName('actionOverlay') as PIXI.Container;
-                
-                // Hide action overlay if game ended, player is moving, or growth is not active
                 if (!isPlayerGrowing || state.isMoving || gameStatus === 'VICTORY' || gameStatus === 'DEFEAT' || evacuationActive) {
-                    if (actionOverlay) {
-                        actionOverlay.visible = false;
-                    }
-                    if (activeActionParticles.current.length > 0) {
-                        activeActionParticles.current.forEach(p => {
-                            try { p.graphics.destroy(); } catch (err) { /* empty */ }
-                        });
-                        activeActionParticles.current = [];
-                    }
+                    if (actionOverlay) actionOverlay.visible = false;
+                    if (activeActionParticles.current.length > 0) { activeActionParticles.current.forEach(p => { try { p.graphics.destroy(); } catch (err) {} }); activeActionParticles.current = []; }
                 } else {
-                    // Update/Create Action Overlay
-                    if (!actionOverlay) {
-                        actionOverlay = new PIXI.Container();
-                        actionOverlay.name = 'actionOverlay';
-                        container.addChild(actionOverlay);
-                    }
+                    if (!actionOverlay) { actionOverlay = new PIXI.Container(); actionOverlay.name = 'actionOverlay'; container.addChild(actionOverlay); }
                     actionOverlay.visible = true;
-                    
-                    // Fetch progress data from selected hex
                     const currentHex = grid && selectedHexId ? grid[selectedHexId] : null;
-                    const levelVal = currentHex ? currentHex.currentLevel : state.targetLevel;
-                    const pZ = getHexVisualHeight(levelVal);
+                    const pZ = getHexVisualHeight(currentHex ? currentHex.currentLevel : state.targetLevel);
                     actionOverlay.y = pZ;
-                    
-                    const isRu = useGameStore.getState().session?.language === 'RU';
+                    const isRu = sessionLanguage === 'RU';
                     const growthType = playerGrowthIntent || 'UPGRADE';
-                    
-                    let currentStepNeeded = 30;
-                    if (growthType === 'RECOVER' && currentHex) {
-                        currentStepNeeded = getLevelConfig(currentHex.maxLevel)?.growthTime ?? 30;
-                    } else if (growthType === 'DIG') {
-                        currentStepNeeded = 30;
-                    } else if (currentHex) {
-                        currentStepNeeded = getLevelConfig(currentHex.currentLevel + 1)?.growthTime ?? 30;
-                    }
-                    
-                    const targetPercent = currentHex && currentStepNeeded > 0 ? Math.min(1.0, currentHex.progress / currentStepNeeded) : 0;
-                    
-                    let color = 0xf59e0b; // Gold (UPGRADE / BUILD)
-                    let prgColorHexStr = '#10b981'; // Green for Upgrade bar
-                    if (growthType === 'DIG') {
-                        color = 0xef4444; // Red
-                        prgColorHexStr = '#ef4444';
-                    } else if (growthType === 'RECOVER') {
-                        color = 0x3b82f6; // Blue
-                        prgColorHexStr = '#3b82f6';
-                    }
-                    
-                    // 1. Rotating Perspective Ground Ring
+                    let needed = 30;
+                    if (growthType === 'RECOVER' && currentHex) needed = getLevelConfig(currentHex.maxLevel)?.growthTime ?? 30;
+                    else if (growthType === 'DIG') needed = 30;
+                    else if (currentHex) needed = getLevelConfig(currentHex.currentLevel + 1)?.growthTime ?? 30;
+                    const targetPercent = currentHex && needed > 0 ? Math.min(1.0, currentHex.progress / needed) : 0;
+                    let color = 0xf59e0b, prgColorHexStr = '#10b981';
+                    if (growthType === 'DIG') { color = 0xef4444; prgColorHexStr = '#ef4444'; }
+                    else if (growthType === 'RECOVER') { color = 0x3b82f6; prgColorHexStr = '#3b82f6'; }
+
                     let gRing = actionOverlay.getChildByName('gRing') as PIXI.Graphics;
-                    if (!gRing) {
-                        gRing = new PIXI.Graphics();
-                        gRing.name = 'gRing';
-                        actionOverlay.addChild(gRing);
-                    }
-                    gRing.clear();
-                    gRing.rotation += 0.04;
-                    gRing.scale.y = 0.6; // perfect 3D perspective squashing
-                    
+                    if (!gRing) { gRing = new PIXI.Graphics(); gRing.name = 'gRing'; actionOverlay.addChild(gRing); }
+                    gRing.clear(); gRing.rotation += 0.04; gRing.scale.y = 0.6;
                     for (let i = 0; i < 12; i++) {
-                        const theta = (2 * Math.PI * i) / 12;
-                        const rx = 24;
-                        const ry = 24;
-                        const dx = Math.cos(theta) * rx;
-                        const dy = Math.sin(theta) * ry;
-                        const dotProgress = (i + 1) / 12;
-                        const isActive = targetPercent >= dotProgress;
-                        if (isActive) {
-                            gRing.circle(dx, dy, 2.5);
-                            gRing.fill({ color, alpha: 0.95 });
-                            gRing.stroke({ width: 0.8, color: 0xffffff });
-                        } else {
-                            gRing.circle(dx, dy, 1.2);
-                            gRing.fill({ color: 0xffffff, alpha: 0.3 });
-                        }
+                        const dx = Math.cos((2 * Math.PI * i) / 12) * 24, dy = Math.sin((2 * Math.PI * i) / 12) * 24;
+                        if (targetPercent >= (i + 1) / 12) { gRing.circle(dx, dy, 2.5); gRing.fill({ color, alpha: 0.95 }); gRing.stroke({ width: 0.8, color: 0xffffff }); }
+                        else { gRing.circle(dx, dy, 1.2); gRing.fill({ color: 0xffffff, alpha: 0.3 }); }
                     }
-                    
-                    // 2. Action Particles Spawner
                     if (Math.random() < 0.3 && activeActionParticles.current.length < 25) {
-                        const pG = new PIXI.Graphics();
-                        pG.circle(0, 0, 1.2 + Math.random() * 2.2);
-                        pG.fill({ color });
-                        
-                        // Spawn relative to player's feet / isometric surface
-                        pG.x = (Math.random() - 0.5) * 20;
-                        const surfaceOffset = -3;
-                        pG.y = surfaceOffset + (Math.random() - 0.5) * 5;
-                        pG.zIndex = 30; // Float on top of player's legs
-                        
+                        const pG = new PIXI.Graphics(); pG.circle(0, 0, 1.2 + Math.random() * 2.2); pG.fill({ color });
+                        pG.x = (Math.random() - 0.5) * 20; pG.y = -3 + (Math.random() - 0.5) * 5; pG.zIndex = 30;
                         actionOverlay.addChild(pG);
-                        
-                        activeActionParticles.current.push({
-                            graphics: pG,
-                            vx: (Math.random() - 0.5) * 1.5,
-                            vy: -1.2 - Math.random() * 1.8,
-                            life: 1.0,
-                            decay: 0.02 + Math.random() * 0.03
-                        });
+                        activeActionParticles.current.push({ graphics: pG, vx: (Math.random() - 0.5) * 1.5, vy: -1.2 - Math.random() * 1.8, life: 1.0, decay: 0.02 + Math.random() * 0.03 });
                     }
-                    
-                    // 3. Floating Capsule HUD Pill above player head
                     let hudPill = actionOverlay.getChildByName('hudPill') as PIXI.Container;
-                    if (!hudPill) {
-                        hudPill = new PIXI.Container();
-                        hudPill.name = 'hudPill';
-                        actionOverlay.addChild(hudPill);
-                    }
-                    
-                    const blockHover = Math.sin(Date.now() / 200) * 3.2;
-                    hudPill.y = -64 + blockHover;
-                    
-                    // Capsule background
+                    if (!hudPill) { hudPill = new PIXI.Container(); hudPill.name = 'hudPill'; actionOverlay.addChild(hudPill); }
+                    hudPill.y = -64 + Math.sin(Date.now() / 200) * 3.2;
                     let pillBg = hudPill.getChildByName('pillBg') as PIXI.Graphics;
-                    if (!pillBg) {
-                        pillBg = new PIXI.Graphics();
-                        pillBg.name = 'pillBg';
-                        hudPill.addChild(pillBg);
-                    }
-                    pillBg.clear();
-                    pillBg.roundRect(-28, -11, 56, 22, 5);
-                    pillBg.fill({ color: 0x0b132b, alpha: 0.92 });
-                    pillBg.stroke({ width: 1.2, color });
-                    
-                    // Left icon container & animation
-                    pillBg.circle(-18, 0, 8);
-                    pillBg.fill({ color: 0x0b132b, alpha: 0.96 });
-                    pillBg.stroke({ width: 1.0, color });
-                    
+                    if (!pillBg) { pillBg = new PIXI.Graphics(); pillBg.name = 'pillBg'; hudPill.addChild(pillBg); }
+                    pillBg.clear(); pillBg.roundRect(-28, -11, 56, 22, 5); pillBg.fill({ color: 0x0b132b, alpha: 0.92 }); pillBg.stroke({ width: 1.2, color });
+                    pillBg.circle(-18, 0, 8); pillBg.fill({ color: 0x0b132b, alpha: 0.96 }); pillBg.stroke({ width: 1.0, color });
                     let pillIcon = hudPill.getChildByName('pillIcon') as PIXI.Graphics;
-                    if (!pillIcon) {
-                        pillIcon = new PIXI.Graphics();
-                        pillIcon.name = 'pillIcon';
-                        hudPill.addChild(pillIcon);
-                    }
-                    pillIcon.clear();
-                    pillIcon.x = -18;
-                    pillIcon.y = 0;
-                    
-                    if (growthType === 'DIG') {
-                        const swinging = Math.sin(Date.now() / 100) * 0.4;
-                        pillIcon.rotation = swinging - 0.3;
-                        pillIcon.strokeStyle = { width: 1.5, color: 0xcbd5e1 };
-                        pillIcon.moveTo(0, 3);
-                        pillIcon.lineTo(0, -4);
-                        pillIcon.stroke();
-                        
-                        pillIcon.beginPath();
-                        pillIcon.moveTo(-5, -4);
-                        pillIcon.quadraticCurveTo(0, -6, 5, -4);
-                        pillIcon.strokeStyle = { width: 1.5, color: 0xf8fafc };
-                        pillIcon.stroke();
-                    } else if (growthType === 'UPGRADE') {
-                        const swinging = Math.sin(Date.now() / 80) * 0.25;
-                        pillIcon.rotation = swinging - 0.15;
-                        pillIcon.strokeStyle = { width: 1.5, color: 0xcbd5e1 };
-                        pillIcon.moveTo(-1, 3);
-                        pillIcon.lineTo(1, -1);
-                        pillIcon.stroke();
-                        
-                        pillIcon.rect(-3, -4, 6, 4);
-                        pillIcon.fill({ color: 0xf59e0b });
-                    } else {
-                        pillIcon.rotation += 0.08;
-                        pillIcon.circle(0, 0, 4);
-                        pillIcon.stroke({ width: 1.5, color: 0x3b82f6 });
-                        pillIcon.circle(0, 0, 1.5);
-                        pillIcon.fill({ color: 0x93c5fd });
-                    }
-                    
-                    // Labels
+                    if (!pillIcon) { pillIcon = new PIXI.Graphics(); pillIcon.name = 'pillIcon'; hudPill.addChild(pillIcon); }
+                    pillIcon.clear(); pillIcon.x = -18; pillIcon.y = 0;
+                    if (growthType === 'DIG') { pillIcon.rotation = Math.sin(Date.now() / 100) * 0.4 - 0.3; pillIcon.strokeStyle = { width: 1.5, color: 0xcbd5e1 }; pillIcon.moveTo(0, 3); pillIcon.lineTo(0, -4); pillIcon.stroke(); }
+                    else if (growthType === 'UPGRADE') { pillIcon.rotation = Math.sin(Date.now() / 80) * 0.25 - 0.15; pillIcon.strokeStyle = { width: 1.5, color: 0xcbd5e1 }; pillIcon.moveTo(-1, 3); pillIcon.lineTo(1, -1); pillIcon.stroke(); pillIcon.rect(-3, -4, 6, 4); pillIcon.fill({ color: 0xf59e0b }); }
+                    else { pillIcon.rotation += 0.08; pillIcon.circle(0, 0, 4); pillIcon.stroke({ width: 1.5, color: 0x3b82f6 }); pillIcon.circle(0, 0, 1.5); pillIcon.fill({ color: 0x93c5fd }); }
                     let labelText = hudPill.getChildByName('labelText') as PIXI.Text;
-                    if (!labelText) {
-                        labelText = new PIXI.Text({
-                            text: '',
-                            style: {
-                                fontSize: 7.5,
-                                align: 'left',
-                                fill: prgColorHexStr,
-                                fontFamily: 'JetBrains Mono, monospace',
-                                fontWeight: 'bold'
-                            }
-                        });
-                        labelText.name = 'labelText';
-                        hudPill.addChild(labelText);
-                    }
+                    if (!labelText) { labelText = new PIXI.Text({ text: '', style: { fontSize: 7.5, align: 'left', fill: prgColorHexStr, fontFamily: 'JetBrains Mono, monospace', fontWeight: 'bold' } }); labelText.name = 'labelText'; hudPill.addChild(labelText); }
                     labelText.text = growthType === 'DIG' ? (isRu ? 'БУР' : 'DIG') : growthType === 'UPGRADE' ? (isRu ? 'СТРОЙ' : 'BUILD') : (isRu ? 'СЪЕМ' : 'SIPHON');
-                    labelText.style.fill = prgColorHexStr;
-                    labelText.x = -6;
-                    labelText.y = -8;
-                    
+                    labelText.style.fill = prgColorHexStr; labelText.x = -6; labelText.y = -8;
                     let prgText = hudPill.getChildByName('prgText') as PIXI.Text;
-                    if (!prgText) {
-                        prgText = new PIXI.Text({
-                            text: '',
-                            style: {
-                                fontSize: 7.5,
-                                align: 'right',
-                                fill: '#ffffff',
-                                fontFamily: 'JetBrains Mono, monospace',
-                                fontWeight: 'bold'
-                            }
-                        });
-                        prgText.name = 'prgText';
-                        hudPill.addChild(prgText);
-                    }
-                    prgText.text = `${Math.round(targetPercent * 100)}%`;
-                    prgText.x = 10;
-                    prgText.y = -8;
-                    
-                    // Bottom Progress bar lines
+                    if (!prgText) { prgText = new PIXI.Text({ text: '', style: { fontSize: 7.5, align: 'right', fill: '#ffffff', fontFamily: 'JetBrains Mono, monospace', fontWeight: 'bold' } }); prgText.name = 'prgText'; hudPill.addChild(prgText); }
+                    prgText.text = `${Math.round(targetPercent * 100)}%`; prgText.x = 10; prgText.y = -8;
                     let pBarUnder = hudPill.getChildByName('pBarUnder') as PIXI.Graphics;
-                    if (!pBarUnder) {
-                        pBarUnder = new PIXI.Graphics();
-                        pBarUnder.name = 'pBarUnder';
-                        hudPill.addChild(pBarUnder);
-                    }
-                    pBarUnder.clear();
-                    pBarUnder.roundRect(-6, 3, 30, 3, 1);
-                    pBarUnder.fill({ color: 0x1e293b, alpha: 0.95 });
-                    if (targetPercent > 0.01) {
-                        pBarUnder.roundRect(-6, 3, 30 * targetPercent, 3, 1);
-                        pBarUnder.fill({ color });
-                    }
+                    if (!pBarUnder) { pBarUnder = new PIXI.Graphics(); pBarUnder.name = 'pBarUnder'; hudPill.addChild(pBarUnder); }
+                    pBarUnder.clear(); pBarUnder.roundRect(-6, 3, 30, 3, 1); pBarUnder.fill({ color: 0x1e293b, alpha: 0.95 });
+                    if (targetPercent > 0.01) { pBarUnder.roundRect(-6, 3, 30 * targetPercent, 3, 1); pBarUnder.fill({ color }); }
                 }
             }
 
-            // Collapse or Triumphant Ascension Animation Check for Victory/Defeat/Evac
             const dynContainer = container as any;
             if (unitId === player?.id && gameStatus === 'VICTORY') {
                 if (sprite) {
-                    if (dynContainer.victoryStart === undefined) {
-                        dynContainer.victoryStart = Date.now();
-                    }
+                    if (dynContainer.victoryStart === undefined) dynContainer.victoryStart = Date.now();
                     const elapsed = Date.now() - dynContainer.victoryStart;
-                    
-                    // 1. Keep player sprite resting on the sinking hex tile
-                    const ascendY = 0;
                     const targetZ = getHexVisualHeight(state.targetLevel);
-                    sprite.y = targetZ;
-                    
-                    // Gentle spin and fade
-                    sprite.rotation += 0.05;
-                    sprite.alpha = Math.max(0, 1.0 - elapsed / 2500); // fade out over 2.5 seconds
-                    
-                    // 2. Draw glorious Victory Beam on ground
+                    sprite.y = targetZ; sprite.rotation += 0.05; sprite.alpha = Math.max(0, 1.0 - elapsed / 2500);
                     let victoryBeam = container.getChildByName('victoryBeam') as PIXI.Graphics;
-                    if (!victoryBeam) {
-                        victoryBeam = new PIXI.Graphics();
-                        victoryBeam.name = 'victoryBeam';
-                        victoryBeam.zIndex = -1; // behind player
-                        container.addChild(victoryBeam);
-                    }
-                    victoryBeam.visible = true;
-                    victoryBeam.clear();
-                    
-                    // Main beam: translucent green/cyan/gold
+                    if (!victoryBeam) { victoryBeam = new PIXI.Graphics(); victoryBeam.name = 'victoryBeam'; victoryBeam.zIndex = -1; container.addChild(victoryBeam); }
+                    victoryBeam.visible = true; victoryBeam.clear();
                     const beamAlpha = Math.min(0.6, elapsed / 500) * Math.max(0, 1.0 - elapsed / 3000);
                     const beamWidth = 30 + Math.sin(elapsed / 100) * 5;
-                    
-                    // Draw isometric base ellipse for beam
-                    victoryBeam.beginPath();
-                    victoryBeam.ellipse(0, targetZ, beamWidth, beamWidth * 0.5);
-                    victoryBeam.fill({ color: 0x10b981, alpha: beamAlpha * 0.3 });
-                    victoryBeam.stroke({ width: 2, color: 0x34d399, alpha: beamAlpha });
-
-                    // Vertical volumetric light cylinder
-                    victoryBeam.beginPath();
-                    victoryBeam.moveTo(-beamWidth, targetZ);
-                    victoryBeam.lineTo(-beamWidth * 0.6, targetZ - 300);
-                    victoryBeam.lineTo(beamWidth * 0.6, targetZ - 300);
-                    victoryBeam.lineTo(beamWidth, targetZ);
-                    victoryBeam.closePath();
-                    victoryBeam.fill({ color: 0x059669, alpha: beamAlpha * 0.15 });
-
-                    // Intense core line
-                    victoryBeam.beginPath();
-                    victoryBeam.moveTo(0, targetZ);
-                    victoryBeam.lineTo(0, targetZ - 300);
-                    victoryBeam.stroke({ width: 4 + Math.sin(elapsed / 50) * 2, color: 0xa7f3d0, alpha: beamAlpha * 0.8 });
-
-                    // Secondary cyan outer beam
-                    victoryBeam.beginPath();
-                    victoryBeam.moveTo(-beamWidth * 1.5, targetZ);
-                    victoryBeam.lineTo(-beamWidth * 1.0, targetZ - 300);
-                    victoryBeam.lineTo(beamWidth * 1.0, targetZ - 300);
-                    victoryBeam.lineTo(beamWidth * 1.5, targetZ);
-                    victoryBeam.closePath();
-                    victoryBeam.fill({ color: 0x06b6d4, alpha: beamAlpha * 0.06 });
-
-                    // 3. Floating celebratory particle rings and stars
+                    victoryBeam.beginPath(); victoryBeam.ellipse(0, targetZ, beamWidth, beamWidth * 0.5); victoryBeam.fill({ color: 0x10b981, alpha: beamAlpha * 0.3 }); victoryBeam.stroke({ width: 2, color: 0x34d399, alpha: beamAlpha });
+                    victoryBeam.beginPath(); victoryBeam.moveTo(-beamWidth, targetZ); victoryBeam.lineTo(-beamWidth * 0.6, targetZ - 300); victoryBeam.lineTo(beamWidth * 0.6, targetZ - 300); victoryBeam.lineTo(beamWidth, targetZ); victoryBeam.closePath(); victoryBeam.fill({ color: 0x059669, alpha: beamAlpha * 0.15 });
+                    victoryBeam.beginPath(); victoryBeam.moveTo(0, targetZ); victoryBeam.lineTo(0, targetZ - 300); victoryBeam.stroke({ width: 4 + Math.sin(elapsed / 50) * 2, color: 0xa7f3d0, alpha: beamAlpha * 0.8 });
                     let victoryParticles = container.getChildByName('victoryParticles') as PIXI.Graphics;
                     if (!victoryParticles) {
-                        victoryParticles = new PIXI.Graphics();
-                        victoryParticles.name = 'victoryParticles';
-                        victoryParticles.zIndex = 5;
-                        container.addChild(victoryParticles);
-                        // Store array of particle configurations
-                        dynContainer.vParts = Array.from({ length: 40 }, () => ({
-                            angle: Math.random() * Math.PI * 2,
-                            radius: 5 + Math.random() * 35,
-                            speedY: 1.5 + Math.random() * 3.0,
-                            size: 1.5 + Math.random() * 3.5,
-                            color: [0x10b981, 0x059669, 0x34d399, 0xf59e0b, 0x60a5fa, 0xffffff][Math.floor(Math.random() * 6)],
-                            yOffset: Math.random() * 100,
-                            driftSpeed: (Math.random() - 0.5) * 0.02
-                        }));
+                        victoryParticles = new PIXI.Graphics(); victoryParticles.name = 'victoryParticles'; victoryParticles.zIndex = 5; container.addChild(victoryParticles);
+                        dynContainer.vParts = Array.from({ length: 40 }, () => ({ angle: Math.random() * Math.PI * 2, radius: 5 + Math.random() * 35, speedY: 1.5 + Math.random() * 3.0, size: 1.5 + Math.random() * 3.5, color: [0x10b981, 0x059669, 0x34d399, 0xf59e0b, 0x60a5fa, 0xffffff][Math.floor(Math.random() * 6)], yOffset: Math.random() * 100, driftSpeed: (Math.random() - 0.5) * 0.02 }));
                     }
-                    victoryParticles.visible = true;
-                    victoryParticles.clear();
-
+                    victoryParticles.visible = true; victoryParticles.clear();
                     if (dynContainer.vParts) {
                         dynContainer.vParts.forEach((p: any) => {
-                            // Update particle position (rising up)
-                            p.yOffset += p.speedY;
-                            p.angle += p.driftSpeed;
-                            if (p.yOffset > 300) {
-                                p.yOffset = 0;
-                                p.radius = 5 + Math.random() * 35;
-                            }
-
-                            // Map flat circle to 3D isometric perspective ellipse
-                            const px = Math.cos(p.angle) * p.radius;
-                            const py = targetZ - p.yOffset + Math.sin(p.angle) * p.radius * 0.5;
-
+                            p.yOffset += p.speedY; p.angle += p.driftSpeed;
+                            if (p.yOffset > 300) { p.yOffset = 0; p.radius = 5 + Math.random() * 35; }
+                            const px = Math.cos(p.angle) * p.radius, py = targetZ - p.yOffset + Math.sin(p.angle) * p.radius * 0.5;
                             const pAlpha = beamAlpha * Math.min(1.0, (300 - p.yOffset) / 80);
-                            victoryParticles.beginPath();
-                            victoryParticles.circle(px, py, p.size);
-                            victoryParticles.fill({ color: p.color, alpha: pAlpha });
+                            victoryParticles.beginPath(); victoryParticles.circle(px, py, p.size); victoryParticles.fill({ color: p.color, alpha: pAlpha });
                         });
                     }
-
-                    // 4. Floating glowing Holographic "STABILITY RESTORED" Text Banner above player
                     let victoryHolo = container.getChildByName('victoryHolo') as PIXI.Container;
                     if (!victoryHolo) {
-                        victoryHolo = new PIXI.Container();
-                        victoryHolo.name = 'victoryHolo';
-                        victoryHolo.zIndex = 20;
-                        container.addChild(victoryHolo);
-
-                        const holoBg = new PIXI.Graphics();
-                        holoBg.name = 'holoBg';
-                        victoryHolo.addChild(holoBg);
-
-                        const isRu = useGameStore.getState().session?.language === 'RU';
-                        const labelTextStr = isRu ? 'СТАБИЛЬНОСТЬ ВОССТАНОВЛЕНА' : 'NEXUS STABILITY RESTORED';
-                        const holoText = new PIXI.Text({
-                            text: labelTextStr,
-                            style: {
-                                fontFamily: 'Space Grotesk, Inter, sans-serif',
-                                fontSize: 12,
-                                fontWeight: '900',
-                                fill: 0x34d399,
-                                stroke: { color: 0x064e3b, width: 3 },
-                                align: 'center',
-                                letterSpacing: 2
-                            }
-                        });
-                        holoText.name = 'holoText';
-                        holoText.anchor.set(0.5, 0.5);
-                        victoryHolo.addChild(holoText);
+                        victoryHolo = new PIXI.Container(); victoryHolo.name = 'victoryHolo'; victoryHolo.zIndex = 20; container.addChild(victoryHolo);
+                        const holoBg = new PIXI.Graphics(); holoBg.name = 'holoBg'; victoryHolo.addChild(holoBg);
+                        const isRu = sessionLanguage === 'RU';
+                        const holoText = new PIXI.Text({ text: isRu ? 'СТАБИЛЬНОСТЬ ВОССТАНОВЛЕНА' : 'NEXUS STABILITY RESTORED', style: { fontFamily: 'Space Grotesk, Inter, sans-serif', fontSize: 12, fontWeight: '900', fill: 0x34d399, stroke: { color: 0x064e3b, width: 3 }, align: 'center', letterSpacing: 2 } });
+                        holoText.name = 'holoText'; holoText.anchor.set(0.5, 0.5); victoryHolo.addChild(holoText);
                     }
                     victoryHolo.visible = true;
-                    
-                    // Animate holographic overlay floating/pulsing
-                    const holoY = targetZ - 130 - ascendY * 0.3 + Math.sin(elapsed / 150) * 5;
-                    victoryHolo.y = holoY;
+                    victoryHolo.y = targetZ - 130 + Math.sin(elapsed / 150) * 5;
                     victoryHolo.alpha = Math.min(1.0, elapsed / 800) * Math.max(0, 1.0 - elapsed / 3000);
                     victoryHolo.scale.set(1.0 + 0.05 * Math.sin(elapsed / 120));
-
                     const hBg = victoryHolo.getChildByName('holoBg') as PIXI.Graphics;
                     if (hBg) {
-                        hBg.clear();
-                        // Subtly animating tech scanline behind the text
-                        const w = 180 + Math.sin(elapsed / 100) * 15;
-                        hBg.roundRect(-w / 2, -12, w, 24, 4);
-                        hBg.fill({ color: 0x064e3b, alpha: 0.4 * victoryHolo.alpha });
-                        hBg.stroke({ width: 1.5, color: 0x34d399, alpha: 0.8 * victoryHolo.alpha });
-                        
-                        // scanning line
-                        const scanY = -12 + ((elapsed / 2) % 24);
-                        hBg.beginPath();
-                        hBg.moveTo(-w / 2 + 2, scanY);
-                        hBg.lineTo(w / 2 - 2, scanY);
-                        hBg.stroke({ width: 1.0, color: 0xa7f3d0, alpha: 0.6 * victoryHolo.alpha });
+                        hBg.clear(); const w = 180 + Math.sin(elapsed / 100) * 15;
+                        hBg.roundRect(-w / 2, -12, w, 24, 4); hBg.fill({ color: 0x064e3b, alpha: 0.4 * victoryHolo.alpha }); hBg.stroke({ width: 1.5, color: 0x34d399, alpha: 0.8 * victoryHolo.alpha });
+                        const scanY = -12 + ((elapsed / 2) % 24); hBg.beginPath(); hBg.moveTo(-w / 2 + 2, scanY); hBg.lineTo(w / 2 - 2, scanY); hBg.stroke({ width: 1.0, color: 0xa7f3d0, alpha: 0.6 * victoryHolo.alpha });
                     }
-
-                    if (shadow) {
-                        shadow.alpha = 0.4 * Math.max(0, 1.0 - elapsed / 1500);
-                        shadow.scale.set(Math.max(0, 1.0 - elapsed / 1500));
-                    }
+                    if (shadow) { shadow.alpha = 0.4 * Math.max(0, 1.0 - elapsed / 1500); shadow.scale.set(Math.max(0, 1.0 - elapsed / 1500)); }
                 }
-                if (ring && ring.alpha > 0.01) {
-                    ring.scale.set(ring.scale.x * 0.9, ring.scale.y * 0.9);
-                    ring.alpha *= 0.9;
-                } else if (ring) {
-                    ring.alpha = 0;
-                }
+                if (ring && ring.alpha > 0.01) { ring.scale.set(ring.scale.x * 0.9, ring.scale.y * 0.9); ring.alpha *= 0.9; } else if (ring) ring.alpha = 0;
             } else if (unitId === player?.id && (gameStatus === 'DEFEAT' || evacuationActive)) {
                 if (sprite) {
-                    const curSx = Math.abs(sprite.scale.x);
-                    const curSy = sprite.scale.y;
-                    if (curSx > 0.01 || curSy > 0.01) {
-                        const newSx = curSx * 0.8;
-                        const newSy = curSy * 0.8;
-                        sprite.scale.set(state.facingLeft ? -newSx : newSx, newSy);
-                        // Pivot is at the ankles, rotating makes it look like it's tumbling into the hex
-                        sprite.rotation += 0.3; 
-                    } else {
-                        sprite.scale.set(0, 0);
-                        sprite.rotation = 0;
-                    }
-                    
-                    if (shadow) {
-                       shadow.alpha = 0.4 * curSx;
-                       shadow.scale.set(curSx, curSy);
-                    }
+                    const curSx = Math.abs(sprite.scale.x), curSy = sprite.scale.y;
+                    if (curSx > 0.01 || curSy > 0.01) { sprite.scale.set(state.facingLeft ? -curSx * 0.8 : curSx * 0.8, curSy * 0.8); sprite.rotation += 0.3; }
+                    else { sprite.scale.set(0, 0); sprite.rotation = 0; }
+                    if (shadow) { shadow.alpha = 0.4 * curSx; shadow.scale.set(curSx, curSy); }
                 }
-                if (ring && ring.alpha > 0.01) {
-                    ring.scale.set(ring.scale.x * 0.8, ring.scale.y * 0.8);
-                    ring.alpha *= 0.8;
-                } else if (ring) {
-                    ring.alpha = 0;
-                }
+                if (ring && ring.alpha > 0.01) { ring.scale.set(ring.scale.x * 0.8, ring.scale.y * 0.8); ring.alpha *= 0.8; } else if (ring) ring.alpha = 0;
             } else {
-                if (sprite && !state.isMoving) {
-                    sprite.rotation = 0;
-                    // Restore natural sprite scale
-                    sprite.scale.set(state.facingLeft ? -1.0 : 1.0, 1.0);
-                    sprite.alpha = 1.0;
-                }
-                if (ring && !state.isMoving) {
-                    ring.scale.set(1.0, 1.0);
-                    ring.alpha = 0.6;
-                }
+                if (sprite && !state.isMoving) { sprite.rotation = 0; sprite.scale.set(state.facingLeft ? -1.0 : 1.0, 1.0); sprite.alpha = 1.0; }
+                if (ring && !state.isMoving) { ring.scale.set(1, 1); ring.alpha = 0.6; }
                 if (dynContainer.victoryStart !== undefined) {
                     dynContainer.victoryStart = undefined;
-                    const victoryBeam = container.getChildByName('victoryBeam');
-                    if (victoryBeam) victoryBeam.visible = false;
-                    const victoryParticles = container.getChildByName('victoryParticles');
-                    if (victoryParticles) victoryParticles.visible = false;
-                    const victoryHolo = container.getChildByName('victoryHolo');
-                    if (victoryHolo) victoryHolo.visible = false;
+                    const vb = container.getChildByName('victoryBeam'); if (vb) vb.visible = false;
+                    const vp = container.getChildByName('victoryParticles'); if (vp) vp.visible = false;
+                    const vh = container.getChildByName('victoryHolo'); if (vh) vh.visible = false;
                 }
             }
         });
 
-        // 2. Portal particle vortex spiral animations
-        hexCache.current.forEach(hContainer => {
-            const portalNode = hContainer.getChildByName('portal') as PIXI.Graphics;
-            if (portalNode) {
-                portalNode.rotation += 0.05;
-            }
-        });
-
-        // 3. Void Flicker animation
-        const now2 = Date.now();
-        hexCache.current.forEach(hContainer => {
-            const voidFlickerNode = hContainer.getChildByName('voidFlicker') as PIXI.Graphics;
-            if (voidFlickerNode) {
-                voidFlickerNode.alpha = 0.5 + 0.3 * Math.sin(now2 / 200);
-            }
-            const voidCircleGlow = hContainer.getChildByName('voidCircleGlow') as PIXI.Graphics;
-            if (voidCircleGlow) {
-                // Pulse size and alpha
-                const scaleVal = 1.0 + 0.12 * Math.sin(now2 / 180);
-                voidCircleGlow.scale.set(scaleVal, scaleVal);
-                voidCircleGlow.alpha = 0.6 + 0.4 * Math.sin(now2 / 240);
-            }
-        });
-
-        // 4. Draw Bot Laser Beam Action Animations
         const parent = renderItemsContainerRef.current;
         if (parent) {
             let laserGraphics = parent.getChildByName('botLasers') as PIXI.Graphics;
-            if (!laserGraphics) {
-                laserGraphics = new PIXI.Graphics();
-                laserGraphics.name = 'botLasers';
-                laserGraphics.zIndex = 999999;
-                parent.addChild(laserGraphics);
-            }
+            if (!laserGraphics) { laserGraphics = new PIXI.Graphics(); laserGraphics.name = 'botLasers'; laserGraphics.zIndex = 999999; parent.addChild(laserGraphics); }
             laserGraphics.clear();
-
             if (bots && bots.length > 0 && grid) {
                 bots.forEach(bot => {
                     const queue = bot.movementQueue;
                     const isGrowing = bot.state === 'GROWING' || (queue && queue.length > 0 && queue[0].upgrade);
                     if (!isGrowing) return;
-
                     const botContainer = unitCache.current.get(bot.id);
-                    if (!botContainer) return;
-
-                    if (!queue || queue.length === 0) return;
+                    if (!botContainer || !queue || queue.length === 0) return;
                     const targetCoord = queue[0];
-
-                    const isDefenseMode = sessionDefenseMode;
-                    if (isDefenseMode) {
-                        const dist = cubeDistance({ q: bot.q, r: bot.r }, { q: targetCoord.q, r: targetCoord.r });
-                        if (dist > 1) return;
-                    }
-
+                    if (isDefenseMode && cubeDistance({ q: bot.q, r: bot.r }, { q: targetCoord.q, r: targetCoord.r }) > 1) return;
                     const targetKey = getHexKey(targetCoord.q, targetCoord.r);
                     const targetHexContainer = hexCache.current.get(targetKey);
                     if (!targetHexContainer) return;
-
                     const botSprite = botContainer.getChildByName('sprite') as PIXI.Sprite;
                     const botZ = botSprite ? botSprite.y : 0;
-                    const startX = botContainer.x;
-                    const startY = botContainer.y + botZ - 12;
-
+                    const startX = botContainer.x, startY = botContainer.y + botZ - 12;
                     const targetLevel = grid[targetKey]?.currentLevel ?? 0;
                     const targetZ = getHexVisualHeight(targetLevel);
-                    const endX = targetHexContainer.x;
-                    const endY = targetHexContainer.y + targetZ;
-
+                    const endX = targetHexContainer.x, endY = targetHexContainer.y + targetZ;
                     const intent = (targetCoord.intent || 'UPGRADE') as string;
-                    let color = 0x00f0ff; // Cyan for UPGRADE
-                    if (intent === 'DIG') {
-                        color = 0xff3366; // Red/pink for DIG
-                    } else if (intent === 'TURRET') {
-                        color = 0xffaa00; // Orange for TURRET
-                    }
-
-                    // Draw main glow beam
+                    let color = 0x00f0ff;
+                    if (intent === 'DIG') color = 0xff3366;
+                    else if (intent === 'TURRET') color = 0xffaa00;
                     laserGraphics.strokeStyle = { width: 3.5, color: color, alpha: 0.85 };
-                    laserGraphics.beginPath();
-                    laserGraphics.moveTo(startX, startY);
-                    laserGraphics.lineTo(endX, endY);
-                    laserGraphics.stroke();
-
-                    // Draw bright core
+                    laserGraphics.beginPath(); laserGraphics.moveTo(startX, startY); laserGraphics.lineTo(endX, endY); laserGraphics.stroke();
                     laserGraphics.strokeStyle = { width: 1.2, color: 0xffffff, alpha: 1.0 };
-                    laserGraphics.beginPath();
-                    laserGraphics.moveTo(startX, startY);
-                    laserGraphics.lineTo(endX, endY);
-                    laserGraphics.stroke();
-
-                    // Impact ring glow
-                    const pulse = Math.sin(now2 * 0.02) * 2;
+                    laserGraphics.beginPath(); laserGraphics.moveTo(startX, startY); laserGraphics.lineTo(endX, endY); laserGraphics.stroke();
+                    const pulse = Math.sin(nowTime * 0.02) * 2;
                     laserGraphics.fillStyle = { color: color, alpha: 0.45 };
-                    laserGraphics.beginPath();
-                    laserGraphics.ellipse(endX, endY, 8 + pulse, 5 + pulse * 0.6);
-                    laserGraphics.fill();
-
+                    laserGraphics.beginPath(); laserGraphics.ellipse(endX, endY, 8 + pulse, 5 + pulse * 0.6); laserGraphics.fill();
                     laserGraphics.fillStyle = { color: 0xffffff, alpha: 0.75 };
-                    laserGraphics.beginPath();
-                    laserGraphics.ellipse(endX, endY, 3, 1.8);
-                    laserGraphics.fill();
+                    laserGraphics.beginPath(); laserGraphics.ellipse(endX, endY, 3, 1.8); laserGraphics.fill();
                 });
             }
         }
@@ -1559,12 +746,9 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
     const latestUpdateSceneLoop = useRef<() => void>(updateSceneLoop);
     latestUpdateSceneLoop.current = updateSceneLoop;
+    const tickerCallbackRef = useRef<() => void>(() => { latestUpdateSceneLoop.current(); });
 
-    const tickerCallbackRef = useRef<() => void>(() => {
-        latestUpdateSceneLoop.current();
-    });
-
-    // Trigger state changes when Render List items from Visual Worker update
+    // Main Render Effect with VFX Enhancements (Depth Fog, Drop Shadows)
     useEffect(() => {
         const parent = renderItemsContainerRef.current;
         if (!parent || !activeRenderItems.length || !grid) return;
@@ -1576,17 +760,11 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         const cos = Math.cos(angleRad);
         const sin = Math.sin(angleRad);
 
-        const rotatedBasePoints = BASE_POINTS.map(pt => ({
-            x: pt.x * cos - pt.y * sin,
-            y: pt.x * sin + pt.y * cos
-        }));
-        // Fetch the absolute active hover ID synchronously from the Ephemeral store
+        const rotatedBasePoints = BASE_POINTS.map(pt => ({ x: pt.x * cos - pt.y * sin, y: pt.x * sin + pt.y * cos }));
         const hoveredHexId = useEphemeralStore.getState().hoveredHexId;
-
-        // Track completed shape coordinates for campaign highlights
         const completedShapeCoords = useGameStore.getState().session?.completedShapeCoords || [];
+        const isLevelComplete = areAllConditionsMet(session, activeLevelConfig);
 
-        // 1. HEX CONSTRUCTS LAYER
         activeRenderItems.forEach(item => {
             if (item.type === 'HEX') {
                 activeHexIds.add(item.id);
@@ -1595,10 +773,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 if (!hex) return;
 
                 const isRevealed = !!props.isRevealed;
-                const isFinish = isFinishTile(props.q, props.r, activeLevelConfig) || 
-                                 props.structureType === 'MONUMENT' || 
-                                 props.structureType === 'PORTAL' ||
-                                 (session?.portalHex && session.portalHex.q === props.q && session.portalHex.r === props.r);
+                const isFinish = isFinishTile(props.q, props.r, activeLevelConfig) || props.structureType === 'MONUMENT' || props.structureType === 'PORTAL' || (session?.portalHex && session.portalHex.q === props.q && session.portalHex.r === props.r);
                 let curContainer = hexCache.current.get(item.id);
 
                 if (!curContainer) {
@@ -1610,1751 +785,725 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 }
                 (curContainer as any).isRevealed = isRevealed;
 
-                // Calculate projected flat visual coordinates
                 const cx = props.x * cos - props.y * sin;
                 const cy = (props.x * sin + props.y * cos) * 0.8;
-                curContainer.x = cx;
-                curContainer.y = cy;
-                curContainer.zIndex = item.depth;
+                curContainer.x = cx; curContainer.y = cy; curContainer.zIndex = item.depth;
                 curContainer.alpha = props.opacity;
 
                 const theme = getTheme(item.props.isRevealed ? hex.maxLevel : 0);
                 const isRealVoid = props.structureType === 'VOID';
-                
                 const costMoves = pendingConfirmation?.data?.costMoves;
                 const costCoins = pendingConfirmation?.data?.costCoins;
                 const gradientLockStatus = !!recentGradientLock;
 
                 const cProps = hexPropsCache.current.get(curContainer);
-                let isDirty = !cProps || 
-                    cProps.rotation !== rotation ||
-                    cProps.offsetY !== props.offsetY ||
-                    cProps.level !== props.level ||
-                    cProps.maxLevel !== props.maxLevel ||
-                    cProps.structureType !== props.structureType ||
-                    cProps.isSelected !== props.isSelected ||
-                    cProps.isPending !== props.isPending ||
-                    cProps.isOccupied !== props.isOccupied ||
-                    cProps.isGrowing !== props.isGrowing ||
-                    cProps.isRankLocked !== props.isRankLocked ||
-                    cProps.progress !== props.progress ||
-                    cProps.durability !== props.durability ||
-                    cProps.artifactType !== props.artifactType ||
-                    cProps.poiType !== props.poiType ||
-                    cProps.hologramTargetLevel !== props.hologramTargetLevel ||
-                    cProps.isPassable !== props.isPassable ||
-                    cProps.isRevealed !== props.isRevealed ||
-                    cProps.lighting !== props.lighting ||
-                    cProps.drawVoidWalls !== props.drawVoidWalls ||
-                    cProps.costMoves !== costMoves ||
-                    cProps.costCoins !== costCoins ||
-                    cProps.gradientLockStatus !== gradientLockStatus;
+                let isDirty = !cProps || cProps.rotation !== rotation ||
+                    cProps.offsetY !== props.offsetY || cProps.level !== props.level || cProps.maxLevel !== props.maxLevel ||
+                    cProps.structureType !== props.structureType || cProps.isSelected !== props.isSelected ||
+                    cProps.isPending !== props.isPending || cProps.isOccupied !== props.isOccupied ||
+                    cProps.isGrowing !== props.isGrowing || cProps.isRankLocked !== props.isRankLocked ||
+                    cProps.progress !== props.progress || cProps.durability !== props.durability ||
+                    cProps.artifactType !== props.artifactType || cProps.poiType !== props.poiType ||
+                    cProps.hologramTargetLevel !== props.hologramTargetLevel || cProps.isPassable !== props.isPassable ||
+                    cProps.isRevealed !== props.isRevealed || cProps.lighting !== props.lighting ||
+                    cProps.drawVoidWalls !== props.drawVoidWalls || cProps.costMoves !== costMoves ||
+                    cProps.costCoins !== costCoins || cProps.gradientLockStatus !== gradientLockStatus;
 
                 if (!isDirty) {
-                    // Check array manually
-                    for (let i = 0; i < 6; i++) {
-                        if (cProps.neighborLevels[i] !== props.neighborLevels[i]) {
-                            isDirty = true;
-                            break;
-                        }
-                    }
+                    for (let i = 0; i < 6; i++) { if (cProps.neighborLevels[i] !== props.neighborLevels[i]) { isDirty = true; break; } }
                 }
 
                 if (!isDirty) {
+                    const hoverOutline = curContainer.getChildByName('hoverOutline') as PIXI.Graphics;
+                    if (hoverOutline) hoverOutline.visible = (hoveredHexId === item.id) && isRevealed;
                     return;
                 }
 
-                const rotatedBasePoints = BASE_POINTS.map(pt => ({
-                    x: pt.x * cos - pt.y * sin,
-                    y: pt.x * sin + pt.y * cos
-                }));
-
                 hexPropsCache.current.set(curContainer, {
-                    rotation,
-                    offsetY: props.offsetY,
-                    level: props.level,
-                    maxLevel: props.maxLevel,
-                    structureType: props.structureType,
-                    neighborLevels: [...props.neighborLevels],
-                    isSelected: props.isSelected,
-                    isPending: props.isPending,
-                    isOccupied: props.isOccupied,
-                    isGrowing: props.isGrowing,
-                    isRankLocked: props.isRankLocked,
-                    progress: props.progress,
-                    durability: props.durability,
-                    artifactType: props.artifactType,
-                    poiType: props.poiType,
-                    hologramTargetLevel: props.hologramTargetLevel,
-                    isPassable: props.isPassable,
-                    isRevealed: props.isRevealed,
-                    lighting: props.lighting,
-                    drawVoidWalls: props.drawVoidWalls,
-                    costMoves,
-                    costCoins,
-                    gradientLockStatus,
+                    rotation, offsetY: props.offsetY, level: props.level, maxLevel: props.maxLevel, structureType: props.structureType,
+                    neighborLevels: [...props.neighborLevels], isSelected: props.isSelected, isPending: props.isPending, isOccupied: props.isOccupied,
+                    isGrowing: props.isGrowing, isRankLocked: props.isRankLocked, progress: props.progress, durability: props.durability,
+                    artifactType: props.artifactType, poiType: props.poiType, hologramTargetLevel: props.hologramTargetLevel,
+                    isPassable: props.isPassable, isRevealed: props.isRevealed, lighting: props.lighting, drawVoidWalls: props.drawVoidWalls,
+                    costMoves, costCoins, gradientLockStatus,
                 });
 
-                // Graphics references
                 let baseLayer = curContainer.getChildByName('base') as PIXI.Graphics;
-                if (!baseLayer) {
-                    baseLayer = new PIXI.Graphics();
-                    baseLayer.name = 'base';
-                    baseLayer.zIndex = 0;
-                    curContainer.addChild(baseLayer);
-                }
-
+                if (!baseLayer) { baseLayer = new PIXI.Graphics(); baseLayer.name = 'base'; baseLayer.zIndex = 0; curContainer.addChild(baseLayer); }
                 baseLayer.clear();
 
-                // Draw Scaffolding Guideline anchors below dry land
                 if (!isRealVoid) {
                     rotatedBasePoints.forEach((pt) => {
-                        const startY = pt.y * 0.8;
-                        const endY = props.offsetY + pt.y * 0.8;
                         if (props.offsetY < -1) {
                             baseLayer.strokeStyle = { width: 0.8, color: 0x6366f1, alpha: 0.15 };
-                            baseLayer.moveTo(pt.x, startY);
-                            baseLayer.lineTo(pt.x, endY);
-                            baseLayer.stroke();
+                            baseLayer.moveTo(pt.x, pt.y * 0.8); baseLayer.lineTo(pt.x, props.offsetY + pt.y * 0.8); baseLayer.stroke();
                         }
                     });
                 }
 
                 let borderLayer = curContainer.getChildByName('border') as PIXI.Graphics;
-                if (!borderLayer) {
-                    borderLayer = new PIXI.Graphics();
-                    borderLayer.name = 'border';
-                    borderLayer.zIndex = 20;
-                    curContainer.addChild(borderLayer);
-                }
+                if (!borderLayer) { borderLayer = new PIXI.Graphics(); borderLayer.name = 'border'; borderLayer.zIndex = 20; curContainer.addChild(borderLayer); }
                 borderLayer.clear();
                 
                 const faceY = props.offsetY;
 
-                // borderLayer is already initialized and cleared above.
-
-                // Drawing Side Strata layers
                 if (isRealVoid && (props.drawVoidWalls !== false)) {
-                    // Top black void face and solid red border
                     borderLayer.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => {
-                        const px = pt.x;
-                        const py = pt.y * 0.8 + faceY;
-                        if (j === 0) borderLayer.moveTo(px, py);
-                        else borderLayer.lineTo(px, py);
-                    });
-                    borderLayer.closePath();
-                    borderLayer.fill({ color: 0x0a0a0a });
+                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + faceY; if (j === 0) borderLayer.moveTo(px, py); else borderLayer.lineTo(px, py); });
+                    borderLayer.closePath(); borderLayer.fill({ color: 0x0a0a0a });
 
                     let voidFlickerNode = curContainer.getChildByName('voidFlicker') as PIXI.Graphics;
-                    if (!voidFlickerNode) {
-                        voidFlickerNode = new PIXI.Graphics();
-                        voidFlickerNode.name = 'voidFlicker';
-                        curContainer.addChild(voidFlickerNode);
-                    }
-                    voidFlickerNode.zIndex = 22;
-                    voidFlickerNode.visible = true;
-                    curContainer.sortChildren();
-                    voidFlickerNode.clear();
+                    if (!voidFlickerNode) { voidFlickerNode = new PIXI.Graphics(); voidFlickerNode.name = 'voidFlicker'; curContainer.addChild(voidFlickerNode); }
+                    voidFlickerNode.zIndex = 22; voidFlickerNode.visible = true; (curContainer as any).voidFlickerNode = voidFlickerNode;
+                    voidFlickerNode.clear(); voidFlickerNode.y = 0; voidFlickerNode.scale.set(1, 1); voidFlickerNode.rotation = 0;
 
-                    // Draw concentric hexagons to create a smooth, beautiful gradient from center (highest red opacity) to boundaries (fades out)
-                    const numHexLayers = 15;
+                    const numHexLayers = 3;
                     for (let step = 0; step < numHexLayers; step++) {
                         const s = 1.0 - (step / numHexLayers) * 0.95;
-                        const alphaVal = 0.03 + 0.65 * Math.pow(1.0 - s, 2.0);
-
+                        const alphaVal = 0.05 + 0.6 * Math.pow(1.0 - s, 2.0);
                         voidFlickerNode.beginPath();
-                        rotatedBasePoints.forEach((pt, j) => {
-                            const px = pt.x * s;
-                            const py = pt.y * 0.8 * s + faceY;
-                            if (j === 0) voidFlickerNode.moveTo(px, py);
-                            else voidFlickerNode.lineTo(px, py);
-                        });
-                        voidFlickerNode.closePath();
-                        voidFlickerNode.fill({ color: 0xef4444, alpha: alphaVal });
+                        rotatedBasePoints.forEach((pt, j) => { const px = pt.x * s, py = pt.y * 0.8 * s + faceY; if (j === 0) voidFlickerNode.moveTo(px, py); else voidFlickerNode.lineTo(px, py); });
+                        voidFlickerNode.closePath(); voidFlickerNode.fill({ color: 0xef4444, alpha: alphaVal });
                     }
-
-                    // Add a clean, crisp red hexagonal boundary stroke
                     voidFlickerNode.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => {
-                        const px = pt.x;
-                        const py = pt.y * 0.8 + faceY;
-                        if (j === 0) voidFlickerNode.moveTo(px, py);
-                        else voidFlickerNode.lineTo(px, py);
-                    });
-                    voidFlickerNode.closePath();
-                    voidFlickerNode.stroke({ width: 3.0, color: 0xef4444, alignment: 1.0 });
+                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + faceY; if (j === 0) voidFlickerNode.moveTo(px, py); else voidFlickerNode.lineTo(px, py); });
+                    voidFlickerNode.closePath(); voidFlickerNode.stroke({ width: 3.0, color: 0xef4444, alignment: 1.0 });
+                    voidFlickerNode.rotation = 0;
 
-                    // Clean up and remove voidCircleGlow if it exists
                     const existingCircleGlow = curContainer.getChildByName('voidCircleGlow');
-                    if (existingCircleGlow) {
-                        curContainer.removeChild(existingCircleGlow).destroy();
-                    }
+                    if (existingCircleGlow) existingCircleGlow.visible = false;
 
-                    // Draw Void boundaries (side walls)
                     for (let i = 0; i < 6; i++) {
                         const next = (i + 1) % 6;
-                        const pt0 = rotatedBasePoints[i];
-                        const pt1 = rotatedBasePoints[next];
-                        
-                        const isFrontFacing = (pt0.y + pt1.y) >= -0.01;
-
-                        if (isFrontFacing) {
+                        const pt0 = rotatedBasePoints[i], pt1 = rotatedBasePoints[next];
+                        if ((pt0.y + pt1.y) >= -0.01) {
                             const VOID_DEPTH = MAX_WALL_DEPTH;
-                            const x1 = pt0.x;
-                            const y1 = pt0.y * 0.8 + faceY;
-                            const x2 = pt1.x;
-                            const y2 = pt1.y * 0.8 + faceY;
-
-                            baseLayer.beginPath();
-                            baseLayer.moveTo(x1, y1);
-                            baseLayer.lineTo(x2, y2);
-                            baseLayer.lineTo(x2, y2 + VOID_DEPTH);
-                            baseLayer.lineTo(x1, y1 + VOID_DEPTH);
-                            baseLayer.closePath();
-                            baseLayer.fill({ color: 0x020617 });
-                            baseLayer.strokeStyle = { width: 1.0, color: 0x1e293b };
-                            baseLayer.stroke();
+                            const x1 = pt0.x, y1 = pt0.y * 0.8 + faceY, x2 = pt1.x, y2 = pt1.y * 0.8 + faceY;
+                            baseLayer.beginPath(); baseLayer.moveTo(x1, y1); baseLayer.lineTo(x2, y2); baseLayer.lineTo(x2, y2 + VOID_DEPTH); baseLayer.lineTo(x1, y1 + VOID_DEPTH); baseLayer.closePath();
+                            baseLayer.fill({ color: 0x020617 }); baseLayer.strokeStyle = { width: 1.0, color: 0x1e293b }; baseLayer.stroke();
                         }
                     }
                 } else if (!isRealVoid) {
-                    // Standard height plate walls
+                    const voidFlickerNode = curContainer.getChildByName('voidFlicker');
+                    if (voidFlickerNode) voidFlickerNode.visible = false;
+                    const voidCircleGlow = curContainer.getChildByName('voidCircleGlow');
+                    if (voidCircleGlow) voidCircleGlow.visible = false;
+
                     for (let i = 0; i < 6; i++) {
                         const next = (i + 1) % 6;
-                        const pt0 = rotatedBasePoints[i];
-                        const pt1 = rotatedBasePoints[next];
-                        
-                        const isFrontFacing = (pt0.y + pt1.y) >= -0.01;
-
-                        if (isFrontFacing) {
+                        const pt0 = rotatedBasePoints[i], pt1 = rotatedBasePoints[next];
+                        if ((pt0.y + pt1.y) >= -0.01) {
                             const nIndex = 5 - i;
                             const nLevel = props.neighborLevels[nIndex];
-
                             let nY = 0;
-                            // VOID neighbor: cap the skirt to a short depth so an elevated
-                            // hex over the abyss looks like a solid plateau, not a 200px thread.
                             if (nLevel === -99) nY = props.offsetY + VOID_SKIRT_DEPTH;
                             else nY = nLevel >= 0 ? -(10 + nLevel * 10) : Math.abs(nLevel + 1) * 10;
 
                             if (props.offsetY < nY) {
                                 const heightDiff = nY - props.offsetY;
-                                const x1 = pt0.x;
-                                const y1 = pt0.y * 0.8 + props.offsetY;
-                                const x2 = pt1.x;
-                                const y2 = pt1.y * 0.8 + props.offsetY;
-
-                                // Base wall face: dark fill for the full skirt.
-                                baseLayer.beginPath();
-                                baseLayer.moveTo(x1, y1);
-                                baseLayer.lineTo(x2, y2);
-                                baseLayer.lineTo(x2, y2 + heightDiff);
-                                baseLayer.lineTo(x1, y1 + heightDiff);
-                                baseLayer.closePath();
-                                baseLayer.fill({ color: PIXI.Color.shared.setValue(theme.dark).toNumber() });
-
-                                // Top highlight band: a slightly-lighter quad over the top ~40%
-                                // of the skirt gives a subtle top-lit 3D shade (lighter near the
-                                // top edge, darker toward the bottom) so the face reads against the
-                                // dark background. Alpha-only here so it does not fight the
-                                // container-level fade applied elsewhere via curContainer.alpha.
+                                const x1 = pt0.x, y1 = pt0.y * 0.8 + props.offsetY, x2 = pt1.x, y2 = pt1.y * 0.8 + props.offsetY;
+                                baseLayer.beginPath(); baseLayer.moveTo(x1, y1); baseLayer.lineTo(x2, y2); baseLayer.lineTo(x2, y2 + heightDiff); baseLayer.lineTo(x1, y1 + heightDiff); baseLayer.closePath();
+                                baseLayer.fill({ color: theme.dark });
                                 const bandDepth = heightDiff * 0.4;
+                                baseLayer.beginPath(); baseLayer.moveTo(x1, y1); baseLayer.lineTo(x2, y2); baseLayer.lineTo(x2, y2 + bandDepth); baseLayer.lineTo(x1, y1 + bandDepth); baseLayer.closePath();
+                                baseLayer.fill({ color: theme.main, alpha: 0.25 });
+                                baseLayer.strokeStyle = { width: 1.5, color: theme.stroke };
+                                baseLayer.beginPath(); baseLayer.moveTo(x1, y1); baseLayer.lineTo(x2, y2); baseLayer.lineTo(x2, y2 + heightDiff); baseLayer.lineTo(x1, y1 + heightDiff); baseLayer.closePath(); baseLayer.stroke();
+                            }
+                        }
+                    }
+                    
+                    // Drop Shadows from Higher Neighbors
+                    if (props.level >= 0) {
+                        for (let i = 0; i < 6; i++) {
+                            const nLevel = props.neighborLevels[5 - i];
+                            if (nLevel > props.level + 1 && nLevel !== -99) {
+                                const pt0 = rotatedBasePoints[i];
+                                const pt1 = rotatedBasePoints[(i + 1) % 6];
+                                const shadowDist = Math.min(20, (nLevel - props.level) * 5);
                                 baseLayer.beginPath();
-                                baseLayer.moveTo(x1, y1);
-                                baseLayer.lineTo(x2, y2);
-                                baseLayer.lineTo(x2, y2 + bandDepth);
-                                baseLayer.lineTo(x1, y1 + bandDepth);
+                                baseLayer.moveTo(pt0.x, pt0.y * 0.8 + props.offsetY);
+                                baseLayer.lineTo(pt1.x, pt1.y * 0.8 + props.offsetY);
+                                baseLayer.lineTo(pt1.x + (pt1.x > 0 ? shadowDist : -shadowDist), pt1.y * 0.8 + props.offsetY + shadowDist * 0.5);
+                                baseLayer.lineTo(pt0.x + (pt0.x > 0 ? shadowDist : -shadowDist), pt0.y * 0.8 + props.offsetY + shadowDist * 0.5);
                                 baseLayer.closePath();
-                                baseLayer.fill({ color: PIXI.Color.shared.setValue(theme.main).toNumber(), alpha: 0.25 });
-
-                                baseLayer.strokeStyle = { width: 1.5, color: PIXI.Color.shared.setValue(theme.stroke).toNumber() };
-                                baseLayer.beginPath();
-                                baseLayer.moveTo(x1, y1);
-                                baseLayer.lineTo(x2, y2);
-                                baseLayer.lineTo(x2, y2 + heightDiff);
-                                baseLayer.lineTo(x1, y1 + heightDiff);
-                                baseLayer.closePath();
-                                baseLayer.stroke();
+                                baseLayer.fill({ color: 0x000000, alpha: 0.25 });
                             }
                         }
                     }
                 }
 
-                // Draw Top Face Polygon
                 let faceContainer = curContainer.getChildByName('faceContainer') as PIXI.Container;
                 if (!isRealVoid) {
-                    const voidFlickerNode = curContainer.getChildByName('voidFlicker');
-                    if (voidFlickerNode) {
-                        curContainer.removeChild(voidFlickerNode).destroy();
-                    }
-                    const voidCircleGlow = curContainer.getChildByName('voidCircleGlow');
-                    if (voidCircleGlow) {
-                        curContainer.removeChild(voidCircleGlow).destroy();
-                    }
-
-                    const topCanvas = isFinish
-                        ? textureService.getTexture(0, props.q, props.r, undefined, 'PORTAL')
-                        : textureService.getTexture(props.level, props.q, props.r, undefined);
+                    const topCanvas = isFinish ? textureService.getTexture(0, props.q, props.r, undefined, 'PORTAL') : textureService.getTexture(props.level, props.q, props.r, undefined);
                     const tex = getPixiTexture(topCanvas);
-
                     if (!faceContainer) {
-                        faceContainer = new PIXI.Container();
-                        faceContainer.name = 'faceContainer';
-                        faceContainer.zIndex = 10;
-                        curContainer.addChild(faceContainer); 
-                        
-                        const sprite = new PIXI.Sprite(tex);
-                        sprite.name = 'faceSprite';
-                        sprite.anchor.set(0.5, 0.5);
-                        faceContainer.addChild(sprite);
+                        faceContainer = new PIXI.Container(); faceContainer.name = 'faceContainer'; faceContainer.zIndex = 10; curContainer.addChild(faceContainer);
+                        const sprite = new PIXI.Sprite(tex); sprite.name = 'faceSprite'; sprite.anchor.set(0.5, 0.5); faceContainer.addChild(sprite);
                     }
-                    
                     const faceSprite = faceContainer.getChildByName('faceSprite') as PIXI.Sprite;
-                    faceSprite.texture = tex;
-                    
-                    const angleRad = rotation * (Math.PI / 180);
-                    faceSprite.rotation = angleRad;
-                    
-                    const scaleX = HEX_SIZE / 32;
-                    const scaleY = (HEX_SIZE * 0.8) / 32;
-                    faceContainer.scale.set(scaleX, scaleY);
-                    faceContainer.y = props.offsetY;
-                    faceContainer.visible = true;
-                    
-                    // Cleanup old facePoly if it exists from previous version
-                    const oldFacePoly = curContainer.getChildByName('facePoly');
-                    if (oldFacePoly) {
-                        curContainer.removeChild(oldFacePoly);
-                        oldFacePoly.destroy();
-                    }
+                    faceSprite.texture = tex; faceSprite.rotation = angleRad;
+                    faceContainer.scale.set(HEX_SIZE / 32, (HEX_SIZE * 0.8) / 32);
+                    faceContainer.y = props.offsetY; faceContainer.visible = true;
 
-                    // L1 Hex Durability Damage Render
-                    if (props.level === 1 && props.durability !== undefined && props.durability < 6 && isRevealed) {
+                    if (props.level === 1 && props.structureType !== 'VOID' && props.durability !== undefined && props.durability < 6 && isRevealed) {
                         let damageLayer = curContainer.getChildByName('damageLayer') as PIXI.Graphics;
-                        if (!damageLayer) {
-                            damageLayer = new PIXI.Graphics();
-                            damageLayer.name = 'damageLayer';
-                            damageLayer.zIndex = 11;
-                            curContainer.addChild(damageLayer);
-                        }
-                        damageLayer.clear();
-                        
+                        if (!damageLayer) { damageLayer = new PIXI.Graphics(); damageLayer.name = 'damageLayer'; damageLayer.zIndex = 11; curContainer.addChild(damageLayer); }
                         const isCritical = props.durability <= 2;
-                        
-                        // Inner warning glow / shading
-                        damageLayer.beginPath();
-                        rotatedBasePoints.forEach((pt, j) => {
-                            const px = pt.x;
-                            const py = pt.y * 0.8 + props.offsetY;
-                            if (j === 0) damageLayer.moveTo(px, py);
-                            else damageLayer.lineTo(px, py);
-                        });
-                        damageLayer.closePath();
-                        
-                        damageLayer.stroke({ 
-                            width: isCritical ? 3 : 2, 
-                            color: isCritical ? 0xef4444 : 0xf59e0b, 
-                            alpha: 0.8 
-                        });
-                        
-                        if (isCritical) {
-                            damageLayer.fill({ color: 0xef4444, alpha: 0.25 });
-                            
-                            // High frequency blink/pulse for critical warning
-                            damageLayer.alpha = 0.6 + 0.4 * Math.sin(Date.now() / 150);
-                            
-                            // Draw a small yellow/orange warning triangle at the center of the face
-                            const ty = props.offsetY - 5;
-                            damageLayer.beginPath();
-                            damageLayer.moveTo(0, ty - 8);
-                            damageLayer.lineTo(8, ty + 6);
-                            damageLayer.lineTo(-8, ty + 6);
-                            damageLayer.closePath();
-                            damageLayer.fill({ color: 0xeab308 }); // yellow triangle
-                            damageLayer.stroke({ width: 1.5, color: 0x000000 });
-                            
-                            // Draw the exclamation mark inside the triangle
-                            damageLayer.beginPath();
-                            damageLayer.moveTo(0, ty - 4);
-                            damageLayer.lineTo(0, ty + 1);
-                            damageLayer.stroke({ width: 2, color: 0x000000 });
-                            
-                            damageLayer.beginPath();
-                            damageLayer.ellipse(0, ty + 4, 1, 1);
-                            damageLayer.fill({ color: 0x000000 });
-                        }
-                        
-                        // Pseudo-random static procedural cracks
-                        const prng = (s: number) => {
-                            const x = Math.sin((props.q + 1) * 12.9898 + (props.r + 1) * 78.233 + s) * 43758.5453;
-                            return x - Math.floor(x);
-                        };
-
-                        damageLayer.beginPath();
-                        const numCracks = Math.min(5, 7 - props.durability); // e.g. 5 durability shows 2 cracks
-                        for (let i = 0; i < numCracks; i++) {
-                            const cx = (prng(i) - 0.5) * 12;
-                            const cy = (prng(i + 10) - 0.5) * 12 + props.offsetY;
-                            damageLayer.moveTo(cx, cy);
-                            
-                            const angle = prng(i + 20) * Math.PI * 2;
-                            const dist = 10 + prng(i + 30) * 15;
-                            const endX = cx + Math.cos(angle) * dist;
-                            const endY = cy + Math.sin(angle) * dist * 0.8;
-                            damageLayer.lineTo(endX, endY);
-                            
-                            if (prng(i + 40) > 0.4) {
-                                const angle2 = angle + (prng(i + 50) > 0.5 ? 0.7 : -0.7);
-                                const dist2 = 8 + prng(i + 60) * 8;
-                                damageLayer.lineTo(endX + Math.cos(angle2) * dist2, 
-                                                   endY + Math.sin(angle2) * dist2 * 0.8);
+                        (curContainer as any).damageLayerNode = damageLayer; (curContainer as any).isCriticalDamage = isCritical;
+                        damageLayer.visible = true;
+                        if (isDirty) {
+                            damageLayer.clear();
+                            let glowColor = 0xeab308, strokeColor = 0xfef08a;
+                            switch (props.durability) { case 4: glowColor = 0xf59e0b; strokeColor = 0xfde047; break; case 3: glowColor = 0xf97316; strokeColor = 0xfdba74; break; case 2: glowColor = 0xea580c; strokeColor = 0xfca5a5; break; case 1: glowColor = 0xef4444; strokeColor = 0xfecaca; break; }
+                            const numDamagedEdges = 6 - props.durability;
+                            for (let i = 0; i < numDamagedEdges; i++) {
+                                const p1 = rotatedBasePoints[i], p2 = rotatedBasePoints[(i + 1) % 6];
+                                damageLayer.beginPath(); damageLayer.moveTo(p1.x, p1.y * 0.8 + faceY); damageLayer.lineTo(p2.x, p2.y * 0.8 + faceY);
+                                damageLayer.stroke({ width: 7.0, color: glowColor, alpha: 0.45 });
+                                damageLayer.beginPath(); damageLayer.moveTo(p1.x, p1.y * 0.8 + faceY); damageLayer.lineTo(p2.x, p2.y * 0.8 + faceY);
+                                damageLayer.stroke({ width: 3.5, color: strokeColor, alpha: 1.0 });
+                            }
+                            const innerScale = (6 - props.durability) / 6;
+                            if (innerScale > 0) {
+                                damageLayer.beginPath();
+                                rotatedBasePoints.forEach((pt, j) => { const px = pt.x * innerScale, py = pt.y * 0.8 * innerScale + faceY; if (j === 0) damageLayer.moveTo(px, py); else damageLayer.lineTo(px, py); });
+                                damageLayer.closePath(); damageLayer.fill({ color: 0x180202, alpha: 0.88 }); damageLayer.stroke({ width: 2.2, color: strokeColor, alpha: 0.9 });
                             }
                         }
-                        damageLayer.stroke({ width: 1.5, color: 0x450a0a, alpha: 0.9, join: 'round', cap: 'round' });
-                        
                     } else {
                         const damageLayer = curContainer.getChildByName('damageLayer') as PIXI.Graphics;
-                        if (damageLayer) damageLayer.clear();
+                        if (damageLayer) damageLayer.visible = false;
                     }
 
-                    // L4+ High-level Hex Cooldown and Recovery Charge indicators
                     if (props.level >= 4 && isRevealed) {
                         let recoveryOverlay = curContainer.getChildByName('recoveryOverlay') as PIXI.Graphics;
-                        if (!recoveryOverlay) {
-                            recoveryOverlay = new PIXI.Graphics();
-                            recoveryOverlay.name = 'recoveryOverlay';
-                            recoveryOverlay.zIndex = 14;
-                            curContainer.addChild(recoveryOverlay);
-                        }
-                        recoveryOverlay.clear();
-
+                        if (!recoveryOverlay) { recoveryOverlay = new PIXI.Graphics(); recoveryOverlay.name = 'recoveryOverlay'; recoveryOverlay.zIndex = 14; curContainer.addChild(recoveryOverlay); }
+                        recoveryOverlay.visible = true; recoveryOverlay.clear();
                         const now = Date.now();
-                        const isOnCooldown = hex.cooldownEndTime && now < hex.cooldownEndTime;
-
-                        const cy = props.offsetY - 2; // Slightly above face level
-                        if (isOnCooldown) {
-                            // Cooldown state: draw a dull crimson overlay ring
-                            recoveryOverlay.beginPath();
-                            recoveryOverlay.ellipse(0, cy, 18, 14.4);
-                            recoveryOverlay.fill({ color: 0xef4444, alpha: 0.15 });
-                            recoveryOverlay.stroke({ width: 2, color: 0xef4444, alpha: 0.7 });
-
-                            // Draw a small warning/overheat cooling core
-                            recoveryOverlay.beginPath();
-                            recoveryOverlay.ellipse(0, cy, 6, 4.8);
-                            recoveryOverlay.fill({ color: 0xf43f5e, alpha: 0.6 });
-                        } else {
-                            // Healthy state: keep empty as requested to remove the 3 dots and ambient ring
+                        if (hex.cooldownEndTime && now < hex.cooldownEndTime) {
+                            const cy = props.offsetY - 2;
+                            recoveryOverlay.beginPath(); recoveryOverlay.ellipse(0, cy, 18, 14.4); recoveryOverlay.fill({ color: 0xef4444, alpha: 0.15 }); recoveryOverlay.stroke({ width: 2, color: 0xef4444, alpha: 0.7 });
+                            recoveryOverlay.beginPath(); recoveryOverlay.ellipse(0, cy, 6, 4.8); recoveryOverlay.fill({ color: 0xf43f5e, alpha: 0.6 });
                         }
                     } else {
                         const rOverlay = curContainer.getChildByName('recoveryOverlay');
-                        if (rOverlay) {
-                            curContainer.removeChild(rOverlay).destroy();
-                        }
+                        if (rOverlay) rOverlay.visible = false;
                     }
                 } else {
                     if (faceContainer) faceContainer.visible = false;
-                    const voidFlickerNode = curContainer.getChildByName('voidFlicker');
-                    if (voidFlickerNode && !isRealVoid) curContainer.removeChild(voidFlickerNode).destroy();
-                    const voidCircleGlow = curContainer.getChildByName('voidCircleGlow');
-                    if (voidCircleGlow && !isRealVoid) curContainer.removeChild(voidCircleGlow).destroy();
-                    const rOverlay = curContainer.getChildByName('recoveryOverlay');
-                    if (rOverlay) curContainer.removeChild(rOverlay).destroy();
                 }
 
-                // borderLayer already grabbed
-
-                // Draws outer hexagonal outline of unrevealed cells
                 if (!isRevealed) {
                     borderLayer.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => {
-                        const px = pt.x;
-                        const py = pt.y * 0.8 + faceY;
-                        if (j === 0) borderLayer.moveTo(px, py);
-                        else borderLayer.lineTo(px, py);
-                    });
-                    borderLayer.closePath();
-                    borderLayer.fill({ color: 0x111827 });
-                    borderLayer.strokeStyle = { width: 4.0, color: 0x374151, alpha: 0.1 };
-                    borderLayer.stroke();
+                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + faceY; if (j === 0) borderLayer.moveTo(px, py); else borderLayer.lineTo(px, py); });
+                    borderLayer.closePath(); borderLayer.fill({ color: 0x111827 }); borderLayer.strokeStyle = { width: 4.0, color: 0x374151, alpha: 0.1 }; borderLayer.stroke();
                 }
 
-                // Portal spinning neon particle ring
                 if (props.structureType === 'PORTAL' || (hex.biome as string) === 'BIOME_PORTAL' || isFinish) {
                     let portalNode = curContainer.getChildByName('portal') as PIXI.Graphics;
-                    if (!portalNode) {
-                        portalNode = new PIXI.Graphics();
-                        portalNode.name = 'portal';
-                        curContainer.addChild(portalNode);
-                    }
-                    portalNode.clear();
-                    portalNode.y = faceY;
-                    portalNode.scale.set(1.0, 0.8);
-                    
-                    const met = areAllConditionsMet(session, activeLevelConfig);
-                    if (met) {
-                        portalNode.strokeStyle = { width: 3.0, color: 0xd946ef, alpha: 1.0 };
-                    } else {
-                        portalNode.strokeStyle = { width: 2.0, color: 0x475569, alpha: 0.5 };
-                    }
-                    portalNode.beginPath();
-                    portalNode.ellipse(0, 0, HEX_SIZE * 0.7, HEX_SIZE * 0.4);
-                    portalNode.stroke();
+                    if (!portalNode) { portalNode = new PIXI.Graphics(); portalNode.name = 'portal'; curContainer.addChild(portalNode); }
+                    portalNode.clear(); portalNode.y = faceY; portalNode.scale.set(1.0, 0.8);
+                    portalNode.strokeStyle = isLevelComplete ? { width: 3.0, color: 0xd946ef, alpha: 1.0 } : { width: 2.0, color: 0x475569, alpha: 0.5 };
+                    portalNode.beginPath(); portalNode.ellipse(0, 0, HEX_SIZE * 0.7, HEX_SIZE * 0.4); portalNode.stroke();
                 } else {
-                     const pNode = curContainer.getChildByName('portal');
-                     if (pNode) curContainer.removeChild(pNode).destroy();
+                    const pNode = curContainer.getChildByName('portal'); if (pNode) pNode.visible = false;
                 }
 
-                // Hover highlight: a dedicated child whose visibility the ticker flips every
-                // frame (instant feedback). Geometry is rebuilt here so it stays rotation-correct.
                 let hoverOutline = curContainer.getChildByName('hoverOutline') as PIXI.Graphics;
-                if (!hoverOutline) {
-                    hoverOutline = new PIXI.Graphics();
-                    hoverOutline.name = 'hoverOutline';
-                    hoverOutline.zIndex = 12;
-                    curContainer.addChild(hoverOutline);
-                }
+                if (!hoverOutline) { hoverOutline = new PIXI.Graphics(); hoverOutline.name = 'hoverOutline'; hoverOutline.zIndex = 12; curContainer.addChild(hoverOutline); }
                 hoverOutline.clear();
                 hoverOutline.beginPath();
-                rotatedBasePoints.forEach((pt, j) => {
-                    const px = pt.x;
-                    const py = pt.y * 0.8 + faceY;
-                    if (j === 0) hoverOutline.moveTo(px, py);
-                    else hoverOutline.lineTo(px, py);
-                });
-                hoverOutline.closePath();
-                hoverOutline.fill({ color: 0xffffff, alpha: 0.16 });
-                hoverOutline.strokeStyle = { width: 3.0, color: 0xffffff, alpha: 1.0 };
-                hoverOutline.stroke();
+                rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + faceY; if (j === 0) hoverOutline.moveTo(px, py); else hoverOutline.lineTo(px, py); });
+                hoverOutline.closePath(); hoverOutline.fill({ color: 0xffffff, alpha: 0.16 }); hoverOutline.strokeStyle = { width: 3.0, color: 0xffffff, alpha: 1.0 }; hoverOutline.stroke();
                 hoverOutline.visible = (hoveredHexId === item.id) && isRevealed;
 
-                // Highlight Selected targets
                 if (props.isSelected && isRevealed) {
                     borderLayer.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => {
-                        const px = pt.x;
-                        const py = pt.y * 0.8 + faceY;
-                        if (j === 0) borderLayer.moveTo(px, py);
-                        else borderLayer.lineTo(px, py);
-                    });
-                    borderLayer.closePath();
-                    borderLayer.strokeStyle = { width: 3.0, color: 0x22d3ee };
-                    borderLayer.stroke();
+                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + faceY; if (j === 0) borderLayer.moveTo(px, py); else borderLayer.lineTo(px, py); });
+                    borderLayer.closePath(); borderLayer.strokeStyle = { width: 3.0, color: 0x22d3ee }; borderLayer.stroke();
                 }
 
-                // Progress loader ring for constructions
                 if (props.isGrowing && isRevealed) {
-                    let needed = 30; // default/fallback
-                    const hq = props.q;
-                    const hr = props.r;
-
-                    const actingEntity = (player && player.q === hq && player.r === hr)
-                        ? player
-                        : bots?.find((b: any) => b.q === hq && b.r === hr);
-
+                    let needed = 30;
+                    const actingEntity = (player && player.q === props.q && player.r === props.r) ? player : bots?.find((b: any) => b.q === props.q && b.r === props.r);
                     if (actingEntity) {
-                        let intent: 'UPGRADE' | 'RECOVER' | 'DIG' | 'TURRET' | null = null;
-                        if (actingEntity.type === 'PLAYER') {
-                            intent = playerGrowthIntent || null;
-                        } else {
-                            const nextInQueue = actingEntity.movementQueue?.[0];
-                            if (nextInQueue && nextInQueue.intent) {
-                                intent = nextInQueue.intent;
-                            } else if (actingEntity.memory?.plan?.steps?.[0]?.type) {
-                                const stepType = actingEntity.memory.plan.steps[0].type;
-                                if (stepType === 'UPGRADE') intent = 'UPGRADE';
-                                else if (stepType === 'DIG') intent = 'DIG';
-                                else if (stepType === 'RECOVER') intent = 'RECOVER';
-                            }
-                        }
-
+                        let intent: any = null;
+                        if (actingEntity.type === 'PLAYER') intent = playerGrowthIntent || null;
+                        else { const n = actingEntity.movementQueue?.[0]; if (n?.intent) intent = n.intent; else if (actingEntity.memory?.plan?.steps?.[0]?.type) { const t = actingEntity.memory.plan.steps[0].type; if (t === 'UPGRADE') intent = 'UPGRADE'; else if (t === 'DIG') intent = 'DIG'; else if (t === 'RECOVER') intent = 'RECOVER'; } }
                         if (intent) {
-                            const activeStatuses = actingEntity.activeStatuses || [];
-                            const hasScannerBuff = activeStatuses.some((s: any) => s.type === 'STATUS_SCANNER_BUFF');
-                            const hasGodMode = activeStatuses.some((s: any) => s.type === 'GOD_MODE');
-                            const growthAccelerator = hasGodMode ? 10 : (hasScannerBuff ? 2 : 0);
-
-                            if (intent === 'RECOVER') {
-                                const config = getLevelConfig(props.maxLevel);
-                                needed = config.growthTime;
-                            } else if (intent === 'DIG') {
-                                needed = Math.max(10, 30 - (growthAccelerator * 5));
-                            } else if (intent === 'UPGRADE') {
-                                const config = getLevelConfig(props.level + 1);
-                                needed = Math.max(10, config.growthTime - (growthAccelerator * 5));
-                            } else if (intent === 'TURRET') {
-                                needed = 40;
-                            }
+                            if (intent === 'RECOVER') needed = getLevelConfig(props.maxLevel)?.growthTime ?? 30;
+                            else if (intent === 'DIG') needed = Math.max(10, 30);
+                            else if (intent === 'UPGRADE') needed = Math.max(10, getLevelConfig(props.level + 1)?.growthTime ?? 30);
                         }
                     }
-
                     const normalizedProgress = Math.min(1.0, props.progress / needed);
-
-                    // Gray/dark background ring
-                    borderLayer.strokeStyle = { width: 3.0, color: 0x374151, alpha: 0.5 };
-                    borderLayer.beginPath();
-                    borderLayer.arc(0, faceY, HEX_SIZE * 0.4, 0, Math.PI * 2);
-                    borderLayer.stroke();
-
-                    // Amber growing ring starting from top (-Math.PI/2) and wrapping clockwise
-                    borderLayer.strokeStyle = { width: 3.5, color: 0xf59e0b, alpha: 0.9 };
-                    borderLayer.beginPath();
-                    borderLayer.arc(0, faceY, HEX_SIZE * 0.4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * normalizedProgress);
-                    borderLayer.stroke();
+                    borderLayer.strokeStyle = { width: 3.0, color: 0x374151, alpha: 0.5 }; borderLayer.beginPath(); borderLayer.arc(0, faceY, HEX_SIZE * 0.4, 0, Math.PI * 2); borderLayer.stroke();
+                    borderLayer.strokeStyle = { width: 3.5, color: 0xf59e0b, alpha: 0.9 }; borderLayer.beginPath(); borderLayer.arc(0, faceY, HEX_SIZE * 0.4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * normalizedProgress); borderLayer.stroke();
                 }
 
-                // Campaign completed shape highlights
-                const isCompletedShapeHex = completedShapeCoords.some(c => c.q === props.q && c.r === props.r);
-                if (isCompletedShapeHex && isRevealed) {
+                if (completedShapeCoords.some(c => c.q === props.q && c.r === props.r) && isRevealed) {
                     borderLayer.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => {
-                        const px = pt.x;
-                        const py = pt.y * 0.8 + faceY;
-                        if (j === 0) borderLayer.moveTo(px, py);
-                        else borderLayer.lineTo(px, py);
-                    });
-                    borderLayer.closePath();
-                    borderLayer.strokeStyle = { width: 4.0, color: 0x10b981, alpha: 0.7 };
-                    borderLayer.stroke();
+                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + faceY; if (j === 0) borderLayer.moveTo(px, py); else borderLayer.lineTo(px, py); });
+                    borderLayer.closePath(); borderLayer.strokeStyle = { width: 4.0, color: 0x10b981, alpha: 0.7 }; borderLayer.stroke();
                 }
 
-                // Holographic Blueprint projection overlay (Step 3)
                 if (props.hologramTargetLevel !== undefined && activatedMiniMonuments?.length === 3 && isRevealed) {
-                    // Flash cyan or blue depending on if it is fully assembled or just blueprint
                     const isConstructed = props.level >= props.hologramTargetLevel;
-                    const holoColor = isConstructed ? 0x22d3ee : 0x4f46e5; // Cyan full, Indigo outline
-                    // Draw outer hologram wireframe
+                    const holoColor = isConstructed ? 0x22d3ee : 0x4f46e5;
                     borderLayer.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => {
-                        const px = pt.x * 0.9;
-                        const py = pt.y * 0.8 * 0.9 + faceY;
-                        if (j === 0) borderLayer.moveTo(px, py);
-                        else borderLayer.lineTo(px, py);
-                    });
-                    borderLayer.closePath();
-                    borderLayer.strokeStyle = { width: 2.0, color: holoColor, alpha: 0.8 };
-                    borderLayer.stroke();
-
-                    // Optional Text Label indicating the TargetLvl
+                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x * 0.9, py = pt.y * 0.8 * 0.9 + faceY; if (j === 0) borderLayer.moveTo(px, py); else borderLayer.lineTo(px, py); });
+                    borderLayer.closePath(); borderLayer.strokeStyle = { width: 2.0, color: holoColor, alpha: 0.8 }; borderLayer.stroke();
+                    let holoTextLayer = curContainer.getChildByName('holoText') as PIXI.Text;
                     if (!isConstructed) {
-                         let holoTextLayer = curContainer.getChildByName('holoText') as PIXI.Text;
-                         if (!holoTextLayer) {
-                             holoTextLayer = new PIXI.Text({
-                                text: `[L${props.hologramTargetLevel}]`,
-                                style: { fontFamily: 'monospace', fontSize: 14, fill: 0x4f46e5, fontWeight: 'bold' }
-                             });
-                             holoTextLayer.name = 'holoText';
-                             holoTextLayer.anchor.set(0.5, 0.5);
-                             holoTextLayer.y = faceY - 15;
-                             holoTextLayer.zIndex = 15;
-                             curContainer.addChild(holoTextLayer);
-                         } else {
-                             holoTextLayer.text = `[L${props.hologramTargetLevel}]`;
-                             holoTextLayer.y = faceY - 15;
-                             holoTextLayer.visible = true;
-                         }
-                    } else {
-                         const hText = curContainer.getChildByName('holoText');
-                         if (hText) hText.visible = false;
-                    }
+                        if (!holoTextLayer) { holoTextLayer = new PIXI.Text({ text: `[L${props.hologramTargetLevel}]`, style: { fontFamily: 'monospace', fontSize: 14, fill: 0x4f46e5, fontWeight: 'bold' } }); holoTextLayer.name = 'holoText'; holoTextLayer.anchor.set(0.5, 0.5); holoTextLayer.zIndex = 15; curContainer.addChild(holoTextLayer); }
+                        holoTextLayer.y = faceY - 15; holoTextLayer.visible = true;
+                    } else { if (holoTextLayer) holoTextLayer.visible = false; }
                 } else {
-                     const hText = curContainer.getChildByName('holoText');
-                     if (hText) hText.visible = false;
+                    const hText = curContainer.getChildByName('holoText'); if (hText) hText.visible = false;
                 }
 
-                // Draw POI or Special structure Emojis
                 let emojiLayer = curContainer.getChildByName('emoji') as PIXI.Text;
                 const isSpecialStructure = !isFinish && (props.structureType === 'MINI_MONUMENT' || props.structureType === 'CORE' || props.structureType === 'TURRET' || props.structureType === 'CAPITAL' || props.isCore || props.isMiniMonument || props.isTurret);
                 if (isRevealed && (isFinish || props.poiType || isSpecialStructure)) {
-                    let icon = '';
-                    let colorVal = '#ffffff';
-                    const met = areAllConditionsMet(session, activeLevelConfig);
-                    if (isFinish) {
-                        icon = '🌀';
-                        colorVal = met ? '#22d3ee' : '#475569';
-                    } else if (props.structureType === 'CAPITAL') {
-                        icon = '🌌';
-                        colorVal = '#10b981'; // Emerald
-                    } else if (props.structureType === 'MINI_MONUMENT' || props.isMiniMonument) {
-                        const isA = props.isActivated || (activatedMiniMonuments && activatedMiniMonuments.includes(`${props.q},${props.r}`));
-                        icon = isA ? '▲' : '△'; // filled vs empty triangle
-                        colorVal = isA ? '#22d3ee' : '#64748b'; // cyan vs slate
-                    } else if (props.structureType === 'CORE' || props.isCore) {
-                        icon = '⎔'; // Hex Nucleus Core
-                        colorVal = '#ec4899'; // Pink
-                    } else if (props.structureType === 'TURRET' || props.isTurret) {
-                        icon = ''; // Bypassed: rendered as 3D graphics model below
-                        colorVal = '#a855f7'; // Purple
-                    } else {
-                        icon = getPoiIcon(props.poiType || '');
-                        colorVal = '#ffffff';
-                    }
-                    if (!emojiLayer) {
-                        emojiLayer = new PIXI.Text({
-                            text: icon,
-                            style: {
-                                fontSize: 18,
-                                align: 'center',
-                                fill: colorVal,
-                                fontWeight: 'bold'
-                            }
-                        });
-                        emojiLayer.name = 'emoji';
-                        emojiLayer.zIndex = 30;
-                        emojiLayer.anchor.set(0.5, 0.5);
-                        curContainer.addChild(emojiLayer);
-                    }
-                    emojiLayer.text = icon;
-                    if (emojiLayer.style) {
-                        emojiLayer.style.fill = colorVal;
-                    }
-                    emojiLayer.y = faceY - 5;
-                    emojiLayer.visible = icon !== '';
-                } else {
-                    if (emojiLayer) emojiLayer.visible = false;
-                }
+                    let icon = '', colorVal = '#ffffff';
+                    if (isFinish) { icon = '🌀'; colorVal = isLevelComplete ? '#22d3ee' : '#475569'; }
+                    else if (props.structureType === 'CAPITAL') { icon = '🌌'; colorVal = '#10b981'; }
+                    else if (props.structureType === 'MINI_MONUMENT' || props.isMiniMonument) { icon = ''; }
+                    else if (props.structureType === 'CORE' || props.isCore) { icon = ''; colorVal = '#ec4899'; }
+                    else if (props.structureType === 'TURRET' || props.isTurret) { icon = ''; colorVal = '#a855f7'; }
+                    else { icon = getPoiIcon(props.poiType || ''); colorVal = '#ffffff'; }
+                    if (!emojiLayer) { emojiLayer = new PIXI.Text({ text: icon, style: { fontSize: 18, align: 'center', fill: colorVal, fontWeight: 'bold' } }); emojiLayer.name = 'emoji'; emojiLayer.zIndex = 30; emojiLayer.anchor.set(0.5, 0.5); curContainer.addChild(emojiLayer); }
+                    emojiLayer.text = icon; if (emojiLayer.style) emojiLayer.style.fill = colorVal;
+                    emojiLayer.y = faceY - 5; emojiLayer.visible = icon !== '';
+                } else { if (emojiLayer) emojiLayer.visible = false; }
 
-                // Render 3D Custom Turret Model (PIXI.Graphics)
                 let turretLayer = curContainer.getChildByName('turret3d') as PIXI.Graphics;
                 if (isRevealed && (props.structureType === 'TURRET' || props.isTurret)) {
-                    if (!turretLayer) {
-                        turretLayer = new PIXI.Graphics();
-                        turretLayer.name = 'turret3d';
-                        turretLayer.zIndex = 32;
-                        curContainer.addChild(turretLayer);
-                    }
+                    if (!turretLayer) { turretLayer = new PIXI.Graphics(); turretLayer.name = 'turret3d'; turretLayer.zIndex = 32; curContainer.addChild(turretLayer); }
                     turretLayer.clear();
-                    
-                    const cx = 0;
-                    const cy = faceY - 6;
-
-                    // 1. Sleek elliptical base ring with high-contrast glowing outline
-                    turretLayer.ellipse(cx, cy, 13, 7.5);
-                    turretLayer.fill({ color: 0x1e293b }); // slate-800
-                    turretLayer.stroke({ color: 0xa855f7, width: 2 }); // purple pulse outline
-
-                    // 2. High-tech supporting vertical bracket column
-                    turretLayer.rect(cx - 3, cy - 13, 6, 13);
-                    turretLayer.fill({ color: 0x334155 }); // slate-700
-                    turretLayer.stroke({ color: 0x475569, width: 1 }); // slate-600
-
-                    // 3. Round swivel-head mount
-                    turretLayer.circle(cx, cy - 13, 7);
-                    turretLayer.fill({ color: 0x6b21a8 }); // purple-800
-                    turretLayer.stroke({ color: 0xd8b4fe, width: 1 }); // purple-300 highlights
-
-                    // 4. Twin high-tech plasma barrels pointing up and forward
-                    turretLayer.rect(cx - 5, cy - 22, 3.2, 10);
-                    turretLayer.fill({ color: 0x0f172a }); // slate-900 (dark gunmetal)
-                    turretLayer.stroke({ color: 0x3b0764, width: 0.8 }); // deep purple border
-                    
-                    turretLayer.rect(cx + 1.8, cy - 22, 3.2, 10);
-                    turretLayer.fill({ color: 0x0f172a }); // slate-900
-                    turretLayer.stroke({ color: 0x3b0764, width: 0.8 }); // deep purple border
-
-                    // 5. Glowing charge energy core on the barrels (plasma tips)
-                    turretLayer.circle(cx - 3.4, cy - 22, 1.6);
-                    turretLayer.fill({ color: 0xf3e8ff }); // bright lilac glow
-
-                    turretLayer.circle(cx + 3.4, cy - 22, 1.6);
-                    turretLayer.fill({ color: 0xf3e8ff }); // bright lilac glow
-
-                    // Core lens glow
-                    turretLayer.circle(cx, cy - 13, 2.5);
-                    turretLayer.fill({ color: 0xd8b4fe }); // glowing purple core center
-
+                    const cx = 0, cy = faceY - 6, nowTime = Date.now();
+                    turretLayer.ellipse(cx, cy, 13, 7.5); turretLayer.fill({ color: 0x1e293b }); turretLayer.stroke({ color: 0xa855f7, width: 2 });
+                    turretLayer.rect(cx - 3, cy - 11, 6, 11); turretLayer.fill({ color: 0x334155 }); turretLayer.stroke({ color: 0x475569, width: 1 });
+                    const angle = (nowTime / 1600) % (Math.PI * 2), hcx = cx, hcy = cy - 11;
+                    const transform = (u: number, v: number, z: number = 0) => { const rx = u * Math.cos(angle) - v * Math.sin(angle); const ry = (u * Math.sin(angle) + v * Math.cos(angle)) * 0.5 - z; return { x: hcx + rx, y: hcy + ry }; };
+                    const c000 = transform(-5, -5, 0), c100 = transform(5, -5, 0), c110 = transform(5, 5, 0), c010 = transform(-5, 5, 0), c001 = transform(-5, -5, 7), c101 = transform(5, -5, 7), c111 = transform(5, 5, 7), c011 = transform(-5, 5, 7);
+                    const drawFace = (p1: any, p2: any, p3: any, p4: any, color: number) => { turretLayer.beginPath(); turretLayer.moveTo(p1.x, p1.y); turretLayer.lineTo(p2.x, p2.y); turretLayer.lineTo(p3.x, p3.y); turretLayer.lineTo(p4.x, p4.y); turretLayer.closePath(); turretLayer.fill({ color }); turretLayer.stroke({ color: 0xd8b4fe, width: 0.5, alpha: 0.5 }); };
+                    drawFace(c100, c110, c111, c101, 0x6b21a8); drawFace(c110, c010, c011, c111, 0x581c87); drawFace(c010, c000, c001, c011, 0x4c1d95); drawFace(c000, c100, c101, c001, 0x3b0764); drawFace(c001, c101, c111, c011, 0x7e22ce);
+                    const bL1 = transform(4, -3, 3.5), bL2 = transform(13, -3, 3.5), bR1 = transform(4, 3, 3.5), bR2 = transform(13, 3, 3.5);
+                    turretLayer.beginPath(); turretLayer.moveTo(bL1.x, bL1.y); turretLayer.lineTo(bL2.x, bL2.y); turretLayer.stroke({ color: 0x0f172a, width: 3.5 });
+                    turretLayer.beginPath(); turretLayer.moveTo(bL1.x, bL1.y); turretLayer.lineTo(bL2.x, bL2.y); turretLayer.stroke({ color: 0xa855f7, width: 1.5 });
+                    turretLayer.beginPath(); turretLayer.moveTo(bR1.x, bR1.y); turretLayer.lineTo(bR2.x, bR2.y); turretLayer.stroke({ color: 0x0f172a, width: 3.5 });
+                    turretLayer.beginPath(); turretLayer.moveTo(bR1.x, bR1.y); turretLayer.lineTo(bR2.x, bR2.y); turretLayer.stroke({ color: 0xa855f7, width: 1.5 });
+                    const tipPulse = 1.8 + 0.6 * Math.sin(nowTime / 140);
+                    turretLayer.beginPath(); turretLayer.circle(bL2.x, bL2.y, tipPulse); turretLayer.fill({ color: 0xf3e8ff }); turretLayer.stroke({ color: 0xc084fc, width: 1 });
+                    turretLayer.beginPath(); turretLayer.circle(bR2.x, bR2.y, tipPulse); turretLayer.fill({ color: 0xf3e8ff }); turretLayer.stroke({ color: 0xc084fc, width: 1 });
+                    const lensCenter = transform(0, 0, 7.5);
+                    turretLayer.beginPath(); turretLayer.circle(lensCenter.x, lensCenter.y, 2.5 + 0.5 * Math.sin(nowTime / 300)); turretLayer.fill({ color: 0xd8b4fe }); turretLayer.stroke({ color: 0xffffff, width: 1 });
+                    const laserL = transform(35, -3, -4), laserR = transform(35, 3, -4);
+                    const beamAlpha = 0.25 * (0.6 + 0.4 * Math.sin(nowTime / 180));
+                    turretLayer.beginPath(); turretLayer.moveTo(bL2.x, bL2.y); turretLayer.lineTo(laserL.x, laserL.y); turretLayer.stroke({ color: 0xd8b4fe, width: 1.0, alpha: beamAlpha });
+                    turretLayer.beginPath(); turretLayer.moveTo(bR2.x, bR2.y); turretLayer.lineTo(laserR.x, laserR.y); turretLayer.stroke({ color: 0xd8b4fe, width: 1.0, alpha: beamAlpha });
                     turretLayer.visible = true;
-                } else {
-                    if (turretLayer) turretLayer.visible = false;
-                }
+                } else { if (turretLayer) turretLayer.visible = false; }
 
-                // Render dynamic campaign objective arrows/indicators
-                const firstIncompleteObjHex = activeLevelConfig?.objectiveHexes?.find((o: any) => !isObjectiveHexCompleted(
-                    o,
-                    grid,
-                    player,
-                    activeLevelConfig?.id,
-                    activatedMiniMonuments,
-                    portalActive
-                ));
-                
+                let coreLayer = curContainer.getChildByName('core3d') as PIXI.Graphics;
+                if (isRevealed && (props.structureType === 'CORE' || props.isCore)) {
+                    if (!coreLayer) { coreLayer = new PIXI.Graphics(); coreLayer.name = 'core3d'; coreLayer.zIndex = 32; curContainer.addChild(coreLayer); }
+                    coreLayer.clear();
+                    const cx = 0, nowTime = Date.now(), bob = 5 * Math.sin(nowTime / 400), cy = faceY - 15 + bob;
+                    const shadowScale = 1.0 - 0.25 * (bob + 5) / 10;
+                    coreLayer.ellipse(cx, faceY - 5, 8.5 * shadowScale, 5.0 * shadowScale); coreLayer.fill({ color: 0xdb2777, alpha: 0.22 });
+                    const angle = (nowTime / 1000) % (Math.PI * 2), r = 9, h = 13;
+                    const v: { x: number, y: number }[] = [];
+                    for (let i = 0; i < 4; i++) { const a = angle + (i * Math.PI / 2); const vx = r * Math.cos(a); const vy = r * Math.sin(a) * 0.45; v.push({ x: vx, y: vy }); }
+                    const topY = -h, botY = h;
+                    const colors = [0xfbcfe8, 0xf472b6, 0xec4899, 0xdb2777];
+                    for (let i = 0; i < 4; i++) { const next = (i + 1) % 4; const faceColor = colors[(i + Math.floor(angle / (Math.PI / 2))) % 4]; coreLayer.beginPath(); coreLayer.moveTo(cx, cy + topY); coreLayer.lineTo(cx + v[i].x, cy + v[i].y); coreLayer.lineTo(cx + v[next].x, cy + v[next].y); coreLayer.closePath(); coreLayer.fill({ color: faceColor, alpha: 0.85 }); coreLayer.stroke({ color: 0xffffff, width: 1.2, alpha: 0.9 }); }
+                    for (let i = 0; i < 4; i++) { const next = (i + 1) % 4; const faceColor = colors[(i + 2 + Math.floor(angle / (Math.PI / 2))) % 4]; coreLayer.beginPath(); coreLayer.moveTo(cx, cy + botY); coreLayer.lineTo(cx + v[i].x, cy + v[i].y); coreLayer.lineTo(cx + v[next].x, cy + v[next].y); coreLayer.closePath(); coreLayer.fill({ color: faceColor, alpha: 0.75 }); coreLayer.stroke({ color: 0xffffff, width: 1.0, alpha: 0.85 }); }
+                    const ringAngle1 = nowTime / 800; coreLayer.beginPath(); coreLayer.ellipse(cx, cy, 14 * Math.abs(Math.sin(ringAngle1)), 6.0); coreLayer.stroke({ color: 0x38bdf8, width: 1.5, alpha: 0.6 });
+                    const ringAngle2 = -nowTime / 1200; coreLayer.beginPath(); coreLayer.ellipse(cx, cy, 16.0, 7.5 * Math.abs(Math.cos(ringAngle2))); coreLayer.stroke({ color: 0xa855f7, width: 1.5, alpha: 0.5 });
+                    coreLayer.beginPath(); coreLayer.circle(cx, cy, 2.5); coreLayer.fill({ color: 0xffffff });
+                    coreLayer.visible = true;
+                } else { if (coreLayer) coreLayer.visible = false; }
+
+                let monumentStarLayer = curContainer.getChildByName('monumentStar3d') as PIXI.Graphics;
+                const isMonument = props.structureType === 'MONUMENT';
+                const isMiniMonumentAttr = props.structureType === 'MINI_MONUMENT' || props.isMiniMonument;
+                if (isRevealed && (isMonument || isMiniMonumentAttr)) {
+                    if (!monumentStarLayer) { monumentStarLayer = new PIXI.Graphics(); monumentStarLayer.name = 'monumentStar3d'; monumentStarLayer.zIndex = 32; curContainer.addChild(monumentStarLayer); }
+                    monumentStarLayer.clear();
+                    const cx = 0, cy = faceY - 8, nowTime = Date.now();
+                    if (isMonument) {
+                        const angleOffset = (nowTime / 1500) % (Math.PI * 2), pulse = 1.0 + 0.1 * Math.sin(nowTime / 200), outer = 13 * pulse, inner = 5.5 * pulse;
+                        const glowOuter = (13 + 5) * pulse, glowInner = (5.5 + 2) * pulse;
+                        monumentStarLayer.beginPath();
+                        for (let i = 0; i < 10; i++) { const r = i % 2 === 0 ? glowOuter : glowInner; const a = -angleOffset * 0.6 + (i * Math.PI / 5) - Math.PI / 2; const px = cx + r * Math.cos(a); const py = cy + r * Math.sin(a); if (i === 0) monumentStarLayer.moveTo(px, py); else monumentStarLayer.lineTo(px, py); }
+                        monumentStarLayer.closePath(); monumentStarLayer.fill({ color: 0xf59e0b, alpha: 0.25 }); monumentStarLayer.stroke({ color: 0xf97316, width: 1, alpha: 0.4 });
+                        monumentStarLayer.beginPath();
+                        for (let i = 0; i < 10; i++) { const r = i % 2 === 0 ? outer : inner; const a = angleOffset + (i * Math.PI / 5) - Math.PI / 2; const px = cx + r * Math.cos(a); const py = cy + r * Math.sin(a); if (i === 0) monumentStarLayer.moveTo(px, py); else monumentStarLayer.lineTo(px, py); }
+                        monumentStarLayer.closePath(); monumentStarLayer.fill({ color: 0xfbbf24 }); monumentStarLayer.stroke({ color: 0xffffff, width: 1.5 });
+                        monumentStarLayer.beginPath(); monumentStarLayer.circle(cx, cy, 2 * pulse); monumentStarLayer.fill({ color: 0xffffff });
+                    } else {
+                        const isActivated = props.isActivated || (activatedMiniMonuments && activatedMiniMonuments.includes(`${props.q},${props.r}`));
+                        const speed = isActivated ? 1800 : 3500, angleOffset = (nowTime / speed) % (Math.PI * 2), pulse = isActivated ? (1.0 + 0.08 * Math.sin(nowTime / 150)) : 1.0, outer = 8 * pulse, inner = 3.5 * pulse;
+                        const starColor = isActivated ? 0x22d3ee : 0x475569, strokeColor = isActivated ? 0xffffff : 0x94a3b8, strokeWidth = isActivated ? 1.2 : 0.8;
+                        if (isActivated) { monumentStarLayer.beginPath(); monumentStarLayer.ellipse(cx, cy + 2, 11 * pulse, 6 * pulse); monumentStarLayer.stroke({ color: 0x06b6d4, width: 1.0, alpha: 0.6 }); }
+                        monumentStarLayer.beginPath();
+                        for (let i = 0; i < 10; i++) { const r = i % 2 === 0 ? outer : inner; const a = angleOffset + (i * Math.PI / 5) - Math.PI / 2; const px = cx + r * Math.cos(a); const py = cy + r * Math.sin(a); if (i === 0) monumentStarLayer.moveTo(px, py); else monumentStarLayer.lineTo(px, py); }
+                        monumentStarLayer.closePath(); monumentStarLayer.fill({ color: starColor }); monumentStarLayer.stroke({ color: strokeColor, width: strokeWidth });
+                        if (isActivated) { monumentStarLayer.beginPath(); monumentStarLayer.circle(cx, cy, 1.2 * pulse); monumentStarLayer.fill({ color: 0xffffff }); }
+                    }
+                    monumentStarLayer.visible = true;
+                } else { if (monumentStarLayer) monumentStarLayer.visible = false; }
+
+                const firstIncompleteObjHex = activeLevelConfig?.objectiveHexes?.find((o: any) => !isObjectiveHexCompleted(o, grid, player, activeLevelConfig?.id, activatedMiniMonuments, portalActive));
                 const objHex = activeLevelConfig?.objectiveHexes?.find((o: any) => o.q === props.q && o.r === props.r);
-                const showArrow = objHex && objHex === firstIncompleteObjHex && !(activeLevelConfig?.id === '1.1' && props.q === -8 && props.r === 0);
-                
-                if (showArrow && isRevealed) {
+                if (objHex && objHex === firstIncompleteObjHex && isRevealed) {
                     let objArrow = curContainer.getChildByName('objective_arrow') as PIXI.Container;
                     if (!objArrow) {
-                        objArrow = new PIXI.Container();
-                        objArrow.name = 'objective_arrow';
-                        objArrow.zIndex = 40;
-                        curContainer.addChild(objArrow);
-
-                        if (objHex.color === 'emerald') {
-                            const txt = new PIXI.Text({
-                                text: '👑',
-                                style: {
-                                    fontSize: 24,
-                                    align: 'center',
-                                }
-                            });
-                            txt.name = 'arrow_art';
-                            txt.anchor.set(0.5, 0.5);
-                            objArrow.addChild(txt);
-                        } else {
-                            const arrowGraphic = new PIXI.Graphics();
-                            arrowGraphic.name = 'arrow_art';
-                            
-                            const arrowColor = objHex.color === 'amber' ? 0xf59e0b :
-                                               objHex.color === 'cyan' ? 0x06b6d4 :
-                                               objHex.color === 'red' ? 0xef4444 : 0x10b981;
-                            const arrowDarkColor = objHex.color === 'amber' ? 0xb45309 :
-                                                   objHex.color === 'cyan' ? 0x0891b2 :
-                                                   objHex.color === 'red' ? 0xb91c1c : 0x059669;
-
-                            // Soft glow halo behind the arrow so the "act here" target reads at a glance.
-                            const glow = new PIXI.Graphics();
-                            glow.name = 'arrow_glow';
-                            glow.circle(0, -8, 22);
-                            glow.fill({ color: arrowColor, alpha: 0.18 });
-                            objArrow.addChild(glow);
-
-                            const drawArrowPath = (g: PIXI.Graphics, dy: number) => {
-                                g.beginPath();
-                                g.moveTo(-10, -25 + dy);
-                                g.lineTo(10, -25 + dy);
-                                g.lineTo(10, -10 + dy);
-                                g.lineTo(18, -10 + dy);
-                                g.lineTo(0, 8 + dy);
-                                g.lineTo(-18, -10 + dy);
-                                g.lineTo(-10, -10 + dy);
-                                g.closePath();
-                            };
-
-                            // Draw bottom/shadow layer for 3D effect
-                            drawArrowPath(arrowGraphic, 4);
-                            arrowGraphic.fill({ color: arrowDarkColor });
-                            arrowGraphic.stroke({ width: 1.5, color: 0x000000, alpha: 0.8, alignment: 1 });
-
-                            // Draw top layer
-                            drawArrowPath(arrowGraphic, 0);
-                            arrowGraphic.fill({ color: arrowColor });
-                            arrowGraphic.stroke({ width: 1.5, color: 0x000000, alpha: 0.6, alignment: 1 });
-
+                        objArrow = new PIXI.Container(); objArrow.name = 'objective_arrow'; objArrow.zIndex = 40; curContainer.addChild(objArrow);
+                        if (objHex.color === 'emerald') { const txt = new PIXI.Text({ text: '👑', style: { fontSize: 24, align: 'center' } }); txt.name = 'arrow_art'; txt.anchor.set(0.5, 0.5); objArrow.addChild(txt); }
+                        else {
+                            const arrowGraphic = new PIXI.Graphics(); arrowGraphic.name = 'arrow_art';
+                            const arrowColor = objHex.color === 'amber' ? 0xf59e0b : objHex.color === 'cyan' ? 0x06b6d4 : objHex.color === 'red' ? 0xef4444 : 0x10b981;
+                            const arrowDarkColor = objHex.color === 'amber' ? 0xb45309 : objHex.color === 'cyan' ? 0x0891b2 : objHex.color === 'red' ? 0xb91c1c : 0x059669;
+                            const glow = new PIXI.Graphics(); glow.name = 'arrow_glow'; glow.circle(0, -8, 22); glow.fill({ color: arrowColor, alpha: 0.18 }); objArrow.addChild(glow);
+                            const drawArrowPath = (g: PIXI.Graphics, dy: number) => { g.beginPath(); g.moveTo(-10, -25 + dy); g.lineTo(10, -25 + dy); g.lineTo(10, -10 + dy); g.lineTo(18, -10 + dy); g.lineTo(0, 8 + dy); g.lineTo(-18, -10 + dy); g.lineTo(-10, -10 + dy); g.closePath(); };
+                            drawArrowPath(arrowGraphic, 4); arrowGraphic.fill({ color: arrowDarkColor }); arrowGraphic.stroke({ width: 1.5, color: 0x000000, alpha: 0.8, alignment: 1 });
+                            drawArrowPath(arrowGraphic, 0); arrowGraphic.fill({ color: arrowColor }); arrowGraphic.stroke({ width: 1.5, color: 0x000000, alpha: 0.6, alignment: 1 });
                             objArrow.addChild(arrowGraphic);
                         }
-
-                        if (objHex.label) {
-                            const lbl = new PIXI.Text({
-                                text: translateArrowLabel(objHex.label, isRu),
-                                style: {
-                                    fontFamily: 'Inter, sans-serif',
-                                    fontSize: 11,
-                                    fontWeight: 'bold',
-                                    fill: 0xffffff,
-                                    stroke: { color: 0x000000, width: 3 },
-                                    align: 'center'
-                                }
-                            });
-                            lbl.name = 'arrow_label';
-                            lbl.anchor.set(0.5, 1.0);
-                            lbl.y = -28;
-                            objArrow.addChild(lbl);
-                        }
+                        if (objHex.label) { const lbl = new PIXI.Text({ text: translateArrowLabel(objHex.label, isRu), style: { fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 'bold', fill: 0xffffff, stroke: { color: 0x000000, width: 3 }, align: 'center' } }); lbl.name = 'arrow_label'; lbl.anchor.set(0.5, 1.0); lbl.y = -28; objArrow.addChild(lbl); }
                     }
-
                     const labelChild = objArrow.getChildByName('arrow_label') as PIXI.Text;
-                    if (labelChild && objHex.label) {
-                        labelChild.text = translateArrowLabel(objHex.label, isRu);
-                    }
-
-                    objArrow.visible = true;
-                    const bounceAmt = Math.sin(Date.now() * 0.007) * 8;
-                    objArrow.y = faceY - 35 + Math.min(0, bounceAmt);
-                    // Gentle glow pulse so the marker shimmers (the requested "мерцание").
-                    const glowChild = objArrow.getChildByName('arrow_glow');
-                    if (glowChild) glowChild.alpha = 0.5 + Math.sin(Date.now() * 0.005) * 0.35;
+                    if (labelChild && objHex.label) { labelChild.text = translateArrowLabel(objHex.label, isRu); }
+                    objArrow.visible = true; objArrow.y = faceY - 35 + Math.min(0, Math.sin(Date.now() * 0.007) * 8);
+                    const glowChild = objArrow.getChildByName('arrow_glow'); if (glowChild) glowChild.alpha = 0.5 + Math.sin(Date.now() * 0.005) * 0.35;
                 } else {
-                    const existingArrow = curContainer.getChildByName('objective_arrow');
-                    if (existingArrow) {
-                        existingArrow.visible = false;
-                    }
+                    const existingArrow = curContainer.getChildByName('objective_arrow'); if (existingArrow) existingArrow.visible = false;
                 }
 
-                // --- PERSISTENT FINISH BEACON ---
-                const met = areAllConditionsMet(session, activeLevelConfig);
-                if (isFinish && isRevealed && met) {
+                if (isFinish && isRevealed && isLevelComplete) {
                     let finishBeacon = curContainer.getChildByName('finish_beacon') as PIXI.Container;
                     if (!finishBeacon) {
-                        finishBeacon = new PIXI.Container();
-                        finishBeacon.name = 'finish_beacon';
-                        finishBeacon.zIndex = 38;
-                        curContainer.addChild(finishBeacon);
-
-                        // Draw a vertical beacon beam (a cone/cylinder of light)
-                        const beam = new PIXI.Graphics();
-                        beam.name = 'beam';
-                        finishBeacon.addChild(beam);
-
-                        // Draw a base glow ellipse
-                        const baseGlow = new PIXI.Graphics();
-                        baseGlow.name = 'baseGlow';
-                        finishBeacon.addChild(baseGlow);
+                        finishBeacon = new PIXI.Container(); finishBeacon.name = 'finish_beacon'; finishBeacon.zIndex = 38; curContainer.addChild(finishBeacon);
+                        const beam = new PIXI.Graphics(); beam.name = 'beam'; finishBeacon.addChild(beam);
+                        const baseGlow = new PIXI.Graphics(); baseGlow.name = 'baseGlow'; finishBeacon.addChild(baseGlow);
                     }
-
                     finishBeacon.visible = true;
-
-                    // Update positions
                     const beam = finishBeacon.getChildByName('beam') as PIXI.Graphics;
                     const baseGlow = finishBeacon.getChildByName('baseGlow') as PIXI.Graphics;
-
                     if (beam) {
                         beam.clear();
-                        // Cone pointing down to faceY from the very top of the sky (1200px up)
-                        // It starts as a point (apex) and expands at the bottom into a rounded elliptical base
-                        const beamHeight = 1200;
-                        const pulse = Math.sin(Date.now() * 0.005) * 0.12 + 0.88; // shimmering scale
-                        const beamWidthBottom = 26 * pulse;
-                        const rx = beamWidthBottom;
-                        const ry = rx * 0.577; // isometric projection radius ratio
-                        
-                        // Beam styling
-                        const beamColor = met ? 0x22d3ee : 0x06b6d4; // Intense cyan vs regular cyan
-                        const outerAlpha = met ? (0.35 * pulse) : (0.18 * pulse);
-                        const innerAlpha = met ? (0.6 * pulse) : (0.3 * pulse);
-                        const strokeAlpha = met ? (0.5 * pulse) : (0.25 * pulse);
-
-                        // Outer soft glowing white/cyan cone with curved round base
-                        beam.beginPath();
-                        beam.moveTo(0, faceY - beamHeight); // Apex
-                        beam.lineTo(rx, faceY); // Right side
-                        beam.quadraticCurveTo(0, faceY + ry * 2, -rx, faceY); // Rounded bottom base
-                        beam.closePath(); // Left side back to apex
-                        beam.fill({ color: beamColor, alpha: outerAlpha });
-                        beam.stroke({ width: 1.5, color: 0xffffff, alpha: strokeAlpha });
-
-                        // Inner super bright core cone with curved round base
-                        const coreRx = rx * 0.4;
-                        const coreRy = coreRx * 0.577;
-                        beam.beginPath();
-                        beam.moveTo(0, faceY - beamHeight); // Apex
-                        beam.lineTo(coreRx, faceY);
-                        beam.quadraticCurveTo(0, faceY + coreRy * 2, -coreRx, faceY);
-                        beam.closePath();
-                        beam.fill({ color: 0xf0fdf4, alpha: innerAlpha }); // warm white/emerald shine
+                        const beamHeight = 1200, pulse = Math.sin(Date.now() * 0.005) * 0.12 + 0.88, beamWidthBottom = 26 * pulse, rx = beamWidthBottom, ry = rx * 0.577;
+                        const beamColor = isLevelComplete ? 0x22d3ee : 0x06b6d4, outerAlpha = isLevelComplete ? (0.35 * pulse) : (0.18 * pulse), innerAlpha = isLevelComplete ? (0.6 * pulse) : (0.3 * pulse), strokeAlpha = isLevelComplete ? (0.5 * pulse) : (0.25 * pulse);
+                        beam.beginPath(); beam.moveTo(0, faceY - beamHeight); beam.lineTo(rx, faceY); beam.quadraticCurveTo(0, faceY + ry * 2, -rx, faceY); beam.closePath(); beam.fill({ color: beamColor, alpha: outerAlpha }); beam.stroke({ width: 1.5, color: 0xffffff, alpha: strokeAlpha });
+                        const coreRx = rx * 0.4, coreRy = coreRx * 0.577;
+                        beam.beginPath(); beam.moveTo(0, faceY - beamHeight); beam.lineTo(coreRx, faceY); beam.quadraticCurveTo(0, faceY + coreRy * 2, -coreRx, faceY); beam.closePath(); beam.fill({ color: 0xf0fdf4, alpha: innerAlpha });
                     }
-
                     if (baseGlow) {
                         baseGlow.clear();
                         const pulse = Math.sin(Date.now() * 0.005) * 0.15 + 1.0;
-                        
-                        const glowColor = met ? 0x22d3ee : 0x0891b2;
-                        const coreColor = met ? 0xa7f3d0 : 0x34d399;
-                        
-                        baseGlow.ellipse(0, faceY, 26 * pulse, 15 * pulse);
-                        baseGlow.fill({ color: glowColor, alpha: met ? 0.5 : 0.25 });
-                        baseGlow.ellipse(0, faceY, 13 * pulse, 7.5 * pulse);
-                        baseGlow.fill({ color: coreColor, alpha: met ? 0.7 : 0.4 }); // Emerald light core
+                        const glowColor = isLevelComplete ? 0x22d3ee : 0x0891b2, coreColor = isLevelComplete ? 0xa7f3d0 : 0x34d399;
+                        baseGlow.ellipse(0, faceY, 26 * pulse, 15 * pulse); baseGlow.fill({ color: glowColor, alpha: isLevelComplete ? 0.5 : 0.25 });
+                        baseGlow.ellipse(0, faceY, 13 * pulse, 7.5 * pulse); baseGlow.fill({ color: coreColor, alpha: isLevelComplete ? 0.7 : 0.4 });
                     }
                 } else {
-                    const existingBeacon = curContainer.getChildByName('finish_beacon');
-                    if (existingBeacon) {
-                        existingBeacon.visible = false;
-                    }
+                    const existingBeacon = curContainer.getChildByName('finish_beacon'); if (existingBeacon) existingBeacon.visible = false;
                 }
 
-                // Custom DIG arrows/indicators for 1.5 and 1.6
                 const activeLevelId = activeLevelConfig?.id;
-                let showDigArrow = false;
-                let digLabel = '';
-
+                let showDigArrow = false, digLabel = '';
                 if (activeLevelId === '1.5' && isRevealed) {
-                    const voidHex = grid['1,-1'];
-                    const centerHex = grid['0,0'];
-                    const isVoidHealed = voidHex && voidHex.structureType !== 'VOID';
-                    
+                    const voidHex = grid['1,-1'], centerHex = grid['0,0'], isVoidHealed = voidHex && voidHex.structureType !== 'VOID';
                     if (isVoidHealed) {
                         const minedNeighbors = [grid['1,-1'], grid['0,1'], grid['-1,0'], grid['0,-1'], grid['1,0'], grid['-1,1']].filter(h => h && h.currentLevel <= -1);
-                        if (minedNeighbors.length < 2) {
-                            const isNeighbor = ['1,-1', '0,1', '-1,0', '0,-1', '1,0', '-1,1'].includes(`${props.q},${props.r}`);
-                            const currentHex = grid[`${props.q},${props.r}`];
-                            if (isNeighbor && currentHex && currentHex.currentLevel > -1) {
-                                showDigArrow = true;
-                                digLabel = 'DIG';
-                            }
-                        } else {
-                            if (props.q === 0 && props.r === 0 && centerHex && centerHex.currentLevel > -2) {
-                                showDigArrow = true;
-                                digLabel = 'DIG x2';
-                            }
-                        }
+                        if (minedNeighbors.length < 2) { const isNeighbor = ['1,-1', '0,1', '-1,0', '0,-1', '1,0', '-1,1'].includes(`${props.q},${props.r}`); const currentHex = grid[`${props.q},${props.r}`]; if (isNeighbor && currentHex && currentHex.currentLevel > -1) { showDigArrow = true; digLabel = 'DIG'; } }
+                        else { if (props.q === 0 && props.r === 0 && centerHex && centerHex.currentLevel > -2) { showDigArrow = true; digLabel = 'DIG x2'; } }
                     }
                 } else if (activeLevelId === '1.6' && isRevealed) {
-                    const void1Healed = grid['2,0']?.structureType !== 'VOID';
-                    const void2Healed = grid['6,0']?.structureType !== 'VOID';
-                    const hasPatch = player?.inventory?.some((i: any) => i.baseId === 'reality_patch');
-                    
-                    if (!void1Healed) {
-                        if (!hasPatch && props.q === 0 && props.r === 0) {
-                            const hexNode = grid['0,0'];
-                            if (hexNode && hexNode.currentLevel > -2) {
-                                showDigArrow = true;
-                                digLabel = 'DIG x2';
-                            }
-                        }
-                    } else if (!void2Healed) {
-                        if (!hasPatch && props.q === 4 && props.r === 0) {
-                            const hexNode = grid['4,0'];
-                            if (hexNode && hexNode.currentLevel > -2) {
-                                showDigArrow = true;
-                                digLabel = 'DIG x2';
-                            }
-                        }
-                    }
+                    const void1Healed = grid['2,0']?.structureType !== 'VOID', void2Healed = grid['6,0']?.structureType !== 'VOID', hasPatch = player?.inventory?.some((i: any) => i.baseId === 'reality_patch');
+                    if (!void1Healed) { if (!hasPatch && props.q === 0 && props.r === 0) { const hexNode = grid['0,0']; if (hexNode && hexNode.currentLevel > -2) { showDigArrow = true; digLabel = 'DIG x2'; } } }
+                    else if (!void2Healed) { if (!hasPatch && props.q === 4 && props.r === 0) { const hexNode = grid['4,0']; if (hexNode && hexNode.currentLevel > -2) { showDigArrow = true; digLabel = 'DIG x2'; } } }
                 }
-
                 if (showDigArrow && isRevealed) {
                     let digArrow = curContainer.getChildByName('dig_arrow') as PIXI.Container;
                     if (!digArrow) {
-                        digArrow = new PIXI.Container();
-                        digArrow.name = 'dig_arrow';
-                        digArrow.zIndex = 39; // Just below main objective arrow
-                        curContainer.addChild(digArrow);
-
-                        const arrowGraphic = new PIXI.Graphics();
-                        arrowGraphic.name = 'dig_arrow_art';
-                        
-                        const arrowColor = 0xef4444; // Red for DIG/EXCAVATION
-                        const arrowDarkColor = 0x991b1b;
-
-                        // Soft glow halo
-                        const glow = new PIXI.Graphics();
-                        glow.name = 'dig_arrow_glow';
-                        glow.circle(0, -8, 20);
-                        glow.fill({ color: arrowColor, alpha: 0.22 });
-                        digArrow.addChild(glow);
-
-                        const drawArrowPath = (g: PIXI.Graphics, dy: number) => {
-                            g.beginPath();
-                            g.moveTo(-8, -22 + dy);
-                            g.lineTo(8, -22 + dy);
-                            g.lineTo(8, -9 + dy);
-                            g.lineTo(14, -9 + dy);
-                            g.lineTo(0, 6 + dy);
-                            g.lineTo(-14, -9 + dy);
-                            g.lineTo(-8, -9 + dy);
-                            g.lineTo(-8, -22 + dy);
-                            g.closePath();
-                        };
-
-                        // Draw bottom/shadow layer for 3D effect
-                        drawArrowPath(arrowGraphic, 3);
-                        arrowGraphic.fill({ color: arrowDarkColor });
-                        arrowGraphic.stroke({ width: 1.2, color: 0x000000, alpha: 0.8, alignment: 1 });
-
-                        // Draw top layer
-                        drawArrowPath(arrowGraphic, 0);
-                        arrowGraphic.fill({ color: arrowColor });
-                        arrowGraphic.stroke({ width: 1.2, color: 0x000000, alpha: 0.6, alignment: 1 });
-
+                        digArrow = new PIXI.Container(); digArrow.name = 'dig_arrow'; digArrow.zIndex = 39; curContainer.addChild(digArrow);
+                        const arrowGraphic = new PIXI.Graphics(); arrowGraphic.name = 'dig_arrow_art';
+                        const arrowColor = 0xef4444, arrowDarkColor = 0x991b1b;
+                        const glow = new PIXI.Graphics(); glow.name = 'dig_arrow_glow'; glow.circle(0, -8, 20); glow.fill({ color: arrowColor, alpha: 0.22 }); digArrow.addChild(glow);
+                        const drawArrowPath = (g: PIXI.Graphics, dy: number) => { g.beginPath(); g.moveTo(-8, -22 + dy); g.lineTo(8, -22 + dy); g.lineTo(8, -9 + dy); g.lineTo(14, -9 + dy); g.lineTo(0, 6 + dy); g.lineTo(-14, -9 + dy); g.lineTo(-8, -9 + dy); g.lineTo(-8, -22 + dy); g.closePath(); };
+                        drawArrowPath(arrowGraphic, 3); arrowGraphic.fill({ color: arrowDarkColor }); arrowGraphic.stroke({ width: 1.2, color: 0x000000, alpha: 0.8, alignment: 1 });
+                        drawArrowPath(arrowGraphic, 0); arrowGraphic.fill({ color: arrowColor }); arrowGraphic.stroke({ width: 1.2, color: 0x000000, alpha: 0.6, alignment: 1 });
                         digArrow.addChild(arrowGraphic);
-
-                        if (digLabel) {
-                            const lbl = new PIXI.Text({
-                                text: translateArrowLabel(digLabel, isRu),
-                                style: {
-                                    fontFamily: 'Inter, sans-serif',
-                                    fontSize: 10,
-                                    fontWeight: 'bold',
-                                    fill: 0xffffff,
-                                    stroke: { color: 0x000000, width: 2.5 },
-                                    align: 'center'
-                                }
-                            });
-                            lbl.name = 'dig_arrow_label';
-                            lbl.anchor.set(0.5, 1.0);
-                            lbl.y = -24;
-                            digArrow.addChild(lbl);
-                        }
+                        if (digLabel) { const lbl = new PIXI.Text({ text: translateArrowLabel(digLabel, isRu), style: { fontFamily: 'Inter, sans-serif', fontSize: 10, fontWeight: 'bold', fill: 0xffffff, stroke: { color: 0x000000, width: 2.5 }, align: 'center' } }); lbl.name = 'dig_arrow_label'; lbl.anchor.set(0.5, 1.0); lbl.y = -24; digArrow.addChild(lbl); }
                     }
-
                     const digLabelChild = digArrow.getChildByName('dig_arrow_label') as PIXI.Text;
-                    if (digLabelChild && digLabel) {
-                        digLabelChild.text = translateArrowLabel(digLabel, isRu);
-                    }
-
-                    digArrow.visible = true;
-                    // Offset phase slightly from objective arrow so they bounce independently/beautifully!
-                    const bounceAmt = Math.sin(Date.now() * 0.008 + props.q) * 6;
-                    digArrow.y = faceY - 32 + Math.min(0, bounceAmt);
-                    
-                    const glowChild = digArrow.getChildByName('dig_arrow_glow');
-                    if (glowChild) glowChild.alpha = 0.4 + Math.sin(Date.now() * 0.006 + props.r) * 0.25;
+                    if (digLabelChild && digLabel) { digLabelChild.text = translateArrowLabel(digLabel, isRu); }
+                    digArrow.visible = true; digArrow.y = faceY - 32 + Math.min(0, Math.sin(Date.now() * 0.008 + props.q) * 6);
+                    const glowChild = digArrow.getChildByName('dig_arrow_glow'); if (glowChild) glowChild.alpha = 0.4 + Math.sin(Date.now() * 0.006 + props.r) * 0.25;
                 } else {
-                    const existingDigArrow = curContainer.getChildByName('dig_arrow');
-                    if (existingDigArrow) {
-                        existingDigArrow.visible = false;
-                    }
+                    const existingDigArrow = curContainer.getChildByName('dig_arrow'); if (existingDigArrow) existingDigArrow.visible = false;
                 }
 
-                // --- GRADIENT LOCK VISUAL AIDS ---
                 const playerHex = player && grid ? grid[getHexKey(player.q, player.r)] : null;
                 const playerHeightLevel = playerHex ? (playerHex.currentLevel ?? 0) : 0;
-
                 const isNeighborOfPlayer = player && cubeDistance(player, props) === 1;
                 const isBlockingNeighbor = isNeighborOfPlayer && recentGradientLock && grid && (props.level >= playerHeightLevel);
-                
                 let gradientWarningOverlay = curContainer.getChildByName('gradient_warning') as PIXI.Graphics;
                 if (isBlockingNeighbor && isRevealed) {
-                    if (!gradientWarningOverlay) {
-                        gradientWarningOverlay = new PIXI.Graphics();
-                        gradientWarningOverlay.name = 'gradient_warning';
-                        gradientWarningOverlay.zIndex = 35;
-                        curContainer.addChild(gradientWarningOverlay);
-                    }
+                    if (!gradientWarningOverlay) { gradientWarningOverlay = new PIXI.Graphics(); gradientWarningOverlay.name = 'gradient_warning'; gradientWarningOverlay.zIndex = 35; curContainer.addChild(gradientWarningOverlay); }
                     gradientWarningOverlay.clear();
                     const alphaPulse = 0.4 + 0.3 * Math.sin(Date.now() / 100);
                     gradientWarningOverlay.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => {
-                        const px = pt.x;
-                        const py = pt.y * 0.8 + props.offsetY;
-                        if (j === 0) gradientWarningOverlay.moveTo(px, py);
-                        else gradientWarningOverlay.lineTo(px, py);
-                    });
-                    gradientWarningOverlay.closePath();
-                    gradientWarningOverlay.stroke({ width: 3, color: 0xef4444, alpha: alphaPulse });
-                    gradientWarningOverlay.fill({ color: 0xef4444, alpha: alphaPulse * 0.4 });
+                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + props.offsetY; if (j === 0) gradientWarningOverlay.moveTo(px, py); else gradientWarningOverlay.lineTo(px, py); });
+                    gradientWarningOverlay.closePath(); gradientWarningOverlay.stroke({ width: 3, color: 0xef4444, alpha: alphaPulse }); gradientWarningOverlay.fill({ color: 0xef4444, alpha: alphaPulse * 0.4 });
                 } else {
-                    if (gradientWarningOverlay) {
-                        curContainer.removeChild(gradientWarningOverlay).destroy();
-                    }
+                    if (gradientWarningOverlay) gradientWarningOverlay.visible = false;
                 }
 
                 const isPlayerHex = player && player.q === props.q && player.r === props.r;
                 let gradientArrows = curContainer.getChildByName('gradient_arrows') as PIXI.Graphics;
-                
                 if (isPlayerHex && recentGradientLock && isRevealed && grid) {
-                    if (!gradientArrows) {
-                        gradientArrows = new PIXI.Graphics();
-                        gradientArrows.name = 'gradient_arrows';
-                        gradientArrows.zIndex = 38;
-                        curContainer.addChild(gradientArrows);
-                    }
+                    if (!gradientArrows) { gradientArrows = new PIXI.Graphics(); gradientArrows.name = 'gradient_arrows'; gradientArrows.zIndex = 38; curContainer.addChild(gradientArrows); }
                     gradientArrows.clear();
-                    
                     NEIGHBOR_DIRECTIONS.forEach(dir => {
-                        const nQ = props.q + dir.q;
-                        const nR = props.r + dir.r;
+                        const nQ = props.q + dir.q, nR = props.r + dir.r;
                         const nHex = grid[getHexKey(nQ, nR)];
                         if (nHex && nHex.structureType !== 'VOID' && (nHex.currentLevel ?? 0) >= playerHeightLevel) {
-                            const nPx = simpleHexToPixel(nQ, nR);
-                            const curPx = simpleHexToPixel(props.q, props.r);
-                            const dx = nPx.x - curPx.x;
-                            const nOffsetY = -((nHex.currentLevel ?? 0) * 8);
-                            const dy = (nPx.y - curPx.y) + (nOffsetY - props.offsetY);
-                            
-                            gradientArrows.beginPath();
-                            gradientArrows.moveTo(0, props.offsetY);
-                            const arrowLengthFactor = 0.65;
-                            const targetX = dx * arrowLengthFactor;
-                            const targetY = props.offsetY + dy * arrowLengthFactor;
-                            
-                            gradientArrows.lineTo(targetX, targetY);
-                            gradientArrows.stroke({ width: 3.5, color: 0xef4444, alpha: 0.8 });
-                            
-                            const angle = Math.atan2(dy, dx);
-                            const headSize = 7;
-                            gradientArrows.beginPath();
-                            gradientArrows.moveTo(targetX, targetY);
-                            gradientArrows.lineTo(
-                                targetX - headSize * Math.cos(angle - Math.PI / 6),
-                                targetY - headSize * Math.sin(angle - Math.PI / 6)
-                            );
-                            gradientArrows.lineTo(
-                                targetX - headSize * Math.cos(angle + Math.PI / 6),
-                                targetY - headSize * Math.sin(angle + Math.PI / 6)
-                            );
-                            gradientArrows.closePath();
-                            gradientArrows.fill({ color: 0xef4444, alpha: 0.9 });
+                            const nPx = simpleHexToPixel(nQ, nR), curPx = simpleHexToPixel(props.q, props.r);
+                            const dx = nPx.x - curPx.x, nOffsetY = -((nHex.currentLevel ?? 0) * 8), dy = (nPx.y - curPx.y) + (nOffsetY - props.offsetY);
+                            gradientArrows.beginPath(); gradientArrows.moveTo(0, props.offsetY);
+                            const targetX = dx * 0.65, targetY = props.offsetY + dy * 0.65;
+                            gradientArrows.lineTo(targetX, targetY); gradientArrows.stroke({ width: 3.5, color: 0xef4444, alpha: 0.8 });
+                            const angle = Math.atan2(dy, dx), headSize = 7;
+                            gradientArrows.beginPath(); gradientArrows.moveTo(targetX, targetY);
+                            gradientArrows.lineTo(targetX - headSize * Math.cos(angle - Math.PI / 6), targetY - headSize * Math.sin(angle - Math.PI / 6));
+                            gradientArrows.lineTo(targetX - headSize * Math.cos(angle + Math.PI / 6), targetY - headSize * Math.sin(angle + Math.PI / 6));
+                            gradientArrows.closePath(); gradientArrows.fill({ color: 0xef4444, alpha: 0.9 });
                         }
                     });
                 } else {
-                    if (gradientArrows) {
-                        curContainer.removeChild(gradientArrows).destroy();
-                    }
+                    if (gradientArrows) gradientArrows.visible = false;
                 }
 
-                // --- RADAR PULSE FOR MINI-MONUMENTS (OBELISKS) ---
                 const isMiniMonument = props.structureType === 'MINI_MONUMENT' || props.isMiniMonument;
                 let miniMonumentPulse = curContainer.getChildByName('mini_monument_pulse') as PIXI.Graphics;
-                
                 if (isMiniMonument && isRevealed) {
-                    if (!miniMonumentPulse) {
-                        miniMonumentPulse = new PIXI.Graphics();
-                        miniMonumentPulse.name = 'mini_monument_pulse';
-                        miniMonumentPulse.zIndex = 5;
-                        curContainer.addChild(miniMonumentPulse);
-                    }
+                    if (!miniMonumentPulse) { miniMonumentPulse = new PIXI.Graphics(); miniMonumentPulse.name = 'mini_monument_pulse'; miniMonumentPulse.zIndex = 5; curContainer.addChild(miniMonumentPulse); }
                     miniMonumentPulse.clear();
-                    
-                    const t = (Date.now() / 2000) % 1.0;
-                    const maxRadius = HEX_SIZE * 3.0;
-                    const curRadius = HEX_SIZE * 0.8 + (maxRadius - HEX_SIZE * 0.8) * t;
-                    const curAlpha = 0.5 * (1.0 - t);
-                    
+                    const t = (Date.now() / 2000) % 1.0, maxRadius = HEX_SIZE * 3.0, curRadius = HEX_SIZE * 0.8 + (maxRadius - HEX_SIZE * 0.8) * t, curAlpha = 0.5 * (1.0 - t);
                     const isActivated = props.isActivated || (activatedMiniMonuments && activatedMiniMonuments.includes(`${props.q},${props.r}`));
                     const pulseColor = isActivated ? 0x22d3ee : 0xf1f5f9;
-                    
-                    miniMonumentPulse.beginPath();
-                    miniMonumentPulse.ellipse(0, props.offsetY, curRadius, curRadius * 0.8);
-                    miniMonumentPulse.stroke({ width: 2, color: pulseColor, alpha: curAlpha });
-                    miniMonumentPulse.fill({ color: pulseColor, alpha: curAlpha * 0.15 });
+                    miniMonumentPulse.beginPath(); miniMonumentPulse.ellipse(0, props.offsetY, curRadius, curRadius * 0.8); miniMonumentPulse.stroke({ width: 2, color: pulseColor, alpha: curAlpha }); miniMonumentPulse.fill({ color: pulseColor, alpha: curAlpha * 0.15 });
                 } else {
-                    if (miniMonumentPulse) {
-                        curContainer.removeChild(miniMonumentPulse).destroy();
-                    }
+                    if (miniMonumentPulse) miniMonumentPulse.visible = false;
                 }
 
-                // --- METEOR WARNING SHADOW/TELEGRAPH ---
                 const targetedMeteor = activeMeteors?.find(m => m.q === props.q && m.r === props.r);
                 let meteorTelegraph = curContainer.getChildByName('meteor_telegraph') as PIXI.Graphics;
                 if (targetedMeteor && isRevealed) {
-                    if (!meteorTelegraph) {
-                        meteorTelegraph = new PIXI.Graphics();
-                        meteorTelegraph.name = 'meteor_telegraph';
-                        meteorTelegraph.zIndex = 42;
-                        curContainer.addChild(meteorTelegraph);
-                    }
+                    if (!meteorTelegraph) { meteorTelegraph = new PIXI.Graphics(); meteorTelegraph.name = 'meteor_telegraph'; meteorTelegraph.zIndex = 42; curContainer.addChild(meteorTelegraph); }
                     meteorTelegraph.clear();
-                    
                     const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.02);
-                    
                     meteorTelegraph.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => {
-                        const px = pt.x;
-                        const py = pt.y * 0.8 + props.offsetY;
-                        if (j === 0) meteorTelegraph.moveTo(px, py);
-                        else meteorTelegraph.lineTo(px, py);
-                    });
-                    meteorTelegraph.closePath();
-                    meteorTelegraph.stroke({ width: 3, color: 0xef4444, alpha: 0.8 + pulse * 0.2 });
-                    meteorTelegraph.fill({ color: 0xef4444, alpha: 0.25 + pulse * 0.15 });
-
-                    const maxTicks = targetedMeteor.maxWarnTicks || 4;
-                    const ticksLeft = targetedMeteor.warnTicksRemaining;
-                    // Ratio from 1 (just spawned) to 0 (impact)
-                    const collapseRatio = ticksLeft / maxTicks;
-                    const progress = 1 - collapseRatio;
+                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + props.offsetY; if (j === 0) meteorTelegraph.moveTo(px, py); else meteorTelegraph.lineTo(px, py); });
+                    meteorTelegraph.closePath(); meteorTelegraph.stroke({ width: 3, color: 0xef4444, alpha: 0.8 + pulse * 0.2 }); meteorTelegraph.fill({ color: 0xef4444, alpha: 0.25 + pulse * 0.15 });
+                    const maxTicks = targetedMeteor.maxWarnTicks || 4, ticksLeft = targetedMeteor.warnTicksRemaining, collapseRatio = ticksLeft / maxTicks, progress = 1 - collapseRatio;
+                    meteorTelegraph.beginPath(); meteorTelegraph.ellipse(0, props.offsetY, 40 * progress, 25 * progress); meteorTelegraph.stroke({ width: 2, color: 0x000000, alpha: 0.5 }); meteorTelegraph.fill({ color: 0x000000, alpha: 0.7 * progress });
+                    const startY = props.offsetY - 800, currentY = startY + (props.offsetY - startY) * Math.pow(progress, 2);
+                    meteorTelegraph.beginPath(); meteorTelegraph.circle(0, currentY, 15); meteorTelegraph.fill({ color: 0xff5500, alpha: 1 });
+                    meteorTelegraph.beginPath(); meteorTelegraph.circle(0, currentY, 8); meteorTelegraph.fill({ color: 0xffaa00, alpha: 1 });
+                    meteorTelegraph.beginPath(); meteorTelegraph.moveTo(-10, currentY); meteorTelegraph.lineTo(10, currentY); meteorTelegraph.lineTo(0, currentY - 80 - 100 * collapseRatio); meteorTelegraph.closePath(); meteorTelegraph.fill({ color: 0xff4400, alpha: 0.6 });
                     
-                    // Expanding shadow
-                    const maxShadowRadiusX = 40;
-                    const maxShadowRadiusY = 25;
-                    
-                    meteorTelegraph.beginPath();
-                    meteorTelegraph.ellipse(0, props.offsetY, maxShadowRadiusX * progress, maxShadowRadiusY * progress);
-                    meteorTelegraph.stroke({ width: 2, color: 0x000000, alpha: 0.5 });
-                    meteorTelegraph.fill({ color: 0x000000, alpha: 0.7 * progress });
-
-                    // Falling fiery rock
-                    const startY = props.offsetY - 800; // Start high up
-                    const currentY = startY + (props.offsetY - startY) * Math.pow(progress, 2); // Accelerate downwards
-                    
-                    // Meteor rock
-                    meteorTelegraph.beginPath();
-                    meteorTelegraph.circle(0, currentY, 15);
-                    meteorTelegraph.fill({ color: 0xff5500, alpha: 1 });
-                    
-                    // Meteor core
-                    meteorTelegraph.beginPath();
-                    meteorTelegraph.circle(0, currentY, 8);
-                    meteorTelegraph.fill({ color: 0xffaa00, alpha: 1 });
-                    
-                    // Meteor trail
-                    meteorTelegraph.beginPath();
-                    meteorTelegraph.moveTo(-10, currentY);
-                    meteorTelegraph.lineTo(10, currentY);
-                    meteorTelegraph.lineTo(0, currentY - 80 - 100 * collapseRatio); // Trail stretches up
-                    meteorTelegraph.closePath();
-                    meteorTelegraph.fill({ color: 0xff4400, alpha: 0.6 });
+                    // Trigger screen shake if meteor is close
+                    if (progress > 0.8) shakeIntensityRef.current = 10;
                 } else {
-                    if (meteorTelegraph) {
-                        curContainer.removeChild(meteorTelegraph).destroy();
-                    }
+                    if (meteorTelegraph) meteorTelegraph.visible = false;
                 }
 
-                // --- GHOST PREVIEW FOR UPGRADE ---
                 const isHovered = hoveredHexId === `${props.q},${props.r}`;
                 const isUpgradeIntent = playerGrowthIntent === 'UPGRADE';
                 let ghostPreview = curContainer.getChildByName('ghost_preview') as PIXI.Graphics;
-                
                 if (isHovered && isUpgradeIntent && isRevealed) {
-                    if (!ghostPreview) {
-                        ghostPreview = new PIXI.Graphics();
-                        ghostPreview.name = 'ghost_preview';
-                        ghostPreview.zIndex = 30;
-                        curContainer.addChild(ghostPreview);
-                    }
+                    if (!ghostPreview) { ghostPreview = new PIXI.Graphics(); ghostPreview.name = 'ghost_preview'; ghostPreview.zIndex = 30; curContainer.addChild(ghostPreview); }
                     ghostPreview.clear();
-                    
                     const nextOffsetY = props.offsetY - 8;
-                    
                     ghostPreview.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => {
-                        const px = pt.x;
-                        const py = pt.y * 0.8 + nextOffsetY;
-                        if (j === 0) ghostPreview.moveTo(px, py);
-                        else ghostPreview.lineTo(px, py);
-                    });
-                    ghostPreview.closePath();
-                    
-                    ghostPreview.stroke({ width: 2.0, color: 0x10b981, alpha: 0.95 });
-                    ghostPreview.fill({ color: 0x10b981, alpha: 0.28 });
-                    
-                    rotatedBasePoints.forEach(pt => {
-                        ghostPreview.beginPath();
-                        ghostPreview.moveTo(pt.x, pt.y * 0.8 + props.offsetY);
-                        ghostPreview.lineTo(pt.x, pt.y * 0.8 + nextOffsetY);
-                        ghostPreview.stroke({ width: 1.0, color: 0x10b981, alpha: 0.5 });
-                    });
-                    
+                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + nextOffsetY; if (j === 0) ghostPreview.moveTo(px, py); else ghostPreview.lineTo(px, py); });
+                    ghostPreview.closePath(); ghostPreview.stroke({ width: 2.0, color: 0x10b981, alpha: 0.95 }); ghostPreview.fill({ color: 0x10b981, alpha: 0.28 });
+                    rotatedBasePoints.forEach(pt => { ghostPreview.beginPath(); ghostPreview.moveTo(pt.x, pt.y * 0.8 + props.offsetY); ghostPreview.lineTo(pt.x, pt.y * 0.8 + nextOffsetY); ghostPreview.stroke({ width: 1.0, color: 0x10b981, alpha: 0.5 }); });
                     let ghostText = curContainer.getChildByName('ghost_text') as PIXI.Text;
-                    if (!ghostText) {
-                        ghostText = new PIXI.Text({
-                            text: `+L${props.level + 1}`,
-                            style: {
-                                fontFamily: 'monospace',
-                                fontSize: 11,
-                                fontWeight: 'bold',
-                                fill: 0x10b981,
-                                stroke: { color: 0x000000, width: 2.5 }
-                            }
-                        });
-                        ghostText.name = 'ghost_text';
-                        ghostText.anchor.set(0.5, 0.5);
-                        ghostText.zIndex = 31;
-                        curContainer.addChild(ghostText);
-                    }
-                    ghostText.y = nextOffsetY - 12;
-                    ghostText.visible = true;
+                    if (!ghostText) { ghostText = new PIXI.Text({ text: `+L${props.level + 1}`, style: { fontFamily: 'monospace', fontSize: 11, fontWeight: 'bold', fill: 0x10b981, stroke: { color: 0x000000, width: 2.5 } } }); ghostText.name = 'ghost_text'; ghostText.anchor.set(0.5, 0.5); ghostText.zIndex = 31; curContainer.addChild(ghostText); }
+                    ghostText.visible = true; ghostText.y = nextOffsetY - 12;
                 } else {
-                    if (ghostPreview) {
-                        curContainer.removeChild(ghostPreview).destroy();
-                    }
-                    const ghostText = curContainer.getChildByName('ghost_text');
-                    if (ghostText) {
-                        curContainer.removeChild(ghostText).destroy();
-                    }
+                    if (ghostPreview) ghostPreview.visible = false;
+                    const ghostText = curContainer.getChildByName('ghost_text'); if (ghostText) ghostText.visible = false;
                 }
 
-                // Render path confirmation cost target badge (isPending)
                 if (props.isPending) {
                     let pendingBadge = curContainer.getChildByName('pending_badge') as PIXI.Container;
                     if (!pendingBadge) {
-                        pendingBadge = new PIXI.Container();
-                        pendingBadge.name = 'pending_badge';
-                        pendingBadge.zIndex = 45;
-                        curContainer.addChild(pendingBadge);
-
-                        const g = new PIXI.Graphics();
-                        g.name = 'badge_graphics';
-                        // Soft glow ring so the cost reads clearly against any terrain.
-                        g.beginPath();
-                        g.circle(0, 0, 19);
-                        g.fill({ color: 0xfbbf24, alpha: 0.22 });
-                        // Coin disc with the cost number inside (per "число монет в кружочке над гексом").
-                        g.beginPath();
-                        g.circle(0, 0, 15);
-                        g.fill({ color: 0xfbbf24 });
-                        g.strokeStyle = { width: 2, color: 0x92400e };
-                        g.stroke();
+                        pendingBadge = new PIXI.Container(); pendingBadge.name = 'pending_badge'; pendingBadge.zIndex = 45; curContainer.addChild(pendingBadge);
+                        const g = new PIXI.Graphics(); g.name = 'badge_graphics';
+                        g.beginPath(); g.circle(0, 0, 19); g.fill({ color: 0xfbbf24, alpha: 0.22 });
+                        g.beginPath(); g.circle(0, 0, 15); g.fill({ color: 0xfbbf24 }); g.strokeStyle = { width: 2, color: 0x92400e }; g.stroke();
                         pendingBadge.addChild(g);
-
-                        const txt = new PIXI.Text({
-                            text: '',
-                            style: {
-                                fontFamily: 'Inter, sans-serif',
-                                fontSize: 15,
-                                fontWeight: 'bold',
-                                fill: 0x78350f,
-                                align: 'center'
-                            }
-                        });
-                        txt.name = 'badge_text';
-                        txt.anchor.set(0.5, 0.5);
-                        pendingBadge.addChild(txt);
+                        const txt = new PIXI.Text({ text: '', style: { fontFamily: 'Inter, sans-serif', fontSize: 15, fontWeight: 'bold', fill: 0x78350f, align: 'center' } });
+                        txt.name = 'badge_text'; txt.anchor.set(0.5, 0.5); pendingBadge.addChild(txt);
                     }
-
-                    pendingBadge.visible = true;
-                    pendingBadge.y = faceY - 33;
-
-                    const costMoves = pendingConfirmation?.data?.costMoves ?? 0;
-                    const costCoins = pendingConfirmation?.data?.costCoins ?? 0;
-                    // Show the coin price inside the disc; fall back to move points if no coins needed.
-                    const textLabel = costCoins > 0 ? `${costCoins}` : `${costMoves}`;
-
+                    pendingBadge.visible = true; pendingBadge.y = faceY - 33;
                     const txt = pendingBadge.getChildByName('badge_text') as PIXI.Text;
-                    if (txt) {
-                        txt.text = textLabel;
-                    }
+                    if (txt) txt.text = pendingConfirmation?.data?.costCoins ? `${pendingConfirmation.data.costCoins}` : `${pendingConfirmation?.data?.costMoves ?? 0}`;
                 } else {
-                    const existingBadge = curContainer.getChildByName('pending_badge');
-                    if (existingBadge) {
-                        existingBadge.visible = false;
-                    }
+                    const existingBadge = curContainer.getChildByName('pending_badge'); if (existingBadge) existingBadge.visible = false;
                 }
-                curContainer.sortChildren();
             } else if (item.type === 'UNIT') {
-                // 2. UNITS LAYER (Sprites walking and jumping)
                 activeUnitIds.add(item.id);
                 const props = item.props;
-
                 let curContainer = unitCache.current.get(item.id);
                 let stateObj = unitAnimStates.current.get(item.id);
 
                 if (!stateObj) {
-                    stateObj = {
-                        startQ: props.q,
-                        startR: props.r,
-                        startTime: Date.now(),
-                        isMoving: false,
-                        startLevel: props.hexLevel,
-                        targetQ: props.q,
-                        targetR: props.r,
-                        targetLevel: props.hexLevel,
-                        facingLeft: false,
-                        currentQ: props.q,
-                        currentR: props.r,
-                        currentLevel: props.hexLevel,
-                        stepDuration: 400,
-                        moveMode: 'SINGLE'
-                    };
+                    stateObj = { startQ: props.q, startR: props.r, startTime: Date.now(), isMoving: false, startLevel: props.hexLevel, targetQ: props.q, targetR: props.r, targetLevel: props.hexLevel, facingLeft: false, currentQ: props.q, currentR: props.r, currentLevel: props.hexLevel, stepDuration: 400, moveMode: 'SINGLE' };
                     unitAnimStates.current.set(item.id, stateObj);
                 }
-                const state = stateObj!;
 
                 const uImage = resourceService.getUnitImage(props.headIndex, props.bodyIndex, props.color, props.type);
                 const tex = getPixiTexture(uImage);
 
                 if (!curContainer) {
-                    curContainer = new PIXI.Container();
-                    curContainer.name = item.id;
-                    parent.addChild(curContainer);
-                    unitCache.current.set(item.id, curContainer);
-
-                    // Add Contact Shadows underneath feet
-                    const shadow = new PIXI.Graphics();
-                    shadow.name = 'shadow';
-                    shadow.beginPath();
-                    shadow.ellipse(0, 0, 10, 6);
-                    shadow.fill({ color: 0x000000, alpha: 0.4 });
-                    curContainer.addChild(shadow);
-
-                    // Glowing neon indicator ring for Player
-                    if (props.isPlayer) {
-                        const ring = new PIXI.Graphics();
-                        ring.name = 'ring';
-                        ring.strokeStyle = { width: 1.0, color: 0xffffff, alpha: 0.6 };
-                        ring.beginPath();
-                        ring.ellipse(0, 0, 16, 10);
-                        ring.stroke();
-                        curContainer.addChild(ring);
-                    }
-
-                    // Scaled character avatar Sprite
-                    const sprite = new PIXI.Sprite(tex);
-                    sprite.name = 'sprite';
-                    sprite.anchor.set(0.5, 0.75); // Center X, Pivot at ankles
-                    sprite.scale.set(1.0, 1.0);
-                    curContainer.addChild(sprite);
+                    curContainer = new PIXI.Container(); curContainer.name = item.id; parent.addChild(curContainer); unitCache.current.set(item.id, curContainer);
+                    const shadow = new PIXI.Graphics(); shadow.name = 'shadow'; shadow.beginPath(); shadow.ellipse(0, 0, 10, 6); shadow.fill({ color: 0x000000, alpha: 0.4 }); curContainer.addChild(shadow);
+                    if (props.isPlayer) { const ring = new PIXI.Graphics(); ring.name = 'ring'; ring.strokeStyle = { width: 1.0, color: 0xffffff, alpha: 0.6 }; ring.beginPath(); ring.ellipse(0, 0, 16, 10); ring.stroke(); curContainer.addChild(ring); }
+                    const sprite = new PIXI.Sprite(tex); sprite.name = 'sprite'; sprite.anchor.set(0.5, 0.75); sprite.scale.set(1.0, 1.0); curContainer.addChild(sprite);
                 } else {
-                    // Update texture if player customized avatar
                     const sprite = curContainer.getChildByName('sprite') as PIXI.Sprite;
-                    if (sprite) {
-                        sprite.texture = tex;
-                    }
+                    if (sprite) sprite.texture = tex;
                 }
                 curContainer.zIndex = item.depth;
 
-                // Detect movement commands from game engine
-                const hasPosChanged = props.q !== state.targetQ || props.r !== state.targetR;
-                const hasLevelChanged = props.hexLevel !== state.targetLevel;
+                const hasPosChanged = props.q !== stateObj.targetQ || props.r !== stateObj.targetR;
+                const hasLevelChanged = props.hexLevel !== stateObj.targetLevel;
 
                 if (hasPosChanged) {
-                    const distance = cubeDistance(
-                        { q: state.targetQ, r: state.targetR },
-                        { q: props.q, r: props.r }
-                    );
-
+                    const distance = cubeDistance({ q: stateObj.targetQ, r: stateObj.targetR }, { q: props.q, r: props.r });
                     if (distance > 1.5) {
-                        state.isMoving = false;
-                        state.startQ = props.q;
-                        state.startR = props.r;
-                        state.startLevel = props.hexLevel;
-                        state.targetQ = props.q;
-                        state.targetR = props.r;
-                        state.targetLevel = props.hexLevel;
-                        state.currentQ = props.q;
-                        state.currentR = props.r;
-                        state.currentLevel = props.hexLevel;
+                        stateObj.isMoving = false; stateObj.startQ = props.q; stateObj.startR = props.r; stateObj.startLevel = props.hexLevel;
+                        stateObj.targetQ = props.q; stateObj.targetR = props.r; stateObj.targetLevel = props.hexLevel;
+                        stateObj.currentQ = props.q; stateObj.currentR = props.r; stateObj.currentLevel = props.hexLevel;
                     } else {
-                        const wasMoving = state.isMoving;
+                        const wasMoving = stateObj.isMoving;
                         const queueLength = (props.isPlayer ? player?.movementQueue?.length : bots?.find(b => b.id === item.id)?.movementQueue?.length) || 0;
-                        
                         let mode: any = 'SINGLE';
                         if (!wasMoving && queueLength > 0) mode = 'FIRST';
                         else if (wasMoving && queueLength > 0) mode = 'MIDDLE';
                         else if (wasMoving && queueLength === 0) mode = 'LAST';
-
-                        state.moveMode = mode;
-                        state.stepDuration = 380; // Perfectly matched step pace loop
-                        state.startQ = wasMoving ? state.currentQ : state.targetQ;
-                        state.startR = wasMoving ? state.currentR : state.targetR;
-                        state.startLevel = wasMoving ? state.currentLevel : state.targetLevel;
-                        state.targetQ = props.q;
-                        state.targetR = props.r;
-                        state.targetLevel = props.hexLevel;
-
-                        // Compute facing direction vector flipping X scale
-                        const startRawX = HEX_SIZE * (Math.sqrt(3) * state.startQ + Math.sqrt(3)/2 * state.startR);
-                        const targetRawX = HEX_SIZE * (Math.sqrt(3) * state.targetQ + Math.sqrt(3)/2 * state.targetR);
-                        if (Math.abs(targetRawX - startRawX) > 1) {
-                            state.facingLeft = targetRawX < startRawX;
-                        }
-
-                        state.startTime = Date.now();
-                        state.isMoving = true;
+                        stateObj.moveMode = mode; stateObj.stepDuration = 380;
+                        stateObj.startQ = wasMoving ? stateObj.currentQ : stateObj.targetQ; stateObj.startR = wasMoving ? stateObj.currentR : stateObj.targetR; stateObj.startLevel = wasMoving ? stateObj.currentLevel : stateObj.targetLevel;
+                        stateObj.targetQ = props.q; stateObj.targetR = props.r; stateObj.targetLevel = props.hexLevel;
+                        const startRawX = HEX_SIZE * (Math.sqrt(3) * stateObj.startQ + Math.sqrt(3)/2 * stateObj.startR);
+                        const targetRawX = HEX_SIZE * (Math.sqrt(3) * stateObj.targetQ + Math.sqrt(3)/2 * stateObj.targetR);
+                        if (Math.abs(targetRawX - startRawX) > 1) stateObj.facingLeft = targetRawX < startRawX;
+                        stateObj.startTime = Date.now(); stateObj.isMoving = true;
                     }
                 } else if (hasLevelChanged) {
-                    if (!state.isMoving) {
-                        state.startLevel = state.targetLevel;
-                        state.startTime = Date.now();
-                        state.isMoving = true;
-                        state.startQ = props.q;
-                        state.startR = props.r;
-                        state.moveMode = 'SINGLE';
-                        state.stepDuration = 400;
-                    }
-                    state.targetLevel = props.hexLevel;
+                    if (!stateObj.isMoving) { stateObj.startLevel = stateObj.targetLevel; stateObj.startTime = Date.now(); stateObj.isMoving = true; stateObj.startQ = props.q; stateObj.startR = props.r; stateObj.moveMode = 'SINGLE'; stateObj.stepDuration = 400; }
+                    stateObj.targetLevel = props.hexLevel;
                 }
 
-                if (!state.isMoving) {
-                    // Synchronously snapping character flat coordinate offsets to eliminate movement latency
+                if (!stateObj.isMoving) {
                     const rawX = HEX_SIZE * (Math.sqrt(3) * props.q + Math.sqrt(3)/2 * props.r);
                     const rawY = HEX_SIZE * 1.5 * props.r;
                     const px = rawX * cos - rawY * sin;
                     const py = (rawX * sin + rawY * cos) * 0.8;
-                    curContainer.x = px;
-                    curContainer.y = py;
-                    
+                    curContainer.x = px; curContainer.y = py;
                     const sprite = curContainer.getChildByName('sprite') as PIXI.Sprite;
                     const shadow = curContainer.getChildByName('shadow') as PIXI.Graphics;
                     const targetZ = getHexVisualHeight(props.hexLevel);
-                    if (sprite) {
-                        sprite.y = targetZ;
-                    }
-                    if (shadow) {
-                        shadow.y = targetZ;
-                    }
+                    if (sprite) sprite.y = targetZ;
+                    if (shadow) shadow.y = targetZ;
                 }
-
-
                 curContainer.alpha = props.opacity;
             }
         });
 
-        // 3. POOL EVICTION (Cull cells and characters that left the Viewport to prevent memory leaks)
         for (const [id, container] of hexCache.current.entries()) {
-            if (!activeHexIds.has(id)) {
-                parent.removeChild(container);
-                container.destroy({ children: true });
-                hexCache.current.delete(id);
-            }
+            if (!activeHexIds.has(id)) { parent.removeChild(container); container.destroy({ children: true }); hexCache.current.delete(id); }
         }
-
         for (const [id, container] of unitCache.current.entries()) {
-            if (!activeUnitIds.has(id)) {
-                parent.removeChild(container);
-                container.destroy({ children: true });
-                unitCache.current.delete(id);
-                unitAnimStates.current.delete(id);
-            }
+            if (!activeUnitIds.has(id)) { parent.removeChild(container); container.destroy({ children: true }); unitCache.current.delete(id); unitAnimStates.current.delete(id); }
         }
-
-        // 4. SORT Z-INDEX DEPTH OF VISIBLE GRAPHICS (Ensure perfect 3D occlusion layering overlays)
-        parent.sortChildren();
-
     }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors, pendingConfirmation, recentGradientLock, playerGrowthIntent, session, simpleHexToPixel, sessionLanguage]);
 
-    const { handleCanvasClick, handleCanvasMouseMove, handleCanvasMouseLeave } = useMapInput({
-        grid,
-        rotation,
-        activeLevelConfig,
-        camera,
-        onHexClick,
-        onHover,
-        pixiAppRef,
-    });
+    const { handleCanvasClick, handleCanvasMouseMove, handleCanvasMouseLeave } = useMapInput({ grid, rotation, activeLevelConfig, camera, onHexClick, onHover, pixiAppRef });
 
-    // Dispatch real-time screen coordinates of player to onboarding tutorials
     useEffect(() => {
         if (!player || !grid) return;
-
         const getScreenCoordsOfHex = (q: number, r: number, level: number) => {
-            const SQRT3 = Math.sqrt(3);
-            const SQRT3_2 = SQRT3 / 2;
-            const ONE_POINT_FIVE = 1.5;
-            
-            const rawNX = HEX_SIZE * (SQRT3 * q + SQRT3_2 * r);
-            const rawNY = HEX_SIZE * (ONE_POINT_FIVE * r);
-            
+            const rawNX = HEX_SIZE * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r);
+            const rawNY = HEX_SIZE * (1.5 * r);
             const angleOffset = rotation * (Math.PI / 180);
-            const cos = Math.cos(angleOffset);
-            const sin = Math.sin(angleOffset);
-            
+            const cos = Math.cos(angleOffset), sin = Math.sin(angleOffset);
             const cx = rawNX * cos - rawNY * sin;
             const cy = (rawNX * sin + rawNY * cos) * 0.8 + getHexVisualHeight(level);
-            
             const cam = camera || { x: 0, y: 0, scale: 1 };
-            const screenX = cam.x + cx * cam.scale;
-            const screenY = cam.y + cy * cam.scale;
-            
-            return {
-                x: screenX - (HEX_SIZE * cam.scale),
-                y: screenY - (HEX_SIZE * cam.scale * 0.8),
-                w: HEX_SIZE * cam.scale * 2,
-                h: HEX_SIZE * cam.scale * 1.6
-            };
+            return { x: cam.x + cx * cam.scale - (HEX_SIZE * cam.scale), y: cam.y + cy * cam.scale - (HEX_SIZE * cam.scale * 0.8), w: HEX_SIZE * cam.scale * 2, h: HEX_SIZE * cam.scale * 1.6 };
         };
-
         const pHex = grid[`${playerQ},${playerR}`];
         if (!pHex) return;
-
         const playerScreen = getScreenCoordsOfHex(playerQ, playerR, pHex.currentLevel);
-
-        let mineScreen = null;
-        let voidScreen = null;
-
+        let mineScreen = null, voidScreen = null;
         const neighbors = getNeighbors(playerQ, playerR);
         for (const n of neighbors) {
             const nHex = grid[`${n.q},${n.r}`];
             if (nHex) {
-                if (nHex.currentLevel < 0 && !mineScreen) {
-                    mineScreen = getScreenCoordsOfHex(n.q, n.r, nHex.currentLevel);
-                }
-                if (nHex.structureType === 'VOID' && !voidScreen) {
-                    voidScreen = getScreenCoordsOfHex(n.q, n.r, nHex.currentLevel);
-                }
+                if (nHex.currentLevel < 0 && !mineScreen) mineScreen = getScreenCoordsOfHex(n.q, n.r, nHex.currentLevel);
+                if (nHex.structureType === 'VOID' && !voidScreen) voidScreen = getScreenCoordsOfHex(n.q, n.r, nHex.currentLevel);
             }
         }
-
-        const updateEvent = new CustomEvent('hexquest-coordinates-update', {
-            detail: {
-                player: playerScreen,
-                mine: mineScreen,
-                void: voidScreen
-            }
-        });
-        window.dispatchEvent(updateEvent);
+        window.dispatchEvent(new CustomEvent('hexquest-coordinates-update', { detail: { player: playerScreen, mine: mineScreen, void: voidScreen } }));
     }, [player, playerQ, playerR, camera, rotation, grid]);
 
-    // Render offscreen bot indicators if any bot is offscreen
     const offscreenBotIndicators = useMemo(() => {
         if (!bots || bots.length === 0 || !grid || !containerRef.current) return [];
-        
-        const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
-        const playerOwnedHexes = isDefenseMode 
-            ? Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore)
-            : [];
-
+        const playerOwnedHexes = isDefenseMode ? Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore) : [];
         const w = containerRef.current.clientWidth || dimensions?.width || 800;
         const h = containerRef.current.clientHeight || dimensions?.height || 600;
         const cam = camera || { x: 0, y: 0, scale: 1 };
-        
-        const indicators: { id: string; x: number; y: number; angle: number; isDestroyer: boolean; distance: number | null }[] = [];
-        
+        const indicators: any[] = [];
         bots.forEach(bot => {
             if (isDefenseMode) {
                 let minDist = 9999;
-                for (const ph of playerOwnedHexes) {
-                    const d = cubeDistance({ q: ph.q, r: ph.r }, { q: bot.q, r: bot.r });
-                    if (d < minDist) {
-                        minDist = d;
-                    }
-                }
-                if (minDist > 4) {
-                    return; // Bot is beyond visibility, skip offscreen indicator!
-                }
+                for (const ph of playerOwnedHexes) { const d = cubeDistance({ q: ph.q, r: ph.r }, { q: bot.q, r: bot.r }); if (d < minDist) minDist = d; }
+                if (minDist > 4) return;
             }
-            
             const bHex = grid[`${bot.q},${bot.r}`];
             if (!bHex) return;
-            
-            const SQRT3 = Math.sqrt(3);
-            const SQRT3_2 = SQRT3 / 2;
-            const ONE_POINT_FIVE = 1.5;
-            
-            const rawNX = HEX_SIZE * (SQRT3 * bot.q + SQRT3_2 * bot.r);
-            const rawNY = HEX_SIZE * (ONE_POINT_FIVE * bot.r);
-            
+            const rawNX = HEX_SIZE * (Math.sqrt(3) * bot.q + Math.sqrt(3) / 2 * bot.r);
+            const rawNY = HEX_SIZE * (1.5 * bot.r);
             const angleOffset = rotation * (Math.PI / 180);
-            const cos = Math.cos(angleOffset);
-            const sin = Math.sin(angleOffset);
-            
+            const cos = Math.cos(angleOffset), sin = Math.sin(angleOffset);
             const cx = rawNX * cos - rawNY * sin;
             const cy = (rawNX * sin + rawNY * cos) * 0.8 + getHexVisualHeight(bHex.currentLevel);
-            
-            const botX = cam.x + cx * cam.scale;
-            const botY = cam.y + cy * cam.scale;
-            
-            const padding = 12;
+            const botX = cam.x + cx * cam.scale, botY = cam.y + cy * cam.scale;
             const isOffscreen = botX < 0 || botX > w || botY < 0 || botY > h;
-            
             if (isOffscreen) {
-                const centerX = w / 2;
-                const centerY = h / 2;
-                const dx = botX - centerX;
-                const dy = botY - centerY;
+                const centerX = w / 2, centerY = h / 2;
+                const dx = botX - centerX, dy = botY - centerY;
                 const angle = Math.atan2(dy, dx);
-                
-                let edgeX = centerX;
-                let edgeY = centerY;
-                
+                let edgeX = centerX, edgeY = centerY;
                 const slope = dx !== 0 ? dy / dx : 10000;
-                const halfW = w / 2 - padding;
-                const halfH = h / 2 - padding;
-                
-                if (Math.abs(dx) * halfH > Math.abs(dy) * halfW) {
-                    if (dx > 0) {
-                        edgeX = centerX + halfW;
-                        edgeY = centerY + halfW * slope;
-                    } else {
-                        edgeX = centerX - halfW;
-                        edgeY = centerY - halfW * slope;
-                    }
-                } else {
-                    if (dy > 0) {
-                        edgeY = centerY + halfH;
-                        edgeX = centerX + halfH / slope;
-                    } else {
-                        edgeY = centerY - halfH;
-                        edgeX = centerX - halfH / slope;
-                    }
-                }
-                
-                const isDestroyer = bot.memory?.botRole === 'DESTROYER' || bot.id.toLowerCase().includes('destroyer');
-                const distHexes = player ? cubeDistance(player, bot) : null;
-                
-                indicators.push({
-                    id: bot.id,
-                    x: edgeX,
-                    y: edgeY,
-                    angle: angle,
-                    isDestroyer,
-                    distance: distHexes
-                });
+                const halfW = w / 2 - 12, halfH = h / 2 - 12;
+                if (Math.abs(dx) * halfH > Math.abs(dy) * halfW) { if (dx > 0) { edgeX = centerX + halfW; edgeY = centerY + halfW * slope; } else { edgeX = centerX - halfW; edgeY = centerY - halfW * slope; } }
+                else { if (dy > 0) { edgeY = centerY + halfH; edgeX = centerX + halfH / slope; } else { edgeY = centerY - halfH; edgeX = centerX - halfH / slope; } }
+                indicators.push({ id: bot.id, x: edgeX, y: edgeY, angle: angle, isDestroyer: bot.memory?.botRole === 'DESTROYER' || bot.id.toLowerCase().includes('destroyer'), distance: player ? cubeDistance(player, bot) : null });
             }
         });
-        
         return indicators;
-    }, [bots, grid, camera, rotation, dimensions, player]);
+    }, [bots, grid, camera, rotation, dimensions, player, isDefenseMode]);
 
     return (
         <div 
@@ -3366,22 +1515,15 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             onTouchStart={handleCanvasClick}
             style={{ width: '100%', height: '100%' }}
         >
-            {/* Offscreen Bot Indicators */}
             {offscreenBotIndicators.map(ind => (
                 <div 
                     key={ind.id}
                     className="absolute pointer-events-none flex items-center justify-center animate-pulse z-50"
-                    style={{
-                        left: `${ind.x}px`,
-                        top: `${ind.y}px`,
-                        transform: 'translate(-50%, -50%)',
-                    }}
+                    style={{ left: `${ind.x}px`, top: `${ind.y}px`, transform: 'translate(-50%, -50%)' }}
                 >
                     <div 
                         className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[16px] border-b-red-500 shadow-md filter drop-shadow-[0_0_4px_rgba(239,68,68,0.5)]"
-                        style={{
-                            transform: `rotate(${ind.angle * (180 / Math.PI) - 90}deg)`,
-                        }}
+                        style={{ transform: `rotate(${ind.angle * (180 / Math.PI) - 90}deg)` }}
                     />
                 </div>
             ))}

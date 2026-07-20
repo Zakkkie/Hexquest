@@ -134,3 +134,75 @@ export const easeInOut = (p: number): number => -0.5 * (Math.cos(Math.PI * p) - 
 
 // Konva.Easings.BackEaseIn
 export const backIn = (p: number): number => p * p * ((BACK_S + 1) * p - BACK_S);
+
+/**
+ * Returns the appropriate emoji icon for a given Point of Interest type.
+ */
+export const getPoiIcon = (type: string): string => {
+  switch (type) {
+    case "city_hub": return "🏛️";
+    case "tavern_travelers": return "🍺";
+    case "bulletin_board": return "📋";
+    case "guard_post": return "🛡️";
+    case "forge": return "⚒️";
+    case "alchemist": return "🧪";
+    case "watchtower": return "🔭";
+    case "market": return "⚖️";
+    case "warehouse": return "📦";
+    case "healer": return "🩹";
+    case "temple": return "⛪";
+    case "archive": return "📜";
+    case "tavern_spirit": return "🍷";
+    case "RIFT_S1_2": return "🌀";
+    case "RIFT_S3_4": return "🌋";
+    default: return "📍";
+  }
+};
+
+/**
+ * Translates tactical arrow labels for Russian locale.
+ */
+export function translateArrowLabel(label: string, isRu: boolean): string {
+    if (!isRu) return label;
+    const lower = label.toLowerCase().trim();
+    
+    // Exact matches
+    if (lower === 'build') return 'Строй';
+    if (lower === 'move') return 'Шаг';
+    if (lower === 'dig') return 'Бур';
+    if (lower === 'dig x2') return 'Бур x2';
+    if (lower === 'checkpoint') return 'Точка';
+    if (lower === 'portal') return 'Портал';
+    if (lower === 'path') return 'Путь';
+    if (lower === 'capital') return 'Капитолий';
+    if (lower === 'goal') return 'Цель';
+    if (lower === 'reactor') return 'Реактор';
+    if (lower === 'l3 ridge') return 'Хребет L3';
+    if (lower === 'goal l3') return 'Цель L3';
+    if (lower === 'heal') return 'Лечить';
+    if (lower === 'deep mine') return 'Шахта';
+    if (lower === 'monolith') return 'Монолит';
+    if (lower === 'shaft') return 'Шахта';
+    if (lower === 'obelisk') return 'Обелиск';
+    if (lower === 'sunken monolith') return 'Затонувший Монолит';
+    if (lower === 'stabilizer') return 'Стабилизатор';
+    if (lower === 'monument') return 'Монумент';
+    if (lower === 'alpha') return 'Альфа';
+    if (lower === 'beta') return 'Бета';
+    if (lower === 'gamma') return 'Гамма';
+    if (lower === 'exit') return 'Выход';
+    if (lower === 'center') return 'Центр';
+    if (lower === 'target') return 'Мишень';
+    if (lower === 'l2') return 'L2';
+    if (lower === 'l0') return 'L0';
+    if (lower === 'l-1') return 'L-1';
+    
+    // Partial translations for things with numbers or variable parts
+    let result = label;
+    result = result.replace(/Obelisk/gi, 'Обелиск');
+    result = result.replace(/Dig/gi, 'Бур');
+    result = result.replace(/Build/gi, 'Строй');
+    result = result.replace(/Move/gi, 'Шаг');
+    
+    return result;
+}

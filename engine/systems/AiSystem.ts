@@ -26,134 +26,132 @@ export class AiSystem implements System {
 
     if (state.bots.length === 0) return;
 
-    // --- TIME SLICING OPTIMIZATION ---
-    // Only process ONE bot per tick to distribute load.
-    const activeBotIndex = state.currentTurn % state.bots.length;
-    const bot = state.bots[activeBotIndex];
+    // Process all bots, but let their individual action rate limit (interval check) throttle them.
+    for (const bot of state.bots) {
+      if (!bot) continue;
+      if (bot.state !== EntityState.IDLE) continue;
 
-    if (!bot) return; 
-    if (bot.state !== EntityState.IDLE) return;
-
-    // --- SPEED THROTTLE ---
-    const baseInterval = GAME_CONFIG.BOT_ACTION_INTERVAL_MS;
-    const isCampaign = !!state.activeLevelConfig;
-    let interval = (!isCampaign && bot.playerLevel < 3) ? baseInterval * 2 : baseInterval;
-    
-    // RICH_VEINS mutator makes bots 30% faster
-    if (state.winCondition?.mutatorType === 'RICH_VEINS') {
-        interval = interval * 0.7;
-    }
-
-    // Apply role-based modifiers
-    if (bot.memory?.botRole === 'SIEGE_RUNNER') {
-        interval = interval * 0.3; // 3x Faster action rate
-    } else if (bot.memory?.botRole === 'SIEGE_TANK') {
-        interval = interval * 2.0; // 2x Slower action rate
-    } else if (bot.memory?.botRole === 'SIEGE_GRINDER') {
-        interval = interval * 0.8; // Slightly faster to chop through defenses
-    }
-
-    // Slow down all bots significantly in Siege/Defense mode to allow strategic counterplay and better readability
-    if (state.defense?.isDefenseMode) {
-        interval = interval * 2.5;
-    }
-    
-    if (!bot.lastActionTime) {
-      bot.lastActionTime = now - Math.floor(Math.random() * interval);
-      return; 
-    }
-    
-    const lastAct = bot.lastActionTime;
-    if (now - lastAct < interval) {
-      return; 
-    }
-
-    // Direct synchronous calculations are highly optimized, GC-friendly & extremely solid across all platform runtimes.
-    const aiResult = calculateBotMove(
-      bot, 
-      state.grid, 
-      state.player, 
-      state.winCondition, 
-      tickObstacles, 
-      index, 
-      state.stateVersion,
-      state.difficulty,
-      tickReservedKeys,
-      state.bots,
-      state.activeLevelConfig
-    );
-
-    if (aiResult) {
-      // PERSIST MEMORY
-      if (aiResult.memory) {
-        bot.memory = aiResult.memory;
+      // --- SPEED THROTTLE ---
+      const baseInterval = GAME_CONFIG.BOT_ACTION_INTERVAL_MS;
+      const isCampaign = !!state.activeLevelConfig;
+      let interval = (!isCampaign && bot.playerLevel < 3) ? baseInterval * 2 : baseInterval;
+      
+      // RICH_VEINS mutator makes bots 30% faster
+      if (state.winCondition?.mutatorType === 'RICH_VEINS') {
+          interval = interval * 0.7;
       }
 
-      // Sync bot rank to its highest owned hex level (instant, no 3s delay)
+      // Apply role-based modifiers
+      if (bot.memory?.botRole === 'SIEGE_RUNNER') {
+          interval = interval * 0.3; // 3x Faster action rate
+      } else if (bot.memory?.botRole === 'SIEGE_TANK') {
+          interval = interval * 2.0; // 2x Slower action rate
+      } else if (bot.memory?.botRole === 'SIEGE_GRINDER') {
+          interval = interval * 0.8; // Slightly faster to chop through defenses
+      }
+
+      // Slow down all bots significantly in Siege/Defense mode to allow strategic counterplay and better readability
       if (state.defense?.isDefenseMode) {
-        bot.playerLevel = 10;
-      } else {
-        const ownedHexes = index.getHexesByOwner(bot.id);
-        for (const hex of ownedHexes) {
-          if (hex.maxLevel > bot.playerLevel) {
-            bot.playerLevel = hex.maxLevel;
+          interval = interval * 2.5;
+      }
+      
+      if (!bot.lastActionTime) {
+        bot.lastActionTime = now - Math.floor(Math.random() * interval);
+        continue; 
+      }
+      
+      const lastAct = bot.lastActionTime;
+      if (now - lastAct < interval) {
+        continue; 
+      }
+
+      // Direct synchronous calculations are highly optimized, GC-friendly & extremely solid across all platform runtimes.
+      const aiResult = calculateBotMove(
+        bot, 
+        state.grid, 
+        state.player, 
+        state.winCondition, 
+        tickObstacles, 
+        index, 
+        state.stateVersion,
+        state.difficulty,
+        tickReservedKeys,
+        state.bots,
+        state.activeLevelConfig
+      );
+
+      if (aiResult) {
+        // PERSIST MEMORY
+        if (aiResult.memory) {
+          bot.memory = aiResult.memory;
+        }
+
+        // Sync bot rank to its highest owned hex level (instant, no 3s delay)
+        if (state.defense?.isDefenseMode) {
+          bot.playerLevel = 10;
+        } else {
+          const ownedHexes = index.getHexesByOwner(bot.id);
+          for (const hex of ownedHexes) {
+            if (hex.maxLevel > bot.playerLevel) {
+              bot.playerLevel = hex.maxLevel;
+            }
           }
         }
-      }
 
-      // --- ENHANCED LOGGING ---
-      let targetStr: string | undefined = undefined;
-      if (aiResult.action) {
-        let tQ: number | undefined;
-        let tR: number | undefined;
+        // --- ENHANCED LOGGING ---
+        let targetStr: string | undefined = undefined;
+        if (aiResult.action) {
+          let tQ: number | undefined;
+          let tR: number | undefined;
 
-        if (aiResult.action.type === 'MOVE' && aiResult.action.path.length > 0) {
-          const dest = aiResult.action.path[aiResult.action.path.length - 1];
-          tQ = dest.q;
-          tR = dest.r;
-        } else if (aiResult.action.type === 'UPGRADE' || aiResult.action.type === 'DIG') {
-          tQ = aiResult.action.coord.q;
-          tR = aiResult.action.coord.r;
-        }
+          if (aiResult.action.type === 'MOVE' && aiResult.action.path.length > 0) {
+            const dest = aiResult.action.path[aiResult.action.path.length - 1];
+            tQ = dest.q;
+            tR = dest.r;
+          } else if (aiResult.action.type === 'UPGRADE' || aiResult.action.type === 'DIG') {
+            tQ = aiResult.action.coord.q;
+            tR = aiResult.action.coord.r;
+          }
 
-        if (tQ !== undefined && tR !== undefined) {
-          const h = state.grid[getHexKey(tQ, tR)];
-          const lvl = h ? h.currentLevel : '?';
-          targetStr = `(${tQ},${tR}) L:${lvl}`;
-        }
-      }
-
-      const logEntry: BotLogEntry = {
-        botId: bot.id,
-        action: aiResult.action ? aiResult.action.type : 'WAIT',
-        reason: aiResult.debug,
-        timestamp: now,
-        target: targetStr
-      };
-
-      state.botActivityLog.unshift(logEntry);
-      if (state.botActivityLog.length > 60) state.botActivityLog.pop();
-      historyService.addEntry(logEntry);
-
-      // ENQUEUE ACTION
-      if (aiResult.action && aiResult.action.type !== 'WAIT') {
-        this.transactionQueue.enqueue({
-          actorId: bot.id,
-          action: aiResult.action,
-          priority: 50, // Standard Bot Priority
-          timestamp: now
-        });
-        
-        if (aiResult.action.type === 'MOVE') {
-          const target = aiResult.action.path[aiResult.action.path.length - 1];
-          if (target) {
-            tickReservedKeys.add(getHexKey(target.q, target.r));
+          if (tQ !== undefined && tR !== undefined) {
+            const h = state.grid[getHexKey(tQ, tR)];
+            const lvl = h ? h.currentLevel : '?';
+            targetStr = `(${tQ},${tR}) L:${lvl}`;
           }
         }
-      }
 
-      bot.lastActionTime = now;
-      state.lastBotActionTime = now;
+        const logEntry: BotLogEntry = {
+          botId: bot.id,
+          action: aiResult.action ? aiResult.action.type : 'WAIT',
+          reason: aiResult.debug,
+          timestamp: now,
+          target: targetStr
+        };
+
+        state.botActivityLog.unshift(logEntry);
+        if (state.botActivityLog.length > 60) state.botActivityLog.pop();
+        historyService.addEntry(logEntry);
+
+        // ENQUEUE ACTION
+        if (aiResult.action && aiResult.action.type !== 'WAIT') {
+          this.transactionQueue.enqueue({
+            actorId: bot.id,
+            action: aiResult.action,
+            priority: 50, // Standard Bot Priority
+            timestamp: now
+          });
+          
+          if (aiResult.action.type === 'MOVE') {
+            const target = aiResult.action.path[aiResult.action.path.length - 1];
+            if (target) {
+              tickReservedKeys.add(getHexKey(target.q, target.r));
+            }
+          }
+        }
+
+        bot.lastActionTime = now;
+        state.lastBotActionTime = now;
+      }
     }
   }
 }

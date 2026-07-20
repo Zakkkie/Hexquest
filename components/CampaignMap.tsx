@@ -260,7 +260,7 @@ const CampaignMap: React.FC = () => {
                                             className="flex-1 flex flex-col bg-slate-950/40 backdrop-blur-md border p-3.5 rounded-xl shadow-lg transition-all duration-300 relative overflow-hidden cursor-pointer hover:bg-slate-900/50 border-indigo-500/15"
                                             style={{
                                                 borderColor: isCompleted ? 'rgba(16, 185, 129, 0.15)' : (isCurrent ? 'rgba(245, 158, 11, 0.4)' : 'rgba(99, 102, 241, 0.1)'),
-                                                opacity: isUnlocked ? 1 : 0.55
+                                                opacity: 1
                                             }}
                                         >
                                             {/* Glowing back element */}
@@ -388,7 +388,7 @@ const CampaignMap: React.FC = () => {
                               </div>
                           )}
                           <div ref={isCurrent ? currentLevelRef : null} className="absolute flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2" style={{ left: pos.x, top: pos.y }}>
-                              <div className={`relative flex items-center justify-center group ${isUnlocked ? 'opacity-100' : 'opacity-40 grayscale-[80%]'}`}>
+                              <div className={`relative flex items-center justify-center group ${isUnlocked ? 'opacity-100' : 'grayscale-[80%]'}`}>
                                   {/* Timeline Micro Milestone Node */}
                                   <div className="relative z-20 flex items-center justify-center pointer-events-none select-none">
                                       {isCurrent && <div className="absolute w-8 h-8 bg-amber-500/35 rounded-full blur-md animate-pulse" />}
@@ -427,7 +427,7 @@ const CampaignMap: React.FC = () => {
                                           }
                                       }}
                                       className={`absolute flex flex-col bg-slate-950/35 backdrop-blur-[18px] border p-3.5 xs:p-4 rounded-2xl md:rounded-[1.5rem] shadow-[0_15px_35px_rgba(0,0,0,0.6)] w-[calc(100vw-110px)] max-w-[260px] md:w-[280px] transition-all duration-300 z-10
-                                          ${isUnlocked ? 'cursor-pointer hover:bg-slate-900/60' : 'cursor-not-allowed opacity-[0.55]'}
+                                          ${isUnlocked ? 'cursor-pointer hover:bg-slate-900/60' : 'cursor-not-allowed'}
                                           ${isCompleted ? 'border-emerald-500/20' : (isCurrent ? 'border-amber-500/50' : 'border-indigo-500/10')}
                                           ${isMobile ? 'left-full ml-4 text-left' : (i % 2 === 0 ? 'left-full ml-8 text-left' : 'right-full mr-8 text-right items-end')}
                                       `}
@@ -547,7 +547,7 @@ const CampaignMap: React.FC = () => {
                                             whileHover={isUnlocked ? { scale: 1.02, y: -2 } : { scale: 1.01 }}
                                             whileTap={isUnlocked ? { scale: 0.98 } : {}}
                                             className={`group relative flex flex-col p-3 md:p-3.5 rounded-2xl md:rounded-[1.3rem] transition-all duration-300 h-full
-                                                ${isUnlocked ? 'cursor-pointer hover:shadow-[0_12px_24px_rgba(0,0,0,0.4)]' : 'opacity-65 grayscale-[40%] cursor-not-allowed'}
+                                                ${isUnlocked ? 'cursor-pointer hover:shadow-[0_12px_24px_rgba(0,0,0,0.4)]' : 'grayscale-[40%] cursor-not-allowed'}
                                             `}
                                             onClick={() => {
                                                 if (isSiegeActive) {

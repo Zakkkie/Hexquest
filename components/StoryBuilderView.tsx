@@ -76,6 +76,69 @@ const TexturePreview: React.FC<{ level: number }> = ({ level }) => {
 const EMPTY_ARRAY: string[] = [];
 const EMPTY_NUMBERS: number[] = [];
 
+const GLOBAL_CSS = `
+@keyframes pulse-nebula {
+    0%, 100% { transform: scale(1) translate(0px, 0px); opacity: 0.18; }
+    50% { transform: scale(1.15) translate(25px, -15px); opacity: 0.38; }
+}
+@keyframes pulse-nebula-slow {
+    0%, 100% { transform: scale(1.1) translate(0px, 0px); opacity: 0.15; }
+    50% { transform: scale(0.95) translate(-35px, 35px); opacity: 0.32; }
+}
+@keyframes flow-matrix {
+    0% { background-position: 0px 0px; }
+    100% { background-position: 40px 80px; }
+}
+.blueprint-grid-glow {
+    background-image: 
+        linear-gradient(rgba(99, 102, 241, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 102, 241, 0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: center;
+    animation: flow-matrix 140s linear infinite;
+}
+.blueprint-grid-sub {
+    background-image: 
+        linear-gradient(rgba(34, 211, 238, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 211, 238, 0.02) 1px, transparent 1px);
+    background-size: 8px 8px;
+    background-position: center;
+}
+.cosmic-vignette {
+    background: radial-gradient(circle at center, transparent 15%, rgba(2, 6, 23, 0.65) 65%, rgba(1, 4, 16, 0.95) 98%);
+}
+.hud-telemetry {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 8px;
+    color: rgba(99, 102, 241, 0.4);
+    letter-spacing: 0.15em;
+}
+@keyframes breathe-constellation {
+    0%, 100% { opacity: 0.75; stroke-width: 2.2px; }
+    50% { opacity: 1.0; stroke-width: 3.8px; }
+}
+.constellation-glow-line {
+    animation: breathe-constellation 3.0s ease-in-out infinite;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+@keyframes svg-border-glow-anim {
+    0%, 100% {
+        stroke: rgba(99, 102, 241, 0.45);
+        filter: drop-shadow(0 0 3px rgba(99, 102, 241, 0.3)) drop-shadow(0 0 8px rgba(99, 102, 241, 0.15));
+    }
+    50% {
+        stroke: rgba(34, 211, 238, 0.85);
+        filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.6)) drop-shadow(0 0 12px rgba(34, 211, 238, 0.3));
+    }
+}
+.animate-svg-glow {
+    animation: svg-border-glow-anim 4.5s infinite ease-in-out;
+}
+`;
+
+const StoryBuilderGlobalStyles = React.memo(() => <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />);
+
 const StoryBuilderView: React.FC = () => {
     const setUIState = useGameStore(state => state.setUIState);
     const playUiSound = useGameStore(state => state.playUiSound);
@@ -188,16 +251,11 @@ const StoryBuilderView: React.FC = () => {
         zoomScaleRef.current = cam.scale;
         updateTooltipPosRef.current?.();
 
-        // Debounce Zustand store updates to avoid triggering massive parent re-renders during active interaction
-        if (storeUpdateTimeoutRef.current) {
-            clearTimeout(storeUpdateTimeoutRef.current);
+        // Update Zustand store synchronously to make viewBounds culling reactive
+        if (!isUnmountingRef.current) {
+            useGameStore.getState().setCameraPos({ x: cam.x, y: cam.y });
+            useGameStore.getState().setZoomScale(cam.scale);
         }
-        storeUpdateTimeoutRef.current = setTimeout(() => {
-            if (!isUnmountingRef.current) {
-                useGameStore.getState().setCameraPos({ x: cam.x, y: cam.y });
-                useGameStore.getState().setZoomScale(cam.scale);
-            }
-        }, 150);
     }, []);
 
     const destroyTooltipRef = useRef<HTMLDivElement>(null);
@@ -237,20 +295,10 @@ const StoryBuilderView: React.FC = () => {
         bringToFront('terminal');
     }, [bringToFront]);
     
-    useEffect(() => {
-        (window as any).setStoryNarrativeCollapsed = (val: boolean) => {
-            setIsNarrativeCollapsed(val);
-            if (!val) {
-                bringToFront('tablet');
-            }
-        };
-        return () => {
-            delete (window as any).setStoryNarrativeCollapsed;
-        };
-    }, [bringToFront]);
+
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const showShapeHint = false;
+
     const [tabletTab, setTabletTab] = useState<'blueprint' | 'diagnostics' | 'rules'>('blueprint');
     const isUiHidden = false;
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
@@ -364,10 +412,7 @@ const StoryBuilderView: React.FC = () => {
         updateTooltipPos();
     }, [destroyButtonCell, updateTooltipPos]);
 
-    // Automation & Flare states
-    const [spToasts, setSpToasts] = useState<{ id: string; text: string; x: number; y: number; congratsRU?: string; congratsEN?: string; cleanNameRU?: string; cleanNameEN?: string }[]>([]);
-    const [flareKeys, setFlareKeys] = useState<Set<string>>(new Set());
-    const [isAnimatingCompletion, setIsAnimatingCompletion] = useState(false);
+
 
     const isUnmountingRef = useRef(false);
     useEffect(() => {
@@ -430,93 +475,9 @@ const StoryBuilderView: React.FC = () => {
         prevSpRef.current = skillPoints;
     }, [skillPoints, addSystemLog]);
 
-    // Dynamic celestial constellation map computation of target blueprint figure
-    const constellationData = useMemo(() => {
-        if (!activeFigure || !activeFigure.shape || activeFigure.shape.length === 0) return null;
-        
-        const HEX_STEP_SIZE = 26; // Larger and clearer scale for background blueprint pattern
-        const coords = activeFigure.shape.map((pt, idx) => {
-            const rawX = HEX_STEP_SIZE * (Math.sqrt(3) * pt.q + (Math.sqrt(3) / 2) * pt.r);
-            const rawY = HEX_STEP_SIZE * (1.5 * pt.r) * 0.8;
-            return {
-                id: idx,
-                q: pt.q,
-                r: pt.r,
-                lvl: pt.lvl ?? 0,
-                x: rawX,
-                y: rawY
-            };
-        });
 
-        // Find bounding box limits to center correctly
-        let minX = Infinity;
-        let maxX = -Infinity;
-        let minY = Infinity;
-        let maxY = -Infinity;
-        coords.forEach(pt => {
-            if (pt.x < minX) minX = pt.x;
-            if (pt.x > maxX) maxX = pt.x;
-            if (pt.y < minY) minY = pt.y;
-            if (pt.y > maxY) maxY = pt.y;
-        });
-
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-
-        const centeredCoords = coords.map(pt => ({
-            ...pt,
-            cx: pt.x - centerX,
-            cy: pt.y - centerY
-        }));
-
-        // Determine all unique neighbor connecting links (distance = 1)
-        const lines: { id: string; x1: number; y1: number; x2: number; y2: number }[] = [];
-        for (let i = 0; i < centeredCoords.length; i++) {
-            for (let j = i + 1; j < centeredCoords.length; j++) {
-                const a = centeredCoords[i];
-                const b = centeredCoords[j];
-                const dq = a.q - b.q;
-                const dr = a.r - b.r;
-                const isNeighbor = Math.abs(dq) <= 1 && Math.abs(dr) <= 1 && Math.abs(dq + dr) <= 1;
-                if (isNeighbor) {
-                    lines.push({
-                        id: `${i}-${j}`,
-                        x1: a.cx,
-                        y1: a.cy,
-                        x2: b.cx,
-                        y2: b.cy
-                    });
-                }
-            }
-        }
-
-        const width = Math.max(maxX - minX + 60, 180);
-        const height = Math.max(maxY - minY + 60, 180);
-
-        return {
-            points: centeredCoords,
-            lines,
-            width,
-            height
-        };
-    }, [activeFigure]);
     
-    // Auto-dismiss destroyButtonCell when clicking anywhere else on the document
-    useEffect(() => {
-        if (!destroyButtonCell) return;
-        const autoDismiss = () => {
-            setDestroyButtonCell(null);
-        };
-        const timer = setTimeout(() => {
-            window.addEventListener('click', autoDismiss);
-            window.addEventListener('touchstart', autoDismiss);
-        }, 10);
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener('click', autoDismiss);
-            window.removeEventListener('touchstart', autoDismiss);
-        };
-    }, [destroyButtonCell]);
+
     
     const containerRef = useRef<HTMLDivElement>(null);
     const carouselRef = useRef<HTMLDivElement>(null);
@@ -688,112 +649,7 @@ const StoryBuilderView: React.FC = () => {
         return () => observer.disconnect();
     }, []);
 
-    // Shape completeness check - checks if the placed level 0 or higher hexes match the active figure's coordinates
-    // under any translation offset (allows random placement anywhere on the board!)
-    const completedHexKeys = useMemo(() => {
-        // Disabled shape matching in Sandbox. Shape building is handled in levels.
-        return new Set<string>();
-    }, []);
 
-    const targetCompleted = false;
-
-    // Automatic Shape Assembly Completion & Neon Highlight Flare Effect
-    useEffect(() => {
-        let toastTimeout: any = null;
-        let consumeTimeout: any = null;
-        let keysToFlare: Set<string> | null = null;
-
-        if (targetCompleted && !isAnimatingCompletion) {
-            setIsAnimatingCompletion(true);
-            keysToFlare = new Set(completedHexKeys);
-            setFlareKeys(keysToFlare);
-            
-            // Play success sound
-            playUiSound('SUCCESS');
-            
-            // Calculate center coordinate of completed shape for floating notification position
-            let sumX = 0;
-            let sumY = 0;
-            let count = 0;
-            keysToFlare.forEach(key => {
-                const [q, r] = key.split(',').map(Number);
-                const px = hexToPixel(q, r);
-                const lvl = storyMap[key] || 0;
-                const heightVal = 10 + lvl * 10;
-                sumX += px.x;
-                sumY += px.y - heightVal;
-                count++;
-            });
-
-            const avgX = count > 0 ? (sumX / count) : 0;
-            const avgY = count > 0 ? (sumY / count) : 0;
-
-            // Project 2D game world coordinates to screen coordinate space
-            const screenX = cameraPosRef.current.x + avgX * zoomScaleRef.current;
-            const screenY = cameraPosRef.current.y + avgY * zoomScaleRef.current;
-
-            // Spawn SP floating toast notification at target screen location
-            const toastId = Math.random().toString(36).substring(2, 9);
-            const toastText = language === 'RU' ? '+1 Очко Симуляции (SP)' : '+1 Simulation Point (SP)';
-            setSpToasts(prev => [...prev, { 
-                id: toastId, 
-                text: toastText, 
-                x: screenX, 
-                y: screenY,
-                congratsRU: activeFigure?.congratsRU,
-                congratsEN: activeFigure?.congratsEN,
-                cleanNameRU: activeFigure?.cleanNameRU,
-                cleanNameEN: activeFigure?.cleanNameEN
-            }]);
-            toastTimeout = setTimeout(() => {
-                setSpToasts(prev => prev.filter(t => t.id !== toastId));
-            }, 3000);
-            
-            // Grant 1 SP to the gameplay store
-            setSkillPoints(skillPoints + 1);
-            
-            // Auto advance next challenge
-            const nextIndex = unlockedFigureIndex + 1;
-            if (nextIndex < FIGURES_COLLECTION.length) {
-                setUnlockedFigureIndex(nextIndex);
-                try {
-                    localStorage.setItem('hexopol_figure_index', String(nextIndex));
-                } catch (e) {
-                    console.warn(e);
-                }
-            } else {
-                setUnlockedFigureIndex(0);
-                try {
-                    localStorage.setItem('hexopol_figure_index', '0');
-                } catch { /* empty */ }
-            }
-            
-            setPopupCell(null);
-            
-            // Consume hexes logically immediately, but keep visually flaring, wait, no.
-            // Consume after flare fadeout.
-            consumeTimeout = setTimeout(() => {
-                if (keysToFlare) {
-                    consumeStoryHexes(Array.from(keysToFlare));
-                }
-                setIsAnimatingCompletion(false);
-                setFlareKeys(new Set());
-                consumeTimeout = null;
-            }, 1600);
-        }
-
-        return () => {
-            if (toastTimeout) clearTimeout(toastTimeout);
-            if (isUnmountingRef.current) {
-                if (consumeTimeout) {
-                    clearTimeout(consumeTimeout);
-                    if (keysToFlare) {
-                        consumeStoryHexes(Array.from(keysToFlare));
-                    }
-                }
-            }
-        };
-    }, [targetCompleted, completedHexKeys, unlockedFigureIndex, skillPoints, language, playUiSound, setSkillPoints, storyMap, isAnimatingCompletion, consumeStoryHexes]);
 
     const hasAnyHex = useMemo(() => {
         return Object.values(storyMap).some(lvl => lvl !== undefined && lvl >= 0);
@@ -964,10 +820,27 @@ const StoryBuilderView: React.FC = () => {
     // Does NOT recompute when popupCell, lastPlacedKey, flareKeys, failedClickCoord, errorMessage,
     // spToasts, tabletTab, isSettingsOpen, etc. change — those are the frequent UI-only state changes
     // that previously forced 469 × 6-neighbour eligibility re-evaluations per render.
+    const viewBounds = useMemo(() => {
+        const MARGIN = 200;
+        const invScale = 1 / storeZoomScale;
+        return {
+            minX: -storeCameraPos.x * invScale - MARGIN,
+            maxX: (stageSize.width - storeCameraPos.x) * invScale + MARGIN,
+            minY: -storeCameraPos.y * invScale - MARGIN,
+            maxY: (stageSize.height - storeCameraPos.y) * invScale + MARGIN,
+        };
+    }, [storeCameraPos, storeZoomScale, stageSize]);
+
     const cellDataList = useMemo(() => {
         const isDemolishMode = selectedBuildLevel === -999;
         const avail = isDemolishMode ? 0 : currentLevelAvailableCount;
-        return gridPoints.map(coord => {
+
+        const visiblePoints = gridPoints.filter(coord => {
+            return coord.x >= viewBounds.minX && coord.x <= viewBounds.maxX &&
+                   coord.y >= viewBounds.minY && coord.y <= viewBounds.maxY;
+        });
+
+        return visiblePoints.map(coord => {
             const key = getHexKey(coord.q, coord.r);
             const lvl = storyMap[key];
             const blueprintLvlVal = blueprintShapeMap[key];
@@ -979,20 +852,19 @@ const StoryBuilderView: React.FC = () => {
             const isCore = coord.q === 0 && coord.r === 0;
             return { key, q: coord.q, r: coord.r, lvl, isBlueprint, blueprintLevel, isEligible, isCenterInitially, canPlaceHex, isCore };
         });
-    }, [gridPoints, storyMap, blueprintShapeMap, selectedBuildLevel, currentLevelAvailableCount,
+    }, [gridPoints, viewBounds, storyMap, blueprintShapeMap, selectedBuildLevel, currentLevelAvailableCount,
         isEligibleForPlacement, startCenterPoint, hasAnyHex]);
 
     // Memoize the set of levels that have at least one valid slot on the map
     const placeableLevels = useMemo(() => {
         const placeable = new Set<number>();
         for (let lvl = 0; lvl <= 9; lvl++) {
-            const hasSlot = gridPoints.some(gp => isEligibleForPlacement(gp.q, gp.r, lvl));
-            if (hasSlot) {
+            if ((minedInSessionHexes[lvl] || 0) + (collectedHexes[lvl] || 0) > 0) {
                 placeable.add(lvl);
             }
         }
         return placeable;
-    }, [storyMap, isEligibleForPlacement, gridPoints]);
+    }, [minedInSessionHexes, collectedHexes]);
 
     const isPanning = useRef(false);
 
@@ -1121,7 +993,7 @@ const StoryBuilderView: React.FC = () => {
         setLastPlacedKey(key);
         setTimeout(() => setLastPlacedKey(prev => prev === key ? null : prev), 600);
         setErrorMessage(null); // clear any previous warning
-    }, [isPanning, isEligibleForPlacement, minedInSessionHexes, collectedHexes, placeStoryHex, addMinedHexes, playUiSound, setErrorMessage, language, setDestroyButtonCell, storyMap, selectedBuildLevel, hasAnyHex]);
+    }, [isPanning, isSiegeActive, playUiSound, language, setErrorMessage, storyMap, selectedBuildLevel, isEligibleForPlacement, setDestroyButtonCell, setPopupCell, setFailedClickCoord, minedInSessionHexes, collectedHexes, placeStoryHex, setLastPlacedKey]);
 
     const handleCellDblClick = useCallback((q: number, r: number) => {
         const key = getHexKey(q, r);
@@ -1135,10 +1007,7 @@ const StoryBuilderView: React.FC = () => {
         if (!isCurrentlyBuilt) {
             handleResetCamera();
         }
-    }, [storyMap, handleResetCamera]);
-
-    // Pan/zoom (wheel, drag, two-finger pinch) and hover/click hit-testing are now
-    // handled inside StoryBoardPixi; camera changes flow back via handlePixiCameraChange.
+    }, [storyMap, handleResetCamera, playUiSound]);
 
     // Clear board reset
     const handleClearBoard = () => {
@@ -1156,59 +1025,8 @@ const StoryBuilderView: React.FC = () => {
 
     return (
         <div id="tutorial-hex-board" ref={containerRef} className="absolute inset-0 bg-[#020617] flex flex-col font-sans overflow-hidden">
-            <style dangerouslySetInnerHTML={{ __html: `
-                @keyframes pulse-nebula {
-                    0%, 100% { transform: scale(1) translate(0px, 0px); opacity: 0.18; }
-                    50% { transform: scale(1.15) translate(25px, -15px); opacity: 0.38; }
-                }
-                @keyframes pulse-nebula-slow {
-                    0%, 100% { transform: scale(1.1) translate(0px, 0px); opacity: 0.15; }
-                    50% { transform: scale(0.95) translate(-35px, 35px); opacity: 0.32; }
-                }
-                @keyframes flow-matrix {
-                    0% { background-position: 0px 0px; }
-                    100% { background-position: 40px 80px; }
-                }
-                .blueprint-grid-glow {
-                    background-image: 
-                        linear-gradient(rgba(99, 102, 241, 0.06) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(99, 102, 241, 0.06) 1px, transparent 1px);
-                    background-size: 40px 40px;
-                    background-position: center;
-                    animation: flow-matrix 140s linear infinite;
-                }
-                .blueprint-grid-sub {
-                    background-image: 
-                        linear-gradient(rgba(34, 211, 238, 0.02) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(34, 211, 238, 0.02) 1px, transparent 1px);
-                    background-size: 8px 8px;
-                    background-position: center;
-                }
-                .cosmic-vignette {
-                    background: radial-gradient(circle at center, transparent 15%, rgba(2, 6, 23, 0.65) 65%, rgba(1, 4, 16, 0.95) 98%);
-                }
-                .hud-telemetry {
-                    font-family: 'JetBrains Mono', ui-monospace, monospace;
-                    font-size: 8px;
-                    color: rgba(99, 102, 241, 0.4);
-                    letter-spacing: 0.15em;
-                }
-                @keyframes breathe-constellation {
-                    0%, 100% {
-                        opacity: 0.75;
-                        stroke-width: 2.2px;
-                    }
-                    50% {
-                        opacity: 1.0;
-                        stroke-width: 3.8px;
-                    }
-                }
-                .constellation-glow-line {
-                    animation: breathe-constellation 3.0s ease-in-out infinite;
-                    stroke-linejoin: round;
-                    stroke-linecap: round;
-                }
-            `}} />
+            <StoryBuilderGlobalStyles />
+            {/* DEEP COSMIC PROTOCOL ROOM BACKDROP */}
 
             {/* DEEP COSMIC PROTOCOL ROOM BACKDROP */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
@@ -1239,141 +1057,6 @@ const StoryBuilderView: React.FC = () => {
                     <div>MAT_LIMIT: [ACTIVE_HARD_CAP]</div>
                     <div>ENGINEERING_ALIGN: [COAXIAL]</div>
                 </div>
-
-                {/* 6. Cosmic Constellation Overlay in Starry Celestial Background sky */}
-                <AnimatePresence>
-                {showShapeHint && constellationData && (() => {
-                    const getLevelColor = (lvl: number) => {
-                        switch(lvl) {
-                            case 0: return '#94a3b8'; // bright silver slate
-                            case 1: return '#22d3ee'; // vivid cyan
-                            case 2: return '#3b82f6'; // bright blue
-                            case 3: return '#a855f7'; // vibrant purple
-                            default: return '#fda4af'; // light pink border
-                        }
-                    };
-
-                    const getLevelBg = (lvl: number) => {
-                        switch(lvl) {
-                            case 0: return 'rgba(148, 163, 184, 0.12)';
-                            case 1: return 'rgba(34, 211, 238, 0.22)';
-                            case 2: return 'rgba(59, 130, 246, 0.25)';
-                            case 3: return 'rgba(168, 85, 247, 0.28)';
-                            default: return 'rgba(253, 164, 175, 0.28)';
-                        }
-                    };
-
-                    return (
-                        <div className="absolute top-[85px] sm:top-[100px] md:top-[120px] left-1/2 -translate-x-1/2 pointer-events-none select-none z-10 flex flex-col items-center">
-                            <motion.div 
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.4, ease: "easeInOut" }}
-                            >
-                                {/* Constellation Star Map SVG */}
-                                <svg 
-                                    width={constellationData.width} 
-                                    height={constellationData.height} 
-                                    viewBox={`${-constellationData.width/2} ${-constellationData.height/2} ${constellationData.width} ${constellationData.height}`}
-                                    className="overflow-visible drop-shadow-[0_0_28px_rgba(34,211,238,0.65)] transition-all duration-500"
-                                >
-                                {/* Hexagon outlines defining each cell of the blueprint shape boundary */}
-                                {constellationData.points.map((pt) => {
-                                    const hexPoints: string[] = [];
-                                    const hexSize = 26; // Matches HEX_STEP_SIZE perfectly for zero spacing/touching hexes
-                                    for (let i = 0; i < 6; i++) {
-                                        const angle = (60 * i + 30) * Math.PI / 180;
-                                        const hx = pt.cx + Math.cos(angle) * hexSize;
-                                        const hy = pt.cy + Math.sin(angle) * hexSize * 0.8; // Perspective factor matches center projection
-                                        hexPoints.push(`${hx},${hy}`);
-                                    }
-
-                                    const clr = getLevelColor(pt.lvl);
-                                    const bg = getLevelBg(pt.lvl);
-
-                                    return (
-                                        <g key={`hex-boundary-${pt.id}`}>
-                                            <polygon
-                                                points={hexPoints.join(' ')}
-                                                fill={bg}
-                                                stroke={clr}
-                                                strokeWidth={pt.lvl > 0 ? "3.2" : "2.0"}
-                                                className="constellation-glow-line"
-                                                style={{
-                                                    filter: `drop-shadow(0 0 8px ${clr})`
-                                                }}
-                                            />
-                                            {/* Display the height/level number clearly inside each blueprint cell */}
-                                            <text
-                                                x={pt.cx}
-                                                y={pt.cy + 4}
-                                                textAnchor="middle"
-                                                fontSize="12.5px"
-                                                fontWeight="900"
-                                                fill={pt.lvl > 0 ? "#ffffff" : "rgba(255,255,255,0.55)"}
-                                                fontFamily="monospace"
-                                                className="select-none pointer-events-none"
-                                                style={{
-                                                    textShadow: `0 0 8px ${clr}`
-                                                }}
-                                            >
-                                                {pt.lvl}
-                                            </text>
-                                        </g>
-                                    );
-                                })}
-                            </svg>
-                            </motion.div>
-                        </div>
-                    );
-                })()}
-                </AnimatePresence>
-            </div>
-
-            {/* FLOATING +1 SP NOTIFICATIONS CONTAINER FLOATING OVER THE COMPLETED SHAPE */}
-            <div className="absolute inset-0 pointer-events-none z-[100] select-none overflow-hidden">
-                <AnimatePresence>
-                    {spToasts.map((toast) => (
-                        <div
-                            key={toast.id}
-                            style={{ 
-                                left: toast.x, 
-                                top: toast.y, 
-                                position: 'absolute', 
-                                transform: 'translate(-50%, -50%)',
-                            }}
-                            className="pointer-events-none select-none z-[100]"
-                        >
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.5, y: 30 }}
-                                animate={{ opacity: [0, 1, 1, 0.9, 0], scale: [0.7, 1.25, 1.25, 1.0, 0.5], y: -120 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 2.2, ease: "easeOut" }}
-                                className="pointer-events-none text-center flex flex-col items-center select-none w-max shrink-0"
-                            >
-                                <span 
-                                    className="block text-[14px] md:text-base font-black tracking-widest text-[#22d3ee] uppercase select-none leading-none mb-1 text-center"
-                                    style={{
-                                        textShadow: '0 0 10px rgba(34, 211, 238, 0.95), 0 0 20px rgba(34, 211, 238, 0.5)'
-                                    }}
-                                >
-                                    {language === 'RU' 
-                                        ? `${toast.cleanNameRU?.toUpperCase() || 'ФИГУРА'} СОБРАН${!toast.cleanNameRU ? 'А' : ''}!` 
-                                        : `${toast.cleanNameEN?.toUpperCase() || 'SHAPE'} COMPLETED!`}
-                                </span>
-                                <span 
-                                    className="block text-2xl md:text-4xl font-black text-white tracking-widest select-none leading-none text-center"
-                                    style={{
-                                        textShadow: '0 0 12px rgba(255, 255, 255, 1.0), 0 0 25px rgba(34, 211, 238, 0.8)'
-                                    }}
-                                >
-                                    +1 SP
-                                </span>
-                            </motion.div>
-                        </div>
-                    ))}
-                </AnimatePresence>
             </div>
 
             {/* CANVAS */}
@@ -1386,7 +1069,7 @@ const StoryBuilderView: React.FC = () => {
                     dimensions={stageSize}
                     transient={{
                         popupKey: popupCell ? getHexKey(popupCell.q, popupCell.r) : null,
-                        flareKeys,
+                        flareKeys: new Set(),
                         lastPlacedKey,
                         failedClickKey: failedClickCoord ? getHexKey(failedClickCoord.q, failedClickCoord.r) : null,
                         hoveredKey,
@@ -2115,22 +1798,6 @@ const StoryBuilderView: React.FC = () => {
                         className="w-full md:max-w-md lg:max-w-xl flex flex-col items-stretch pointer-events-auto"
                     >
                         {/* Custom SVG border glow style injection */}
-                        <style dangerouslySetInnerHTML={{ __html: `
-                            @keyframes svg-border-glow-anim {
-                                0%, 100% {
-                                    stroke: rgba(99, 102, 241, 0.45);
-                                    filter: drop-shadow(0 0 3px rgba(99, 102, 241, 0.3)) drop-shadow(0 0 8px rgba(99, 102, 241, 0.15));
-                                }
-                                50% {
-                                    stroke: rgba(34, 211, 238, 0.85);
-                                    filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.6)) drop-shadow(0 0 12px rgba(34, 211, 238, 0.3));
-                                }
-                            }
-                            .animate-svg-glow {
-                                animation: svg-border-glow-anim 4.5s infinite ease-in-out;
-                            }
-                        `}} />
-
                         <div 
                             id="tutorial-shape-list" 
                             ref={bottomToolbarRef}
@@ -2217,11 +1884,12 @@ const StoryBuilderView: React.FC = () => {
                             {/* Scrolling container */}
                             <div 
                                 ref={carouselRef}
-                                className="w-full flex flex-row gap-1.5 overflow-x-auto scrollbar-none flex-nowrap scroll-smooth relative z-10"
+                                className="w-full flex flex-row gap-5 overflow-x-auto scrollbar-none flex-nowrap scroll-smooth relative z-10"
                                 style={{ 
                                     scrollbarWidth: 'none', 
                                     msOverflowStyle: 'none',
                                     paddingLeft: '16px',
+                                    paddingRight: '16px',
                                     paddingTop: '0px',
                                     marginTop: '0px',
                                     marginLeft: '0px',
@@ -2340,14 +2008,14 @@ const StoryBuilderView: React.FC = () => {
                                                         transmuteHexes(lvl, lvl + 1, 1);
                                                     }}
                                                     title={language === 'RU' ? `Сплавить 3 гекса L${lvl} в 1 гекс L${lvl + 1}` : `Transmute 3x L${lvl} into 1x L${lvl + 1}`}
-                                                    className={`absolute -top-2 left-1/2 -translate-x-1/2 rounded-full p-0.5 z-30 transition-all group overflow-hidden ${
+                                                    className={`absolute top-[38%] -translate-y-1/2 left-[calc(100%+10px)] -translate-x-1/2 rounded-full p-0.5 z-30 transition-all group overflow-hidden ${
                                                         canTransmute
-                                                            ? "bg-cyan-900 border border-cyan-400 hover:bg-cyan-700 hover:scale-110 active:scale-95 shadow-[0_0_10px_rgba(34,211,238,0.5)] cursor-pointer"
+                                                            ? "bg-[#0e2c3a] border border-cyan-400 hover:bg-cyan-700 hover:scale-110 active:scale-95 shadow-[0_0_10px_rgba(34,211,238,0.5)] cursor-pointer"
                                                             : "bg-slate-950/60 border border-slate-800/40 opacity-30 hover:opacity-60 cursor-pointer"
                                                     }`}
                                                     style={{ width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 >
-                                                    <RefreshCw className={`w-2.5 h-2.5 transition-colors ${canTransmute ? "text-cyan-200 group-hover:text-white" : "text-slate-500"}`} />
+                                                    <RefreshCw className={`w-2.5 h-2.5 transition-all duration-500 group-hover:rotate-180 ${canTransmute ? "text-cyan-200 group-hover:text-white" : "text-slate-500"}`} />
                                                 </button>
                                             )}
                                             </div>
@@ -2504,9 +2172,6 @@ const StoryBuilderView: React.FC = () => {
                 language={language === 'RU' ? 'RU' : 'EN'}
                 playUiSound={playUiSound}
             />
-            </div>
-        </div>
-    );
+        </div></div>);
 };
-
 export default StoryBuilderView;
