@@ -234,7 +234,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
     // --- COMPUTED STATE ---
     
     const currentHex = (grid && player) ? grid[getHexKey(player.q, player.r)] : undefined;
-    const neighbors = player ? getNeighbors(player.q, player.r) : [];
+    const neighbors = useMemo(() => player ? getNeighbors(player.q, player.r) : [], [player]);
     const botPositions = useMemo(() => (bots || []).map(b => ({ q: b.q, r: b.r })), [bots]);
     const isMoving = player?.state === 'MOVING';
     const queueSize = winCondition?.queueSize || 3;
@@ -273,6 +273,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
             const can = !player.recoveredCurrentHex;
             return { canRecover: can, label: '', cooling: false };
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentHex, player, currentTurn]); // Use turn or tick for reactivity
 
     const isDefenseMode = useGameStore(state => state.session?.defense?.isDefenseMode);
@@ -316,6 +317,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
         
         const percent = currentStepNeeded > 0 ? (currentHex.progress / currentStepNeeded) * 100 : 0;
         return { percent, mode };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentHex, isPlayerGrowing, playerGrowthIntent]);
 
     // Tooltips
@@ -411,7 +413,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                 : `🔴 LOCKED: ${turretCondition.reason}`,
             statusType: (canBuildTurret ? 'success' : 'error') as any,
         };
-    }, [currentHex, player, canBuildTurret, turretCondition, language]);
+    }, [player, canBuildTurret, turretCondition, language]);
 
     const inventoryTooltipData = useMemo(() => {
         const occupied = player?.inventory ? player.inventory.filter(Boolean).length : 0;

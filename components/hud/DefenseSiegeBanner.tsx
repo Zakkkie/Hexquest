@@ -24,7 +24,7 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
 
     const activeBotsCount = session?.bots?.length || 0;
 
-    const messageLog = session.messageLog || [];
+    const messageLog = session.messageLog;
 
     // Health Percent/State
     const healthPercent = Math.min(100, Math.max(0, (coreHealth / maxCoreHealth) * 100));
@@ -40,7 +40,7 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
 
     // Latest 4 messages from the event log
     const recentLogs = useMemo(() => {
-        return messageLog.slice(0, 5);
+        return (messageLog || []).slice(0, 5);
     }, [messageLog]);
 
     // Localizations

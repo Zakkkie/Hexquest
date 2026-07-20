@@ -307,9 +307,37 @@ export const createInitialSessionData = async (
 
   let secretMonumentCoord: HexCoord | undefined = undefined;
   if (!levelConfig && winCondition?.winType === 'SUMMIT') {
-      const angle = Math.random() * Math.PI * 2;
       const dist = 5 + Math.floor(Math.random() * 5); // 5 to 9 radius
-      secretMonumentCoord = { q: Math.round(Math.cos(angle) * dist), r: Math.round(Math.sin(angle) * dist) };
+      const side = Math.floor(Math.random() * 6);
+      const i = Math.floor(Math.random() * dist);
+      let q = 0, r = 0;
+      switch (side) {
+          case 0:
+              q = dist - i;
+              r = i;
+              break;
+          case 1:
+              q = -i;
+              r = dist;
+              break;
+          case 2:
+              q = -dist;
+              r = dist - i;
+              break;
+          case 3:
+              q = -dist + i;
+              r = -i;
+              break;
+          case 4:
+              q = i;
+              r = -dist;
+              break;
+          case 5:
+              q = dist;
+              r = -dist + i;
+              break;
+      }
+      secretMonumentCoord = { q, r };
   }
 
   let monumentRequirements: string[] | undefined;

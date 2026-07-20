@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useId } from 'react';
 import { useGameStore } from '../store.ts';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Trophy, LogOut, Ghost, ArrowRight, X, LogIn, Lock, Target, Gem, Crown, 
   Bot, Volume2, VolumeX, BookOpen, Music, ChevronLeft, ChevronRight, 
   Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, 
-  Mountain, Crosshair, Shuffle, Settings, Minus, Plus, Compass, Check, Cpu, Sparkles
+  Mountain, Crosshair, Shuffle, Settings, Minus, Plus, Compass, Check, Cpu
 } from 'lucide-react';
 
 import { WinCondition, Difficulty } from '../types.ts';
@@ -13,255 +13,208 @@ import { TEXT } from '../services/i18n.ts';
 import { audioService } from '../services/audioService.ts';
 import { DIFFICULTY_SETTINGS } from '../rules/config.ts';
 
+// --- CONSTANTS & STATIC DATA (Prevented from recreating on every render) ---
+
 const AVATAR_COLORS = [
-  '#ef4444', 
-  '#f97316', 
-  '#eab308', 
-  '#22c55e', 
-  '#06b6d4', 
-  '#3b82f6', 
-  '#8b5cf6', 
-  '#ec4899'  
+  '#ef4444', '#f97316', '#eab308', '#22c55e', 
+  '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'  
 ];
 
-// Styles block for high-performance GPU animations inside the Main Menu
-const MainMenuStyleBlock: React.FC = () => {
-  return (
-    <style dangerouslySetInnerHTML={{ __html: `
-      @keyframes float-particle {
-        0% {
-          transform: translate3d(0, 0, 0) scale(1);
-          opacity: 0.15;
-        }
-        50% {
-          transform: translate3d(var(--float-x), -150px, 0) scale(1.4);
-          opacity: 0.7;
-        }
-        100% {
-          transform: translate3d(0, -300px, 0) scale(1);
-          opacity: 0.15;
-        }
-      }
+const GLOBAL_CSS = `
+  @keyframes float-particle {
+    0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.15; }
+    50% { transform: translate3d(var(--float-x), -150px, 0) scale(1.4); opacity: 0.7; }
+    100% { transform: translate3d(0, -300px, 0) scale(1); opacity: 0.15; }
+  }
+  @keyframes nebula-slow-1 {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    33% { transform: translate3d(30px, -20px, 0) scale(1.1); }
+    66% { transform: translate3d(-15px, 40px, 0) scale(0.9); }
+    100% { transform: translate3d(0, 0, 0) scale(1); }
+  }
+  @keyframes nebula-slow-2 {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(-40px, 30px, 0) scale(1.15); }
+    100% { transform: translate3d(0, 0, 0) scale(1); }
+  }
+  @keyframes nebula-slow-3 {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(20px, -30px, 0) scale(1.2); }
+    100% { transform: translate3d(0, 0, 0) scale(1); }
+  }
+  @keyframes float-hex {
+    0% { transform: translate3d(0, 0, 0) rotate(var(--hex-rot)) scale(0.8); opacity: 0.03; }
+    50% { transform: translate3d(var(--hex-x), -100px, 0) rotate(calc(var(--hex-rot) + 180deg)) scale(1.15); opacity: 0.18; }
+    100% { transform: translate3d(0, -200px, 0) rotate(calc(var(--hex-rot) + 360deg)) scale(0.8); opacity: 0.03; }
+  }
+  @keyframes grid-slow {
+    0% { transform: rotateX(12deg) translate3d(0, 0, 0); }
+    50% { transform: rotateX(16deg) translate3d(0, -15px, 0); }
+    100% { transform: rotateX(12deg) translate3d(0, 0, 0); }
+  }
+  @keyframes spin-sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes glint-sweep {
+    0% { transform: translate3d(-100%, 0, 0) skewX(-20deg); }
+    30% { transform: translate3d(200%, 0, 0) skewX(-20deg); }
+    100% { transform: translate3d(200%, 0, 0) skewX(-20deg); }
+  }
+`;
 
-      @keyframes nebula-slow-1 {
-        0% { transform: translate3d(0, 0, 0) scale(1); }
-        33% { transform: translate3d(30px, -20px, 0) scale(1.1); }
-        66% { transform: translate3d(-15px, 40px, 0) scale(0.9); }
-        100% { transform: translate3d(0, 0, 0) scale(1); }
-      }
-
-      @keyframes nebula-slow-2 {
-        0% { transform: translate3d(0, 0, 0) scale(1); }
-        50% { transform: translate3d(-40px, 30px, 0) scale(1.15); }
-        100% { transform: translate3d(0, 0, 0) scale(1); }
-      }
-
-      @keyframes nebula-slow-3 {
-        0% { transform: translate3d(0, 0, 0) scale(1); }
-        50% { transform: translate3d(20px, -30px, 0) scale(1.2); }
-        100% { transform: translate3d(0, 0, 0) scale(1); }
-      }
-
-      @keyframes float-hex {
-        0% {
-          transform: translate3d(0, 0, 0) rotate(var(--hex-rot)) scale(0.8);
-          opacity: 0.03;
-        }
-        50% {
-          transform: translate3d(var(--hex-x), -100px, 0) rotate(calc(var(--hex-rot) + 180deg)) scale(1.15);
-          opacity: 0.18;
-        }
-        100% {
-          transform: translate3d(0, -200px, 0) rotate(calc(var(--hex-rot) + 360deg)) scale(0.8);
-          opacity: 0.03;
-        }
-      }
-
-      @keyframes grid-slow {
-        0% { transform: rotateX(12deg) translate3d(0, 0, 0); }
-        50% { transform: rotateX(16deg) translate3d(0, -15px, 0); }
-        100% { transform: rotateX(12deg) translate3d(0, 0, 0); }
-      }
-
-      @keyframes spin-sweep {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-
-      @keyframes glint-sweep {
-        0% { transform: translate3d(-100%, 0, 0) skewX(-20deg); }
-        30% { transform: translate3d(200%, 0, 0) skewX(-20deg); }
-        100% { transform: translate3d(200%, 0, 0) skewX(-20deg); }
-      }
-    `}} />
-  );
+const MENU_BUTTON_STYLES = {
+  primary: 'bg-gradient-to-r from-indigo-950/50 to-indigo-900/30 border-indigo-500/40 hover:from-indigo-900/60 hover:to-indigo-800/40 text-white hover:border-indigo-400 shadow-[0_4px_24px_rgba(99,102,241,0.15)] hover:shadow-[0_4px_30px_rgba(99,102,241,0.35)]',
+  campaign: 'bg-gradient-to-r from-violet-950/50 via-purple-950/40 to-violet-950/50 border-purple-500/40 hover:border-purple-400 hover:from-purple-900/60 hover:via-indigo-900/40 hover:to-purple-900/60 text-white shadow-[0_4px_24px_rgba(168,85,247,0.15)] hover:shadow-[0_4px_30px_rgba(168,85,247,0.35)]',
+  battle: 'bg-gradient-to-r from-rose-950/50 via-red-950/40 to-rose-950/50 border-rose-500/40 hover:border-red-400 hover:from-red-900/60 hover:via-rose-900/40 hover:to-red-900/60 text-white shadow-[0_4px_24px_rgba(244,63,94,0.15)] hover:shadow-[0_4px_30px_rgba(244,63,94,0.35)]',
+  resume: 'bg-gradient-to-r from-amber-950/60 via-yellow-950/50 to-amber-950/60 border-amber-500/60 hover:border-amber-400 hover:from-amber-900/70 hover:to-amber-900/60 text-amber-50 shadow-[0_0_25px_rgba(245,158,11,0.25)] hover:shadow-[0_0_35px_rgba(245,158,11,0.45)] border-t-amber-400/20',
+  danger: 'bg-red-950/25 border-red-900/30 hover:bg-red-900/30 hover:border-red-500/50 text-red-100',
+  default: 'bg-slate-900/50 border-slate-700/60 hover:bg-slate-800/60 hover:border-indigo-500/50 text-slate-200 hover:text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)]'
 };
 
-// Moving futuristic nebula backdrop with blurred glowing fields
-const NebulaBackground: React.FC = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {/* Deep Space Base */}
-      <div className="absolute inset-0 bg-transparent" />
-      
-      {/* Violet/Indigo Nebula Core */}
-      <div 
-        className="absolute top-[-10%] left-[-15%] w-[70vw] h-[70vw] rounded-full bg-indigo-900/20 blur-[120px]"
-        style={{
-          animation: 'nebula-slow-1 30s infinite ease-in-out',
-          willChange: 'transform',
-        }}
-      />
-
-      {/* Fuchsia/Magenta Nebula Accent */}
-      <div 
-        className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-fuchsia-950/20 blur-[130px]"
-        style={{
-          animation: 'nebula-slow-2 25s infinite ease-in-out',
-          willChange: 'transform',
-        }}
-      />
-
-      {/* Cyan Tactical Pulse Spot */}
-      <div 
-        className="absolute top-[40%] right-[20%] w-[50vw] h-[50vw] rounded-full bg-cyan-950/15 blur-[100px]"
-        style={{
-          animation: 'nebula-slow-3 22s infinite ease-in-out',
-          willChange: 'transform',
-        }}
-      />
-    </div>
-  );
+const MENU_ICON_STYLES = {
+  primary: 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 group-hover:bg-indigo-500/25 group-hover:text-white group-hover:scale-110',
+  campaign: 'bg-purple-500/10 border border-purple-500/30 text-purple-300 group-hover:bg-purple-500/25 group-hover:text-white group-hover:scale-110',
+  battle: 'bg-rose-500/10 border border-rose-500/30 text-rose-300 group-hover:bg-rose-500/25 group-hover:text-white group-hover:scale-110',
+  resume: 'bg-amber-500/15 border border-amber-500/40 text-amber-300 group-hover:bg-amber-500/30 group-hover:text-white group-hover:scale-110 animate-pulse',
+  danger: 'bg-red-500/10 border border-red-500/20 text-red-400 group-hover:bg-red-500/20 group-hover:text-red-200',
+  default: 'bg-slate-800/40 border border-slate-700/50 text-slate-400 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/30 group-hover:text-indigo-300 group-hover:scale-110'
 };
 
-// Intricate particle field for celestial depth
-const FloatingParticles: React.FC = () => {
-  const particles = Array.from({ length: 25 });
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {particles.map((_, i) => {
-        const size = Math.random() * 3 + 1.5;
-        const initialX = Math.random() * 100;
-        const initialY = Math.random() * 100;
-        const duration = Math.random() * 12 + 10;
-        const delay = Math.random() * -12;
-        const floatX = Math.random() * 30 - 15;
-        
-        return (
-          <div
-            key={i}
-            className="absolute rounded-full bg-indigo-400/20 blur-[0.5px]"
-            style={{
-              width: size,
-              height: size,
-              left: `${initialX}%`,
-              top: `${initialY}%`,
-              boxShadow: '0 0 6px rgba(129, 140, 248, 0.5)',
-              animation: `float-particle ${duration}s infinite ease-in-out`,
-              animationDelay: `${delay}s`,
-              willChange: 'transform, opacity',
-              '--float-x': `${floatX}px`,
-            } as React.CSSProperties}
-          />
-        );
-      })}
-    </div>
-  );
+const LED_COLORS = {
+  primary: 'bg-indigo-500 shadow-[0_0_8px_#6366f1]',
+  campaign: 'bg-purple-500 shadow-[0_0_8px_#a855f7]',
+  battle: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]',
+  resume: 'bg-amber-400 shadow-[0_0_12px_#fbbf24]',
+  danger: 'bg-red-500 shadow-[0_0_8px_#ef4444]',
+  default: 'bg-indigo-400/40'
 };
 
-// Holographic cyber grid in the background with slow float
-const GridAtmosphere: React.FC = () => {
-  return (
-    <div 
-      className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-15"
-      style={{
-        backgroundImage: `linear-gradient(rgba(79, 70, 229, 0.08) 1px, transparent 1px), 
-                          linear-gradient(90deg, rgba(79, 70, 229, 0.08) 1px, transparent 1px)`,
-        backgroundSize: '40px 40px',
-        backgroundPosition: 'center',
-        perspective: '1000px',
-      }}
-    >
-      <div 
-        className="absolute inset-0"
-        style={{
-          transformStyle: "preserve-3d",
-          animation: 'grid-slow 20s infinite ease-in-out',
-          willChange: 'transform',
-        }}
-      />
-    </div>
-  );
-};
-
-const FloatingHexagons: React.FC = () => {
-  const hexes = Array.from({ length: 6 });
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 select-none">
-      {hexes.map((_, i) => {
-        const size = Math.random() * 40 + 20;
-        const initialX = Math.random() * 100;
-        const initialY = Math.random() * 100;
-        const duration = Math.random() * 20 + 20;
-        const delay = Math.random() * -20;
-        const rotate = Math.random() * 360;
-        const hexX = Math.random() * 40 - 20;
-        
-        return (
-          <div
-            key={i}
-            className="absolute text-indigo-500/15"
-            style={{
-              width: size,
-              height: size,
-              left: `${initialX}%`,
-              top: `${initialY}%`,
-              animation: `float-hex ${duration}s infinite ease-in-out`,
-              animationDelay: `${delay}s`,
-              willChange: 'transform',
-              '--hex-rot': `${rotate}deg`,
-              '--hex-x': `${hexX}px`,
-            } as React.CSSProperties}
-          >
-            <Hexagon className="w-full h-full stroke-current fill-none" strokeWidth={0.8} />
-          </div>
-        );
-      })}
-    </div>
-  );
+const SPOTLIGHT_COLORS = {
+  primary: 'rgba(99,102,241,0.12)',
+  campaign: 'rgba(168,85,247,0.12)',
+  battle: 'rgba(244,63,94,0.12)',
+  resume: 'rgba(245,158,11,0.12)',
+  danger: 'rgba(239,68,68,0.1)',
+  default: 'rgba(129,140,248,0.08)'
 };
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.05
-    }
-  }
+  visible: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.05 } }
 } as const;
 
 const itemVariants = {
   hidden: { opacity: 0, y: 15 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring",
-      stiffness: 140,
-      damping: 16
-    }
-  }
+  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 140, damping: 16 } }
 } as const;
 
-type AuthMode = 'GUEST' | 'LOGIN' | 'REGISTER' | null;
+// --- MEMOIZED UI COMPONENTS ---
 
-// Character renderer for preview
-const CharacterPreview: React.FC<{ head: number, body: number, color: string }> = ({ head, body, color }) => {
+const MainMenuStyleBlock = React.memo(() => (
+  <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
+));
+
+const NebulaBackground = React.memo(() => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div className="absolute inset-0 bg-transparent" />
+    <div className="absolute top-[-10%] left-[-15%] w-[70vw] h-[70vw] rounded-full bg-indigo-900/20 blur-[120px]" style={{ animation: 'nebula-slow-1 30s infinite ease-in-out', willChange: 'transform' }} />
+    <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-fuchsia-950/20 blur-[130px]" style={{ animation: 'nebula-slow-2 25s infinite ease-in-out', willChange: 'transform' }} />
+    <div className="absolute top-[40%] right-[20%] w-[50vw] h-[50vw] rounded-full bg-cyan-950/15 blur-[100px]" style={{ animation: 'nebula-slow-3 22s infinite ease-in-out', willChange: 'transform' }} />
+  </div>
+));
+
+const FloatingParticles = React.memo(() => {
+  // Generate particles only once using useMemo to prevent GC spikes on re-renders
+  const particles = useMemo(() => Array.from({ length: 25 }).map(() => ({
+    size: Math.random() * 3 + 1.5,
+    initialX: Math.random() * 100,
+    initialY: Math.random() * 100,
+    duration: Math.random() * 12 + 10,
+    delay: Math.random() * -12,
+    floatX: Math.random() * 30 - 15,
+  })), []);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {particles.map((p, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full bg-indigo-400/20 blur-[0.5px]"
+          style={{
+            width: p.size, height: p.size,
+            left: `${p.initialX}%`, top: `${p.initialY}%`,
+            boxShadow: '0 0 6px rgba(129, 140, 248, 0.5)',
+            animation: `float-particle ${p.duration}s infinite ease-in-out`,
+            animationDelay: `${p.delay}s`,
+            willChange: 'transform, opacity',
+            '--float-x': `${p.floatX}px`,
+          } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+});
+
+const GridAtmosphere = React.memo(() => (
+  <div 
+    className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-15"
+    style={{
+      backgroundImage: `linear-gradient(rgba(79, 70, 229, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(79, 70, 229, 0.08) 1px, transparent 1px)`,
+      backgroundSize: '40px 40px',
+      backgroundPosition: 'center',
+      perspective: '1000px',
+    }}
+  >
+    <div className="absolute inset-0" style={{ transformStyle: "preserve-3d", animation: 'grid-slow 20s infinite ease-in-out', willChange: 'transform' }} />
+  </div>
+));
+
+const FloatingHexagons = React.memo(() => {
+  const hexes = useMemo(() => Array.from({ length: 6 }).map(() => ({
+    size: Math.random() * 40 + 20,
+    initialX: Math.random() * 100,
+    initialY: Math.random() * 100,
+    duration: Math.random() * 20 + 20,
+    delay: Math.random() * -20,
+    rotate: Math.random() * 360,
+    hexX: Math.random() * 40 - 20,
+  })), []);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 select-none">
+      {hexes.map((h, i) => (
+        <div
+          key={i}
+          className="absolute text-indigo-500/15"
+          style={{
+            width: h.size, height: h.size,
+            left: `${h.initialX}%`, top: `${h.initialY}%`,
+            animation: `float-hex ${h.duration}s infinite ease-in-out`,
+            animationDelay: `${h.delay}s`,
+            willChange: 'transform',
+            '--hex-rot': `${h.rotate}deg`,
+            '--hex-x': `${h.hexX}px`,
+          } as React.CSSProperties}
+        >
+          <Hexagon className="w-full h-full stroke-current fill-none" strokeWidth={0.8} />
+        </div>
+      ))}
+    </div>
+  );
+});
+
+// CharacterPreview with unique SVG IDs to prevent filter collisions
+const CharacterPreview = React.memo<{ head: number, body: number, color: string }>(({ head, body, color }) => {
+    const uid = useId().replace(/:/g, '');
     const headY = 43;
     const bodyY = 55;
     const eyeColor = '#22d3ee';
+
+    const glowId = `glow-${uid}`;
+    const blurId = `blur-${uid}`;
+    const gliderGradId = `glider-${uid}`;
+    const monoGradId = `mono-${uid}`;
+    const prismGradId = `prism-${uid}`;
+    const tacGradId = `tac-${uid}`;
+    const cylGradId = `cyl-${uid}`;
 
     const renderHead = () => {
         switch(head % 4) {
@@ -272,25 +225,25 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
                         <rect x="40" y={headY} width="20" height="5" fill="#1e293b" />
                         <line x1="44" y1={headY-8} x2="40" y2={headY-18} stroke="#94a3b8" strokeWidth="2" />
                         <circle cx="40" cy={headY-18} r="1.5" fill={eyeColor} />
-                        <circle cx="50" cy={headY-4} r="3" fill={eyeColor} filter="url(#glow)" />
+                        <circle cx="50" cy={headY-4} r="3" fill={eyeColor} filter={`url(#${glowId})`} />
                     </g>
                 );
             case 1: 
                 return (
                     <g>
                         <path d={`M 42 ${headY+6} L 58 ${headY+6} L 62 ${headY} L 38 ${headY} Z`} fill={color} />
-                        <path d={`M 40 ${headY} L 60 ${headY} L 56 ${headY-12} L 44 ${headY-12} Z`} fill="url(#tacGrad)" />
-                        <rect x="42" y={headY-5} width="16" height="3" fill={eyeColor} filter="url(#glow)" />
+                        <path d={`M 40 ${headY} L 60 ${headY} L 56 ${headY-12} L 44 ${headY-12} Z`} fill={`url(#${tacGradId})`} />
+                        <rect x="42" y={headY-5} width="16" height="3" fill={eyeColor} filter={`url(#${glowId})`} />
                     </g>
                 );
             case 2: 
                 return (
                     <g>
-                        <rect x="42" y={headY-14} width="16" height="20" rx="2" fill="url(#cylGrad)" />
+                        <rect x="42" y={headY-14} width="16" height="20" rx="2" fill={`url(#${cylGradId})`} />
                         <rect x="42" y={headY-10} width="16" height="2" fill="#0f172a" />
                         <rect x="42" y={headY-5} width="16" height="2" fill="#0f172a" />
                         <rect x="42" y={headY} width="16" height="2" fill="#0f172a" />
-                        <rect x="48" y={headY-12} width="4" height="14" fill={eyeColor} filter="url(#glow)" />
+                        <rect x="48" y={headY-12} width="4" height="14" fill={eyeColor} filter={`url(#${glowId})`} />
                     </g>
                 );
             case 3: 
@@ -298,7 +251,7 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
                     <g>
                         <ellipse cx="50" cy={headY-4} rx="14" ry="8" fill={color} />
                         <ellipse cx="50" cy={headY-4} rx="10" ry="5" fill="#0f172a" />
-                        <circle cx="50" cy={headY-4} r="3" fill={eyeColor} filter="url(#glow)" />
+                        <circle cx="50" cy={headY-4} r="3" fill={eyeColor} filter={`url(#${glowId})`} />
                         <circle cx="50" cy={headY-4} r="1" fill="#ffffff" />
                         <circle cx="34" cy={headY-4} r="2" fill="#38bdf8" />
                         <circle cx="66" cy={headY-4} r="2" fill="#38bdf8" />
@@ -309,7 +262,7 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
     };
 
     const renderBody = () => {
-        const shadow = <ellipse cx="50" cy="67" rx="14" ry="5" fill="rgba(0,0,0,0.4)" filter="url(#blur)" />;
+        const shadow = <ellipse cx="50" cy="67" rx="14" ry="5" fill="rgba(0,0,0,0.4)" filter={`url(#${blurId})`} />;
 
         switch(body % 4) {
             case 0:
@@ -323,15 +276,15 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
                         <rect x="34" y={bodyY-4} width="2" height="16" fill="rgba(255,255,255,0.4)" />
                         <rect x="60" y={bodyY-4} width="2" height="16" fill="rgba(255,255,255,0.4)" />
                         <path d={`M 40 ${bodyY-10} L 60 ${bodyY-10} L 62 ${bodyY+8} L 38 ${bodyY+8} Z`} fill="#0f172a" />
-                        <circle cx="50" cy={bodyY} r="4" fill="#38bdf8" filter="url(#glow)" />
+                        <circle cx="50" cy={bodyY} r="4" fill="#38bdf8" filter={`url(#${glowId})`} />
                     </g>
                 );
             case 1:
                 return (
                     <g>
                         {shadow}
-                        <ellipse cx="50" cy={bodyY+8} rx="12" ry="4" fill="#10b981" filter="url(#glow)" />
-                        <path d={`M 50 ${bodyY-16} L 70 ${bodyY} L 60 ${bodyY+8} L 50 ${bodyY+2} L 40 ${bodyY+8} L 30 ${bodyY} Z`} fill="url(#gliderGrad)" />
+                        <ellipse cx="50" cy={bodyY+8} rx="12" ry="4" fill="#10b981" filter={`url(#${glowId})`} />
+                        <path d={`M 50 ${bodyY-16} L 70 ${bodyY} L 60 ${bodyY+8} L 50 ${bodyY+2} L 40 ${bodyY+8} L 30 ${bodyY} Z`} fill={`url(#${gliderGradId})`} />
                         <path d={`M 50 ${bodyY-10} L 60 ${bodyY} L 40 ${bodyY} Z`} fill="#0f172a" />
                         <circle cx="34" cy={bodyY} r="1.5" fill="#38bdf8" />
                         <circle cx="66" cy={bodyY} r="1.5" fill="#38bdf8" />
@@ -343,7 +296,7 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
                         {shadow}
                         <path d={`M 44 ${bodyY} L 56 ${bodyY} L 50 ${bodyY+14} Z`} fill="#f59e0b" />
                         <path d={`M 47 ${bodyY} L 53 ${bodyY} L 50 ${bodyY+8} Z`} fill="#fef08a" />
-                        <rect x="36" y={bodyY-18} width="28" height="22" fill="url(#monoGrad)" />
+                        <rect x="36" y={bodyY-18} width="28" height="22" fill={`url(#${monoGradId})`} />
                         <rect x="36" y={bodyY-18} width="28" height="2" fill="rgba(255,255,255,0.15)" />
                         <rect x="36" y={bodyY-18} width="2" height="22" fill="rgba(255,255,255,0.15)" />
                         <rect x="40" y={bodyY-14} width="20" height="6" fill="#0f172a" />
@@ -357,7 +310,7 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
                         {shadow}
                         <path d={`M 34 ${bodyY-10} L 39 ${bodyY-4} L 30 ${bodyY+2} Z`} fill={color} />
                         <path d={`M 66 ${bodyY-10} L 61 ${bodyY-4} L 70 ${bodyY+2} Z`} fill={color} />
-                        <path d={`M 50 ${bodyY-22} L 62 ${bodyY-2} L 50 ${bodyY+14} L 38 ${bodyY-2} Z`} fill="url(#prismGrad)" />
+                        <path d={`M 50 ${bodyY-22} L 62 ${bodyY-2} L 50 ${bodyY+14} L 38 ${bodyY-2} Z`} fill={`url(#${prismGradId})`} />
                         <path d={`M 50 ${bodyY-22} L 38 ${bodyY-2} L 50 ${bodyY+14} Z`} fill="rgba(255,255,255,0.3)" />
                     </g>
                 );
@@ -368,33 +321,33 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
     return (
         <svg viewBox="0 0 100 100" className="w-24 h-24 drop-shadow-2xl overflow-visible">
             <defs>
-                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <filter id={glowId} x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="3" result="blur" />
                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
-                <filter id="blur" x="-20%" y="-20%" width="140%" height="140%">
+                <filter id={blurId} x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="3" />
                 </filter>
-                <linearGradient id="gliderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <linearGradient id={gliderGradId} x1="0%" y1="0%" x2="0%" y2="100%">
                     <stop offset="0%" stopColor="#ffffff" />
                     <stop offset="30%" stopColor={color} />
                     <stop offset="100%" stopColor="#020617" />
                 </linearGradient>
-                <linearGradient id="monoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <linearGradient id={monoGradId} x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor={color} />
                     <stop offset="100%" stopColor="#020617" />
                 </linearGradient>
-                <linearGradient id="prismGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <linearGradient id={prismGradId} x1="0%" y1="0%" x2="0%" y2="100%">
                     <stop offset="0%" stopColor="#ffffff" />
                     <stop offset="20%" stopColor={color} />
                     <stop offset="80%" stopColor="#1e293b" />
                     <stop offset="100%" stopColor="#000000" />
                 </linearGradient>
-                <linearGradient id="tacGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <linearGradient id={tacGradId} x1="0%" y1="0%" x2="0%" y2="100%">
                     <stop offset="0%" stopColor="#334155" />
                     <stop offset="100%" stopColor="#0f172a" />
                 </linearGradient>
-                <linearGradient id="cylGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <linearGradient id={cylGradId} x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#1e293b" />
                     <stop offset="50%" stopColor={color} />
                     <stop offset="100%" stopColor="#1e293b" />
@@ -404,9 +357,9 @@ const CharacterPreview: React.FC<{ head: number, body: number, color: string }> 
             {renderHead()}
         </svg>
     );
-};
+});
 
-const MenuButton: React.FC<{ 
+const MenuButton = React.memo<{ 
   onClick: () => void; 
   icon: React.ReactNode; 
   label: string; 
@@ -414,68 +367,22 @@ const MenuButton: React.FC<{
   variant?: 'primary' | 'battle' | 'campaign' | 'danger' | 'default' | 'resume';
   className?: string;
   style?: React.CSSProperties;
-}> = ({ onClick, icon, label, subLabel, variant = 'default', className = '', style }) => {
+}>(({ onClick, icon, label, subLabel, variant = 'default', className = '', style }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setCoords({ x, y });
-  };
+    setCoords({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, []);
 
-  const getStyle = () => {
-    switch(variant) {
-      case 'primary': 
-        return 'bg-gradient-to-r from-indigo-950/50 to-indigo-900/30 border-indigo-500/40 hover:from-indigo-900/60 hover:to-indigo-800/40 text-white hover:border-indigo-400 shadow-[0_4px_24px_rgba(99,102,241,0.15)] hover:shadow-[0_4px_30px_rgba(99,102,241,0.35)]';
-      case 'campaign': 
-        return 'bg-gradient-to-r from-violet-950/50 via-purple-950/40 to-violet-950/50 border-purple-500/40 hover:border-purple-400 hover:from-purple-900/60 hover:via-indigo-900/40 hover:to-purple-900/60 text-white shadow-[0_4px_24px_rgba(168,85,247,0.15)] hover:shadow-[0_4px_30px_rgba(168,85,247,0.35)]';
-      case 'battle': 
-        return 'bg-gradient-to-r from-rose-950/50 via-red-950/40 to-rose-950/50 border-rose-500/40 hover:border-red-400 hover:from-red-900/60 hover:via-rose-900/40 hover:to-red-900/60 text-white shadow-[0_4px_24px_rgba(244,63,94,0.15)] hover:shadow-[0_4px_30px_rgba(244,63,94,0.35)]';
-      case 'resume': 
-        return 'bg-gradient-to-r from-amber-950/60 via-yellow-950/50 to-amber-950/60 border-amber-500/60 hover:border-amber-400 hover:from-amber-900/70 hover:to-amber-900/60 text-amber-50 shadow-[0_0_25px_rgba(245,158,11,0.25)] hover:shadow-[0_0_35px_rgba(245,158,11,0.45)] border-t-amber-400/20';
-      case 'danger': 
-        return 'bg-red-950/25 border-red-900/30 hover:bg-red-900/30 hover:border-red-500/50 text-red-100';
-      default: 
-        return 'bg-slate-900/50 border-slate-700/60 hover:bg-slate-800/60 hover:border-indigo-500/50 text-slate-200 hover:text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)]';
-    }
-  };
-
-  const getIconStyle = () => {
-    switch(variant) {
-      case 'primary': return 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 group-hover:bg-indigo-500/25 group-hover:text-white group-hover:scale-110';
-      case 'campaign': return 'bg-purple-500/10 border border-purple-500/30 text-purple-300 group-hover:bg-purple-500/25 group-hover:text-white group-hover:scale-110';
-      case 'battle': return 'bg-rose-500/10 border border-rose-500/30 text-rose-300 group-hover:bg-rose-500/25 group-hover:text-white group-hover:scale-110';
-      case 'resume': return 'bg-amber-500/15 border border-amber-500/40 text-amber-300 group-hover:bg-amber-500/30 group-hover:text-white group-hover:scale-110 animate-pulse';
-      case 'danger': return 'bg-red-500/10 border border-red-500/20 text-red-400 group-hover:bg-red-500/20 group-hover:text-red-200';
-      default: return 'bg-slate-800/40 border border-slate-700/50 text-slate-400 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/30 group-hover:text-indigo-300 group-hover:scale-110';
-    }
-  };
-
-  const getLedColor = () => {
-    switch(variant) {
-      case 'primary': return 'bg-indigo-500 shadow-[0_0_8px_#6366f1]';
-      case 'campaign': return 'bg-purple-500 shadow-[0_0_8px_#a855f7]';
-      case 'battle': return 'bg-rose-500 shadow-[0_0_8px_#f43f5e]';
-      case 'resume': return 'bg-amber-400 shadow-[0_0_12px_#fbbf24]';
-      case 'danger': return 'bg-red-500 shadow-[0_0_8px_#ef4444]';
-      default: return 'bg-indigo-400/40';
-    }
-  };
-
-  const getSpotlightColor = () => {
-    switch(variant) {
-      case 'primary': return 'rgba(99,102,241,0.12)';
-      case 'campaign': return 'rgba(168,85,247,0.12)';
-      case 'battle': return 'rgba(244,63,94,0.12)';
-      case 'resume': return 'rgba(245,158,11,0.12)';
-      case 'danger': return 'rgba(239,68,68,0.1)';
-      default: return 'rgba(129,140,248,0.08)';
-    }
-  };
+  // Lookup maps instead of switch statements for cleaner code and performance
+  const styleClass = MENU_BUTTON_STYLES[variant] || MENU_BUTTON_STYLES.default;
+  const iconClass = MENU_ICON_STYLES[variant] || MENU_ICON_STYLES.default;
+  const ledClass = LED_COLORS[variant] || LED_COLORS.default;
+  const spotlightColor = SPOTLIGHT_COLORS[variant] || SPOTLIGHT_COLORS.default;
 
   return (
     <motion.button 
@@ -487,13 +394,11 @@ const MenuButton: React.FC<{
       whileHover={{ scale: 1.02, x: 4 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 350, damping: 14 }}
-      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border backdrop-blur-xl transition-all duration-300 relative overflow-hidden touch-manipulation cursor-pointer ${getStyle()} ${className}`}
+      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border backdrop-blur-xl transition-all duration-300 relative overflow-hidden touch-manipulation cursor-pointer ${styleClass} ${className}`}
       style={style}
     >
-      {/* Visual left accent light strip */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[4px] transition-all duration-300 ${getLedColor()}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-[4px] transition-all duration-300 ${ledClass}`} />
 
-      {/* Interactive Spotlight Radial Glow */}
       <AnimatePresence>
         {isHovered && (
           <motion.div
@@ -502,14 +407,14 @@ const MenuButton: React.FC<{
             exit={{ opacity: 0 }}
             className="absolute inset-0 pointer-events-none transition-opacity duration-300"
             style={{
-              background: `radial-gradient(130px circle at ${coords.x}px ${coords.y}px, ${getSpotlightColor()}, transparent)`,
+              background: `radial-gradient(130px circle at ${coords.x}px ${coords.y}px, ${spotlightColor}, transparent)`,
               mixBlendMode: 'screen'
             }}
           />
         )}
       </AnimatePresence>
 
-      <div className={`p-3 rounded-xl transition-all duration-300 relative z-10 ${getIconStyle()}`}>
+      <div className={`p-3 rounded-xl transition-all duration-300 relative z-10 ${iconClass}`}>
         {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-5 h-5 md:w-5 md:h-5 drop-shadow-md' })}
       </div>
 
@@ -524,12 +429,10 @@ const MenuButton: React.FC<{
         )}
       </div>
       
-      {/* Right chevron interactive layout accent */}
       <div className="ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300 text-white/50 relative z-10">
         <ChevronRight className="w-4 h-4" />
       </div>
 
-      {/* Glossy sweeping scanline overlay */}
       <motion.div 
          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" 
          initial={{ x: '-100%' }}
@@ -538,7 +441,11 @@ const MenuButton: React.FC<{
       />
     </motion.button>
   );
-};
+});
+
+type AuthMode = 'GUEST' | 'LOGIN' | 'REGISTER' | null;
+
+// --- MAIN COMPONENT ---
 
 const MainMenu: React.FC = () => {
   const user = useGameStore(state => state.user);
@@ -550,6 +457,7 @@ const MainMenu: React.FC = () => {
   const isSfxMuted = useGameStore(state => state.isSfxMuted);
   const isLiteMode = useGameStore(state => state.isLiteMode);
   const language = useGameStore(state => state.language);
+  
   const startNewGame = useGameStore(state => state.startNewGame);
   const setUIState = useGameStore(state => state.setUIState);
   const setLanguage = useGameStore(state => state.setLanguage);
@@ -570,7 +478,6 @@ const MainMenu: React.FC = () => {
   const [inputName, setInputName] = useState('');
   const [inputPassword, setInputPassword] = useState('');
   
-  // Customization State
   const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[5]); 
   const [selectedHead, setSelectedHead] = useState(0);
   const [selectedBody, setSelectedBody] = useState(0);
@@ -581,30 +488,35 @@ const MainMenu: React.FC = () => {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsMenuRef = useRef<HTMLDivElement>(null);
+  const parallaxRef = useRef<HTMLDivElement>(null);
 
-  // Entrance animations state
   const [logoVisible, setLogoVisible] = useState(false);
 
-  // Background Parallax Offset State
-  const [parallaxOffset, setParallaxOffset] = useState({ x: 0, y: 0 });
-
+  // Parallax background optimized with requestAnimationFrame
   useEffect(() => {
     if (isLiteMode) {
-      setParallaxOffset({ x: 0, y: 0 });
+      if (parallaxRef.current) parallaxRef.current.style.transform = 'translate3d(0, 0, 0)';
       return;
     }
+    
+    let raf = 0;
     const handleMouseMove = (e: MouseEvent) => {
-      const { innerWidth, innerHeight } = window;
-      const x = (e.clientX / innerWidth - 0.5) * 18; 
-      const y = (e.clientY / innerHeight - 0.5) * 18;
-      setParallaxOffset({ x, y });
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (!parallaxRef.current) return;
+        const x = (e.clientX / window.innerWidth - 0.5) * 18;
+        const y = (e.clientY / window.innerHeight - 0.5) * 18;
+        parallaxRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      });
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(raf);
+    };
   }, [isLiteMode]);
 
-  // Config State
   const [selectedTier, setSelectedTier] = useState<1 | 2 | 3>(1);
   const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
   const [botCount, setBotCount] = useState<number>(1);
@@ -617,18 +529,15 @@ const MainMenu: React.FC = () => {
 
   const t = TEXT[language].MENU;
   
-  const MISSION_TIERS = {
+  const MISSION_TIERS = useMemo(() => ({
     1: { level: 5, coins: 0, label: language === 'RU' ? 'ПИК УР.5' : 'SUMMIT L5', time: '~10m', color: 'text-blue-400', difficulty: 'EASY' as Difficulty, icon: Mountain, desc: 'Recon' },
     2: { level: 6, coins: 0, label: language === 'RU' ? 'ПИК УР.6' : 'SUMMIT L6', time: '~15m', color: 'text-amber-400', difficulty: 'MEDIUM' as Difficulty, icon: Target, desc: 'Std Ops' },
     3: { level: 7, coins: 0, label: language === 'RU' ? 'ПИК УР.7' : 'SUMMIT L7', time: '~25m', color: 'text-red-400', difficulty: 'HARD' as Difficulty, icon: Crown, desc: 'Apex' }
-  };
+  }), [language]);
 
   useEffect(() => {
-      const timer = setTimeout(() => {
-          setLogoVisible(true);
-      }, 100);
+      const timer = setTimeout(() => setLogoVisible(true), 100);
       
-      // Ensure lite mode is disabled on menu load to restore the background
       if (useGameStore.getState().isLiteMode) {
           useGameStore.setState({ isLiteMode: false });
       }
@@ -649,7 +558,7 @@ const MainMenu: React.FC = () => {
       return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const startCampaignWithMode = (mode: 'STORY' | 'LEVELS') => {
+  const startCampaignWithMode = useCallback((mode: 'STORY' | 'LEVELS') => {
     playUiSound('CLICK');
     if (!user) {
         setAuthMode('LOGIN');
@@ -662,9 +571,9 @@ const MainMenu: React.FC = () => {
     } else {
         setUIState(mode === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
     }
-  };
+  }, [user, hasActiveSession, playUiSound, setCampaignMode, setUIState]);
 
-  const handleNewGameClick = () => {
+  const handleNewGameClick = useCallback(() => {
     playUiSound('CLICK');
     if (!user) {
         setAuthMode('LOGIN');
@@ -678,9 +587,9 @@ const MainMenu: React.FC = () => {
       setSelectedTier(1);
       setDifficulty('EASY');
     }
-  };
+  }, [user, hasActiveSession, playUiSound]);
 
-   const randomizeConfig = () => {
+  const randomizeConfig = useCallback(() => {
       playUiSound('CLICK');
       const rTier = (Math.floor(Math.random() * 3) + 1) as 1|2|3;
       const diffs: Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
@@ -710,9 +619,9 @@ const MainMenu: React.FC = () => {
       setStartingCreditsBonus(rCredits);
       setStartingMovesBonus(rMoves);
       setMutatorType(rMutator);
-  };
+  }, [playUiSound]);
 
-  const confirmMissionStart = () => {
+  const confirmMissionStart = useCallback(() => {
     playUiSound('CLICK');
     const tier = MISSION_TIERS[selectedTier as 1|2|3];
     const winCondition: WinCondition = {
@@ -734,18 +643,18 @@ const MainMenu: React.FC = () => {
     
     startNewGame(winCondition);
     setShowMissionConfig(false);
-  };
+  }, [playUiSound, MISSION_TIERS, selectedTier, botCount, difficulty, storageCap, mapType, startingArtifactId, startingCreditsBonus, startingMovesBonus, mutatorType, startNewGame]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     playUiSound('CLICK');
     if (hasActiveSession) {
       setConfirmAction({ type: 'LOGOUT' });
     } else {
       logout();
     }
-  };
+  }, [playUiSound, hasActiveSession, logout]);
 
-  const executeConfirmAction = () => {
+  const executeConfirmAction = useCallback(() => {
     playUiSound('CLICK');
     if (!confirmAction) return;
 
@@ -762,14 +671,14 @@ const MainMenu: React.FC = () => {
       resetProgress();
     }
     setConfirmAction(null);
-  };
+  }, [playUiSound, confirmAction, abandonSession, setUIState, logout, resetProgress]);
 
-  const cancelConfirmAction = () => {
+  const cancelConfirmAction = useCallback(() => {
     playUiSound('CLICK');
     setConfirmAction(null);
-  };
+  }, [playUiSound]);
 
-  const handleAuthSubmit = () => {
+  const handleAuthSubmit = useCallback(() => {
     playUiSound('CLICK');
     setErrorMessage(null);
     if (!inputName.trim()) {
@@ -811,9 +720,9 @@ const MainMenu: React.FC = () => {
         }
       }
     }
-  };
+  }, [playUiSound, inputName, selectedColor, authMode, inputPassword, isGuestRegistration, selectedHead, selectedBody, loginUser, loginAsGuest, registerUser]);
 
-  const renderAvatar = (color: string, head: number, body: number, size = 'md') => {
+  const renderAvatar = useCallback((color: string, head: number, body: number, size = 'md') => {
     const dims = size === 'lg' ? 'w-16 h-16' : (size === 'sm' ? 'w-7 h-7' : 'w-10 h-10');
     return (
       <div className={`${dims} rounded-full flex items-center justify-center border-2 border-indigo-400/30 shadow-[0_0_12px_rgba(99,102,241,0.2)] bg-[#0c0d1e] overflow-hidden relative shrink-0`}>
@@ -822,31 +731,53 @@ const MainMenu: React.FC = () => {
          </div>
       </div>
     );
-  };
+  }, []);
 
-  const getBotLabel = (count: number) => {
+  const getBotLabel = useCallback((count: number) => {
       if (count === 1) return t.BOT_LABEL_DUEL;
       if (count <= 3) return t.BOT_LABEL_SKIRMISH;
       if (count <= 5) return t.BOT_LABEL_WAR;
       return t.BOT_LABEL_CHAOS;
-  };
+  }, [t.BOT_LABEL_DUEL, t.BOT_LABEL_SKIRMISH, t.BOT_LABEL_WAR, t.BOT_LABEL_CHAOS]);
 
-  const cycleOption = (setter: (v: number) => void, current: number, direction: 1 | -1, max: number) => {
+  const cycleOption = useCallback((setter: (v: number) => void, current: number, direction: 1 | -1, max: number) => {
       let next = current + direction;
       if (next < 0) next = max - 1;
       if (next >= max) next = 0;
       setter(next);
       playUiSound('CLICK');
-  };
+  }, [playUiSound]);
+
+  // Static arrays to prevent recreation in JSX
+  const tierIds = useMemo(() => [1, 2, 3], []);
+  const artifactsList = useMemo(() => ([
+      { id: 'NONE', label: language === 'RU' ? 'Нет' : 'None' },
+      { id: 'fuel_cell', label: language === 'RU' ? 'Топливо' : 'Fuel Cell' },
+      { id: 'data_disc', label: language === 'RU' ? 'Диск' : 'Data Disc' },
+      { id: 'raw_container', label: language === 'RU' ? 'Ящик' : 'Container' },
+      { id: 'reality_patch', label: language === 'RU' ? 'Патч' : 'Patch' },
+      { id: 'void_core', label: language === 'RU' ? 'Ядро' : 'Void Core' },
+      { id: 'architect_nanites', label: language === 'RU' ? 'Наниты' : 'Nanites' }
+  ]), [language]);
+  
+  const creditBonuses = useMemo(() => [0, 20, 50, 100], []);
+  const moveBonuses = useMemo(() => [0, 5, 10, 20], []);
+  const mutatorsList = useMemo(() => ([
+      { id: 'NONE', label: language === 'RU' ? 'Стандарт' : 'Standard' },
+      { id: 'SUDDEN_DEATH', label: language === 'RU' ? 'Внез. Смерть' : 'Sudden Death' },
+      { id: 'RICH_VEINS', label: language === 'RU' ? 'Бог. Жилы' : 'Rich Veins' },
+      { id: 'FRAGILE_GROUND', label: language === 'RU' ? 'Хрупкий Пол' : 'Fragile Ground' },
+      { id: 'NANO_STORM', label: language === 'RU' ? 'Нано-Шторм' : 'Nano-Storm' }
+  ]), [language]);
 
   return (
     <div className="relative w-full h-full flex items-center justify-center pointer-events-auto overflow-hidden font-sans">
       <MainMenuStyleBlock />
-      {/* Background Ambience Layering with Hardware-Accelerated 3D Parallax */}
+      
       <div 
+        ref={parallaxRef}
         className="absolute inset-0 pointer-events-none z-0"
         style={{
-          transform: `translate3d(${parallaxOffset.x}px, ${parallaxOffset.y}px, 0)`,
           transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)',
           willChange: 'transform'
         }}
@@ -857,10 +788,8 @@ const MainMenu: React.FC = () => {
         <FloatingParticles />
       </div>
       
-      {/* TOP SYSTEM NAV BAR */}
       <div className="absolute top-0 left-0 w-full p-4 md:p-6 pt-[calc(env(safe-area-inset-top)+14px)] flex justify-between items-center z-50 pointer-events-auto">
         
-        {/* Profile / Authorization credentials badge */}
         <div className="flex items-center gap-2">
             {!user ? (
               <motion.button 
@@ -899,7 +828,6 @@ const MainMenu: React.FC = () => {
             )}
         </div>
 
-        {/* System parameters with drop-down control desk */}
         <div className="relative" ref={settingsMenuRef}>
             <motion.button 
               onClick={() => { setIsSettingsOpen(!isSettingsOpen); playUiSound('CLICK'); }}
@@ -920,13 +848,11 @@ const MainMenu: React.FC = () => {
                     transition={{ type: "spring", damping: 20, stiffness: 220 }}
                     className="absolute top-full right-0 mt-2 bg-[#090a18]/95 backdrop-blur-2xl border-2 border-indigo-500/40 p-4 rounded-2xl shadow-[0_12px_45px_rgba(0,0,0,0.7)] flex flex-col gap-3.5 min-w-[260px] z-[60]"
                 >
-                    {/* Header */}
                     <div className="flex flex-col border-b border-indigo-500/20 pb-2 mb-0.5">
                         <span className="text-[9px] font-mono text-indigo-400 uppercase tracking-widest leading-none">SYSTEM PARAMS</span>
                         <span className="text-xs font-black text-white uppercase tracking-wider mt-1">{language === 'RU' ? 'Панель настроек' : 'Control Deck'}</span>
                     </div>
 
-                    {/* Language Settings */}
                     <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{language === 'RU' ? 'ЯЗЫК ИНТЕРФЕЙСА' : 'SYSTEM LANGUAGE'}</span>
                         <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-black/40 rounded-xl border border-white/5">
@@ -947,7 +873,6 @@ const MainMenu: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Sounds Settings */}
                     <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{language === 'RU' ? 'СИГНАЛЫ И ЗВУКИ' : 'AUDIO OUTPUT'}</span>
                         <div className="flex flex-col gap-1.5">
@@ -971,11 +896,9 @@ const MainMenu: React.FC = () => {
                                 </div>
                                 <span className="text-[9px] font-mono leading-none font-bold">{isSfxMuted ? 'OFF' : 'ON'}</span>
                             </motion.button>
-
                         </div>
                     </div>
 
-                    {/* Performance Settings */}
                     <div className="flex flex-col gap-1.5 mt-1.5">
                         <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{language === 'RU' ? 'ПРОИЗВОДИТЕЛЬНОСТЬ' : 'PERFORMANCE'}</span>
                         <div className="flex flex-col gap-1.5">
@@ -992,7 +915,6 @@ const MainMenu: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Rankings & Leaderboard */}
                     <div className="flex flex-col border-t border-indigo-500/20 pt-3.5 mt-0.5">
                         <motion.button 
                             onClick={() => { setIsSettingsOpen(false); setUIState('LEADERBOARD'); playUiSound('CLICK'); }}
@@ -1010,29 +932,22 @@ const MainMenu: React.FC = () => {
         </div>
       </div>
 
-      {/* CORE MENU CENTRAL STAGE */}
       <div className="flex flex-col md:grid md:grid-cols-12 gap-8 md:gap-14 lg:gap-16 w-full max-w-sm md:max-w-4xl lg:max-w-5xl px-6 md:px-10 z-10 max-h-screen overflow-y-auto no-scrollbar py-24 md:py-6 items-center justify-center">
         
-        {/* LEFT COLUMN: THE LOGO & BRAND IDENTITY PANEL */}
         <motion.div 
             initial={{ opacity: 0, x: -30, scale: 0.95 }}
             animate={{ opacity: logoVisible ? 1 : 0, x: logoVisible ? 0 : -30, scale: logoVisible ? 1 : 0.95 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="md:col-span-6 lg:col-span-7 flex flex-col items-center md:items-start text-center md:text-left select-none relative"
         >
-            {/* Rotating Tech HUD and Hologram Core */}
             <motion.div 
                 whileHover="hover"
                 className="relative w-28 h-28 md:w-36 md:h-36 mb-5 flex items-center justify-center select-none group cursor-pointer"
             >
-                {/* Background glow shadow */}
                 <div className="absolute w-32 h-32 md:w-44 md:h-44 bg-indigo-500/20 blur-[30px] md:blur-[45px] rounded-full animate-[pulse_4s_ease-in-out_infinite]" />
 
-                {/* Rotating Outer Ring Slices */}
                 <motion.svg 
-                    variants={{
-                        hover: { rotate: 360, transition: { duration: 15, repeat: Infinity, ease: "linear" } }
-                    }}
+                    variants={{ hover: { rotate: 360, transition: { duration: 15, repeat: Infinity, ease: "linear" } } }}
                     className="absolute w-full h-full animate-[spin_25s_linear_infinite]" 
                     viewBox="0 0 100 100"
                 >
@@ -1040,22 +955,15 @@ const MainMenu: React.FC = () => {
                     <circle cx="50" cy="50" r="44" stroke="#c084fc" strokeWidth="2" strokeDasharray="2 18" fill="none" opacity="0.6" />
                 </motion.svg>
 
-                {/* Counter-Clockwise Dotted Ring */}
                 <motion.div 
-                    variants={{
-                        hover: { rotate: -360, transition: { duration: 8, repeat: Infinity, ease: "linear" } }
-                    }}
+                    variants={{ hover: { rotate: -360, transition: { duration: 8, repeat: Infinity, ease: "linear" } } }}
                     className="absolute inset-1.5 border border-dotted border-indigo-400/30 rounded-full animate-[spin_12s_linear_infinite_reverse]" 
                 />
 
-                {/* Inner Compass Ticks */}
                 <div className="absolute inset-3 border border-dashed border-indigo-500/20 rounded-full animate-[spin_18s_linear_infinite]" />
 
-                {/* Central Hexagonal Core with Hologram */}
                 <motion.div 
-                    variants={{
-                        hover: { scale: 1.1, borderColor: "rgba(129, 140, 248, 0.8)", boxShadow: "0 0 20px rgba(99, 102, 241, 0.6)" }
-                    }}
+                    variants={{ hover: { scale: 1.1, borderColor: "rgba(129, 140, 248, 0.8)", boxShadow: "0 0 20px rgba(99, 102, 241, 0.6)" } }}
                     transition={{ type: "spring", stiffness: 300, damping: 15 }}
                     className="relative z-10 p-1 bg-[#060714]/90 rounded-2xl border-2 border-indigo-500/40 shadow-[inset_0_0_15px_rgba(99,102,241,0.4)] transition-all duration-300"
                 >
@@ -1065,12 +973,10 @@ const MainMenu: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* Tactical HUD markings */}
                 <div className="absolute top-1 left-1 text-[7px] text-indigo-400/40 font-mono">X+12.4</div>
                 <div className="absolute bottom-1 right-1 text-[7px] text-indigo-400/40 font-mono">Y-45.9</div>
             </motion.div>
 
-            {/* Typography & Title */}
             <div className="flex flex-col items-center md:items-start mt-2 relative">
                 <div className="relative flex items-center">
                     <span className="hidden md:inline-block text-indigo-500/30 text-4xl lg:text-5xl font-mono mr-3 select-none leading-none animate-pulse">[</span>
@@ -1081,30 +987,19 @@ const MainMenu: React.FC = () => {
                             key={index}
                             initial={{ opacity: 0, y: 15, rotateX: -45 }}
                             animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 140,
-                              damping: 12,
-                              delay: index * 0.04 + 0.15
-                            }}
+                            transition={{ type: "spring", stiffness: 140, damping: 12, delay: index * 0.04 + 0.15 }}
                             whileHover={{ 
-                              scale: 1.15, 
-                              y: -4,
-                              color: '#818cf8',
+                              scale: 1.15, y: -4, color: '#818cf8',
                               textShadow: '0 0 20px rgba(129, 140, 248, 0.8)',
                               transition: { type: "spring", stiffness: 300, damping: 10 } 
                             }}
                             className="inline-block text-5xl sm:text-6xl md:text-5xl lg:text-7xl xl:text-8xl text-transparent bg-clip-text bg-gradient-to-b from-white via-indigo-50 to-indigo-200 cursor-default"
-                            style={{ 
-                              WebkitTextStroke: '1.2px rgba(255,255,255,0.25)',
-                              filter: 'drop-shadow(0 0 12px rgba(99,102,241,0.3))'
-                            }}
+                            style={{ WebkitTextStroke: '1.2px rgba(255,255,255,0.25)', filter: 'drop-shadow(0 0 12px rgba(99,102,241,0.3))' }}
                           >
                             {char === ' ' ? '\u00A0' : char}
                           </motion.span>
                         ))}
                         
-                        {/* Scanning Gloss Glint */}
                         <motion.div 
                             className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent pointer-events-none mix-blend-color-dodge"
                             initial={{ x: '-100%', skewX: -20 }}
@@ -1116,18 +1011,14 @@ const MainMenu: React.FC = () => {
                     <span className="hidden md:inline-block text-indigo-500/30 text-4xl lg:text-5xl font-mono ml-3 select-none leading-none animate-pulse">]</span>
                 </div>
 
-                {/* Subtitle with high-contrast indicator */}
                 <div className="relative mt-2 px-4 py-1 rounded bg-slate-950/40 border border-indigo-500/10 backdrop-blur-md shadow-[inset_0_0_12px_rgba(99,102,241,0.15)] overflow-hidden">
-                    {/* Glowing bottom border laser line */}
                     <div className="absolute inset-x-0 bottom-0 h-[1.5px] bg-gradient-to-r from-transparent via-fuchsia-500 to-transparent animate-pulse" />
-
                     <div className="text-xs sm:text-sm md:text-xs lg:text-base text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-fuchsia-400 to-pink-400 font-mono font-black uppercase tracking-[0.3em] md:tracking-[0.4em] drop-shadow-[0_0_8px_rgba(168,85,247,0.3)]">
                         {language === 'RU' ? 'ЭКОНОМИКА' : 'ECONOMY'}
                     </div>
                 </div>
             </div>
 
-            {/* Custom Divider line */}
             <div className="flex items-center gap-3 mt-5 md:mt-6 w-full justify-center md:justify-start">
                 <div className="h-[2px] w-10 md:w-14 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
                 <p className="text-[10px] md:text-[11px] text-indigo-200/95 font-mono font-black tracking-[0.2em] uppercase drop-shadow-[0_0_8px_rgba(99,102,241,0.5)] whitespace-nowrap">
@@ -1136,7 +1027,6 @@ const MainMenu: React.FC = () => {
                 <div className="h-[2px] w-10 md:w-14 bg-gradient-to-l from-transparent via-indigo-500/50 to-transparent"></div>
             </div>
 
-            {/* Micro details footprint */}
             <div className="hidden md:flex items-center gap-2 mt-5 text-[8.5px] text-slate-500 font-mono uppercase tracking-wider select-none">
                 <span>VER: 2.0.0 // LIVE</span>
                 <span>•</span>
@@ -1146,25 +1036,20 @@ const MainMenu: React.FC = () => {
             </div>
         </motion.div>
 
-        {/* RIGHT COLUMN: ACTION CONTROLS & SELECTION BUTTONS */}
         <motion.div 
           variants={containerVariants}
           initial="hidden"
           animate="visible"
           className="md:col-span-6 lg:col-span-5 flex flex-col gap-3.5 w-full max-w-sm shrink-0"
         >
-          {/* Glassmorphic border container that bundles controls nicely */}
           <div className="bg-[#0b0c1e]/40 border-2 border-indigo-500/15 p-4 md:p-5 rounded-3xl backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col gap-3.5 relative overflow-hidden">
-            {/* Holographic background mesh inside the card */}
             <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/[0.02] to-transparent pointer-events-none" />
             
-            {/* Grid corner decoration notches */}
             <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-indigo-500/20 pointer-events-none" />
             <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-indigo-500/20 pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-indigo-500/20 pointer-events-none" />
             <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-indigo-500/20 pointer-events-none" />
 
-            {/* Campaign Launch Button */}
             <motion.div variants={itemVariants}>
               <MenuButton 
                   onClick={() => startCampaignWithMode('STORY')} 
@@ -1175,7 +1060,6 @@ const MainMenu: React.FC = () => {
               />
             </motion.div>
 
-            {/* Skirmish Game Mode */}
             <motion.div variants={itemVariants}>
               <MenuButton 
                   onClick={handleNewGameClick} 
@@ -1186,13 +1070,8 @@ const MainMenu: React.FC = () => {
               />
             </motion.div>
 
-            {/* Action Resume Session - Lights up premium gold when active! */}
             {hasActiveSession && (
-              <motion.div 
-                variants={itemVariants}
-                className="relative"
-              >
-                {/* Extra ambient glow behind active campaign */}
+              <motion.div variants={itemVariants} className="relative">
                 <div className="absolute -inset-1 bg-amber-500/10 rounded-2xl blur-md animate-pulse pointer-events-none" />
                 <MenuButton 
                     onClick={() => { setUIState('GAME'); playUiSound('CLICK'); }} 
@@ -1208,7 +1087,6 @@ const MainMenu: React.FC = () => {
 
       </div>
 
-      {/* AUTHENTICATION / SIGN IN MODAL */}
       <AnimatePresence>
       {authMode && (
         <motion.div 
@@ -1224,16 +1102,13 @@ const MainMenu: React.FC = () => {
               transition={{ type: "spring", damping: 25, stiffness: 280 }}
               className="bg-slate-950/45 border border-indigo-500/25 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.15)] w-full max-w-sm relative overflow-hidden flex flex-col backdrop-blur-xl"
           >
-              {/* Corner decors */}
               <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-indigo-500/40 pointer-events-none" />
               <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-indigo-500/40 pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-indigo-500/40 pointer-events-none" />
               <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-indigo-500/40 pointer-events-none" />
 
-              {/* Scanlines layer */}
               <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
               
-            {/* Modal tab navigation */}
             <div className="grid grid-cols-2 border-b border-indigo-500/20 bg-[#0d0f22]/60 shrink-0">
                 <button 
                     onClick={() => { setAuthMode('LOGIN'); setErrorMessage(null); playUiSound('CLICK'); }} 
@@ -1249,7 +1124,6 @@ const MainMenu: React.FC = () => {
                 </button>
             </div>
 
-            {/* Inner Content scroll area */}
             <div className="p-5 md:p-6 flex flex-col gap-4 overflow-y-auto no-scrollbar max-h-[75vh]">
               <div className="flex items-center gap-3">
                   <div className={`p-2.5 rounded-xl border shrink-0 ${authMode === 'REGISTER' && isGuestRegistration ? 'bg-slate-800/40 border-slate-700 text-slate-300' : (authMode === 'LOGIN' ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-400' : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400')}`}>
@@ -1377,7 +1251,6 @@ const MainMenu: React.FC = () => {
       )}
       </AnimatePresence>
 
-      {/* ACTION WARNINGS / ABANDON CONFIRMATION MODAL */}
       <AnimatePresence>
       {confirmAction && (
           <motion.div 
@@ -1394,13 +1267,11 @@ const MainMenu: React.FC = () => {
                 onClick={(e) => e.stopPropagation()}
                 className="bg-slate-950/45 border border-amber-500/25 rounded-2xl p-6 max-w-sm w-full shadow-[0_0_50px_rgba(245,158,11,0.15)] relative text-center backdrop-blur-xl overflow-hidden"
             >
-                {/* Corner decors */}
                 <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40 pointer-events-none" />
                 <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-amber-500/40 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-amber-500/40 pointer-events-none" />
                 <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/40 pointer-events-none" />
 
-                {/* Scanlines layer */}
                 <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
                 <div className="w-12 h-12 rounded-full border-2 border-amber-500/30 flex items-center justify-center mx-auto mb-3 bg-amber-500/10 animate-bounce">
                     <span className="text-amber-500 text-xl font-bold font-mono">!</span>
@@ -1413,7 +1284,7 @@ const MainMenu: React.FC = () => {
                         ? (language === 'RU' ? t.LOGOUT_CONFIRM : t.LOGOUT_CONFIRM)
                         : confirmAction.type === 'RESET_PROGRESS_ALL'
                         ? (language === 'RU' 
-                            ? 'Вы уверены, что хотите сбросить ВЕСЬ прогресс обучения, чертежей и очков в 0? Это действие необратимо.' 
+                            ? 'Вы уверены, что хотите сбросить ВЕСЬ прогресс обучения, чертежи и очков в 0? Это действие необратимо.' 
                             : 'Are you sure you want to reset ALL training progression, blueprints, and points back to 0? This action is irreversible.')
                         : (language === 'RU' ? t.ABANDON_CONFIRM : t.ABANDON_CONFIRM)}
                 </p>
@@ -1436,7 +1307,6 @@ const MainMenu: React.FC = () => {
       )}
       </AnimatePresence>
 
-      {/* COMPACT BATTLE / SKIRMISH GAME MODE CONFIGURATOR */}
       <AnimatePresence>
       {showMissionConfig && (
         <motion.div 
@@ -1460,10 +1330,8 @@ const MainMenu: React.FC = () => {
               <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-indigo-500/40 pointer-events-none rounded-bl-2xl sm:rounded-bl-3xl" />
               <div className="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-indigo-500/40 pointer-events-none rounded-br-2xl sm:rounded-br-3xl" />
 
-              {/* Scanlines layer */}
               <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
 
-              {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-white/5 md:border-indigo-500/20 bg-white/2 backdrop-blur-md shrink-0">
                 <div className="flex items-center gap-2.5 sm:gap-3.5">
                     <motion.div 
@@ -1501,16 +1369,14 @@ const MainMenu: React.FC = () => {
                 </div>
               </div>
 
-              {/* Scrollable Setup parameters */}
               <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 space-y-4 sm:space-y-6 text-left">
                   
-                  {/* Goal tier selectors */}
                   <div>
                     <h3 className="text-[8.5px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400/80 flex items-center gap-1.5 mb-2 sm:mb-3">
                         <Target className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-indigo-400" /> {t.COL_GOAL_TITLE}
                     </h3>
                     <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
-                        {[1, 2, 3].map(id => {
+                        {tierIds.map(id => {
                               const tier = MISSION_TIERS[id as 1|2|3];
                               const isSelected = selectedTier === id;
                               const Icon = tier.icon;
@@ -1541,10 +1407,8 @@ const MainMenu: React.FC = () => {
 
                   <div className="h-px bg-white/5 w-full" />
 
-                  {/* Settings Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-5">
                       
-                      {/* Left: Terrain selection */}
                       <div className="flex flex-col">
                         <div className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 shadow-lg hover:bg-white/8 transition-all h-full">
                             <div className="flex flex-col text-left">
@@ -1575,7 +1439,6 @@ const MainMenu: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Right: Opponents count */}
                       <div className="flex flex-col">
                         <div className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 shadow-lg hover:bg-white/8 transition-all h-full">
                             <div className="flex flex-col text-left flex-1">
@@ -1618,7 +1481,6 @@ const MainMenu: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Cargo Capacity Selection */}
                       <div className="col-span-1 sm:col-span-2 bg-white/5 border border-white/5 hover:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 shadow-lg hover:bg-white/8 transition-all">
                           <div className="flex flex-col text-left flex-1">
                               <h3 className="text-[8.5px] sm:text-[10.5px] md:text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
@@ -1659,7 +1521,6 @@ const MainMenu: React.FC = () => {
                           </div>
                       </div>
 
-                      {/* STARTING ARTIFACT & BONUSES SECTION */}
                       <div className="col-span-1 sm:col-span-2 border-t border-white/5 pt-4">
                           <h3 className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
                               <Cpu className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-indigo-400" />
@@ -1667,21 +1528,12 @@ const MainMenu: React.FC = () => {
                           </h3>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* Starting Gear (Artifacts) */}
                               <div className="bg-white/2 border border-white/5 hover:border-indigo-500/15 rounded-xl p-3 sm:p-4 transition-all">
                                   <span className="text-[8px] sm:text-[9.5px] font-black text-slate-300 uppercase tracking-widest block mb-2">
                                       {language === 'RU' ? 'НАЧАЛЬНЫЙ АРТЕФАКТ' : 'STARTING ARTIFACT'}
                                   </span>
                                   <div className="grid grid-cols-4 gap-1.5">
-                                      {[
-                                          { id: 'NONE', label: language === 'RU' ? 'Нет' : 'None' },
-                                          { id: 'fuel_cell', label: language === 'RU' ? 'Топливо' : 'Fuel Cell' },
-                                          { id: 'data_disc', label: language === 'RU' ? 'Диск' : 'Data Disc' },
-                                          { id: 'raw_container', label: language === 'RU' ? 'Ящик' : 'Container' },
-                                          { id: 'reality_patch', label: language === 'RU' ? 'Патч' : 'Patch' },
-                                          { id: 'void_core', label: language === 'RU' ? 'Ядро' : 'Void Core' },
-                                          { id: 'architect_nanites', label: language === 'RU' ? 'Наниты' : 'Nanites' }
-                                      ].map(art => {
+                                      {artifactsList.map(art => {
                                           const isSelected = startingArtifactId === art.id;
                                           return (
                                               <button
@@ -1709,14 +1561,13 @@ const MainMenu: React.FC = () => {
                                   </p>
                               </div>
 
-                              {/* Starting Resource Bonuses */}
                               <div className="bg-white/2 border border-white/5 rounded-xl p-3 sm:p-4 flex flex-col justify-between">
                                   <div>
                                       <span className="text-[8px] sm:text-[9.5px] font-black text-slate-300 uppercase tracking-widest block mb-1.5">
                                           {language === 'RU' ? 'НАЧАЛЬНЫЕ СУБСИДИИ (КРЕДИТЫ)' : 'STARTING CREDIT ALLOCATIONS'}
                                       </span>
                                       <div className="flex gap-1 mb-3">
-                                          {[0, 20, 50, 100].map(val => (
+                                          {creditBonuses.map(val => (
                                               <button
                                                   key={val}
                                                   onClick={() => { setStartingCreditsBonus(val); playUiSound('CLICK'); }}
@@ -1735,7 +1586,7 @@ const MainMenu: React.FC = () => {
                                           {language === 'RU' ? 'АВАРИЙНЫЕ ЭНЕРГО-РЕЗЕРВЫ (ХОДЫ)' : 'EMERGENCY ENERGY ALLOCATIONS'}
                                       </span>
                                       <div className="flex gap-1">
-                                          {[0, 5, 10, 20].map(val => (
+                                          {moveBonuses.map(val => (
                                               <button
                                                   key={val}
                                                   onClick={() => { setStartingMovesBonus(val); playUiSound('CLICK'); }}
@@ -1754,7 +1605,6 @@ const MainMenu: React.FC = () => {
                           </div>
                       </div>
 
-                      {/* ANOMALY MUTATOR SELECTION */}
                       <div className="col-span-1 sm:col-span-2 border-t border-white/5 pt-4">
                           <h3 className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
                               <Compass className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-cyan-400" />
@@ -1762,13 +1612,7 @@ const MainMenu: React.FC = () => {
                           </h3>
                           
                           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                              {[
-                                  { id: 'NONE', label: language === 'RU' ? 'Стандарт' : 'Standard' },
-                                  { id: 'SUDDEN_DEATH', label: language === 'RU' ? 'Внез. Смерть' : 'Sudden Death' },
-                                  { id: 'RICH_VEINS', label: language === 'RU' ? 'Бог. Жилы' : 'Rich Veins' },
-                                  { id: 'FRAGILE_GROUND', label: language === 'RU' ? 'Хрупкий Пол' : 'Fragile Ground' },
-                                  { id: 'NANO_STORM', label: language === 'RU' ? 'Нано-Шторм' : 'Nano-Storm' }
-                              ].map(mut => {
+                              {mutatorsList.map(mut => {
                                   const isSelected = mutatorType === mut.id;
                                   return (
                                       <button
@@ -1800,7 +1644,6 @@ const MainMenu: React.FC = () => {
                   </div>
               </div>
 
-              {/* Footer action buttons */}
               <div className="p-3 sm:p-5 border-t border-white/5 md:border-indigo-500/20 bg-white/2 backdrop-blur-md flex items-center justify-between gap-3 shrink-0 flex-row">
                   <div className="flex flex-col text-left leading-tight">
                       <span className="text-[7.5px] sm:text-[9px] text-slate-500 font-black uppercase tracking-wider">{t.EST_REWARD}</span>
@@ -1841,8 +1684,6 @@ const MainMenu: React.FC = () => {
         </motion.div>
       )}
       </AnimatePresence>
-
-
 
     </div>
   );

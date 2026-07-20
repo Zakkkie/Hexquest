@@ -419,8 +419,10 @@ const StoryBuilderView: React.FC = () => {
         isUnmountingRef.current = false;
         return () => {
             isUnmountingRef.current = true;
-            if (storeUpdateTimeoutRef.current) {
-                clearTimeout(storeUpdateTimeoutRef.current);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+            const currentTimeout = storeUpdateTimeoutRef.current;
+            if (currentTimeout) {
+                clearTimeout(currentTimeout);
             }
         };
     }, []);

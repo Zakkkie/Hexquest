@@ -202,11 +202,37 @@ export class TurretSystem implements System {
           if (candidates.length > 0) {
               return candidates[Math.floor(Math.random() * candidates.length)];
           }
-          const angle = Math.random() * Math.PI * 2;
-          return {
-              q: Math.round(Math.cos(angle) * mapRadius),
-              r: Math.round(Math.sin(angle) * mapRadius)
-          };
+          // Fallback: spawn on outer rim (exact hexagonal boundary coordinates)
+          const side = Math.floor(Math.random() * 6);
+          const i = Math.floor(Math.random() * mapRadius);
+          let q = 0, r = 0;
+          switch (side) {
+              case 0:
+                  q = mapRadius - i;
+                  r = i;
+                  break;
+              case 1:
+                  q = -i;
+                  r = mapRadius;
+                  break;
+              case 2:
+                  q = -mapRadius;
+                  r = mapRadius - i;
+                  break;
+              case 3:
+                  q = -mapRadius + i;
+                  r = -i;
+                  break;
+              case 4:
+                  q = i;
+                  r = -mapRadius;
+                  break;
+              case 5:
+                  q = mapRadius;
+                  r = -mapRadius + i;
+                  break;
+          }
+          return { q, r };
       };
 
       let spawnedCount = 0;

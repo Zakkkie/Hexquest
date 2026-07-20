@@ -145,45 +145,35 @@ export class VictorySystem implements System {
             const isCampaignLoss = state.activeLevelConfig.hooks.checkLossCondition(state, _index);
             if (isCampaignLoss) {
                 const lvlId = state.activeLevelConfig.id;
-                let allowed = false;
                 let customMsg: string | undefined = undefined;
 
                 // Rule 1: Time/Turn Limit
                 if (lvlId === '2.9' && (((state as any)._clock ?? 6) <= 0)) {
-                    allowed = true;
                     customMsg = state.language === 'RU' ? '⏱️ ПОРАЖЕНИЕ: Время вышло!' : '⏱️ DEFEAT: Time is up!';
-                }
-                if (lvlId === '3.2' && (Date.now() - state.sessionStartTime >= 180000)) {
-                    allowed = true;
+                } else if (lvlId === '3.2' && (Date.now() - state.sessionStartTime >= 180000)) {
                     customMsg = state.language === 'RU' ? '⏱️ ПОРАЖЕНИЕ: Лимит времени (180с) исчерпан!' : '⏱️ DEFEAT: Time limit (180s) exceeded!';
-                }
-                if (lvlId === '5.5' && ((state.currentTurn ?? 0) >= 20)) {
-                    allowed = true;
+                } else if (lvlId === '5.5' && ((state.currentTurn ?? 0) >= 20)) {
                     customMsg = state.language === 'RU' ? '⏱️ ПОРАЖЕНИЕ: Превышен лимит в 20 ходов!' : '⏱️ DEFEAT: 20-turn limit exceeded!';
                 }
 
                 // Rule 3: Bot activated final monument first
                 const onMon = state.bots?.some((b: any) => state.grid[getHexKey(b.q, b.r)]?.structureType === 'MONUMENT');
                 if (onMon) {
-                    allowed = true;
                     customMsg = state.language === 'RU' ? '🤖 ПОРАЖЕНИЕ: Соперник активировал Монумент первым!' : '🤖 DEFEAT: Rival activated the Monument first!';
                 }
 
-                // If this is an allowed campaign failure, trigger defeat
-                if (allowed) {
-                    state.gameStatus = 'DEFEAT';
-                    const msg = customMsg || 'Critical Mission Failure';
-                    state.messageLog.unshift({
-                        id: `lose-camp-${Date.now()}`,
-                        text: msg,
-                        type: 'ERROR',
-                        source: 'SYSTEM',
-                        timestamp: Date.now()
-                    });
-                    events.push(GameEventFactory.create('DEFEAT', msg, state.player.id));
-                    this.generateLeaderboardEvent(state, events);
-                    return;
-                }
+                state.gameStatus = 'DEFEAT';
+                const msg = customMsg || 'Critical Mission Failure';
+                state.messageLog.unshift({
+                    id: `lose-camp-${Date.now()}`,
+                    text: msg,
+                    type: 'ERROR',
+                    source: 'SYSTEM',
+                    timestamp: Date.now()
+                });
+                events.push(GameEventFactory.create('DEFEAT', msg, state.player.id));
+                this.generateLeaderboardEvent(state, events);
+                return;
             }
         }
     }

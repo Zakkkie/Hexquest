@@ -516,6 +516,7 @@ export const LevelEditorView: React.FC = () => {
     });
     // Trigger viewport auto-fit
     autoFitView();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapSize]);
 
   // Load a coordinate template preset

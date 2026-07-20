@@ -191,7 +191,7 @@ export const ItemIcon: React.FC<{ item?: Item, def?: any, size?: string, opacity
             draw();
         }
 
-    }, [item, def, opacity, grayscale]);
+    }, [item, def, opacity, grayscale, silhouette]);
 
     return <canvas ref={canvasRef} width={64} height={64} className={`${size} object-contain`} />;
 };

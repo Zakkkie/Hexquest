@@ -133,6 +133,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         let isDestroyed = false;
         pixiAppRef.current = new PIXI.Application();
         app = pixiAppRef.current;
+        const currentTickerCallback = tickerCallbackRef.current;
 
         const initPixi = async () => {
             try {
@@ -163,7 +164,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             particlesContainerRef.current = particlesContainer;
             world.addChild(particlesContainer);
 
-            if (app!.ticker) app!.ticker.add(tickerCallbackRef.current);
+            if (app!.ticker) app!.ticker.add(currentTickerCallback);
             if (dimensions && app!.renderer) app!.renderer.resize(dimensions.width, dimensions.height);
             setIsPixiReady(true);
         };
@@ -176,7 +177,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             if (activeActionParticles.current.length > 0) { activeActionParticles.current.forEach(p => { try { p.graphics.destroy(); } catch (err) {} }); activeActionParticles.current = []; }
             if (pixiAppRef.current === app) {
                 pixiAppRef.current = null;
-                if (app?.ticker) { try { app.ticker.remove(tickerCallbackRef.current); } catch (e) {} }
+                if (app?.ticker) { try { app.ticker.remove(currentTickerCallback); } catch (e) {} }
                 try { app?.destroy(true, { children: true }); } catch (e) {}
                 worldContainerRef.current = null; renderItemsContainerRef.current = null; connectionsGraphicsRef.current = null; effectsContainerRef.current = null; particlesContainerRef.current = null;
             }

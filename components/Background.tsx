@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, memo } from 'react';
 import { useGameStore } from '../store.ts';
 
@@ -10,83 +9,108 @@ const HEX_SIZE = 40;
 const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
 const HEX_HEIGHT = 2 * HEX_SIZE;
 
+// Предрассчитанные точки гексагона для оптимизации (избегаем тригонометрии в цикле)
+const HEX_POINTS = Array.from({ length: 6 }, (_, i) => {
+  const angle = (Math.PI / 180) * (60 * i + 30);
+  return { x: HEX_SIZE * Math.cos(angle), y: HEX_SIZE * Math.sin(angle) };
+});
+
+interface Star {
+  x: number;
+  y: number;
+  size: number;
+  alpha: number;
+  speed: number;
+  angleOffset: number;
+}
+
+interface Meteor {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+}
+
 const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
     let animationFrameId: number;
     let time = 0;
     let smoothEntropy = 0;
-
+    
+    // FPS Throttling
     const TARGET_FPS = variant === 'MENU' ? 60 : 30; 
     const FRAME_INTERVAL = 1000 / TARGET_FPS;
     let lastFrameTime = 0;
 
-    // Starfield for Game Mode
-    const stars: { x: number; y: number; size: number; alpha: number; speed: number; angleOffset: number }[] = [];
-    if (variant === 'GAME') {
-        const starCount = 150;
-        for(let i=0; i<starCount; i++) {
-            stars.push({
-                x: Math.random() * window.innerWidth,
-                y: Math.random() * window.innerHeight,
-                size: Math.random() * 2,
-                alpha: Math.random() * 0.8 + 0.2,
-                speed: Math.random() * 0.2,
-                angleOffset: Math.random() * Math.PI * 2
-            });
-        }
-    }
+    let stars: Star[] = [];
+    const meteors: Meteor[] = [];
 
-    const handleResize = () => {
-      if (canvas) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight * (variant === 'MENU' ? 1.5 : 1.0);
+    // Безопасная инициализация размеров с учетом Retina (DPR)
+    const setupCanvas = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // Ограничиваем 2x для производительности
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Сброс
+      ctx.scale(dpr, dpr);
+      
+      // Инициализация звезд только при ресайзе или старте
+      if (variant === 'GAME') {
+        stars = Array.from({ length: 150 }, () => ({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          size: Math.random() * 1.5 + 0.5,
+          alpha: Math.random() * 0.6 + 0.4,
+          speed: Math.random() * 0.2,
+          angleOffset: Math.random() * Math.PI * 2
+        }));
       }
     };
-    window.addEventListener('resize', handleResize);
-    handleResize();
 
-    const drawHex = (x: number, y: number, size: number, color: string, height: number, strokeColor: string) => {
-      const rotationDeg = 0; 
-      
-      // Draw and fill the main hex
+    setupCanvas();
+    window.addEventListener('resize', setupCanvas);
+
+    const drawHex = (x: number, y: number, color: string, height: number, strokeColor: string, lineWidth: number) => {
       ctx.beginPath();
-      const startAngleRad = (Math.PI / 180) * (30 + rotationDeg);
-      ctx.moveTo(x + size * Math.cos(startAngleRad), y + size * Math.sin(startAngleRad));
+      ctx.moveTo(x + HEX_POINTS[0].x, y + HEX_POINTS[0].y);
       for (let i = 1; i < 6; i++) {
-        const angle_deg = 60 * i + 30 + rotationDeg;
-        const angle_rad = Math.PI / 180 * angle_deg;
-        ctx.lineTo(x + size * Math.cos(angle_rad), y + size * Math.sin(angle_rad));
+        ctx.lineTo(x + HEX_POINTS[i].x, y + HEX_POINTS[i].y);
       }
       ctx.closePath();
       
       ctx.fillStyle = color;
       ctx.fill();
 
-      // Stroke the main hex before starting secondary paths
       ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 1 + height * 2;
+      ctx.lineWidth = lineWidth;
       ctx.stroke();
 
-      // Draw inner glowing hex if height is significant
-      if (height > 0.2) {
+      // Внутреннее свечение
+      if (height > 0.3) {
+        const innerSize = 1 - height * 0.5;
         ctx.beginPath();
-        const innerSize = size * (1 - height * 0.5); 
-        const innerStartAngleRad = (Math.PI / 180) * (30 + rotationDeg);
-        ctx.moveTo(x + innerSize * Math.cos(innerStartAngleRad), y + innerSize * Math.sin(innerStartAngleRad));
+        ctx.moveTo(x + HEX_POINTS[0].x * innerSize, y + HEX_POINTS[0].y * innerSize);
         for (let i = 1; i < 6; i++) {
-          const angle_deg = 60 * i + 30 + rotationDeg;
-          const angle_rad = Math.PI / 180 * angle_deg;
-          ctx.lineTo(x + innerSize * Math.cos(angle_rad), y + innerSize * Math.sin(angle_rad));
+          ctx.lineTo(x + HEX_POINTS[i].x * innerSize, y + HEX_POINTS[i].y * innerSize);
         }
         ctx.closePath();
-        ctx.fillStyle = `rgba(255, 255, 255, ${height * 0.2})`;
+        // Используем чистый rgba формат, корректный для alpha:false
+        ctx.fillStyle = `rgba(255, 255, 255, ${height * 0.15})`;
         ctx.fill();
       }
     };
@@ -102,15 +126,17 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
 
       const state = useGameStore.getState();
       const isLiteMode = state.isLiteMode;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
 
+      // Очистка фона (fillRect быстрее чем clearRect для alpha:false)
       if (isLiteMode) {
           ctx.fillStyle = '#020617';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillRect(0, 0, w, h);
           return;
       }
 
       if (variant === 'GAME') {
-          // Fetch entropy without triggering React re-renders for maximum performance
           const entropy = state.session?.entropy;
           let targetDangerRatio = 0;
           if (entropy && entropy.max > 0) {
@@ -118,16 +144,13 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
               targetDangerRatio = 1.0 - currentRatio;
           }
 
-          // Smooth interpolation for visual transitions
           smoothEntropy += (targetDangerRatio - smoothEntropy) * 0.05;
 
-          // Background Color Interpolation using a cubic Hermite spline for smoother transitions
           const smoothstep = (x: number) => x * x * (3 - 2 * x);
           
-          // Interpolation points: 0.0 (Base), 0.5 (Mid), 1.0 (Crit)
           const base = { r: 2, g: 6, b: 23 };
-          const mid = { r: 35, g: 15, b: 35 }; // Adjusted mid-point
-          const crit = { r: 60, g: 5, b: 5 };  // Adjusted crit-point
+          const mid = { r: 35, g: 15, b: 35 }; 
+          const crit = { r: 60, g: 5, b: 5 };  
           
           let bgR, bgG, bgB;
           if (smoothEntropy <= 0.5) {
@@ -142,13 +165,11 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
               bgB = mid.b + (crit.b - mid.b) * f;
           }
           
-          ctx.fillStyle = `rgb(${bgR}, ${bgG}, ${bgB})`;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = `rgb(${bgR | 0}, ${bgG | 0}, ${bgB | 0})`; // Побитовое ИЛИ для быстрого округления
+          ctx.fillRect(0, 0, w, h);
 
-          // Nebula Effects (2 glowing orbs)
+          // Туманности (Nebula Orbs)
           if (smoothEntropy > 0) {
-              const w = canvas.width, h = canvas.height;
-              // Nebula 1: Slow orbit
               const n1x = w * 0.5 + Math.sin(time * 5) * w * 0.25;
               const n1y = h * 0.5 + Math.cos(time * 3) * h * 0.25;
               const grad1 = ctx.createRadialGradient(n1x, n1y, 0, n1x, n1y, Math.max(w, h) * 0.6);
@@ -157,7 +178,6 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
               ctx.fillStyle = grad1;
               ctx.fillRect(0, 0, w, h);
 
-              // Nebula 2: Opposite orbit
               const n2x = w * 0.5 + Math.sin(time * 4 + Math.PI) * w * 0.3;
               const n2y = h * 0.5 + Math.cos(time * 6) * h * 0.3;
               const grad2 = ctx.createRadialGradient(n2x, n2y, 0, n2x, n2y, Math.max(w, h) * 0.5);
@@ -167,18 +187,18 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
               ctx.fillRect(0, 0, w, h);
           }
 
-          // Starfield
-          // Stars shift color from white -> yellow -> red based on entropy
-          const sR = Math.floor(255 - smoothEntropy * 35);
-          const sG = Math.floor(255 - smoothEntropy * 150);
-          const sB = Math.floor(255 - smoothEntropy * 255);
+          // Звезды
+          const sR = 255 - (smoothEntropy * 35) | 0;
+          const sG = 255 - (smoothEntropy * 150) | 0;
+          const sB = 255 - (smoothEntropy * 255) | 0;
           ctx.fillStyle = `rgb(${sR}, ${sG}, ${sB})`;
 
-          const speedMultiplier = 1 + (smoothEntropy * 8); // Speed up as entropy rises
-          const driftX = Math.sin(time * 2) * 0.1 * speedMultiplier; // Slight horizontal sway
+          const speedMultiplier = 1 + (smoothEntropy * 8);
+          const driftX = Math.sin(time * 2) * 0.1 * speedMultiplier;
 
-          stars.forEach(star => {
-              ctx.globalAlpha = star.alpha * (0.8 + Math.sin(time * 10 + star.angleOffset) * 0.2); // Twinkle
+          for (let i = 0; i < stars.length; i++) {
+              const star = stars[i];
+              ctx.globalAlpha = star.alpha * (0.8 + Math.sin(time * 10 + star.angleOffset) * 0.2);
               ctx.beginPath();
               ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
               ctx.fill();
@@ -187,21 +207,67 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
               star.x += driftX;
 
               if (star.y < 0) {
-                  star.y = canvas.height;
-                  star.x = Math.random() * canvas.width;
+                  star.y = h;
+                  star.x = Math.random() * w;
               }
-              if (star.x < 0) star.x = canvas.width;
-              if (star.x > canvas.width) star.x = 0;
-          });
+              if (star.x < 0) star.x = w;
+              if (star.x > w) star.x = 0;
+          }
           ctx.globalAlpha = 1.0;
 
-      } else {
-          // --- MENU MODE: BREATHING HEXES ---
-          ctx.fillStyle = '#020617'; 
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // Метеоры при высокой энтропии (Визуальное улучшение)
+          if (smoothEntropy > 0.6 && Math.random() < 0.05) {
+              meteors.push({
+                  x: Math.random() * w,
+                  y: -20,
+                  vx: -Math.random() * 4 - 2,
+                  vy: Math.random() * 6 + 4,
+                  life: 0,
+                  maxLife: 60 + Math.random() * 30
+              });
+          }
 
-          const numCols = Math.ceil(canvas.width / HEX_WIDTH) + 2;
-          const numRows = Math.ceil(canvas.height / (HEX_HEIGHT * 0.75)) + 4;
+          for (let i = meteors.length - 1; i >= 0; i--) {
+              const m = meteors[i];
+              m.life++;
+              m.x += m.vx;
+              m.y += m.vy;
+              
+              if (m.life > m.maxLife || m.y > h) {
+                  meteors.splice(i, 1);
+                  continue;
+              }
+
+              const alpha = 1 - (m.life / m.maxLife);
+              ctx.beginPath();
+              ctx.moveTo(m.x, m.y);
+              ctx.lineTo(m.x - m.vx * 4, m.y - m.vy * 4);
+              ctx.strokeStyle = `rgba(255, 100, 100, ${alpha})`;
+              ctx.lineWidth = 2;
+              ctx.stroke();
+          }
+
+          // Виньетка для фокуса (Визуальное улучшение)
+          const vignette = ctx.createRadialGradient(w/2, h/2, Math.min(w, h) * 0.3, w/2, h/2, Math.max(w, h) * 0.7);
+          vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+          vignette.addColorStop(1, `rgba(0, 0, 0, ${0.6 + smoothEntropy * 0.2})`);
+          ctx.fillStyle = vignette;
+          ctx.fillRect(0, 0, w, h);
+
+      } else {
+          // --- MENU MODE: NEON BREATHING HEXES ---
+          ctx.fillStyle = '#020617'; 
+          ctx.fillRect(0, 0, w, h);
+
+          // Легкое свечение из центра меню (Визуальное улучшение)
+          const centerGlow = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.5);
+          centerGlow.addColorStop(0, 'rgba(31, 41, 55, 0.4)');
+          centerGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = centerGlow;
+          ctx.fillRect(0, 0, w, h);
+
+          const numCols = Math.ceil(w / HEX_WIDTH) + 2;
+          const numRows = Math.ceil(h / (HEX_HEIGHT * 0.75)) + 4;
           const flyOffset = (time * 20) % (HEX_HEIGHT * 1.5);
 
           for (let r = -2; r < numRows; r++) {
@@ -216,13 +282,27 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
                const height = Math.max(0, rawH);
 
                let color = '#0f172a'; 
-               const stroke = `rgba(71, 85, 105, ${0.2 + height * 0.4})`;
+               let stroke = `rgba(71, 85, 105, ${0.2 + height * 0.4})`;
+               let lw = 1;
 
-               if (height > 0.6) color = '#1e3a8a';
-               if (height > 0.8) color = '#b45309';
-               if (height > 0.9) color = '#0284c7';
+               // Неоновые цвета при высокой "высоте"
+               if (height > 0.6) {
+                   color = '#1e293b'; 
+                   stroke = `rgba(99, 102, 241, ${0.5 + height * 0.3})`; // Индиго
+                   lw = 1.5;
+               }
+               if (height > 0.8) {
+                   color = '#1e1b4b'; 
+                   stroke = `rgba(129, 140, 248, ${0.6 + height * 0.4})`; // Светлый индиго
+                   lw = 2;
+               }
+               if (height > 0.95) {
+                   color = '#312e81'; 
+                   stroke = `rgba(199, 210, 254, 0.9)`; // Почти белый
+                   lw = 2.5;
+               }
                
-               drawHex(cx, cy, HEX_SIZE, color, height, stroke);
+               drawHex(cx, cy, color, height, stroke, lw);
             }
           }
       }
@@ -231,12 +311,12 @@ const Background: React.FC<BackgroundProps> = ({ variant = 'MENU' }) => {
     animationFrameId = requestAnimationFrame(render);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', setupCanvas);
       cancelAnimationFrame(animationFrameId);
     };
   }, [variant]);
 
-  return <canvas ref={canvasRef} className="w-full h-full block" />;
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />;
 };
 
 export default memo(Background);
