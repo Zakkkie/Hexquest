@@ -1,4 +1,4 @@
-import { Hex, Entity } from '../types';
+import { Hex, Entity, HexCoord } from '../types';
 import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
@@ -368,4 +368,75 @@ export const findBestDigTargets = (
     }
 
     return candidates.sort((a, b) => b.score - a.score).slice(0, limit);
+};
+
+export const findBestBuildTarget = (
+    bot: Entity,
+    grid: Record<string, Hex>,
+    index: WorldIndex,
+    navObstacles: HexCoord[],
+    claimedSet: Set<string>,
+    blacklisted: string[],
+    reachable: Set<string>,
+    options?: { allowPlayerOwner?: boolean; campaignScoring?: boolean }
+): Hex | null => {
+    const botPos = { q: bot.q, r: bot.r };
+    let bestBuild: Hex | null = null;
+    let bestScore = -9999;
+
+    for (const id of reachable) {
+        const hex = grid[id];
+        if (!hex || hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
+        
+        if (options?.allowPlayerOwner) {
+            if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
+        } else {
+            if (hex.ownerId && hex.ownerId !== bot.id) continue;
+        }
+
+        if (hex.currentLevel > bot.playerLevel && cubeDistance(botPos, hex) > 0) continue;
+        if (claimedSet.has(hex.id) || blacklisted.includes(hex.id)) continue;
+
+        const check = checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, navObstacles);
+        if (check.canGrow) {
+            const d = cubeDistance(botPos, hex);
+            let score = 0;
+            if (options?.campaignScoring) {
+                score = -d;
+                if (hex.currentLevel === 0) score += 5;
+            } else {
+                score = -d * 2;
+                score += hex.currentLevel * 50;
+                if (d === 0) score += 20;
+                if (hex.ownerId === bot.id) score += 10;
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestBuild = hex;
+            }
+        } else if (check.missingSupports && check.missingSupports.length > 0) {
+            const resolved = resolveBuildChain(hex, bot, grid, index, 0);
+            if (resolved && reachable.has(resolved.hex.id) && !blacklisted.includes(resolved.hex.id)) {
+                const d = cubeDistance(botPos, resolved.hex);
+                let score = 0;
+                if (options?.campaignScoring) {
+                    score = -d;
+                    if (resolved.hex.currentLevel === 0) score += 5;
+                } else {
+                    score = -d * 2;
+                    score += resolved.hex.currentLevel * 50;
+                    if (d === 0) score += 20;
+                    if (resolved.hex.ownerId === bot.id) score += 10;
+                }
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestBuild = resolved.hex;
+                }
+            }
+        }
+    }
+
+    return bestBuild;
 };

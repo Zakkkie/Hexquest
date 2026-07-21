@@ -1,426 +1,401 @@
-import React, { useEffect, useRef } from 'react';
-import { audioService } from '../services/audioService';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '../store';
+import { audioService } from '../services/audioService';
+import { ArrowRight, RotateCcw, LogOut, Trophy } from 'lucide-react';
 
-// Helper: draw hexagon wireframe on canvas
-const drawHexagonShell = (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    size: number
-) => {
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i + Math.PI / 6;
-        const hX = x + size * Math.cos(angle);
-        const hY = y + size * Math.sin(angle);
-        if (i === 0) ctx.moveTo(hX, hY);
-        else ctx.lineTo(hX, hY);
+// --- THEME CONFIGURATION ---
+type ThemeType = 'NEON_CASCADE' | 'CRIMSON_RIFT' | 'QUANTUM_VOID' | 'GOLDEN_SINGULARITY';
+
+interface ThemeConfig {
+    bgGradient: string;
+    primaryColor: string;
+    secondaryColor: string;
+    accentColor: string;
+    particleType: 'rain' | 'sparks' | 'dust' | 'fractals';
+    titleText: string;
+    logs: string[];
+}
+
+const getThemeForLevel = (levelId: string | undefined, language: 'RU' | 'EN'): ThemeConfig => {
+    const series = levelId ? levelId.split('.')[0] : '1';
+    const isRu = language === 'RU';
+
+    switch (series) {
+        case '2':
+            return {
+                bgGradient: 'from-red-950 via-rose-950 to-slate-950',
+                primaryColor: '#ef4444',
+                secondaryColor: '#f97316',
+                accentColor: '#fbbf24',
+                particleType: 'sparks',
+                titleText: isRu ? 'КРАСНЫЙ РАЗЛОМ' : 'CRIMSON RIFT',
+                logs: isRu ? ['[ЯДРО] Тепловой коллапс предотвращен', '[ЭНТРОПИЯ] Стабилизация разлома: 100%', '[СИСТЕМА] Багровый сектор очищен'] : ['[CORE] Thermal collapse averted', '[ENTROPY] Rift stabilization: 100%', '[SYSTEM] Crimson sector purged']
+            };
+        case '3':
+            return {
+                bgGradient: 'from-purple-950 via-indigo-950 to-slate-950',
+                primaryColor: '#a855f7',
+                secondaryColor: '#6366f1',
+                accentColor: '#d946ef',
+                particleType: 'dust',
+                titleText: isRu ? 'КВАНТОВАЯ ПУСТОТА' : 'QUANTUM VOID',
+                logs: isRu ? ['[ВАКУУМ] Квантовая пена осела', '[ДАННЫЕ] Парадоксы разрешены', '[ЯДРО] Пустота синхронизирована'] : ['[VACUUM] Quantum foam settled', '[DATA] Paradoxes resolved', '[CORE] Void synchronized']
+            };
+        case '4':
+        case '5':
+            return {
+                bgGradient: 'from-amber-950 via-yellow-900 to-slate-950',
+                primaryColor: '#f59e0b',
+                secondaryColor: '#eab308',
+                accentColor: '#ffffff',
+                particleType: 'fractals',
+                titleText: isRu ? 'ЗОЛОТАЯ СИНГУЛЯРНОСТЬ' : 'GOLDEN SINGULARITY',
+                logs: isRu ? ['[СИНГУЛЯРНОСТЬ] Предел достигнут', '[ЭНЕРГИЯ] Золотое сечение активно', '[СИСТЕМА] Абсолютный резонанс'] : ['[SINGULARITY] Limit reached', '[ENERGY] Golden ratio active', '[SYSTEM] Absolute resonance']
+            };
+        case '1':
+        default:
+            return {
+                bgGradient: 'from-emerald-950 via-cyan-950 to-slate-950',
+                primaryColor: '#10b981',
+                secondaryColor: '#06b6d4',
+                accentColor: '#34d399',
+                particleType: 'rain',
+                titleText: isRu ? 'НЕОНОВЫЙ КАСКАД' : 'NEON CASCADE',
+                logs: isRu ? ['[СЕТЬ] Изоляция завершена', '[ДАННЫЕ] Матрица расшифрована', '[ЯДРО] Вектор стабилен'] : ['[NET] Isolation complete', '[DATA] Matrix decrypted', '[CORE] Vector stable']
+            };
     }
-    ctx.closePath();
 };
 
-interface StreamParticle {
+// --- CANVAS PARTICLE ENGINE ---
+interface Particle {
     x: number;
     y: number;
+    vx: number;
+    vy: number;
     size: number;
-    speed: number;
-    angle: number;
-    rotationSpeed: number;
-    char: string;
-    opacity: number;
+    life: number;
+    maxLife: number;
     color: string;
+    rotation: number;
+    vr: number;
 }
 
-interface PulseWave {
-    x: number;
-    y: number;
-    radius: number;
-    maxRadius: number;
-    speed: number;
-    opacity: number;
-    color: string;
+interface VictorySequenceProps {
+    isActive: boolean;
+    levelId?: string;
+    score?: number;
+    onRetry: () => void;
+    onNext: () => void;
+    onMenu: () => void;
 }
 
-const CONSOLE_LOGS_RU = [
-    "[СИСТЕМА] Инициализация протокола извлечения...",
-    "[ЯДРО] Вектор стабильности зафиксирован на 100%",
-    "[СЕТЬ] Подключение к симуляции Nebula-Sector...",
-    "[ДАННЫЕ] Расшифровка структуры гексагонального слоя...",
-    "[ГЕОЛОГИЯ] Стабилизация высотных аномалий: завершено",
-    "[БЮДЖЕТ] Сведение экономических балансов сектора...",
-    "[КОД] Сборка нанитов архитектора: СТАТУС_ОК",
-    "[СВЯЗЬ] Передача матрицы ресурсов завершена успешно!",
-    "[БЕЗОПАСНОСТЬ] Вектор перемещения возвращен в гипер-ядро."
-];
-
-const CONSOLE_LOGS_EN = [
-    "[SYSTEM] Initializing extraction protocol...",
-    "[CORE] Stability vector locked at 100%",
-    "[NEBULA] Linking to Nebula-Sector simulation...",
-    "[DATA] Decrypting hex-layer spatial array...",
-    "[GEOLOGY] Stabilizing elevation anomalies: COMPLETE",
-    "[BUDGET] Aggregating economic sector ledger...",
-    "[CODE] Architect nanites compilation: STATUS_OK",
-    "[COMM] Resource matrix data stream finalized!",
-    "[SECURITY] Transferring energetic vector to hyper-core."
-];
-
-interface FireworksProps {
-    onComplete?: () => void;
-}
-
-const Fireworks: React.FC<FireworksProps> = ({ onComplete }) => {
+export const VictorySequence: React.FC<VictorySequenceProps> = ({ isActive, levelId, score = 0, onRetry, onNext, onMenu }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const language = useGameStore(state => state.language);
-    const logs = language === 'RU' ? CONSOLE_LOGS_RU : CONSOLE_LOGS_EN;
-    
-    // We use a ref to make sure we don't trigger onComplete multiple times
-    const isCompleteFired = useRef(false);
+    const [theme, setTheme] = useState<ThemeConfig>(getThemeForLevel(levelId, language));
+    const [visibleLogs, setVisibleLogs] = useState<string[]>([]);
+    const [showUI, setShowUI] = useState(false);
 
     useEffect(() => {
+        if (isActive) {
+            setTheme(getThemeForLevel(levelId, language));
+            audioService.play('SUCCESS');
+            const timer = setTimeout(() => audioService.play('LEVEL_UP'), 600);
+            const uiTimer = setTimeout(() => setShowUI(true), 1200);
+            return () => { clearTimeout(timer); clearTimeout(uiTimer); };
+        } else {
+            setShowUI(false);
+            setVisibleLogs([]);
+        }
+    }, [isActive, levelId, language]);
+
+    // Terminal Log Effect
+    useEffect(() => {
+        if (!isActive) return;
+        let logIndex = 0;
+        const logInterval = setInterval(() => {
+            if (logIndex < theme.logs.length) {
+                setVisibleLogs(prev => [...prev, theme.logs[logIndex]]);
+                logIndex++;
+                audioService.play('UI_HOVER');
+            } else {
+                clearInterval(logInterval);
+            }
+        }, 400);
+        return () => clearInterval(logInterval);
+    }, [isActive, theme]);
+
+    // Canvas Animation
+    useEffect(() => {
+        if (!isActive) return;
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: true });
         if (!ctx) return;
 
-        let width = window.innerWidth;
-        let height = window.innerHeight;
-        canvas.width = width;
-        canvas.height = height;
+        const dpr = window.devicePixelRatio || 1;
+        let w = window.innerWidth;
+        let h = window.innerHeight;
+        
+        const resize = () => {
+            w = window.innerWidth;
+            h = window.innerHeight;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            canvas.style.width = `${w}px`;
+            canvas.style.height = `${h}px`;
+            ctx.scale(dpr, dpr);
+        };
+        resize();
 
-        // Sound cues to celebrate victory
-        audioService.play('SUCCESS');
-        const synthTimer = setTimeout(() => {
-            audioService.play('LEVEL_UP');
-        }, 800);
-
-        // Cyber Simulation State
-        const particles: StreamParticle[] = [];
-        const pulses: PulseWave[] = [];
-        let scannerY = 0;
-        const scannerSpeed = 4;
-
-        // Ticker variables
-        const activeLogs: string[] = [];
-        let lastLogTime = 0;
-        let currentLogIndex = 0;
-
-        // Init some immediate particles
-        for (let i = 0; i < 40; i++) {
-            particles.push(spawnParticle(width, height, true));
-        }
-
-        function spawnParticle(w: number, h: number, randomY = false): StreamParticle {
-            const size = Math.random() * 25 + 10;
-            const isHex = Math.random() < 0.45;
-            const hexSymbol = isHex ? "" : (Math.random() < 0.5 ? "0x" + Math.floor(Math.random() * 256).toString(16).toUpperCase() : (Math.random() < 0.5 ? "1" : "0"));
-            return {
-                x: Math.random() * w,
-                y: randomY ? Math.random() * h : h + 30,
-                size,
-                speed: Math.random() * 2.5 + 1.2,
-                angle: Math.random() * Math.PI * 2,
-                rotationSpeed: (Math.random() - 0.5) * 0.04,
-                char: hexSymbol,
-                opacity: Math.random() * 0.6 + 0.3,
-                color: Math.random() < 0.7 ? '#10b981' : '#06b6d4' // Emerald or Cyan
-            };
-        }
-
-        // Loop execution
-        let animationFrameId: number;
+        const particles: Particle[] = [];
         let frameCount = 0;
 
+        const spawnParticle = () => {
+            const maxLife = 100 + Math.random() * 100;
+            const colorRand = Math.random();
+            const color = colorRand < 0.5 ? theme.primaryColor : colorRand < 0.8 ? theme.secondaryColor : theme.accentColor;
+
+            switch (theme.particleType) {
+                case 'rain':
+                    particles.push({
+                        x: Math.random() * w, y: -20,
+                        vx: 0, vy: Math.random() * 3 + 2,
+                        size: Math.random() * 12 + 4, life: 0, maxLife,
+                        color, rotation: 0, vr: 0
+                    });
+                    break;
+                case 'sparks':
+                    particles.push({
+                        x: w / 2 + (Math.random() - 0.5) * 100, y: h + 20,
+                        vx: (Math.random() - 0.5) * 2, vy: -(Math.random() * 4 + 3),
+                        size: Math.random() * 4 + 2, life: 0, maxLife,
+                        color, rotation: 0, vr: 0
+                    });
+                    break;
+                case 'dust':
+                    particles.push({
+                        x: Math.random() * w, y: Math.random() * h,
+                        vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5,
+                        size: Math.random() * 2 + 1, life: 0, maxLife: 200,
+                        color, rotation: 0, vr: 0
+                    });
+                    break;
+                case 'fractals':
+                    particles.push({
+                        x: w / 2, y: h / 2,
+                        vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6,
+                        size: Math.random() * 6 + 2, life: 0, maxLife: 120,
+                        color, rotation: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.1
+                    });
+                    break;
+            }
+        };
+
+        let animId: number;
         const loop = () => {
-            const isLiteMode = useGameStore.getState().isLiteMode;
-            if (isLiteMode) {
-                if (lastLogTime === 0) {
-                     lastLogTime = Date.now();
-                }
-                const now = Date.now();
-                if (now - lastLogTime > 4000) {
-                    if (onComplete && !isCompleteFired.current) {
-                        isCompleteFired.current = true;
-                        onComplete();
-                    }
-                }
-                
-                ctx.fillStyle = 'rgba(2, 6, 23, 0.9)'; 
-                ctx.fillRect(0, 0, width, height);
-                
-                ctx.save();
-                ctx.font = 'bold 18px JetBrains Mono, Courier New, monospace';
-                ctx.fillStyle = '#10b981';
-                ctx.textAlign = 'center';
-                ctx.shadowColor = 'rgba(16, 185, 129, 0.5)';
-                ctx.shadowBlur = 8;
-                ctx.fillText(
-                    language === 'RU' 
-                        ? 'ПРОЦЕСС УСПЕШНО ЗАВЕРШЕН // 100%' 
-                        : 'DEC-LINK SYNCHRONIZATION COMPLETE // 100%', 
-                    width / 2, 
-                    height / 2
-                );
-                ctx.restore();
-                
-                animationFrameId = requestAnimationFrame(loop);
-                return;
-            }
-
+            ctx.clearRect(0, 0, w, h);
             frameCount++;
-            // Clear the canvas to keep it fully transparent, preventing the underlying game from darkening
-            ctx.clearRect(0, 0, width, height);
 
-            // Laser Scanner Sweep
-            scannerY += scannerSpeed;
-            if (scannerY > height + 100) {
-                scannerY = -50;
-                // Add center explosion pulse on turnaround
-                pulses.push({
-                    x: width / 2,
-                    y: height / 2,
-                    radius: 0,
-                    maxRadius: Math.max(width, height) * 0.7,
-                    speed: 12,
-                    opacity: 0.8,
-                    color: '#06b6d4'
-                });
+            // Draw radial glow
+            const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w, h)/2);
+            grad.addColorStop(0, `${theme.primaryColor}15`); // 15 = hex opacity ~8%
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            // Spawn logic
+            if (frameCount % 3 === 0 && particles.length < 150) {
+                spawnParticle();
             }
 
-            // Radar Scan background grids
-            ctx.save();
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.03)';
-            ctx.lineWidth = 1;
-            const sizeGrid = 80;
-            for (let x = 0; x < width; x += sizeGrid) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
-                ctx.stroke();
-            }
-            for (let y = 0; y < height; y += sizeGrid) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(width, y);
-                ctx.stroke();
-            }
-            ctx.restore();
-
-            // Spawn waves periodic
-            if (frameCount % 60 === 0) {
-                pulses.push({
-                    x: Math.random() * width,
-                    y: Math.random() * height,
-                    radius: 0,
-                    maxRadius: Math.random() * 200 + 150,
-                    speed: 3.5,
-                    opacity: 0.8,
-                    color: Math.random() < 0.5 ? '#10b981' : '#ef4444'
-                });
-            }
-
-            // Update & Draw pulses
-            for (let i = pulses.length - 1; i >= 0; i--) {
-                const pulse = pulses[i];
-                pulse.radius += pulse.speed;
-                pulse.opacity -= 0.015;
-
-                if (pulse.opacity <= 0 || pulse.radius >= pulse.maxRadius) {
-                    pulses.splice(i, 1);
-                    continue;
-                }
-
-                ctx.save();
-                ctx.strokeStyle = pulse.color;
-                ctx.globalAlpha = pulse.opacity;
-                ctx.lineWidth = 1.5;
-                drawHexagonShell(ctx, pulse.x, pulse.y, pulse.radius);
-                ctx.stroke();
-
-                // Dotted inner wireframe ring
-                ctx.beginPath();
-                ctx.setLineDash([5, 10]);
-                ctx.arc(pulse.x, pulse.y, pulse.radius * 0.75, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            // Update & Draw Particles
-            if (particles.length < 55) {
-                particles.push(spawnParticle(width, height, false));
-            }
-
+            // Update & Draw
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
-                p.y -= p.speed;
-                p.angle += p.rotationSpeed;
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life++;
+                p.rotation += p.vr;
 
-                if (p.y < -50) {
+                // Physics per type
+                if (theme.particleType === 'sparks') p.vy += 0.05; // Gravity
+                if (theme.particleType === 'dust') {
+                    p.vx += (Math.random() - 0.5) * 0.1;
+                    p.vy += (Math.random() - 0.5) * 0.1;
+                }
+
+                if (p.life > p.maxLife || p.y > h + 50 || p.y < -50) {
                     particles.splice(i, 1);
                     continue;
                 }
 
-                ctx.save();
-                ctx.globalAlpha = p.opacity;
-                ctx.strokeStyle = p.color;
-                ctx.fillStyle = p.color;
+                const fadeIn = Math.min(1, p.life / 20);
+                const fadeOut = Math.min(1, (p.maxLife - p.life) / 30);
+                const alpha = Math.min(fadeIn, fadeOut);
 
-                // Draw hexagon outline vs code data stream
-                if (p.char === "") {
-                    ctx.lineWidth = 1.2;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 10;
+
+                if (theme.particleType === 'rain') {
+                    ctx.font = `bold ${p.size}px monospace`;
+                    ctx.fillText(Math.random() > 0.5 ? '0' : '1', p.x, p.y);
+                } else if (theme.particleType === 'fractals') {
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rotation);
                     ctx.beginPath();
                     for (let j = 0; j < 6; j++) {
-                        const a = p.angle + (Math.PI / 3) * j;
-                        const hX = p.x + p.size * Math.cos(a);
-                        const hY = p.y + p.size * Math.sin(a);
-                        if (j === 0) ctx.moveTo(hX, hY);
-                        else ctx.lineTo(hX, hY);
+                        const angle = (Math.PI / 3) * j;
+                        ctx.lineTo(Math.cos(angle) * p.size, Math.sin(angle) * p.size);
                     }
                     ctx.closePath();
-                    ctx.stroke();
-
-                    // Tiny dot inside hex
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
-                    ctx.font = `bold ${Math.floor(p.size * 0.8)}px Courier, monospace`;
-                    ctx.shadowColor = p.color;
-                    ctx.shadowBlur = 10;
-                    ctx.fillText(p.char, p.x, p.y);
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
                 }
                 ctx.restore();
             }
 
-            // Draw horizontal high-frequency scanning beam
-            ctx.save();
-            const sweepGlow = ctx.createLinearGradient(0, scannerY - 30, 0, scannerY + 10);
-            sweepGlow.addColorStop(0, 'rgba(6, 182, 212, 0)');
-            sweepGlow.addColorStop(0.5, 'rgba(6, 182, 212, 0.45)');
-            sweepGlow.addColorStop(0.9, 'rgba(6, 182, 212, 0.9)');
-            sweepGlow.addColorStop(1, 'rgba(6, 182, 212, 0)');
-
-            ctx.fillStyle = sweepGlow;
-            ctx.fillRect(0, scannerY - 30, width, 40);
-
-            // Laser thin core sweep line
-            ctx.strokeStyle = '#22d3ee';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo(0, scannerY);
-            ctx.lineTo(width, scannerY);
-            ctx.stroke();
-            ctx.restore();
-
-            // Holographic Ticker logic
-            const now = Date.now();
-            if (now - lastLogTime > 550 && currentLogIndex < logs.length) {
-                activeLogs.push(logs[currentLogIndex]);
-                currentLogIndex++;
-                lastLogTime = now;
-                // Periodic blip audio feedback
-                if (currentLogIndex % 2 === 0) {
-                    audioService.play('UI_HOVER');
-                }
-                if (activeLogs.length > 8) {
-                    activeLogs.shift();
-                }
-            }
-            
-            // Check for animation completion
-            if (currentLogIndex >= logs.length && now - lastLogTime > 1200) {
-                if (onComplete && !isCompleteFired.current) {
-                    isCompleteFired.current = true;
-                    onComplete();
-                }
-            }
-
-            // Draw Holographic Logs on Canvas
-            ctx.save();
-            ctx.font = 'bold 11px JetBrains Mono, Courier New, monospace';
-            ctx.fillStyle = '#10b981';
-            ctx.shadowColor = 'rgba(16, 185, 129, 0.6)';
-            ctx.shadowBlur = 10;
-            
-            // Console Header box (Responsive for Mobile)
-            const boxMargin = 20;
-            const boxWidth = Math.min(width - (boxMargin * 2), 380);
-            // Center the box instead of hardcoding 20 if it's smaller, though 20 is fine since we do width-40
-            const boxX = boxMargin; 
-            const boxY = height - 190;
-            
-            ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.roundRect(boxX, boxY, boxWidth, 160, 4);
-            ctx.fill();
-            ctx.stroke();
-
-            // Terminal brackets
-            ctx.strokeStyle = '#10b981';
-            ctx.lineWidth = 2;
-            // Top left corner
-            ctx.beginPath(); ctx.moveTo(boxX, boxY + 12); ctx.lineTo(boxX, boxY); ctx.lineTo(boxX + 12, boxY); ctx.stroke();
-            // Bottom right corner
-            ctx.beginPath(); ctx.moveTo(boxX + boxWidth, boxY + 160 - 12); ctx.lineTo(boxX + boxWidth, boxY + 160); ctx.lineTo(boxX + boxWidth - 12, boxY + 160); ctx.stroke();
-
-            // Display title
-            ctx.fillStyle = '#34d399';
-            // Adjust title for very small screens
-            const titleText = boxWidth < 280 ? "NEBULA STABLE" : "NEBULA DEC-LINK PROCESSED // STABLE";
-            ctx.fillText(titleText, boxX + 15, boxY + 22);
-            
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
-            ctx.beginPath();
-            ctx.moveTo(boxX + 15, boxY + 30);
-            ctx.lineTo(boxX + boxWidth - 15, boxY + 30);
-            ctx.stroke();
-
-            // Scrolling text
-            ctx.fillStyle = '#a7f3d0';
-            activeLogs.forEach((log, index) => {
-                // Truncate logs if they don't fit
-                const maxChars = Math.floor((boxWidth - 30) / 6.6); // roughly 6.6px per char
-                const displayLog = log.length > maxChars ? log.substring(0, maxChars - 3) + '...' : log;
-                ctx.fillText(displayLog, boxX + 15, boxY + 48 + index * 14);
-            });
-
-            // Caret blink
-            if (Math.floor(Date.now() / 400) % 2 === 0) {
-                const lastLog = activeLogs[activeLogs.length - 1] || '';
-                const maxChars = Math.floor((boxWidth - 30) / 6.6);
-                const displayLogCount = lastLog.length > maxChars ? maxChars : lastLog.length;
-                
-                const caretX = boxX + 15 + displayLogCount * 6.6;
-                const caretY = boxY + 48 + (Math.max(0, activeLogs.length - 1)) * 14 - 9;
-                ctx.fillStyle = '#10b981';
-                ctx.fillRect(caretX, caretY, 6, 11);
-            }
-            ctx.restore();
-
-            animationFrameId = requestAnimationFrame(loop);
+            animId = requestAnimationFrame(loop);
         };
 
         loop();
-
-        const handleResize = () => {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
-        };
-
-        window.addEventListener('resize', handleResize);
+        window.addEventListener('resize', resize);
         return () => {
-            clearTimeout(synthTimer);
-            window.removeEventListener('resize', handleResize);
-            cancelAnimationFrame(animationFrameId);
+            cancelAnimationFrame(animId);
+            window.removeEventListener('resize', resize);
         };
-    }, [language, logs, onComplete]);
+    }, [isActive, theme]);
 
-    return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-[130]" />;
+    if (!isActive) return null;
+
+    return (
+        <AnimatePresence>
+            <motion.div 
+                className="fixed inset-0 z-[250] flex flex-col items-center justify-center overflow-hidden pointer-events-auto"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+            >
+                {/* Canvas Background */}
+                <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
+                <div className={`absolute inset-0 bg-gradient-to-b ${theme.bgGradient} opacity-80 pointer-events-none`} />
+                <div className="absolute inset-0 bg-scanlines opacity-[0.05] pointer-events-none" />
+
+                {/* Content Container */}
+                <div className="relative z-10 flex flex-col items-center justify-between h-full w-full p-6 sm:p-10 max-w-4xl mx-auto">
+                    
+                    {/* Top: Title */}
+                    <motion.div 
+                        className="flex flex-col items-center gap-4 mt-10 sm:mt-0"
+                        initial={{ y: -50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    >
+                        <div className="flex items-center gap-2 px-4 py-1.5 bg-black/40 border rounded-full backdrop-blur-md" style={{ borderColor: `${theme.primaryColor}50` }}>
+                            <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: theme.primaryColor }} />
+                            <span className="text-[10px] font-mono font-black uppercase tracking-[0.3em]" style={{ color: theme.accentColor }}>
+                                {language === 'RU' ? 'СИНХРОНИЗАЦИЯ ЗАВЕРШЕНА' : 'SYNCHRONIZATION COMPLETE'}
+                            </span>
+                        </div>
+                        <h1 className="text-5xl sm:text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 uppercase">
+                            {language === 'RU' ? 'ПОБЕДА' : 'VICTORY'}
+                        </h1>
+                        <p className="text-xs font-mono uppercase tracking-[0.2em] text-slate-400">{theme.titleText}</p>
+                    </motion.div>
+
+                    {/* Middle: Score & Stats (If visible) */}
+                    {showUI && (
+                        <motion.div 
+                            className="flex flex-col items-center gap-6 my-8"
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 200 }}
+                        >
+                            <div className="flex flex-col items-center bg-black/30 backdrop-blur-md border border-white/10 rounded-2xl p-6 min-w-[280px]">
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+                                    <Trophy className="w-3.5 h-3.5" />
+                                    {language === 'RU' ? 'ОЧКИ РЕЙТИНГА' : 'RATING POINTS'}
+                                </div>
+                                <div className="text-4xl font-black font-mono" style={{ color: theme.primaryColor }}>
+                                    {score.toLocaleString()}
+                                </div>
+                            </div>
+                            
+                            {/* Terminal Logs Box */}
+                            <div className="w-full max-w-sm bg-black/50 border rounded-xl p-3 h-32 overflow-hidden backdrop-blur-sm" style={{ borderColor: `${theme.primaryColor}30` }}>
+                                <div className="text-[8px] font-mono uppercase tracking-widest pb-1 mb-1 border-b border-white/5" style={{ color: theme.secondaryColor }}>
+                                    SYSTEM_LOGS // SECURE
+                                </div>
+                                <div className="flex flex-col gap-1 text-[10px] font-mono">
+                                    <AnimatePresence>
+                                        {visibleLogs.map((log, i) => (
+                                            <motion.div 
+                                                key={i} 
+                                                initial={{ opacity: 0, x: -10 }} 
+                                                animate={{ opacity: 1, x: 0 }}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <span style={{ color: theme.primaryColor }}>&gt;</span>
+                                                <span className="text-slate-300">{log}</span>
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Bottom: Actions */}
+                    {showUI && (
+                        <motion.div 
+                            className="w-full max-w-sm flex flex-col gap-3 mb-10 sm:mb-0"
+                            initial={{ y: 50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                        >
+                            <motion.button 
+                                whileHover={{ scale: 1.02 }} 
+                                whileTap={{ scale: 0.98 }} 
+                                onClick={onNext}
+                                className="w-full py-4 font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg transition-all"
+                                style={{ backgroundColor: theme.primaryColor, color: '#000', boxShadow: `0 0 25px ${theme.primaryColor}50` }}
+                            >
+                                {language === 'RU' ? 'СЛЕДУЮЩИЙ УРОВЕНЬ' : 'NEXT LEVEL'}
+                                <ArrowRight className="w-5 h-5" />
+                            </motion.button>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <motion.button 
+                                    whileHover={{ scale: 1.02 }} 
+                                    whileTap={{ scale: 0.98 }} 
+                                    onClick={onRetry}
+                                    className="py-3 bg-slate-800/80 hover:bg-slate-700 text-white font-bold uppercase tracking-wider text-xs rounded-lg flex items-center justify-center gap-2 transition-all border border-white/10"
+                                >
+                                    <RotateCcw className="w-4 h-4" />
+                                    {language === 'RU' ? 'ЗАНОВО' : 'RETRY'}
+                                </motion.button>
+                                <motion.button 
+                                    whileHover={{ scale: 1.02 }} 
+                                    whileTap={{ scale: 0.98 }} 
+                                    onClick={onMenu}
+                                    className="py-3 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white font-bold uppercase tracking-wider text-xs rounded-lg flex items-center justify-center gap-2 transition-all border border-white/5"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    {language === 'RU' ? 'ВЫХОД' : 'EXIT'}
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+            </motion.div>
+        </AnimatePresence>
+    );
 };
 
-export default Fireworks;
+export default VictorySequence;

@@ -161,8 +161,8 @@ export function checkGrowthCondition(
       };
   }
 
-  // 4. STABILITY CHECK (Strict Equal Level Rule for L1+)
-  if (currentLevel >= 1) {
+  // 4. STABILITY CHECK (Strict Equal Level Rule for non-L0)
+  if (currentLevel !== 0) {
     // Exception 2: Valley Rule Exception
     // If the cell being upgraded is located in a deep ravine, surrounded by 5 or more neighbors whose heights strictly exceed the historical level of the upgraded hex:
     // Neighbors with Level > Hex.maxLevel >= 5
@@ -186,7 +186,7 @@ export function checkGrowthCondition(
       if (!isDepressionRule) {
         const supportNeighbors = neighbors.filter(n => {
            const h = grid[getHexKey(n.q, n.r)];
-           return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) >= currentLevel;
+           return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) === currentLevel;
          });
 
         if (supportNeighbors.length < 2) {

@@ -425,6 +425,22 @@ export class MovementSystem implements System {
         }
     }
 
+    // Player Fog limit check: hide opened hexes that are further than 12 hexes away
+    if (entity.type === EntityType.PLAYER) {
+        const isFogEnabled = state.activeLevelConfig?.mapConfig?.revealMode === 'fog';
+        if (isFogEnabled) {
+            for (const key of Object.keys(state.grid)) {
+                const hex = gridUpdates[key] || state.grid[key];
+                if (hex && hex.revealed) {
+                    const dToPlayer = cubeDistance({ q: entity.q, r: entity.r }, { q: hex.q, r: hex.r });
+                    if (dToPlayer > 12) {
+                        gridUpdates[key] = { ...(gridUpdates[key] || hex), revealed: false };
+                    }
+                }
+            }
+        }
+    }
+
     if (Object.keys(gridUpdates).length > 0) {
         Object.assign(state.grid, gridUpdates);
     }

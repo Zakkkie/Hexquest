@@ -5,7 +5,8 @@ import {
   Trophy, LogOut, Ghost, ArrowRight, X, LogIn, Lock, Target, Gem, Crown, 
   Bot, Volume2, VolumeX, BookOpen, Music, ChevronLeft, ChevronRight, 
   Swords, Layers, Map as MapIcon, Box, Hexagon, UserPlus, Fingerprint, User, 
-  Mountain, Crosshair, Shuffle, Settings, Minus, Plus, Compass, Check, Cpu
+  Mountain, Crosshair, Shuffle, Settings, Minus, Plus, Compass, Check, Cpu,
+  Coins, Timer
 } from 'lucide-react';
 
 import { WinCondition, Difficulty } from '../types.ts';
@@ -1307,383 +1308,321 @@ const MainMenu: React.FC = () => {
       )}
       </AnimatePresence>
 
-      <AnimatePresence>
-      {showMissionConfig && (
-        <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-slate-950/45 backdrop-blur-xl z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 pointer-events-auto"
-        >
-          <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ type: "spring", damping: 25, stiffness: 280 }}
-              className="bg-slate-950/45 border border-indigo-500/25 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-[0_0_50px_rgba(99,102,241,0.15)] w-full max-w-md sm:max-w-xl md:max-w-3xl h-full sm:h-auto max-h-[92vh] sm:max-h-[85vh] md:max-h-[90vh] relative overflow-hidden flex flex-col transition-all duration-300"
-          >
-              <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/10 blur-[60px] rounded-full pointer-events-none" />
-              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-rose-500/10 blur-[60px] rounded-full pointer-events-none" />
+     {/* COMPACT BATTLE / SKIRMISH GAME MODE CONFIGURATOR */}
+ <AnimatePresence>
+{showMissionConfig && (
+  <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 bg-slate-950/85 backdrop-blur-xl z-50 flex items-center justify-center p-2 sm:p-4 pointer-events-auto"
+  >
+    <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ type: "spring", damping: 25, stiffness: 280 }}
+        className="bg-slate-950/60 backdrop-blur-2xl border border-indigo-500/30 rounded-2xl shadow-[0_0_60px_rgba(99,102,241,0.2)] w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] relative overflow-hidden flex flex-col"
+    >
+        {/* Ambient Effects */}
+        <div className="absolute -top-20 -left-20 w-48 h-48 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-rose-500/10 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
 
-              <div className="absolute top-0 left-0 w-6 h-6 border-t border-l border-indigo-500/40 pointer-events-none rounded-tl-2xl sm:rounded-tl-3xl" />
-              <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-indigo-500/40 pointer-events-none rounded-tr-2xl sm:rounded-tr-3xl" />
-              <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-indigo-500/40 pointer-events-none rounded-bl-2xl sm:rounded-bl-3xl" />
-              <div className="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-indigo-500/40 pointer-events-none rounded-br-2xl sm:rounded-br-3xl" />
+        {/* Compact Header */}
+        <div className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 border-b border-indigo-500/20 bg-slate-900/60 shrink-0 z-10">
+            <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-rose-500/15 rounded-lg border border-rose-500/30">
+                    <Swords className="w-4 h-4 text-rose-400" />
+                </div>
+                <div className="text-left">
+                    <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-tight bg-gradient-to-r from-white via-indigo-200 to-indigo-100 bg-clip-text text-transparent leading-none">{t.CONFIG_TITLE}</h2>
+                    <p className="text-[8px] sm:text-[9px] text-emerald-400 uppercase tracking-widest font-mono font-black mt-0.5 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-emerald-400 animate-ping" /> {t.TERMINAL_ACTIVE}
+                    </p>
+                </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+                <motion.button 
+                    whileHover={{ scale: 1.1, rotate: 180 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={randomizeConfig} 
+                    className="p-2 text-slate-400 hover:text-white rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-all cursor-pointer" 
+                    title={language === 'RU' ? 'Случайно' : 'Randomize'}
+                >
+                    <Shuffle className="w-4 h-4" />
+                </motion.button>
+                <motion.button 
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowMissionConfig(false)} 
+                    className="p-2 text-slate-400 hover:text-rose-400 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-all cursor-pointer"
+                >
+                    <X className="w-4 h-4" />
+                </motion.button>
+            </div>
+        </div>
 
-              <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
+        {/* Compact Content Grid */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-3 sm:p-4 space-y-3 z-10">
+            
+            {/* SECTION 1: Mission Goal */}
+            <div>
+                <h3 className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
+                    <Target className="w-3 h-3 text-indigo-400" /> {t.COL_GOAL_TITLE}
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                    {tierIds.map(id => {
+                        const tier = MISSION_TIERS[id as 1|2|3];
+                        const isSelected = selectedTier === id;
+                        const Icon = tier.icon;
+                        return (
+                            <motion.button 
+                                whileHover={{ scale: 1.02, y: -1 }}
+                                whileTap={{ scale: 0.98 }}
+                                key={id} 
+                                onClick={() => { setSelectedTier(id as 1|2|3); setDifficulty(tier.difficulty); playUiSound('CLICK'); }}
+                                className={`relative flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all duration-300 cursor-pointer ${
+                                    isSelected 
+                                        ? 'bg-indigo-500/15 border-indigo-500/70 shadow-[0_0_15px_rgba(99,102,241,0.3)] text-white' 
+                                        : 'bg-slate-900/40 border-slate-700/50 hover:border-slate-600 text-slate-400'
+                                }`}
+                            >
+                                {isSelected && <span className="absolute top-1 right-1 w-1 h-1 rounded-full bg-indigo-400 animate-ping" />}
+                                <Icon className={`w-4 h-4 mb-1 transition-all ${isSelected ? 'text-indigo-400 scale-110' : 'text-slate-500'}`} />
+                                <span className={`text-[9px] font-black uppercase tracking-wide leading-none ${isSelected ? 'text-white' : 'text-slate-400'}`}>{tier.label}</span>
+                                <span className={`text-[7px] font-mono mt-0.5 leading-none ${isSelected ? 'text-indigo-300' : 'text-slate-600'}`}>{tier.time}</span>
+                            </motion.button>
+                        );
+                    })}
+                </div>
+            </div>
 
-              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-white/5 md:border-indigo-500/20 bg-white/2 backdrop-blur-md shrink-0">
-                <div className="flex items-center gap-2.5 sm:gap-3.5">
-                    <motion.div 
-                        whileHover={{ rotate: 15, scale: 1.05 }}
-                        className="p-2 sm:p-2.5 bg-red-500/10 border border-red-500/20 md:border-red-500/35 rounded-xl sm:rounded-2xl shadow-[0_0_15px_rgba(239,68,68,0.15)]"
-                    >
-                        <Swords className="w-4 h-4 sm:w-5.5 sm:h-5.5 text-red-500" />
-                    </motion.div>
-                    <div className="text-left">
-                        <h2 className="text-sm sm:text-lg md:text-xl font-black text-white uppercase tracking-tight bg-gradient-to-r from-white via-indigo-200 to-indigo-100 bg-clip-text text-transparent">{t.CONFIG_TITLE}</h2>
-                        <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                            <p className="text-[8px] sm:text-[10px] text-emerald-400 uppercase tracking-widest font-mono font-black">{t.TERMINAL_ACTIVE}</p>
+            {/* SECTION 2: Parameters Grid */}
+            <div>
+                <h3 className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
+                    <Cpu className="w-3 h-3 text-cyan-400" /> {language === 'RU' ? 'ПАРАМЕТРЫ' : 'PARAMETERS'}
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                    
+                    {/* Terrain */}
+                    <div className="bg-slate-900/40 border border-slate-700/50 rounded-xl p-2.5 flex flex-col gap-1.5">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                            <MapIcon className="w-3 h-3 text-cyan-400" /> {language === 'RU' ? 'Рельеф' : 'Terrain'}
+                        </span>
+                        <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/5">
+                            <button 
+                                onClick={() => { setMapType('FLAT'); playUiSound('CLICK'); }}
+                                className={`flex-1 py-1.5 rounded-md text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer ${mapType === 'FLAT' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}
+                            >
+                                {language === 'RU' ? 'Плоский' : 'Flat'}
+                            </button>
+                            <button 
+                                onClick={() => { setMapType('CHAOTIC'); playUiSound('CLICK'); }}
+                                className={`flex-1 py-1.5 rounded-md text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}
+                            >
+                                {language === 'RU' ? 'Хаос' : 'Chaos'}
+                            </button>
                         </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-1.5 sm:gap-2.5">
-                    <motion.button 
-                        whileHover={{ scale: 1.05, rotate: 180 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={randomizeConfig} 
-                        className="p-1.5 sm:p-2.5 text-slate-400 hover:text-white transition-colors rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-indigo-500/40 cursor-pointer" 
-                        title="Randomize Parameters"
-                    >
-                        <Shuffle className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
-                    </motion.button>
-                    <motion.button 
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setShowMissionConfig(false)} 
-                        className="text-slate-400 hover:text-rose-400 transition-colors p-1.5 sm:p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer"
-                    >
-                        <X className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
-                    </motion.button>
-                </div>
-              </div>
 
-              <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 space-y-4 sm:space-y-6 text-left">
-                  
-                  <div>
-                    <h3 className="text-[8.5px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400/80 flex items-center gap-1.5 mb-2 sm:mb-3">
-                        <Target className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-indigo-400" /> {t.COL_GOAL_TITLE}
-                    </h3>
-                    <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
-                        {tierIds.map(id => {
-                              const tier = MISSION_TIERS[id as 1|2|3];
-                              const isSelected = selectedTier === id;
-                              const Icon = tier.icon;
-                              return (
-                                <motion.button 
-                                  whileHover={{ scale: 1.02, y: -2 }}
-                                  whileTap={{ scale: 0.98 }}
-                                  key={id} 
-                                  onClick={() => { setSelectedTier(id as 1|2|3); setDifficulty(tier.difficulty); playUiSound('CLICK'); }}
-                                  className={`
-                                    relative flex flex-col items-center justify-center p-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 h-14 sm:h-20 md:h-24 lg:h-26 overflow-hidden cursor-pointer text-center
-                                    ${isSelected 
-                                        ? 'bg-indigo-500/15 border-indigo-500/70 shadow-[0_0_20px_rgba(99,102,241,0.25)] text-white' 
-                                        : 'bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10 text-slate-400'}
-                                  `}
-                                >
-                                   {isSelected && (
-                                     <span className="absolute top-1.5 right-1.5 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-indigo-400 animate-ping" />
-                                   )}
-                                   <Icon className={`w-3.5 h-3.5 sm:w-5 sm:h-5 mb-1 sm:mb-1.5 transition-all duration-300 ${isSelected ? 'text-indigo-400 scale-110' : 'text-slate-500'}`} />
-                                   <span className={`text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wide leading-tight ${isSelected ? 'text-white' : 'text-slate-400'}`}>{tier.label}</span>
-                                   <span className={`text-[7px] sm:text-[8px] md:text-[9.5px] font-mono mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-600'}`}>{tier.time}</span>
-                                </motion.button>
-                              );
-                        })}
+                    {/* Bots */}
+                    <div className="bg-slate-900/40 border border-slate-700/50 rounded-xl p-2.5 flex flex-col gap-1.5">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                            <Bot className="w-3 h-3 text-rose-400" /> {t.LBL_RIVALS}
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => { if (botCount > 1) { setBotCount(botCount - 1); playUiSound('CLICK'); } }}
+                                disabled={botCount <= 1}
+                                className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${botCount <= 1 ? 'text-slate-800 opacity-30' : 'text-rose-400 hover:bg-rose-500/10 cursor-pointer'}`}
+                            >
+                                <Minus className="w-3 h-3" />
+                            </button>
+                            <div className="flex-1 flex justify-center gap-0.5">
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                    <div key={i} className={`w-1 h-3 rounded-[1px] transition-all ${i < botCount ? 'bg-rose-500 shadow-[0_0_4px_rgba(239,68,68,0.7)]' : 'bg-slate-800'}`} />
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => { if (botCount < 6) { setBotCount(botCount + 1); playUiSound('CLICK'); } }}
+                                disabled={botCount >= 6}
+                                className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${botCount >= 6 ? 'text-slate-800 opacity-30' : 'text-rose-400 hover:bg-rose-500/10 cursor-pointer'}`}
+                            >
+                                <Plus className="w-3 h-3" />
+                            </button>
+                        </div>
                     </div>
-                  </div>
 
-                  <div className="h-px bg-white/5 w-full" />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-5">
-                      
-                      <div className="flex flex-col">
-                        <div className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 shadow-lg hover:bg-white/8 transition-all h-full">
-                            <div className="flex flex-col text-left">
-                                <h3 className="text-[8.5px] sm:text-[10.5px] md:text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                                    <MapIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" /> {language === 'RU' ? 'Рельеф Сектора' : 'Sector Terrain'}
-                                </h3>
-                                <span className="text-[7.5px] sm:text-[9px] md:text-[10px] text-slate-500 mt-1 sm:mt-1.5 font-mono uppercase tracking-wide leading-relaxed">
-                                    {mapType === 'FLAT' 
-                                        ? (language === 'RU' ? 'Устойчивые ровные плиты' : 'Flat stable hex tiles') 
-                                        : (language === 'RU' ? 'Крутые аномальные уступы' : 'Steep vertical heights')}
-                                </span>
+                    {/* Cargo Cap */}
+                    <div className="bg-slate-900/40 border border-slate-700/50 rounded-xl p-2.5 flex flex-col gap-1.5">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                            <Box className="w-3 h-3 text-emerald-400" /> {t.CARGO_CAP}
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => { if (storageCap > 3) { setStorageCap(storageCap - 1); playUiSound('CLICK'); } }}
+                                disabled={storageCap <= 3}
+                                className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${storageCap <= 3 ? 'text-slate-800 opacity-30' : 'text-emerald-400 hover:bg-emerald-500/10 cursor-pointer'}`}
+                            >
+                                <Minus className="w-3 h-3" />
+                            </button>
+                            <div className="flex-1 flex justify-center gap-0.5">
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                    <div key={i} className={`w-1 h-3 rounded-[1px] transition-all ${i < storageCap ? 'bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.7)]' : 'bg-slate-800'}`} />
+                                ))}
                             </div>
-
-                            <div className="flex bg-black/40 p-0.5 rounded-lg sm:rounded-xl border border-white/5 shrink-0 w-24 sm:w-32 md:w-36">
-                                <button 
-                                    onClick={() => { setMapType('FLAT'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[7.5px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${mapType === 'FLAT' ? 'bg-slate-800 text-white shadow-[0_0_8px_rgba(255,255,255,0.1)]' : 'text-slate-500 hover:text-slate-300'}`}
-                                >
-                                    {language === 'RU' ? 'Плоский' : 'Flat'}
-                                </button>
-                                <button 
-                                    onClick={() => { setMapType('CHAOTIC'); playUiSound('CLICK'); }}
-                                    className={`flex-1 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[7.5px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${mapType === 'CHAOTIC' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
-                                >
-                                    {language === 'RU' ? 'Хаос' : 'Chaos'}
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => { if (storageCap < 6) { setStorageCap(storageCap + 1); playUiSound('CLICK'); } }}
+                                disabled={storageCap >= 6}
+                                className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${storageCap >= 6 ? 'text-slate-800 opacity-30' : 'text-emerald-400 hover:bg-emerald-500/10 cursor-pointer'}`}
+                            >
+                                <Plus className="w-3 h-3" />
+                            </button>
                         </div>
-                      </div>
+                    </div>
 
-                      <div className="flex flex-col">
-                        <div className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 shadow-lg hover:bg-white/8 transition-all h-full">
-                            <div className="flex flex-col text-left flex-1">
-                                <h3 className="text-[8.5px] sm:text-[10.5px] md:text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                                    <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500" /> {t.LBL_RIVALS}
-                                </h3>
-                                <span className="text-[7.5px] sm:text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 sm:mt-1.5 uppercase tracking-wide leading-none">
-                                    {getBotLabel(botCount)}
-                                </span>
-                                
-                                <div className="flex gap-0.5 sm:gap-1 mt-2 sm:mt-2.5">
-                                    {Array.from({ length: 6 }).map((_, i) => (
-                                        <div 
-                                            key={i} 
-                                            className={`w-1 sm:w-1.5 h-1.5 sm:h-2 rounded-[1px] transition-all duration-300 ${i < botCount ? 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]' : 'bg-slate-800'}`} 
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="flex items-center bg-black/40 p-0.5 border border-white/5 rounded-lg sm:rounded-xl shrink-0 w-20 sm:w-24 md:w-28 justify-between">
-                                <motion.button
-                                    whileTap={{ scale: 0.85 }}
-                                    onClick={() => { if (botCount > 1) { setBotCount(botCount - 1); playUiSound('CLICK'); } }}
-                                    disabled={botCount <= 1}
-                                    className={`w-5.5 h-5.5 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-all ${botCount <= 1 ? 'text-slate-800 opacity-20' : 'text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 cursor-pointer'}`}
+                    {/* Credits Bonus */}
+                    <div className="bg-slate-900/40 border border-slate-700/50 rounded-xl p-2.5 flex flex-col gap-1.5">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                            <Coins className="w-3 h-3 text-amber-400" /> {language === 'RU' ? 'Бонус Cr' : 'Credits'}
+                        </span>
+                        <div className="flex gap-1">
+                            {creditBonuses.map(val => (
+                                <button
+                                    key={val}
+                                    onClick={() => { setStartingCreditsBonus(val); playUiSound('CLICK'); }}
+                                    className={`flex-1 py-1 rounded-md text-[8px] font-mono font-black border transition-all cursor-pointer ${
+                                        startingCreditsBonus === val 
+                                            ? 'bg-amber-500/20 border-amber-500 text-amber-300' 
+                                            : 'bg-black/30 border-white/5 text-slate-500'
+                                    }`}
                                 >
-                                    <Minus className="w-3 sm:w-4 h-3 sm:h-4" />
-                                </motion.button>
-                                <span className="text-[10px] sm:text-xs font-mono font-black text-rose-500">{botCount}</span>
-                                <motion.button
-                                    whileTap={{ scale: 0.85 }}
-                                    onClick={() => { if (botCount < 6) { setBotCount(botCount + 1); playUiSound('CLICK'); } }}
-                                    disabled={botCount >= 6}
-                                    className={`w-5.5 h-5.5 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-all ${botCount >= 6 ? 'text-slate-800 opacity-20' : 'text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 cursor-pointer'}`}
-                                >
-                                    <Plus className="w-3 sm:w-4 h-3 sm:h-4" />
-                                </motion.button>
-                            </div>
+                                    +{val}
+                                </button>
+                            ))}
                         </div>
-                      </div>
+                    </div>
 
-                      <div className="col-span-1 sm:col-span-2 bg-white/5 border border-white/5 hover:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 shadow-lg hover:bg-white/8 transition-all">
-                          <div className="flex flex-col text-left flex-1">
-                              <h3 className="text-[8.5px] sm:text-[10.5px] md:text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                                  <Box className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" /> {t.CARGO_CAP}
-                              </h3>
-                              <span className="text-[7.5px] sm:text-[9px] md:text-[10px] text-slate-500 font-mono mt-1 sm:mt-1.5 uppercase tracking-wide leading-none">
-                                  {language === 'RU' ? `Предел хранения: ${storageCap}` : `Inventory Slot Limit: ${storageCap}`}
-                              </span>
-                              
-                              <div className="flex gap-0.5 sm:gap-1 mt-2 sm:mt-2.5">
-                                  {Array.from({ length: 6 }).map((_, i) => (
-                                      <div 
-                                          key={i} 
-                                          className={`w-1 sm:w-1.5 h-1.5 sm:h-2 rounded-[1px] transition-all duration-300 ${i < storageCap ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]' : 'bg-slate-800'}`} 
-                                      />
-                                  ))}
-                              </div>
-                          </div>
+                    {/* Moves Bonus */}
+                    <div className="bg-slate-900/40 border border-slate-700/50 rounded-xl p-2.5 flex flex-col gap-1.5">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                            <Timer className="w-3 h-3 text-sky-400" /> {language === 'RU' ? 'Бонус Mvs' : 'Moves'}
+                        </span>
+                        <div className="flex gap-1">
+                            {moveBonuses.map(val => (
+                                <button
+                                    key={val}
+                                    onClick={() => { setStartingMovesBonus(val); playUiSound('CLICK'); }}
+                                    className={`flex-1 py-1 rounded-md text-[8px] font-mono font-black border transition-all cursor-pointer ${
+                                        startingMovesBonus === val 
+                                            ? 'bg-sky-500/20 border-sky-500 text-sky-300' 
+                                            : 'bg-black/30 border-white/5 text-slate-500'
+                                    }`}
+                                >
+                                    +{val}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                          <div className="flex items-center bg-black/40 p-0.5 border border-white/5 rounded-lg sm:rounded-xl shrink-0 w-20 sm:w-24 md:w-28 justify-between">
-                              <motion.button
-                                  whileTap={{ scale: 0.85 }}
-                                  onClick={() => { if (storageCap > 3) { setStorageCap(storageCap - 1); playUiSound('CLICK'); } }}
-                                  disabled={storageCap <= 3}
-                                  className={`w-5.5 h-5.5 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-all ${storageCap <= 3 ? 'text-slate-800 opacity-20' : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer'}`}
-                              >
-                                  <Minus className="w-3 sm:w-4 h-3 sm:h-4" />
-                              </motion.button>
-                              <span className="text-[10px] sm:text-xs font-mono font-black text-emerald-400">{storageCap}</span>
-                              <motion.button
-                                  whileTap={{ scale: 0.85 }}
-                                  onClick={() => { if (storageCap < 6) { setStorageCap(storageCap + 1); playUiSound('CLICK'); } }}
-                                  disabled={storageCap >= 6}
-                                  className={`w-5.5 h-5.5 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-all ${storageCap >= 6 ? 'text-slate-800 opacity-20' : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer'}`}
-                              >
-                                  <Plus className="w-3 sm:w-4 h-3 sm:h-4" />
-                              </motion.button>
-                          </div>
-                      </div>
+                    {/* Artifact */}
+                    <div className="bg-slate-900/40 border border-slate-700/50 rounded-xl p-2.5 flex flex-col gap-1.5 col-span-2">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                            <Gem className="w-3 h-3 text-indigo-400" /> {language === 'RU' ? 'Артефакт' : 'Artifact'}
+                        </span>
+                        <div className="flex gap-1 flex-wrap">
+                            {artifactsList.map(art => (
+                                <button
+                                    key={art.id}
+                                    onClick={() => { setStartingArtifactId(art.id); playUiSound('CLICK'); }}
+                                    className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border transition-all cursor-pointer ${
+                                        startingArtifactId === art.id 
+                                            ? 'bg-indigo-500/20 border-indigo-500 text-white shadow-[0_0_8px_rgba(99,102,241,0.3)]' 
+                                            : 'bg-black/30 border-white/5 text-slate-400 hover:border-white/10'
+                                    }`}
+                                >
+                                    {art.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                      <div className="col-span-1 sm:col-span-2 border-t border-white/5 pt-4">
-                          <h3 className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
-                              <Cpu className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-indigo-400" />
-                              {language === 'RU' ? 'ДЕСАНТНЫЕ СРЕДСТВА И СНАРЯЖЕНИЕ' : 'PRE-MISSION DEPLOYMENT & GEAR'}
-                          </h3>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="bg-white/2 border border-white/5 hover:border-indigo-500/15 rounded-xl p-3 sm:p-4 transition-all">
-                                  <span className="text-[8px] sm:text-[9.5px] font-black text-slate-300 uppercase tracking-widest block mb-2">
-                                      {language === 'RU' ? 'НАЧАЛЬНЫЙ АРТЕФАКТ' : 'STARTING ARTIFACT'}
-                                  </span>
-                                  <div className="grid grid-cols-4 gap-1.5">
-                                      {artifactsList.map(art => {
-                                          const isSelected = startingArtifactId === art.id;
-                                          return (
-                                              <button
-                                                  key={art.id}
-                                                  onClick={() => { setStartingArtifactId(art.id); playUiSound('CLICK'); }}
-                                                  className={`py-1.5 px-1 rounded-lg text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
-                                                      isSelected 
-                                                          ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-[0_0_10px_rgba(99,102,241,0.25)]' 
-                                                          : 'bg-black/30 border-white/5 text-slate-400 hover:border-white/10 hover:bg-black/40'
-                                                  }`}
-                                              >
-                                                  {art.label}
-                                              </button>
-                                          );
-                                      })}
-                                  </div>
-                                  <p className="text-[7.5px] sm:text-[9px] text-indigo-300 font-mono mt-2 uppercase tracking-wide min-h-[24px]">
-                                      {startingArtifactId === 'NONE' && (language === 'RU' ? 'Без снаряжения' : 'Begin the simulation without initial gear.')}
-                                      {startingArtifactId === 'fuel_cell' && (language === 'RU' ? '+3 Хода на старте | Штраф -15 Кредитов (в ущерб балансу)' : 'Spent Fuel Cell: +3 starting Moves, penalizes initial credits by -15')}
-                                      {startingArtifactId === 'data_disc' && (language === 'RU' ? '+15 Кредитов | Аннулирует и сжигает весь стартовый материал' : 'Fragmented Data Disc: +15 starting Credits, obliterates starting materials')}
-                                      {startingArtifactId === 'raw_container' && (language === 'RU' ? '+2 Материала | Отнимает -3 Хода на старте' : 'Raw Container: +2 starting Materials, costs -3 starting Moves')}
-                                      {startingArtifactId === 'reality_patch' && (language === 'RU' ? '+3% Стабильности щита | Штраф -10 Кредитов' : 'Reality Patch: +3% stability, costs -10 initial credits')}
-                                      {startingArtifactId === 'void_core' && (language === 'RU' ? 'Шунт гравитации: Свободный шаг сквозь стены и крутые уступы за 1 ход' : 'Void Core: Shunts gravity, enabling step movement through walls and cliffs')}
-                                      {startingArtifactId === 'architect_nanites' && (language === 'RU' ? 'Наниты: Позволяют строить БЕСПЛАТНО, но урезают доход на 100%' : 'Architect Nanites: Free tile upgrades, penalizes passive credits gain by 100%')}
-                                  </p>
-                              </div>
+                </div>
+            </div>
 
-                              <div className="bg-white/2 border border-white/5 rounded-xl p-3 sm:p-4 flex flex-col justify-between">
-                                  <div>
-                                      <span className="text-[8px] sm:text-[9.5px] font-black text-slate-300 uppercase tracking-widest block mb-1.5">
-                                          {language === 'RU' ? 'НАЧАЛЬНЫЕ СУБСИДИИ (КРЕДИТЫ)' : 'STARTING CREDIT ALLOCATIONS'}
-                                      </span>
-                                      <div className="flex gap-1 mb-3">
-                                          {creditBonuses.map(val => (
-                                              <button
-                                                  key={val}
-                                                  onClick={() => { setStartingCreditsBonus(val); playUiSound('CLICK'); }}
-                                                  className={`flex-1 py-1 rounded-lg text-[8.5px] sm:text-[10px] font-mono font-black border cursor-pointer ${
-                                                      startingCreditsBonus === val 
-                                                          ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.2)]' 
-                                                          : 'bg-black/30 border-white/5 text-slate-500 hover:text-slate-300'
-                                                  }`}
-                                              >
-                                                  +{val} Cr
-                                              </button>
-                                          ))}
-                                      </div>
+            {/* SECTION 3: Mutators */}
+            <div>
+                <h3 className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
+                    <Compass className="w-3 h-3 text-cyan-400" /> {language === 'RU' ? 'МУТАТОРЫ' : 'MUTATORS'}
+                </h3>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                    {mutatorsList.map(mut => {
+                        const isSelected = mutatorType === mut.id;
+                        return (
+                            <button
+                                key={mut.id}
+                                onClick={() => { setMutatorType(mut.id as any); playUiSound('CLICK'); }}
+                                className={`py-2 px-1 rounded-lg text-[8px] font-black uppercase tracking-wider border transition-all cursor-pointer ${
+                                    isSelected 
+                                        ? 'bg-indigo-500/20 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.3)]' 
+                                        : 'bg-slate-900/40 border-slate-700/50 text-slate-400 hover:border-slate-600'
+                                }`}
+                            >
+                                {mut.label}
+                            </button>
+                        );
+                    })}
+                </div>
+                {/* Compact Mutator Description */}
+                <div className="mt-2 bg-black/30 border border-white/5 rounded-lg p-2">
+                    <p className="text-[8px] text-slate-400 font-mono leading-relaxed line-clamp-2">
+                        {mutatorType === 'NONE' && (language === 'RU' ? 'Стандартная симуляция без аномалий.' : 'Standard simulation without anomalies.')}
+                        {mutatorType === 'SUDDEN_DEATH' && (language === 'RU' ? '2x износ стабильности, +50% кредитов за добычу.' : '2x entropy, +50% mining credits.')}
+                        {mutatorType === 'RICH_VEINS' && (language === 'RU' ? '2x кредиты за жилы, боты быстрее на 30%.' : '2x vein credits, bots 30% faster.')}
+                        {mutatorType === 'FRAGILE_GROUND' && (language === 'RU' ? 'Прочность L1 снижена вдвое (3 шага).' : 'L1 durability halved (3 steps).')}
+                        {mutatorType === 'NANO_STORM' && (language === 'RU' ? '+1 ход за шаг, UPGRADE бесплатно.' : '+1 move/step, UPGRADE free.')}
+                    </p>
+                </div>
+            </div>
 
-                                      <span className="text-[8px] sm:text-[9.5px] font-black text-slate-300 uppercase tracking-widest block mb-1.5">
-                                          {language === 'RU' ? 'АВАРИЙНЫЕ ЭНЕРГО-РЕЗЕРВЫ (ХОДЫ)' : 'EMERGENCY ENERGY ALLOCATIONS'}
-                                      </span>
-                                      <div className="flex gap-1">
-                                          {moveBonuses.map(val => (
-                                              <button
-                                                  key={val}
-                                                  onClick={() => { setStartingMovesBonus(val); playUiSound('CLICK'); }}
-                                                  className={`flex-1 py-1 rounded-lg text-[8.5px] sm:text-[10px] font-mono font-black border cursor-pointer ${
-                                                      startingMovesBonus === val 
-                                                          ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.2)]' 
-                                                          : 'bg-black/30 border-white/5 text-slate-500 hover:text-slate-300'
-                                                  }`}
-                                              >
-                                                  +{val} Mvs
-                                              </button>
-                                          ))}
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
+        </div>
 
-                      <div className="col-span-1 sm:col-span-2 border-t border-white/5 pt-4">
-                          <h3 className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
-                              <Compass className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-cyan-400" />
-                              {language === 'RU' ? 'АКТИВНЫЙ АНОМАЛЬНЫЙ МУТАТОР' : 'ACTIVE SECTOR ANOMALY MUTATOR'}
-                          </h3>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                              {mutatorsList.map(mut => {
-                                  const isSelected = mutatorType === mut.id;
-                                  return (
-                                      <button
-                                          key={mut.id}
-                                          onClick={() => { setMutatorType(mut.id as any); playUiSound('CLICK'); }}
-                                          className={`py-2 px-1.5 rounded-xl text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider transition-all border flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                                              isSelected 
-                                                  ? 'bg-indigo-500/15 border-indigo-400 text-white shadow-lg' 
-                                                  : 'bg-white/5 border-white/5 text-slate-400 hover:border-white/10 hover:bg-white/8'
-                                          }`}
-                                      >
-                                          <span className={`font-black ${isSelected ? 'text-white' : ''}`}>{mut.label}</span>
-                                      </button>
-                                  );
-                              })}
-                          </div>
+        {/* Compact Footer */}
+        <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-t border-indigo-500/20 bg-slate-900/60 shrink-0 z-10">
+            <div className="flex flex-col text-left leading-tight">
+                <span className="text-[7px] text-slate-500 font-black uppercase tracking-wider">{t.EST_REWARD}</span>
+                <span className="text-xs font-mono font-black text-amber-400 flex items-center gap-1">
+                    <Gem className="w-3 h-3" />
+                    {selectedTier === 3 ? t.REWARD_HIGH : (selectedTier === 2 ? t.REWARD_MED : t.REWARD_STD)}
+                </span>
+            </div>
+            <div className="flex gap-2">
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => { playUiSound('CLICK'); setShowMissionConfig(false); setUIState('LEVEL_EDITOR'); }}
+                    className="px-3 py-2 bg-white/5 border border-white/10 hover:border-indigo-500/50 text-indigo-300 hover:text-white font-bold rounded-lg text-[9px] uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                    <Layers className="w-3 h-3 text-indigo-400" />
+                    <span className="hidden sm:inline">{language === 'RU' ? 'Чертежи' : 'Editor'}</span>
+                </motion.button>
+                <motion.button 
+                    whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(99,102,241,0.5)" }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={confirmMissionStart}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-lg uppercase tracking-widest transition-all flex items-center gap-1.5 text-[10px] cursor-pointer shadow-[0_4px_15px_rgba(99,102,241,0.3)]"
+                >
+                    <Crosshair className="w-3 h-3" />
+                    <span>{t.BTN_START}</span>
+                </motion.button>
+            </div>
+        </div>
 
-                          <div className="mt-2.5 bg-black/40 border border-white/5 rounded-xl p-2.5">
-                              <p className="text-[7.5px] sm:text-[9.5px] text-slate-400 font-mono uppercase tracking-wide leading-relaxed">
-                                  {mutatorType === 'NONE' && (language === 'RU' ? 'Нет активных аномальных эффектов. Чистая симуляция по умолчанию.' : 'No active anomaly effects. Baseline environment.')}
-                                  {mutatorType === 'SUDDEN_DEATH' && (language === 'RU' ? 'ВНЕЗАПНАЯ СМЕРТЬ: Все действия (DIG/UPGRADE/RECOVER) вызывают ДВОЙНОЙ износ стабильности сектора (2x Entropy), но Кредиты при глубокой добыче (L < 0) увеличены на +50%!' : 'SUDDEN DEATH: All actions incur 2x higher Entropy impact on sector stability, but Deep Mined coins (L < 0) are boosted by +50%!')}
-                                  {mutatorType === 'RICH_VEINS' && (language === 'RU' ? 'БОГАТЫЕ ЖИЛЫ: Все глубинные руды и жилы удваивают денежные выплаты за добычу, но ИИ-боты ускорены на 30%!' : 'RICH VEINS: Double coins from all mineral veins, but rival bots make actions 30% faster!')}
-                                  {mutatorType === 'FRAGILE_GROUND' && (language === 'RU' ? 'ХРУПКИЙ ГРУНТ: Опорная прочность треснутых плит L1 снижена ВДВОЕ (3 шага до обрушения вместо 6)! Остерегайтесь бездны.' : 'FRAGILE GROUND: Cracked tiles L1 have half of their structural durability (3 steps to collapse instead of 6). Walk with care!')}
-                                  {mutatorType === 'NANO_STORM' && (language === 'RU' ? 'НАНО-ШТОРМ: Стоимость шагов на любых плитах повышена на +1 Ход, но нанотехнологическая буря делает UPGRADE абсолютно БЕСПЛАТНЫМ!' : 'NANO-STORM: Moves step cost increased by +1 on all levels, but Nanite Free Build is active for all entities!')}
-                              </p>
-                          </div>
-                      </div>
-
-                  </div>
-              </div>
-
-              <div className="p-3 sm:p-5 border-t border-white/5 md:border-indigo-500/20 bg-white/2 backdrop-blur-md flex items-center justify-between gap-3 shrink-0 flex-row">
-                  <div className="flex flex-col text-left leading-tight">
-                      <span className="text-[7.5px] sm:text-[9px] text-slate-500 font-black uppercase tracking-wider">{t.EST_REWARD}</span>
-                      <span className="text-xs sm:text-sm md:text-base font-mono font-black text-amber-400 flex items-center gap-1 mt-0.5">
-                        <Gem className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-amber-400" />
-                        {selectedTier === 3 ? t.REWARD_HIGH : (selectedTier === 2 ? t.REWARD_MED : t.REWARD_STD)}
-                      </span>
-                  </div>
-
-                  <div className="flex gap-2 sm:gap-3 shrink-0">
-                     <motion.button
-                        whileHover={{ scale: 1.02, y: -1 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          playUiSound('CLICK');
-                          setShowMissionConfig(false);
-                          setUIState('LEVEL_EDITOR');
-                        }}
-                        className="px-3 py-1.5 sm:px-4 sm:py-2.5 bg-white/5 border border-white/10 hover:border-indigo-500/50 text-indigo-300 hover:text-white font-bold rounded-lg sm:rounded-xl text-[8.5px] sm:text-[10px] md:text-xs uppercase tracking-wider transition-all flex items-center gap-1 sm:gap-1.5 font-mono cursor-pointer"
-                     >
-                        <Layers className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-400" />
-                        {language === 'RU' ? 'Чертежи' : 'Level Editor'}
-                     </motion.button>
-
-                     <motion.button 
-                        whileHover={{ scale: 1.03, y: -1, boxShadow: "0 0 20px rgba(99,102,241,0.5)" }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={confirmMissionStart}
-                        className="px-4 py-1.5 sm:px-5 sm:py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-lg sm:rounded-xl border-t border-indigo-400/30 uppercase tracking-widest transition-all flex items-center justify-center gap-1 sm:gap-2 group text-[9px] sm:text-xs cursor-pointer shadow-[0_4px_15px_rgba(99,102,241,0.3)]"
-                     >
-                        <Crosshair className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-100 group-hover:rotate-90 transition-all duration-500" />
-                        <span>{t.BTN_START}</span>
-                     </motion.button>
-                  </div>
-              </div>
-
-          </motion.div>
-        </motion.div>
-      )}
-      </AnimatePresence>
+    </motion.div>
+  </motion.div>
+)}
+</AnimatePresence>
 
     </div>
   );

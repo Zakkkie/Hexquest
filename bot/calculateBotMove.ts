@@ -1,4 +1,4 @@
-import { Entity, Hex, HexCoord, WinCondition, BotAction, Difficulty, BotMemory, PlanStep } from '../types';
+import { Entity, Hex, HexCoord, WinCondition, BotAction, Difficulty, BotMemory, PlanStep, LevelConfig } from '../types';
 import { getHexKey, getNeighbors, findPath, findSiegePath, getStatusModifiers, cubeDistance } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
@@ -16,7 +16,8 @@ import {
     currentHex,
     finalize,
     getReachableHexes,
-    buildMonumentRestriction
+    buildMonumentRestriction,
+    checkHasVoidCore
 } from './helpers';
 import { buildPlan } from './plans';
 
@@ -49,8 +50,7 @@ const moveAndAct = (
         return { action: { type: 'WAIT', stateVersion }, debug: `${debugPrefix}:Blocked`, memory: { ...mem, stuckCounter: (mem.stuckCounter ?? 0) + 1 } };
     }
 
-    const hasVoidCore = (bot.equipment && Object.values(bot.equipment).some(item => item && item.baseId === 'void_core')) ||
-                        (bot.activeStatuses && bot.activeStatuses.some(s => (s.type as string) === 'VOID_CORE' || s.label === 'Void Core'));
+    const hasVoidCore = checkHasVoidCore(bot);
     const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles, hasVoidCore, false, true);
     const path = pathResult.path;
     if (path && path.length > 0) {
@@ -102,8 +102,7 @@ const executeStep = (
         mem.targetHexId = step.targetId;
         if (cubeDistance(bot, target) === 0) return 'STEP_DONE';
 
-        const hasVoidCore = (bot.equipment && Object.values(bot.equipment).some(item => item && item.baseId === 'void_core')) ||
-                            (bot.activeStatuses && bot.activeStatuses.some(s => (s.type as string) === 'VOID_CORE' || s.label === 'Void Core'));
+        const hasVoidCore = checkHasVoidCore(bot);
         const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles, hasVoidCore, false, true);
         const path = pathResult.path;
         if (!path || path.length === 0) {
@@ -177,7 +176,7 @@ export const calculateBotMove = (
     _difficulty: Difficulty,
     reservedHexKeys?: Set<string>,
     allBots?: Entity[],
-    activeLevelConfig?: any
+    activeLevelConfig?: LevelConfig
 ): AiResult => {
     if (!bot) return { action: null, debug: '', memory: { lastPlayerPos: null, stuckCounter: 0 } };
 
@@ -219,7 +218,7 @@ export const calculateBotMove = (
     let reachableCache: Set<string> | null = null;
     const getReachable = (): Set<string> => {
         if (!reachableCache) {
-            reachableCache = getReachableHexes(bot, grid, navObs, 35);
+            reachableCache = getReachableHexes(bot, grid, navObs, 35, checkHasVoidCore(bot));
         }
         return reachableCache;
     };

@@ -866,9 +866,25 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         rotatedBasePoints.forEach((pt, j) => { const px = pt.x * s, py = pt.y * 0.8 * s + faceY; if (j === 0) voidFlickerNode.moveTo(px, py); else voidFlickerNode.lineTo(px, py); });
                         voidFlickerNode.closePath(); voidFlickerNode.fill({ color: 0xef4444, alpha: alphaVal });
                     }
-                    voidFlickerNode.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + faceY; if (j === 0) voidFlickerNode.moveTo(px, py); else voidFlickerNode.lineTo(px, py); });
-                    voidFlickerNode.closePath(); voidFlickerNode.stroke({ width: 3.0, color: 0xef4444, alignment: 1.0 });
+                    // Draw red outline only on boundaries where neighbor is not a visible VOID hex
+                    for (let i = 0; i < 6; i++) {
+                        const next = (i + 1) % 6;
+                        const nIndex = 5 - i;
+                        const d = NEIGHBOR_DIRECTIONS[nIndex];
+                        const nKey = getHexKey(props.q + d.q, props.r + d.r);
+                        const nHex = grid[nKey];
+                        const isNeighborVisible = nHex && (nHex.revealed || forceReveal);
+                        const isNeighborVoid = nHex && nHex.structureType === 'VOID';
+
+                        if (!(isNeighborVisible && isNeighborVoid)) {
+                            const pt0 = rotatedBasePoints[i], pt1 = rotatedBasePoints[next];
+                            const x1 = pt0.x, y1 = pt0.y * 0.8 + faceY, x2 = pt1.x, y2 = pt1.y * 0.8 + faceY;
+                            voidFlickerNode.beginPath();
+                            voidFlickerNode.moveTo(x1, y1);
+                            voidFlickerNode.lineTo(x2, y2);
+                            voidFlickerNode.stroke({ width: 3.0, color: 0xef4444, alignment: 1.0 });
+                        }
+                    }
                     voidFlickerNode.rotation = 0;
 
                     const existingCircleGlow = curContainer.getChildByName('voidCircleGlow');
@@ -878,10 +894,19 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         const next = (i + 1) % 6;
                         const pt0 = rotatedBasePoints[i], pt1 = rotatedBasePoints[next];
                         if ((pt0.y + pt1.y) >= -0.01) {
-                            const VOID_DEPTH = MAX_WALL_DEPTH;
-                            const x1 = pt0.x, y1 = pt0.y * 0.8 + faceY, x2 = pt1.x, y2 = pt1.y * 0.8 + faceY;
-                            baseLayer.beginPath(); baseLayer.moveTo(x1, y1); baseLayer.lineTo(x2, y2); baseLayer.lineTo(x2, y2 + VOID_DEPTH); baseLayer.lineTo(x1, y1 + VOID_DEPTH); baseLayer.closePath();
-                            baseLayer.fill({ color: 0x020617 }); baseLayer.strokeStyle = { width: 1.0, color: 0x1e293b }; baseLayer.stroke();
+                            const nIndex = 5 - i;
+                            const d = NEIGHBOR_DIRECTIONS[nIndex];
+                            const nKey = getHexKey(props.q + d.q, props.r + d.r);
+                            const nHex = grid[nKey];
+                            const isNeighborVisible = nHex && (nHex.revealed || forceReveal);
+
+                            // Only draw a downwards wall if the neighbor is not visible (unrevealed or outside the map)
+                            if (!isNeighborVisible) {
+                                const VOID_DEPTH = MAX_WALL_DEPTH;
+                                const x1 = pt0.x, y1 = pt0.y * 0.8 + faceY, x2 = pt1.x, y2 = pt1.y * 0.8 + faceY;
+                                baseLayer.beginPath(); baseLayer.moveTo(x1, y1); baseLayer.lineTo(x2, y2); baseLayer.lineTo(x2, y2 + VOID_DEPTH); baseLayer.lineTo(x1, y1 + VOID_DEPTH); baseLayer.closePath();
+                                baseLayer.fill({ color: 0x020617 }); baseLayer.strokeStyle = { width: 1.0, color: 0x1e293b }; baseLayer.stroke();
+                            }
                         }
                     }
                 } else if (!isRealVoid) {

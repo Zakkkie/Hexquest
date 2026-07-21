@@ -1,8 +1,8 @@
-import { Entity, Hex, HexCoord, BotMemory, Plan, PlanStep } from '../types';
+import { Entity, Hex, HexCoord, BotMemory, Plan, PlanStep, LevelConfig } from '../types';
 import { getNeighbors } from '../services/hexUtils';
 import { checkGrowthCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
-import { findBestDigTargets, findHiveTarget, resolveBuildChain } from './planning';
+import { findBestDigTargets, findHiveTarget, resolveBuildChain, findBestBuildTarget } from './planning';
 import {
     HIVE_RADIUS,
     MAX_BFS_STEPS,
@@ -29,19 +29,23 @@ export const findStaircaseTarget = (
     reachableSet: Set<string>
 ): StaircaseTarget | null => {
     const open: Hex[] = [];
+    let head = 2000;
+    let tail = 2000;
     const visited     = new Set<string>();
     const candidates: StaircaseTarget[] = [];
     const obsKeys     = new Set(navObstacles.map(o => hexKey(o.q, o.r)));
 
     for (const c of getNeighbors(monument.q, monument.r)) {
         const h = grid[hexKey(c.q, c.r)];
-        if (h && h.structureType !== 'VOID') open.push(h);
+        if (h && h.structureType !== 'VOID') {
+            open[tail++] = h;
+        }
     }
 
     let steps = 0;
-    while (open.length > 0 && steps < MAX_BFS_STEPS) {
+    while (head < tail && steps < MAX_BFS_STEPS) {
         steps++;
-        const current = open.shift()!;
+        const current = open[head++];
         if (visited.has(current.id)) continue;
         visited.add(current.id);
 
@@ -64,11 +68,15 @@ export const findStaircaseTarget = (
             } else if (growCheck.missingSupports) {
                 for (const ms of growCheck.missingSupports) {
                     const mh = grid[hexKey(ms.q, ms.r)];
-                    if (mh && !visited.has(mh.id)) open.unshift(mh);
+                    if (mh && !visited.has(mh.id)) {
+                        open[--head] = mh;
+                    }
                 }
                 for (const nb of getNeighbors(current.q, current.r)) {
                     const nh = grid[hexKey(nb.q, nb.r)];
-                    if (nh && !visited.has(nh.id) && nh.structureType !== 'VOID' && dist(nh, monument) >= d) open.push(nh);
+                    if (nh && !visited.has(nh.id) && nh.structureType !== 'VOID' && dist(nh, monument) >= d) {
+                        open[tail++] = nh;
+                    }
                 }
             }
         }
@@ -113,42 +121,7 @@ export const buildExplorePlan = (
                 return { steps: [{ type: 'MOVE_TO', targetId: t.hex.id }, { type: 'DIG', targetId: t.hex.id }], createdAt: stateVersion, label: 'Explore:EconomyDig' };
             }
         } else {
-            const botPos = { q: bot.q, r: bot.r };
-            let bestBuild: Hex | null = null;
-            let bestScore = -9999;
-            for (const id of reachable) {
-                const hex = grid[id];
-                if (!hex || hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
-                if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
-                if (hex.currentLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
-                if (claimedSet.has(hex.id) || (mem.blacklistedTargets || []).includes(hex.id)) continue;
-
-                const check = checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, _navObstacles);
-                if (check.canGrow) {
-                    const d = dist(botPos, hex);
-                    let score = -d * 2;
-                    score += hex.currentLevel * 50;
-                    if (d === 0) score += 20;
-                    if (hex.ownerId === bot.id) score += 10;
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestBuild = hex;
-                    }
-                } else if (check.missingSupports && check.missingSupports.length > 0) {
-                    const resolved = resolveBuildChain(hex, bot, grid, index, 0);
-                    if (resolved && reachable.has(resolved.hex.id) && !(mem.blacklistedTargets || []).includes(resolved.hex.id)) {
-                        const d = dist(botPos, resolved.hex);
-                        let score = -d * 2;
-                        score += resolved.hex.currentLevel * 50;
-                        if (d === 0) score += 20;
-                        if (resolved.hex.ownerId === bot.id) score += 10;
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestBuild = resolved.hex;
-                        }
-                    }
-                }
-            }
+            const bestBuild = findBestBuildTarget(bot, grid, index, _navObstacles, claimedSet, mem.blacklistedTargets || [], reachable, { allowPlayerOwner: true });
             if (bestBuild) {
                 return { steps: [{ type: 'MOVE_TO', targetId: bestBuild.id }, { type: 'UPGRADE', targetId: bestBuild.id }], createdAt: stateVersion, label: 'Explore:EconomyBuild' };
             }
@@ -293,45 +266,7 @@ export const buildCompetePlan = (
         }
     }
 
-    const botPos = { q: bot.q, r: bot.r };
-    let bestBuild: Hex | null = null;
-    let bestScore = -9999;
-
-    for (const id of reachable) {
-        const hex = grid[id];
-        if (!hex || hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
-        if (hex.ownerId && hex.ownerId !== bot.id && hex.ownerId !== 'player-1') continue;
-        if (hex.currentLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
-        if (claimedSet.has(hex.id) || (mem.blacklistedTargets || []).includes(hex.id)) continue;
-
-        const check = checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, navObstacles);
-        if (check.canGrow) {
-            const d = dist(botPos, hex);
-            let score = -d * 2;
-            score += hex.currentLevel * 50;
-            if (d === 0) score += 20;
-            if (hex.ownerId === bot.id) score += 10;
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestBuild = hex;
-            }
-        } else if (check.missingSupports && check.missingSupports.length > 0) {
-            const resolved = resolveBuildChain(hex, bot, grid, index, 0);
-            if (resolved && reachable.has(resolved.hex.id)) {
-                const d = dist(botPos, resolved.hex);
-                let score = -d * 2;
-                score += resolved.hex.currentLevel * 50;
-                if (d === 0) score += 20;
-                if (resolved.hex.ownerId === bot.id) score += 10;
-                
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestBuild = resolved.hex;
-                }
-            }
-        }
-    }
+    const bestBuild = findBestBuildTarget(bot, grid, index, navObstacles, claimedSet, mem.blacklistedTargets || [], reachable, { allowPlayerOwner: true });
 
     if (bestBuild) {
         return {
@@ -364,7 +299,7 @@ export const buildCampaignPlan = (
     player: Entity,
     index: WorldIndex,
     activeLevelId: string,
-    activeLevelConfig: any,
+    activeLevelConfig?: LevelConfig,
     reachable: Set<string>
 ): Plan => {
     if (activeLevelConfig?.botObjective === 'DESTROY_PLAYER' || activeLevelId === '3.5' || activeLevelId === '3.6') {
@@ -448,40 +383,7 @@ export const buildCampaignPlan = (
                     }
                 }
 
-                const botPos = { q: bot.q, r: bot.r };
-                let bestNeutral: Hex | null = null;
-                let bestScore = -9999;
-
-                for (const id of reachable) {
-                    const hex = grid[id];
-                    if (!hex || hex.structureType === 'VOID' || hex.structureType === 'MONUMENT') continue;
-                    if (hex.ownerId && hex.ownerId !== bot.id) continue;
-                    if (hex.currentLevel > bot.playerLevel && dist(botPos, hex) > 0) continue;
-                    
-                    if (claimedSet.has(hex.id) || (mem.blacklistedTargets || []).includes(hex.id)) continue;
-                    
-                    const check = checkGrowthCondition(hex, bot, getNeighbors(hex.q, hex.r), grid, navObstacles);
-                    if (check.canGrow) {
-                        const d = dist(botPos, hex);
-                        let score = -d;
-                        if (hex.currentLevel === 0) score += 5;
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestNeutral = hex;
-                        }
-                    } else if (check.missingSupports && check.missingSupports.length > 0) {
-                        const resolved = resolveBuildChain(hex, bot, grid, index, 0);
-                        if (resolved && reachable.has(resolved.hex.id) && !(mem.blacklistedTargets || []).includes(resolved.hex.id)) {
-                            const d = dist(botPos, resolved.hex);
-                            let score = -d;
-                            if (resolved.hex.currentLevel === 0) score += 5;
-                            if (score > bestScore) {
-                                bestScore = score;
-                                bestNeutral = resolved.hex;
-                            }
-                        }
-                    }
-                }
+                const bestNeutral = findBestBuildTarget(bot, grid, index, navObstacles, claimedSet, mem.blacklistedTargets || [], reachable, { allowPlayerOwner: false, campaignScoring: true });
 
                 if (bestNeutral) {
                     return {
@@ -545,7 +447,7 @@ export const buildPlan = (
     player: Entity,
     index: WorldIndex,
     activeLevelId?: string,
-    activeLevelConfig?: any,
+    activeLevelConfig?: LevelConfig,
     reachable?: Set<string>
 ): Plan => {
     const actualReachable = reachable!;

@@ -1,4 +1,4 @@
-import { Entity, Hex, HexCoord, BotMemory, BotAction } from '../types';
+import { Entity, Hex, HexCoord, BotMemory, BotAction, LevelConfig } from '../types';
 import { getHexKey, cubeDistance, getNeighbors } from '../services/hexUtils';
 import { checkGrowthCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
@@ -49,7 +49,7 @@ export const buildClaimedSet = (bot: Entity, allBots: Entity[]): Set<string> => 
     return claimed;
 };
 
-export const buildMonumentRestriction = (monument: Hex, index: WorldIndex, levelConfig?: any): Set<string> => {
+export const buildMonumentRestriction = (monument: Hex, index: WorldIndex, levelConfig?: LevelConfig): Set<string> => {
     const restricted = new Set<string>();
     const radius = levelConfig?.monumentZoneRadius ?? MONUMENT_ZONE_R;
     const candidates = index.getHexesInRange(monument, radius);
@@ -59,7 +59,20 @@ export const buildMonumentRestriction = (monument: Hex, index: WorldIndex, level
     return restricted;
 };
 
-export const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObstacles: HexCoord[], maxDist: number = 20): Set<string> => {
+export const checkHasVoidCore = (bot: Entity): boolean => {
+    return !!(
+        (bot.equipment && Object.values(bot.equipment).some(item => item && item.baseId === 'void_core')) ||
+        (bot.activeStatuses && bot.activeStatuses.some(s => (s.type as string) === 'VOID_CORE' || s.label === 'Void Core'))
+    );
+};
+
+export const getReachableHexes = (
+    bot: Entity,
+    grid: Record<string, Hex>,
+    navObstacles: HexCoord[],
+    maxDist: number = 20,
+    hasVoidCore?: boolean
+): Set<string> => {
     const reachable = new Set<string>();
     const startKey = hexKey(bot.q, bot.r);
     const queue: { q: number, r: number, dist: number }[] = [{ q: bot.q, r: bot.r, dist: 0 }];
@@ -69,8 +82,7 @@ export const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObs
         obsKeys.add(hexKey(o.q, o.r));
     }
     
-    const hasVoidCore = (bot.equipment && Object.values(bot.equipment).some(item => item && item.baseId === 'void_core')) ||
-                        (bot.activeStatuses && bot.activeStatuses.some(s => (s.type as string) === 'VOID_CORE' || s.label === 'Void Core'));
+    const finalHasVoidCore = hasVoidCore !== undefined ? hasVoidCore : checkHasVoidCore(bot);
     
     const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
     
@@ -93,7 +105,7 @@ export const getReachableHexes = (bot: Entity, grid: Record<string, Hex>, navObs
             if (!nHex || nHex.structureType === 'VOID') continue;
             if (isDefenseMode && nHex.currentLevel > 1) continue;
             if (nHex.currentLevel > bot.playerLevel) continue;
-            if (!hasVoidCore && Math.abs(currentLevel - nHex.currentLevel) > 1) continue;
+            if (!finalHasVoidCore && Math.abs(currentLevel - nHex.currentLevel) > 1) continue;
             
             reachable.add(nKey);
             queue.push({ q: n.q, r: n.r, dist: current.dist + 1 });
@@ -165,24 +177,8 @@ export const findCooperativeBuildTarget = (
     return null;
 };
 
-export const isProd = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') || 
-               (typeof window !== 'undefined' && ((window as any).process?.env?.NODE_ENV === 'production' || (import.meta as any).env?.PROD));
-
 export const finalize = (result: AiResult, mem: BotMemory): AiResult => {
     result.memory.waitStreak = result.action?.type === 'WAIT' ? (mem.waitStreak ?? 0) + 1 : 0;
     result.memory.lastActionType = result.action?.type ?? null; 
-    
-    const activePlanLabel = mem.plan ? `${mem.plan.label} (${mem.plan.steps.length} steps remaining)` : 'No active plan';
-    console.log(`[Bot Decision] Bot ID: ${result.memory.targetHexId ? 'Targeted' : 'Searching'} | Pos: (${mem.lastPosKey || '?'}) | Action Chosen: ${result.action ? result.action.type : 'WAIT'} details: ${JSON.stringify(result.action)} | Logic Reason/Debug: ${result.debug} | Active Plan: ${activePlanLabel}`);
-
-    if (isProd) {
-        result.debug = '';
-        if (result.memory.plan) {
-            result.memory.plan.label = '';
-        }
-        if (mem.plan) {
-            mem.plan.label = '';
-        }
-    }
     return result;
 };
