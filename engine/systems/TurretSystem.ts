@@ -17,12 +17,15 @@ export class TurretSystem implements System {
     this.recycleDeadBots(state, now, events);
 
     // 3. Process each turret firing
+    const turretSpeedUpgrade = state.campaignUpgrades?.turretSpeed ?? 0;
+
     for (const key in grid) {
       const cell = grid[key];
       if (cell.structureType === 'TURRET' || cell.isTurret) {
-        // Enforce cooldown
-        const cooldown = cell.turretCooldown ?? 3000; // default 3 seconds
-        const lastFired = cell.lastRecoveryUseTime ?? 0; // abuse this unused timestamp slot to avoid custom JSON-unfriendly extensions
+        // Enforce cooldown with turretSpeed upgrade reduction (-500ms per upgrade level, min 1000ms)
+        const baseCooldown = cell.turretCooldown ?? 5000;
+        const cooldown = Math.max(1000, baseCooldown - turretSpeedUpgrade * 500);
+        const lastFired = cell.lastRecoveryUseTime ?? 0; // abuse this timestamp slot for firing cooldown
         if (now - lastFired < cooldown) {
           continue;
         }
@@ -30,7 +33,7 @@ export class TurretSystem implements System {
         // Calculate dynamic range with height bonus
         const L_att = cell.currentLevel ?? 0;
         const baseRange = cell.turretRange ?? 2;
-        const baseDamage = cell.turretDamage ?? 3;
+        const baseDamage = 1; // Base damage is 1 Rank per shot
 
         // Find closest active bot in range
         let targetBot: any = null;
@@ -39,7 +42,7 @@ export class TurretSystem implements System {
         let finalDmg = baseDamage;
 
         for (const bot of state.bots) {
-          if (bot.moves <= 0) continue;
+          if (bot.moves <= 0 || (bot.playerLevel ?? 1) < 1) continue;
           
           const botHex = grid[`${bot.q},${bot.r}`];
           const L_tgt = botHex ? (botHex.currentLevel ?? 0) : 0;
@@ -57,35 +60,41 @@ export class TurretSystem implements System {
             targetBot = bot;
             finalEffectiveRange = effectiveRange;
 
-            // Dynamic damage modifier based on attacker (L_att) and target (L_tgt)
-            // Placing turrets on peaks (L_att >= 2) increases damage by +25%
-            let damageMultiplier = 1.0;
-            if (L_att >= 2) {
-              damageMultiplier += 0.25;
-            }
-            // Height difference modifier: +10% damage per level of height difference (L_att - L_tgt)
-            // conversely, shooting upwards (L_att < L_tgt) carries -10% per level penalty
+            // Height bonus damage: if turret is significantly higher (+2 levels), deal 2 rank damage
             const heightDiff = L_att - L_tgt;
-            damageMultiplier += heightDiff * 0.10;
-
-            // Enforce minimum multiplier of 0.5
-            damageMultiplier = Math.max(0.5, damageMultiplier);
-
-            finalDmg = Math.round(baseDamage * damageMultiplier);
+            if (heightDiff >= 2) {
+              finalDmg = 2;
+            } else {
+              finalDmg = 1;
+            }
           }
         }
 
         // Fire!
         if (targetBot) {
-          targetBot.moves = Math.max(0, targetBot.moves - finalDmg);
+          // Reduce bot rank by turret damage
+          targetBot.playerLevel = (targetBot.playerLevel ?? 1) - finalDmg;
+          const isDestroyed = targetBot.playerLevel < 1;
+
+          if (isDestroyed) {
+            targetBot.moves = 0; // Trigger recycling
+          }
           
           cell.lastRecoveryUseTime = now; // set fired cooldown ts
 
-          const msg = `🛡️ Turret at (${cell.q}, ${cell.r}) (L${L_att}) fired at ${targetBot.id}! Range: ${finalEffectiveRange}, Damage: ${finalDmg}`;
+          const isRu = state.language === 'RU';
+          const msg = isDestroyed
+            ? (isRu 
+                ? `💥 Турель на (${cell.q}, ${cell.r}) уничтожила бота ${targetBot.id}! (Ранг опустился ниже 1)`
+                : `💥 Turret at (${cell.q}, ${cell.r}) destroyed bot ${targetBot.id}! (Rank dropped below 1)`)
+            : (isRu
+                ? `🛡️ Турель на (${cell.q}, ${cell.r}) нанесла удар боту ${targetBot.id}! Осталось ранга: ${targetBot.playerLevel}`
+                : `🛡️ Turret at (${cell.q}, ${cell.r}) hit bot ${targetBot.id}! Remaining Rank: ${targetBot.playerLevel}`);
+
           state.messageLog.unshift({
             id: `turret-fire-${now}-${cell.q}-${cell.r}`,
             text: msg,
-            type: 'INFO',
+            type: isDestroyed ? 'WARN' : 'INFO',
             source: 'SYSTEM',
             timestamp: now
           });
@@ -96,11 +105,11 @@ export class TurretSystem implements System {
             id: `turret-text-${now}-${cell.q}-${cell.r}`,
             q: targetBot.q,
             r: targetBot.r,
-            text: `-${finalDmg} HP`,
-            color: '#F43F5E', // Rose-500 red glow
+            text: isDestroyed ? `💥 DESTROYED!` : `-${finalDmg} RANK`,
+            color: isDestroyed ? '#EF4444' : '#F43F5E',
             startTime: now,
             lifetime: 1500,
-            icon: 'WARN',
+            icon: isDestroyed ? 'SKULL' : 'WARN',
             sourceQ: cell.q,
             sourceR: cell.r
           });
@@ -262,6 +271,9 @@ export class TurretSystem implements System {
         let botMoves = 15;
         let botHead = 4;
         let botBody = 4;
+        let baseRank = 2;
+
+        const waveRankBonus = Math.floor((state.defense.currentWave - 1) / 3);
 
         if (waveSubIndex === 0) {
           // Simple wave: only Grinders
@@ -270,6 +282,7 @@ export class TurretSystem implements System {
           botMoves = 15;
           botHead = 4;
           botBody = 4;
+          baseRank = 2;
         } else if (waveSubIndex === 1) {
           // Mixed wave: cycle Grinder, Runner, Tank
           const r = i % 3;
@@ -279,18 +292,21 @@ export class TurretSystem implements System {
             botMoves = 15;
             botHead = 4;
             botBody = 4;
+            baseRank = 2;
           } else if (r === 1) {
             botRole = 'SIEGE_RUNNER';
             botColor = '#EAB308'; // Yellow
             botMoves = 6;
             botHead = 2;
             botBody = 1;
+            baseRank = 1;
           } else {
             botRole = 'SIEGE_TANK';
             botColor = '#8B5CF6'; // Purple
             botMoves = 40;
             botHead = 3;
             botBody = 3;
+            baseRank = 3;
           }
         } else {
           // Hard wave: cycle Tank, Tank, Grinder
@@ -301,14 +317,24 @@ export class TurretSystem implements System {
             botMoves = 40;
             botHead = 3;
             botBody = 3;
+            baseRank = 3;
           } else {
             botRole = 'SIEGE_GRINDER';
             botColor = '#EF4444';
             botMoves = 15;
             botHead = 4;
             botBody = 4;
+            baseRank = 2;
           }
         }
+
+        // Base wave rank starts at Rank 4 on Wave 1 (3 + wave)
+        const waveBaseRank = 3 + state.defense.currentWave;
+        let roleOffset = 0;
+        if (botRole === 'SIEGE_RUNNER') roleOffset = -1;
+        if (botRole === 'SIEGE_TANK') roleOffset = 1;
+
+        const initialBotRank = Math.min(10, Math.max(1, waveBaseRank + roleOffset));
 
         // Spawn specialized bot
         const botId = `saboteur-w${state.defense.currentWave}-${i+1}`;
@@ -318,14 +344,14 @@ export class TurretSystem implements System {
           state: EntityState.IDLE,
           q: pt.q,
           r: pt.r,
-          playerLevel: 1,
+          playerLevel: initialBotRank,
           coins: 200,
           moves: botMoves,
           totalCoinsEarned: 0,
           actionsTaken: 0,
           movementQueue: [],
-          storage: 2,
-          maxStorage: 4,
+          storage: Math.min(2, state.player.maxStorage || 4),
+          maxStorage: state.player.maxStorage || 4,
           inventory: [],
           avatarColor: botColor,
           headIndex: botHead,

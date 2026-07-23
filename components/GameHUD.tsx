@@ -11,6 +11,7 @@ import CentralTutorialBanner from './hud/CentralTutorialBanner.tsx';
 import { OnboardingTutorial } from './hud/OnboardingTutorial.tsx';
 import { DefenseSiegeBanner } from './hud/DefenseSiegeBanner.tsx';
 import { RadarWidget } from './hud/RadarWidget.tsx';
+import { SiegeDiagnostics } from './hud/SiegeDiagnostics.tsx';
 import { Item } from '../types.ts';
 
 interface GameHUDProps {
@@ -148,6 +149,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
         <InventoryModal isOpen={showInventory} onClose={() => setShowInventory(false)} />
 
         <OnboardingTutorial />
+
+        <SiegeDiagnostics />
 
         <GameDialogs 
             activeModal={activeModal}

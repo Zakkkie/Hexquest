@@ -132,6 +132,7 @@ export const createGameplaySlice = (
 
                 if (siegeLvl !== undefined && siegeLvl !== -999) {
                     initialGrid[key] = {
+                        id: key,
                         q, r,
                         currentLevel: siegeLvl,
                         maxLevel: siegeLvl,
@@ -147,6 +148,7 @@ export const createGameplaySlice = (
                 } else {
                     const randomDepth = -1 - Math.floor(Math.random() * 3);
                     initialGrid[key] = {
+                        id: key,
                         q, r, currentLevel: randomDepth, maxLevel: randomDepth,
                         progress: 0, structureType: 'NONE', isPassable: true,
                         isExcavated: true, revealed: true
@@ -159,10 +161,15 @@ export const createGameplaySlice = (
     const coreKey = getHexKey(0, 0);
     if (!initialGrid[coreKey] || initialGrid[coreKey].structureType !== 'CORE') {
       initialGrid[coreKey] = {
+        id: coreKey,
         q: 0, r: 0, currentLevel: 0, maxLevel: 0, progress: 0,
         structureType: 'CORE', isCore: true, isPassable: true, isExcavated: false,
         isIndestructible: true, revealed: true, ownerId: 'player-1'
       } as Hex;
+    } else {
+      initialGrid[coreKey].id = coreKey;
+      initialGrid[coreKey].isCore = true;
+      initialGrid[coreKey].structureType = 'CORE';
     }
 
     const stateUser = get().user;

@@ -14,7 +14,24 @@ class CampaignLoadBalancer {
     ): (...args: Args) => Result {
         const self = this;
         return function(this: any, ...args: Args): Result {
-            const keyStr = `${cacheKeyPrefix}:${JSON.stringify(args)}`;
+            let keyStr = cacheKeyPrefix;
+            try {
+                if (args[0] && typeof args[0] === 'object') {
+                    if (typeof (args[0] as any).stateVersion === 'number') {
+                        keyStr = `${cacheKeyPrefix}:version:${(args[0] as any).stateVersion}`;
+                    } else if (typeof (args[0] as any).id === 'string') {
+                        keyStr = `${cacheKeyPrefix}:id:${(args[0] as any).id}`;
+                    } else {
+                        // Safe limited serialization
+                        keyStr = `${cacheKeyPrefix}:fallback`;
+                    }
+                } else {
+                    keyStr = `${cacheKeyPrefix}:${JSON.stringify(args)}`;
+                }
+            } catch (e) {
+                keyStr = `${cacheKeyPrefix}:error-fallback:${Math.random()}`;
+            }
+
             const cached = self.cacheMap.get(keyStr);
             const now = Date.now();
 

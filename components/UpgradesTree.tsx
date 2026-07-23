@@ -26,10 +26,10 @@ const getUpgradeCost = (key: string, level: number): number => {
     if ([
         'fuelEfficiency', 'scanRadius', 'fatigueResistance', 'growthAccelerator', 
         'diggerLuck', 'doubleDigChance', 'reserveCapacitor', 'turboRecharge', 
-        'entropyResistance', 'restorationMaster', 'contrastHighlighting'
+        'entropyResistance', 'restorationMaster', 'contrastHighlighting', 'turretSpeed'
     ].includes(key)) {
         if (key === 'contrastHighlighting') return 5;
-        const base = (key === 'growthAccelerator' || key === 'diggerLuck' || key === 'turboRecharge') ? 3 : 2;
+        const base = (key === 'growthAccelerator' || key === 'diggerLuck' || key === 'turboRecharge' || key === 'turretSpeed') ? 3 : 2;
         return base * (level + 1);
     }
     return 1 + level;
@@ -87,7 +87,7 @@ const SECTORS: SectorConfig[] = [
         descEN: 'Fine-tunes nanite construction rates, physical floor durability, and deep-vein salvage luck.',
         color: 'amber',
         icon: Wrench,
-        keys: ['growthAccelerator', 'foundationStrength', 'diggerLuck', 'restorationMaster'] as const
+        keys: ['growthAccelerator', 'foundationStrength', 'diggerLuck', 'restorationMaster', 'turretSpeed'] as const
     }
 ];
 
@@ -240,6 +240,12 @@ const UPGRADE_CONFIGS: Record<keyof CampaignUpgrades, UpgradeConfig> = {
         descRU: (lvl) => `Отображает контурную сияющую сетку для схем до ${lvl * 20} фигур (уровень ${lvl})`,
         descEN: (lvl) => `Displays glowing outline grid for setups of up to ${lvl * 20} shapes (Level ${lvl})`,
         Icon: Star, amountPerUpgrade: 1, colorClass: 'text-pink-400', maxLevel: 10
+    },
+    turretSpeed: {
+        labelRU: 'Скорость Обороны', labelEN: 'Turret Speed',
+        descRU: 'Увеличивает темп стрельбы турелей (-500мс кулдаун)',
+        descEN: 'Increases turret fire rate (-500ms cooldown per level)',
+        Icon: Zap, amountPerUpgrade: 1, colorClass: 'text-amber-400', maxLevel: 6
     }
 };
 
@@ -447,7 +453,7 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.99, y: 10 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="bg-slate-950 sm:border sm:border-indigo-500/30 w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-6xl sm:rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.2)] flex flex-col relative z-10 overflow-hidden"
+                className="bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.8)] w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-6xl rounded-2xl md:rounded-3xl flex flex-col relative z-10 overflow-hidden"
             >
                 <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-indigo-500/40 z-30 pointer-events-none" />
                 <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-indigo-500/40 z-30 pointer-events-none" />

@@ -146,7 +146,7 @@ export class GrowthSystem implements System {
                         ? `💥 РЕАКТОРНЫЙ ШОК: Попытка съема энергии перегретого сектора снижает стабильность на -10%!`
                         : `💥 REACTOR SHOCK: Attempting recovery of overheating sector drops stability by -10%!`;
                     state.messageLog.unshift({
-                        id: `cd-${now}`,
+                        id: `cd-${now}-${Math.random().toString(36).substring(2, 7)}`,
                         text: `${state.language === 'RU' ? `Сектор на перезарядке: осталось ${seconds}с` : `Sector Recharging: ${seconds}s left`}. ${errorLabel}`,
                         type: 'WARN',
                         source: 'SYSTEM',
@@ -244,7 +244,7 @@ export class GrowthSystem implements System {
                  const errorLabel = state.language === 'RU'
                      ? `⚠️ СЕЙСМИЧЕСКАЯ ОШИБКА: Ошибка бурения дестабилизирует стабильность ядра (-5% энтропии)!`
                      : `⚠️ SEISMIC ERROR: Excavation failure destabilizes the core stability (-5% entropy)!`;
-                 state.messageLog.unshift({ id: `dig-fail-${Date.now()}`, text: `${msg}. ${errorLabel}`, type: 'WARN', source: 'SYSTEM', timestamp: Date.now() });
+                 state.messageLog.unshift({ id: `dig-fail-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: `${msg}. ${errorLabel}`, type: 'WARN', source: 'SYSTEM', timestamp: Date.now() });
                  events.push(GameEventFactory.create('ACTION_DENIED', msg, entity.id));
                  state.isPlayerGrowing = false;
              }
@@ -254,8 +254,7 @@ export class GrowthSystem implements System {
         // Logic for Dig Progress
         const { growthAccelerator } = getStatusModifiers(entity, state);
         const isBot = entity.type !== EntityType.PLAYER;
-        const isDefenseMode = !!state.defense?.isDefenseMode;
-        const needed = (isBot && isDefenseMode) ? 3 : Math.max(10, 30 - (growthAccelerator * 5));
+        const needed = isBot ? 30 : Math.max(10, 30 - (growthAccelerator * 5));
         if (hex.progress + 1 >= needed) {
              const newLevel = hex.currentLevel - 1;
              
@@ -285,7 +284,7 @@ export class GrowthSystem implements System {
              if (hasBreakdownRisk && Math.random() < 0.1) {
                  if (entity.playerLevel > 1) entity.playerLevel--;
                  const failMsg = "CRITICAL BREAKDOWN: Drill Malfunction!";
-                 state.messageLog.unshift({ id: `breakdown-${Date.now()}`, text: failMsg, type: 'ERROR', source: 'SYSTEM', timestamp: Date.now() });
+                 state.messageLog.unshift({ id: `breakdown-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: failMsg, type: 'ERROR', source: 'SYSTEM', timestamp: Date.now() });
                  events.push(GameEventFactory.create('ERROR', failMsg, entity.id));
                  // Stop action
                  if (hasUpgradeCmd) entity.movementQueue.shift();
@@ -300,22 +299,33 @@ export class GrowthSystem implements System {
                  matGain *= 2;
              }
              let actualMatGain = 0;
+             let depthReward = 1;
 
-             // CAP MATERIAL AT MAX STORAGE, BUT ALLOW ACTION TO PROCEED
-             if (entity.storage < entity.maxStorage) {
-                 const space = entity.maxStorage - entity.storage;
-                 actualMatGain = Math.min(space, matGain);
-                 entity.storage += actualMatGain;
-             }
-             state.totalMinedMaterial = (state.totalMinedMaterial || 0) + actualMatGain;
+             if (isBot) {
+                 // Bot receives 1 material (if space in storage) and 1 move per layer dug
+                 if (entity.storage < entity.maxStorage) {
+                     entity.storage += 1;
+                     actualMatGain = 1;
+                 }
+                 depthReward = 1;
+                 entity.moves += depthReward;
+             } else {
+                 // CAP MATERIAL AT MAX STORAGE, BUT ALLOW ACTION TO PROCEED
+                 if (entity.storage < entity.maxStorage) {
+                     const space = entity.maxStorage - entity.storage;
+                     actualMatGain = Math.min(space, matGain);
+                     entity.storage += actualMatGain;
+                 }
+                 state.totalMinedMaterial = (state.totalMinedMaterial || 0) + actualMatGain;
 
-             if (entity.type === 'PLAYER') {
-                 if (!state.minedHexes) state.minedHexes = {};
-                 state.minedHexes[hex.currentLevel] = (state.minedHexes[hex.currentLevel] || 0) + 1;
+                 if (entity.type === 'PLAYER') {
+                     if (!state.minedHexes) state.minedHexes = {};
+                     state.minedHexes[hex.currentLevel] = (state.minedHexes[hex.currentLevel] || 0) + 1;
+                 }
+                 
+                 depthReward = Math.max(1, Math.abs(newLevel));
+                 entity.moves += depthReward;
              }
-             
-             const depthReward = Math.max(1, Math.abs(newLevel));
-             entity.moves += depthReward;
              
              // Handle Durability Logic for new level
              let newDurability = hex.durability;
@@ -382,7 +392,7 @@ export class GrowthSystem implements System {
                              entity.coins += finalAmount;
                              entity.totalCoinsEarned += finalAmount;
                              const lootMsg = `FOUND: ${finalAmount} Coins!`;
-                             state.messageLog.unshift({ id: `loot-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
+                             state.messageLog.unshift({ id: `loot-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
                              events.push(GameEventFactory.create('RECOVERY_USED', lootMsg, entity.id, { coins: finalAmount })); 
                          } else if (loot.type === 'ITEM') {
                              if (!entity.inventory) entity.inventory = [];
@@ -391,10 +401,10 @@ export class GrowthSystem implements System {
                              if (entity.inventory.length < maxInv) {
                                  entity.inventory = [...entity.inventory, loot.item];
                                  const lootMsg = `FOUND: ${loot.item.name}!`;
-                                 state.messageLog.unshift({ id: `loot-item-${Date.now()}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
+                                 state.messageLog.unshift({ id: `loot-item-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });
                                  events.push(GameEventFactory.create('ITEM_DROP', lootMsg, entity.id));
                              } else {
-                                 state.messageLog.unshift({ id: `loot-full-${Date.now()}`, text: "Inventory Full! Item Discarded.", type: 'WARN', source: 'LOOT', timestamp: Date.now() });
+                                 state.messageLog.unshift({ id: `loot-full-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: "Inventory Full! Item Discarded.", type: 'WARN', source: 'LOOT', timestamp: Date.now() });
                                  events.push(GameEventFactory.create('ERROR', "Inventory Full", entity.id));
                              }
                          }
@@ -445,8 +455,34 @@ export class GrowthSystem implements System {
              }
              
              if (isVisible) {
-                 state.messageLog.unshift({ id: `dig-ok-${Date.now()}`, text: msg, type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now() });
+                 state.messageLog.unshift({ id: `dig-ok-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: msg, type: 'SUCCESS', source: 'SYSTEM', timestamp: Date.now() });
                  events.push(GameEventFactory.create('SECTOR_EXCAVATED', msg, entity.id, { material: actualMatGain, moves: depthReward }));
+             }
+
+             if (entity.type === 'PLAYER') {
+                 state.effects = state.effects || [];
+                 if (actualMatGain > 0) {
+                     state.effects.push({
+                         id: `dig-mat-${Date.now()}-${Math.random()}`,
+                         q: entity.q,
+                         r: entity.r,
+                         text: `+${actualMatGain}⚙️`,
+                         color: '#A855F7',
+                         startTime: Date.now(),
+                         lifetime: 1800
+                     });
+                 }
+                 if (depthReward > 0) {
+                     state.effects.push({
+                         id: `dig-moves-${Date.now()}-${Math.random()}`,
+                         q: entity.q,
+                         r: entity.r,
+                         text: state.language === 'RU' ? `+${depthReward} Ходов` : `+${depthReward} Moves`,
+                         color: '#3B82F6',
+                         startTime: Date.now(),
+                         lifetime: 1800
+                     });
+                 }
              }
 
              if (hasUpgradeCmd) entity.movementQueue.shift();
@@ -464,7 +500,8 @@ export class GrowthSystem implements System {
         const neighbors = index.getValidNeighbors(targetQ, targetR).map(h => ({ q: h.q, r: h.r }));
         const occupied = index.getOccupiedHexesList();
         
-        const condition = checkGrowthCondition(hex, entity, neighbors, state.grid, occupied, queueSize);
+        const isDefense = !!state.defense?.isDefenseMode;
+        const condition = checkGrowthCondition(hex, entity, neighbors, state.grid, occupied, queueSize, isDefense);
         
         // STATUS CHECK: FREE BUILD
         // If Free Build active, ignore "NEED MATERIAL" reason
@@ -486,7 +523,7 @@ export class GrowthSystem implements System {
              const errorLabel = state.language === 'RU'
                  ? `⚠️ СТРУКТУРНЫЙ СБОЙ: Попытка неверного строительства дестабилизирует эфир (-5% энтропии)!`
                  : `⚠️ STRUCTURAL FAILURE: Invalid construction attempt destabilizes the field (-5% entropy)!`;
-             state.messageLog.unshift({ id: `denied-${Date.now()}`, text: `Growth Failed: ${msg}. ${errorLabel}`, type: 'WARN', source: 'SYSTEM', timestamp: Date.now() });
+             state.messageLog.unshift({ id: `denied-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: `Growth Failed: ${msg}. ${errorLabel}`, type: 'WARN', source: 'SYSTEM', timestamp: Date.now() });
              events.push(GameEventFactory.create('ACTION_DENIED', msg, entity.id));
              state.isPlayerGrowing = false; 
           }
@@ -498,8 +535,7 @@ export class GrowthSystem implements System {
         const config = getLevelConfig(targetLevel);
         const { growthAccelerator } = getStatusModifiers(entity, state);
         const isBot = entity.type !== EntityType.PLAYER;
-        const isDefenseMode = !!state.defense?.isDefenseMode;
-        const needed = (isBot && isDefenseMode) ? 3 : Math.max(10, config.growthTime - (growthAccelerator * 5));
+        const needed = isBot ? 30 : Math.max(10, config.growthTime - (growthAccelerator * 5));
 
         // Check Progress
         if (hex.progress + 1 >= needed) {
@@ -577,7 +613,7 @@ export class GrowthSystem implements System {
                const msg = `${prefix} Sector L1 Built (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
                
                if (isVisible) {
-                  state.messageLog.unshift({ id: `acq-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
+                  state.messageLog.unshift({ id: `acq-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
                   events.push(GameEventFactory.create('SECTOR_ACQUIRED', msg, entity.id, { level: 1 }));
                }
           } else {
@@ -586,7 +622,7 @@ export class GrowthSystem implements System {
                const msg = `${prefix} Upgraded to L${targetLevel} (${hasFreeBuild ? '0' : '-1'} Mat, +Move, +Cr)`;
                
                if (isVisible) {
-                  state.messageLog.unshift({ id: `lvl-${Date.now()}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
+                  state.messageLog.unshift({ id: `lvl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: msg, type: 'SUCCESS', source: entity.id, timestamp: Date.now() });
                   events.push(GameEventFactory.create('LEVEL_UP', msg, entity.id, { level: targetLevel }));
                }
           }
@@ -614,6 +650,30 @@ export class GrowthSystem implements System {
               isPlayerBuilt: entity.type === EntityType.PLAYER ? true : hex.isPlayerBuilt,
               isExcavated: entity.type === EntityType.PLAYER ? false : hex.isExcavated
           });
+
+          if (entity.type === 'PLAYER') {
+              state.effects = state.effects || [];
+              state.effects.push({
+                  id: `upgrade-float-${Date.now()}-${Math.random()}`,
+                  q: entity.q,
+                  r: entity.r,
+                  text: state.language === 'RU' ? `L${targetLevel} +1 Ход` : `L${targetLevel} +1 Move`,
+                  color: '#10B981',
+                  startTime: Date.now(),
+                  lifetime: 1800
+              });
+              if (!hasFreeBuild) {
+                  state.effects.push({
+                      id: `upgrade-mat-${Date.now()}-${Math.random()}`,
+                      q: entity.q,
+                      r: entity.r,
+                      text: `-1⚙️`,
+                      color: '#EF4444',
+                      startTime: Date.now(),
+                      lifetime: 1500
+                  });
+              }
+          }
           
           const shouldContinue = false;
 
@@ -656,7 +716,7 @@ export class GrowthSystem implements System {
             entity.state = EntityState.IDLE;
             if (entity.type === EntityType.PLAYER) {
                 state.messageLog.unshift({
-                    id: `turret-fail-${now}`,
+                    id: `turret-fail-${now}-${Math.random().toString(36).substring(2, 7)}`,
                     text: `Turret Build Failed: ${reason}`,
                     type: 'WARN',
                     source: 'SYSTEM',
@@ -689,7 +749,7 @@ export class GrowthSystem implements System {
 
             const msg = `🛡️ Built Defensive Turret at (${hex.q}, ${hex.r})! Setup completed.`;
             state.messageLog.unshift({
-                id: `turret-build-ok-${now}`,
+                id: `turret-build-ok-${now}-${Math.random().toString(36).substring(2, 7)}`,
                 text: msg,
                 type: 'SUCCESS',
                 source: entity.id,

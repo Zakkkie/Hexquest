@@ -3,7 +3,7 @@ import { useGameStore } from '../../store';
 import { TEXT } from '../../services/i18n';
 import { 
     Crown, Box, Wallet, Coins, Footprints, Settings, X, Music, VolumeX, Volume2, 
-    Globe, BookOpen, Trophy, FileText, LogOut, RotateCcw, Zap, HelpCircle, ZoomIn, ZoomOut 
+    Globe, BookOpen, Trophy, FileText, LogOut, RotateCcw, Zap, HelpCircle, ZoomIn, ZoomOut, Cpu 
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import EntropyGauge from '../EntropyGauge';
@@ -11,7 +11,7 @@ import { StorageBlocks } from './HudShared';
 
 // --- TYPES ---
 type StatType = 'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | 'ENTROPY';
-type ModalType = 'EXIT' | 'RANKINGS' | 'CODEX' | 'LOG' | 'RESTART';
+type ModalType = 'EXIT' | 'RANKINGS' | 'CODEX' | 'AI_MONITOR' | 'RESTART';
 type HelpTopic = 'RANK' | 'MATERIAL' | 'COINS' | 'MOVES' | 'ENTROPY';
 
 interface TopStatsBarProps {
@@ -86,7 +86,7 @@ const StatWidget: React.FC<StatWidgetProps> = memo(({
             onTouchEnd={() => onInteract(type, 'leave')}
             animate={isHighlighted ? { scale: [1, 1.05, 1], borderColor: ['rgba(245,158,11,0.2)', 'rgba(245,158,11,1)', 'rgba(245,158,11,0.2)'] } : {}}
             transition={isHighlighted ? { duration: 1.5, repeat: Infinity } : {}}
-            className={`relative flex items-center gap-1 sm:gap-1.5 md:gap-2.5 cursor-pointer group shrink-0 pr-1 sm:pr-2 select-none py-0.5 md:py-1 transition-all duration-300 hover:bg-slate-900/40 px-1 sm:px-1.5 rounded-lg border ${themeClass}`}
+            className={`relative flex items-center gap-1.5 sm:gap-2 md:gap-3 cursor-pointer group shrink-0 pr-1.5 sm:pr-2.5 select-none py-1 md:py-1.5 transition-all duration-300 hover:bg-slate-900/40 px-1.5 sm:px-2.5 rounded-xl border ${themeClass}`}
         >
             <motion.div 
                 animate={
@@ -130,6 +130,10 @@ const SystemMenu: React.FC<SystemMenuProps & { language: 'RU' | 'EN', t: any, is
 }) => {
     const store = useGameStore.getState();
     
+    const session = store.session;
+    const winCond = session?.winCondition;
+    const isBattleMode = winCond?.winType === 'SUMMIT' || winCond?.levelId === -1;
+
     if (!isOpen) return null;
 
     return (
@@ -166,13 +170,15 @@ const SystemMenu: React.FC<SystemMenuProps & { language: 'RU' | 'EN', t: any, is
                 <BookOpen className="w-4 h-4 text-purple-400" />
                 <span className="text-xs font-bold uppercase">{language === 'RU' ? 'База Предметов' : 'Item Codex'}</span>
             </button>
-            <button onClick={() => { onOpenModal('RANKINGS'); onClose(); store.playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-900/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
-                <Trophy className="w-4 h-4 text-amber-500" />
-                <span className="text-xs font-bold uppercase">{t.LEADERBOARD_TITLE}</span>
-            </button>
-            <button onClick={() => { onOpenModal('LOG'); onClose(); store.playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left">
-                <FileText className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
+            {isBattleMode && (
+                <button onClick={() => { onOpenModal('RANKINGS'); onClose(); store.playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-900/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors w-full text-left border border-transparent hover:border-slate-600">
+                    <Trophy className="w-4 h-4 text-amber-500" />
+                    <span className="text-xs font-bold uppercase">{t.LEADERBOARD_TITLE}</span>
+                </button>
+            )}
+            <button onClick={() => { onOpenModal('AI_MONITOR'); onClose(); store.playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left">
+                <Cpu className="w-4 h-4 text-indigo-400 animate-pulse" />
+                <span className="text-xs font-bold uppercase">{language === 'RU' ? 'AI Монитор' : 'AI Monitor'}</span>
             </button>
             <button onClick={() => { store.toggleLiteMode(); store.playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border ${isLiteMode ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-400' : 'bg-slate-900/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white hover:border-slate-600'}`}>
                 <Zap className={`w-4 h-4 ${isLiteMode ? 'animate-pulse' : 'text-slate-400'}`} />
@@ -181,10 +187,12 @@ const SystemMenu: React.FC<SystemMenuProps & { language: 'RU' | 'EN', t: any, is
             
             <div className="h-px bg-slate-700/50 my-1"></div>
             
-            <button onClick={() => { window.dispatchEvent(new CustomEvent('hexquest-show-onboarding')); onClose(); store.playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/10 hover:bg-indigo-900/30 text-indigo-400 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left mb-1">
-                <HelpCircle className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase">{language === 'RU' ? 'Обучение' : 'Tutorial'}</span>
-            </button>
+            {isBattleMode && (
+                <button onClick={() => { window.dispatchEvent(new CustomEvent('hexquest-show-onboarding')); onClose(); store.playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/10 hover:bg-indigo-900/30 text-indigo-400 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left mb-1">
+                    <HelpCircle className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase">{language === 'RU' ? 'Обучение' : 'Tutorial'}</span>
+                </button>
+            )}
             <button onClick={() => { onOpenModal('RESTART'); onClose(); store.playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-900/10 hover:bg-amber-900/30 text-amber-400 border border-amber-900/30 hover:border-amber-500/50 transition-colors w-full text-left">
                 <RotateCcw className="w-4 h-4" />
                 <span className="text-xs font-bold uppercase">{t.BTN_RETRY}</span>
@@ -311,7 +319,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                 
                 {/* STATS STRIP */}
                 <div className="flex flex-col gap-1 flex-1 min-w-0 md:flex-none md:w-fit relative pointer-events-auto" ref={statsBarRef} id="top-stats-bar">
-                    <div className="flex items-center justify-between md:justify-start bg-slate-950/80 backdrop-blur-2xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-1 py-1 md:px-4 md:py-2 gap-0.5 sm:gap-1.5 md:gap-4 transition-all duration-300 hover:border-slate-700/60 overflow-x-auto overflow-y-hidden stats-scroll-hide w-full h-[38px] md:h-auto md:shrink-0 relative">
+                    <div className="flex items-center justify-between md:justify-start bg-slate-950/80 backdrop-blur-2xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-2 py-1.5 md:px-5 md:py-3 gap-1.5 sm:gap-3 md:gap-6 transition-all duration-300 hover:border-slate-700/60 overflow-x-auto overflow-y-hidden stats-scroll-hide w-full h-[44px] md:h-auto md:shrink-0 relative">
                         
                         {/* Entropy Background */}
                         {entropy && (
@@ -350,7 +358,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                             </div>
                         </StatWidget>
 
-                        <div className="w-px h-4 md:h-7 bg-slate-800/80 shrink-0 -mx-[2.5px] sm:-mx-[3px] md:-mx-[5px]"></div>
+                        <div className="w-px h-4 md:h-7 bg-slate-800/80 shrink-0 mx-0.5 sm:mx-1 md:mx-2"></div>
                         
                         {/* MATERIAL */}
                         <StatWidget type="MATERIAL" icon={<Box className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-400" />} label={t.MATERIAL} isHighlighted={isLevel14} storageChanged={storageChanged} animKey={storageAnimKey} onInteract={handleInteraction}>
@@ -361,7 +369,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                             </div>
                         </StatWidget>
 
-                        <div className="w-px h-4 md:h-7 bg-slate-800/80 shrink-0 -mx-[2.5px] sm:-mx-[3px] md:-mx-[5px]"></div>
+                        <div className="w-px h-4 md:h-7 bg-slate-800/80 shrink-0 mx-0.5 sm:mx-1 md:mx-2"></div>
                         
                         {/* COINS */}
                         <StatWidget type="COINS" icon={<Wallet className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-400" />} label={t.CREDITS} coinsChanged={coinsChanged} animKey={coinsAnimKey} onInteract={handleInteraction}>
@@ -373,7 +381,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                             </div>
                         </StatWidget>
 
-                        <div className="w-px h-4 md:h-7 bg-slate-800/80 shrink-0 -mx-[2.5px] sm:-mx-[3px] md:-mx-[5px]"></div>
+                        <div className="w-px h-4 md:h-7 bg-slate-800/80 shrink-0 mx-0.5 sm:mx-1 md:mx-2"></div>
                         
                         {/* MOVES */}
                         <StatWidget type="MOVES" icon={<Footprints className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isMoving ? 'text-white' : 'text-blue-400'}`} />} label={t.MOVES} isMoving={isMoving} onInteract={handleInteraction} animKey={0}>
@@ -383,7 +391,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                             </div>
                         </StatWidget>
 
-                        <div className="w-px h-4 md:h-7 bg-slate-800/80 shrink-0 -mx-[2.5px] sm:-mx-[3px] md:-mx-[5px]"></div>
+                        <div className="w-px h-4 md:h-7 bg-slate-800/80 shrink-0 mx-0.5 sm:mx-1 md:mx-2"></div>
                         
                         {/* ENTROPY */}
                         <StatWidget type="ENTROPY" icon={<EntropyGauge className="w-4 h-4 md:w-6 md:h-6" />} label={entropy && entropy.current / entropy.max < 0.3 ? (language === 'RU' ? 'КРИТ' : 'CRIT') : entropy && entropy.current / entropy.max < 0.6 ? (language === 'RU' ? 'ПРЕД' : 'WARN') : (language === 'RU' ? 'НОРМ' : 'STABLE')} onInteract={handleInteraction} animKey={0}>

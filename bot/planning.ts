@@ -2,7 +2,6 @@ import { Hex, Entity, HexCoord } from '../types';
 import { getHexKey, getNeighbors, cubeDistance } from '../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
-import { useGameStore } from '../store';
 
 interface ScoredTarget {
     hex: Hex;
@@ -88,7 +87,7 @@ const resolveDigChain = (
 ): ScoredTarget | null => {
     if (depth > MAX_RECURSION_DEPTH) return null;
     if (target.structureType === 'VOID') return null;
-    const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+    const isDefenseMode = !!(bot.memory?.botRole?.startsWith('SIEGE_'));
     if (!isDefenseMode && target.structureType === 'MONUMENT') return null;
 
     const nbs = getNeighbors(target.q, target.r);
@@ -180,7 +179,7 @@ const findDestroyerTarget = (
     const candidates = index.getHexesInRange({q:bot.q, r:bot.r}, scanRadiusForDestroyerFallback);
     let bestTarget: ScoredTarget | null = null;
     let maxScore = -9999;
-    const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+    const isDefenseMode = !!(bot.memory?.botRole?.startsWith('SIEGE_'));
 
     for (const hex of candidates) {
         if (hex.structureType === 'VOID') continue;

@@ -94,34 +94,47 @@ const StoryTimeline: React.FC<{
   const t = TEXT[useGameStore.getState().language].CAMPAIGN_MAP;
   const language = useGameStore.getState().language;
 
-  // Stagger parameters optimized for snug layouts without gaps
+  // Stagger parameters optimized for snug layouts with symmetric header padding
   const timelineLayout = useMemo(() => {
-    const ITEM_HEIGHT = isMobile ? 155 : 270;
-    const START_OFFSET = isMobile ? 45 : 85;
+    const ITEM_HEIGHT = isMobile ? 160 : 260;
+    const CARD_HEIGHT = isMobile ? 135 : 175;
+    const HEADER_PADDING = isMobile ? 24 : 32;
+    const START_OFFSET = isMobile ? 32 : 48;
+    
     const positions: any[] = [];
     let currentY = START_OFFSET;
     let lastSeries = '';
 
     CAMPAIGN_LEVELS.forEach((level, index) => {
       const series = level.id.split('.')[0];
-      let hasHeader = false, headerY = 0;
+      let hasHeader = false;
+      let headerY = 0;
       
-      if (series !== lastSeries) {
-        currentY += index > 0 ? (isMobile ? 70 : 130) : 0;
-        headerY = currentY;
-        currentY += isMobile ? 55 : 90;
+      if (index === 0) {
+        // Series 1 Header: placed with exactly HEADER_PADDING above and below
+        headerY = START_OFFSET + HEADER_PADDING;
+        currentY = headerY + HEADER_PADDING + CARD_HEIGHT / 2;
         hasHeader = true;
         lastSeries = series;
+      } else if (series !== lastSeries) {
+        // Transition to next series with mathematically symmetric and snug padding around the header
+        const prevY = currentY;
+        headerY = prevY + CARD_HEIGHT / 2 + HEADER_PADDING;
+        currentY = headerY + HEADER_PADDING + CARD_HEIGHT / 2;
+        hasHeader = true;
+        lastSeries = series;
+      } else {
+        // Same Series: standard item spacing
+        currentY += ITEM_HEIGHT;
       }
       
       const isLeft = index % 2 === 0;
       // On mobile, lock timeline to the left edge with precise margins to maximize card space
       const x = isMobile ? 38 : (isLeft ? containerWidth * 0.28 : containerWidth * 0.72);
       positions.push({ x, y: currentY, hasHeader, headerY, seriesId: series, level, index });
-      currentY += ITEM_HEIGHT;
     });
     
-    return { positions, totalHeight: currentY + (isMobile ? 60 : 100) };
+    return { positions, totalHeight: currentY + (isMobile ? 80 : 120) };
   }, [containerWidth, isMobile]);
 
   // Center view on current active unlocked level node

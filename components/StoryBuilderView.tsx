@@ -4,7 +4,7 @@ import { getHexKey, hexToPixel } from '../services/hexUtils.ts';
 import { THEME_PALETTE } from './MapRenderer.tsx';
 import StoryBoardPixi from './StoryBoardPixi.tsx';
 import { UpgradesTree } from './UpgradesTree.tsx';
-import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle, Hexagon, Terminal, ChevronDown, ChevronUp, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, VolumeX, Music, Languages, HelpCircle, Info, ChevronLeft, ChevronRight, X, Trophy, RefreshCw, Map, AlertTriangle, Hexagon, Terminal, ChevronDown, ChevronUp, Sparkles, ZoomIn, ZoomOut, Shield, Zap, Cpu, Activity, Layers, CheckCircle2, Target, Award, Eye, Wrench, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 
@@ -299,7 +299,7 @@ const StoryBuilderView: React.FC = () => {
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-    const [tabletTab, setTabletTab] = useState<'blueprint' | 'diagnostics' | 'rules'>('blueprint');
+    const [tabletTab, setTabletTab] = useState<'blueprint' | 'schematics' | 'diagnostics'>('blueprint');
     const isUiHidden = false;
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
     const [showUpgrades, setShowUpgrades] = useState(false);
@@ -1478,19 +1478,23 @@ const StoryBuilderView: React.FC = () => {
 
 
                 {/* FLOATING DROPDOWN FOR EXPANDED TASK DETAILS (Interactive Engineering Tablet) */}
-                <AnimatePresence>
-                    {!isNarrativeCollapsed && (
-                        <motion.div
-                            id="tutorial-blueprint-tablet"
-                            initial={{ opacity: 0, y: -15, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -15, scale: 0.95 }}
-                            transition={{ duration: 0.2 }}
-                            className="absolute top-[84px] md:top-[112px] left-1/2 -translate-x-1/2 w-[92vw] max-w-md max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-210px)] overflow-y-auto bg-slate-950/80 border border-white/10 hover:border-indigo-500/25 rounded-2xl shadow-2xl p-4 select-none backdrop-blur-xl flex flex-col pointer-events-auto transition-all duration-300"
-                            style={{ zIndex: 100 + panelZOrder.indexOf('tablet') * 10 }}
-                            onPointerDown={() => bringToFront('tablet')}
-                            onClick={(e) => e.stopPropagation()}
-                        >
+                <div 
+                    id="tutorial-blueprint-tablet-container" 
+                    className="absolute top-[76px] md:top-[100px] left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center w-[94vw] max-w-md select-none z-[110]"
+                    style={{ zIndex: 100 + panelZOrder.indexOf('tablet') * 10 }}
+                    onPointerDown={() => bringToFront('tablet')}
+                >
+                    <AnimatePresence>
+                        {!isNarrativeCollapsed && (
+                            <motion.div
+                                id="tutorial-blueprint-tablet"
+                                initial={{ opacity: 0, y: -15, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -15, scale: 0.95 }}
+                                transition={{ duration: 0.2 }}
+                                className="w-full max-h-[calc(100vh-160px)] sm:max-h-[calc(100vh-200px)] overflow-y-auto bg-slate-950/95 border-2 border-indigo-500/35 hover:border-indigo-400/60 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.85)] p-3.5 sm:p-4 select-none backdrop-blur-2xl flex flex-col pointer-events-auto transition-all duration-300 relative"
+                                onClick={(e) => e.stopPropagation()}
+                            >
                             {/* Sleek Top Edge Progress Line */}
                             <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-slate-900/60 overflow-hidden rounded-t-2xl">
                                 <div 
@@ -1522,40 +1526,46 @@ const StoryBuilderView: React.FC = () => {
                             </div>
 
                             {/* Tablet Tabs */}
-                            <div className="grid grid-cols-3 gap-1 mb-3 bg-slate-900/50 p-0.5 rounded-lg border border-white/5">
+                            <div className="grid grid-cols-3 gap-1 mb-3 bg-slate-900/60 p-1 rounded-xl border border-white/5">
                                 {[
-                                    { id: 'blueprint', labelRU: 'СТАТУС', labelEN: 'STATUS' },
-                                    { id: 'diagnostics', labelRU: 'ДИАГНОСТИКА', labelEN: 'DIAGNOSTICS' },
-                                    { id: 'rules', labelRU: 'ИНСТРУКЦИЯ', labelEN: 'GUIDE' }
+                                    { id: 'blueprint', labelRU: 'ЯДРО И ОБОРОНА', labelEN: 'CORE & DEFENSE', icon: Shield },
+                                    { id: 'schematics', labelRU: 'ЧЕРТЕЖИ И СИНТЕЗ', labelEN: 'BLUEPRINTS', icon: Target },
+                                    { id: 'diagnostics', labelRU: 'ДИАГНОСТИКА', labelEN: 'DIAGNOSTICS', icon: Cpu }
                                 ].map((tab) => {
                                     const isActive = tabletTab === tab.id;
+                                    const IconComp = tab.icon;
                                     return (
                                         <button
                                             key={tab.id}
                                             onClick={() => { playUiSound('CLICK'); setTabletTab(tab.id as any); }}
-                                            className={`py-1.5 px-2 rounded-md font-black text-[11px] md:text-[12.5px] tracking-wider uppercase transition-all ${isActive ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                                            className={`py-2 px-1 rounded-lg font-black text-[9.5px] sm:text-[11px] tracking-wider uppercase transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer select-none ${isActive ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-400/30 font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
                                         >
-                                            {language === 'RU' ? tab.labelRU : tab.labelEN}
+                                            <IconComp className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-cyan-300' : 'text-slate-500'}`} />
+                                            <span className="truncate">{language === 'RU' ? tab.labelRU : tab.labelEN}</span>
                                         </button>
                                     );
                                 })}
                             </div>
 
-                            {/* Centerpiece Container Panel */}
+                            {/* TAB 1: CORE & DEFENSE MATRIX */}
                             {tabletTab === 'blueprint' && (
-                                <div className="flex flex-col">
-                                    {/* Holographic Projection viewport - Engineering Schematic */}
-                                    <div className="w-full bg-slate-900/20 border border-indigo-500/20 rounded-xl mb-3 p-4 relative overflow-hidden backdrop-blur-md shadow-[inset_0_0_24px_rgba(99,102,241,0.15)] flex flex-col gap-3 min-h-[56px]">
-                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_80%)] pointer-events-none" />
+                                <div className="flex flex-col text-left">
+                                    {/* Holographic Projection viewport - Core Grid Matrix */}
+                                    <div className="w-full bg-slate-900/30 border border-indigo-500/30 rounded-xl mb-3 p-3 sm:p-3.5 relative overflow-hidden backdrop-blur-md shadow-[inset_0_0_24px_rgba(99,102,241,0.15)] flex flex-col gap-2.5 sm:gap-3">
+                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_80%)] pointer-events-none" />
                                         
-                                        {/* Science fiction corner reticles */}
-                                        <div className="absolute top-2.5 left-2.5 w-3 h-3 border-t-2 border-l-2 border-indigo-500/50 rounded-tl" />
-                                        <div className="absolute top-2.5 right-2.5 w-3 h-3 border-t-2 border-r-2 border-indigo-500/50 rounded-tr" />
-                                        <div className="absolute bottom-2.5 left-2.5 w-3 h-3 border-b-2 border-l-2 border-indigo-500/50 rounded-bl" />
-                                        <div className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-indigo-500/50 rounded-br" />
- 
-                                        <div className="absolute top-2.5 left-7 text-[9px] font-mono tracking-wider text-indigo-400/40 uppercase">
-                                            {language === 'RU' ? 'ИНЖЕНЕРНАЯ СХЕМА УЗЛОВ' : 'ENGINEERING SCHEMATIC'}
+                                        {/* Sci-Fi corner reticles */}
+                                        <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-cyan-400/60 rounded-tl" />
+                                        <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-cyan-400/60 rounded-tr" />
+                                        <div className="absolute bottom-2 left-2 w-2.5 h-2.5 border-b-2 border-l-2 border-cyan-400/60 rounded-bl" />
+                                        <div className="absolute bottom-2 right-2 w-2.5 h-2.5 border-b-2 border-r-2 border-cyan-400/60 rounded-br" />
+
+                                        <div className="flex justify-between items-center text-[9px] font-mono tracking-wider text-indigo-300/60 uppercase">
+                                            <span>{language === 'RU' ? 'МАТРИЦА СЕТКИ ЯДРА' : 'CORE MATRIX SCHEMATIC'}</span>
+                                            <span className="text-cyan-400 font-bold flex items-center gap-1">
+                                                <Activity className="w-3 h-3 animate-pulse" />
+                                                <span>ONLINE</span>
+                                            </span>
                                         </div>
                                         
                                         {(() => {
@@ -1565,69 +1575,232 @@ const StoryBuilderView: React.FC = () => {
                                             const totalVolume = placedAll.reduce((sum, val) => sum + (val as number), 0);
                                             const highTiers = placedAll.filter(l => (l as number) >= 5).length;
                                             
+                                            // Power output calculation
+                                            const corePower = Math.round(totalVolume * 12.5 + placedNodes * 5);
+                                            
+                                            // Defense rating points
+                                            const defensePoints = placedAll.reduce((acc, lvl) => {
+                                                const l = lvl as number;
+                                                if (l === 0) return acc + 1;
+                                                if (l < 5) return acc + 3;
+                                                return acc + 8; // Citadel towers L5+
+                                            }, 0);
+                                            
+                                            let shieldTierName = language === 'RU' ? 'Базовая платформа' : 'Exposed Platform';
+                                            let shieldDesc = language === 'RU' ? 'Постройте высотные барьеры L3+ для защиты от атак ботов' : 'Construct elevated L3+ barriers to resist bot invasions';
+                                            let shieldColor = 'text-amber-400 border-amber-500/30 bg-amber-950/20';
+
+                                            if (defensePoints >= 40) {
+                                                shieldTierName = language === 'RU' ? 'Форт-Цитадель' : 'Fortress Citadel';
+                                                shieldDesc = language === 'RU' ? 'Максимальный уровень обороны! Преимущество по высоте в Осаде' : 'Maximum defense level! Superior height advantage in Siege';
+                                                shieldColor = 'text-emerald-400 border-emerald-500/30 bg-emerald-950/20';
+                                            } else if (defensePoints >= 15) {
+                                                shieldTierName = language === 'RU' ? 'Укрепленный сектор' : 'Defended Grid Sector';
+                                                shieldDesc = language === 'RU' ? 'Умеренная стойкость. Высотные платформы создают преграды ботам' : 'Moderate resilience. Height platforms block bot pathing';
+                                                shieldColor = 'text-cyan-400 border-cyan-500/30 bg-cyan-950/20';
+                                            }
+
+                                            const shieldPercent = Math.min(100, Math.round((defensePoints / 50) * 100));
+
                                             return (
-                                                <div className="mt-4 flex gap-3 h-full">
-                                                    {/* Left Visual Diagram */}
-                                                    <div className="w-[80px] h-[80px] shrink-0 border border-indigo-500/30 rounded-lg flex items-center justify-center bg-indigo-950/20 relative">
-                                                        <Hexagon className="w-10 h-10 text-cyan-400 absolute opacity-30 animate-spin" style={{ animationDuration: '10s' }} />
-                                                        <Hexagon className="w-6 h-6 text-indigo-300 relative z-10" />
-                                                        <div className="absolute bottom-1 right-1 text-[6px] text-cyan-400 font-mono">v1.0</div>
+                                                <div className="flex flex-col gap-2.5">
+                                                    {/* Power & Volume Grid */}
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div className="bg-slate-950/60 border border-indigo-500/20 rounded-lg p-2 flex items-center gap-2.5">
+                                                            <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 shrink-0">
+                                                                <Zap className="w-4 h-4 text-cyan-400 animate-pulse" />
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[8px] font-mono text-slate-400 uppercase tracking-wider">
+                                                                    {language === 'RU' ? 'ВЫРАБОТКА ЭНЕРГИИ' : 'POWER OUTPUT'}
+                                                                </span>
+                                                                <span className="text-[13px] font-black font-mono text-white">
+                                                                    {corePower} <span className="text-[9px] text-cyan-400 font-normal">kW</span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="bg-slate-950/60 border border-indigo-500/20 rounded-lg p-2 flex items-center gap-2.5">
+                                                            <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 shrink-0">
+                                                                <Layers className="w-4 h-4 text-purple-300" />
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[8px] font-mono text-slate-400 uppercase tracking-wider">
+                                                                    {language === 'RU' ? 'ОБЪЕМ ПЛАТФОРМ' : 'TOTAL VOLUME'}
+                                                                </span>
+                                                                <span className="text-[13px] font-black font-mono text-white">
+                                                                    {totalVolume} <span className="text-[9px] text-purple-400 font-normal">ед.</span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    {/* Right Stats */}
-                                                    <div className="flex-1 flex flex-col justify-center gap-2">
-                                                        <div>
-                                                            <div className="flex justify-between items-baseline mb-0.5">
-                                                                <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest">{language === 'RU' ? 'СТРОИТЕЛЬНЫЕ УЗЛЫ' : 'CONSTRUCTION NODES'}</span>
-                                                                <span className="text-[13px] font-mono text-white font-bold">{placedNodes}</span>
-                                                            </div>
-                                                            <div className="w-full bg-slate-800/80 h-1 rounded overflow-hidden">
-                                                                <div className="bg-cyan-500 h-full" style={{ width: `${Math.min(100, placedNodes)}%` }} />
-                                                            </div>
-                                                        </div>
 
-                                                        <div>
-                                                            <div className="flex justify-between items-baseline mb-0.5">
-                                                                <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest">{language === 'RU' ? 'ОБЪЕМ ПЛАТФОРМ' : 'PLATFORM VOLUME'}</span>
-                                                                <span className="text-[13px] font-mono text-white font-bold">{totalVolume}</span>
-                                                            </div>
-                                                            <div className="h-[2px] w-full border-b border-dashed border-indigo-500/30" />
+                                                    {/* Key Node Metrics Grid */}
+                                                    <div className="grid grid-cols-3 gap-1.5">
+                                                        <div className="bg-slate-900/70 border border-white/5 rounded-lg p-1.5 text-center flex flex-col justify-center">
+                                                            <span className="text-[8px] font-mono text-slate-400 uppercase">{language === 'RU' ? 'УЗЛЫ СЕТКИ' : 'NODES'}</span>
+                                                            <span className="text-[13px] font-black font-mono text-cyan-300">{placedNodes}</span>
                                                         </div>
+                                                        <div className="bg-slate-900/70 border border-white/5 rounded-lg p-1.5 text-center flex flex-col justify-center">
+                                                            <span className="text-[8px] font-mono text-slate-400 uppercase">{language === 'RU' ? 'ПИК ЯРУСА' : 'MAX HEIGHT'}</span>
+                                                            <span className="text-[13px] font-black font-mono text-amber-400">L{maxLevelPlaced}</span>
+                                                        </div>
+                                                        <div className="bg-slate-900/70 border border-white/5 rounded-lg p-1.5 text-center flex flex-col justify-center">
+                                                            <span className="text-[8px] font-mono text-slate-400 uppercase">{language === 'RU' ? 'ЯДРА L5+' : 'CORES L5+'}</span>
+                                                            <span className="text-[13px] font-black font-mono text-rose-400">{highTiers}</span>
+                                                        </div>
+                                                    </div>
 
-                                                        <div className="grid grid-cols-2 gap-2 mt-1">
-                                                            <div className="bg-slate-900/60 border border-white/5 rounded p-1.5 flex flex-col justify-center items-center">
-                                                                <span className="text-[8.5px] text-slate-500 tracking-wider mb-0.5">{language === 'RU' ? 'МАКС ВЫСОТА' : 'MAX HEIGHT'}</span>
-                                                                <span className="text-[13px] text-amber-400 font-black font-mono">L{maxLevelPlaced}</span>
-                                                            </div>
-                                                            <div className="bg-slate-900/60 border border-white/5 rounded p-1.5 flex flex-col justify-center items-center">
-                                                                <span className="text-[8.5px] text-slate-500 tracking-wider mb-0.5">{language === 'RU' ? 'ЯДРА (L5+)' : 'CORES L5+'}</span>
-                                                                <span className="text-[13px] text-rose-400 font-black font-mono">{highTiers}</span>
-                                                            </div>
+                                                    {/* Defense & Shield Readiness Box */}
+                                                    <div className={`p-2.5 rounded-xl border flex flex-col gap-1.5 ${shieldColor}`}>
+                                                        <div className="flex justify-between items-center text-[10px] font-extrabold uppercase">
+                                                            <span className="flex items-center gap-1.5">
+                                                                <Shield className="w-3.5 h-3.5 shrink-0" />
+                                                                <span>{shieldTierName}</span>
+                                                            </span>
+                                                            <span className="font-mono text-[11px] font-black">{shieldPercent}%</span>
                                                         </div>
+                                                        <div className="w-full bg-slate-950/80 h-1.5 rounded-full overflow-hidden border border-white/5">
+                                                            <motion.div 
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${shieldPercent}%` }}
+                                                                transition={{ duration: 0.5 }}
+                                                                className="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-emerald-400" 
+                                                            />
+                                                        </div>
+                                                        <span className="text-[10px] font-medium leading-tight opacity-90">
+                                                            {shieldDesc}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             );
                                         })()}
- 
+
                                         {/* Animated Laser Scanning Line */}
                                         <motion.div 
                                             animate={{ y: ['0%', '100%'] }} 
                                             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }} 
-                                            className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/35 to-transparent shadow-[0_0_8px_rgba(34,211,238,0.5)] pointer-events-none z-10"
+                                            className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent shadow-[0_0_8px_rgba(34,211,238,0.5)] pointer-events-none z-10"
                                             style={{ top: 0 }}
                                         />
                                     </div>
-
-                                    {/* Summary removed as merged into Holographic Projection viewport */}
                                 </div>
                             )}
 
+                            {/* TAB 2: BLUEPRINTS & SHAPE SYNTHESIZER */}
+                            {tabletTab === 'schematics' && (
+                                <div className="flex flex-col text-left gap-2.5 mb-2">
+                                    {/* Blueprint Active Card */}
+                                    {(() => {
+                                        const shape = activeFigure.shape || [];
+                                        const totalShapeNodes = shape.length;
+                                        
+                                        // Count matches on storyMap
+                                        const completedNodes = shape.filter(pt => {
+                                            const key = getHexKey(pt.q, pt.r);
+                                            const lvl = storyMap[key];
+                                            return lvl !== undefined && lvl >= 0 && (pt.lvl === undefined || lvl === pt.lvl);
+                                        }).length;
+
+                                        const matchPercent = totalShapeNodes > 0 ? Math.round((completedNodes / totalShapeNodes) * 100) : 0;
+                                        const isFullyBuilt = matchPercent === 100;
+
+                                        return (
+                                            <div className="bg-slate-900/40 border border-indigo-500/25 rounded-xl p-3 flex flex-col gap-2.5 relative overflow-hidden">
+                                                <div className="flex justify-between items-start gap-2 border-b border-white/5 pb-2">
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                                            <span className="text-[12px] font-black text-white uppercase tracking-tight">
+                                                                {language === 'RU' ? activeFigure.cleanNameRU : activeFigure.cleanNameEN}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-[9px] font-mono text-slate-400 mt-0.5">
+                                                            {language === 'RU' ? `ЧЕРТЕЖ № ${unlockedFigureIndex + 1} ИЗ ${FIGURES_COLLECTION.length}` : `BLUEPRINT #${unlockedFigureIndex + 1} OF ${FIGURES_COLLECTION.length}`}
+                                                        </span>
+                                                    </div>
+                                                    <div className="px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-[10px] font-mono font-bold shrink-0 flex items-center gap-1">
+                                                        <Sparkles className="w-3 h-3 text-amber-400" />
+                                                        <span>+{activeFigure.rewardSP} SP</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Description */}
+                                                <p className="text-[10.5px] font-medium text-slate-300 leading-snug">
+                                                    {language === 'RU' ? activeFigure.descRU : activeFigure.descEN}
+                                                </p>
+
+                                                {/* Shape match progress */}
+                                                <div className="bg-slate-950/60 border border-white/5 p-2 rounded-lg flex flex-col gap-1.5">
+                                                    <div className="flex justify-between items-center text-[10px] font-mono">
+                                                        <span className="text-slate-400">{language === 'RU' ? 'ПРОГРЕСС СБОРКИ:' : 'MATCH PROGRESS:'}</span>
+                                                        <span className={`font-bold ${isFullyBuilt ? 'text-emerald-400' : 'text-cyan-300'}`}>
+                                                            {completedNodes} / {totalShapeNodes} {language === 'RU' ? 'узлов' : 'nodes'} ({matchPercent}%)
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                                        <motion.div 
+                                                            animate={{ width: `${matchPercent}%` }}
+                                                            className={`h-full ${isFullyBuilt ? 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-cyan-400'}`}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Action controls */}
+                                                <div className="flex gap-2 mt-1">
+                                                    <button
+                                                        onClick={() => {
+                                                            playUiSound('CLICK');
+                                                            const prevIdx = unlockedFigureIndex > 0 ? unlockedFigureIndex - 1 : FIGURES_COLLECTION.length - 1;
+                                                            setUnlockedFigureIndex(prevIdx);
+                                                            try { localStorage.setItem('hexopol_figure_index', String(prevIdx)); } catch {}
+                                                        }}
+                                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[10px] font-bold uppercase transition-colors border border-white/5 cursor-pointer flex items-center justify-center gap-1"
+                                                    >
+                                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                                        <span>{language === 'RU' ? 'ПРЕД.' : 'PREV'}</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            playUiSound('CLICK');
+                                                            handleResetCamera();
+                                                        }}
+                                                        className="flex-1 py-1.5 bg-indigo-600/80 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors border border-indigo-400/30 cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
+                                                    >
+                                                        <Eye className="w-3.5 h-3.5 text-cyan-300" />
+                                                        <span>{language === 'RU' ? 'ФОКУСИРОВАТЬ КАМЕРУ' : 'FOCUS SCHEMATIC'}</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            playUiSound('CLICK');
+                                                            const nextIdx = unlockedFigureIndex < FIGURES_COLLECTION.length - 1 ? unlockedFigureIndex + 1 : 0;
+                                                            setUnlockedFigureIndex(nextIdx);
+                                                            try { localStorage.setItem('hexopol_figure_index', String(nextIdx)); } catch {}
+                                                        }}
+                                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[10px] font-bold uppercase transition-colors border border-white/5 cursor-pointer flex items-center justify-center gap-1"
+                                                    >
+                                                        <span>{language === 'RU' ? 'СЛЕД.' : 'NEXT'}</span>
+                                                        <ChevronRight className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
+                            {/* TAB 3: DIAGNOSTICS & MANUAL */}
                             {tabletTab === 'diagnostics' && (
-                                <div className="flex flex-col text-left mb-3.5 scrollbar-thin overflow-y-auto max-h-[420px] pr-1">
+                                <div className="flex flex-col text-left mb-3.5 scrollbar-thin overflow-y-auto max-h-[380px] pr-1 gap-3">
+                                    {/* WebGL Matrix Hardware Scanner */}
                                     <div className="bg-slate-900/40 border border-white/5 rounded-xl p-3">
                                         <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/5 gap-2">
                                             <div className="flex items-center gap-1.5">
+                                                <Cpu className="w-3.5 h-3.5 text-rose-400" />
                                                 <span className="text-[11px] font-black text-rose-400 uppercase tracking-widest leading-none">
-                                                    {language === 'RU' ? 'ТЕСТИРОВАНИЕ ТЕКСТУР PIXIJS' : 'PIXIJS TEXTURE DIAGNOSTICS'}
+                                                    {language === 'RU' ? 'СКАНИРОВАНИЕ ТЕКСТУР PIXIJS' : 'PIXIJS TEXTURE DIAGNOSTICS'}
                                                 </span>
                                                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                                             </div>
@@ -1644,24 +1817,25 @@ const StoryBuilderView: React.FC = () => {
                                                         totalElapsedMs: Number((end - start).toFixed(2))
                                                     });
                                                 }}
-                                                className="bg-indigo-600 hover:bg-indigo-500 font-extrabold text-[10px] tracking-wide uppercase px-2 py-1 rounded transition-colors text-white border border-indigo-400/30 font-sans cursor-pointer shadow-md select-none outline-none"
+                                                className="bg-indigo-600 hover:bg-indigo-500 font-extrabold text-[10px] tracking-wide uppercase px-2 py-1 rounded transition-colors text-white border border-indigo-400/30 font-sans cursor-pointer shadow-md select-none outline-none flex items-center gap-1"
                                             >
-                                                {language === 'RU' ? 'ЗАПУСТИТЬ ТЕСТ' : 'RUN TEST'}
+                                                <RefreshCw className="w-3 h-3 text-cyan-300" />
+                                                <span>{language === 'RU' ? 'ЗАПУСТИТЬ ТЕСТ' : 'RUN TEST'}</span>
                                             </button>
                                         </div>
 
-                                        <p className="text-slate-400 text-[11px] font-medium leading-normal mb-3">
+                                        <p className="text-slate-400 text-[10.5px] font-medium leading-normal mb-2.5">
                                             {language === 'RU' 
-                                                ? 'Этот инструмент проверяет процедурную генерацию текстур услугой TextureService и их корректное сопоставление с WebGL контекстом рендерера PixiJS.' 
-                                                : 'This tool verifies procedural texture generation via TextureService and validates that HTML Canvas objects map correctly to PixiJS GPU textures.'}
+                                                ? 'Проверка корректности рендеринга процедурных текстур блоков L0-L9 и WebGL-контекста.' 
+                                                : 'Verifies procedural texture generation and validates GPU WebGL texture binding for PixiJS.'}
                                         </p>
 
                                         {diagnosticsRun ? (
                                             <div className="flex flex-col gap-2">
-                                                <div className="flex items-center justify-between text-[10.5px] font-mono bg-slate-950/40 p-2 rounded border border-white/5">
+                                                <div className="flex items-center justify-between text-[10px] font-mono bg-slate-950/40 p-2 rounded border border-white/5">
                                                     <div>
                                                         <span className="text-slate-500 font-bold block">{language === 'RU' ? 'СТАТУС ПРОВЕРКИ:' : 'VERIFICATION STATUS:'}</span>
-                                                        <span className={`font-black uppercase text-[11.5px] ${diagnosticsRun.status === 'SUCCESS' ? 'text-emerald-400' : 'text-rose-500'}`}>
+                                                        <span className={`font-black uppercase text-[11px] ${diagnosticsRun.status === 'SUCCESS' ? 'text-emerald-400' : 'text-rose-500'}`}>
                                                             {diagnosticsRun.status === 'SUCCESS' ? 'PASS / УСПЕШНО' : 'FAIL / ОШИБКА'}
                                                         </span>
                                                     </div>
@@ -1671,28 +1845,28 @@ const StoryBuilderView: React.FC = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex flex-col gap-1.5 mt-1">
+                                                <div className="flex flex-col gap-1 mt-1 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
                                                     {diagnosticsRun.results.map((res) => {
                                                         return (
-                                                            <div key={res.level} className="bg-slate-950/25 border border-white/5 p-2 rounded-lg flex items-center justify-between text-[10px] font-mono hover:bg-slate-950/40 transition-colors">
+                                                            <div key={res.level} className="bg-slate-950/25 border border-white/5 p-1.5 rounded-lg flex items-center justify-between text-[9.5px] font-mono hover:bg-slate-950/40 transition-colors">
                                                                 <div className="flex items-center gap-2">
                                                                     <TexturePreview level={res.level} />
                                                                     <div>
                                                                         <span className="text-white font-bold block">Level {res.level} ({res.level >= 0 ? `L${res.level}` : `M${Math.abs(res.level)}`})</span>
-                                                                        <span className="text-slate-500 font-bold">Res: {res.width}x{res.height} px</span>
+                                                                        <span className="text-slate-500 font-bold">{res.width}x{res.height} px</span>
                                                                     </div>
                                                                 </div>
 
-                                                                <div className="flex flex-col gap-1 items-end">
+                                                                <div className="flex flex-col gap-0.5 items-end">
                                                                     <div className="flex gap-1">
-                                                                        <span className={`px-1 rounded text-[9px] font-black uppercase ${res.canvasOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
+                                                                        <span className={`px-1 rounded text-[8.5px] font-black uppercase ${res.canvasOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
                                                                             Canvas
                                                                         </span>
-                                                                        <span className={`px-1 rounded text-[9px] font-black uppercase ${res.pixiOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
+                                                                        <span className={`px-1 rounded text-[8.5px] font-black uppercase ${res.pixiOk ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-rose-950/60 text-rose-500 border border-rose-500/20'}`}>
                                                                             PixiJS
                                                                         </span>
                                                                     </div>
-                                                                    <span className="text-slate-500 text-[9px] font-bold">{res.elapsedMs} ms</span>
+                                                                    <span className="text-slate-500 text-[8.5px] font-bold">{res.elapsedMs} ms</span>
                                                                 </div>
                                                             </div>
                                                         );
@@ -1700,62 +1874,52 @@ const StoryBuilderView: React.FC = () => {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="flex flex-col items-center justify-center py-8 border border-dashed border-white/10 rounded-lg text-slate-500 font-medium text-[11px] gap-2">
-                                                <Info className="w-4 h-4 text-slate-600 animate-pulse" />
-                                                <span>{language === 'RU' ? 'Ожидание запуска диагностики...' : 'Awaiting manual trigger...'}</span>
+                                            <div className="flex items-center justify-center py-4 border border-dashed border-white/10 rounded-lg text-slate-500 font-medium text-[10.5px] gap-2">
+                                                <Info className="w-3.5 h-3.5 text-slate-600 animate-pulse" />
+                                                <span>{language === 'RU' ? 'Нажмите "Запустить тест" для сканирования' : 'Click "Run Test" to trigger scanner'}</span>
                                             </div>
                                         )}
                                     </div>
-                                </div>
-                            )}
 
-                            {tabletTab === 'rules' && (
-                                <div className="flex flex-col text-left mb-3.5">
-                                    {/* Header Info */}
-                                    <div className="mb-2.5">
-                                        <h3 className="text-[14px] font-black text-white uppercase tracking-tight leading-tight mb-0.5">
-                                            {language === 'RU' ? 'РЕЖИМ ПРОЕКТИРОВАНИЯ ЯДРА' : 'CORE SANDBOX ENGINEERING MODE'}
-                                        </h3>
-                                        <p className="text-slate-400 text-[11.5px] leading-relaxed font-sans font-medium">
-                                            {language === 'RU' ? 'Здесь нет ограничений. Свободно стройте оборонительные платформы для предстоящих Защит ядра от вредоносных ботов.' : 'There are no limits here. Construct defensive platforms freely for upcoming Core Defense scenarios against malicious bots.'}
-                                        </p>
-                                    </div>
-
-                                    {/* Step Guidelines Panel */}
-                                    <div className="p-3 bg-slate-950/40 border border-white/5 rounded-xl flex flex-col gap-2.5 text-[11px] text-slate-400 font-sans leading-relaxed font-medium">
-                                        <div className="text-[9px] font-black text-indigo-400 tracking-wider uppercase mb-0.5">
-                                            {language === 'RU' ? 'РУКОВОДСТВО ПО СТРОИТЕЛЬСТВУ' : 'CONSTRUCTION GUIDE RULES'}
+                                    {/* Step Guidelines Manual */}
+                                    <div className="p-3 bg-slate-950/40 border border-white/5 rounded-xl flex flex-col gap-2 text-[10.5px] text-slate-400 font-sans leading-relaxed font-medium">
+                                        <div className="text-[9px] font-black text-indigo-400 tracking-wider uppercase mb-0.5 flex items-center gap-1.5">
+                                            <Wrench className="w-3 h-3 text-indigo-400" />
+                                            <span>{language === 'RU' ? 'РУКОВОДСТВО СТРОИТЕЛЯ ЯДРА' : 'CORE CONSTRUCTION GUIDE'}</span>
                                         </div>
+
                                         <div className="flex items-start gap-2">
-                                            <span className="w-5 h-5 rounded-full bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-[9px] font-black text-cyan-400 shrink-0">1</span>
+                                            <span className="w-4 h-4 rounded-full bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-[9px] font-black text-cyan-400 shrink-0">1</span>
                                             <div>
-                                                <span className="text-slate-200 font-extrabold text-[12.5px] block">
-                                                    {language === 'RU' ? 'Шаг 1. Платформы' : '1. Core Platforms'}
+                                                <span className="text-slate-200 font-extrabold text-[11px] block">
+                                                    {language === 'RU' ? 'Правило лестницы (Staircase Rule)' : '1. Staircase Rule'}
                                                 </span>
-                                                <span className="text-slate-400 text-[11px] font-sans">
-                                                    {language === 'RU' ? 'Размещайте блоки L0 или удаляйте их для настройки платформ ядра.' : 'Place Level 0 blocks or demolish them to shape territory around the core.'}
+                                                <span className="text-slate-400 text-[10px]">
+                                                    {language === 'RU' ? 'Перемещение возможно только между блоками с перепадом высоты не более 1 яруса (|ΔL| ≤ 1).' : 'Movement is restricted to blocks with elevation difference of at most 1 level.'}
                                                 </span>
                                             </div>
                                         </div>
+
                                         <div className="flex items-start gap-2">
-                                            <span className="w-5 h-5 rounded-full bg-purple-950 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-400 shrink-0">2</span>
+                                            <span className="w-4 h-4 rounded-full bg-purple-950 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-400 shrink-0">2</span>
                                             <div>
-                                                <span className="text-slate-200 font-extrabold text-[12.5px] block">
-                                                    {language === 'RU' ? 'Шаг 2. Подъем высоты' : '2. Elevate Heights'}
+                                                <span className="text-slate-200 font-extrabold text-[11px] block">
+                                                    {language === 'RU' ? 'Контур поддержки (Support Contour)' : '2. Support Contour'}
                                                 </span>
-                                                <span className="text-slate-400 text-[11px] font-sans">
-                                                    {language === 'RU' ? 'Используйте материалы для усиления укреплений блоков до L9+.' : 'Use materials to elevate block heights up to L9+ for scaling rewards.'}
+                                                <span className="text-slate-400 text-[10px]">
+                                                    {language === 'RU' ? 'Для подъема яруса L1+ необходимы минимум 2 соседа с высотой, равной текущей (=== currentLevel).' : 'Upgrading an L1+ block requires at least 2 neighbors matching its exact height.'}
                                                 </span>
                                             </div>
                                         </div>
+
                                         <div className="flex items-start gap-2">
-                                            <span className="w-5 h-5 rounded-full bg-amber-950 border border-amber-500/30 flex items-center justify-center text-[9px] font-black text-amber-400 shrink-0">3</span>
+                                            <span className="w-4 h-4 rounded-full bg-amber-950 border border-amber-500/30 flex items-center justify-center text-[9px] font-black text-amber-400 shrink-0">3</span>
                                             <div>
-                                                <span className="text-slate-200 font-extrabold text-[12.5px] block">
-                                                    {language === 'RU' ? 'Шаг 3. Защита ядра' : '3. Core Defense'}
+                                                <span className="text-slate-200 font-extrabold text-[11px] block">
+                                                    {language === 'RU' ? 'Защита от Осады Ботов' : '3. Bot Invasion Defense'}
                                                 </span>
-                                                <span className="text-slate-400 text-[11px] font-sans">
-                                                    {language === 'RU' ? 'Каждые 5 уровней активируется атака ботов. Постройте прочную защиту!' : 'Every 5 simulated levels triggers a bot invasion. Build sturdy defenses!'}
+                                                <span className="text-slate-400 text-[10px]">
+                                                    {language === 'RU' ? 'Каждые 5 уровней активируется атака ботов. Высотные барьеры L3+ дают вам тактический приоритет.' : 'Every 5 levels triggers a bot invasion. Elevated L3+ platforms provide tactical superiority.'}
                                                 </span>
                                             </div>
                                         </div>
@@ -1767,6 +1931,7 @@ const StoryBuilderView: React.FC = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
+                </div>
 
                 {/* BOTTOM CONTENT - Compact Inventory Carousel with floating SP island */}
                 <div className="mt-auto flex flex-col items-center justify-end pointer-events-none pt-4 w-full max-w-5xl mx-auto px-6 md:px-0 select-none pb-2 md:pb-4">

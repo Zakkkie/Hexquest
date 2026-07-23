@@ -193,7 +193,7 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
                                                 if (!session?.defense?.isDefenseMode) return null;
 
     return (
-                                                    <div key={log.id} className="text-[8.5px] font-mono leading-relaxed flex items-start gap-1">
+                                                    <div key={`${log.id}-${log.timestamp}`} className="text-[8.5px] font-mono leading-relaxed flex items-start gap-1">
                                                         <span className={`${col} font-black shrink-0`}>&gt;</span>
                                                         <span className="text-slate-300 break-words flex-1 leading-tight">{log.text}</span>
                                                     </div>
@@ -373,7 +373,7 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
                                             if (!session?.defense?.isDefenseMode) return null;
 
     return (
-                                                <div key={log.id} className="text-[9px] font-mono leading-relaxed flex items-start gap-1.5 border-b border-slate-900/30 pb-1.5 last:border-none last:pb-0">
+                                                <div key={`${log.id}-${log.timestamp}`} className="text-[9px] font-mono leading-relaxed flex items-start gap-1.5 border-b border-slate-900/30 pb-1.5 last:border-none last:pb-0">
                                                     <span className={`${col} font-black uppercase shrink-0`}>&gt;</span>
                                                     <span className="text-slate-300 break-words flex-1 leading-normal">{log.text}</span>
                                                 </div>

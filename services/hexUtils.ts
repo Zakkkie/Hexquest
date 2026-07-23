@@ -487,7 +487,8 @@ export const findPath = (
 export const findSiegePath = (
   start: HexCoord, 
   end: HexCoord, 
-  grid: Record<string, Hex>
+  grid: Record<string, Hex>,
+  botId?: string
 ): PathResult => {
   const startKey = getHexKey(start.q, start.r);
   const endKey = getHexKey(end.q, end.r);
@@ -495,13 +496,50 @@ export const findSiegePath = (
   if (startKey === endKey) {
     return { path: [] };
   }
+
+  const checks = {
+    startPos: `(${start.q},${start.r})`,
+    endPos: `(${end.q},${end.r})`,
+    isSameCell: startKey === endKey,
+    endHexIsVoid: false,
+    tooFar: false,
+    timeout: false,
+    maxCostExceeded: false,
+    iterations: 0,
+    reachableChecked: 0,
+    blockedByVoidCount: 0,
+    obstaclesEncountered: [] as string[]
+  };
   
   const endHex = grid[endKey];
   if (endHex && endHex.structureType === 'VOID') {
+    checks.endHexIsVoid = true;
+    if (typeof window !== 'undefined') {
+      const g = (window as any).__siegeDebugLogs = (window as any).__siegeDebugLogs || {};
+      g[botId || 'unknown'] = {
+        timestamp: Date.now(),
+        botId,
+        pathFound: false,
+        reason: 'VOID',
+        checks
+      };
+    }
     return { path: null, reason: 'VOID' };
   }
 
-  if (cubeDistance(start, end) > SAFETY_CONFIG.MAX_PATH_LENGTH) {
+  const startToEndDist = cubeDistance(start, end);
+  if (startToEndDist > SAFETY_CONFIG.MAX_PATH_LENGTH) {
+    checks.tooFar = true;
+    if (typeof window !== 'undefined') {
+      const g = (window as any).__siegeDebugLogs = (window as any).__siegeDebugLogs || {};
+      g[botId || 'unknown'] = {
+        timestamp: Date.now(),
+        botId,
+        pathFound: false,
+        reason: 'TOO_FAR',
+        checks
+      };
+    }
     return { path: null, reason: 'TOO_FAR' };
   }
 
@@ -510,18 +548,38 @@ export const findSiegePath = (
   const gScore = new Map<string, number>();
 
   gScore.set(startKey, 0);
-  openSet.push(startKey, cubeDistance(start, end));
+  openSet.push(startKey, startToEndDist);
 
   let iterations = 0;
+  let reachableChecked = 0;
 
   while (openSet.length > 0) {
     if (iterations++ > SAFETY_CONFIG.MAX_SEARCH_ITERATIONS) {
+      checks.timeout = true;
+      checks.iterations = iterations;
+      checks.reachableChecked = reachableChecked;
+      console.log(`[SIEGE-PATHFINDING] Timeout from (${start.q},${start.r}) to (${end.q},${end.r}). Iterations: ${iterations}`);
+      if (typeof window !== 'undefined') {
+        const g = (window as any).__siegeDebugLogs = (window as any).__siegeDebugLogs || {};
+        g[botId || 'unknown'] = {
+          timestamp: Date.now(),
+          botId,
+          pathFound: false,
+          reason: 'TIMEOUT',
+          checks
+        };
+      }
       return { path: null, reason: 'TIMEOUT' };
     }
 
     const currentKey = openSet.pop()!;
+    reachableChecked++;
+    
     // Allow slightly higher path costs because of digging/upgrading
-    if ((gScore.get(currentKey) || 0) > SAFETY_CONFIG.MAX_PATH_LENGTH * 8) continue;
+    if ((gScore.get(currentKey) || 0) > SAFETY_CONFIG.MAX_PATH_LENGTH * 8) {
+      checks.maxCostExceeded = true;
+      continue;
+    }
 
     if (currentKey === endKey) {
       const path: HexCoord[] = [];
@@ -532,6 +590,21 @@ export const findSiegePath = (
         const parent = cameFrom.get(currKey);
         if (!parent) break;
         currKey = getHexKey(parent.q, parent.r);
+      }
+      checks.iterations = iterations;
+      checks.reachableChecked = reachableChecked;
+      console.log(`[SIEGE-PATHFINDING] Success from (${start.q},${start.r}) to (${end.q},${end.r}). Path length: ${path.length}. Reachable checked: ${reachableChecked}`);
+      if (typeof window !== 'undefined') {
+        const g = (window as any).__siegeDebugLogs = (window as any).__siegeDebugLogs || {};
+        g[botId || 'unknown'] = {
+          timestamp: Date.now(),
+          botId,
+          pathFound: true,
+          reason: 'SUCCESS',
+          pathLength: path.length,
+          checks,
+          reachableChecked
+        };
       }
       return { path };
     }
@@ -546,32 +619,42 @@ export const findSiegePath = (
       const nKey = getHexKey(neighbor.q, neighbor.r);
       const neighborHex = grid[nKey];
       
-      if (!neighborHex) continue;
-      if (neighborHex.structureType === 'VOID') continue;
+      if (neighborHex && neighborHex.structureType === 'VOID') {
+        checks.blockedByVoidCount++;
+        continue;
+      }
 
-      const neighborLevel = neighborHex.currentLevel;
+      const neighborLevel = neighborHex ? neighborHex.currentLevel : 0;
 
       // Base weight: 1 point for moving
       let stepCost = 1;
+      let obstacleEvent = '';
 
       // 1. Is it a player wall or elevated tile (level > 1)?
       if (neighborLevel > 1) {
-        // Lowering player walls takes digs. Each dig costs 5 weight units.
         const digsNeeded = neighborLevel - 1;
         stepCost += digsNeeded * 5;
+        obstacleEvent += `WALL(L${neighborLevel}, +${digsNeeded * 5} cost) `;
       }
 
       // 2. Is there a steep height jump?
       const diff = neighborLevel - currentLevel;
       if (Math.abs(diff) > 1) {
         if (diff > 1) {
-          // Steep uphill: needs to be carved down (digs)
           const digsNeeded = neighborLevel - (currentLevel + 1);
           stepCost += digsNeeded * 5;
+          obstacleEvent += `UPHILL(L${currentLevel}->L${neighborLevel}, +${digsNeeded * 5} cost) `;
         } else {
-          // Steep downhill: needs to be built up (upgrades)
           const upgradesNeeded = (currentLevel - 1) - neighborLevel;
           stepCost += upgradesNeeded * 5;
+          obstacleEvent += `DOWNHILL(L${currentLevel}->L${neighborLevel}, +${upgradesNeeded * 5} cost) `;
+        }
+      }
+
+      if (obstacleEvent) {
+        checks.obstaclesEncountered.push(`(${neighbor.q},${neighbor.r}): ${obstacleEvent.trim()}`);
+        if (checks.obstaclesEncountered.length > 20) {
+          checks.obstaclesEncountered.shift(); // keep it small and memory-friendly
         }
       }
 
@@ -581,12 +664,31 @@ export const findSiegePath = (
         cameFrom.set(nKey, currentCoord);
         gScore.set(nKey, tentativeG);
         
-        const fScore = tentativeG + cubeDistance(neighbor, end);
+        const distToCore = cubeDistance(neighbor, end);
+        const fScore = tentativeG + distToCore;
         openSet.push(nKey, fScore);
+
+        if (obstacleEvent) {
+          // obstacle logged in checks.obstaclesEncountered
+        }
       }
     }
   }
 
+  checks.iterations = iterations;
+  checks.reachableChecked = reachableChecked;
+  console.log(`[SIEGE-PATHFINDING] Failed to find path from (${start.q},${start.r}) to (${end.q},${end.r}). Reason: BLOCKED. Reachable checked: ${reachableChecked}`);
+  
+  if (typeof window !== 'undefined') {
+    const g = (window as any).__siegeDebugLogs = (window as any).__siegeDebugLogs || {};
+    g[botId || 'unknown'] = {
+      timestamp: Date.now(),
+      botId,
+      pathFound: false,
+      reason: 'BLOCKED',
+      checks
+    };
+  }
   return { path: null, reason: 'BLOCKED' };
 };
 

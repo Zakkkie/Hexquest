@@ -78,7 +78,9 @@ export const calculateMovementCost = (
         // Terrain Cost Logic
         // Positive High Ground (>1): Costs height.
         // Flat (0, 1) or Negative (<0): Costs 1.
-        let stepCost = hasVoidCore ? 1 : ((nextHex?.currentLevel ?? 0) > 1 ? (nextHex?.currentLevel ?? 0) : 1);
+        const isDefenseMode = !!session?.defense?.isDefenseMode;
+        const isSiegeBot = entity.type === 'BOT' && (entity.memory?.botRole?.startsWith('SIEGE_') || isDefenseMode);
+        let stepCost = isSiegeBot ? 0 : (hasVoidCore ? 1 : ((nextHex?.currentLevel ?? 0) > 1 ? (nextHex?.currentLevel ?? 0) : 1));
         if (session && session.winCondition && session.winCondition.mutatorType === 'NANO_STORM') {
             stepCost += 1;
         }

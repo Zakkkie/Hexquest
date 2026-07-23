@@ -96,100 +96,45 @@ export const LevelExitDialog: React.FC<LevelExitDialogProps> = ({
                         animate={{ scale: 1, y: 0, opacity: 1 }}
                         exit={{ scale: 0.9, y: 30, opacity: 0 }}
                         transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                        className="bg-slate-950/45 backdrop-blur-xl border border-red-500/25 p-5 md:p-8 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.15)] w-[92vw] max-w-[380px] md:max-w-md text-center relative overflow-hidden z-20 group"
+                        className="bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded-2xl md:rounded-3xl p-6 md:p-8 w-[92vw] max-w-md text-center relative overflow-hidden z-20 group"
                         onClick={e => e.stopPropagation()}
                     >
-                        {/* Glowing neon top stripe */}
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600/30 via-red-500/60 to-red-600/30 pointer-events-none" />
+                        {/* Glowing top stripe */}
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-600/30 via-rose-500/60 to-rose-600/30 pointer-events-none" />
 
                         {/* Scanline pattern overlay */}
-                        <div className="absolute inset-0 bg-scanlines opacity-[0.06] pointer-events-none" />
-
-                        {/* Tech Corner notches */}
-                        <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-red-500/50 pointer-events-none" />
-                        <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-red-500/50 pointer-events-none" />
-                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-red-500/50 pointer-events-none" />
-                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-red-500/50 pointer-events-none" />
-
-                        {/* Interactive sweeping laser scan effect */}
-                        <motion.div
-                            animate={{ y: [-10, 420, -10] }}
-                            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-                            className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-red-500/65 to-transparent shadow-[0_0_8px_rgba(239,68,68,0.7)] pointer-events-none"
-                        />
-
-                        {/* Ambient floating glowing dust particles */}
-                        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-                            {particles.map((p) => (
-                                <motion.div
-                                    key={p.id}
-                                    style={{
-                                        position: 'absolute',
-                                        left: `calc(50% + ${p.x}%)`,
-                                        top: `calc(50% + ${p.y}%)`,
-                                        width: '6px',
-                                        height: '6px',
-                                        borderRadius: '50%',
-                                        backgroundColor: '#ef4444',
-                                        boxShadow: '0 0 6px #f43f5e'
-                                    }}
-                                    animate={{
-                                        y: [0, -150, 0],
-                                        opacity: [0.1, 0.8, 0.1],
-                                        scale: [p.scale, p.scale * 1.5, p.scale]
-                                    }}
-                                    transition={{
-                                        duration: p.duration,
-                                        repeat: Infinity,
-                                        delay: p.delay,
-                                        ease: "easeInOut"
-                                    }}
-                                />
-                            ))}
-                        </div>
+                        <div className="absolute inset-0 bg-scanlines opacity-[0.04] pointer-events-none" />
 
                         {/* Warning holographic status tag */}
-                        <div className="flex justify-center items-center gap-1.5 mb-5 select-none">
-                            <Cpu className="w-3.5 h-3.5 text-red-500/75 animate-pulse" />
-                            <span className="text-[10px] font-mono font-black text-red-400/90 uppercase tracking-[0.2em] bg-red-950/40 px-2 py-0.5 border border-red-500/25 rounded-md">
+                        <div className="flex justify-center items-center gap-1.5 mb-4 select-none">
+                            <Cpu className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                            <span className="text-[10px] font-mono font-bold text-rose-400 uppercase tracking-wider bg-rose-950/40 px-2.5 py-1 border border-rose-800/60 rounded-lg">
                                 [{text.code}]
                             </span>
                         </div>
 
                         {/* Main holographic warning icon */}
-                        <div className="relative w-16 h-16 mx-auto mb-4">
-                            {/* Double pulsing ring */}
-                            <motion.div 
-                                animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0, 0.3] }}
-                                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                                className="absolute inset-0 rounded-2xl border-2 border-red-500/30"
-                            />
-                            <motion.div 
-                                animate={{ scale: [1, 1.15, 1] }}
-                                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                                className="absolute inset-0 rounded-2xl border border-red-500/50"
-                            />
-                            <div className="absolute inset-1 rounded-xl bg-gradient-to-br from-red-950/40 to-slate-900 border border-red-500/30 flex items-center justify-center shadow-lg shadow-red-950/30">
-                                <ShieldAlert className="w-8 h-8 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]" />
+                        <div className="relative w-14 h-14 mx-auto mb-4">
+                            <div className="absolute inset-0 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.2)]">
+                                <ShieldAlert className="w-7 h-7 text-rose-400" />
                             </div>
                         </div>
 
-                        {/* Title & Description with glowing effect */}
-                        <h3 className="text-xl md:text-2xl font-black font-mono text-white uppercase mb-2.5 tracking-tight break-words whitespace-pre-wrap select-none drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]">
+                        {/* Title & Description */}
+                        <h3 className="text-xl md:text-2xl font-extrabold uppercase tracking-wider text-slate-100 mb-2.5">
                             {text.title}
                         </h3>
-                        <p className="text-xs md:text-sm text-slate-400 mb-7 leading-relaxed px-1 md:px-3 break-words whitespace-pre-wrap font-sans select-none">
+                        <p className="text-slate-300 text-sm leading-relaxed mb-6 px-1 md:px-2">
                             {text.desc}
                         </p>
 
                         {/* Unified Action buttons */}
                         <div className="flex flex-col gap-3 relative z-10">
-                            {/* Abort button (Primary) */}
+                            {/* Abort button (Danger) */}
                             <motion.button
-                                whileHover={{ scale: 1.02, filter: "brightness(1.1)" }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={handleConfirm}
-                                className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white font-black uppercase text-xs tracking-wider transition-all shadow-[0_4px_20px_rgba(239,68,68,0.4)] hover:shadow-[0_0_25px_rgba(239,68,68,0.65)] border border-red-400/30 cursor-pointer flex items-center justify-center gap-2"
+                                className="w-full py-3.5 bg-rose-950/40 border border-rose-800/60 text-rose-300 hover:bg-rose-900/60 rounded-xl font-bold uppercase tracking-wider text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
                             >
                                 <LogOut className="w-4 h-4" />
                                 <span>{text.confirm}</span>
@@ -197,10 +142,9 @@ export const LevelExitDialog: React.FC<LevelExitDialogProps> = ({
 
                             {/* Cancel button (Secondary) */}
                             <motion.button
-                                whileHover={{ scale: 1.02, backgroundColor: "rgba(30, 41, 59, 0.9)" }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={handleClose}
-                                className="w-full py-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 font-bold uppercase text-[10px] tracking-widest transition-all cursor-pointer shadow-inner"
+                                className="w-full py-3.5 bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-slate-200 rounded-xl font-bold uppercase tracking-wider text-xs transition-all cursor-pointer"
                             >
                                 {text.cancel}
                             </motion.button>

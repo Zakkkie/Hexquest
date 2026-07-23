@@ -56,12 +56,31 @@ export const ECONOMIC_MILESTONES: Milestone[] = [
     }
 ];
 
-export function getMilestoneModifiers(_totalGoldEarned: number) {
-    return {
+export function getMilestoneModifiers(totalGoldEarned: number) {
+    const modifiers = {
         extraFuel: 0,
         extraIncomeMult: 0,
         extraStartingMats: 0,
         extraRecoveryCharges: 0,
         extraVision: 0
     };
+
+    if (totalGoldEarned >= 500) {
+        modifiers.extraFuel += 1;
+    }
+    if (totalGoldEarned >= 1500) {
+        modifiers.extraIncomeMult += 0.10;
+    }
+    if (totalGoldEarned >= 4000) {
+        modifiers.extraStartingMats += 3;
+    }
+    if (totalGoldEarned >= 10000) {
+        modifiers.extraRecoveryCharges += 1;
+    }
+    if (totalGoldEarned >= 25000) {
+        modifiers.extraIncomeMult += 0.25;
+        modifiers.extraVision += 1;
+    }
+
+    return modifiers;
 }

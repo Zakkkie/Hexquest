@@ -5,7 +5,7 @@ import { TEXT } from '../../services/i18n';
 import { CAMPAIGN_LEVELS } from '../../campaign/levels';
 import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
 import { getCampaignMetric } from '../../campaign/getCampaignMetric';
-import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Timer, Coins, Sparkles, Info, Cpu, ShieldAlert, Layers } from 'lucide-react';
+import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Timer, Coins, Sparkles, Info, Cpu, ShieldAlert, Layers, Download, Activity } from 'lucide-react';
 import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
 import { Item } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -518,7 +518,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 15, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/45 backdrop-blur-xl border border-amber-500/25 p-5 md:p-8 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.15)] w-[92vw] max-w-[340px] md:max-w-sm text-center relative overflow-hidden group"
+                            className="bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl md:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-6 md:p-8 w-[92vw] max-w-md text-center relative overflow-hidden group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Cyber Corner Brackets */}
@@ -529,21 +529,21 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
                             {/* Glowing top accent */}
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-600/30 via-amber-500/60 to-amber-600/30 pointer-events-none" />
-                            <div className="w-14 h-14 rounded-2xl bg-amber-950/30 flex items-center justify-center mx-auto mb-4 border border-amber-500/40 shadow-lg shadow-amber-900/30">
+                            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center mx-auto mb-4 text-amber-400 shadow-lg shadow-amber-900/30">
                                 <RotateCcw className="w-7 h-7 text-amber-500" />
                             </div>
-                            <h3 className="text-xl font-black text-white uppercase mb-2 tracking-tight break-words whitespace-pre-wrap">{t.BTN_RETRY}?</h3>
-                            <p className="text-xs text-slate-400 mb-6 leading-relaxed px-2 break-words whitespace-pre-wrap">{language === 'RU' ? 'Начать уровень заново? Текущий прогресс будет потерян.' : 'Restart the level? Current progress will be lost.'}</p>
+                            <h3 className="text-xl font-extrabold text-slate-100 uppercase mb-2 tracking-wider break-words whitespace-pre-wrap">{t.BTN_RETRY}?</h3>
+                            <p className="text-sm text-slate-300 mb-6 leading-relaxed px-2 break-words whitespace-pre-wrap">{language === 'RU' ? 'Начать уровень заново? Текущий прогресс будет потерян.' : 'Restart the level? Current progress will be lost.'}</p>
                             <div className="flex flex-col gap-3">
-                                <button onClick={() => { handleRetry(); closeModal(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 hover:brightness-110 text-white font-extrabold uppercase text-xs transition-shadow shadow-lg shadow-amber-900/40 cursor-pointer active:scale-95 transition-all">{t.BTN_CONFIRM}</button>
+                                <button onClick={() => { handleRetry(); closeModal(); playUiSound('CLICK'); }} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold uppercase tracking-wider text-xs shadow-lg shadow-emerald-500/20 cursor-pointer active:scale-95 transition-all">{t.BTN_CONFIRM}</button>
                                 <button 
                                     onClick={() => { handleNewGame(); closeModal(); }} 
-                                    className="w-full py-3 rounded-xl bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-900/40 hover:border-red-500/50 font-bold uppercase text-[10px] transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                                    className="w-full py-3 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 hover:bg-rose-900/60 font-bold uppercase tracking-wider text-[10px] transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
                                 >
                                     <RefreshCw className="w-4 h-4 animate-[spin_20s_linear_infinite]" />
                                     {language === 'RU' ? 'Новая Игра (Сброс)' : 'New Game (Reset)'}
                                 </button>
-                                <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-2 rounded-xl bg-transparent text-slate-500 hover:text-slate-300 font-bold uppercase text-[10px] transition-colors cursor-pointer">{t.BTN_CANCEL}</button>
+                                <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="w-full py-2.5 rounded-xl bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-slate-200 font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer">{t.BTN_CANCEL}</button>
                             </div>
                         </motion.div>
                     </div>
@@ -566,7 +566,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                 animate={{ scale: 1, y: 0, opacity: 1 }}
                 exit={{ scale: 0.95, y: 25, opacity: 0 }}
                 transition={{ type: "spring", duration: 0.4 }}
-                className="relative bg-slate-950/60 backdrop-blur-xl border border-indigo-500/30 rounded-2xl shadow-[0_0_60px_rgba(79,70,229,0.2)] w-[94vw] max-w-3xl max-h-[92vh] flex flex-col overflow-hidden group"
+                className="relative bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl md:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] w-[94vw] max-w-3xl max-h-[92vh] flex flex-col overflow-hidden group"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Ambient Effects */}
@@ -576,17 +576,17 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                 <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
                 {/* Compact Header */}
-                <div className="bg-slate-900/80 border-b border-indigo-500/30 p-2.5 flex items-center justify-between z-20 shrink-0">
+                <div className="bg-slate-900/60 backdrop-blur-sm border-b border-slate-800/80 p-3 sm:p-4 flex items-center justify-between z-20 shrink-0">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="p-1.5 bg-indigo-500/20 rounded-md border border-indigo-500/30 shrink-0">
-                            <Terminal className="w-4 h-4 text-indigo-400" />
+                        <div className="p-2.5 bg-indigo-500/20 rounded-xl border border-indigo-500/30 text-indigo-400 shrink-0">
+                            <Terminal className="w-5 h-5 text-indigo-400" />
                         </div>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-400/80 leading-none font-mono">
+                            <span className="text-[8px] font-extrabold uppercase tracking-[0.2em] text-indigo-400/80 leading-none font-mono">
                                 {language === 'RU' ? 'ПРОТОКОЛ ИНИЦИАЛИЗАЦИИ' : 'MISSION_PROTOCOL_INIT'}
                             </span>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="text-xs sm:text-sm font-black text-white uppercase tracking-wide truncate">
+                                <span className="text-xs sm:text-sm font-extrabold text-slate-100 uppercase tracking-wider truncate">
                                     {language === 'RU' ? 'ПРОФИЛЬ СИМУЛЯЦИИ' : 'SIMULATION PROFILE'}
                                 </span>
                                 {bots && bots.length > 0 && (
@@ -598,8 +598,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         </div>
                     </div>
                     {gameStatus !== 'BRIEFING' && (
-                        <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-800/60 transition-colors cursor-pointer shrink-0">
-                            <X className="w-4 h-4"/>
+                        <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-white/10 active:scale-95 transition-all cursor-pointer shrink-0">
+                            <X className="w-5 h-5"/>
                         </button>
                     )}
                 </div>
@@ -874,9 +874,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                 )}
             </AnimatePresence>
 
-            {/* LOG */}
+            {/* AI MONITOR */}
             <AnimatePresence>
-                {activeModal === 'LOG' && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
+                {activeModal === 'AI_MONITOR' && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
                     <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 pointer-events-auto">
                         <motion.div 
                             initial={{ opacity: 0 }}
@@ -890,7 +890,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 20, opacity: 0 }}
                             transition={{ type: "spring", duration: 0.4 }}
-                            className="bg-slate-950/45 backdrop-blur-xl border border-indigo-500/25 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.15)] w-[94vw] max-w-2xl h-[80vh] md:h-[85vh] flex flex-col overflow-hidden relative group"
+                            className="bg-slate-950/45 backdrop-blur-xl border border-indigo-500/25 rounded-2xl shadow-[0_0_50px_rgba(79,70,229,0.15)] w-[94vw] max-w-2xl h-[85vh] md:h-[90vh] flex flex-col overflow-hidden relative group"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Cyber Corner Brackets */}
@@ -908,44 +908,182 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             <div className="p-4 border-b border-indigo-500/30 flex items-center justify-between bg-indigo-950/20 z-20 shrink-0">
                                 <div className="flex items-center gap-3">
                                     <div className="p-1.5 bg-indigo-500/20 rounded border border-indigo-500/30">
-                                        <FileText className="w-4 h-4 text-indigo-400" />
+                                        <Cpu className="w-4 h-4 text-indigo-400 animate-pulse" />
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none">DATA_FETCH_COMPLETE</span>
-                                        <span className="text-xs font-bold text-white uppercase tracking-widest truncate">{language === 'RU' ? 'Журнал Событий' : 'Event Log'}</span>
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none">NEXUS COGNITIVE OVERLAY</span>
+                                        <span className="text-xs font-bold text-white uppercase tracking-widest truncate">{language === 'RU' ? 'ИИ Монитор Небьюла' : 'AI Monitor & Telemetry'}</span>
                                     </div>
                                 </div>
-                                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer flex items-center justify-center translate-x-1"><X className="w-5 h-5" /></button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const timestamp = new Date().toISOString();
+                                            const mode = session?.defense?.isDefenseMode ? 'Core Siege Mode' : (session?.activeLevelConfig?.id ? `Level ${session.activeLevelConfig.id}` : 'Skirmish Battle Mode');
+                                            const turn = session?.currentTurn || 0;
+                                            const botList = bots || [];
+                                            const botLogs = session?.botActivityLog || [];
+
+                                            let content = `==================================================\n`;
+                                            content += `HEXQUEST ECONOMY - AI MONITOR & TELEMETRY REPORT\n`;
+                                            content += `Export Timestamp: ${timestamp}\n`;
+                                            content += `Game Mode: ${mode} | Turn: ${turn}\n`;
+                                            content += `Core Health: ${session?.defense?.coreHealth ?? 100}% | Stability: ${session?.entropy?.current ?? 0}%\n`;
+                                            content += `Active AI Vectors (${botList.length}):\n`;
+                                            botList.forEach((bot: any, idx: number) => {
+                                                content += `  Vector #${idx + 1} [${bot.id}]: Role=${bot.memory?.botRole || bot.state} Pos=(q:${bot.q}, r:${bot.r}) Plan=${bot.memory?.plan?.label || 'IDLE'}\n`;
+                                            });
+                                            content += `==================================================\n\n`;
+                                            content += `--- AI COGNITIVE AUDIT LOG (${botLogs.length} entries) ---\n\n`;
+                                            if (botLogs.length > 0) {
+                                                [...botLogs].reverse().forEach((log: any) => {
+                                                    content += `[${new Date(log.timestamp).toISOString()}] [${log.type}] ${log.text}\n`;
+                                                });
+                                            } else {
+                                                content += `No bot cognitive logs recorded.\n`;
+                                            }
+
+                                            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                                            const url = URL.createObjectURL(blob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.download = `hexquest_ai_telemetry_${Date.now()}.txt`;
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                            URL.revokeObjectURL(url);
+                                        }}
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-500/50 border border-indigo-500/50 rounded-lg text-indigo-300 hover:text-white text-[10px] font-bold uppercase transition-all cursor-pointer shadow-md active:scale-95"
+                                        title={language === 'RU' ? 'Экспорт телеметрии ИИ в .txt' : 'Export AI telemetry report'}
+                                    >
+                                        <Download className="w-3.5 h-3.5" />
+                                        <span>{language === 'RU' ? 'Экспорт .TXT' : 'Export .TXT'}</span>
+                                    </button>
+                                    <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer flex items-center justify-center translate-x-1"><X className="w-5 h-5" /></button>
+                                </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2 bg-slate-950/40 z-20 custom-scrollbar">
-                                {messageLog && messageLog.length > 0 ? (
-                                    [...messageLog].reverse().map((log) => (
-                                        <div key={log.id} className="relative flex gap-3 p-3 bg-slate-900/30 border border-slate-850 rounded hover:bg-slate-850/40 transition-all group/item overflow-hidden">
-                                            <div className={`absolute top-0 left-0 w-1 h-full ${log.type === 'INFO' ? 'bg-indigo-500' : log.type === 'ERROR' ? 'bg-red-500' : log.type === 'WARN' ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ backgroundColor: log.type === 'INFO' ? 'rgb(99, 102, 241)' : undefined }} />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className={`text-[9px] font-black uppercase tracking-widest ${log.type === 'INFO' ? 'text-indigo-400' : log.type === 'ERROR' ? 'text-red-400' : log.type === 'WARN' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                                        [{log.type}]
-                                                    </span>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[8px] font-mono text-slate-600">STAMP::</span>
-                                                        <span className="text-[9px] font-mono text-slate-400">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                                    </div>
-                                                </div>
-                                                <p className="text-[11px] md:text-xs text-slate-200 font-mono leading-relaxed break-words whitespace-pre-wrap">
-                                                    <span className="text-slate-600 mr-2 opacity-50">&gt;</span>
-                                                    {log.text}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-full opacity-10 gap-3 py-16">
-                                        <Terminal className="w-16 h-16 text-slate-500" />
-                                        <div className="text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.5em]">BUFFER_EMPTY</div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4 bg-slate-950/40 z-20 custom-scrollbar">
+                                {/* Summary KPIs */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                    <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800/80 flex flex-col gap-1">
+                                        <span className="text-[9px] text-slate-400 uppercase tracking-widest font-mono">
+                                            {language === 'RU' ? 'Активные Боты' : 'Active Vectors'}
+                                        </span>
+                                        <span className="text-xl font-black font-mono text-white">
+                                            {bots?.length || 0}
+                                        </span>
                                     </div>
-                                )}
+                                    <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800/80 flex flex-col gap-1">
+                                        <span className="text-[9px] text-slate-400 uppercase tracking-widest font-mono">
+                                            {language === 'RU' ? 'Здоровье Ядра' : 'Core Health'}
+                                        </span>
+                                        <span className={`text-xl font-black font-mono ${(session?.defense?.coreHealth ?? 100) < 30 ? 'text-rose-400 animate-pulse' : 'text-emerald-400'}`}>
+                                            {session?.defense?.coreHealth ?? 100}%
+                                        </span>
+                                    </div>
+                                    <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800/80 flex flex-col gap-1">
+                                        <span className="text-[9px] text-slate-400 uppercase tracking-widest font-mono">
+                                            {language === 'RU' ? 'Энтропия Сетки' : 'System Entropy'}
+                                        </span>
+                                        <span className="text-xl font-black font-mono text-amber-400">
+                                            {Math.round(session?.entropy?.current || 0)}%
+                                        </span>
+                                    </div>
+                                    <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800/80 flex flex-col gap-1">
+                                        <span className="text-[9px] text-slate-400 uppercase tracking-widest font-mono">
+                                            {language === 'RU' ? 'Записи ИИ' : 'Audit Logs'}
+                                        </span>
+                                        <span className="text-xl font-black font-mono text-indigo-400">
+                                            {session?.botActivityLog?.length || 0}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Active Vectors Heap Section */}
+                                <div className="space-y-2.5">
+                                    <h4 className="text-[10px] font-black tracking-widest font-mono text-slate-400 uppercase flex items-center gap-1.5">
+                                        <Activity className="w-3.5 h-3.5 text-indigo-400" />
+                                        {language === 'RU' ? 'Активные Векторы ИИ (Автономные Боты)' : 'Active AI Vector Heap'}
+                                    </h4>
+
+                                    {(!bots || bots.length === 0) ? (
+                                        <div className="p-6 text-center text-xs text-slate-500 font-mono border border-dashed border-slate-800/80 rounded-xl">
+                                            {language === 'RU' ? 'Активные враждебные боты в симуляции не обнаружены.' : 'No active hostile bots detected in simulation.'}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                            {bots.map((bot: any) => {
+                                                const hasPlan = bot.memory?.plan && bot.memory.plan.steps.length > 0;
+                                                const currentLevel = session?.grid?.[`${bot.q},${bot.r}`]?.currentLevel ?? 0;
+                                                return (
+                                                    <div 
+                                                        key={bot.id}
+                                                        className="p-3 bg-slate-900/40 border border-slate-800/80 rounded-xl flex flex-col gap-2 relative overflow-hidden group"
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <div 
+                                                                    className="w-3 h-3 rounded-full border border-white/20 shrink-0"
+                                                                    style={{ backgroundColor: bot.avatarColor || '#6366f1' }}
+                                                                />
+                                                                <span className="text-xs font-bold font-mono text-white">
+                                                                    Vector #{bot.id.slice(-4).toUpperCase()}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-500/30">
+                                                                {bot.memory?.botRole || 'SIEGE_GRINDER'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-slate-400 bg-slate-950/50 p-2 rounded-lg border border-slate-900">
+                                                            <div>POS: <span className="text-white font-bold">({bot.q}, {bot.r})</span></div>
+                                                            <div>ELEV: <span className="text-emerald-400 font-bold">L{currentLevel}</span></div>
+                                                            <div>MOVES: <span className="text-blue-400 font-bold">{bot.moves}</span></div>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-[10px] font-mono">
+                                                            <span className="text-slate-500">PLAN: <span className="text-amber-400">{bot.memory?.plan?.label || 'IDLE'}</span></span>
+                                                            <span className={hasPlan ? 'text-emerald-400' : 'text-slate-500'}>{hasPlan ? 'ACTIVE_PATH' : 'STALLED'}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Cognitive Audit Logs Section */}
+                                <div className="space-y-2.5 pt-2">
+                                    <h4 className="text-[10px] font-black tracking-widest font-mono text-slate-400 uppercase flex items-center gap-1.5">
+                                        <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+                                        {language === 'RU' ? 'Журнал Когнитивных Собствий ИИ' : 'Cognitive Audit Stream'}
+                                    </h4>
+
+                                    <div className="space-y-1.5">
+                                        {session?.botActivityLog && session.botActivityLog.length > 0 ? (
+                                            [...session.botActivityLog].reverse().map((log: any, idx: number) => {
+                                                const typeColor = log.type === 'ERROR' ? 'text-rose-400 border-rose-500/30 bg-rose-950/20' : log.type === 'WARN' ? 'text-amber-400 border-amber-500/30 bg-amber-950/20' : 'text-indigo-300 border-slate-800/80 bg-slate-900/30';
+                                                return (
+                                                    <div key={`${log.id}-${idx}`} className={`p-2.5 rounded-lg border font-mono text-[11px] flex flex-col gap-1 ${typeColor}`}>
+                                                        <div className="flex items-center justify-between opacity-75 text-[9px]">
+                                                            <span className="font-bold uppercase">[{log.type}]</span>
+                                                            <span>{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                        </div>
+                                                        <p className="text-slate-200 break-words leading-relaxed">
+                                                            <span className="text-slate-500 mr-2">&gt;</span>
+                                                            {log.text}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="p-8 text-center text-slate-500 text-xs font-mono border border-dashed border-slate-850 rounded-xl">
+                                                {language === 'RU' ? 'Журнал когнитивных событий пуст.' : 'No cognitive audit entries recorded.'}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
+
                             <div className="p-4 bg-slate-900/60 border-t border-indigo-500/30 z-20 shadow-inner shrink-0">
                                 <button onClick={closeModal} className="w-full py-3 bg-indigo-600/20 border border-indigo-500 hover:bg-indigo-600 hover:text-white text-indigo-400 font-extrabold uppercase text-xs tracking-[0.3em] transition-all rounded shadow-md cursor-pointer active:scale-98">
                                     {t.BTN_READY}
@@ -1150,7 +1288,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 25, opacity: 0 }}
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                            className="bg-slate-950/45 border-2 border-slate-800/80 rounded-2xl md:rounded-[2rem] shadow-[0_25px_60px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.05)] w-[96vw] max-w-4xl flex flex-col relative z-10 max-h-[96vh] overflow-y-auto no-scrollbar py-2 md:py-6 px-2 sm:px-6 md:px-8 border-t-indigo-500/30 group leading-tight backdrop-blur-xl"
+                            className="bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl md:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] w-[96vw] max-w-4xl flex flex-col relative z-10 max-h-[96vh] overflow-y-auto no-scrollbar py-2 md:py-6 px-2 sm:px-6 md:px-8 group leading-tight"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Glowing top accent */}
@@ -1418,7 +1556,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 15, opacity: 0 }}
                             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                            className="bg-slate-950/45 backdrop-blur-xl border border-amber-500/25 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(245,158,11,0.15)] w-[94vw] max-w-2xl max-h-[94vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 group z-20"
+                            className="bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl md:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-4 md:p-6 w-[94vw] max-w-2xl max-h-[94vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 group z-20"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Cyber Corner Brackets */}
@@ -1602,7 +1740,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 15, opacity: 0 }}
                             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                            className="bg-slate-950/45 backdrop-blur-xl border border-red-500/25 p-4 md:p-6 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.15)] w-[94vw] max-w-lg max-h-[92vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 group z-20"
+                            className="bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl md:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-4 md:p-6 w-[94vw] max-w-lg max-h-[92vh] md:max-h-[90vh] relative overflow-hidden flex flex-col gap-4 md:gap-6 group z-20"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Cyber Corner Brackets */}
@@ -1662,7 +1800,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         initial={{ scale: 0.95, y: 10 }}
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.95, y: 10 }}
-                        className="bg-slate-950/45 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 md:p-8 w-[90vw] max-w-sm shadow-2xl relative text-center z-10 group"
+                        className="bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl md:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-6 md:p-8 w-[90vw] max-w-md relative text-center z-10 group"
                     >
                         {/* Cyber Corner Brackets */}
                         <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-red-500/50 pointer-events-none" />

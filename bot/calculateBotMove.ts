@@ -22,6 +22,54 @@ import {
 import { buildPlan } from './plans';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HELPER: TARGET HEX RESOLUTION & MODE CLASSIFICATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type BotGameMode = 'CAMPAIGN' | 'SKIRMISH' | 'SIEGE';
+
+export const getBotGameMode = (
+    activeLevelConfig: LevelConfig | null | undefined,
+    isDefenseMode: boolean,
+    botRole?: string
+): BotGameMode => {
+    if (isDefenseMode || botRole?.startsWith('SIEGE_')) {
+        return 'SIEGE';
+    }
+    if (activeLevelConfig) {
+        return 'CAMPAIGN';
+    }
+    return 'SKIRMISH';
+};
+
+/**
+ * Safely resolves a target hex by ID/key from grid, populating a default flat L0 hex if unmapped.
+ */
+const resolveTargetHex = (grid: Record<string, Hex>, targetId: string): Hex | null => {
+    if (!targetId) return null;
+    if (grid[targetId]) return grid[targetId];
+
+    const parts = targetId.split(',');
+    if (parts.length === 2) {
+        const q = parseInt(parts[0], 10);
+        const r = parseInt(parts[1], 10);
+        if (!isNaN(q) && !isNaN(r)) {
+            const fallback: Hex = {
+                id: targetId,
+                q,
+                r,
+                currentLevel: 0,
+                maxLevel: 0,
+                structureType: 'NONE',
+                isPassable: true
+            };
+            grid[targetId] = fallback;
+            return fallback;
+        }
+    }
+    return null;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // STEP EXECUTION & MOVEMENT
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -33,12 +81,14 @@ const moveAndAct = (
     navObstacles: HexCoord[],
     stateVersion: number,
     mem: BotMemory,
-    debugPrefix: string
+    debugPrefix: string,
+    isDefenseModeParam?: boolean
 ): AiResult => {
     const d = cubeDistance(bot, target);
     if (d === 0) {
         const nbs   = getNeighbors(bot.q, bot.r);
-        const check = actionType === 'UPGRADE' ? checkGrowthCondition(target, bot, nbs, grid, navObstacles) : checkDigCondition(target, bot, nbs, grid);
+        const isDefense = isDefenseModeParam !== undefined ? isDefenseModeParam : !!(bot.memory?.botRole?.startsWith('SIEGE_'));
+        const check = actionType === 'UPGRADE' ? checkGrowthCondition(target, bot, nbs, grid, navObstacles, undefined, isDefense) : checkDigCondition(target, bot, nbs, grid, isDefense);
 
         if (check.canGrow) {
             const action: BotAction = actionType === 'UPGRADE' ? { type: 'UPGRADE', coord: { q: target.q, r: target.r }, intent: 'UPGRADE', stateVersion } : { type: 'DIG', coord: { q: target.q, r: target.r }, stateVersion };
@@ -61,7 +111,8 @@ const moveAndAct = (
     
     if (d === 1 && bot.storage > 0) {
         const ch = currentHex(bot, grid);
-        if (ch && target.maxLevel > ch.maxLevel + 1 && checkGrowthCondition(ch, bot, getNeighbors(bot.q, bot.r), grid, navObstacles).canGrow) {
+        const isDefense = isDefenseModeParam !== undefined ? isDefenseModeParam : !!(bot.memory?.botRole?.startsWith('SIEGE_'));
+        if (ch && target.maxLevel > ch.maxLevel + 1 && checkGrowthCondition(ch, bot, getNeighbors(bot.q, bot.r), grid, navObstacles, undefined, isDefense).canGrow) {
             return { action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'UPGRADE', stateVersion }, debug: 'Mountaineer', memory: { ...mem, stuckCounter: 0 } };
         }
     }
@@ -80,7 +131,8 @@ const executeStep = (
     claimedSet: Set<string>,
     allBots: Entity[],
     reachable: Set<string>,
-    player: Entity
+    player: Entity,
+    isDefenseModeParam?: boolean
 ): AiResult | 'STEP_DONE' | 'STEP_FAILED' => {
     if (step.type === 'RECOVER') {
         if (!bot.recoveredCurrentHex && currentHex(bot, grid)?.structureType !== 'VOID') return { action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'RECOVER', stateVersion }, debug: 'Recover', memory: mem };
@@ -93,14 +145,25 @@ const executeStep = (
         const target = findBestDigTargets(bot, grid, index, allBots, 10, restriction, reachable).find(t => !claimedSet.has(t.hex.id) && !(mem.blacklistedTargets || []).includes(t.hex.id))?.hex;
         if (!target) return 'STEP_FAILED';
         mem.targetHexId = target.id;
-        return moveAndAct(bot, target, 'DIG', grid, navObstacles, stateVersion, mem, 'Mine');
+        return moveAndAct(bot, target, 'DIG', grid, navObstacles, stateVersion, mem, 'Mine', isDefenseModeParam);
     }
 
     if (step.type === 'MOVE_TO') {
-        const target = grid[step.targetId];
+        const target = resolveTargetHex(grid, step.targetId);
         if (!target) return 'STEP_FAILED';
         mem.targetHexId = step.targetId;
         if (cubeDistance(bot, target) === 0) return 'STEP_DONE';
+
+        const isDefenseMode = isDefenseModeParam || !!(bot.memory?.botRole?.startsWith('SIEGE_'));
+        const isSiegeBot = !!(bot.memory?.botRole?.startsWith('SIEGE_')) || isDefenseMode;
+
+        if (isSiegeBot && cubeDistance(bot, target) <= 1) {
+            const isBlockedByEntity = allBots.some(b => b.id !== bot.id && b.q === target.q && b.r === target.r) || (player.q === target.q && player.r === target.r);
+            if (isBlockedByEntity) {
+                return { action: { type: 'WAIT', stateVersion }, debug: 'SiegeWaitPeer', memory: { ...mem, waitStreak: (mem.waitStreak ?? 0) + 1 } };
+            }
+            return { action: { type: 'MOVE', path: [{ q: target.q, r: target.r }], stateVersion }, debug: 'SiegeStep', memory: { ...mem, waitStreak: 0 } };
+        }
 
         const hasVoidCore = checkHasVoidCore(bot);
         const pathResult = findPath({ q: bot.q, r: bot.r }, { q: target.q, r: target.r }, grid, bot.playerLevel, navObstacles, hasVoidCore, false, true);
@@ -122,7 +185,8 @@ const executeStep = (
 
             if (cubeDistance(bot, target) === 1 && bot.storage > 0) {
                 const ch = currentHex(bot, grid);
-                if (ch && target.maxLevel > ch.maxLevel + 1 && checkGrowthCondition(ch, bot, getNeighbors(bot.q, bot.r), grid, navObstacles).canGrow) {
+                const isDefense = isDefenseModeParam || !!(bot.memory?.botRole?.startsWith('SIEGE_'));
+                if (ch && target.maxLevel > ch.maxLevel + 1 && checkGrowthCondition(ch, bot, getNeighbors(bot.q, bot.r), grid, navObstacles, undefined, isDefense).canGrow) {
                     return { action: { type: 'UPGRADE', coord: { q: bot.q, r: bot.r }, intent: 'UPGRADE', stateVersion }, debug: 'Mountaineer', memory: { ...mem, waitStreak: 0 } };
                 }
             }
@@ -143,13 +207,30 @@ const executeStep = (
     }
 
     if (step.type === 'UPGRADE' || step.type === 'DIG') {
-        const target = grid[step.targetId];
+        const target = resolveTargetHex(grid, step.targetId);
         if (!target) return 'STEP_FAILED';
+        
+        const isDefenseMode = isDefenseModeParam || !!(bot.memory?.botRole?.startsWith('SIEGE_'));
+        const isSiegeBot = !!(bot.memory?.botRole?.startsWith('SIEGE_')) || isDefenseMode;
+        
+        if (isSiegeBot) {
+            if (target.structureType === 'VOID') return 'STEP_FAILED';
+            if (cubeDistance(bot, target) > 1) return 'STEP_FAILED';
+            return {
+                action: step.type === 'UPGRADE' 
+                    ? { type: 'UPGRADE', coord: { q: target.q, r: target.r }, intent: 'UPGRADE', stateVersion }
+                    : { type: 'DIG', coord: { q: target.q, r: target.r }, stateVersion },
+                debug: `Siege${step.type}`,
+                memory: { ...mem, waitStreak: 0, stuckCounter: 0, targetHexId: step.type === 'DIG' ? null : mem.targetHexId }
+            };
+        }
+
         if (step.type === 'UPGRADE' && bot.storage < 1) return 'STEP_FAILED';
         
-        if (cubeDistance(bot, target) > 1) return moveAndAct(bot, target, step.type, grid, navObstacles, stateVersion, mem, `Reach${step.type}`);
+        if (cubeDistance(bot, target) > 1) return moveAndAct(bot, target, step.type, grid, navObstacles, stateVersion, mem, `Reach${step.type}`, isDefenseModeParam);
 
-        const check = step.type === 'UPGRADE' ? checkGrowthCondition(target, bot, getNeighbors(target.q, target.r), grid, navObstacles) : checkDigCondition(target, bot, getNeighbors(target.q, target.r), grid);
+        const isDefense = isDefenseModeParam || !!(bot.memory?.botRole?.startsWith('SIEGE_'));
+        const check = step.type === 'UPGRADE' ? checkGrowthCondition(target, bot, getNeighbors(target.q, target.r), grid, navObstacles, undefined, isDefense) : checkDigCondition(target, bot, getNeighbors(target.q, target.r), grid, isDefense);
         if (!check.canGrow) return 'STEP_FAILED';
 
         return {
@@ -176,7 +257,8 @@ export const calculateBotMove = (
     _difficulty: Difficulty,
     reservedHexKeys?: Set<string>,
     allBots?: Entity[],
-    activeLevelConfig?: LevelConfig
+    activeLevelConfig?: LevelConfig,
+    isDefenseModeParam?: boolean
 ): AiResult => {
     if (!bot) return { action: null, debug: '', memory: { lastPlayerPos: null, stuckCounter: 0 } };
 
@@ -258,87 +340,131 @@ export const calculateBotMove = (
     }
 
     const activeLevelId = activeLevelConfig?.id;
-    const isSiege = !!(bot.memory?.botRole?.startsWith('SIEGE_'));
+    const isDefenseMode = isDefenseModeParam ?? (activeLevelConfig ? false : !!(bot.memory?.botRole?.startsWith('SIEGE_')));
+    const botMode = getBotGameMode(activeLevelConfig, isDefenseMode, bot.memory?.botRole);
+    mem.botMode = botMode;
 
     const planStale = (stateVersion - (mem.plan?.createdAt ?? 0)) > PLAN_TTL || (mem.waitStreak ?? 0) >= MAX_WAIT_STREAK;
     if (!mem.plan || mem.plan.steps.length === 0 || planStale) {
-        if (isSiege) {
+        if (botMode === 'SIEGE') {
             if (!mem.botRole || !mem.botRole.startsWith('SIEGE_')) {
-                mem.botRole = 'DESTROYER';
+                mem.botRole = 'SIEGE_GRINDER';
             }
             const coreKey = getHexKey(0, 0);
-            
-            // Find optimal path to the core (0, 0)
-            const siegePathResult = findSiegePath({ q: bot.q, r: bot.r }, { q: 0, r: 0 }, grid);
-            if (siegePathResult && siegePathResult.path && siegePathResult.path.length > 0) {
-                const path = siegePathResult.path;
-                const nextStep = path[0];
-                const nextKey = getHexKey(nextStep.q, nextStep.r);
-                const nextHex = grid[nextKey];
-                const nextLevel = nextHex ? nextHex.currentLevel : 0;
-                
-                const botHex = grid[getHexKey(bot.q, bot.r)];
-                const botLevel = botHex ? botHex.currentLevel : 0;
+            const botKey = getHexKey(bot.q, bot.r);
+            const botHex = resolveTargetHex(grid, botKey)!;
+            const botLevel = botHex ? (botHex.currentLevel ?? 0) : 0;
 
-                if (nextHex && nextHex.structureType !== 'VOID') {
-                    // 1. Is it a wall (level > 1)?
-                    if (nextLevel > 1) {
-                        mem.plan = { 
-                            steps: [{ type: 'DIG', targetId: nextHex.id }], 
-                            createdAt: stateVersion, 
-                            label: 'SIEGE_LASER_WALL' 
-                        };
+            // 1. If standing directly on the Core at (0, 0)
+            if (bot.q === 0 && bot.r === 0) {
+                const coreHex = resolveTargetHex(grid, coreKey);
+                mem.plan = { steps: [{ type: 'DIG', targetId: coreHex?.id || coreKey }], createdAt: stateVersion, label: 'SIEGE_ATTACK_CORE' };
+            }
+            // 2. Calculate dynamic route to Core (0,0) based on current position and height
+            else {
+                const siegePathResult = findSiegePath({ q: bot.q, r: bot.r }, { q: 0, r: 0 }, grid, bot.id);
+
+                if (siegePathResult && siegePathResult.path && siegePathResult.path.length > 0) {
+                    const nextStep = siegePathResult.path[0];
+                    const nextKey = getHexKey(nextStep.q, nextStep.r);
+                    const nextHex = resolveTargetHex(grid, nextKey);
+
+                    if (nextHex && nextHex.structureType !== 'VOID') {
+                        const nextLevel = nextHex.currentLevel ?? 0;
+                        const diff = nextLevel - botLevel;
+                        
+                        // Attack core if target is core
+                        if (nextStep.q === 0 && nextStep.r === 0) {
+                            mem.plan = { steps: [{ type: 'DIG', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_ATTACK_CORE' };
+                        }
+                        // Uphill is too steep: drill down the obstacle
+                        else if (diff > 1) {
+                            mem.plan = { steps: [{ type: 'DIG', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_LASER_WALL' };
+                        }
+                        // Downhill is too steep: fill up the pit
+                        else if (diff < -1) {
+                            mem.plan = { steps: [{ type: 'UPGRADE', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_UPGRADE_PIT' };
+                        }
+                        // Height difference is traversable (|diff| <= 1): walk forward
+                        else {
+                            mem.plan = { steps: [{ type: 'MOVE_TO', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_STEP' };
+                        }
                     }
-                    // 2. Is there a steep uphill slope (> 1)?
-                    else if (nextLevel > botLevel + 1) {
-                        mem.plan = { 
-                            steps: [{ type: 'DIG', targetId: nextHex.id }], 
-                            createdAt: stateVersion, 
-                            label: 'SIEGE_LASER_UPHILL' 
-                        };
-                    }
-                    // 3. Is there a steep downhill slope (< -1)?
-                    else if (nextLevel < botLevel - 1) {
-                        mem.plan = { 
-                            steps: [{ type: 'UPGRADE', targetId: nextHex.id }], 
-                            createdAt: stateVersion, 
-                            label: 'SIEGE_UPGRADE_DOWNHILL' 
-                        };
-                    }
-                    // 4. Standard move step
-                    else {
-                        mem.plan = { 
-                            steps: [{ type: 'MOVE_TO', targetId: nextHex.id }], 
-                            createdAt: stateVersion, 
-                            label: 'SIEGE_STEP' 
-                        };
-                    }
-                }
-            } else {
-                if (getReachable().has(coreKey)) {
-                    mem.plan = { steps: [{ type: 'MOVE_TO', targetId: coreKey }, { type: 'DIG', targetId: coreKey }], createdAt: stateVersion, label: 'SIEGE_TARGET_CORE' };
                 } else {
-                    const targetInfo = findHiveTarget(bot, grid, index, mem.botRole as any, 50, player);
-                    if (targetInfo && getReachable().has(targetInfo.hex.id)) {
-                        const steps: PlanStep[] = [{ type: 'MOVE_TO', targetId: targetInfo.hex.id }];
-                        if (targetInfo.actionType !== 'MOVE_ONLY') steps.push({ type: targetInfo.actionType, targetId: targetInfo.hex.id });
-                        mem.plan = { steps, createdAt: stateVersion, label: `SIEGE_NAV: ${targetInfo.reason}` };
+                    // Fallback when adjacent to core or direct neighbor pathing is blocked
+                    if (cubeDistance(bot, { q: 0, r: 0 }) <= 1) {
+                        const coreHex = resolveTargetHex(grid, coreKey);
+                        mem.plan = { steps: [{ type: 'DIG', targetId: coreHex?.id || coreKey }], createdAt: stateVersion, label: 'SIEGE_ATTACK_CORE' };
                     } else {
-                        mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, activeLevelId, activeLevelConfig, getReachable());
+                        // Intelligent terrain-climbing/digging fallbacks:
+                        // If all accessible neighbors are uphill, build own tile up to climb
+                        // If all accessible neighbors are downhill, dig own tile down to climb down
+                        const neighbors = getNeighbors(bot.q, bot.r);
+                        const accessibleNeighbors = neighbors.filter(n => {
+                            const nHex = grid[getHexKey(n.q, n.r)];
+                            return nHex && nHex.structureType !== 'VOID';
+                        });
+
+                        const allNeighborsUphill = accessibleNeighbors.length > 0 && accessibleNeighbors.every(n => {
+                            const nHex = grid[getHexKey(n.q, n.r)];
+                            return (nHex.currentLevel ?? 0) - botLevel > 1;
+                        });
+
+                        const allNeighborsDownhill = accessibleNeighbors.length > 0 && accessibleNeighbors.every(n => {
+                            const nHex = grid[getHexKey(n.q, n.r)];
+                            return (nHex.currentLevel ?? 0) - botLevel < -1;
+                        });
+
+                        if (allNeighborsUphill && botHex) {
+                            mem.plan = { steps: [{ type: 'UPGRADE', targetId: botHex.id }], createdAt: stateVersion, label: 'SIEGE_LEVEL_SELF_UP' };
+                        } else if (allNeighborsDownhill && botHex) {
+                            mem.plan = { steps: [{ type: 'DIG', targetId: botHex.id }], createdAt: stateVersion, label: 'SIEGE_LEVEL_SELF_DOWN' };
+                        } else {
+                            let bestNeighbor: HexCoord | null = null;
+                            let minDist = Infinity;
+                            for (const n of neighbors) {
+                                const nKey = getHexKey(n.q, n.r);
+                                const nHex = grid[nKey];
+                                if (nHex && nHex.structureType === 'VOID') continue;
+                                const dist = cubeDistance(n, { q: 0, r: 0 });
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    bestNeighbor = n;
+                                }
+                            }
+                            if (bestNeighbor) {
+                                const targetKey = getHexKey(bestNeighbor.q, bestNeighbor.r);
+                                const targetHex = resolveTargetHex(grid, targetKey)!;
+                                const targetLevel = targetHex.currentLevel ?? 0;
+                                const diff = targetLevel - botLevel;
+                                if (diff > 1) {
+                                    mem.plan = { steps: [{ type: 'DIG', targetId: targetKey }], createdAt: stateVersion, label: 'SIEGE_LASER_WALL' };
+                                } else if (diff < -1) {
+                                    mem.plan = { steps: [{ type: 'UPGRADE', targetId: targetKey }], createdAt: stateVersion, label: 'SIEGE_UPGRADE_PIT' };
+                                } else {
+                                    mem.plan = { steps: [{ type: 'MOVE_TO', targetId: targetKey }], createdAt: stateVersion, label: 'SIEGE_STEP' };
+                                }
+                            }
+                        }
                     }
                 }
             }
-        } else {
+        } else if (botMode === 'CAMPAIGN') {
             mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, activeLevelId, activeLevelConfig, getReachable());
+        } else {
+            mem.plan = buildPlan(bot, grid, monument, navObs, claimed, stateVersion, bots, mem, player, index, undefined, undefined, getReachable());
         }
         mem.waitStreak = 0;
     }
 
     while (mem.plan && mem.plan.steps.length > 0) {
-        const result = executeStep(mem.plan.steps[0], bot, grid, index, navObs, stateVersion, mem, monument, claimed, bots, getReachable(), player);
+        const result = executeStep(mem.plan.steps[0], bot, grid, index, navObs, stateVersion, mem, monument, claimed, bots, getReachable(), player, isDefenseMode);
         
         if (result === 'STEP_DONE') { 
             mem.plan.steps.shift(); 
+            if (mem.plan.steps.length === 0) {
+                mem.plan = null;
+            }
             continue; 
         }
         

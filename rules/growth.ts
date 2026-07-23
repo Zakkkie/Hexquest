@@ -15,11 +15,13 @@ export function checkDigCondition(
   hex: Hex,
   _entity: Entity,
   neighbors: HexCoord[],
-  grid: Record<string, Hex>
+  grid: Record<string, Hex>,
+  isDefenseModeParam?: boolean
 ): GrowthCheckResult {
   
-  const isBot = _entity.id?.startsWith('bot_') || (_entity as any).type === 'BOT';
-  const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+  const isBot = _entity.id?.startsWith('bot') || _entity.id?.startsWith('saboteur') || (_entity as any).type === 'BOT';
+  const isSiegeBot = isBot && !!(_entity as any).memory?.botRole?.startsWith('SIEGE_');
+  const isDefenseMode = isDefenseModeParam !== undefined ? (isDefenseModeParam || isSiegeBot) : (!!useGameStore.getState().session?.defense?.isDefenseMode || isSiegeBot);
   if (isBot && isDefenseMode) {
       if (hex.structureType === 'VOID') {
           return { canGrow: false, reason: "CANNOT DIG VOID" };
@@ -33,7 +35,7 @@ export function checkDigCondition(
   }
   
   if (hex.isIndestructible) {
-      if (hex.isCore && _entity.id.startsWith('bot_')) {
+      if (hex.isCore && (_entity.id?.startsWith('bot') || _entity.id?.startsWith('saboteur'))) {
           // Bots can dig the core to damage it
           return { canGrow: true };
       }
@@ -121,12 +123,23 @@ export function checkGrowthCondition(
   neighbors: HexCoord[],
   grid: Record<string, Hex>,
   _occupiedHexes: HexCoord[] = [],
-  _requiredQueueSize: number = 3
+  _requiredQueueSize: number = 3,
+  isDefenseModeParam?: boolean
 ): GrowthCheckResult {
   if (!hex) return { canGrow: false, reason: 'Invalid Hex' };
 
   if (hex.structureType === 'MONUMENT' || hex.isIndestructible) {
       return { canGrow: false, reason: "ANCIENT STRUCTURE (IMMUTABLE)" };
+  }
+
+  const isBot = entity.id?.startsWith('bot') || entity.id?.startsWith('saboteur') || (entity as any).type === 'BOT';
+  const isSiegeBot = isBot && !!(entity as any).memory?.botRole?.startsWith('SIEGE_');
+  const isDefenseMode = isDefenseModeParam !== undefined ? (isDefenseModeParam || isSiegeBot) : (!!useGameStore.getState().session?.defense?.isDefenseMode || isSiegeBot);
+  if (isBot && isDefenseMode) {
+      if (hex.structureType === 'VOID') {
+          return { canGrow: false, reason: "CANNOT BUILD ON VOID" };
+      }
+      return { canGrow: true };
   }
 
   const currentLevel = hex.currentLevel ?? 0;
@@ -144,8 +157,6 @@ export function checkGrowthCondition(
 
   // 1. MATERIAL CHECK (Still costs material unless free status active)
   if (entity.storage < 1) {
-      const isBot = entity.id?.startsWith('bot_') || (entity as any).type === 'BOT';
-      const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
       const hasFreeBuild = entity.activeStatuses?.some(s => s.type === 'STATUS_FREE_BUILD' || s.label === 'Free Build') || (isBot && isDefenseMode);
       if (!hasFreeBuild) {
           return { canGrow: false, reason: "NEED MATERIAL (DIG)" };

@@ -2,7 +2,6 @@ import { Entity, Hex, HexCoord, BotMemory, BotAction, LevelConfig } from '../typ
 import { getHexKey, cubeDistance, getNeighbors } from '../services/hexUtils';
 import { checkGrowthCondition } from '../rules/growth';
 import { WorldIndex } from '../engine/WorldIndex';
-import { useGameStore } from '../store';
 
 export interface AiResult {
     action: BotAction | null;
@@ -84,7 +83,7 @@ export const getReachableHexes = (
     
     const finalHasVoidCore = hasVoidCore !== undefined ? hasVoidCore : checkHasVoidCore(bot);
     
-    const isDefenseMode = !!useGameStore.getState().session?.defense?.isDefenseMode;
+    const isDefenseMode = !!(bot.memory?.botRole?.startsWith('SIEGE_'));
     
     reachable.add(startKey);
     

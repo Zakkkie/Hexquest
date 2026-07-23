@@ -905,15 +905,13 @@ const BASE_MIN: Record<string, number> = {
 };
 series2Base.forEach(l => { l.difficultyScore = BASE_SCORES[l.id]; l.movePointCost = BASE_MIN[l.id]; });
 
-// Series 2 = 10 hand-authored + 50 procedurally generated levels, ordered by
-// baked difficulty so play progression runs easy → hard (no solver at runtime).
-// Tie-break by raw execution length (movePointCost) for a stable, sensible order.
-export const series2Levels: LevelConfig[] = [...series2Base, ...series2Generated]
-  .sort((a, b) => (a.difficultyScore ?? 0) - (b.difficultyScore ?? 0)
-    || (a.movePointCost ?? 0) - (b.movePointCost ?? 0));
+// Series 2 = 10 hand-authored + 50 procedurally generated levels.
+// Keeps the logical sequential progression intact (10 basic introductory levels,
+// followed by 50 progressively harder procedurally generated levels).
+export const series2Levels: LevelConfig[] = [...series2Base, ...series2Generated];
 
-// Renumber id + title sequentially in difficulty order so both run 2.1 … 2.60
-// (id number = difficulty rank = play position). Level hooks key off coords, not
+// Renumber id + title sequentially so both run 2.1 … 2.60
+// (id number = play position). Level hooks key off coords, not
 // id, so reassigning here is safe; id-keyed consumers (getCampaignMetric, the
 // solve-test) are generic / look levels up by stable title-name instead.
 series2Levels.forEach((l, i) => {

@@ -33,6 +33,7 @@ export const DEFAULT_CAMPAIGN_UPGRADES: CampaignUpgrades = {
   entropyResistance: 0,
   restorationMaster: 0,
   contrastHighlighting: 0,
+  turretSpeed: 0,
 };
 
 export const createDefaultProgress = () => ({

@@ -197,47 +197,120 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
 
     const drawConnections = useCallback(() => {
         const graphics = connectionsGraphicsRef.current;
-        if (!graphics || !grid || !player || isPlayerGrowing || player.state === EntityState.MOVING) { graphics?.clear(); return; }
+        if (!graphics || !grid || !player) return;
         graphics.clear();
+        
         const angleRad = rotation * (Math.PI / 180);
         const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
         const SQRT3 = Math.sqrt(3), SQRT3_2 = SQRT3 / 2, ONE_POINT_FIVE = 1.5;
 
-        const rawPX = HEX_SIZE * (SQRT3 * player.q + SQRT3_2 * player.r);
-        const rawPY = HEX_SIZE * (ONE_POINT_FIVE * player.r);
-        const ppx = rawPX * cos - rawPY * sin;
-        const ppy = (rawPX * sin + rawPY * cos) * 0.8;
+        // Draw player lines only if player is not growing and not moving
+        if (!isPlayerGrowing && player.state !== EntityState.MOVING) {
+            const ppxRaw = HEX_SIZE * (SQRT3 * player.q + SQRT3_2 * player.r);
+            const ppyRaw = HEX_SIZE * (ONE_POINT_FIVE * player.r);
+            const ppx = ppxRaw * cos - ppyRaw * sin;
+            const ppy = (ppxRaw * sin + ppyRaw * cos) * 0.8;
 
-        const pHex = grid[getHexKey(player.q, player.r)];
-        const startH = pHex ? (10 + pHex.currentLevel * 10) : 10;
-        const neighbors = getNeighbors(player.q, player.r);
+            const pHex = grid[getHexKey(player.q, player.r)];
+            const startH = pHex ? (10 + pHex.currentLevel * 10) : 10;
+            const neighbors = getNeighbors(player.q, player.r);
 
-        for (const n of neighbors) {
-            const nHex = grid[getHexKey(n.q, n.r)];
-            if (nHex?.structureType === 'VOID' || nHex?.isPassable === false) continue;
-            const rawNX = HEX_SIZE * (SQRT3 * n.q + SQRT3_2 * n.r);
-            const rawNY = HEX_SIZE * (ONE_POINT_FIVE * n.r);
-            const npx = rawNX * cos - rawNY * sin;
-            const npy = (rawNX * sin + rawNY * cos) * 0.8;
-            const endH = nHex ? (10 + nHex.currentLevel * 10) : 10;
-            if (Math.abs((pHex?.currentLevel ?? 0) - (nHex?.currentLevel ?? 0)) > 1) continue;
+            for (const n of neighbors) {
+                const nHex = grid[getHexKey(n.q, n.r)];
+                if (nHex?.structureType === 'VOID' || nHex?.isPassable === false) continue;
+                const rawNX = HEX_SIZE * (SQRT3 * n.q + SQRT3_2 * n.r);
+                const rawNY = HEX_SIZE * (ONE_POINT_FIVE * n.r);
+                const npx = rawNX * cos - rawNY * sin;
+                const npy = (rawNX * sin + rawNY * cos) * 0.8;
+                const endH = nHex ? (10 + nHex.currentLevel * 10) : 10;
+                if (Math.abs((pHex?.currentLevel ?? 0) - (nHex?.currentLevel ?? 0)) > 1) continue;
 
-            const cost = (nHex?.currentLevel ?? 0) > 1 ? (nHex?.currentLevel ?? 0) : 1;
-            const { exchangeRate } = getStatusModifiers(player, { campaignUpgrades });
-            const canAfford = player.moves >= cost || player.coins >= (cost * exchangeRate);
+                const cost = (nHex?.currentLevel ?? 0) > 1 ? (nHex?.currentLevel ?? 0) : 1;
+                const { exchangeRate } = getStatusModifiers(player, { campaignUpgrades });
+                const canAfford = player.moves >= cost || player.coins >= (cost * exchangeRate);
 
-            graphics.strokeStyle = { width: 2.0, color: canAfford ? 0x34d399 : 0xef4444, alpha: (nHex && nHex.currentLevel > player.playerLevel) ? 0.2 : 0.6 };
-            const startX = ppx, startY = ppy - startH, endX = npx, endY = npy - endH;
-            for (let s = 0; s < 6; s++) {
-                if (s % 2 === 0) {
-                    const t1 = s / 6, t2 = (s + 1) / 6;
-                    graphics.moveTo(startX + (endX - startX) * t1, startY + (endY - startY) * t1);
-                    graphics.lineTo(startX + (endX - startX) * t2, startY + (endY - startY) * t2);
+                graphics.strokeStyle = { width: 2.0, color: canAfford ? 0x34d399 : 0xef4444, alpha: (nHex && nHex.currentLevel > player.playerLevel) ? 0.2 : 0.6 };
+                const startX = ppx, startY = ppy - startH, endX = npx, endY = npy - endH;
+                for (let s = 0; s < 6; s++) {
+                    if (s % 2 === 0) {
+                        const t1 = s / 6, t2 = (s + 1) / 6;
+                        graphics.moveTo(startX + (endX - startX) * t1, startY + (endY - startY) * t1);
+                        graphics.lineTo(startX + (endX - startX) * t2, startY + (endY - startY) * t2);
+                    }
                 }
+                graphics.stroke();
             }
-            graphics.stroke();
         }
-    }, [grid, player, isPlayerGrowing, rotation, campaignUpgrades]);
+
+        // Draw diagnostic lines for inactive/idle bots in Core Siege mode
+        if (isDefenseMode && bots && bots.length > 0) {
+            bots.forEach((bot: any) => {
+                let targetId = bot.memory?.targetHexId || bot.memory?.plan?.steps?.[0]?.targetId;
+                const isIdle = !targetId || bot.state === EntityState.IDLE;
+                
+                // If idle or no target, default to Core (0,0)
+                if (!targetId) {
+                    targetId = '0,0';
+                }
+
+                const parts = targetId.split(',');
+                if (parts.length !== 2) return;
+                const tq = parseInt(parts[0], 10);
+                const tr = parseInt(parts[1], 10);
+                if (isNaN(tq) || isNaN(tr)) return;
+
+                const botHex = grid[getHexKey(bot.q, bot.r)];
+                const targetHex = grid[getHexKey(tq, tr)];
+
+                const botH = botHex ? (10 + botHex.currentLevel * 10) : 10;
+                const targetH = targetHex ? (10 + targetHex.currentLevel * 10) : 10;
+
+                const rawBotX = HEX_SIZE * (SQRT3 * bot.q + SQRT3_2 * bot.r);
+                const rawBotY = HEX_SIZE * (ONE_POINT_FIVE * bot.r);
+                const bpx = rawBotX * cos - rawBotY * sin;
+                const bpy = (rawBotX * sin + rawBotY * cos) * 0.8;
+
+                const rawTarX = HEX_SIZE * (SQRT3 * tq + SQRT3_2 * tr);
+                const rawTarY = HEX_SIZE * (ONE_POINT_FIVE * tr);
+                const tpx = rawTarX * cos - rawTarY * sin;
+                const tpy = (rawTarX * sin + rawTarY * cos) * 0.8;
+
+                if (isIdle) {
+                    // Draw dashed/solid orange indicator line for idle/inactive bots pointing to Core
+                    graphics.strokeStyle = { width: 2.0, color: 0xf97316, alpha: 0.8 }; // Bright Orange warning line
+                    
+                    // Draw simple dashed/dotted line effect manually
+                    const startX = bpx, startY = bpy - botH, endX = tpx, endY = tpy - targetH;
+                    const stepsCount = 10;
+                    for (let s = 0; s < stepsCount; s++) {
+                        if (s % 2 === 0) {
+                            const t1 = s / stepsCount;
+                            const t2 = (s + 1) / stepsCount;
+                            graphics.moveTo(startX + (endX - startX) * t1, startY + (endY - startY) * t1);
+                            graphics.lineTo(startX + (endX - startX) * t2, startY + (endY - startY) * t2);
+                        }
+                    }
+                    graphics.stroke();
+
+                    // Draw alert ring around the idle bot
+                    graphics.strokeStyle = { width: 1.5, color: 0xf97316, alpha: 0.6 };
+                    graphics.drawCircle(bpx, bpy - botH, 15);
+                    graphics.stroke();
+                } else {
+                    // Draw solid purple indicator line for active bots pursuing a specific target
+                    graphics.strokeStyle = { width: 3.0, color: 0xc084fc, alpha: 0.9 }; // Elegant purple line
+                    graphics.moveTo(bpx, bpy - botH);
+                    graphics.lineTo(tpx, tpy - targetH);
+                    graphics.stroke();
+
+                    // Draw target node dot
+                    graphics.fillStyle = { color: 0xa855f7, alpha: 1.0 };
+                    graphics.drawCircle(tpx, tpy - targetH, 5);
+                    graphics.fill();
+                }
+            });
+        }
+    }, [grid, player, isPlayerGrowing, rotation, campaignUpgrades, bots, isDefenseMode]);
 
     useEffect(() => { drawConnections(); }, [drawConnections, isPixiReady]);
 
@@ -265,7 +338,9 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             const elapsed = Date.now() - cached.startTime;
             const progress = Math.min(1.0, elapsed / cached.lifetime);
             const { x: basePx, y: basePy } = simpleHexToPixel(cached.q, cached.r);
-            const currentY = basePy - 20 - idx * 24;
+            const hexCell = grid ? grid[getHexKey(cached.q, cached.r)] : undefined;
+            const yOffset = getHeightOffset(hexCell ? (hexCell.currentLevel || 0) : 0);
+            const currentY = basePy - yOffset - 20 - idx * 24;
             const currentRise = progress * 80;
             if (cached.container && !cached.container.destroyed) {
                 cached.container.x = basePx; cached.container.y = currentY - currentRise;
@@ -353,14 +428,37 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             economicParticlesRef.current.push({ id: Math.random(), x: px, y: py, vx: (Math.random() - 0.5) * 0.45, vy: -1.0 - Math.random() * 0.8, scale: 0.75, alpha: 0.95, age: 0, maxAge: type === 'AMBIENT' ? 45 + Math.random() * 25 : 55, container });
         };
 
+        if (player) {
+            if (coinsIncreased) {
+                const count = 3;
+                for (let i = 0; i < count; i++) {
+                    setTimeout(() => {
+                        if (particlesContainerRef.current) {
+                            spawnResourceParticle(player.q, player.r, 'COIN', deltaCoins);
+                        }
+                    }, i * 140);
+                }
+            }
+            if (storageIncreased) {
+                const count = 2;
+                for (let i = 0; i < count; i++) {
+                    setTimeout(() => {
+                        if (particlesContainerRef.current) {
+                            spawnResourceParticle(player.q, player.r, 'MATERIAL', deltaStorage);
+                        }
+                    }, i * 140);
+                }
+            }
+        }
+
         for (const key in grid) {
             const hex = grid[key];
             const isCore = hex.structureType === 'CORE' || hex.isCore;
             const isTurret = hex.structureType === 'TURRET' || hex.isTurret;
             if (isCore || isTurret) {
-                if (coinsIncreased) { const count = isCore ? 4 : 2; for (let i = 0; i < count; i++) { setTimeout(() => { if (particlesContainerRef.current && grid[key]) spawnResourceParticle(hex.q, hex.r, 'COIN', deltaCoins); }, i * 140); } }
-                if (storageIncreased) { const count = isCore ? 3 : 1; for (let i = 0; i < count; i++) { setTimeout(() => { if (particlesContainerRef.current && grid[key]) spawnResourceParticle(hex.q, hex.r, 'MATERIAL', deltaStorage); }, i * 140); } }
-                if (shouldSpawnAmbient && Math.random() < (isCore ? 0.8 : 0.45)) spawnResourceParticle(hex.q, hex.r, 'AMBIENT');
+                if (shouldSpawnAmbient && Math.random() < (isCore ? 0.8 : 0.45)) {
+                    spawnResourceParticle(hex.q, hex.r, 'AMBIENT');
+                }
             }
         }
         economicParticlesRef.current = economicParticlesRef.current.filter(p => {
@@ -1501,11 +1599,6 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         const cam = camera || { x: 0, y: 0, scale: 1 };
         const indicators: any[] = [];
         bots.forEach(bot => {
-            if (isDefenseMode) {
-                let minDist = 9999;
-                for (const ph of playerOwnedHexes) { const d = cubeDistance({ q: ph.q, r: ph.r }, { q: bot.q, r: bot.r }); if (d < minDist) minDist = d; }
-                if (minDist > 4) return;
-            }
             const bHex = grid[`${bot.q},${bot.r}`];
             if (!bHex) return;
             const rawNX = HEX_SIZE * (Math.sqrt(3) * bot.q + Math.sqrt(3) / 2 * bot.r);

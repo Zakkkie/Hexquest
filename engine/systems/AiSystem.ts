@@ -50,14 +50,13 @@ export class AiSystem implements System {
           interval = interval * 0.8; // Slightly faster to chop through defenses
       }
 
-      // Slow down all bots significantly in Siege/Defense mode to allow strategic counterplay and better readability
+      // Ensure readable pace for all bots in Siege/Defense mode
       if (state.defense?.isDefenseMode) {
-          interval = interval * 2.5;
+          interval = Math.max(interval, 800);
       }
       
       if (!bot.lastActionTime) {
-        bot.lastActionTime = now - Math.floor(Math.random() * interval);
-        continue; 
+        bot.lastActionTime = now - interval;
       }
       
       const lastAct = bot.lastActionTime;
@@ -77,7 +76,8 @@ export class AiSystem implements System {
         state.difficulty,
         tickReservedKeys,
         state.bots,
-        state.activeLevelConfig
+        state.activeLevelConfig,
+        !!state.defense?.isDefenseMode
       );
 
       if (aiResult) {
@@ -88,7 +88,9 @@ export class AiSystem implements System {
 
         // Sync bot rank to its highest owned hex level (instant, no 3s delay)
         if (state.defense?.isDefenseMode) {
-          bot.playerLevel = 10;
+          if (!bot.playerLevel || bot.playerLevel <= 0) {
+            bot.playerLevel = 1;
+          }
         } else {
           const ownedHexes = index.getHexesByOwner(bot.id);
           for (const hex of ownedHexes) {
@@ -120,17 +122,23 @@ export class AiSystem implements System {
           }
         }
 
-        const logEntry: BotLogEntry = {
-          botId: bot.id,
-          action: aiResult.action ? aiResult.action.type : 'WAIT',
-          reason: aiResult.debug,
-          timestamp: now,
-          target: targetStr
-        };
+        const newAction = aiResult.action ? aiResult.action.type : 'WAIT';
+        const lastEntry = state.botActivityLog[0];
+        if (lastEntry && lastEntry.botId === bot.id && lastEntry.action === newAction && lastEntry.reason === aiResult.debug && lastEntry.target === targetStr) {
+          lastEntry.timestamp = now;
+        } else {
+          const logEntry: BotLogEntry = {
+            botId: bot.id,
+            action: newAction,
+            reason: aiResult.debug,
+            timestamp: now,
+            target: targetStr
+          };
 
-        state.botActivityLog.unshift(logEntry);
-        if (state.botActivityLog.length > 60) state.botActivityLog.pop();
-        historyService.addEntry(logEntry);
+          state.botActivityLog.unshift(logEntry);
+          if (state.botActivityLog.length > 25) state.botActivityLog.pop();
+          historyService.addEntry(logEntry);
+        }
 
         // ENQUEUE ACTION
         if (aiResult.action && aiResult.action.type !== 'WAIT') {

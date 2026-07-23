@@ -125,41 +125,33 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: "spring", stiffness: 350, damping: 25 }}
-          className="bg-slate-950/80 backdrop-blur-2xl border border-indigo-500/30 w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-4xl sm:rounded-3xl overflow-hidden flex flex-col relative shadow-[0_0_60px_rgba(79,70,229,0.3)]"
+          className="bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded-2xl md:rounded-3xl w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl overflow-hidden flex flex-col relative"
         >
           {/* Ambient Effects */}
-          <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-600/20 blur-[80px] rounded-full pointer-events-none animate-pulse" />
-          <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-purple-600/20 blur-[80px] rounded-full pointer-events-none animate-pulse" />
+          <div className="absolute -top-24 -left-24 w-64 h-64 bg-emerald-600/10 blur-[80px] rounded-full pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-teal-600/10 blur-[80px] rounded-full pointer-events-none" />
           <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
-          
-          {/* Scanline Animation */}
-          <motion.div 
-            className="absolute left-0 right-0 h-20 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none z-0"
-            initial={{ top: '-20%' }}
-            animate={{ top: '120%' }}
-            transition={{ repeat: Infinity, duration: 5, ease: "linear" }}
-          />
 
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-indigo-500/20 bg-slate-900/60 backdrop-blur-sm shrink-0 z-20 relative">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-sm shrink-0 z-20 relative">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-500/15 rounded-lg border border-indigo-500/30 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <div className="p-2.5 bg-emerald-500/15 rounded-xl border border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <Terminal className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-500/60 leading-none">LOCAL_ASSET_REPOSITORY</div>
-                <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-widest leading-none mt-0.5">
+                <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">LOCAL_ASSET_REPOSITORY</div>
+                <h2 className="text-lg md:text-xl font-extrabold text-slate-100 uppercase tracking-wider leading-none">
                   {language === 'RU' ? 'Инвентарь' : 'Inventory'}
                 </h2>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex flex-col items-end">
-                <div className="text-[8px] font-black tracking-widest text-emerald-400/60 leading-none mb-0.5 uppercase">Credits</div>
-                <div className="text-sm sm:text-base font-mono font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">{player.coins}</div>
+                <div className="text-[9px] font-bold uppercase tracking-wider text-emerald-400/80 leading-none mb-0.5">Credits</div>
+                <div className="text-sm sm:text-base font-mono font-bold text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">{player.coins}</div>
               </div>
-              <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-all transform hover:scale-110 active:scale-95 cursor-pointer">
-                <X className="w-6 h-6" />
+              <button onClick={onClose} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-xl transition-all cursor-pointer">
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>

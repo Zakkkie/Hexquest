@@ -85,33 +85,28 @@ const Leaderboard: React.FC = () => {
   const rankRange = Array.from({ length: 21 }, (_, i) => i - 10);
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-2 md:p-12 pointer-events-auto bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-4xl bg-slate-950/45 backdrop-blur-xl border border-indigo-500/25 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.2)] overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh] relative group">
-        {/* Cyber Corner Brackets */}
-        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-500/50 z-30 pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-500/50 z-30 pointer-events-none" />
+    <div className="w-full h-full flex items-center justify-center p-2 md:p-6 pointer-events-auto bg-black/60 backdrop-blur-md">
+      <div className="w-full max-w-2xl bg-slate-950/90 backdrop-blur-2xl border border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded-2xl md:rounded-3xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh] relative group">
 
         {/* Scanline Effect */}
         <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
 
         {/* Header */}
-        <div className="p-4 md:p-6 border-b border-indigo-500/30 flex items-center justify-between bg-indigo-900/10 relative z-20 shrink-0">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="p-2 md:p-3 bg-amber-500/15 rounded-xl border border-amber-500/35 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
-              <Trophy className="w-5 h-5 md:w-8 md:h-8" />
+        <div className="px-5 py-4 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/60 backdrop-blur-sm relative z-20 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-500/15 rounded-xl border border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+              <Trophy className="w-5 h-5 md:w-6 md:h-6" />
             </div>
             <div>
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500/80 leading-none mb-1">{t.SUBTITLE}</div>
-              <h2 className="text-lg md:text-2xl font-black text-white uppercase tracking-widest leading-none">{t.TITLE}</h2>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">{t.SUBTITLE}</div>
+              <h2 className="text-lg md:text-xl font-extrabold text-slate-100 uppercase tracking-wider leading-none">{t.TITLE}</h2>
             </div>
           </div>
           <button 
             onClick={() => setUIState('MENU')}
-            className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-3 rounded-xl bg-slate-800/60 hover:bg-red-500/20 text-slate-300 hover:text-red-400 border border-white/5 hover:border-red-500/30 transition-all font-black uppercase text-[10px] tracking-wider transform hover:scale-105 active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-slate-200 font-bold uppercase tracking-wider text-xs transition-all cursor-pointer"
           >
-            <ArrowLeft className="w-3 h-3 md:w-4 md:h-4" /> <span>{t.BTN_BACK}</span>
+            <ArrowLeft className="w-4 h-4" /> <span>{t.BTN_BACK}</span>
           </button>
         </div>
 

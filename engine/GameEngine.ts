@@ -209,7 +209,7 @@ export class GameEngine {
                     }
                     
                     tickEvents.push({
-                        id: `void-restored-${Date.now()}`,
+                        id: `void-restored-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
                         type: 'MESSAGE',
                         message: nextState.language === 'RU'
                             ? '🌀 ИСТОЧНИК УСТРАНЕН: Пространство стабилизировано, все зараженные сектора восстановлены!'
@@ -271,7 +271,7 @@ export class GameEngine {
                                 };
                                 
                                 tickEvents.push({
-                                    id: `void-infected-${Date.now()}`,
+                                    id: `void-infected-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
                                     type: 'MESSAGE',
                                     message: nextState.language === 'RU'
                                         ? `⚠️ ПУСТОТА РАСПОЛЗАЕТСЯ: Сектор (${chosenKey}) поглощен бездной!`

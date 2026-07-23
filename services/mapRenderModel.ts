@@ -180,6 +180,10 @@ export const runLocalRenderCalculation = (
     const playerQ = player.q;
     const playerR = player.r;
 
+    const playerOwnedHexes = isDefenseMode
+        ? Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore)
+        : [];
+
     for (const hexId in grid) {
         const hex = grid[hexId];
         const hq = hex.q;
@@ -189,42 +193,13 @@ export const runLocalRenderCalculation = (
         let isRevealed = !!hex.revealed || !!forceReveal;
         let finalVisibility = 0;
 
-        if (isDefenseMode) {
-            // Find player owned hexes to calculate nearest base distance
-            const playerOwnedHexes = Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore);
-            let distToPlayerBase = distToPlayer;
-            let minDist = 9999;
-            for (const ph of playerOwnedHexes) {
-                const d = cubeDistance({ q: ph.q, r: ph.r }, { q: hq, r: hr });
-                if (d < minDist) {
-                    minDist = d;
-                }
-            }
-            if (minDist !== 9999) {
-                distToPlayerBase = minDist;
-            }
-
-            if (distToPlayerBase <= 4) {
-                isRevealed = true;
-                if (distToPlayerBase <= 1) {
-                    finalVisibility = 1.0;
-                } else if (distToPlayerBase === 2) {
-                    finalVisibility = 0.70;
-                } else if (distToPlayerBase === 3) {
-                    finalVisibility = 0.40;
-                } else if (distToPlayerBase === 4) {
-                    finalVisibility = 0.15;
-                }
-            } else {
-                isRevealed = false;
-                finalVisibility = 0.0;
-            }
+        if (isDefenseMode || forceReveal) {
+            isRevealed = true;
+            finalVisibility = 1.0;
         } else {
-            if (distToPlayer > 5 && !forceReveal) continue;
+            if (distToPlayer > 5) continue;
             
-            if (forceReveal) {
-                finalVisibility = 1.0;
-            } else if (distToPlayer <= 2) {
+            if (distToPlayer <= 2) {
                 finalVisibility = 1.0;
             } else if (distToPlayer === 3) {
                 finalVisibility = 0.70;
@@ -365,33 +340,12 @@ export const runLocalRenderCalculation = (
         const uR = u.r;
 
         if (!u.isPlayer) {
-            if (isDefenseMode) {
-                // Find player owned hexes to calculate nearest base distance
-                const playerOwnedHexes = Object.values(grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore);
-                let minDist = 9999;
-                for (const ph of playerOwnedHexes) {
-                    const d = cubeDistance({ q: ph.q, r: ph.r }, { q: uQ, r: uR });
-                    if (d < minDist) {
-                        minDist = d;
-                    }
-                }
-                if (minDist > 4) {
-                    continue; // Skip rendering/drawing the bot if it's beyond the visibility range!
-                }
-                // Apply fading opacity matching the tile's visibility
-                if (minDist <= 1) {
-                    uOpacity = 1.0;
-                } else if (minDist === 2) {
-                    uOpacity = 0.70;
-                } else if (minDist === 3) {
-                    uOpacity = 0.40;
-                } else if (minDist === 4) {
-                    uOpacity = 0.15;
-                }
+            if (isDefenseMode || forceReveal) {
+                uOpacity = 1.0;
             } else {
                 const uHex = grid[getHexKey(uQ, uR)];
                 const isRevealed = uHex ? uHex.revealed : false;
-                if (!isRevealed) continue;
+                if (!isRevealed && !forceReveal) continue;
 
                 const distToPlayer = cubeDistance({ q: uQ, r: uR }, playerPos);
                 if (distToPlayer <= 2) {

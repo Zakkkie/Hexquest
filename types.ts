@@ -657,4 +657,5 @@ export interface CampaignUpgrades {
   entropyResistance: number;
   restorationMaster: number;
   contrastHighlighting: number;
+  turretSpeed: number;
 }
