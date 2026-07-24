@@ -108,7 +108,7 @@ export class TurretSystem implements System {
             text: isDestroyed ? `💥 DESTROYED!` : `-${finalDmg} RANK`,
             color: isDestroyed ? '#EF4444' : '#F43F5E',
             startTime: now,
-            lifetime: 1500,
+            lifetime: 2500,
             icon: isDestroyed ? 'SKULL' : 'WARN',
             sourceQ: cell.q,
             sourceR: cell.r
@@ -413,7 +413,7 @@ export class TurretSystem implements System {
           text: `RECYCLED! +15¢`,
           color: '#10B981', // brilliant emerald green
           startTime: now,
-          lifetime: 1500,
+          lifetime: 2500,
           icon: 'SKULL'
         });
 

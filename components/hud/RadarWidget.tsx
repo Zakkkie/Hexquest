@@ -53,7 +53,7 @@ export const RadarWidget: React.FC = () => {
     const getRadarStatus = () => {
         if (distance <= 2) {
             return {
-                colorClass: 'text-amber-400 border-amber-500/40 bg-amber-950/20 shadow-[inset_0_0_12px_rgba(245,158,11,0.15)]',
+                colorClass: 'text-amber-400 border-transparent bg-amber-950/20 shadow-none',
                 pulseColor: 'bg-amber-500',
                 label: isRu ? 'СИГНАЛ: ВЫСОКОИНТЕНСИВНЫЙ' : 'SIGNAL: STRONG DEPTH',
                 subtext: isRu ? 'Цель очень близко! Исследуйте соседние сектора.' : 'Anomalous core aligned! Reach adjacent grids.',
@@ -62,7 +62,7 @@ export const RadarWidget: React.FC = () => {
             };
         } else if (distance <= 4) {
             return {
-                colorClass: 'text-yellow-400 border-yellow-500/30 bg-yellow-950/10 shadow-[inset_0_0_12px_rgba(234,179,8,0.1)]',
+                colorClass: 'text-yellow-400 border-transparent bg-yellow-950/10 shadow-none',
                 pulseColor: 'bg-yellow-500',
                 label: isRu ? 'СИГНАЛ: СРЕДНИЙ КАНАЛ' : 'SIGNAL: STABLE BEACON',
                 subtext: isRu ? 'Поток улавливается. Двигайтесь по вектору изменения.' : 'Stable spatial fingerprint detected. Advance target.',
@@ -71,7 +71,7 @@ export const RadarWidget: React.FC = () => {
             };
         } else {
             return {
-                colorClass: 'text-teal-400 border-teal-500/20 bg-teal-950/10 shadow-[inset_0_0_12px_rgba(20,184,166,0.05)]',
+                colorClass: 'text-teal-400 border-transparent bg-teal-950/10 shadow-none',
                 pulseColor: 'bg-teal-500',
                 label: isRu ? 'СИГНАЛ: НИЗКОЧАСТОТНЫЙ' : 'SIGNAL: WEAK FEEDWELL',
                 subtext: isRu ? 'Обнаружены фоновые помехи. Начните сканирование сетки.' : 'Faint structural resonance. Sweep the external map.',
@@ -88,7 +88,7 @@ export const RadarWidget: React.FC = () => {
             initial={{ opacity: 0, y: 10, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`w-full rounded-xl border backdrop-blur-md flex flex-col pointer-events-auto transition-all duration-300 overflow-hidden ${status.colorClass}`}
+            className={`w-full rounded-xl border-transparent backdrop-blur-md flex flex-col pointer-events-auto transition-all duration-300 overflow-hidden ${status.colorClass}`}
         >
             {/* Header with animating icon - clickable for collapse/expand */}
             <div 

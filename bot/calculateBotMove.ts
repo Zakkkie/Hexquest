@@ -214,7 +214,7 @@ const executeStep = (
         const isSiegeBot = !!(bot.memory?.botRole?.startsWith('SIEGE_')) || isDefenseMode;
         
         if (isSiegeBot) {
-            if (target.structureType === 'VOID') return 'STEP_FAILED';
+            if (target.structureType === 'VOID' && step.type !== 'UPGRADE') return 'STEP_FAILED';
             if (cubeDistance(bot, target) > 1) return 'STEP_FAILED';
             return {
                 action: step.type === 'UPGRADE' 
@@ -369,23 +369,27 @@ export const calculateBotMove = (
                     const nextKey = getHexKey(nextStep.q, nextStep.r);
                     const nextHex = resolveTargetHex(grid, nextKey);
 
-                    if (nextHex && nextHex.structureType !== 'VOID') {
+                    if (nextHex) {
                         const nextLevel = nextHex.currentLevel ?? 0;
-                        const diff = nextLevel - botLevel;
                         
-                        // Attack core if target is core
+                        // Attack core if target is core (0,0) or level core to 0 if player is on it / built on core
                         if (nextStep.q === 0 && nextStep.r === 0) {
-                            mem.plan = { steps: [{ type: 'DIG', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_ATTACK_CORE' };
+                            if (nextLevel > 0) {
+                                mem.plan = { steps: [{ type: 'DIG', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_LEVEL_CORE_DOWN' };
+                            } else if (nextLevel < 0 || nextHex.structureType === 'VOID') {
+                                mem.plan = { steps: [{ type: 'UPGRADE', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_LEVEL_CORE_UP' };
+                            } else {
+                                mem.plan = { steps: [{ type: 'DIG', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_ATTACK_CORE' };
+                            }
                         }
-                        // Uphill is too steep: drill down the obstacle
-                        else if (diff > 1) {
-                            mem.plan = { steps: [{ type: 'DIG', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_LASER_WALL' };
+                        // Restore road to level 0 before stepping on next hex towards core
+                        else if (nextLevel > 0) {
+                            mem.plan = { steps: [{ type: 'DIG', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_RESTORE_ROAD_DOWN' };
                         }
-                        // Downhill is too steep: fill up the pit
-                        else if (diff < -1) {
-                            mem.plan = { steps: [{ type: 'UPGRADE', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_UPGRADE_PIT' };
+                        else if (nextLevel < 0 || nextHex.structureType === 'VOID') {
+                            mem.plan = { steps: [{ type: 'UPGRADE', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_RESTORE_ROAD_UP' };
                         }
-                        // Height difference is traversable (|diff| <= 1): walk forward
+                        // Level is 0: step onto it
                         else {
                             mem.plan = { steps: [{ type: 'MOVE_TO', targetId: nextHex?.id || nextKey }], createdAt: stateVersion, label: 'SIEGE_STEP' };
                         }
@@ -394,7 +398,14 @@ export const calculateBotMove = (
                     // Fallback when adjacent to core or direct neighbor pathing is blocked
                     if (cubeDistance(bot, { q: 0, r: 0 }) <= 1) {
                         const coreHex = resolveTargetHex(grid, coreKey);
-                        mem.plan = { steps: [{ type: 'DIG', targetId: coreHex?.id || coreKey }], createdAt: stateVersion, label: 'SIEGE_ATTACK_CORE' };
+                        const coreLevel = coreHex?.currentLevel ?? 0;
+                        if (coreLevel > 0) {
+                            mem.plan = { steps: [{ type: 'DIG', targetId: coreHex?.id || coreKey }], createdAt: stateVersion, label: 'SIEGE_LEVEL_CORE_DOWN' };
+                        } else if (coreLevel < 0 || coreHex?.structureType === 'VOID') {
+                            mem.plan = { steps: [{ type: 'UPGRADE', targetId: coreHex?.id || coreKey }], createdAt: stateVersion, label: 'SIEGE_LEVEL_CORE_UP' };
+                        } else {
+                            mem.plan = { steps: [{ type: 'DIG', targetId: coreHex?.id || coreKey }], createdAt: stateVersion, label: 'SIEGE_ATTACK_CORE' };
+                        }
                     } else {
                         // Intelligent terrain-climbing/digging fallbacks:
                         // If all accessible neighbors are uphill, build own tile up to climb
@@ -435,12 +446,11 @@ export const calculateBotMove = (
                             if (bestNeighbor) {
                                 const targetKey = getHexKey(bestNeighbor.q, bestNeighbor.r);
                                 const targetHex = resolveTargetHex(grid, targetKey)!;
-                                const targetLevel = targetHex.currentLevel ?? 0;
-                                const diff = targetLevel - botLevel;
-                                if (diff > 1) {
-                                    mem.plan = { steps: [{ type: 'DIG', targetId: targetKey }], createdAt: stateVersion, label: 'SIEGE_LASER_WALL' };
-                                } else if (diff < -1) {
-                                    mem.plan = { steps: [{ type: 'UPGRADE', targetId: targetKey }], createdAt: stateVersion, label: 'SIEGE_UPGRADE_PIT' };
+                                const targetLevel = targetHex?.currentLevel ?? 0;
+                                if (targetLevel > 0) {
+                                    mem.plan = { steps: [{ type: 'DIG', targetId: targetKey }], createdAt: stateVersion, label: 'SIEGE_RESTORE_ROAD_DOWN' };
+                                } else if (targetLevel < 0 || targetHex?.structureType === 'VOID') {
+                                    mem.plan = { steps: [{ type: 'UPGRADE', targetId: targetKey }], createdAt: stateVersion, label: 'SIEGE_RESTORE_ROAD_UP' };
                                 } else {
                                     mem.plan = { steps: [{ type: 'MOVE_TO', targetId: targetKey }], createdAt: stateVersion, label: 'SIEGE_STEP' };
                                 }

@@ -86,7 +86,7 @@ const StatWidget: React.FC<StatWidgetProps> = memo(({
             onTouchEnd={() => onInteract(type, 'leave')}
             animate={isHighlighted ? { scale: [1, 1.05, 1], borderColor: ['rgba(245,158,11,0.2)', 'rgba(245,158,11,1)', 'rgba(245,158,11,0.2)'] } : {}}
             transition={isHighlighted ? { duration: 1.5, repeat: Infinity } : {}}
-            className={`relative flex items-center gap-1.5 sm:gap-2 md:gap-3 cursor-pointer group shrink-0 pr-1.5 sm:pr-2.5 select-none py-1 md:py-1.5 transition-all duration-300 hover:bg-slate-900/40 px-1.5 sm:px-2.5 rounded-xl border ${themeClass}`}
+            className={`relative flex items-center gap-1 sm:gap-1.5 md:gap-3 cursor-pointer group shrink-0 select-none py-0.5 md:py-1.5 transition-all duration-300 hover:bg-slate-900/40 px-1 sm:px-2 md:px-2.5 rounded-lg md:rounded-xl border ${themeClass}`}
         >
             <motion.div 
                 animate={
@@ -94,7 +94,7 @@ const StatWidget: React.FC<StatWidgetProps> = memo(({
                     storageChanged === 'drain' || coinsChanged === 'drain' ? { scale: [1, 1.2, 1], boxShadow: ['0 0 0px rgba(239,68,68,0)', '0 0 15px rgba(239,68,68,0.6)', '0 0 0px rgba(239,68,68,0)'] } : {}
                 }
                 transition={{ duration: 0.5 }}
-                className={`w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg flex items-center justify-center transition-all group-hover:scale-110 ${iconBgClass}`}
+                className={`w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 rounded md:rounded-lg flex items-center justify-center transition-all group-hover:scale-110 ${iconBgClass}`}
             >
                 {icon}
             </motion.div>
@@ -178,7 +178,7 @@ const SystemMenu: React.FC<SystemMenuProps & { language: 'RU' | 'EN', t: any, is
             )}
             <button onClick={() => { onOpenModal('AI_MONITOR'); onClose(); store.playUiSound('CLICK'); }} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-400 border border-indigo-900/30 hover:border-indigo-500/50 transition-colors w-full text-left">
                 <Cpu className="w-4 h-4 text-indigo-400 animate-pulse" />
-                <span className="text-xs font-bold uppercase">{language === 'RU' ? 'AI Монитор' : 'AI Monitor'}</span>
+                <span className="text-xs font-bold uppercase">{language === 'RU' ? 'ИИ Диагностика' : 'AI Diagnostics'}</span>
             </button>
             <button onClick={() => { store.toggleLiteMode(); store.playUiSound('CLICK'); }} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors w-full text-left border ${isLiteMode ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-400' : 'bg-slate-900/50 border-transparent hover:bg-slate-800 text-slate-300 hover:text-white hover:border-slate-600'}`}>
                 <Zap className={`w-4 h-4 ${isLiteMode ? 'animate-pulse' : 'text-slate-400'}`} />
@@ -313,13 +313,13 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
     };
 
     return (
-        <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-[60] pt-[calc(env(safe-area-inset-top)+8px)] md:pt-[calc(env(safe-area-inset-top)+16px)]">
+        <div className="absolute inset-x-0 top-0 p-1 sm:p-2 md:p-4 pointer-events-none z-[60] pt-[calc(env(safe-area-inset-top)+4px)] md:pt-[calc(env(safe-area-inset-top)+16px)]">
             <style>{HUD_STYLES}</style>
-            <div className="w-full flex justify-between items-start gap-1.5 md:gap-4 max-w-7xl mx-auto relative pointer-events-none">
+            <div className="w-full flex justify-between items-center gap-1 sm:gap-2 md:gap-4 max-w-7xl mx-auto relative pointer-events-none">
                 
                 {/* STATS STRIP */}
                 <div className="flex flex-col gap-1 flex-1 min-w-0 md:flex-none md:w-fit relative pointer-events-auto" ref={statsBarRef} id="top-stats-bar">
-                    <div className="flex items-center justify-between md:justify-start bg-slate-950/80 backdrop-blur-2xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-2 py-1.5 md:px-5 md:py-3 gap-1.5 sm:gap-3 md:gap-6 transition-all duration-300 hover:border-slate-700/60 overflow-x-auto overflow-y-hidden stats-scroll-hide w-full h-[44px] md:h-auto md:shrink-0 relative">
+                    <div className="flex items-center justify-between md:justify-start bg-slate-950/80 backdrop-blur-2xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-1.5 py-1 sm:px-3 sm:py-2 md:px-5 md:py-3 gap-0.5 sm:gap-2 md:gap-6 transition-all duration-300 hover:border-slate-700/60 overflow-x-auto overflow-y-hidden stats-scroll-hide w-full h-[38px] sm:h-[42px] md:h-auto md:shrink-0 relative">
                         
                         {/* Entropy Background */}
                         {entropy && (
@@ -497,10 +497,10 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                 })()}
 
                 {/* SYSTEM MENU */}
-                <div className="pointer-events-auto flex items-start shrink-0 relative z-50" ref={systemMenuRef}>
+                <div className="pointer-events-auto flex items-center shrink-0 relative z-50" ref={systemMenuRef}>
                     <div className="relative">
-                        <button onClick={() => { setIsSystemMenuOpen(!isSystemMenuOpen); playUiSound('CLICK'); }} className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'}`}>
-                            {isSystemMenuOpen ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+                        <button onClick={() => { setIsSystemMenuOpen(!isSystemMenuOpen); playUiSound('CLICK'); }} className={`w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center backdrop-blur-xl border rounded-xl transition-all shadow-lg active:scale-95 ${isSystemMenuOpen ? 'bg-slate-800 border-slate-500 text-white' : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-white'}`}>
+                            {isSystemMenuOpen ? <X className="w-4 h-4 md:w-5 md:h-5" /> : <Settings className="w-4 h-4 md:w-5 md:h-5" />}
                         </button>
                         <SystemMenu 
                             isOpen={isSystemMenuOpen} 

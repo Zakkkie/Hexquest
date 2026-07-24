@@ -129,17 +129,11 @@ const SkirmishHintBanner: React.FC = () => {
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.2 }}
                     onClick={handleToggleCollapse}
-                    className={`pointer-events-auto cursor-pointer w-full p-2.5 rounded-xl border bg-slate-950/45 backdrop-blur-xl shadow-[0_0_50px_rgba(99,102,241,0.05)] flex items-center justify-between gap-3 text-white transition-all select-none group relative overflow-hidden ${
-                        isAccomplished ? 'border-emerald-500/25 text-emerald-300' : 'border-indigo-500/25 text-indigo-300'
+                    className={`pointer-events-auto cursor-pointer w-full p-2.5 rounded-xl border-transparent bg-slate-950/45 backdrop-blur-xl shadow-none flex items-center justify-between gap-3 text-white transition-all select-none group relative overflow-hidden ${
+                        isAccomplished ? 'text-emerald-300' : 'text-indigo-300'
                     }`}
                     title={language === 'RU' ? 'Развернуть' : 'Expand'}
                 >
-                    {/* Corner decors */}
-                    <div className={`absolute top-0 left-0 w-2.5 h-2.5 border-t border-l pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
-                    <div className={`absolute top-0 right-0 w-2.5 h-2.5 border-t border-r pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
-                    <div className={`absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
-                    <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
-
                     {/* Scanlines layer */}
                     <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
 
@@ -185,14 +179,9 @@ const SkirmishHintBanner: React.FC = () => {
                     className="pointer-events-auto w-full"
                     id="skirmish-hint-banner-expanded"
                 >
-                    <div className={`p-4 rounded-xl border bg-slate-950/45 backdrop-blur-xl shadow-[0_0_50px_rgba(99,102,241,0.15)] flex flex-col gap-3 transition-all duration-300 relative overflow-hidden group ${
-                        isAccomplished ? 'border-emerald-500/25' : 'border-indigo-500/25'
+                    <div className={`p-4 rounded-xl border-transparent bg-slate-950/45 backdrop-blur-xl shadow-none flex flex-col gap-3 transition-all duration-300 relative overflow-hidden group ${
+                        isAccomplished ? '' : ''
                     }`}>
-                        {/* Corner decors */}
-                        <div className={`absolute top-0 left-0 w-3 h-3 border-t border-l pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
-                        <div className={`absolute top-0 right-0 w-3 h-3 border-t border-r pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
-                        <div className={`absolute bottom-0 left-0 w-3 h-3 border-b border-l pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
-                        <div className={`absolute bottom-0 right-0 w-3 h-3 border-b border-r pointer-events-none ${isAccomplished ? 'border-emerald-500/40' : 'border-indigo-500/40'}`} />
 
                         {/* Scanlines layer */}
                         <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />

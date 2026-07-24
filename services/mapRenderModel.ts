@@ -287,7 +287,10 @@ export const runLocalRenderCalculation = (
                         const config = getLevelConfig(hex.maxLevel);
                         needed = config.growthTime;
                     } else if (intent === 'DIG') {
-                        needed = Math.max(10, 30 - (growthAccelerator * 5));
+                        const curLvl = hex.currentLevel ?? 0;
+                        const baseSecs = curLvl >= 1 ? (curLvl + 2) : 3;
+                        const baseTicks = baseSecs * 10;
+                        needed = actingEntity.type !== 'PLAYER' ? baseTicks : Math.max(10, baseTicks - (growthAccelerator * 5));
                     } else if (intent === 'UPGRADE') {
                         const config = getLevelConfig(hex.currentLevel + 1);
                         needed = Math.max(10, config.growthTime - (growthAccelerator * 5));

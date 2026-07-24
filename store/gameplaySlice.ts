@@ -716,20 +716,26 @@ export const createGameplaySlice = (
           switch (event.type) {
             case 'LEVEL_UP': case 'SECTOR_ACQUIRED': text = lang === 'RU' ? "+1 УР" : "+1 LVL"; color = isPlayer ? "#818cf8" : "#f87171"; icon = 'UP'; break;
             case 'SECTOR_EXCAVATED': {
-              const mat = Number(event.data?.material || 0);
-              const mvs = Number(event.data?.moves || 0);
-              if (mat > 0) newEffectsData.push({ q: targetQ, r: targetR, text: lang === 'RU' ? `+${mat} МАТ` : `+${mat} MAT`, color: "#34d399", icon: 'PICKAXE', lifetime: 1200 });
-              if (mvs > 0) newEffectsData.push({ q: targetQ, r: targetR, text: lang === 'RU' ? `+${mvs} ХОД` : `+${mvs} MOVE`, color: "#60a5fa", icon: 'FOOTPRINTS', lifetime: 1200 });
+              const hasEngineFx = result.state.effects.some(e => e.q === targetQ && e.r === targetR && (e.id.includes('dig') || e.id.includes('mat')));
+              if (!hasEngineFx) {
+                const mat = Number(event.data?.material || 0);
+                const mvs = Number(event.data?.moves || 0);
+                if (mat > 0) newEffectsData.push({ q: targetQ, r: targetR, text: lang === 'RU' ? `+${mat} МАТ` : `+${mat} MAT`, color: "#34d399", icon: 'PICKAXE', lifetime: 2500 });
+                if (mvs > 0) newEffectsData.push({ q: targetQ, r: targetR, text: lang === 'RU' ? `+${mvs} ХОД` : `+${mvs} MOVE`, color: "#60a5fa", icon: 'FOOTPRINTS', lifetime: 2500 });
+              }
               break;
             }
             case 'RECOVERY_USED': {
               if (isPlayer) {
-                if (event.data?.customText) { text = String(event.data.customText); color = String(event.data.customColor || '#fbbf24'); icon = 'GEM'; }
-                else {
-                  const c = Number(event.data?.coins || 0);
-                  const m = Number(event.data?.moves || 0);
-                  if (c > 0) newEffectsData.push({ q: targetQ, r: targetR, text: lang === 'RU' ? `+${c} МОН` : `+${c} COIN`, color: "#fbbf24", icon: 'COIN', lifetime: 1200 });
-                  if (m > 0) newEffectsData.push({ q: targetQ, r: targetR, text: lang === 'RU' ? `+${m} ХОД` : `+${m} MOVE`, color: "#60a5fa", icon: 'FOOTPRINTS', lifetime: 1200 });
+                const hasEngineFx = result.state.effects.some(e => e.q === targetQ && e.r === targetR && e.id.includes('restore'));
+                if (!hasEngineFx) {
+                  if (event.data?.customText) { text = String(event.data.customText); color = String(event.data.customColor || '#fbbf24'); icon = 'GEM'; }
+                  else {
+                    const c = Number(event.data?.coins || 0);
+                    const m = Number(event.data?.moves || 0);
+                    if (c > 0) newEffectsData.push({ q: targetQ, r: targetR, text: lang === 'RU' ? `+${c} МОН` : `+${c} COIN`, color: "#fbbf24", icon: 'COIN', lifetime: 2500 });
+                    if (m > 0) newEffectsData.push({ q: targetQ, r: targetR, text: lang === 'RU' ? `+${m} ХОД` : `+${m} MOVE`, color: "#60a5fa", icon: 'FOOTPRINTS', lifetime: 2500 });
+                  }
                 }
               }
               break;
@@ -741,7 +747,7 @@ export const createGameplaySlice = (
             case 'ITEM_DROP': text = lang === 'RU' ? "ПРЕДМЕТ!" : "ITEM FOUND!"; color = "#fcd34d"; icon = 'GEM'; break;
             case 'ACTION_DENIED': case 'ERROR': text = (event.message || '').toUpperCase(); color = "#f87171"; icon = 'WARN'; break;
           }
-          if (text) newEffectsData.push({ q: targetQ, r: targetR, text, color, icon, lifetime: 1200 });
+          if (text) newEffectsData.push({ q: targetQ, r: targetR, text, color, icon, lifetime: 2500 });
         }
       });
 

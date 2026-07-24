@@ -619,16 +619,14 @@ export const findSiegePath = (
       const nKey = getHexKey(neighbor.q, neighbor.r);
       const neighborHex = grid[nKey];
       
-      if (neighborHex && neighborHex.structureType === 'VOID') {
-        checks.blockedByVoidCount++;
-        continue;
-      }
-
-      const neighborLevel = neighborHex ? neighborHex.currentLevel : 0;
-
-      // Base weight: 1 point for moving
       let stepCost = 1;
       let obstacleEvent = '';
+
+      if (neighborHex && neighborHex.structureType === 'VOID') {
+        checks.blockedByVoidCount++;
+        stepCost += 15;
+        obstacleEvent += `VOID(+15 cost) `;
+      }
 
       // 1. Is it a player wall or elevated tile (level > 1)?
       if (neighborLevel > 1) {

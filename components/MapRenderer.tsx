@@ -328,24 +328,52 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             let cached = effectCache.current.get(eff.id);
             if (!cached) {
                 const container = new PIXI.Container();
-                const text = new PIXI.Text({ text: eff.text, style: { fontFamily: 'Inter, sans-serif', fontSize: 16, fontWeight: 'bold', fill: eff.color, align: 'center' } });
+                const text = new PIXI.Text({ 
+                    text: eff.text, 
+                    style: { 
+                        fontFamily: 'Inter, system-ui, sans-serif', 
+                        fontSize: 16, 
+                        fontWeight: 'bold', 
+                        fill: eff.color, 
+                        align: 'center',
+                        stroke: { color: 0x0f172a, width: 4.0 },
+                    } 
+                });
                 text.anchor.set(0.5, 0.5); container.addChild(text); parent.addChild(container);
                 let laserGraphics: PIXI.Graphics | undefined = undefined;
                 if (eff.sourceQ !== undefined && eff.sourceR !== undefined) { laserGraphics = new PIXI.Graphics(); parent.addChild(laserGraphics); }
-                cached = { container, text, startTime: Date.now(), lifetime: eff.lifetime, q: eff.q, r: eff.r, stackIndex: idx, laserGraphics };
+                cached = { container, text, startTime: Date.now(), lifetime: eff.lifetime || 2500, q: eff.q, r: eff.r, stackIndex: idx, laserGraphics };
                 effectCache.current.set(eff.id, cached);
             }
+
+            const totalLifetime = cached.lifetime || 2500;
             const elapsed = Date.now() - cached.startTime;
-            const progress = Math.min(1.0, elapsed / cached.lifetime);
+            const progress = Math.min(1.0, elapsed / totalLifetime);
+
             const { x: basePx, y: basePy } = simpleHexToPixel(cached.q, cached.r);
             const hexCell = grid ? grid[getHexKey(cached.q, cached.r)] : undefined;
             const yOffset = getHeightOffset(hexCell ? (hexCell.currentLevel || 0) : 0);
-            const currentY = basePy - yOffset - 20 - idx * 24;
-            const currentRise = progress * 80;
+            const stackYOffset = idx * 26;
+            const currentY = basePy - yOffset - 28 - stackYOffset;
+            const floatRise = Math.pow(progress, 0.8) * 90;
+
             if (cached.container && !cached.container.destroyed) {
-                cached.container.x = basePx; cached.container.y = currentY - currentRise;
-                if (progress < 0.2) { const scale = 0.5 + (progress / 0.2) * 0.5; cached.container.scale.set(scale, scale); cached.container.alpha = 1.0; }
-                else { const fp = (progress - 0.2) / 0.8; cached.container.alpha = 1.0 - fp; cached.container.scale.set(1.0 + fp * 0.2, 1.0 + fp * 0.2); }
+                cached.container.x = basePx; 
+                cached.container.y = currentY - floatRise;
+
+                if (progress < 0.15) {
+                    const pop = progress / 0.15;
+                    const scale = 0.5 + pop * 0.55;
+                    cached.container.scale.set(scale, scale);
+                    cached.container.alpha = 1.0;
+                } else if (progress < 0.65) {
+                    cached.container.scale.set(1.0, 1.0);
+                    cached.container.alpha = 1.0;
+                } else {
+                    const fp = (progress - 0.65) / 0.35;
+                    cached.container.alpha = Math.max(0, 1.0 - fp);
+                    cached.container.scale.set(1.0 + fp * 0.15, 1.0 + fp * 0.15);
+                }
             }
             if (cached.laserGraphics && !cached.laserGraphics.destroyed && eff.sourceQ !== undefined && eff.sourceR !== undefined) {
                 cached.laserGraphics.clear();
@@ -399,57 +427,20 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         const parent = particlesContainerRef.current;
         if (!parent || !grid) return;
         const now = Date.now();
-        const curCoins = player?.coins || 0, curStorage = player?.storage || 0;
-        let coinsIncreased = false, deltaCoins = 0;
-        if (lastPlayerCoinsRef.current > 0 && curCoins > lastPlayerCoinsRef.current) { coinsIncreased = true; deltaCoins = curCoins - lastPlayerCoinsRef.current; }
-        let storageIncreased = false, deltaStorage = 0;
-        if (lastPlayerStorageRef.current > 0 && curStorage > lastPlayerStorageRef.current) { storageIncreased = true; deltaStorage = curStorage - lastPlayerStorageRef.current; }
-        lastPlayerCoinsRef.current = curCoins; lastPlayerStorageRef.current = curStorage;
         let shouldSpawnAmbient = false;
         if (now - lastPeriodicPulseRef.current > 1200) { shouldSpawnAmbient = true; lastPeriodicPulseRef.current = now; }
 
-        const spawnResourceParticle = (hq: number, hr: number, type: 'COIN' | 'MATERIAL' | 'AMBIENT', customVal?: number) => {
+        const spawnResourceParticle = (hq: number, hr: number, type: 'AMBIENT') => {
             const { x: basePx, y: basePy } = simpleHexToPixel(hq, hr);
             const hexCell = grid[getHexKey(hq, hr)];
             const yOffset = getHeightOffset(hexCell ? (hexCell.currentLevel || 0) : 0);
             const px = basePx, py = basePy - yOffset - 15;
             const container = new PIXI.Container();
-            if (type === 'COIN') {
-                const text = new PIXI.Text({ text: customVal ? `+${customVal}¢` : "+¢", style: { fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 'bold', fill: 0x10b981, stroke: { color: 0xffffff, width: 2 } } });
-                text.anchor.set(0.5, 0.5); container.addChild(text);
-                const aura = new PIXI.Graphics(); aura.circle(0, 0, 11); aura.fill({ color: 0xfbbf24, alpha: 0.35 }); container.addChildAt(aura, 0);
-            } else if (type === 'MATERIAL') {
-                const text = new PIXI.Text({ text: customVal ? `+${customVal}⚙️` : "+⚙️", style: { fontFamily: 'Inter, sans-serif', fontSize: 13, fontWeight: 'bold', fill: 0xa855f7, stroke: { color: 0xffffff, width: 2 } } });
-                text.anchor.set(0.5, 0.5); container.addChild(text);
-                const aura = new PIXI.Graphics(); aura.rect(-8, -8, 16, 16); aura.fill({ color: 0xc084fc, alpha: 0.3 }); container.addChildAt(aura, 0);
-            } else { const dot = new PIXI.Graphics(); dot.circle(0, 0, 2.5 + Math.random() * 2); dot.fill({ color: Math.random() > 0.5 ? 0xf59e0b : 0x10b981 }); container.addChild(dot); }
+            const dot = new PIXI.Graphics(); dot.circle(0, 0, 2.5 + Math.random() * 2); dot.fill({ color: Math.random() > 0.5 ? 0xf59e0b : 0x10b981 }); container.addChild(dot);
             container.x = px; container.y = py; container.alpha = 0.95; container.scale.set(0.75);
             parent.addChild(container);
-            economicParticlesRef.current.push({ id: Math.random(), x: px, y: py, vx: (Math.random() - 0.5) * 0.45, vy: -1.0 - Math.random() * 0.8, scale: 0.75, alpha: 0.95, age: 0, maxAge: type === 'AMBIENT' ? 45 + Math.random() * 25 : 55, container });
+            economicParticlesRef.current.push({ id: Math.random(), x: px, y: py, vx: (Math.random() - 0.5) * 0.45, vy: -1.0 - Math.random() * 0.8, scale: 0.75, alpha: 0.95, age: 0, maxAge: 45 + Math.random() * 25, container });
         };
-
-        if (player) {
-            if (coinsIncreased) {
-                const count = 3;
-                for (let i = 0; i < count; i++) {
-                    setTimeout(() => {
-                        if (particlesContainerRef.current) {
-                            spawnResourceParticle(player.q, player.r, 'COIN', deltaCoins);
-                        }
-                    }, i * 140);
-                }
-            }
-            if (storageIncreased) {
-                const count = 2;
-                for (let i = 0; i < count; i++) {
-                    setTimeout(() => {
-                        if (particlesContainerRef.current) {
-                            spawnResourceParticle(player.q, player.r, 'MATERIAL', deltaStorage);
-                        }
-                    }, i * 140);
-                }
-            }
-        }
 
         for (const key in grid) {
             const hex = grid[key];
@@ -1157,7 +1148,16 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                         else { const n = actingEntity.movementQueue?.[0]; if (n?.intent) intent = n.intent; else if (actingEntity.memory?.plan?.steps?.[0]?.type) { const t = actingEntity.memory.plan.steps[0].type; if (t === 'UPGRADE') intent = 'UPGRADE'; else if (t === 'DIG') intent = 'DIG'; else if (t === 'RECOVER') intent = 'RECOVER'; } }
                         if (intent) {
                             if (intent === 'RECOVER') needed = getLevelConfig(props.maxLevel)?.growthTime ?? 30;
-                            else if (intent === 'DIG') needed = Math.max(10, 30);
+                            else if (intent === 'DIG') {
+                                const curLvl = props.level ?? 0;
+                                const baseSecs = curLvl >= 1 ? (curLvl + 2) : 3;
+                                const baseTicks = baseSecs * 10;
+                                const activeStatuses = actingEntity.activeStatuses || [];
+                                const hasScannerBuff = activeStatuses.some((s: any) => s.type === 'STATUS_SCANNER_BUFF');
+                                const hasGodMode = activeStatuses.some((s: any) => s.type === 'GOD_MODE');
+                                const growthAccelerator = hasGodMode ? 10 : (hasScannerBuff ? 2 : 0);
+                                needed = actingEntity.type !== 'PLAYER' ? baseTicks : Math.max(10, baseTicks - (growthAccelerator * 5));
+                            }
                             else if (intent === 'UPGRADE') needed = Math.max(10, getLevelConfig(props.level + 1)?.growthTime ?? 30);
                         }
                     }

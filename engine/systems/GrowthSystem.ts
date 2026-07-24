@@ -251,10 +251,13 @@ export class GrowthSystem implements System {
              return false;
          }
 
-        // Logic for Dig Progress
+        // Logic for Dig Progress based on level (L1 = 3s, L2 = 4s, L3 = 5s, L>=1 = (L+2)s)
         const { growthAccelerator } = getStatusModifiers(entity, state);
         const isBot = entity.type !== EntityType.PLAYER;
-        const needed = isBot ? 30 : Math.max(10, 30 - (growthAccelerator * 5));
+        const curLevel = hex.currentLevel ?? 0;
+        const baseSecs = curLevel >= 1 ? (curLevel + 2) : 3;
+        const baseTicks = baseSecs * 10;
+        const needed = isBot ? baseTicks : Math.max(10, baseTicks - (growthAccelerator * 5));
         if (hex.progress + 1 >= needed) {
              const newLevel = hex.currentLevel - 1;
              
@@ -469,7 +472,7 @@ export class GrowthSystem implements System {
                          text: `+${actualMatGain}⚙️`,
                          color: '#A855F7',
                          startTime: Date.now(),
-                         lifetime: 1800
+                         lifetime: 2500
                      });
                  }
                  if (depthReward > 0) {
@@ -480,7 +483,7 @@ export class GrowthSystem implements System {
                          text: state.language === 'RU' ? `+${depthReward} Ходов` : `+${depthReward} Moves`,
                          color: '#3B82F6',
                          startTime: Date.now(),
-                         lifetime: 1800
+                         lifetime: 2500
                      });
                  }
              }
@@ -660,7 +663,7 @@ export class GrowthSystem implements System {
                   text: state.language === 'RU' ? `L${targetLevel} +1 Ход` : `L${targetLevel} +1 Move`,
                   color: '#10B981',
                   startTime: Date.now(),
-                  lifetime: 1800
+                  lifetime: 2500
               });
               if (!hasFreeBuild) {
                   state.effects.push({
@@ -670,7 +673,7 @@ export class GrowthSystem implements System {
                       text: `-1⚙️`,
                       color: '#EF4444',
                       startTime: Date.now(),
-                      lifetime: 1500
+                      lifetime: 2500
                   });
               }
           }

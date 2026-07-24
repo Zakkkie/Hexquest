@@ -11,7 +11,6 @@ import CentralTutorialBanner from './hud/CentralTutorialBanner.tsx';
 import { OnboardingTutorial } from './hud/OnboardingTutorial.tsx';
 import { DefenseSiegeBanner } from './hud/DefenseSiegeBanner.tsx';
 import { RadarWidget } from './hud/RadarWidget.tsx';
-import { SiegeDiagnostics } from './hud/SiegeDiagnostics.tsx';
 import { Item } from '../types.ts';
 
 interface GameHUDProps {
@@ -113,23 +112,33 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
                 )}
 
                 {gameStatus === 'PLAYING' && (
-                    <div className="absolute left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2.5 transition-all duration-300 top-[calc(84px+env(safe-area-inset-top))] md:top-[104px]">
+                    <div className="absolute left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm md:max-w-md pointer-events-none flex flex-col gap-2 transition-all duration-300 top-[calc(48px+env(safe-area-inset-top))] sm:top-[calc(52px+env(safe-area-inset-top))] md:top-[68px]">
                         {!session?.defense?.isDefenseMode && <CentralTutorialBanner onOpenHelpDetail={() => setActiveModal('MISSION')} />}
-                        {!session?.defense?.isDefenseMode && <RadarWidget />}
                         
-                        {toast && !session?.activeLevelConfig && (
+                        {toast && (
                             <div className="w-full flex justify-center pointer-events-auto">
-                                <div className="w-full bg-slate-950 px-4 py-3 rounded-lg border border-slate-800 shadow-xl flex items-center justify-center animate-in fade-in zoom-in-95 duration-200">
-                                    <span className={`
-                                        text-xs font-black uppercase tracking-wider font-mono select-none text-center leading-tight
-                                        ${toast.type === 'error' ? 'text-rose-400' : toast.type === 'success' ? 'text-emerald-400' : 'text-amber-400'}
-                                    `}>
+                                <div className="w-full bg-slate-950/95 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-slate-800 shadow-2xl flex items-center gap-2.5 animate-in fade-in zoom-in-95 duration-200">
+                                    <span className="relative flex h-2 w-2 shrink-0">
+                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                                            toast.type === 'error' ? 'bg-rose-400' : toast.type === 'success' ? 'bg-emerald-400' : 'bg-amber-400'
+                                        }`}></span>
+                                        <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                                            toast.type === 'error' ? 'bg-rose-500' : toast.type === 'success' ? 'bg-emerald-500' : 'bg-amber-500'
+                                        }`}></span>
+                                    </span>
+                                    <span className={`text-[10px] font-black uppercase tracking-wider font-mono shrink-0 ${
+                                        toast.type === 'error' ? 'text-rose-400' : toast.type === 'success' ? 'text-emerald-400' : 'text-amber-400'
+                                    }`}>
+                                        {toast.type === 'error' ? 'ОШИБКА' : toast.type === 'success' ? 'УСПЕХ' : 'ИНФО'}
+                                    </span>
+                                    <span className="text-[11px] font-semibold text-slate-200 truncate">
                                         {toast.message}
                                     </span>
                                 </div>
-                             </div>
+                            </div>
                         )}
-                        
+
+                        {!session?.defense?.isDefenseMode && <RadarWidget />}
                         {!session?.defense?.isDefenseMode && <SkirmishHintBanner />}
                     </div>
                 )}
@@ -149,8 +158,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
         <InventoryModal isOpen={showInventory} onClose={() => setShowInventory(false)} />
 
         <OnboardingTutorial />
-
-        <SiegeDiagnostics />
 
         <GameDialogs 
             activeModal={activeModal}

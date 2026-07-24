@@ -420,7 +420,7 @@ export class ActionProcessor {
               text: state.language === 'RU' ? `x${totalHealed} восстановление` : `x${totalHealed} recovery`,
               color: '#10B981',
               startTime: Date.now(),
-              lifetime: 1800
+              lifetime: 2500
           });
           
           this.applyEffect(state, index, actor, item.effectType, item.effectValue, item.effectDescription, item.effectDuration);

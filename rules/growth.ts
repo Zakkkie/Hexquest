@@ -136,9 +136,6 @@ export function checkGrowthCondition(
   const isSiegeBot = isBot && !!(entity as any).memory?.botRole?.startsWith('SIEGE_');
   const isDefenseMode = isDefenseModeParam !== undefined ? (isDefenseModeParam || isSiegeBot) : (!!useGameStore.getState().session?.defense?.isDefenseMode || isSiegeBot);
   if (isBot && isDefenseMode) {
-      if (hex.structureType === 'VOID') {
-          return { canGrow: false, reason: "CANNOT BUILD ON VOID" };
-      }
       return { canGrow: true };
   }
 
