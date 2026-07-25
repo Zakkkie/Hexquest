@@ -1,16 +1,16 @@
-import { GameStore, createDefaultProgress } from './types.ts';
-import { GameEngine } from '../engine/GameEngine.ts';
-import { audioService } from '../services/audioService.ts';
-import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
-import { campaignLoadBalancer } from '../campaign/balancer.ts';
-import { calculateMovementCost } from '../rules/movement.ts';
-import { generateMonumentRecipe } from '../rules/items.ts';
-import { effectPool } from '../services/effectPool.ts';
-import { historyService } from '../services/historyService.ts';
-import { createInitialSessionData } from '../services/sessionFactory.ts';
-import { resourceService } from '../services/resourceService.ts';
-import { TEXT } from '../services/i18n.ts';
-import { getHexKey, findPath, cubeDistance } from '../services/hexUtils.ts';
+import { GameStore, createDefaultProgress } from './types';
+import { GameEngine } from '../engine/GameEngine';
+import { audioService } from '../services/audioService';
+import { CAMPAIGN_LEVELS } from '../campaign/levels';
+import { campaignLoadBalancer } from '../campaign/balancer';
+import { calculateMovementCost } from '../rules/movement';
+import { generateMonumentRecipe } from '../rules/items';
+import { effectPool } from '../services/effectPool';
+import { historyService } from '../services/historyService';
+import { createInitialSessionData } from '../services/sessionFactory';
+import { resourceService } from '../services/resourceService';
+import { TEXT } from '../services/i18n';
+import { getHexKey, findPath, cubeDistance } from '../services/hexUtils';
 import { 
   EntityState, 
   FloatingText, 
@@ -20,7 +20,7 @@ import {
   LevelConfig, 
   GameEventType,
   Hex
-} from '../types.ts';
+} from '../types';
 
 // --- SERVICE GLOBALS / MODULE SCOPE ---
 let engine: GameEngine | null = null;

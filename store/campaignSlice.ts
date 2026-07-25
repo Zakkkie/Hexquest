@@ -1,6 +1,6 @@
-import { GameStore } from './types.ts';
-import { getHexKey } from '../services/hexUtils.ts';
-import { CampaignUpgrades } from '../types.ts';
+import { GameStore } from './types';
+import { getHexKey } from '../services/hexUtils';
+import { CampaignUpgrades } from '../types';
 
 export const createCampaignSlice = (
   set: (fn: (state: GameStore) => Partial<GameStore>) => void
@@ -196,8 +196,29 @@ export const createCampaignSlice = (
   claimLevelReward: (levelId: string) => set((state) => {
     const claimedSet = new Set(state.claimedLevelRewards || []);
     claimedSet.add(levelId);
+    const newClaimedRewards = Array.from(claimedSet);
+
+    // Only roll for core siege if we are claiming a normal level reward (not a siege completed reward)
+    if (!levelId.startsWith('siege_completed_')) {
+      const completedNormalCount = newClaimedRewards.filter(id => !id.startsWith('siege_completed_') && !id.startsWith('siege_pending_')).length;
+      
+      const currentBlock = Math.floor((completedNormalCount - 1) / 5) + 1;
+      const indexInBlock = ((completedNormalCount - 1) % 5) + 1;
+      
+      const isSiegeTriggeredForBlock = newClaimedRewards.includes(`siege_completed_${currentBlock}`) || 
+                                       newClaimedRewards.includes(`siege_pending_${currentBlock}`);
+                                       
+      if (completedNormalCount > 0 && !isSiegeTriggeredForBlock) {
+        const chance = indexInBlock * 0.2;
+        const roll = Math.random();
+        if (roll <= chance) {
+          newClaimedRewards.push(`siege_pending_${currentBlock}`);
+        }
+      }
+    }
+
     return {
-      claimedLevelRewards: Array.from(claimedSet)
+      claimedLevelRewards: newClaimedRewards
     };
   })
 });

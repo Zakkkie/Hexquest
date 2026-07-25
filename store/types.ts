@@ -1,4 +1,4 @@
-import { GameState, UIState, WinCondition, SessionState, DeviceType, Item, CampaignUpgrades } from '../types.ts';
+import { GameState, UIState, WinCondition, SessionState, DeviceType, Item, CampaignUpgrades } from '../types';
 
 export const INITIAL_PLAYGROUND_SEED: Record<number, number> = {
   0: 13,

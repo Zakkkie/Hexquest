@@ -205,10 +205,17 @@ const StoryBuilderView: React.FC = () => {
     });
 
     const isSiegeActive = useMemo(() => {
-        const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_')).length;
-        return completedNormalCount > 0 && 
-               completedNormalCount % 5 === 0 && 
-               !claimedLevelRewards.includes(`siege_completed_${completedNormalCount}`);
+        const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_') && !id.startsWith('siege_pending_')).length;
+        if (completedNormalCount === 0) return false;
+        
+        // Check if any block has a pending siege that is not yet completed
+        const currentBlock = Math.floor((completedNormalCount - 1) / 5) + 1;
+        for (let b = 1; b <= currentBlock; b++) {
+            if (claimedLevelRewards.includes(`siege_pending_${b}`) && !claimedLevelRewards.includes(`siege_completed_${b}`)) {
+                return true;
+            }
+        }
+        return false;
     }, [claimedLevelRewards]);
 
     useEffect(() => {
@@ -304,10 +311,8 @@ const StoryBuilderView: React.FC = () => {
     const [lastPlacedKey, setLastPlacedKey] = useState<string | null>(null);
     const [showUpgrades, setShowUpgrades] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
-    const [popupCell, setPopupCell] = useState<{ q: number, r: number } | null>(null);
     const [selectedBuildLevel, setSelectedBuildLevel] = useState<number>(0); // 0-9 for building higher levels, or -999 for demolish/снос
     const [errorMessage, setErrorMessage] = useState<string | null>(null); // Visual feedback warning toast
-    const [destroyButtonCell, setDestroyButtonCell] = useState<{ q: number, r: number } | null>(null);
     const [failedClickCoord, setFailedClickCoord] = useState<{ q: number, r: number } | null>(null);
     const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
@@ -386,31 +391,8 @@ const StoryBuilderView: React.FC = () => {
         return results;
     }, []);
 
-    const updateTooltipPos = useCallback(() => {
-        if (!destroyTooltipRef.current || !destroyButtonCell) return;
-        const { q, r } = destroyButtonCell;
-        const px = hexToPixel(q, r);
-        const lvl = storyMap[getHexKey(q, r)] || 0;
-        const heightVal = 10 + lvl * 10;
-        const topFaceY = px.y - heightVal;
-        
-        const camX = cameraPosRef.current.x;
-        const camY = cameraPosRef.current.y;
-        const scale = zoomScaleRef.current;
-        
-        const leftPos = camX + px.x * scale;
-        const topPos = camY + topFaceY * scale - 46 * scale;
-        
-        destroyTooltipRef.current.style.left = `${leftPos}px`;
-        destroyTooltipRef.current.style.top = `${topPos}px`;
-        destroyTooltipRef.current.style.transform = `translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.25, scale))})`;
-    }, [destroyButtonCell, storyMap]);
-
+    const updateTooltipPos = useCallback(() => {}, []);
     updateTooltipPosRef.current = updateTooltipPos;
-
-    useEffect(() => {
-        updateTooltipPos();
-    }, [destroyButtonCell, updateTooltipPos]);
 
 
 
@@ -850,7 +832,7 @@ const StoryBuilderView: React.FC = () => {
             const blueprintLevel = blueprintLvlVal !== undefined ? blueprintLvlVal : 0;
             const isEligible = isEligibleForPlacement(coord.q, coord.r);
             const isCenterInitially = coord.q === startCenterPoint.q && coord.r === startCenterPoint.r && !hasAnyHex && lvl !== -999;
-            const canPlaceHex = isDemolishMode ? (lvl !== undefined && lvl >= 0) : (isEligible && avail > 0);
+            const canPlaceHex = isDemolishMode ? (lvl !== undefined && lvl >= 0) : isEligible;
             const isCore = coord.q === 0 && coord.r === 0;
             return { key, q: coord.q, r: coord.r, lvl, isBlueprint, blueprintLevel, isEligible, isCenterInitially, canPlaceHex, isCore };
         });
@@ -869,6 +851,22 @@ const StoryBuilderView: React.FC = () => {
     }, [minedInSessionHexes, collectedHexes]);
 
     const isPanning = useRef(false);
+
+    const handleCellDemolish = useCallback((q: number, r: number) => {
+        if (q === 0 && r === 0) {
+            playUiSound('ERROR');
+            setErrorMessage(language === 'RU' ? 'Главное ядро (0,0) неуязвимо и не может быть удалено!' : 'The Core Matrix (0,0) is invulnerable and cannot be demolished!');
+            setTimeout(() => setErrorMessage(null), 5000);
+            return;
+        }
+        playUiSound('SUCCESS');
+        placeStoryHex(q, r, -999);
+        addSystemLog(
+            `Гекс (${q}, ${r}) снесён.`,
+            `Hex (${q}, ${r}) demolished.`,
+            'info'
+        );
+    }, [language, playUiSound, placeStoryHex, setErrorMessage, addSystemLog]);
 
     const handleCellClick = useCallback((q: number, r: number) => {
         if (isPanning.current) return;
@@ -907,48 +905,46 @@ const StoryBuilderView: React.FC = () => {
             }
             if (currentLvl === buildLevel && buildLevel !== -999) {
                 playUiSound('CLICK');
-                setDestroyButtonCell(prev => (prev && prev.q === q && prev.r === r) ? null : { q, r });
+                const holdMsg = language === 'RU' ? 'Зажмите гекс на 1 сек для его уничтожения!' : 'Hold down on hex to demolish!';
+                setErrorMessage(holdMsg);
+                setTimeout(() => setErrorMessage(curr => curr === holdMsg ? null : curr), 3000);
                 return;
             }
-            // Dismiss destroy button cell on other cell interactions
-            setDestroyButtonCell(null);
+            if (buildLevel === -999) {
+                playUiSound('CLICK');
+                const holdMsg = language === 'RU' ? 'Зажмите гекс на 1 сек для его уничтожения!' : 'Hold down on hex to demolish!';
+                setErrorMessage(holdMsg);
+                setTimeout(() => setErrorMessage(curr => curr === holdMsg ? null : curr), 3000);
+                return;
+            }
             if (eligible && buildLevel !== -999) {
                 // If it's an existing tile, and the current selected level is valid for upgrading
                 // (It will fall through to execute placement)
             } else {
-                if (buildLevel === -999) {
-                    // Demolish popup
-                    playUiSound('CLICK');
-                    setPopupCell({ q, r });
-                    return;
+                playUiSound('ERROR');
+                setFailedClickCoord({ q, r });
+                setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
+
+                const currentLevel = currentLvl;
+                let blockBuildErrorMsg = '';
+
+                if (buildLevel !== currentLevel + 1) {
+                    blockBuildErrorMsg = language === 'RU'
+                        ? `Стройте пошагово! Высоту можно повысить только на +1 (нужно поставить Уровень ${currentLevel + 1}).`
+                        : `Build step-by-step! Height can only be raised by +1 (you should select Level ${currentLevel + 1}).`;
                 } else {
-                    // Trying to place a forbidden upgraded hex (support or height-step violation)
-                    playUiSound('ERROR');
-                    setFailedClickCoord({ q, r });
-                    setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
-
-                    const currentLevel = currentLvl;
-                    let blockBuildErrorMsg = '';
-
-                    if (buildLevel !== currentLevel + 1) {
-                        blockBuildErrorMsg = language === 'RU'
-                            ? `Стройте пошагово! Высоту можно повысить только на +1 (нужно поставить Уровень ${currentLevel + 1}).`
-                            : `Build step-by-step! Height can only be raised by +1 (you should select Level ${currentLevel + 1}).`;
-                    } else {
-                        blockBuildErrorMsg = language === 'RU'
-                            ? `Неустойчиво! Для высоты Уровня ${buildLevel} нужно 2 соседних блока Уровня ${currentLevel} или выше.`
-                            : `Unstable! Level ${buildLevel} height requires at least 2 adjacent neighbor blocks of Level ${currentLevel} or higher.`;
-                    }
-
-                    setErrorMessage(blockBuildErrorMsg);
-                    setTimeout(() => {
-                        setErrorMessage(curr => curr === blockBuildErrorMsg ? null : curr);
-                    }, 5000);
-                    return;
+                    blockBuildErrorMsg = language === 'RU'
+                        ? `Неустойчиво! Для высоты Уровня ${buildLevel} нужно 2 соседних блока Уровня ${currentLevel} или выше.`
+                        : `Unstable! Level ${buildLevel} height requires at least 2 adjacent neighbor blocks of Level ${currentLevel} or higher.`;
                 }
+
+                setErrorMessage(blockBuildErrorMsg);
+                setTimeout(() => {
+                    setErrorMessage(curr => curr === blockBuildErrorMsg ? null : curr);
+                }, 5000);
+                return;
             }
         } else if (!eligible) {
-            setDestroyButtonCell(null);
             playUiSound('ERROR');
             setFailedClickCoord({ q, r });
             setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
@@ -995,7 +991,7 @@ const StoryBuilderView: React.FC = () => {
         setLastPlacedKey(key);
         setTimeout(() => setLastPlacedKey(prev => prev === key ? null : prev), 600);
         setErrorMessage(null); // clear any previous warning
-    }, [isPanning, isSiegeActive, playUiSound, language, setErrorMessage, storyMap, selectedBuildLevel, isEligibleForPlacement, setDestroyButtonCell, setPopupCell, setFailedClickCoord, minedInSessionHexes, collectedHexes, placeStoryHex, setLastPlacedKey]);
+    }, [isPanning, isSiegeActive, playUiSound, language, setErrorMessage, storyMap, selectedBuildLevel, isEligibleForPlacement, setFailedClickCoord, minedInSessionHexes, collectedHexes, placeStoryHex, setLastPlacedKey]);
 
     const handleCellDblClick = useCallback((q: number, r: number) => {
         const key = getHexKey(q, r);
@@ -1021,7 +1017,6 @@ const StoryBuilderView: React.FC = () => {
     const confirmClearBoard = () => {
         playUiSound('CLICK');
         clearStoryMap();
-        setPopupCell(null);
         setShowClearConfirm(false);
     };
 
@@ -1070,7 +1065,7 @@ const StoryBuilderView: React.FC = () => {
                     camera={pixiCamera}
                     dimensions={stageSize}
                     transient={{
-                        popupKey: popupCell ? getHexKey(popupCell.q, popupCell.r) : null,
+                        popupKey: null,
                         flareKeys: new Set(),
                         lastPlacedKey,
                         failedClickKey: failedClickCoord ? getHexKey(failedClickCoord.q, failedClickCoord.r) : null,
@@ -1080,9 +1075,9 @@ const StoryBuilderView: React.FC = () => {
                     figureIndex={unlockedFigureIndex}
                     onCellClick={handleCellClick}
                     onCellDblClick={handleCellDblClick}
+                    onCellDemolish={handleCellDemolish}
                     onHover={setHoveredKey}
                     onCameraChange={handlePixiCameraChange}
-                    onBackgroundClick={() => setDestroyButtonCell(null)}
                 />
             </div>
             
@@ -1099,7 +1094,7 @@ const StoryBuilderView: React.FC = () => {
             
             {/* TOP HEADER STATUS MENU BAR (ABOVE ALL OTHER WINDOWS) */}
             <div 
-                className="absolute top-0 left-0 right-0 p-4 md:p-8 pointer-events-none"
+                className="absolute top-0 left-0 right-0 p-2 sm:p-4 md:p-8 pt-[calc(env(safe-area-inset-top)+8px)] pointer-events-none"
                 style={{ zIndex: isSettingsOpen ? 100 + panelZOrder.indexOf('settings') * 10 : 9999 }}
             >
                 <motion.div 
@@ -1167,10 +1162,14 @@ const StoryBuilderView: React.FC = () => {
                         <button 
                             id="tutorial-sp-badge"
                             onClick={() => { playUiSound('CLICK'); setShowUpgrades(true); }}
-                            className="h-10 px-3 bg-slate-900/95 border border-indigo-500/30 hover:border-indigo-400 hover:bg-indigo-950/40 rounded-xl flex items-center gap-1.5 shadow-md text-indigo-300 text-xs font-semibold cursor-pointer select-none backdrop-blur-md transition-all active:scale-95 duration-200"
+                            className={`h-10 px-3 rounded-xl flex items-center gap-1.5 shadow-md text-xs font-semibold cursor-pointer select-none backdrop-blur-md transition-all active:scale-95 duration-200 ${
+                                skillPoints > 0
+                                    ? 'border-2 text-amber-300 hover:border-amber-400 hover:shadow-[0_0_25px_rgba(251,191,36,0.95)] animate-gold-blink font-black scale-105'
+                                    : 'bg-slate-900/95 border border-indigo-500/30 hover:border-indigo-400 hover:bg-indigo-950/40 text-indigo-300'
+                            }`}
                         >
-                            <Trophy className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                            <span className="text-white font-black text-[11px] md:text-xs">{skillPoints} SP</span>
+                            <Trophy className={`w-3.5 h-3.5 shrink-0 ${skillPoints > 0 ? 'text-amber-400 drop-shadow-[0_0_4px_rgba(245,158,11,0.6)]' : 'text-indigo-400'}`} />
+                            <span className={`font-black text-[11px] md:text-xs ${skillPoints > 0 ? 'text-amber-100 font-extrabold' : 'text-white'}`}>{skillPoints} SP</span>
                         </button>
 
                         {/* Settings Button */}
@@ -1192,7 +1191,7 @@ const StoryBuilderView: React.FC = () => {
                                         initial={{ opacity: 0, scale: 0.9, y: -10 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                                        className="absolute top-full right-0 mt-2 p-3 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2 min-w-[200px] z-[9999] origin-top-right"
+                                        className="absolute top-full right-0 mt-2 p-3 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2 min-w-[200px] max-w-[calc(100vw-24px)] z-[9999] origin-top-right"
                                     > 
                                         <button 
                                             onClick={() => { playUiSound('CLICK'); (window as any).startStoryTutorial && (window as any).startStoryTutorial(); setIsSettingsOpen(false); }}
@@ -1421,59 +1420,6 @@ const StoryBuilderView: React.FC = () => {
                         </motion.div>
                     )}
                 </div>
-                
-                {/* FLOATING ACTION TOOLTIP FOR SAME-LEVEL HEX DEMOLISHING */}
-                <AnimatePresence>
-                    {destroyButtonCell && (() => {
-                        const { q, r } = destroyButtonCell;
-                        const key = getHexKey(q, r);
-                        const lvl = storyMap[key];
-                        if (lvl === undefined || lvl < 0) return null;
-                        
-                        const px = hexToPixel(q, r);
-                        const heightVal = 10 + lvl * 10;
-                        const yOffsetOffset = -heightVal;
-                        const topFaceY = px.y + yOffsetOffset;
-                        
-                        // Calculate screen position
-                        const leftPos = cameraPosRef.current.x + px.x * zoomScaleRef.current;
-                        const topPos = cameraPosRef.current.y + topFaceY * zoomScaleRef.current - 46 * zoomScaleRef.current; // place it 46px above the hex top face
-                        
-                        return (
-                            <motion.div 
-                                ref={destroyTooltipRef}
-                                initial={{ scale: 0, opacity: 0, y: 10 }}
-                                animate={{ scale: 1, opacity: 1, y: 0 }}
-                                exit={{ scale: 0, opacity: 0, y: 10 }}
-                                style={{
-                                    position: 'absolute',
-                                    left: `${leftPos}px`,
-                                    top: `${topPos}px`,
-                                    transform: `translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.25, zoomScaleRef.current))})`,
-                                    zIndex: 120,
-                                }}
-                                className="pointer-events-auto"
-                            >
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        playUiSound('SUCCESS');
-                                        placeStoryHex(q, r, -999);
-                                        setDestroyButtonCell(null);
-                                    }}
-                                    onTouchStart={(e) => e.stopPropagation()}
-                                    onTouchEnd={(e) => e.stopPropagation()}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onMouseUp={(e) => e.stopPropagation()}
-                                    className="bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[8px] md:text-[9.5px] tracking-wider px-2.5 py-1.5 rounded-lg shadow-[0_5px_15px_rgba(239,68,68,0.4)] border border-red-500 flex items-center gap-1 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
-                                >
-                                    <span>✖</span>
-                                    <span>{language === 'RU' ? 'УНИЧТОЖИТЬ' : 'DESTROY'}</span>
-                                </button>
-                            </motion.div>
-                        );
-                    })()}
-                </AnimatePresence>
 
 
 
@@ -2256,74 +2202,6 @@ const StoryBuilderView: React.FC = () => {
                 {showUpgrades && (
                     <UpgradesTree onClose={() => setShowUpgrades(false)} key="upgrades-tree" />
                 )}
-            </AnimatePresence>
-
-            {/* INTERACTIVE DEMOLITION CONFIRMATION MODAL */}
-            <AnimatePresence>
-                {popupCell && (() => {
-                    const key = getHexKey(popupCell.q, popupCell.r);
-                    const currentLevel = storyMap[key];
-                    if (currentLevel === undefined) return null;
-                    
-                    return (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto"
-                            onClick={() => setPopupCell(null)}
-                        >
-                            <motion.div
-                                initial={{ scale: 0.95, y: 15 }}
-                                animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.95, y: 15 }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="bg-slate-950 border-2 border-red-500/30 rounded-2xl p-6 max-w-sm w-full shadow-[0_0_50px_rgba(239,68,68,0.2)] relative text-left"
-                            >
-                                <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-red-500/40 z-30 pointer-events-none" />
-                                <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-red-500/40 z-30 pointer-events-none" />
-                                <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-red-500/40 z-30 pointer-events-none" />
-                                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-red-500/40 z-30 pointer-events-none" />
-                                <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none z-10" />
-                                
-                                <div className="text-center p-2 z-20 relative">
-                                    <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-                                        <X className="w-7 h-7 font-black" />
-                                    </div>
-                                    <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1.5 text-center">
-                                        {language === 'RU' ? 'ПОДТВЕРДИТЬ СНОС?' : 'CONFIRM DEMOLITION?'}
-                                    </h4>
-                                    <p className="text-slate-400 text-[10px] mb-6 text-center leading-relaxed">
-                                        {language === 'RU' 
-                                            ? `Вы уверены, что хотите демонтировать и убрать этот гекс уровня L${currentLevel}? Плитка будет перенесена обратно на ваш склад.`
-                                            : `Are you sure you want to demolish and remove this L${currentLevel} hex? The tile will be reclaimed and placed back inside your depository.`}
-                                    </p>
-                                    
-                                    <div className="flex gap-2.5">
-                                        <button
-                                            onClick={() => { playUiSound('CLICK'); setPopupCell(null); }}
-                                            className="flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-900 border border-white/5 text-slate-400 hover:text-white transition-all cursor-pointer"
-                                        >
-                                            {language === 'RU' ? 'ОТМЕНА' : 'CANCEL'}
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                playUiSound('SUCCESS');
-                                                placeStoryHex(popupCell.q, popupCell.r, -999);
-
-                                                setPopupCell(null);
-                                            }}
-                                            className="flex-1 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-red-600 text-white hover:bg-red-700 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-1 cursor-pointer border border-red-500"
-                                        >
-                                            <span className="text-[11px] leading-none">✖</span>
-                                            <span>{language === 'RU' ? 'СНЕСТИ' : 'DEMOLISH'}</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    );
-                })()}
             </AnimatePresence>
 
             <StoryTutorial />

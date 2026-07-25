@@ -1,10 +1,10 @@
 import { ReactMouseEvent, TouchEvent, useRef, useEffect } from 'react';
-import { useGameStore } from '../store.ts';
-import { useEphemeralStore } from '../store/ephemeralStore.ts';
-import { getHexKey } from '../services/hexUtils.ts';
-import { HEX_SIZE } from '../rules/config.ts';
-import { getHeightOffset } from '../services/pixiHexRender.ts';
-import { Hex } from '../types.ts';
+import { useGameStore } from '../store';
+import { useEphemeralStore } from '../store/ephemeralStore';
+import { getHexKey } from '../services/hexUtils';
+import { HEX_SIZE } from '../rules/config';
+import { getHeightOffset } from '../services/pixiHexRender';
+import { Hex } from '../types';
 
 interface UseMapInputProps {
   grid: Record<string, Hex> | undefined;

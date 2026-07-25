@@ -1,6 +1,6 @@
-import { GameStore, UiSoundType } from './types.ts';
-import { audioService } from '../services/audioService.ts';
-import { UIState, DeviceType } from '../types.ts';
+import { GameStore, UiSoundType } from './types';
+import { audioService } from '../services/audioService';
+import { UIState, DeviceType } from '../types';
 
 export const createUiSlice = (
   set: (fn: (state: GameStore) => Partial<GameStore> | Partial<GameStore>) => void,

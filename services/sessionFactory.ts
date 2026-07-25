@@ -1,9 +1,9 @@
-import { WinCondition, SessionState, Difficulty, Item, Entity, EntityType, EntityState, HexCoord, LogEntry, Language, UserProfile } from '../types.ts';
+import { WinCondition, SessionState, Difficulty, Item, Entity, EntityType, EntityState, HexCoord, LogEntry, Language, UserProfile } from '../types';
 import { LevelConfig } from '../types';
-import { GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../rules/config.ts';
-import { getHexKey, getNeighbors } from './hexUtils.ts';
-import { generateMap, generateSingleHex } from './mapGenerator.ts';
-import { generateMonumentRecipe, getItemDef, ITEM_REGISTRY } from '../rules/items.ts';
+import { GAME_CONFIG, DIFFICULTY_SETTINGS, ENTROPY_CONFIG } from '../rules/config';
+import { getHexKey, getNeighbors } from './hexUtils';
+import { generateMap, generateSingleHex } from './mapGenerator';
+import { generateMonumentRecipe, getItemDef, ITEM_REGISTRY } from '../rules/items';
 import MapWorker from './map.worker?worker';
 
 const BOT_PALETTE = ['#ef4444', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e'];

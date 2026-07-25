@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as PIXI from 'pixi.js';
-import { useGameStore } from '../store.ts';
-import { useEphemeralStore } from '../store/ephemeralStore.ts';
-import { HEX_SIZE, getLevelConfig } from '../rules/config.ts';
-import { textureService } from '../services/textureService.ts';
-import { resourceService } from '../services/resourceService.ts';
-import { EntityState, Hex, Entity } from '../types.ts';
-import { getNeighbors, getStatusModifiers, getHexKey } from '../services/hexUtils.ts';
-import { safifyCoord } from '../utils/safeCoordinates.ts';
+import { useGameStore } from '../store';
+import { useEphemeralStore } from '../store/ephemeralStore';
+import { HEX_SIZE, getLevelConfig } from '../rules/config';
+import { textureService } from '../services/textureService';
+import { resourceService } from '../services/resourceService';
+import { EntityState, Hex, Entity } from '../types';
+import { getNeighbors, getStatusModifiers, getHexKey } from '../services/hexUtils';
+import { safifyCoord } from '../utils/safeCoordinates';
 import {
     BASE_POINTS,
     THEME_PALETTE,
@@ -16,7 +16,7 @@ import {
     getPixiTexture,
     getPoiIcon,
     translateArrowLabel,
-} from '../services/pixiHexRender.ts';
+} from '../services/pixiHexRender';
 import {
     NEIGHBOR_DIRECTIONS,
     VOID_LEVEL_FLAG,
@@ -25,8 +25,8 @@ import {
     runLocalRenderCalculation,
     isFinishTile,
     areAllConditionsMet,
-} from '../services/mapRenderModel.ts';
-import { useMapInput } from '../hooks/useMapInput.ts';
+} from '../services/mapRenderModel';
+import { useMapInput } from '../hooks/useMapInput';
 
 export { THEME_PALETTE };
 
@@ -321,15 +321,20 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         const counts: Record<string, number> = {};
         const activeEffectIds = new Set<string>();
 
+        const ICON_MAP: Record<string, string> = { UP: '▲', DOWN: '▼', WARN: '⚠️', COIN: '🪙', PICKAXE: '⛏️', GEM: '💎', FOOTPRINTS: '👣', PLUS: '➕', SKULL: '💀' };
+
         sorted.forEach(eff => {
             const key = `${eff.q},${eff.r}`;
             const idx = counts[key] || 0; counts[key] = idx + 1;
             activeEffectIds.add(eff.id);
+            const iconPrefix = eff.icon && ICON_MAP[eff.icon] && !eff.text.startsWith(ICON_MAP[eff.icon]) ? `${ICON_MAP[eff.icon]} ` : '';
+            const displayText = iconPrefix + eff.text;
+
             let cached = effectCache.current.get(eff.id);
             if (!cached) {
                 const container = new PIXI.Container();
                 const text = new PIXI.Text({ 
-                    text: eff.text, 
+                    text: displayText, 
                     style: { 
                         fontFamily: 'Inter, system-ui, sans-serif', 
                         fontSize: 16, 
@@ -344,6 +349,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 if (eff.sourceQ !== undefined && eff.sourceR !== undefined) { laserGraphics = new PIXI.Graphics(); parent.addChild(laserGraphics); }
                 cached = { container, text, startTime: Date.now(), lifetime: eff.lifetime || 2500, q: eff.q, r: eff.r, stackIndex: idx, laserGraphics };
                 effectCache.current.set(eff.id, cached);
+            } else if (cached.text && cached.text.text !== displayText) {
+                cached.text.text = displayText;
             }
 
             const totalLifetime = cached.lifetime || 2500;
@@ -355,24 +362,24 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             const yOffset = getHeightOffset(hexCell ? (hexCell.currentLevel || 0) : 0);
             const stackYOffset = idx * 26;
             const currentY = basePy - yOffset - 28 - stackYOffset;
-            const floatRise = Math.pow(progress, 0.8) * 90;
+            const floatRise = progress * 32;
 
             if (cached.container && !cached.container.destroyed) {
                 cached.container.x = basePx; 
                 cached.container.y = currentY - floatRise;
 
-                if (progress < 0.15) {
-                    const pop = progress / 0.15;
-                    const scale = 0.5 + pop * 0.55;
+                if (progress < 0.12) {
+                    const pop = progress / 0.12;
+                    const scale = 0.7 + pop * 0.3;
                     cached.container.scale.set(scale, scale);
                     cached.container.alpha = 1.0;
-                } else if (progress < 0.65) {
+                } else if (progress < 0.80) {
                     cached.container.scale.set(1.0, 1.0);
                     cached.container.alpha = 1.0;
                 } else {
-                    const fp = (progress - 0.65) / 0.35;
+                    const fp = (progress - 0.80) / 0.20;
                     cached.container.alpha = Math.max(0, 1.0 - fp);
-                    cached.container.scale.set(1.0 + fp * 0.15, 1.0 + fp * 0.15);
+                    cached.container.scale.set(1.0, 1.0);
                 }
             }
             if (cached.laserGraphics && !cached.laserGraphics.destroyed && eff.sourceQ !== undefined && eff.sourceR !== undefined) {

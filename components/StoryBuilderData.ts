@@ -1,4 +1,4 @@
-import { GAME_CONFIG } from '../rules/config.ts';
+import { GAME_CONFIG } from '../rules/config';
 
 export const DEG_TO_RAD = Math.PI / 180;
 

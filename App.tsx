@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useGameStore } from './store.ts';
+import { useGameStore } from './store';
 import { motion, AnimatePresence } from 'motion/react';
-import GameView from './components/GameView.tsx';
-import MainMenu from './components/MainMenu.tsx';
-import Leaderboard from './components/Leaderboard.tsx';
-import CampaignMap from './components/CampaignMap.tsx';
-import StoryBuilderView from './components/StoryBuilderView.tsx';
-import LevelEditorView from './components/LevelEditorView.tsx';
-import IntroSequence from './components/IntroSequence.tsx';
-import CampaignLoading from './components/CampaignLoading.tsx';
-import Background from './components/Background.tsx';
-import { DeviceType } from './types.ts';
+import GameView from './components/GameView';
+import MainMenu from './components/MainMenu';
+import Leaderboard from './components/Leaderboard';
+import CampaignMap from './components/CampaignMap';
+import StoryBuilderView from './components/StoryBuilderView';
+import LevelEditorView from './components/LevelEditorView';
+import IntroSequence from './components/IntroSequence';
+import CampaignLoading from './components/CampaignLoading';
+import Background from './components/Background';
+import { DeviceType } from './types';
 
 const App: React.FC = () => {
   const uiState = useGameStore(state => state.uiState);

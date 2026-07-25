@@ -1,5 +1,5 @@
-import { GameStore, INITIAL_PLAYGROUND_SEED, createDefaultProgress, DEFAULT_CAMPAIGN_UPGRADES } from './types.ts';
-import { audioService } from '../services/audioService.ts';
+import { GameStore, INITIAL_PLAYGROUND_SEED, createDefaultProgress, DEFAULT_CAMPAIGN_UPGRADES } from './types';
+import { audioService } from '../services/audioService';
 
 // Synchronous salted cryptographic hash function (cyrb53-based)
 // This secures password storage in the mock in-memory DB by eliminating raw passwords.

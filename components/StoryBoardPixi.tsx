@@ -63,6 +63,7 @@ interface StoryBoardPixiProps {
     figureIndex?: number;
     onCellClick: (q: number, r: number) => void;
     onCellDblClick: (q: number, r: number) => void;
+    onCellDemolish?: (q: number, r: number) => void;
     onHover: (key: string | null) => void;
     onCameraChange: (camera: { x: number; y: number; scale: number }) => void;
     onBackgroundClick?: () => void;
@@ -160,6 +161,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     figureIndex = 9999,
     onCellClick,
     onCellDblClick,
+    onCellDemolish,
     onHover,
     onCameraChange,
     onBackgroundClick,
@@ -183,6 +185,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     const figureIndexRef = useRef(figureIndex);
     const onCellClickRef = useRef(onCellClick);
     const onCellDblClickRef = useRef(onCellDblClick);
+    const onCellDemolishRef = useRef(onCellDemolish);
     const onHoverRef = useRef(onHover);
     const onCameraChangeRef = useRef(onCameraChange);
     const onBackgroundClickRef = useRef(onBackgroundClick);
@@ -195,6 +198,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     figureIndexRef.current = figureIndex;
     onCellClickRef.current = onCellClick;
     onCellDblClickRef.current = onCellDblClick;
+    onCellDemolishRef.current = onCellDemolish;
     onHoverRef.current = onHover;
     onCameraChangeRef.current = onCameraChange;
     onBackgroundClickRef.current = onBackgroundClick;
@@ -206,6 +210,80 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     const prevFlareKeysSize = useRef(0);
     const isPainting = useRef(false);
     const lastPaintedKey = useRef<string | null>(null);
+
+    // Long press demolition state
+    const longPressRef = useRef<{
+        q: number;
+        r: number;
+        startTime: number;
+        targetDuration: number;
+        completed: boolean;
+    } | null>(null);
+
+    const cancelLongPress = () => {
+        if (longPressRef.current) {
+            const { q, r } = longPressRef.current;
+            const key = getHexKey(q, r);
+            const container = cellCache.current.get(key);
+            if (container) {
+                const px = (container as any).px || hexToPixel(q, r);
+                container.x = px.x;
+                container.y = px.y;
+                const collapse = container.getChildByName('collapse') as PIXI.Container;
+                if (collapse) {
+                    const overlay = collapse.getChildByName('destroyOverlay') as PIXI.Graphics;
+                    if (overlay) overlay.visible = false;
+                }
+            }
+            longPressRef.current = null;
+        }
+    };
+
+    const triggerDustExplosion = (q: number, r: number, lvl = 0) => {
+        const pContainer = particleContainerRef.current;
+        if (!pContainer) return;
+
+        const px = hexToPixel(q, r);
+        const hOffset = getHeightOffset(lvl);
+        const topY = px.y + hOffset;
+
+        const dustColors = [0xef4444, 0xf97316, 0x94a3b8, 0x64748b, 0x475569, 0xf59e0b, 0xd97706];
+
+        for (let i = 0; i < 40; i++) {
+            const pg = new PIXI.Graphics();
+            const isDebris = Math.random() > 0.4;
+            const size = isDebris ? (1.5 + Math.random() * 3.5) : (3.0 + Math.random() * 5.0);
+            const color = dustColors[Math.floor(Math.random() * dustColors.length)];
+
+            pg.beginPath();
+            if (isDebris) {
+                pg.rect(-size / 2, -size / 2, size, size);
+            } else {
+                pg.circle(0, 0, size);
+            }
+            pg.fill({ color: 0xffffff });
+            pg.tint = color;
+            pg.x = px.x + (Math.random() - 0.5) * 20;
+            pg.y = topY + (Math.random() - 0.5) * 10;
+            pContainer.addChild(pg);
+
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 1.2 + Math.random() * 3.8;
+
+            activeParticles.current.push({
+                graphic: pg,
+                x: pg.x,
+                y: pg.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 1.2,
+                alpha: 1.0,
+                life: 0,
+                maxLife: 500 + Math.random() * 600,
+                color,
+                scale: 1.0,
+            });
+        }
+    };
 
     const triggerNaniteBurst = (q: number, r: number, count = 25) => {
         const pContainer = particleContainerRef.current;
@@ -689,23 +767,23 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                     isBuilt ? colors.top
                     : isCore ? 'rgba(244, 63, 94, 0.22)'
                     : isCenterInitially ? 'rgba(16, 185, 129, 0.18)'
-                    : isEligible ? 'rgba(34, 211, 238, 0.15)'
+                    : canPlaceHex ? 'rgba(34, 211, 238, 0.15)'
                     : 'rgba(255,255,255,0.03)';
                 const strokeColor =
                     isBuilt ? (isCore ? '#f43f5e' : '#06b6d4')
                     : isCore ? '#f43f5e'
                     : isCenterInitially ? '#10b981'
                     : isBlueprint ? 'rgba(168, 85, 247, 0.75)'
-                    : isEligible ? 'rgba(34, 211, 238, 0.85)'
+                    : canPlaceHex ? 'rgba(34, 211, 238, 0.85)'
                     : 'rgba(255,255,255,0.15)';
                 const strokeWidth =
                     isBuilt ? (isCore ? 3.0 : 2.0)
                     : isCore ? 3.0
                     : isCenterInitially ? 3.0
                     : isBlueprint ? 1.5
-                    : isEligible ? 2.5
+                    : canPlaceHex ? 2.5
                     : 1.0;
-                const dash = (isEligible || isBlueprint) && !isCore;
+                const dash = (canPlaceHex || isBlueprint) && !isCore;
 
                 // fill (parse rgba)
                 const fc = PIXI.Color.shared.setValue(fillColor);
@@ -725,7 +803,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
 
             // ---- eligibility glow (now on all eligible cells across all levels) ----
             let eligGlow = topGroup.getChildByName('eligGlow') as PIXI.Graphics;
-            if (isEligible) {
+            if (canPlaceHex) {
                 if (!eligGlow) {
                     eligGlow = new PIXI.Graphics();
                     eligGlow.name = 'eligGlow';
@@ -744,7 +822,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
 
             // plus marker (+) for center / eligible empty cells
             let plus = topGroup.getChildByName('plus') as PIXI.Graphics;
-            if (!isBuilt && (isCenterInitially || isEligible || isCore)) {
+            if (!isBuilt && (isCenterInitially || canPlaceHex || isCore)) {
                 if (!plus) {
                     plus = new PIXI.Graphics();
                     plus.name = 'plus';
@@ -873,7 +951,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
 
             // ---- pulse outline (eligible + built, looping) ----
             let pulse = collapse.getChildByName('pulse') as PIXI.Graphics;
-            if (isEligible && !isCenterInitially && isBuilt) {
+            if (canPlaceHex && !isCenterInitially && isBuilt) {
                 if (!pulse) {
                     pulse = new PIXI.Graphics();
                     pulse.name = 'pulse';
@@ -886,7 +964,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 tracePoly(pulse, ring);
                 pulse.fill({ color: C('#22d3ee'), alpha: 0.05 });
                 tracePoly(pulse, ring);
-                pulse.stroke({ width: 1.5, color: canPlaceHex ? C('#22d3ee') : C('#a855f7') });
+                pulse.stroke({ width: 1.5, color: C('#22d3ee') });
                 pulse.visible = true;
             } else if (pulse) {
                 pulse.visible = false;
@@ -1045,13 +1123,13 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 st.failedT = undefined;
             }
 
-            if (isEligible && !isCenterInitially && isBuilt) {
+            if (canPlaceHex && !isCenterInitially && isBuilt) {
                 if (st.pulseT === undefined) st.pulseT = 0;
             } else {
                 st.pulseT = undefined;
             }
 
-            if (isEligible) {
+            if (canPlaceHex) {
                 if (st.eligPulseT === undefined) st.eligPulseT = Math.random() * 2;
             } else {
                 st.eligPulseT = undefined;
@@ -1174,6 +1252,105 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             vignette.position.set(w / 2 + driftX, h / 2 + driftY);
             vignette.scale.set(scale);
             vignette.alpha = 0.95 + Math.sin(vigTime * 1.2) * 0.04;
+        }
+
+        // Long press demolition animation & completion check
+        if (longPressRef.current && !longPressRef.current.completed) {
+            const lp = longPressRef.current;
+            const now = performance.now();
+            const elapsed = now - lp.startTime;
+            const progress = Math.min(1.0, elapsed / lp.targetDuration);
+
+            const key = getHexKey(lp.q, lp.r);
+            const container = cellCache.current.get(key);
+            if (container) {
+                const px = (container as any).px || hexToPixel(lp.q, lp.r);
+                const shake = 1 + progress * 7;
+                container.x = px.x + (Math.random() - 0.5) * shake;
+                container.y = px.y + (Math.random() - 0.5) * shake;
+
+                const collapse = container.getChildByName('collapse') as PIXI.Container;
+                if (collapse) {
+                    let destroyOverlay = collapse.getChildByName('destroyOverlay') as PIXI.Graphics;
+                    if (!destroyOverlay) {
+                        destroyOverlay = new PIXI.Graphics();
+                        destroyOverlay.name = 'destroyOverlay';
+                        collapse.addChild(destroyOverlay);
+                    }
+                    destroyOverlay.clear();
+                    destroyOverlay.visible = true;
+
+                    const cell = cellsRef.current.find(c => c.key === key);
+                    const lvl = cell?.lvl ?? 0;
+                    const hOffset = getHeightOffset(lvl);
+
+                    destroyOverlay.y = hOffset;
+                    destroyOverlay.scale.set(1, 0.8);
+
+                    // Red outer circle
+                    destroyOverlay.beginPath();
+                    destroyOverlay.circle(0, 0, 32);
+                    destroyOverlay.stroke({ width: 3, color: 0xef4444, alpha: 0.8 });
+
+                    // Arc for progress
+                    const startAngle = -Math.PI / 2;
+                    const endAngle = startAngle + progress * Math.PI * 2;
+                    destroyOverlay.beginPath();
+                    destroyOverlay.arc(0, 0, 32, startAngle, endAngle);
+                    destroyOverlay.stroke({ width: 5, color: 0xf97316, alpha: 1.0 });
+
+                    if (progress > 0.85) {
+                        destroyOverlay.beginPath();
+                        destroyOverlay.circle(0, 0, 30);
+                        destroyOverlay.fill({ color: 0xef4444, alpha: (progress - 0.85) * 4 });
+                    }
+                }
+            }
+
+            // Emit subtle dust sparks while shaking
+            if (Math.random() < progress * 0.7) {
+                const px = hexToPixel(lp.q, lp.r);
+                const pContainer = particleContainerRef.current;
+                if (pContainer) {
+                    const pg = new PIXI.Graphics();
+                    pg.beginPath();
+                    pg.circle(0, 0, 1.5 + Math.random() * 2);
+                    pg.fill({ color: 0xef4444 });
+                    pg.x = px.x + (Math.random() - 0.5) * 30;
+                    pg.y = px.y + (Math.random() - 0.5) * 20;
+                    pContainer.addChild(pg);
+                    activeParticles.current.push({
+                        graphic: pg,
+                        x: pg.x,
+                        y: pg.y,
+                        vx: (Math.random() - 0.5) * 2.5,
+                        vy: -Math.random() * 2 - 0.5,
+                        alpha: 1.0,
+                        life: 0,
+                        maxLife: 300,
+                        color: 0xef4444,
+                        scale: 1.0,
+                    });
+                }
+            }
+
+            if (progress >= 1.0) {
+                lp.completed = true;
+                const q = lp.q;
+                const r = lp.r;
+
+                cancelLongPress();
+
+                triggerDustExplosion(q, r, cellsRef.current.find(c => c.key === key)?.lvl ?? 0);
+
+                try {
+                    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                        navigator.vibrate([40, 60, 40]);
+                    }
+                } catch {}
+
+                onCellDemolishRef.current?.(q, r);
+            }
         }
 
         // Per-cell animations.
@@ -1402,28 +1579,32 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
         if (isMultiTouch) {
             isDragging.current = false;
             isPainting.current = false;
+            cancelLongPress();
             return;
         }
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         (e.target as Element).setPointerCapture?.(e.pointerId);
 
+        const cam = cameraRef.current;
+        isDragging.current = true;
+        dragMoved.current = false;
+        dragStart.current = { x: e.clientX, y: e.clientY, camX: cam.x, camY: cam.y };
+
         const hit = hitTest(e.clientX, e.clientY);
         if (hit) {
             const hitKey = getHexKey(hit.q, hit.r);
             const cell = cellsRef.current.find(c => c.key === hitKey);
-            if (cell && cell.canPlaceHex) {
-                isPainting.current = true;
-                lastPaintedKey.current = hitKey;
-                onCellClickRef.current(hit.q, hit.r);
-                dragMoved.current = false;
-                return;
+            // Long press demolition threshold on built hexes (except core)
+            if (cell && cell.lvl !== undefined && cell.lvl >= 0 && !cell.isCore) {
+                longPressRef.current = {
+                    q: hit.q,
+                    r: hit.r,
+                    startTime: performance.now(),
+                    targetDuration: 650,
+                    completed: false,
+                };
             }
         }
-
-        isDragging.current = true;
-        dragMoved.current = false;
-        const cam = cameraRef.current;
-        dragStart.current = { x: e.clientX, y: e.clientY, camX: cam.x, camY: cam.y };
     };
 
     const handlePointerMove = (e: React.PointerEvent) => {
@@ -1434,51 +1615,45 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             if (key !== transientRef.current.hoveredKey) onHoverRef.current(key);
         }
 
-        if (isPainting.current) {
-            const hit = hitTest(e.clientX, e.clientY);
-            if (hit) {
-                const hitKey = getHexKey(hit.q, hit.r);
-                if (hitKey !== lastPaintedKey.current) {
-                    const cell = cellsRef.current.find(c => c.key === hitKey);
-                    if (cell && cell.canPlaceHex) {
-                        lastPaintedKey.current = hitKey;
-                        onCellClickRef.current(hit.q, hit.r);
-                    }
-                }
-            }
-            return;
-        }
-
         if (!isDragging.current || pinchStart.current) return;
         const isMultiTouch = e.pointerType === 'touch' && (e.nativeEvent as any).touches && (e.nativeEvent as any).touches.length > 1;
         if (isMultiTouch) {
             isDragging.current = false;
+            cancelLongPress();
             return;
         }
         const ds = dragStart.current;
         const dx = e.clientX - ds.x;
         const dy = e.clientY - ds.y;
-        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved.current = true;
-        const cam = cameraRef.current;
-        const newPos = clampPan({ x: ds.camX + dx, y: ds.camY + dy }, cam.scale);
-        applyCamera({ x: newPos.x, y: newPos.y, scale: cam.scale });
+        const moveDist = Math.hypot(dx, dy);
+
+        const dragThreshold = e.pointerType === 'touch' ? 8 : 6;
+        if (moveDist > dragThreshold) {
+            dragMoved.current = true;
+            cancelLongPress();
+        }
+
+        if (dragMoved.current) {
+            const cam = cameraRef.current;
+            const newPos = clampPan({ x: ds.camX + dx, y: ds.camY + dy }, cam.scale);
+            applyCamera({ x: newPos.x, y: newPos.y, scale: cam.scale });
+        }
     };
 
     const handlePointerUp = (e: React.PointerEvent) => {
-        if (isPainting.current) {
-            isPainting.current = false;
-            lastPaintedKey.current = null;
-            return;
-        }
-
         const wasDrag = dragMoved.current;
+        const lpCompleted = longPressRef.current?.completed;
+
+        cancelLongPress();
+
         isDragging.current = false;
         dragMoved.current = false;
-        if (wasDrag) return;
-        // treat as click / tap
+
+        if (wasDrag || lpCompleted) return;
+
+        // treat as clean click / tap
         const hit = hitTest(e.clientX, e.clientY);
         if (!hit) {
-            // Tapped empty space: matches the old Stage onClick/onTap behavior.
             onBackgroundClickRef.current?.();
             return;
         }
@@ -1496,6 +1671,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     const handlePointerLeave = () => {
         isPainting.current = false;
         lastPaintedKey.current = null;
+        cancelLongPress();
         if (transientRef.current.hoveredKey !== null) onHoverRef.current(null);
     };
 

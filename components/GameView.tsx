@@ -1,14 +1,14 @@
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
-import { useGameStore } from '../store.ts';
-import { useEphemeralStore } from '../store/ephemeralStore.ts';
-import { hexToPixel } from '../services/hexUtils.ts';
-import Background from './Background.tsx';
-import GameHUD from './GameHUD.tsx';
-import MapRenderer from './MapRenderer.tsx';
-import { audioService } from '../services/audioService.ts';
-import { wallUpdaterRegistry } from '../services/wallUpdater.ts';
-import { safifyCoord } from '../utils/safeCoordinates.ts';
-import { getHeightOffset } from '../services/pixiHexRender.ts';
+import { useGameStore } from '../store';
+import { useEphemeralStore } from '../store/ephemeralStore';
+import { hexToPixel } from '../services/hexUtils';
+import Background from './Background';
+import GameHUD from './GameHUD';
+import MapRenderer from './MapRenderer';
+import { audioService } from '../services/audioService';
+import { wallUpdaterRegistry } from '../services/wallUpdater';
+import { safifyCoord } from '../utils/safeCoordinates';
+import { getHeightOffset } from '../services/pixiHexRender';
 
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 

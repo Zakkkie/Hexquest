@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect, memo, useRef } from 'react';
-import { useGameStore } from '../store.ts';
-import { audioService } from '../services/audioService.ts';
-import TopStatsBar from './hud/TopStatsBar.tsx';
-import BottomActionDock from './hud/BottomActionDock.tsx';
-import GameDialogs from './hud/GameDialogs.tsx';
-import InventoryModal from './InventoryModal.tsx';
-import SkirmishHintBanner from './hud/SkirmishHintBanner.tsx';
-import CentralTutorialBanner from './hud/CentralTutorialBanner.tsx';
-import { OnboardingTutorial } from './hud/OnboardingTutorial.tsx';
-import { DefenseSiegeBanner } from './hud/DefenseSiegeBanner.tsx';
-import { RadarWidget } from './hud/RadarWidget.tsx';
-import { Item } from '../types.ts';
+import { useGameStore } from '../store';
+import { audioService } from '../services/audioService';
+import TopStatsBar from './hud/TopStatsBar';
+import BottomActionDock from './hud/BottomActionDock';
+import GameDialogs from './hud/GameDialogs';
+import InventoryModal from './InventoryModal';
+import SkirmishHintBanner from './hud/SkirmishHintBanner';
+import CentralTutorialBanner from './hud/CentralTutorialBanner';
+import { OnboardingTutorial } from './hud/OnboardingTutorial';
+import { DefenseSiegeBanner } from './hud/DefenseSiegeBanner';
+import { RadarWidget } from './hud/RadarWidget';
+import { Item } from '../types';
 
 interface GameHUDProps {
   onCenterPlayer: () => void;

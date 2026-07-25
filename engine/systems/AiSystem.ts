@@ -123,20 +123,40 @@ export class AiSystem implements System {
         }
 
         const newAction = aiResult.action ? aiResult.action.type : 'WAIT';
+        
+        if (bot.memory) {
+          bot.memory.lastDebug = aiResult.debug;
+          bot.memory.lastTargetStr = targetStr;
+        }
+
         const lastEntry = state.botActivityLog[0];
         if (lastEntry && lastEntry.botId === bot.id && lastEntry.action === newAction && lastEntry.reason === aiResult.debug && lastEntry.target === targetStr) {
           lastEntry.timestamp = now;
         } else {
+          const isWarn = aiResult.debug?.includes('Wait') || aiResult.debug?.includes('Stuck') || newAction === 'WAIT';
+          const isError = aiResult.debug?.includes('NoPath') || aiResult.debug?.includes('Fail') || aiResult.debug?.includes('Blocked');
+          const logType: 'INFO' | 'WARN' | 'ERROR' = isError ? 'ERROR' : (isWarn ? 'WARN' : 'INFO');
+
+          const botShortId = bot.id ? bot.id.slice(-4).toUpperCase() : 'BOT';
+          const roleStr = bot.memory?.botRole || bot.state || 'BOT';
+          const actionStr = newAction === 'WAIT' ? 'WAITING' : newAction;
+          const formattedText = `Vector #${botShortId} [${roleStr}] -> ${actionStr}${targetStr ? ` @ ${targetStr}` : ''} | Reason: ${aiResult.debug || 'OK'}`;
+
           const logEntry: BotLogEntry = {
+            id: `log-${now}-${Math.random().toString(36).substring(2, 7)}`,
             botId: bot.id,
             action: newAction,
             reason: aiResult.debug,
+            type: logType,
+            text: formattedText,
+            target: targetStr,
             timestamp: now,
-            target: targetStr
+            role: roleStr,
+            planLabel: bot.memory?.plan?.label
           };
 
           state.botActivityLog.unshift(logEntry);
-          if (state.botActivityLog.length > 25) state.botActivityLog.pop();
+          if (state.botActivityLog.length > 60) state.botActivityLog.pop();
           historyService.addEntry(logEntry);
         }
 

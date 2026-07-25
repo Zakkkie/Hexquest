@@ -515,8 +515,17 @@ const CampaignMap: React.FC = () => {
   const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards || []);
 
   const isSiegeActive = useMemo(() => {
-    const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_')).length;
-    return completedNormalCount > 0 && completedNormalCount % 5 === 0 && !claimedLevelRewards.includes(`siege_completed_${completedNormalCount}`);
+    const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_') && !id.startsWith('siege_pending_')).length;
+    if (completedNormalCount === 0) return false;
+    
+    // Check if any block has a pending siege that is not yet completed
+    const currentBlock = Math.floor((completedNormalCount - 1) / 5) + 1;
+    for (let b = 1; b <= currentBlock; b++) {
+      if (claimedLevelRewards.includes(`siege_pending_${b}`) && !claimedLevelRewards.includes(`siege_completed_${b}`)) {
+        return true;
+      }
+    }
+    return false;
   }, [claimedLevelRewards]);
   
   const isMobile = deviceType === 'MOBILE';

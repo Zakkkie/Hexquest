@@ -1,10 +1,10 @@
 import React from 'react';
-import { useGameStore } from '../store.ts';
+import { useGameStore } from '../store';
 import { X, Shield, Wrench, Zap, Package, Footprints, Gem, Circle, Terminal, Activity } from 'lucide-react';
-import { getItemDef } from '../rules/items.ts';
-import { ItemIcon, getRarityBorder } from './hud/HudShared.tsx';
-import { GAME_CONFIG } from '../rules/config.ts';
-import { getStatusModifiers } from '../services/hexUtils.ts';
+import { getItemDef } from '../rules/items';
+import { ItemIcon, getRarityBorder } from './hud/HudShared';
+import { GAME_CONFIG } from '../rules/config';
+import { getStatusModifiers } from '../services/hexUtils';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface InventoryModalProps {

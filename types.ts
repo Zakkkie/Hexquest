@@ -165,6 +165,8 @@ export interface BotMemory {
   waitStreak?: number;
   lastPosKey?: string | null;
   stayStreak?: number;
+  lastDebug?: string;
+  lastTargetStr?: string;
   
   botRole?: 'BUILDER' | 'DIGGER' | 'AGGRESSOR' | 'SUPPORTER' | 'MINER' | 'DESTROYER' | 'GUARDIAN' | 'SIEGE_RUNNER' | 'SIEGE_GRINDER' | 'SIEGE_TANK';
   mode?: 'GATHER' | 'BUILD' | 'AGGRESSOR';
@@ -264,9 +266,12 @@ export interface GameEvent {
 }
 
 export interface BotLogEntry {
+  id?: string;
   botId: string;
   action: string;
-  reason: string;
+  reason?: string;
+  type?: 'INFO' | 'WARN' | 'ERROR';
+  text?: string;
   target?: string;
   timestamp: number;
   phase?: string;

@@ -206,8 +206,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     useEffect(() => {
         if (gameStatus === 'VICTORY' && !victoryRewards) {
             if (session?.winCondition?.winType === 'SIEGE') {
-                const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_')).length;
-                const siegeId = `siege_completed_${completedNormalCount}`;
+                const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_') && !id.startsWith('siege_pending_')).length;
+                const currentBlock = Math.max(1, Math.floor((completedNormalCount - 1) / 5) + 1);
+                const siegeId = `siege_completed_${currentBlock}`;
                 const isAlreadyClaimed = claimedLevelRewards.includes(siegeId);
                 
                 setWasRewardPreviouslyClaimed(isAlreadyClaimed);
@@ -1041,8 +1042,14 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                             <div>MOVES: <span className="text-blue-400 font-bold">{bot.moves}</span></div>
                                                         </div>
                                                         <div className="flex items-center justify-between text-[10px] font-mono">
-                                                            <span className="text-slate-500">PLAN: <span className="text-amber-400">{bot.memory?.plan?.label || 'IDLE'}</span></span>
-                                                            <span className={hasPlan ? 'text-emerald-400' : 'text-slate-500'}>{hasPlan ? 'ACTIVE_PATH' : 'STALLED'}</span>
+                                                            <span className="text-slate-500">PLAN: <span className="text-amber-400 font-semibold">{bot.memory?.plan?.label || 'IDLE'}</span></span>
+                                                            <span className={(bot.memory?.stuckCounter ?? 0) > 0 ? 'text-rose-400 font-bold' : (bot.memory?.waitStreak ?? 0) > 0 ? 'text-amber-400 font-bold' : hasPlan ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
+                                                                {(bot.memory?.stuckCounter ?? 0) > 0 ? `STUCK (${bot.memory.stuckCounter})` : (bot.memory?.waitStreak ?? 0) > 0 ? `WAIT (${bot.memory.waitStreak})` : hasPlan ? 'ACTIVE' : 'STALLED'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[10px] font-mono text-indigo-300/90 bg-indigo-950/40 px-2 py-1 rounded border border-indigo-500/20 truncate">
+                                                            <span className="text-slate-500 mr-1">&gt;</span>
+                                                            {bot.memory?.lastDebug || 'Active'}
                                                         </div>
                                                     </div>
                                                 );
@@ -1060,17 +1067,19 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
                                     <div className="space-y-1.5">
                                         {session?.botActivityLog && session.botActivityLog.length > 0 ? (
-                                            [...session.botActivityLog].reverse().map((log: any, idx: number) => {
-                                                const typeColor = log.type === 'ERROR' ? 'text-rose-400 border-rose-500/30 bg-rose-950/20' : log.type === 'WARN' ? 'text-amber-400 border-amber-500/30 bg-amber-950/20' : 'text-indigo-300 border-slate-800/80 bg-slate-900/30';
+                                            session.botActivityLog.map((log: any, idx: number) => {
+                                                const type = log.type || (log.action === 'WAIT' ? 'WARN' : 'INFO');
+                                                const typeColor = type === 'ERROR' ? 'text-rose-400 border-rose-500/30 bg-rose-950/20' : type === 'WARN' ? 'text-amber-400 border-amber-500/30 bg-amber-950/20' : 'text-indigo-300 border-slate-800/80 bg-slate-900/30';
+                                                const logText = log.text || `Vector #${(log.botId || '').slice(-4).toUpperCase()} [${log.action || 'WAIT'}] ${log.target ? `@ ${log.target}` : ''} | Reason: ${log.reason || 'OK'}`;
                                                 return (
-                                                    <div key={`${log.id}-${idx}`} className={`p-2.5 rounded-lg border font-mono text-[11px] flex flex-col gap-1 ${typeColor}`}>
+                                                    <div key={log.id || `${log.botId}-${idx}`} className={`p-2.5 rounded-lg border font-mono text-[11px] flex flex-col gap-1 ${typeColor}`}>
                                                         <div className="flex items-center justify-between opacity-75 text-[9px]">
-                                                            <span className="font-bold uppercase">[{log.type}]</span>
+                                                            <span className="font-bold uppercase">[{type}]</span>
                                                             <span>{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                                                         </div>
                                                         <p className="text-slate-200 break-words leading-relaxed">
                                                             <span className="text-slate-500 mr-2">&gt;</span>
-                                                            {log.text}
+                                                            {logText}
                                                         </p>
                                                     </div>
                                                 );

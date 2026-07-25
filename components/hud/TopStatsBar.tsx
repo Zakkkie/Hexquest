@@ -82,8 +82,6 @@ const StatWidget: React.FC<StatWidgetProps> = memo(({
             onClick={() => onInteract(type, 'click')}
             onMouseEnter={() => onInteract(type, 'enter')}
             onMouseLeave={() => onInteract(type, 'leave')}
-            onTouchStart={() => onInteract(type, 'enter')}
-            onTouchEnd={() => onInteract(type, 'leave')}
             animate={isHighlighted ? { scale: [1, 1.05, 1], borderColor: ['rgba(245,158,11,0.2)', 'rgba(245,158,11,1)', 'rgba(245,158,11,0.2)'] } : {}}
             transition={isHighlighted ? { duration: 1.5, repeat: Infinity } : {}}
             className={`relative flex items-center gap-1 sm:gap-1.5 md:gap-3 cursor-pointer group shrink-0 select-none py-0.5 md:py-1.5 transition-all duration-300 hover:bg-slate-900/40 px-1 sm:px-2 md:px-2.5 rounded-lg md:rounded-xl border ${themeClass}`}
@@ -137,7 +135,7 @@ const SystemMenu: React.FC<SystemMenuProps & { language: 'RU' | 'EN', t: any, is
     if (!isOpen) return null;
 
     return (
-        <div className="absolute top-full right-0 mt-2 bg-slate-950/95 backdrop-blur-xl border border-indigo-500/30 p-3 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex flex-col gap-2 min-w-[200px] z-[100] animate-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-2 bg-slate-950/95 backdrop-blur-xl border border-indigo-500/30 p-3 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex flex-col gap-2 min-w-[200px] max-w-[calc(100vw-24px)] z-[100] animate-in slide-in-from-top-2 duration-200">
             <div className="flex gap-2">
                 <button onClick={() => { store.toggleMusic(); store.playUiSound('CLICK'); }} className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-colors border ${isMusicMuted ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-indigo-900/40 border-indigo-500/50 text-indigo-400'}`}>
                     {isMusicMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4" />}
@@ -303,11 +301,11 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
 
     const getTooltipPositionClass = (stat: StatType) => {
         switch (stat) {
-            case 'RANK': return 'left-1/2 -translate-x-1/2 md:translate-x-0 md:left-2 origin-top md:origin-top-left';
-            case 'MATERIAL': return 'left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[15%] origin-top md:origin-top-left';
+            case 'RANK': return 'left-0 md:left-2 translate-x-0 origin-top-left';
+            case 'MATERIAL': return 'left-2 sm:left-8 md:left-[15%] translate-x-0 origin-top-left';
             case 'COINS': return 'left-1/2 -translate-x-1/2 origin-top';
-            case 'MOVES': return 'left-1/2 -translate-x-1/2 md:translate-x-0 md:right-[15%] origin-top md:origin-top-right';
-            case 'ENTROPY': return 'left-1/2 -translate-x-1/2 md:translate-x-0 md:right-2 origin-top md:origin-top-right';
+            case 'MOVES': return 'right-2 sm:right-8 md:right-[15%] left-auto translate-x-0 origin-top-right';
+            case 'ENTROPY': return 'right-0 md:right-2 left-auto translate-x-0 origin-top-right';
             default: return 'left-1/2 -translate-x-1/2 origin-top';
         }
     };

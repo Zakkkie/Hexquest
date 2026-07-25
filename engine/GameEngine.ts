@@ -11,7 +11,7 @@ import { TurretSystem } from './systems/TurretSystem';
 import { MeteorSystem } from './systems/MeteorSystem';
 import { ActionProcessor } from './ActionProcessor';
 import { TransactionQueue } from '../services/transactionQueue';
-import { SAFETY_CONFIG } from '../rules/config';
+import { SAFETY_CONFIG, GAME_CONFIG } from '../rules/config';
 import { createDraft, finishDraft, setAutoFreeze } from 'immer';
 
 setAutoFreeze(false);
@@ -140,8 +140,8 @@ export class GameEngine {
         // 1. Cleanup old effects every tick
         const now = Date.now();
         nextState.effects = nextState.effects.filter(e => now - e.startTime < e.lifetime);
-        if (nextState.effects.length > 30) {
-            nextState.effects.splice(0, nextState.effects.length - 30);
+        if (nextState.effects.length > GAME_CONFIG.MAX_FLOATING_TEXTS) {
+            nextState.effects.splice(0, nextState.effects.length - GAME_CONFIG.MAX_FLOATING_TEXTS);
         }
 
         // 2. Update Systems (AI will populate TransactionQueue)
@@ -349,8 +349,8 @@ export class GameEngine {
     state.effects = state.effects.filter(e => now - e.startTime < e.lifetime);
     
     // Limit total effects to prevent state bloat
-    if (state.effects.length > 30) {
-        state.effects.splice(0, state.effects.length - 30);
+    if (state.effects.length > GAME_CONFIG.MAX_FLOATING_TEXTS) {
+        state.effects.splice(0, state.effects.length - GAME_CONFIG.MAX_FLOATING_TEXTS);
     }
     
     if (state.messageLog.length > SAFETY_CONFIG.MAX_LOG_SIZE) {

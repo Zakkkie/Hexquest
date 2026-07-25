@@ -421,11 +421,12 @@ export const findPath = (
       if (obsKeys.has(nKey)) continue;
 
       const neighborHex = grid[nKey];
+      if (!neighborHex) continue;
       
       // -- Game Rules --
       if (!ignoreAllRules) {
         // 0. Void Check: Cannot enter a destroyed hex
-        if (neighborHex && neighborHex.structureType === 'VOID') continue;
+        if (neighborHex.structureType === 'VOID') continue;
 
         // 1. Rank Check: Cannot enter hex higher than player rank
         if (neighborHex && neighborHex.currentLevel > rank) {
@@ -488,7 +489,8 @@ export const findSiegePath = (
   start: HexCoord, 
   end: HexCoord, 
   grid: Record<string, Hex>,
-  botId?: string
+  botId?: string,
+  occupiedKeys?: Set<string>
 ): PathResult => {
   const startKey = getHexKey(start.q, start.r);
   const endKey = getHexKey(end.q, end.r);
@@ -511,8 +513,13 @@ export const findSiegePath = (
     obstaclesEncountered: [] as string[]
   };
   
+  const startHex = grid[startKey];
   const endHex = grid[endKey];
-  if (endHex && endHex.structureType === 'VOID') {
+  if (!startHex || !endHex) {
+    return { path: null, reason: 'BLOCKED' };
+  }
+
+  if (endHex.structureType === 'VOID') {
     checks.endHexIsVoid = true;
     if (typeof window !== 'undefined') {
       const g = (window as any).__siegeDebugLogs = (window as any).__siegeDebugLogs || {};
@@ -618,11 +625,20 @@ export const findSiegePath = (
     for (const neighbor of neighbors) {
       const nKey = getHexKey(neighbor.q, neighbor.r);
       const neighborHex = grid[nKey];
+      if (!neighborHex) continue;
+
+      const neighborLevel = neighborHex.currentLevel ?? 0;
       
       let stepCost = 1;
       let obstacleEvent = '';
 
-      if (neighborHex && neighborHex.structureType === 'VOID') {
+      // Soft traffic congestion penalty so bots flank around each other
+      if (occupiedKeys && occupiedKeys.has(nKey) && nKey !== endKey) {
+        stepCost += 4;
+        obstacleEvent += `OCCUPIED(+4 cost) `;
+      }
+
+      if (neighborHex.structureType === 'VOID') {
         checks.blockedByVoidCount++;
         stepCost += 15;
         obstacleEvent += `VOID(+15 cost) `;
