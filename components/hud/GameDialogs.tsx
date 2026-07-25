@@ -190,6 +190,8 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         {id: 2, revealedLevel: null, isClaimed: false}
     ]);
 
+    const [animatingCellId, setAnimatingCellId] = useState<number | null>(null);
+    const [rouletteValue, setRouletteValue] = useState<number>(0);
     const [victoryRewards, setVictoryRewards] = useState<{
         l0: number;
         l1: number;
@@ -276,6 +278,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
     const handleRevealHex = (id: number) => {
         if (rewardHexCells.find(c => c.id === id)?.revealedLevel !== null) return;
+        if (animatingCellId !== null) return; // wait for current animation
         
         if (playUiSound) playUiSound('CLICK');
         
@@ -284,36 +287,45 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         const maxAllowed = Math.min(10, 2 + Math.floor(levelIndex / 20));
 
         const r = Math.random();
-        let level = 10;
-        if (r < 0.3) level = 0;
-        else if (r < 0.5) level = 1;
-        else if (r < 0.65) level = 2;
-        else if (r < 0.77) level = 3;
-        else if (r < 0.86) level = 4;
-        else if (r < 0.92) level = 5;
-        else if (r < 0.96) level = 6;
-        else if (r < 0.985) level = 7;
-        else if (r < 0.995) level = 8;
-        else if (r < 0.999) level = 9;
+        let finalLevel = 10;
+        if (r < 0.3) finalLevel = 0;
+        else if (r < 0.5) finalLevel = 1;
+        else if (r < 0.65) finalLevel = 2;
+        else if (r < 0.77) finalLevel = 3;
+        else if (r < 0.86) finalLevel = 4;
+        else if (r < 0.92) finalLevel = 5;
+        else if (r < 0.96) finalLevel = 6;
+        else if (r < 0.985) finalLevel = 7;
+        else if (r < 0.995) finalLevel = 8;
+        else if (r < 0.999) finalLevel = 9;
 
-        if (level > maxAllowed) {
-            level = maxAllowed;
+        if (finalLevel > maxAllowed) {
+            finalLevel = maxAllowed;
         }
 
-        setRewardHexCells(prev => prev.map(c => c.id === id ? { ...c, revealedLevel: level, isClaimed: true } : c));
+        setAnimatingCellId(id);
         
-        // Mathematically optimized counts to ensure players have ample resources for over 100 figures
-        const countToGrant = level === 0 ? 20 
-                           : level === 1 ? 15 
-                           : level === 2 ? 12 
-                           : level === 3 ? 10 
-                           : level === 4 ? 8 
-                           : level === 5 ? 6 
-                           : 5;
+        let counter = 0;
+        const interval = setInterval(() => {
+            setRouletteValue(Math.floor(Math.random() * (maxAllowed + 1)));
+            counter++;
+            if (counter > 20) {
+                clearInterval(interval);
+                setAnimatingCellId(null);
+                setRewardHexCells(prev => prev.map(c => c.id === id ? { ...c, revealedLevel: finalLevel, isClaimed: true } : c));
+                
+                const countToGrant = finalLevel === 0 ? 20 
+                                   : finalLevel === 1 ? 15 
+                                   : finalLevel === 2 ? 12 
+                                   : finalLevel === 3 ? 10 
+                                   : finalLevel === 4 ? 8 
+                                   : finalLevel === 5 ? 6 
+                                   : 5;
 
-        // Instantly add block to global collected hexes to be used in StoryBuilderView
-        addCollectedHexes({ [level]: countToGrant });
-        addMinedHexes({ [level]: countToGrant });
+                addCollectedHexes({ [finalLevel]: countToGrant });
+                addMinedHexes({ [finalLevel]: countToGrant });
+            }
+        }, 50);
     };
 
     // --- LOGIC ---
@@ -1503,6 +1515,15 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                             </div>
                                                             <span className="text-[8px] sm:text-[9px] font-bold text-emerald-400 mt-2 uppercase tracking-wide">
                                                                 +{cell.revealedLevel === 0 ? 20 : cell.revealedLevel === 1 ? 15 : cell.revealedLevel === 2 ? 12 : cell.revealedLevel === 3 ? 10 : cell.revealedLevel === 4 ? 8 : cell.revealedLevel === 5 ? 6 : 5} {language === 'RU' ? 'шт!' : 'qty!'}
+                                                            </span>
+                                                        </>
+                                                    ) : animatingCellId === cell.id ? (
+                                                        <>
+                                                            <div className="w-10 h-10 rounded bg-blue-900/50 border border-blue-500/50 flex items-center justify-center text-blue-400 font-black font-mono text-lg animate-pulse">
+                                                                L{rouletteValue}
+                                                            </div>
+                                                            <span className="text-[8px] sm:text-[9px] font-bold text-blue-400 mt-2 uppercase tracking-wide">
+                                                                {language === 'RU' ? 'Синтез...' : 'Synthesis...'}
                                                             </span>
                                                         </>
                                                     ) : (

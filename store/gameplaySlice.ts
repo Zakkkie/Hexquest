@@ -75,7 +75,7 @@ export const createGameplaySlice = (
     const stateUser = get().user || get().ensureGuestUser();
     const upgrades = get().campaignUpgrades;
     
-    set(() => ({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME', isCampaignLoading: true }));
+    set(() => ({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME', isCampaignLoading: true, showNewGameTutorialModal: true }));
     await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to render
     
     try {

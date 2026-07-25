@@ -177,7 +177,7 @@ export const series1Levels: LevelConfig[] = [
       { q: -5, r: 3, targetLevel: 1, label: 'Безопасный Путь', color: 'cyan' },
       { q: -10, r: 0, targetLevel: 1, label: 'Столица', color: 'emerald' },
     ],
-    startState: { credits: 0, moves: 40, rank: 1, materials: 0, initialEntropy: 100 },
+    startState: { credits: 0, moves: 40, rank: 5, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
@@ -315,7 +315,7 @@ export const series1Levels: LevelConfig[] = [
     },
     hooks: {
       checkWinCondition: (state) => {
-        return (state.grid['0,0']?.currentLevel ?? 2) <= 0;
+        return state.player.q === 0 && state.player.r === 0 && (state.grid['0,0']?.currentLevel ?? 2) <= 0;
       },
       checkLossCondition: (state) => {
         return isStranded(state);
@@ -333,17 +333,19 @@ export const series1Levels: LevelConfig[] = [
       size: 3,
       type: 'fixed',
       customLayout: [
-        { q: 0, r: 0, currentLevel: 1, maxLevel: 4, recoveryCharges: 3, revealed: true, ownerId: 'player-1' }, // Reactor L1 (maxLevel 4 allows 3 recovery charges)
-        { q: 1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true }, // Buffer L1
-        { q: -1, r: 1, currentLevel: 1, maxLevel: 1, revealed: true }, // Buffer L1
-        { q: 2, r: -2, currentLevel: 1, maxLevel: 1, revealed: true }, // Slide L1
-        { q: -2, r: 2, currentLevel: 1, maxLevel: 1, revealed: true }, // Slide L1
-        { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: 0, r: -1, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: 0, currentLevel: 2, maxLevel: 4, recoveryCharges: 3, revealed: true, ownerId: 'player-1' }, // Central Reactor L2
+        { q: 1, r: -1, currentLevel: 3, maxLevel: 3, revealed: true }, // High wall
+        { q: 0, r: -1, currentLevel: 2, maxLevel: 2, revealed: true },
+        { q: -1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true }, // Low step
+        { q: -1, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: 0, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: 1, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
+        { q: 2, r: -2, currentLevel: 2, maxLevel: 2, revealed: true }, 
+        { q: 2, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
         { q: 2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: -2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -2, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -2, r: 1, currentLevel: 1, maxLevel: 1, revealed: true },
+        { q: -2, r: 0, currentLevel: 2, maxLevel: 2, revealed: true },
         { q: 0, r: -2, currentLevel: 0, maxLevel: 0, revealed: true },
         { q: 0, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
       ]
@@ -503,7 +505,7 @@ export const series1Levels: LevelConfig[] = [
     },
     hooks: {
       checkWinCondition: (state) => {
-        return (state.grid['0,0']?.currentLevel ?? 0) >= 3;
+        return state.player.q === 0 && state.player.r === 0 && (state.grid['0,0']?.currentLevel ?? 0) >= 3;
       },
       checkLossCondition: (state) => {
         return isStranded(state);
@@ -607,7 +609,7 @@ export const series1Levels: LevelConfig[] = [
     },
     hooks: {
       checkWinCondition: (state) => {
-        return (state.grid['0,0']?.currentLevel ?? 0) <= -2 && state.grid['1,-1']?.structureType !== 'VOID';
+        return state.player.q === 0 && state.player.r === 0 && (state.grid['0,0']?.currentLevel ?? 0) <= -2 && state.grid['1,-1']?.structureType !== 'VOID';
       },
       checkLossCondition: (state) => {
         return isStranded(state);

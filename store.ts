@@ -75,6 +75,7 @@ export const useGameStore = create<GameStore>()(
           return localStorage.getItem('hexopol_story_tutorial_completed') !== 'true';
         } catch { return true; }
       })(),
+      showNewGameTutorialModal: false,
       
       // Camera & Zoom (Bypassing React re-renders)
       cameraPos: {

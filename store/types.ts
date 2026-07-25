@@ -64,6 +64,8 @@ export interface GameStore extends GameState {
   loadingLevelId: string | null;
   hasHydrated: boolean;
   isStoryTutorialActive?: boolean;
+  showNewGameTutorialModal: boolean;
+  setShowNewGameTutorialModal: (show: boolean) => void;
   
   // Camera & Zoom Zustand Store integrations (Bypassing React re-renders)
   cameraPos: { x: number; y: number };

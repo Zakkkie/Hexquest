@@ -79,7 +79,8 @@ export const isObjectiveHexCompleted = (
             return player.q === objHex.q && player.r === objHex.r;
         }
         if (gridCell && objHex.targetLevel) {
-            return gridCell.currentLevel >= objHex.targetLevel;
+            // Only complete if the player has visited it OR if it's explicitly higher level
+            return gridCell.currentLevel > objHex.targetLevel || (player.q === objHex.q && player.r === objHex.r);
         }
     }
 

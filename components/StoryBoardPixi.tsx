@@ -831,6 +831,10 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 plus.clear();
                 const pc = isCore ? C('#f43f5e') : (isCenterInitially ? C('#10b981') : PIXI.Color.shared.setValue('rgba(34, 211, 238, 0.75)').toNumber());
                 const pa = (isCore || isCenterInitially) ? 1 : 0.75;
+                tracePoly(plus, BASE_POINTS);
+                plus.stroke({ width: 2.5, color: pc, alpha: pa, alignment: 1 });
+                plus.fill({ color: pc, alpha: 0.05 });
+                plus.beginPath();
                 plus.moveTo(-5, 0); plus.lineTo(5, 0);
                 plus.moveTo(0, -5); plus.lineTo(0, 5);
                 plus.stroke({ width: 1.5, color: pc, alpha: pa });

@@ -20,19 +20,19 @@ const TRANSLATE: Record<'RU' | 'EN', TutorialStep[]> = {
         { 
             targetId: "tutorial-shape-list", 
             text: "Выбор высоты", 
-            desc: "Выбери уровень гекса на панели внизу:\n• L0 — базовая равнина (платформа)\n• L1-L9 — уступы, стены и реакторы\nВыбранный блок подсвечен голубым.",
+            desc: "Выбери уровень гекса на панели внизу:\n• L0 — базовая равнина (платформа)\n• L1-L9 — уступы, стены и реакторы\nВыбранный блок подсвечен голубым.\n\n(Жмите ПРОДОЛЖИТЬ)",
             position: "above", align: "center", skipPos: "top" 
         },
         { 
             targetId: "tutorial-hex-board", 
             text: "Правило поддержки", 
-            desc: "Нажмите на пустой гекс для строительства.\nДля L2+ нужны минимум 2 соседа того же уровня для опоры, иначе конструкция обрушится!",
+            desc: "В игре вы сможете нажимать на пустые гексы для строительства.\nДля L2+ нужны минимум 2 соседа того же уровня для опоры, иначе конструкция обрушится!\n\n(Жмите ПРОДОЛЖИТЬ)",
             position: "above", align: "center", skipPos: "bottom" 
         },
         { 
             targetId: "tutorial-blueprint-tablet", 
             text: "Инженерные схемы", 
-            desc: "Кликните на планшет чертежей вверху.\nСобирайте указанные геометрические фигуры для получения Очков Навыков (SP).",
+            desc: "Позже вы сможете кликнуть на планшет чертежей вверху.\nСобирайте указанные геометрические фигуры для получения Очков Навыков (SP).\n\n(Жмите ПРОДОЛЖИТЬ)",
             position: "below", align: "center", skipPos: "bottom" 
         },
         { 
@@ -55,9 +55,9 @@ const TRANSLATE: Record<'RU' | 'EN', TutorialStep[]> = {
         }
     ],
     EN: [
-        { targetId: "tutorial-shape-list", text: "Height Selection", desc: "Select a hex tier at the bottom panel:\n• L0 — Base platform & plains\n• L1-L9 — Ledges, walls & reactors\nThe selected tier will glow cyan.", position: "above", align: "center", skipPos: "top" },
-        { targetId: "tutorial-hex-board", text: "Support Rule", desc: "Tap an empty hex to build on the board.\nNote: L2+ requires 2 adjacent blocks of the same level for support, or it collapses!", position: "above", align: "center", skipPos: "bottom" },
-        { targetId: "tutorial-blueprint-tablet", text: "Build Blueprints", desc: "Tap the tablet at the top to view designs.\nSynthesize specific hex shapes on the board to earn valuable Skill Points (SP).", position: "below", align: "center", skipPos: "bottom" },
+        { targetId: "tutorial-shape-list", text: "Height Selection", desc: "Select a hex tier at the bottom panel:\n• L0 — Base platform & plains\n• L1-L9 — Ledges, walls & reactors\nThe selected tier will glow cyan.\n\n(Press NEXT to continue)", position: "above", align: "center", skipPos: "top" },
+        { targetId: "tutorial-hex-board", text: "Support Rule", desc: "In the game, you will tap an empty hex to build.\nNote: L2+ requires 2 adjacent blocks of the same level for support, or it collapses!\n\n(Press NEXT to continue)", position: "above", align: "center", skipPos: "bottom" },
+        { targetId: "tutorial-blueprint-tablet", text: "Build Blueprints", desc: "Later you can tap the tablet at the top to view designs.\nSynthesize specific hex shapes on the board to earn valuable Skill Points (SP).\n\n(Press NEXT to continue)", position: "below", align: "center", skipPos: "bottom" },
         { targetId: "tutorial-sp-badge", text: "Skill Points (SP)", desc: "Spend SP in the upgrades tree. Tap the purple badge to increase your engineering Rank and unlock advanced modules.", position: "below", align: "right", skipPos: "bottom" },
         { targetId: "tutorial-levels-btn", text: "Simulation Map", desc: "Tap this button to return to level selection and unlock new tactical sectors.", position: "above", align: "center", skipPos: "top" },
         { targetId: "tutorial-hex-board", text: "Core Defense", desc: "Every 5 levels, hostile bots will attack. Trigger the core defense alert at the top, protect your base and earn rewards!", position: "above", align: "center", skipPos: "bottom" }
@@ -333,7 +333,13 @@ export const StoryTutorial: React.FC = () => {
             }
 
             if (rect) {
-                const next = { x: rect.left, y: Math.max(0, rect.top), w: rect.width, h: Math.min(window.innerHeight - rect.top, rect.height) };
+                const margin = 24; // safety margin
+                const width = Math.min(rect.width, window.innerWidth - (margin * 2));
+                const height = Math.min(rect.height, window.innerHeight - (margin * 2));
+                const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+                const top = Math.max(margin, Math.min(rect.top, window.innerHeight - height - margin));
+
+                const next = { x: left, y: top, w: width, h: height };
                 setCutout(prev => { if (prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h) return prev; return next; });
             } else {
                 const next = { x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 100, w: 200, h: 200 };
@@ -423,8 +429,9 @@ export const StoryTutorial: React.FC = () => {
     return (
         <div 
             id="story-onboarding-container" 
-            className="fixed inset-0 z-[200] select-none pointer-events-auto cursor-pointer"
+            className="fixed inset-0 z-[200] select-none pointer-events-auto cursor-pointer pb-0 mb-0 pl-[9px]"
             onClick={handleNext}
+            style={{ paddingBottom: 0, marginBottom: 0, paddingLeft: '9px' }}
         >
             <svg className="absolute inset-0 w-full h-full pointer-events-none z-[80]">
                 <defs>
@@ -451,7 +458,7 @@ export const StoryTutorial: React.FC = () => {
 
             <AnimatePresence mode="popLayout">
                 {cutout && (
-                    <React.Fragment key={step}>
+                    <div key={step} className="contents">
                         {/* CUTOUT AREA HIGHLIGHT RINGS */}
                         <motion.div 
                             initial={{ opacity: 0, scale: 0.95 }}
@@ -476,8 +483,8 @@ export const StoryTutorial: React.FC = () => {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: isMobile ? -15 : -10 }}
                             transition={{ duration: 0.25, ease: "easeOut" }}
-                            style={getCardStyle()}
-                            className="absolute z-[100] bg-slate-950/95 border border-cyan-500/40 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] p-3 sm:p-4 flex flex-col gap-1.5 sm:gap-2 text-left backdrop-blur-2xl pointer-events-auto overflow-hidden"
+                            style={{ ...getCardStyle(), paddingBottom: '12px', marginBottom: '60px' }}
+                            className="absolute z-[100] bg-slate-950/95 border border-cyan-500/40 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] p-3 sm:p-4 pb-[12px] mb-[60px] flex flex-col gap-1.5 sm:gap-2 text-left backdrop-blur-2xl pointer-events-auto overflow-hidden"
                         >
                             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-80"></div>
                             
@@ -540,7 +547,7 @@ export const StoryTutorial: React.FC = () => {
                                 </button>
                             </div>
                         </motion.div>
-                    </React.Fragment>
+                    </div>
                 )}
             </AnimatePresence>
             

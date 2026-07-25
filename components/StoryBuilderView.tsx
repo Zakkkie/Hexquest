@@ -1438,7 +1438,7 @@ const StoryBuilderView: React.FC = () => {
                 {/* FLOATING DROPDOWN FOR EXPANDED TASK DETAILS (Interactive Engineering Tablet) */}
                 <div 
                     id="tutorial-blueprint-tablet-container" 
-                    className="absolute top-[76px] md:top-[100px] left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center w-[94vw] max-w-md select-none z-[110]"
+                    className="absolute top-[76px] md:top-[100px] left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center w-[90vw] sm:w-[94vw] max-w-md select-none z-[110] box-border px-2 sm:px-0"
                     style={{ zIndex: 100 + panelZOrder.indexOf('tablet') * 10 }}
                     onPointerDown={() => bringToFront('tablet')}
                 >
