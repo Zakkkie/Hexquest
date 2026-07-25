@@ -465,6 +465,7 @@ const MainMenu: React.FC = () => {
   const setCampaignMode = useGameStore(state => state.setCampaignMode);
   const logout = useGameStore(state => state.logout);
   const loginAsGuest = useGameStore(state => state.loginAsGuest);
+  const ensureGuestUser = useGameStore(state => state.ensureGuestUser);
   const loginUser = useGameStore(state => state.loginUser);
   const registerUser = useGameStore(state => state.registerUser);
   const abandonSession = useGameStore(state => state.abandonSession);
@@ -561,10 +562,9 @@ const MainMenu: React.FC = () => {
 
   const startCampaignWithMode = useCallback((mode: 'STORY' | 'LEVELS') => {
     playUiSound('CLICK');
-    if (!user) {
-        setAuthMode('LOGIN');
-        setErrorMessage(null);
-        return;
+    let currentUser = user;
+    if (!currentUser) {
+      currentUser = ensureGuestUser();
     }
     setCampaignMode(mode);
     if (hasActiveSession) {
@@ -572,14 +572,13 @@ const MainMenu: React.FC = () => {
     } else {
         setUIState(mode === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
     }
-  }, [user, hasActiveSession, playUiSound, setCampaignMode, setUIState]);
+  }, [user, ensureGuestUser, hasActiveSession, playUiSound, setCampaignMode, setUIState]);
 
   const handleNewGameClick = useCallback(() => {
     playUiSound('CLICK');
-    if (!user) {
-        setAuthMode('LOGIN');
-        setErrorMessage(null);
-        return;
+    let currentUser = user;
+    if (!currentUser) {
+      currentUser = ensureGuestUser();
     }
     if (hasActiveSession) {
       setConfirmAction({ type: 'ABANDON_NEW_GAME' });
@@ -588,7 +587,7 @@ const MainMenu: React.FC = () => {
       setSelectedTier(1);
       setDifficulty('EASY');
     }
-  }, [user, hasActiveSession, playUiSound]);
+  }, [user, ensureGuestUser, hasActiveSession, playUiSound]);
 
   const randomizeConfig = useCallback(() => {
       playUiSound('CLICK');
@@ -682,6 +681,13 @@ const MainMenu: React.FC = () => {
   const handleAuthSubmit = useCallback(() => {
     playUiSound('CLICK');
     setErrorMessage(null);
+
+    if (authMode === 'REGISTER' && isGuestRegistration && !inputName.trim()) {
+      ensureGuestUser();
+      setAuthMode(null);
+      return;
+    }
+
     if (!inputName.trim()) {
       setErrorMessage("Name is required.");
       return;
@@ -721,7 +727,7 @@ const MainMenu: React.FC = () => {
         }
       }
     }
-  }, [playUiSound, inputName, selectedColor, authMode, inputPassword, isGuestRegistration, selectedHead, selectedBody, loginUser, loginAsGuest, registerUser]);
+  }, [playUiSound, inputName, selectedColor, authMode, inputPassword, isGuestRegistration, selectedHead, selectedBody, loginUser, loginAsGuest, registerUser, ensureGuestUser]);
 
   const renderAvatar = useCallback((color: string, head: number, body: number, size = 'md') => {
     const dims = size === 'lg' ? 'w-16 h-16' : (size === 'sm' ? 'w-7 h-7' : 'w-10 h-10');

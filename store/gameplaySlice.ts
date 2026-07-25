@@ -72,7 +72,7 @@ export const createGameplaySlice = (
       };
     }
 
-    const stateUser = get().user;
+    const stateUser = get().user || get().ensureGuestUser();
     const upgrades = get().campaignUpgrades;
     
     set(() => ({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME', isCampaignLoading: true }));
@@ -172,7 +172,7 @@ export const createGameplaySlice = (
       initialGrid[coreKey].structureType = 'CORE';
     }
 
-    const stateUser = get().user;
+    const stateUser = get().user || get().ensureGuestUser();
     const upgrades = get().campaignUpgrades;
     const claimedLevelRewards = get().claimedLevelRewards || [];
     const completedSiegesCount = claimedLevelRewards.filter(id => id.startsWith('siege_completed_')).length;

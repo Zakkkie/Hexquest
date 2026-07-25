@@ -1,4 +1,5 @@
 import { GameStore, INITIAL_PLAYGROUND_SEED, createDefaultProgress, DEFAULT_CAMPAIGN_UPGRADES } from './types';
+import { UserProfile } from '../types';
 import { audioService } from '../services/audioService';
 
 // Synchronous salted cryptographic hash function (cyrb53-based)
@@ -99,10 +100,37 @@ function validateCredentials(nickname: string, password?: string, checkPasswordS
   return { success: true };
 }
 
+export function generateRandomGuestInfo() {
+  const prefixes = ['Guest', 'Commander', 'Pilot', 'Cadet', 'Explorer', 'Vector', 'Rover', 'Astra', 'Nexus', 'Cipher'];
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+  const num = Math.floor(1000 + Math.random() * 9000);
+  const nickname = `${prefix}_${num}`;
+
+  const colors = [
+    '#ef4444', '#f97316', '#eab308', '#22c55e', 
+    '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'  
+  ];
+  const avatarColor = colors[Math.floor(Math.random() * colors.length)];
+  const headIndex = Math.floor(Math.random() * 4);
+  const bodyIndex = Math.floor(Math.random() * 4);
+
+  return { nickname, avatarColor, headIndex, bodyIndex };
+}
+
 export const createAuthSlice = (
   set: (fn: (state: GameStore) => Partial<GameStore>) => void,
   get: () => GameStore
 ) => ({
+  ensureGuestUser: (): UserProfile => {
+    const currentUser = get().user;
+    if (currentUser) {
+      return currentUser;
+    }
+    const { nickname, avatarColor, headIndex, bodyIndex } = generateRandomGuestInfo();
+    get().loginAsGuest(nickname, avatarColor, headIndex, bodyIndex);
+    return get().user!;
+  },
+
   loginAsGuest: (nickname: string, avatarColor: string, headIndex: number, bodyIndex: number) => {
     audioService.play('UI_CLICK');
     

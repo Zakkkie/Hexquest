@@ -1,4 +1,4 @@
-import { GameState, UIState, WinCondition, SessionState, DeviceType, Item, CampaignUpgrades } from '../types';
+import { GameState, UIState, WinCondition, SessionState, DeviceType, Item, CampaignUpgrades, UserProfile } from '../types';
 
 export const INITIAL_PLAYGROUND_SEED: Record<number, number> = {
   0: 13,
@@ -93,6 +93,7 @@ export interface GameStore extends GameState {
   loginAsGuest: (n: string, c: string, h: number, b: number) => AuthResponse;
   registerUser: (n: string, p: string, c: string, h: number, b: number) => AuthResponse;
   loginUser: (n: string, p: string) => AuthResponse;
+  ensureGuestUser: () => UserProfile;
   logout: () => void;
   
   // Session Management
