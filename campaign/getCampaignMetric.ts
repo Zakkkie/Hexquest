@@ -45,7 +45,7 @@ export function getCampaignMetric(
     return { current: idx !== -1 ? idx : 0, target: 15, label: language === 'RU' ? 'ШАГИ' : 'STEPS' };
   }
   if (levelId === '1.1') {
-    return { current: (player.q === -8 && player.r === 0) ? 1 : 0, target: 1, label: language === 'RU' ? 'СТОЛИЦА' : 'CAPITAL' };
+    return { current: (player.q === -10 && player.r === 0) ? 1 : 0, target: 1, label: language === 'RU' ? 'СТОЛИЦА' : 'CAPITAL' };
   }
   if (levelId === '1.2') {
     return { current: Math.max(0, 2 - (grid['0,0']?.currentLevel ?? 2)), target: 2, label: language === 'RU' ? 'СРЕЗАННЫЕ СЛОИ' : 'DIG LAYERS' };

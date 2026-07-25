@@ -434,7 +434,7 @@ export const runLocalRenderCalculation = (
 export const isFinishTile = (q: number, r: number, activeLevelConfig: any): boolean => {
     if (!activeLevelConfig) return false;
     if (activeLevelConfig.id === '1.0' && q === -2 && r === 3) return true;
-    if (activeLevelConfig.id === '1.1' && q === -8 && r === 0) return true;
+    if (activeLevelConfig.id === '1.1' && q === -10 && r === 0) return true;
     if (activeLevelConfig.id === '1.2' && q === 0 && r === 0) return true;
     if (activeLevelConfig.id === '1.3' && q === 0 && r === 0) return true;
     if (activeLevelConfig.id === '1.5' && q === 0 && r === 0) return true;
@@ -500,7 +500,7 @@ export const areAllConditionsMet = (
         let finishR = session.player.r;
 
         if (activeLevelConfig.id === '1.0') { finishQ = -2; finishR = 3; }
-        else if (activeLevelConfig.id === '1.1') { finishQ = -8; finishR = 0; }
+        else if (activeLevelConfig.id === '1.1') { finishQ = -10; finishR = 0; }
         else if (activeLevelConfig.id === '1.2') { finishQ = 0; finishR = 0; }
         else if (activeLevelConfig.id === '1.3') { finishQ = 0; finishR = 0; }
         else if (activeLevelConfig.id === '1.5') { finishQ = 0; finishR = 0; }

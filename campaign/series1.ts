@@ -162,92 +162,50 @@ export const series1Levels: LevelConfig[] = [
   {
     id: '1.1',
     title: 'Sim 1.1: Сбор Материалов',
-    description: 'СИСТЕМНАЯ ДИРЕКТИВА. СБОР РЕСУРСОВ. Локация нестабильна. Добывайте строительные материалы (ОД), избегая обрушения хрупких платформ, чтобы проложить безопасный маршрут к Столице. Следуйте указаниям навигационного модуля и берегите ресурсы.',
+    description: 'СИСТЕМНАЯ ДИРЕКТИВА. СБОР РЕСУРСОВ. Локация чрезвычайно нестабильна. Прямой путь и северный хребет заминированы хрупкой структурой, которая обрушится под вами и снизит ваш ранг ниже 1! Следуйте исключительно по стабильному Южному обходному пути (не менее 10 шагов), чтобы достичь Столицы.',
     goalText: 'Доберитесь до Столицы',
     mapConfig: {
-      size: 4,
+      size: 6,
       type: 'fixed',
       customLayout: [
-        { q: 1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Start peak
-        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 }, // Fork 1
-        { q: -1, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 }, // Fork 2
-
-        // --- FRAGILE CENTER (Cracked tiles) ---
-        { q: -2, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -3, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -4, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -5, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -6, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -7, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-
-        // --- SAFE SOUTH ---
-        { q: -1, r: 1, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -2, r: 1, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -3, r: 1, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -4, r: 2, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -5, r: 2, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -6, r: 2, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-        { q: -7, r: 1, currentLevel: 1, maxLevel: 1, revealed: true, durability: 1 },
-
-        // --- NORTHERN RIDGE ---
-        { q: 0, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
-        { q: -1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
-        { q: -2, r: -1, currentLevel: 2, maxLevel: 2, revealed: true },
-        { q: -3, r: -1, currentLevel: 2, maxLevel: 2, revealed: true },
-        { q: -4, r: -1, currentLevel: 3, maxLevel: 3, revealed: true }, // L3 Ridge target
-        { q: -5, r: -1, currentLevel: 2, maxLevel: 2, revealed: true },
-        { q: -6, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
-        { q: -7, r: -1, currentLevel: 1, maxLevel: 1, revealed: true },
-
-        // --- CAPITAL (Destination) ---
-        { q: -8, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, structureType: 'CAPITAL' }
+        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1', durability: 5 },
+        { q: -10, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, structureType: 'CAPITAL', durability: 5 }
       ]
     },
     objectiveHexes: [
-      { q: 0, r: 0, targetLevel: 1, label: 'Path', color: 'cyan' },
-      { q: -1, r: 0, targetLevel: 1, label: 'Path', color: 'cyan' },
-      { q: -2, r: 0, targetLevel: 1, label: 'Path', color: 'cyan' },
-      { q: -3, r: 0, targetLevel: 1, label: 'Path', color: 'cyan' },
-      { q: -4, r: -1, targetLevel: 3, label: 'L3 Ridge', color: 'amber' },
-      { q: -8, r: 0, targetLevel: 1, label: 'Capital', color: 'emerald' },
+      { q: 0, r: 1, targetLevel: 1, label: 'Южная Дорога', color: 'cyan' },
+      { q: -5, r: 3, targetLevel: 1, label: 'Безопасный Путь', color: 'cyan' },
+      { q: -10, r: 0, targetLevel: 1, label: 'Столица', color: 'emerald' },
     ],
-    startState: { credits: 0, moves: 40, rank: 7, materials: 0, initialEntropy: 100 },
+    startState: { credits: 0, moves: 40, rank: 1, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
       const player = state.player;
-      const finished = player.q === -8 && player.r === 0;
+      const finished = player.q === -10 && player.r === 0;
       if (finished) {
-        return isRu ? "ПОБЕДА: Вы у цели!" : "VICTORY: You reached the objective!";
+        return isRu ? "ПОБЕДА: Вы достигли Столицы!" : "VICTORY: You reached the Capital!";
       }
-      const hex = state.grid[`${player.q},${player.r}`];
       
-      if (hex && hex.durability === 1) {
+      const safeSouthKeys = new Set([
+        '0,0', '0,1', '-1,2', '-2,3', '-3,3', '-4,3',
+        '-5,3', '-6,3', '-7,3', '-8,3', '-9,2', '-10,1', '-10,0'
+      ]);
+      const currentKey = `${player.q},${player.r}`;
+      
+      if (!safeSouthKeys.has(currentKey)) {
         return isRu 
-          ? "БЕГИ: Плита разрушается! Двигайся вперед без остановок!"
-          : "RUN: Tile is collapsing! Move forward without stopping!";
+          ? "ОПАСНОСТЬ! Вы на разрушаемом пути! Следующий шаг снизит ранг ниже 1 и уничтожит вас!"
+          : "DANGER! You are on a crumbling path! Next step drops rank below 1!";
       }
       
-      if (player.r === -1) {
-        return isRu
-          ? "КОПАЙ: Срежь вершину под собой до L1, чтобы сэкономить силы(ОД) для движения!"
-          : "DIG: Cut the peak under you down to L1 to save movement points!";
-      }
-      
-      const hasReachedFork = (player.q === 0 && player.r === 0) || (player.q === -1 && player.r === 0);
-      if (hasReachedFork) {
-        return isRu
-          ? "ИДИ НА УКАЗАТЕЛЬ: Выбери путь - Хрупкий центр, Безопасный Юг или Хребет на Севере!"
-          : "MOVE: Choose your path - Fragile center, Safe South, or Ridge on the North!";
-      }
-
       return isRu
-        ? "ИДИ НА УКАЗАТЕЛЬ: Двигайтесь к выходу (-8, 0)!"
-        : "MOVE TO TARGET: Proceed to the exit target (-8, 0)!";
+        ? "ИДИТЕ ПО ЮЖНОЙ ДОРОГЕ: Безопасный путь состоит из 12 шагов к Столице (-10, 0)!"
+        : "FOLLOW SOUTH ROAD: Safe path has 12 steps to the Capital (-10, 0)!";
     },
     hooks: {
       checkWinCondition: (state) => {
-        return state.player.q === -8 && state.player.r === 0;
+        return state.player.q === -10 && state.player.r === 0;
       },
       checkLossCondition: (state) => {
         return isStranded(state);
