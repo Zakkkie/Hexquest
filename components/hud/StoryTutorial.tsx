@@ -348,13 +348,35 @@ export const StoryTutorial: React.FC = () => {
     }, [isTutorialActive, step, currentConfig, isMobile]);
 
     const getCardStyle = useCallback((): React.CSSProperties => {
+        if (!cutout) {
+            return { 
+                position: 'absolute', 
+                bottom: '35px', 
+                left: '12px', 
+                right: '12px', 
+                width: 'auto', 
+                display: 'flex',
+                flexDirection: 'column'
+            };
+        }
+
         if (!isMobile) {
             const baseStyle: React.CSSProperties = { position: 'absolute', width: '380px', maxWidth: '92vw' };
-            if (currentConfig?.position === 'above') { baseStyle.bottom = '100%'; baseStyle.marginBottom = '24px'; } 
-            else { baseStyle.top = '100%'; baseStyle.marginTop = '24px'; }
-            if (currentConfig?.align === 'center') { baseStyle.left = '50%'; baseStyle.transform = 'translateX(-50%)'; } 
-            else if (currentConfig?.align === 'right') { baseStyle.right = 0; baseStyle.transformOrigin = 'right'; } 
-            else { baseStyle.left = 0; baseStyle.transformOrigin = 'left'; }
+            
+            if (currentConfig?.position === 'above') { 
+                baseStyle.bottom = `${window.innerHeight - cutout.y + 24}px`; 
+            } else { 
+                baseStyle.top = `${cutout.y + cutout.h + 24}px`; 
+            }
+            
+            if (currentConfig?.align === 'center') { 
+                baseStyle.left = `${cutout.x + cutout.w / 2}px`; 
+                baseStyle.transform = 'translateX(-50%)'; 
+            } else if (currentConfig?.align === 'right') { 
+                baseStyle.right = `${Math.max(16, window.innerWidth - (cutout.x + cutout.w))}px`;
+            } else { 
+                baseStyle.left = `${Math.max(16, cutout.x)}px`; 
+            }
             return baseStyle;
         }
 
@@ -365,26 +387,13 @@ export const StoryTutorial: React.FC = () => {
         const gap = 12;         // Зазор между подсвеченной областью и карточкой
         const sidePadding = 12; // Боковые отступы от краев экрана
 
-        if (!cutout) {
-            return { 
-                position: 'fixed', 
-                bottom: `${safeBottom}px`, 
-                left: `${sidePadding}px`, 
-                right: `${sidePadding}px`, 
-                width: 'auto', 
-                maxHeight: `calc(100vh - ${safeTop + safeBottom}px)`,
-                display: 'flex',
-                flexDirection: 'column'
-            };
-        }
-
         const spaceAbove = cutout.y - safeTop;
         const spaceBelow = window.innerHeight - (cutout.y + cutout.h) - safeBottom;
         const putAbove = spaceAbove > spaceBelow;
 
         if (putAbove) {
             return {
-                position: 'fixed',
+                position: 'absolute',
                 bottom: `${window.innerHeight - cutout.y + gap}px`,
                 left: `${sidePadding}px`,
                 right: `${sidePadding}px`,
@@ -395,7 +404,7 @@ export const StoryTutorial: React.FC = () => {
             };
         } else {
             return {
-                position: 'fixed',
+                position: 'absolute',
                 top: `${cutout.y + cutout.h + gap}px`,
                 left: `${sidePadding}px`,
                 right: `${sidePadding}px`,
@@ -416,7 +425,6 @@ export const StoryTutorial: React.FC = () => {
             id="story-onboarding-container" 
             className="fixed inset-0 z-[200] select-none pointer-events-auto cursor-pointer"
             onClick={handleNext}
-            onTouchStart={handleNext}
         >
             <svg className="absolute inset-0 w-full h-full pointer-events-none z-[80]">
                 <defs>
@@ -443,27 +451,33 @@ export const StoryTutorial: React.FC = () => {
 
             <AnimatePresence mode="popLayout">
                 {cutout && (
-                    <motion.div 
-                        key={step}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.05 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="absolute z-[90] pointer-events-none flex flex-col items-center justify-center"
-                        style={{ left: cutout.x, top: cutout.y, width: cutout.w, height: cutout.h }}
-                    >
+                    <React.Fragment key={step}>
+                        {/* CUTOUT AREA HIGHLIGHT RINGS */}
                         <motion.div 
-                            className="absolute inset-[-12px] rounded-2xl border-2 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.6),inset_0_0_15px_rgba(34,211,238,0.4)]" 
-                            animate={{ opacity: [0.6, 1, 0.6] }}
-                            transition={{ repeat: Infinity, duration: 1.5 }}
-                        />
-                        <div className="absolute inset-[-18px] border border-indigo-400/40 rounded-3xl pointer-events-none" />
-                        <div className="absolute inset-[-24px] border-2 border-cyan-400/20 rounded-3xl animate-ping duration-[2000ms] pointer-events-none" />
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.05 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="absolute z-[90] pointer-events-none flex flex-col items-center justify-center"
+                            style={{ left: cutout.x, top: cutout.y, width: cutout.w, height: cutout.h }}
+                        >
+                            <motion.div 
+                                className="absolute inset-[-12px] rounded-2xl border-2 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.6),inset_0_0_15px_rgba(34,211,238,0.4)]" 
+                                animate={{ opacity: [0.6, 1, 0.6] }}
+                                transition={{ repeat: Infinity, duration: 1.5 }}
+                            />
+                            <div className="absolute inset-[-18px] border border-indigo-400/40 rounded-3xl pointer-events-none" />
+                            <div className="absolute inset-[-24px] border-2 border-cyan-400/20 rounded-3xl animate-ping duration-[2000ms] pointer-events-none" />
+                        </motion.div>
                         
-                        {/* Tooltip Card Container */}
-                        <div 
+                        {/* TOOLTIP CARD CONTAINER */}
+                        <motion.div 
+                            initial={{ opacity: 0, y: isMobile ? 15 : 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: isMobile ? -15 : -10 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
                             style={getCardStyle()}
-                            className="bg-slate-950/95 border border-cyan-500/40 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] p-3 sm:p-4 flex flex-col gap-1.5 sm:gap-2 text-left backdrop-blur-2xl pointer-events-auto overflow-hidden"
+                            className="absolute z-[100] bg-slate-950/95 border border-cyan-500/40 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] p-3 sm:p-4 flex flex-col gap-1.5 sm:gap-2 text-left backdrop-blur-2xl pointer-events-auto overflow-hidden"
                         >
                             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-80"></div>
                             
@@ -525,8 +539,8 @@ export const StoryTutorial: React.FC = () => {
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    </React.Fragment>
                 )}
             </AnimatePresence>
             

@@ -665,6 +665,18 @@ const StoryBuilderView: React.FC = () => {
         return { q: bestQ, r: bestR };
     }, [storyMap]);
 
+    useEffect(() => {
+        (window as any).setStoryNarrativeCollapsed = (collapsed: boolean) => {
+            setIsNarrativeCollapsed(collapsed);
+            if (!collapsed) {
+                setTabletTab('schematics'); // Auto-switch to Schematics tab so drawings list is actually visible during tutorial Step 3!
+            }
+        };
+        return () => {
+            delete (window as any).setStoryNarrativeCollapsed;
+        };
+    }, []);
+
     const autoTutorialTriggeredRef = useRef<boolean>(false);
 
     useEffect(() => {
