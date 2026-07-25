@@ -122,6 +122,9 @@ const series2Base: LevelConfig[] = [
           { q: 0, r: 0, currentLevel: 0, maxLevel: 0, ownerId: 'player-1', revealed: true },
           { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
           { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
+          { q: -1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+          { q: 0, r: -1, currentLevel: 0, maxLevel: 0, revealed: true },
+          { q: -1, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
           // ASCENDING RAMP out of the shaft to the Monolith
           { q: 2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
           { q: 3, r: 0, currentLevel: 1, maxLevel: 1, revealed: true },
@@ -136,10 +139,9 @@ const series2Base: LevelConfig[] = [
           // ── DECOR: south canyon under the shaft (Δ≥2) ──
           { q: 0, r: 2, currentLevel: -3, maxLevel: -3, revealed: true },
           { q: 1, r: 1, currentLevel: -3, maxLevel: -3, revealed: true },
-          { q: -1, r: 1, currentLevel: -4, maxLevel: -4, revealed: true },
       ]
     },
-    startState: { credits: 0, moves: 6, rank: 2, materials: 0 },
+    startState: { credits: 0, moves: 10, rank: 2, materials: 0 },
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';

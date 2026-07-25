@@ -375,27 +375,25 @@ export const series1Levels: LevelConfig[] = [
       size: 3,
       type: 'fixed',
       customLayout: [
-        { q: 0, r: 0, currentLevel: 1, maxLevel: 1, revealed: true, ownerId: 'player-1' }, // Reactor L1
-        { q: 1, r: -1, currentLevel: 0, maxLevel: 0, revealed: true }, // Buffer L0
-        { q: -1, r: 1, currentLevel: 0, maxLevel: 0, revealed: true }, // Buffer L0
-        { q: 2, r: -2, currentLevel: -1, maxLevel: -1, revealed: true }, // Slide L-1
-        { q: -2, r: 2, currentLevel: -1, maxLevel: -1, revealed: true }, // Slide L-1
+        { q: 0, r: 0, currentLevel: 1, maxLevel: 4, recoveryCharges: 3, revealed: true, ownerId: 'player-1' }, // Reactor L1 (maxLevel 4 allows 3 recovery charges)
+        { q: 1, r: -1, currentLevel: 1, maxLevel: 1, revealed: true }, // Buffer L1
+        { q: -1, r: 1, currentLevel: 1, maxLevel: 1, revealed: true }, // Buffer L1
+        { q: 2, r: -2, currentLevel: 1, maxLevel: 1, revealed: true }, // Slide L1
+        { q: -2, r: 2, currentLevel: 1, maxLevel: 1, revealed: true }, // Slide L1
         { q: 1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
         { q: -1, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
         { q: 0, r: -1, currentLevel: 0, maxLevel: 0, revealed: true },
         { q: 0, r: 1, currentLevel: 0, maxLevel: 0, revealed: true },
-        { q: 2, r: 0, currentLevel: -1, maxLevel: -1, revealed: true },
-        { q: -2, r: 0, currentLevel: -1, maxLevel: -1, revealed: true },
-        { q: 0, r: -2, currentLevel: -1, maxLevel: -1, revealed: true },
-        { q: 0, r: 2, currentLevel: -1, maxLevel: -1, revealed: true },
+        { q: 2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: -2, r: 0, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: -2, currentLevel: 0, maxLevel: 0, revealed: true },
+        { q: 0, r: 2, currentLevel: 0, maxLevel: 0, revealed: true },
       ]
     },
     objectiveHexes: [
       { q: 0, r: 0, targetLevel: 1, label: 'Reactor', color: 'blue' },
-      { q: 1, r: -1, targetLevel: 0, label: 'L0', color: 'blue' },
-      { q: -1, r: 1, targetLevel: 0, label: 'L0', color: 'blue' },
-      { q: 2, r: -2, targetLevel: -1, label: 'L-1', color: 'blue' },
-      { q: -2, r: 2, targetLevel: -1, label: 'L-1', color: 'blue' },
+      { q: 1, r: -1, targetLevel: 1, label: 'Buffer L1', color: 'cyan' },
+      { q: -1, r: 1, targetLevel: 1, label: 'Buffer L1', color: 'cyan' },
     ],
     startState: { credits: 0, moves: 12, rank: 1, materials: 0, initialEntropy: 100 },
     aiMode: 'none',
@@ -403,25 +401,34 @@ export const series1Levels: LevelConfig[] = [
       const isRu = state.language === 'RU';
       const credits = state.player.coins;
       const reactor = state.grid['0,0'];
+      const player = state.player;
       
       if (credits >= 15) {
         return isRu ? "ПОБЕДА: Лимит набран!" : "VICTORY: Quota satisfied!";
       }
       
-      if (state.player.q === 0 && state.player.r === 0) {
-        if (reactor?.recoveryCharges && reactor.recoveryCharges > 0) {
+      if (player.q === 0 && player.r === 0) {
+        const charges = reactor?.recoveryCharges ?? (reactor?.maxLevel && reactor.maxLevel >= 4 ? 3 : 0);
+        if (charges > 0) {
           return isRu
-            ? `СБОР ЭНЕРГИИ: Жми ВОССТАНОВИТЬ (Синяя кнопка) 3 раза! Заряды: ${reactor.recoveryCharges}/3`
-            : `RECOVER: Press RECOVER (Blue button) 3 times! Charges: ${reactor.recoveryCharges}/3`;
+            ? `СБОР ЭНЕРГИИ: Жми ВОССТАНОВИТЬ (Синяя кнопка)! Заряды: ${charges}/3`
+            : `RECOVER: Press RECOVER (Blue button)! Charges: ${charges}/3`;
         }
         return isRu
-          ? "ИДИ НА УКАЗАТЕЛЬ: Реактор остывает! Покинь Центр и сними энергию на плитах ниже!"
-          : "MOVE: Reactor cooling down! Descend to buffer plates for recovery!";
+          ? "ИДИ НА УКАЗАТЕЛЬ: Реактор остывает! Покинь Центр и сними энергию на плитах L1 рядом!"
+          : "MOVE: Reactor cooling down! Move to nearby L1 buffer plates for recovery!";
       }
       
+      const currentHex = state.grid[`${player.q},${player.r}`];
+      if (currentHex && currentHex.currentLevel >= 1 && !player.recoveredCurrentHex) {
+        return isRu
+          ? "СБОР ЭНЕРГИИ: Жми ВОССТАНОВИТЬ (Синяя кнопка), чтобы списать кредиты!"
+          : "RECOVER: Press RECOVER (Blue button) to gather credits!";
+      }
+
       return isRu
-        ? "СБОР ЭНЕРГИИ: Жми ВОССТАНОВИТЬ, затем иди на следующий гекс!"
-        : "RECOVER: Press RECOVER, then move to the next hex!";
+        ? "ИДИ НА УКАЗАТЕЛЬ: Перейди на подсвеченную синюю плиту L1!"
+        : "MOVE TO TARGET: Step onto the highlighted blue L1 plate!";
     },
     hooks: {
       checkWinCondition: (state) => {
@@ -472,11 +479,12 @@ export const series1Levels: LevelConfig[] = [
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
+      const player = state.player;
       const h00 = state.grid['0,0']?.currentLevel ?? 0;
       if (h00 >= 3) {
         return isRu
-          ? "Поздравляем! Архитектурная башня L3 успешно зафиксирована на пике."
-          : "Congratulations! Architectural L3 tower successfully anchored on the peak.";
+          ? "ПОБЕДА: Архитектурная башня L3 успешно зафиксирована на пике."
+          : "VICTORY: Architectural L3 tower successfully anchored on the peak.";
       }
 
       const centerNeighbors = ['1,-1', '1,0', '0,1', '-1,1', '-1,0', '0,-1'];
@@ -484,36 +492,56 @@ export const series1Levels: LevelConfig[] = [
       
       if (h00 === 2) {
         if (l2SupportsForL3 < 2) {
+          if (player.q === 0 && player.r === 0) {
+            return isRu
+              ? `ИДИ НА УКАЗАТЕЛЬ: Сойди с Центра и возведи 2 соседние плиты до уровня L2! Готово: ${l2SupportsForL3}/2`
+              : `MOVE TO TARGET: Step off Center and upgrade 2 neighboring tiles to Level L2! Progress: ${l2SupportsForL3}/2`;
+          }
           return isRu
-            ? `СТРОЙ БАШНИ L3: Чтобы поднять Центр до L3, нужно возвести 2 соседние плиты до высоты L2! Готово: ${l2SupportsForL3}/2`
-            : `BUILD L3 TOWERS: Upgrade 2 neighboring tiles to height L2 to unlock the Center! Progress: ${l2SupportsForL3}/2`;
+            ? `СТРОЙ ОПОРЫ L2: Улучши 2 соседние плиты до уровня L2! Готово: ${l2SupportsForL3}/2`
+            : `BUILD L2 SUPPORTS: Upgrade 2 neighboring tiles to Level L2! Progress: ${l2SupportsForL3}/2`;
+        }
+        if (player.q === 0 && player.r === 0) {
+          return isRu
+            ? "СТРОЙ В ЦЕНТРЕ: Ваши опоры L2 готовы! Жми УЛУЧШИТЬ (Оранжевая кнопка) до L3!"
+            : "BUILD IN CENTER: L2 supports ready! Press UPGRADE (Orange button) to L3!";
         }
         return isRu
-          ? "ИДИ В ЦЕНТР: Ваши опоры готовы! Шагни в (0,0) и СТРОЙ до L3!"
-          : "MOVE TO CENTER: Supports ready! Step in Center (0,0) and BUILD to L3!";
+          ? "ИДИ НА УКАЗАТЕЛЬ: Опоры готовы! Вернись в Центр (0,0) и строй до L3!"
+          : "MOVE TO TARGET: Supports ready! Step back to Center (0,0) and build to L3!";
       }
 
       const l1SupportsForL2 = centerNeighbors.filter(key => (state.grid[key]?.currentLevel ?? 0) >= 1).length;
       if (h00 === 1) {
         if (l1SupportsForL2 < 2) {
+          if (player.q === 0 && player.r === 0) {
+            return isRu
+              ? `ИДИ НА УКАЗАТЕЛЬ: Сойди с Центра и возведи 2 соседние плиты до уровня L1! Готово: ${l1SupportsForL2}/2`
+              : `MOVE TO TARGET: Step off Center and upgrade 2 neighboring tiles to Level L1! Progress: ${l1SupportsForL2}/2`;
+          }
           return isRu
-            ? `СТРОЙ ОПОРЫ L2: Чтобы поднять Центр до L2, нужно минимум 2 опорных гекса на уровне L1 вокруг! Готово: ${l1SupportsForL2}/2`
-            : `BUILD L2 SUPPORTS: Need at least 2 neighboring hexes at L1 to upgrade the Center! Ready: ${l1SupportsForL2}/2`;
+            ? `СТРОЙ ОПОРЫ L1: Улучши 2 соседние плиты до уровня L1! Готово: ${l1SupportsForL2}/2`
+            : `BUILD L1 SUPPORTS: Upgrade 2 neighboring tiles to Level L1! Progress: ${l1SupportsForL2}/2`;
+        }
+        if (player.q === 0 && player.r === 0) {
+          return isRu
+            ? "СТРОЙ В ЦЕНТРЕ: Опоры L1 готовы! Жми УЛУЧШИТЬ (Оранжевая кнопка) до L2!"
+            : "BUILD IN CENTER: L1 supports ready! Press UPGRADE (Orange button) to L2!";
         }
         return isRu
-          ? "ИДИ В ЦЕНТР: Опоры готовы. Шагни на (0,0) и СТРОЙ до L2."
-          : "MOVE TO CENTER: Supports ready. Step to (0,0) and BUILD to L2.";
+          ? "ИДИ НА УКАЗАТЕЛЬ: Опоры L1 готовы! Вернись в Центр (0,0) и строй до L2!"
+          : "MOVE TO TARGET: L1 supports ready! Step back to Center (0,0) and build to L2!";
       }
 
-      const l1Supports = centerNeighbors.filter(key => (state.grid[key]?.currentLevel ?? 0) >= 1).length;
-      if (l1Supports < 2) {
+      // h00 === 0
+      if (player.q === 0 && player.r === 0) {
         return isRu
-          ? `СТРОЙ ФУНДАМЕНТ: Улучши любые 2 соседние плиты до L1, чтобы затем поднять Центр. Готово: ${l1Supports}/2`
-          : `BUILD FOUNDATION: Upgrade any 2 neighbors to L1 to unlock the Center build. Progress: ${l1Supports}/2`;
+          ? "СТРОЙ В ЦЕНТРЕ: Жми УЛУЧШИТЬ (Оранжевая кнопка), чтобы заложить фундамент L1!"
+          : "BUILD IN CENTER: Press UPGRADE (Orange button) to build L1 foundation!";
       }
       return isRu
-        ? "ИДИ В ЦЕНТР: Фундамент заложен! Шагни на (0,0) и СТРОЙ до L1."
-        : "MOVE TO CENTER: Foundation set! Step to (0,0) and BUILD to L1.";
+        ? "ИДИ НА УКАЗАТЕЛЬ: Вернись в Центр (0,0) и заложи фундамент L1!"
+        : "MOVE TO TARGET: Return to Center (0,0) and build L1 foundation!";
     },
     hooks: {
       checkWinCondition: (state) => {
@@ -564,6 +592,7 @@ export const series1Levels: LevelConfig[] = [
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
+      const player = state.player;
       const voidHex = state.grid['1,-1'];
       const centerHex = state.grid['0,0'];
       const hasPatch = state.player.inventory.some(i => i.baseId === 'reality_patch');
@@ -578,22 +607,45 @@ export const series1Levels: LevelConfig[] = [
             ? "ПРИМЕНИ ЛОСКУТ: Открой ИНВЕНТАРЬ и примени Лоскут Реальности на VOID (1,-1)!"
             : "USE PATCH: Open INVENTORY and apply Reality Patch on VOID (1,-1)!";
         } else {
-          return isRu
-            ? "ПРОВАЛ: Лоскут потерян."
-            : "FAIL: Patch lost.";
+          return isRu ? "ПРОВАЛ: Лоскут потерян." : "FAIL: Patch lost.";
         }
       }
 
+      // voidHex is healed
+      const centerLevel = centerHex?.currentLevel ?? 0;
       const minedNeighbors = [state.grid['1,-1'], state.grid['0,1']].filter(h => h && h.currentLevel <= -1).length;
-      if (minedNeighbors < 2) {
+
+      if (centerLevel === 0) {
+        if (player.q === 0 && player.r === 0) {
+          return isRu
+            ? "КОПАЙ В ЦЕНТРЕ: Жми КОПАТЬ (Красная кнопка), чтобы спустить Центр до L-1!"
+            : "DIG IN CENTER: Press DIG (Red button) to lower Center to L-1!";
+        }
         return isRu
-          ? `КОПАЙ: Углуби двух соседей (1,-1) и (0,1) на высоту L-1 для поддержки! Готово: ${minedNeighbors}/2`
-          : `DIG: Lower two neighbors (1,-1) and (0,1) down to L-1 for support! Progress: ${minedNeighbors}/2`;
+          ? "ИДИ НА УКАЗАТЕЛЬ: Встань в Центр (0,0) и скопай его до уровня L-1!"
+          : "MOVE TO TARGET: Step to Center (0,0) and dig down to L-1!";
       }
 
+      // centerLevel is -1
+      if (minedNeighbors < 2) {
+        if (player.q === 0 && player.r === 0) {
+          return isRu
+            ? `ИДИ НА УКАЗАТЕЛЬ: Сойди с Центра и скопай 2 соседние плиты (1,-1) и (0,1) до L-1! Готово: ${minedNeighbors}/2`
+            : `MOVE TO TARGET: Step off Center and dig 2 neighboring tiles (1,-1) & (0,1) to L-1! Progress: ${minedNeighbors}/2`;
+        }
+        return isRu
+          ? `КОПАЙ ОПОРЫ: Углуби соседей (1,-1) и (0,1) до уровня L-1 для поддержки! Готово: ${minedNeighbors}/2`
+          : `DIG SUPPORTS: Lower neighbors (1,-1) & (0,1) to Level L-1 for support! Progress: ${minedNeighbors}/2`;
+      }
+
+      if (player.q === 0 && player.r === 0) {
+        return isRu
+          ? "КОПАЙ В ЦЕНТРЕ: Опоры готовы! Жми КОПАТЬ (Красная кнопка) до глубины L-2!"
+          : "DIG IN CENTER: Supports ready! Press DIG (Red button) down to L-2!";
+      }
       return isRu
-        ? "КОПАЙ: Теперь иди в Центр (0,0) и КОПАЙ его дважды до глубины L-2!"
-        : "DIG: Now step to the Center (0,0) and DIG it twice down to depth L-2!";
+        ? "ИДИ НА УКАЗАТЕЛЬ: Вернись в Центр (0,0) и скопай его до глубины L-2!"
+        : "MOVE TO TARGET: Return to Center (0,0) and dig down to L-2!";
     },
     hooks: {
       checkWinCondition: (state) => {
@@ -676,7 +728,7 @@ export const series1Levels: LevelConfig[] = [
 
       const hasReachedDestination = (player.q === 8 && player.r === 0);
       if (hasReachedDestination) {
-        return isRu ? "Поздравляем! Вы добрались до Столицы на третьем столпе!" : "Congratulations! You reached the Capital on the third pillar!";
+        return isRu ? "ПОБЕДА: Вы добрались до Столицы на третьем столпе!" : "Congratulations! You reached the Capital on the third pillar!";
       }
 
       const void1Healed = grid['2,0']?.structureType !== 'VOID';
@@ -689,6 +741,20 @@ export const series1Levels: LevelConfig[] = [
             ? "ПРИМЕНИ ЛОСКУТ: Иди на край (1,0), открой ИНВЕНТАРЬ и примени Лоскут на VOID (2,0)!"
             : "USE PATCH: Move to edge (1,0), open INVENTORY and apply Patch on VOID (2,0)!";
         } else {
+          const p1CenterLvl = grid['0,0']?.currentLevel ?? 0;
+          if (p1CenterLvl === -1) {
+            const minedP1 = [grid['1,0'], grid['0,1'], grid['-1,0']].filter(h => h && h.currentLevel <= -1).length;
+            if (minedP1 < 2) {
+              return isRu
+                ? `КОПАЙ ОПОРЫ: Углуби 2 соседних гекса рядом с Центром до уровня L-1 для поддержки! Готово: ${minedP1}/2`
+                : `DIG SUPPORTS: Lower 2 neighbor hexes near Center to L-1 for support! Progress: ${minedP1}/2`;
+            }
+          }
+          if (player.q === 0 && player.r === 0) {
+            return isRu
+              ? "КОПАЙ В ЦЕНТРЕ: Жми КОПАТЬ (Красная кнопка) до L-2, чтобы найти Лоскут!"
+              : "DIG IN CENTER: Press DIG (Red button) down to L-2 to find the Patch!";
+          }
           return isRu
             ? "КОПАЙ: Встань на Центр 1-го столпа (0,0) и КОПАЙ его до уровня L-2, чтобы найти Лоскут!"
             : "DIG: Stand on Pillar 1 Center (0,0) and DIG to L-2 to find the Patch!";
@@ -701,6 +767,20 @@ export const series1Levels: LevelConfig[] = [
             ? "ПРИМЕНИ ЛОСКУТ: Иди на край (5,0), открой ИНВЕНТАРЬ и примени Лоскут на VOID (6,0)!"
             : "USE PATCH: Move to edge (5,0), open INVENTORY and apply Patch on VOID (6,0)!";
         } else {
+          const p2CenterLvl = grid['4,0']?.currentLevel ?? 0;
+          if (p2CenterLvl === -1) {
+            const minedP2 = [grid['5,0'], grid['4,1'], grid['3,0']].filter(h => h && h.currentLevel <= -1).length;
+            if (minedP2 < 2) {
+              return isRu
+                ? `КОПАЙ ОПОРЫ: Углуби 2 соседних гекса на 2-м столпе до L-1 для поддержки! Готово: ${minedP2}/2`
+                : `DIG SUPPORTS: Lower 2 neighbor hexes on Pillar 2 to L-1 for support! Progress: ${minedP2}/2`;
+            }
+          }
+          if (player.q === 4 && player.r === 0) {
+            return isRu
+              ? "КОПАЙ В ЦЕНТРЕ: Жми КОПАТЬ (Красная кнопка) до L-2 за вторым Лоскутом!"
+              : "DIG IN CENTER: Press DIG (Red button) down to L-2 for the second Patch!";
+          }
           return isRu
             ? "КОПАЙ: Иди на Центр 2-го столпа (4,0) и КОПАЙ его до уровня L-2 за вторым Лоскутом!"
             : "DIG: Move to Pillar 2 Center (4,0) and DIG to L-2 for the second Patch!";
@@ -747,13 +827,95 @@ export const series1Levels: LevelConfig[] = [
     aiMode: 'none',
     getTutorialHint: (state) => {
       const isRu = state.language === 'RU';
-      const level = state.grid['0,0']?.currentLevel ?? 0;
-      if (level >= 4) {
+      const player = state.player;
+      const h00 = state.grid['0,0']?.currentLevel ?? 0;
+      if (h00 >= 4) {
         return isRu ? "ПОБЕДА: Вы успешно возвели пик до L4!" : "VICTORY: Perfect L4 peak complete!";
       }
+
+      if (player.storage < 1) {
+        return isRu
+          ? "КОПАЙ МАТЕРИАЛЫ: В рюкзаке 0 материалов! Жми КОПАТЬ (Красная кнопка) на соседних плитах L1, чтобы срубить материал!"
+          : "DIG MATERIALS: 0 materials! Press DIG (Red button) on adjacent L1 tiles to gather materials!";
+      }
+
+      const centerNeighbors = ['0,-1', '1,-1', '1,0', '0,1', '-1,1', '-1,0'];
+
+      if (h00 === 3) {
+        const l3Supports = centerNeighbors.filter(key => (state.grid[key]?.currentLevel ?? 0) >= 3).length;
+        if (l3Supports < 2) {
+          if (player.q === 0 && player.r === 0) {
+            return isRu
+              ? `ИДИ НА УКАЗАТЕЛЬ: Сойди с Центра и возведи 2 соседние плиты до уровня L3! Готово: ${l3Supports}/2`
+              : `MOVE TO TARGET: Step off Center and upgrade 2 neighboring tiles to L3! Progress: ${l3Supports}/2`;
+          }
+          return isRu
+            ? `СТРОЙ ОПОРЫ L3: Улучши 2 соседние плиты до уровня L3! Готово: ${l3Supports}/2`
+            : `BUILD L3 SUPPORTS: Upgrade 2 neighboring tiles to Level L3! Progress: ${l3Supports}/2`;
+        }
+        if (player.q === 0 && player.r === 0) {
+          return isRu
+            ? "СТРОЙ В ЦЕНТРЕ: Опоры L3 готовы! Жми УЛУЧШИТЬ (Оранжевая кнопка), чтобы возвести Пик L4!"
+            : "BUILD IN CENTER: L3 supports ready! Press UPGRADE (Orange button) to build L4 Peak!";
+        }
+        return isRu
+          ? "ИДИ НА УКАЗАТЕЛЬ: Опоры L3 готовы! Вернись в Центр (0,0) и строй Пик L4!"
+          : "MOVE TO TARGET: L3 supports ready! Return to Center (0,0) and build L4 Peak!";
+      }
+
+      if (h00 === 2) {
+        const l2Supports = centerNeighbors.filter(key => (state.grid[key]?.currentLevel ?? 0) >= 2).length;
+        if (l2Supports < 2) {
+          if (player.q === 0 && player.r === 0) {
+            return isRu
+              ? `ИДИ НА УКАЗАТЕЛЬ: Сойди с Центра и возведи 2 соседние плиты до уровня L2! Готово: ${l2Supports}/2`
+              : `MOVE TO TARGET: Step off Center and upgrade 2 neighboring tiles to L2! Progress: ${l2Supports}/2`;
+          }
+          return isRu
+            ? `СТРОЙ ОПОРЫ L2: Улучши 2 соседние плиты до уровня L2! Готово: ${l2Supports}/2`
+            : `BUILD L2 SUPPORTS: Upgrade 2 neighboring tiles to Level L2! Progress: ${l2Supports}/2`;
+        }
+        if (player.q === 0 && player.r === 0) {
+          return isRu
+            ? "СТРОЙ В ЦЕНТРЕ: Опоры L2 готовы! Жми УЛУЧШИТЬ (Оранжевая кнопка) до L3!"
+            : "BUILD IN CENTER: L2 supports ready! Press UPGRADE (Orange button) to L3!";
+        }
+        return isRu
+          ? "ИДИ НА УКАЗАТЕЛЬ: Опоры L2 готовы! Вернись в Центр (0,0) и строй до L3!"
+          : "MOVE TO TARGET: L2 supports ready! Return to Center (0,0) and build to L3!";
+      }
+
+      if (h00 === 1) {
+        const l1Supports = centerNeighbors.filter(key => (state.grid[key]?.currentLevel ?? 0) >= 1).length;
+        if (l1Supports < 2) {
+          if (player.q === 0 && player.r === 0) {
+            return isRu
+              ? `ИДИ НА УКАЗАТЕЛЬ: Сойди с Центра и возведи 2 соседние плиты до уровня L1! Готово: ${l1Supports}/2`
+              : `MOVE TO TARGET: Step off Center and upgrade 2 neighboring tiles to L1! Progress: ${l1Supports}/2`;
+          }
+          return isRu
+            ? `СТРОЙ ОПОРЫ L1: Улучши 2 соседние плиты до уровня L1! Готово: ${l1Supports}/2`
+            : `BUILD L1 SUPPORTS: Upgrade 2 neighboring tiles to Level L1! Progress: ${l1Supports}/2`;
+        }
+        if (player.q === 0 && player.r === 0) {
+          return isRu
+            ? "СТРОЙ В ЦЕНТРЕ: Опоры L1 готовы! Жми УЛУЧШИТЬ (Оранжевая кнопка) до L2!"
+            : "BUILD IN CENTER: L1 supports ready! Press UPGRADE (Orange button) to L2!";
+        }
+        return isRu
+          ? "ИДИ НА УКАЗАТЕЛЬ: Опоры L1 готовы! Вернись в Центр (0,0) и строй до L2!"
+          : "MOVE TO TARGET: L1 supports ready! Return to Center (0,0) and build to L2!";
+      }
+
+      // h00 === 0
+      if (player.q === 0 && player.r === 0) {
+        return isRu
+          ? "СТРОЙ В ЦЕНТРЕ: Жми УЛУЧШИТЬ (Оранжевая кнопка), чтобы заложить фундамент L1!"
+          : "BUILD IN CENTER: Press UPGRADE (Orange button) to build L1 foundation!";
+      }
       return isRu
-        ? `ПОСТРОЙ ПИК L4: Улучши центральный гекс (0,0) до уровня L4! Текущий уровень: L${level}. (Требуется 16 улучшений, 10 материалов дано на старте, добывайте новые материалы из соседних плит).`
-        : `BUILD L4 PEAK: Upgrade the central hex (0,0) to Level L4! Current: L${level}. (Requires 16 upgrades, 10 materials provided on start, mine more materials from adjacent tiles).`;
+        ? "ИДИ НА УКАЗАТЕЛЬ: Встань в Центр (0,0) и заложи фундамент L1!"
+        : "MOVE TO TARGET: Step to Center (0,0) and build L1 foundation!";
     },
     hooks: {
       checkWinCondition: (state) => {

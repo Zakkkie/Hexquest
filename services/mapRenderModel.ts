@@ -90,11 +90,20 @@ export const isObjectiveHexCompleted = (
         }
     }
 
-    // Sim 1.3: Goal L3
+    // Sim 1.3: Recovery & Reactor
     if (activeLevelId === '1.3') {
-        if (objHex.label === 'Goal L3') {
-            return gridCell ? gridCell.currentLevel >= 3 : false;
+        if (player.coins >= 15) return true;
+        if (objHex.q === 0 && objHex.r === 0) {
+            const reactor = grid['0,0'];
+            return (reactor?.recoveryCharges ?? 0) === 0;
         }
+        const hexKey = `${objHex.q},${objHex.r}`;
+        const hex = grid[hexKey];
+        if (hex) {
+            if (player.q === objHex.q && player.r === objHex.r && player.recoveredCurrentHex) return true;
+            if (hex.lastRecoveryUseTime && hex.lastRecoveryUseTime > 0) return true;
+        }
+        return false;
     }
 
     // Sim 1.5: Heal / Deep Mine

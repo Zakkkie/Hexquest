@@ -361,8 +361,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             const hexCell = grid ? grid[getHexKey(cached.q, cached.r)] : undefined;
             const yOffset = getHeightOffset(hexCell ? (hexCell.currentLevel || 0) : 0);
             const stackYOffset = idx * 26;
-            const currentY = basePy - yOffset - 28 - stackYOffset;
-            const floatRise = progress * 32;
+            // getHeightOffset returns negative values for height elevation (e.g. -10 for L0, -20 for L1).
+            // Adding yOffset adjusts for hex surface height, and subtracting 65 places the text above the player head.
+            const currentY = basePy + yOffset - 65 - stackYOffset;
+            const floatRise = progress * 38;
 
             if (cached.container && !cached.container.destroyed) {
                 cached.container.x = basePx; 

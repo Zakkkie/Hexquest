@@ -189,7 +189,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
 
     const recoverDimmed = useMemo(() => {
         if (!activeLevelConfig?.id?.startsWith('1.')) return false;
-        if (activeLevelConfig?.id === '1.6') return false;
+        if (activeLevelConfig?.id === '1.3' || activeLevelConfig?.id === '1.6') return false;
         if (!tutorialHint) return false;
         const upper = tutorialHint.toUpperCase();
         if (upper.includes('ПОБЕДА') || upper.includes('VICTORY')) return true;
@@ -586,7 +586,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'}
                                     disabled={!canUpgrade || isLevel1_1}
                                     dimmed={upgradeDimmed || isLevel1_1}
-                                    pulsate={levelId === '1.0' || levelId === '1.3' || levelId === '1.7' || (canUpgrade && !isPlayerGrowing)}
+                                    pulsate={levelId === '1.0' || levelId === '1.4' || levelId === '1.7' || (canUpgrade && !isPlayerGrowing)}
                                     progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0}
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? 'ring-2 ring-amber-500/30' : ''} !p-0 !m-0`}
                                     title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}
@@ -610,7 +610,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'}
                                     disabled={!recoveryState.canRecover || isLevel1_1}
                                     dimmed={recoverDimmed || isLevel1_1}
-                                    pulsate={levelId === '1.4'}
+                                    pulsate={levelId === '1.3'}
                                     progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0}
                                     className={`${isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''} !p-0 !m-0`}
                                     title={recoverDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : recoverTooltip}
@@ -802,7 +802,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'UPGRADE'} 
                                     disabled={!canUpgrade} 
                                     dimmed={upgradeDimmed}
-                                    pulsate={levelId === '1.0' || levelId === '1.3' || levelId === '1.7' || (canUpgrade && !isPlayerGrowing)} 
+                                    pulsate={levelId === '1.0' || levelId === '1.4' || levelId === '1.7' || (canUpgrade && !isPlayerGrowing)} 
                                     progress={timeData.mode === 'UPGRADE' ? timeData.percent : 0} 
                                     className={isPlayerGrowing && playerGrowthIntent === 'UPGRADE' ? '-translate-y-0.5 ring-2 ring-amber-500/30 font-bold' : ''} 
                                     title={upgradeDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : upgradeTooltip}
@@ -831,7 +831,7 @@ const BottomActionDock: React.FC<BottomActionDockProps> = ({ onCenterPlayer, onI
                                     active={isPlayerGrowing && playerGrowthIntent === 'RECOVER'} 
                                     disabled={!recoveryState.canRecover} 
                                     dimmed={recoverDimmed}
-                                    pulsate={levelId === '1.4'}
+                                    pulsate={levelId === '1.3'}
                                     progress={timeData.mode === 'RECOVERY' ? timeData.percent : 0} 
                                     className={isPlayerGrowing && playerGrowthIntent === 'RECOVER' ? 'ring-2 ring-blue-500/30' : ''} 
                                     title={recoverDimmed ? (language === 'RU' ? "Заблокировано обучением" : "Locked in training") : recoverTooltip}

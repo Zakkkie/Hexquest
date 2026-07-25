@@ -701,8 +701,8 @@ export const createGameplaySlice = (
         }
 
         // FLOATING EFFECTS
-        if (event.entityId || ['HEX_COLLAPSE', 'METEOR_STRIKE', 'PLAYER_HIT_BY_METEOR'].includes(event.type)) {
-          const entity = isPlayer ? result.state.player : result.state.bots.find(b => b.id === event.entityId);
+        if (event.entityId || ['HEX_COLLAPSE', 'METEOR_STRIKE', 'PLAYER_HIT_BY_METEOR', 'ACTION_DENIED', 'ERROR'].includes(event.type)) {
+          const entity = isPlayer ? result.state.player : (result.state.bots.find(b => b.id === event.entityId) || result.state.player);
           const targetQ = event.data?.q !== undefined ? Number(event.data.q) : (entity?.q || 0);
           const targetR = event.data?.r !== undefined ? Number(event.data.r) : (entity?.r || 0);
 
@@ -754,6 +754,12 @@ export const createGameplaySlice = (
       // IMMUTABLE EFFECTS UPDATE (Optimized & Safe)
       const validEffects = result.state.effects.filter(e => e.startTime + e.lifetime > now);
       const finalEffects = effectPool.addBatch(validEffects, newEffectsData);
+
+      // Persist effects into engine state so subsequent ticks retain them throughout lifetime
+      result.state.effects = finalEffects;
+      if (engine?.state) {
+        engine.state.effects = finalEffects;
+      }
 
       // SINGLE SET CALL PER TICK (Optimized Rendering)
       set((curr) => {
