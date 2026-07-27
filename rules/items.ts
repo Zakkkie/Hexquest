@@ -1,4 +1,3 @@
-
 import { Item, ItemRarity, ItemEffectType, NegativeEffectType, Language, Difficulty } from '../types';
 
 interface ItemDefinition {
@@ -8,6 +7,7 @@ interface ItemDefinition {
     description: Record<Language, string>;
     visualType: 'CYLINDER' | 'CHIP' | 'BOX' | 'PATCH' | 'SCANNER' | 'PRISM' | 'DRILL' | 'GENERATOR' | 'PARTICLES' | 'SPINE' | 'CORE' | 'SKULL' | 'ARMOR' | 'BOOTS' | 'RING' | 'NECKLACE' | 'HELMET' | 'FOOD' | 'POTION' | 'GEM' | 'BAR' | 'SWORD' | 'DAGGER' | 'AXE' | 'MACE' | 'SPEAR' | 'STAFF' | 'BOW' | 'GUN' | 'FIST' | 'THROWING' | 'BOOK';
     visualColor: string;
+    iconUrl?: string;
     effectType: ItemEffectType;
     effectValue: number;
     effectDuration?: number; // ms
@@ -22,10 +22,11 @@ interface ItemDefinition {
     equipSlot?: 'head' | 'body' | 'feet' | 'necklace' | 'ring' | 'tool' | 'artifact';
     maxHpBonus?: number;
     maxEnergyBonus?: number;
-    [key: string]: any;
+    // Removed [key: string]: any to enforce strict typing
 }
 
 export const ITEM_REGISTRY: ItemDefinition[] = [
+    // --- ARMOR ---
     {
         idPrefix: 'iron_plate',
         rarity: 'COMMON',
@@ -34,8 +35,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualType: 'ARMOR',
         visualColor: '#94a3b8',
         iconUrl: 'A_Armour01.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
+        effectType: 'INCREASE_MAX_HP', 
+        effectValue: 15,
         effectLabel: { EN: '+15 Max HP', RU: '+15 Макс. Здоровье' },
         negativeEffectType: 'LOSE_CREDITS',
         negativeEffectValue: 10,
@@ -51,8 +52,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualType: 'ARMOR',
         visualColor: '#cbd5e1',
         iconUrl: 'A_Armour02.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
+        effectType: 'INCREASE_MAX_HP',
+        effectValue: 30,
         effectLabel: { EN: '+30 Max HP', RU: '+30 Макс. Здоровье' },
         negativeEffectType: 'STATUS_FATIGUE',
         negativeEffectDuration: 30000,
@@ -68,8 +69,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualType: 'ARMOR',
         visualColor: '#475569',
         iconUrl: 'A_Armor04.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
+        effectType: 'INCREASE_MAX_HP',
+        effectValue: 50,
         effectLabel: { EN: '+50 Max HP', RU: '+50 Макс. Здоровье' },
         negativeEffectType: 'STATUS_FATIGUE',
         negativeEffectDuration: 60000,
@@ -77,179 +78,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         equipSlot: 'body',
         maxHpBonus: 50
     },
-    {
-        idPrefix: 'leather_boots',
-        rarity: 'COMMON',
-        name: { EN: 'Leather Boots', RU: 'Кожаные Сапоги' },
-        description: { EN: 'Simple leather boots. +5 Max Energy.', RU: 'Простые кожаные сапоги. +5 Макс. Энергии.' },
-        visualType: 'BOOTS',
-        visualColor: '#78350f',
-        iconUrl: 'A_Shoes01.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
-        effectLabel: { EN: '+5 Max Energy', RU: '+5 Макс. Энергии' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 5,
-        negativeEffectLabel: { EN: 'Maintenance (-5 Cr)', RU: 'Обслуживание (-5 Кр)' },
-        equipSlot: 'feet',
-        maxEnergyBonus: 5
-    },
-    {
-        idPrefix: 'tutorial_mark',
-        rarity: 'RARE',
-        name: { EN: 'Syndicate Mark', RU: 'Метка Синдиката' },
-        description: { EN: 'A proof of completing a simulation level.', RU: 'Доказательство прохождения уровня симуляции.' },
-        visualType: 'CHIP',
-        visualColor: '#f59e0b',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
-        effectLabel: { EN: 'Proof of Rank', RU: 'Доказательство Ранга' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 0,
-        negativeEffectLabel: { EN: '', RU: '' },
-    },
-    {
-        idPrefix: 'speed_boots',
-        rarity: 'UNCOMMON',
-        name: { EN: 'Speed Boots', RU: 'Сапоги Скорости' },
-        description: { EN: 'Aerodynamic boots. +15 Max Energy.', RU: 'Аэродинамичные сапоги. +15 Макс. Энергии.' },
-        visualType: 'BOOTS',
-        visualColor: '#38bdf8',
-        iconUrl: 'A_Shoes03.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
-        effectLabel: { EN: '+15 Max Energy', RU: '+15 Макс. Энергии' },
-        negativeEffectType: 'STATUS_FATIGUE',
-        negativeEffectDuration: 15000,
-        negativeEffectLabel: { EN: 'Overheat (Fatigue)', RU: 'Перегрев (Усталость)' },
-        equipSlot: 'feet',
-        maxEnergyBonus: 15
-    },
-    {
-        idPrefix: 'silver_ring',
-        rarity: 'COMMON',
-        name: { EN: 'Silver Ring', RU: 'Серебряное Кольцо' },
-        description: { EN: 'A simple silver band. +20 Credits.', RU: 'Простое серебряное кольцо. +20 Кредитов.' },
-        visualType: 'RING',
-        visualColor: '#94a3b8',
-        iconUrl: 'Ac_Ring01.png',
-        effectType: 'ADD_CREDITS',
-        effectValue: 20,
-        effectLabel: { EN: '+20 Credits', RU: '+20 Кредитов' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 1,
-        negativeEffectLabel: { EN: 'Distraction (-1 Move)', RU: 'Отвлечение (-1 Ход)' },
-        equipSlot: 'ring'
-    },
-    {
-        idPrefix: 'ruby_ring',
-        rarity: 'UNCOMMON',
-        name: { EN: 'Ruby Ring', RU: 'Кольцо с Рубином' },
-        description: { EN: 'A ring with a small ruby. +50 Credits.', RU: 'Кольцо с небольшим рубином. +50 Кредитов.' },
-        visualType: 'RING',
-        visualColor: '#f43f5e',
-        iconUrl: 'Ac_Ring02.png',
-        effectType: 'ADD_CREDITS',
-        effectValue: 50,
-        effectLabel: { EN: '+50 Credits', RU: '+50 Кредитов' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 2,
-        negativeEffectLabel: { EN: 'Heavy (-2 Moves)', RU: 'Тяжелое (-2 Хода)' },
-        equipSlot: 'ring'
-    },
-    {
-        idPrefix: 'emerald_necklace',
-        rarity: 'UNCOMMON',
-        name: { EN: 'Emerald Necklace', RU: 'Изумрудное Ожерелье' },
-        description: { EN: 'A necklace with an emerald. +5% Stability.', RU: 'Ожерелье с изумрудом. +5% Стабильности.' },
-        visualType: 'NECKLACE',
-        visualColor: '#10b981',
-        iconUrl: 'Ac_Necklace01.png',
-        effectType: 'ADD_ENTROPY',
-        effectValue: 5,
-        effectLabel: { EN: '+5% Stability', RU: '+5% Стабильности' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 20,
-        negativeEffectLabel: { EN: 'Maintenance (-20 Cr)', RU: 'Обслуживание (-20 Кр)' },
-        equipSlot: 'necklace'
-    },
-    {
-        idPrefix: 'diamond_necklace',
-        rarity: 'RARE',
-        name: { EN: 'Diamond Necklace', RU: 'Бриллиантовое Ожерелье' },
-        description: { EN: 'A necklace with a diamond. +15% Stability.', RU: 'Ожерелье с бриллиантом. +15% Стабильности.' },
-        visualType: 'NECKLACE',
-        visualColor: '#f1f5f9',
-        iconUrl: 'Ac_Necklace02.png',
-        effectType: 'ADD_ENTROPY',
-        effectValue: 15,
-        effectLabel: { EN: '+15% Stability', RU: '+15% Стабильности' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 50,
-        negativeEffectLabel: { EN: 'Expensive (-50 Cr)', RU: 'Дорогое (-50 Кр)' },
-        equipSlot: 'necklace'
-    },
-    {
-        idPrefix: 'fuel_cell',
-        rarity: 'COMMON',
-        name: { EN: 'Spent Fuel Cell', RU: 'Отработанный Элемент' },
-        description: { EN: 'Dull glass cylinder with green residue.', RU: 'Потускневший цилиндр с осадком.' },
-        visualType: 'CYLINDER',
-        visualColor: '#4ade80',
-        iconUrl: 'I_Bottle01.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 3,
-        effectLabel: { EN: '+3 Moves', RU: '+3 Хода' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 15,
-        negativeEffectLabel: { EN: '-15 Credits (Fine)', RU: '-15 Кредитов (Штраф)' }
-    },
-    {
-        idPrefix: 'data_disc',
-        rarity: 'COMMON',
-        name: { EN: 'Fragmented Data Disc', RU: 'Битый Диск Данных' },
-        description: { EN: 'Orange chip with a crack.', RU: 'Оранжевый чип с трещиной.' },
-        visualType: 'CHIP',
-        visualColor: '#fb923c',
-        iconUrl: 'I_Scroll.png',
-        effectType: 'ADD_CREDITS',
-        effectValue: 15,
-        effectLabel: { EN: '+15 Credits', RU: '+15 Кредитов' },
-        negativeEffectType: 'RESET_MATERIALS',
-        negativeEffectLabel: { EN: 'System Error: Mat=0', RU: 'Сбой: Материалы=0' }
-    },
-    {
-        idPrefix: 'raw_container',
-        rarity: 'COMMON',
-        name: { EN: 'Raw Container', RU: 'Грубый Контейнер' },
-        description: { EN: 'Rusty metal box, dark inside.', RU: 'Ржавый ящик, внутри темнота.' },
-        visualType: 'BOX',
-        visualColor: '#78350f',
-        iconUrl: 'I_Chest01.png',
-        effectType: 'ADD_MATERIAL',
-        effectValue: 2,
-        effectLabel: { EN: '+2 Material', RU: '+2 Материала' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 3,
-        negativeEffectLabel: { EN: '-3 Moves (Exhaustion)', RU: '-3 Хода (Вскрытие)' }
-    },
-    {
-        idPrefix: 'reality_patch',
-        rarity: 'COMMON',
-        name: { EN: 'Reality Patch', RU: 'Лоскут Реальности' },
-        description: { EN: 'Tape made of frozen light.', RU: 'Скотч из застывшего света.' },
-        visualType: 'PATCH',
-        visualColor: '#60a5fa',
-        iconUrl: 'I_Fabric.png',
-        effectType: 'ADD_ENTROPY',
-        effectValue: 3,
-        effectLabel: { EN: '+3% Stability', RU: '+3% Энтропии' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 10,
-        negativeEffectLabel: { EN: '-10 Credits (Waste)', RU: '-10 Кредитов' }
-    },
-
-    // --- ARMOR & CLOTHING ---
     {
         idPrefix: 'armor_light',
         rarity: 'COMMON',
@@ -298,8 +126,93 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectLabel: { EN: 'Very Heavy (Fatigue)', RU: 'Очень тяжелый (Усталость)' },
         equipSlot: 'body'
     },
+    {
+        idPrefix: 'ablative_armor',
+        rarity: 'UNCOMMON',
+        name: { EN: 'Ablative Armor', RU: 'Абляционная Броня' },
+        description: { EN: 'Ceramic plates. +10 Max HP.', RU: 'Керамические плиты. +10 Макс. Здоровье.' },
+        visualType: 'ARMOR',
+        visualColor: '#94a3b8',
+        iconUrl: 'A_Armour03.png',
+        effectType: 'INCREASE_MAX_HP',
+        effectValue: 10,
+        effectLabel: { EN: '+10 Max HP', RU: '+10 Макс. Здоровье' },
+        negativeEffectType: 'STATUS_FATIGUE',
+        negativeEffectDuration: 60000,
+        negativeEffectLabel: { EN: 'Heavy (Fatigue)', RU: 'Тяжелая (Усталость)' },
+        equipSlot: 'body',
+        maxHpBonus: 10
+    },
+    {
+        idPrefix: 'armor_heavy_04',
+        rarity: 'RARE',
+        name: { EN: 'Heavy Plate Armor', RU: 'Тяжелый Доспех' },
+        description: { EN: 'Superior protection.', RU: 'Превосходная защита.' },
+        visualType: 'ARMOR',
+        visualColor: '#475569',
+        iconUrl: 'A_Armor04.png',
+        effectType: 'INCREASE_MAX_HP',
+        effectValue: 40,
+        effectLabel: { EN: '+40 Max HP', RU: '+40 Макс. Здоровье' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 2,
+        negativeEffectLabel: { EN: '-2 Moves', RU: '-2 Хода' },
+        equipSlot: 'body',
+        maxHpBonus: 40
+    },
+    {
+        idPrefix: 'armor_heavy_05',
+        rarity: 'LEGENDARY',
+        name: { EN: 'Royal Guardian Plate', RU: 'Королевский Доспех' },
+        description: { EN: 'The ultimate defense.', RU: 'Ультимативная защита.' },
+        visualType: 'ARMOR',
+        visualColor: '#fbbf24',
+        iconUrl: 'A_Armor05.png',
+        effectType: 'INCREASE_MAX_HP',
+        effectValue: 60,
+        effectLabel: { EN: '+60 Max HP', RU: '+60 Макс. Здоровье' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 3,
+        negativeEffectLabel: { EN: '-3 Moves', RU: '-3 Хода' },
+        equipSlot: 'body',
+        maxHpBonus: 60
+    },
 
-    // --- SHOES ---
+    // --- BOOTS ---
+    {
+        idPrefix: 'leather_boots',
+        rarity: 'COMMON',
+        name: { EN: 'Leather Boots', RU: 'Кожаные Сапоги' },
+        description: { EN: 'Simple leather boots. +5 Max Energy.', RU: 'Простые кожаные сапоги. +5 Макс. Энергии.' },
+        visualType: 'BOOTS',
+        visualColor: '#78350f',
+        iconUrl: 'A_Shoes01.png',
+        effectType: 'INCREASE_MAX_ENERGY',
+        effectValue: 5,
+        effectLabel: { EN: '+5 Max Energy', RU: '+5 Макс. Энергии' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 5,
+        negativeEffectLabel: { EN: 'Maintenance (-5 Cr)', RU: 'Обслуживание (-5 Кр)' },
+        equipSlot: 'feet',
+        maxEnergyBonus: 5
+    },
+    {
+        idPrefix: 'speed_boots',
+        rarity: 'UNCOMMON',
+        name: { EN: 'Speed Boots', RU: 'Сапоги Скорости' },
+        description: { EN: 'Aerodynamic boots. +15 Max Energy.', RU: 'Аэродинамичные сапоги. +15 Макс. Энергии.' },
+        visualType: 'BOOTS',
+        visualColor: '#38bdf8',
+        iconUrl: 'A_Shoes03.png',
+        effectType: 'INCREASE_MAX_ENERGY',
+        effectValue: 15,
+        effectLabel: { EN: '+15 Max Energy', RU: '+15 Макс. Энергии' },
+        negativeEffectType: 'STATUS_FATIGUE',
+        negativeEffectDuration: 15000,
+        negativeEffectLabel: { EN: 'Overheat (Fatigue)', RU: 'Перегрев (Усталость)' },
+        equipSlot: 'feet',
+        maxEnergyBonus: 15
+    },
     {
         idPrefix: 'shoes_leather',
         rarity: 'COMMON',
@@ -335,6 +248,70 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
 
     // --- ACCESSORIES ---
     {
+        idPrefix: 'silver_ring',
+        rarity: 'COMMON',
+        name: { EN: 'Silver Ring', RU: 'Серебряное Кольцо' },
+        description: { EN: 'A simple silver band. +20 Credits.', RU: 'Простое серебряное кольцо. +20 Кредитов.' },
+        visualType: 'RING',
+        visualColor: '#94a3b8',
+        iconUrl: 'Ac_Ring01.png',
+        effectType: 'ADD_CREDITS',
+        effectValue: 20,
+        effectLabel: { EN: '+20 Credits', RU: '+20 Кредитов' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 1,
+        negativeEffectLabel: { EN: 'Distraction (-1 Move)', RU: 'Отвлечение (-1 Ход)' },
+        equipSlot: 'ring'
+    },
+    {
+        idPrefix: 'ruby_ring',
+        rarity: 'UNCOMMON',
+        name: { EN: 'Ruby Ring', RU: 'Кольцо с Рубином' },
+        description: { EN: 'A ring with a small ruby. +50 Credits.', RU: 'Кольцо с небольшим рубином. +50 Кредитов.' },
+        visualType: 'RING',
+        visualColor: '#f43f5e',
+        iconUrl: 'Ac_Ring02.png',
+        effectType: 'ADD_CREDITS',
+        effectValue: 50,
+        effectLabel: { EN: '+50 Credits', RU: '+50 Кредитов' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 2,
+        negativeEffectLabel: { EN: 'Heavy (-2 Moves)', RU: 'Тяжелое (-2 Хода)' },
+        equipSlot: 'ring'
+    },
+    {
+        idPrefix: 'emerald_necklace',
+        rarity: 'UNCOMMON',
+        name: { EN: 'Emerald Necklace', RU: 'Изумрудное Ожерелье' },
+        description: { EN: 'A necklace with an emerald. +5% Stability.', RU: 'Ожерелье с изумрудом. +5% Стабильности.' },
+        visualType: 'NECKLACE',
+        visualColor: '#10b981',
+        iconUrl: 'Ac_Necklace01.png',
+        effectType: 'ADD_ENTROPY',
+        effectValue: 5,
+        effectLabel: { EN: '+5% Stability', RU: '+5% Стабильности' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 5,
+        negativeEffectLabel: { EN: 'Maintenance (-5 Cr)', RU: 'Обслуживание (-5 Кр)' },
+        equipSlot: 'necklace'
+    },
+    {
+        idPrefix: 'diamond_necklace',
+        rarity: 'RARE',
+        name: { EN: 'Diamond Necklace', RU: 'Бриллиантовое Ожерелье' },
+        description: { EN: 'A necklace with a diamond. +15% Stability.', RU: 'Ожерелье с бриллиантом. +15% Стабильности.' },
+        visualType: 'NECKLACE',
+        visualColor: '#f1f5f9',
+        iconUrl: 'Ac_Necklace02.png',
+        effectType: 'ADD_ENTROPY',
+        effectValue: 15,
+        effectLabel: { EN: '+15% Stability', RU: '+15% Стабильности' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 10,
+        negativeEffectLabel: { EN: 'Maintenance (-10 Cr)', RU: 'Обслуживание (-10 Кр)' },
+        equipSlot: 'necklace'
+    },
+    {
         idPrefix: 'ring_gold',
         rarity: 'UNCOMMON',
         name: { EN: 'Gold Ring', RU: 'Золотое Кольцо' },
@@ -366,6 +343,40 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectLabel: { EN: 'Expensive (-40 Cr)', RU: 'Дорогое (-40 Кр)' },
         equipSlot: 'necklace'
     },
+    {
+        idPrefix: 'ring_gold_01',
+        rarity: 'UNCOMMON',
+        name: { EN: 'Gold Ring', RU: 'Золотое Кольцо' },
+        description: { EN: 'A simple gold ring.', RU: 'Простое золотое кольцо.' },
+        visualType: 'RING',
+        visualColor: '#fbbf24',
+        iconUrl: 'Ac_Ring01.png',
+        effectType: 'INCREASE_MAX_ENERGY',
+        effectValue: 10,
+        effectLabel: { EN: '+10 Max Energy', RU: '+10 Макс. Энергия' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 50,
+        negativeEffectLabel: { EN: 'Expensive (-50 Cr)', RU: 'Дорогое (-50 Кр)' },
+        equipSlot: 'ring',
+        maxEnergyBonus: 10
+    },
+    {
+        idPrefix: 'necklace_silver_01',
+        rarity: 'RARE',
+        name: { EN: 'Silver Necklace', RU: 'Серебряное Ожерелье' },
+        description: { EN: 'A beautiful silver necklace.', RU: 'Красивое серебряное ожерелье.' },
+        visualType: 'NECKLACE',
+        visualColor: '#cbd5e1',
+        iconUrl: 'Ac_Necklace01.png',
+        effectType: 'INCREASE_MAX_ENERGY',
+        effectValue: 20,
+        effectLabel: { EN: '+20 Max Energy', RU: '+20 Макс. Энергия' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 100,
+        negativeEffectLabel: { EN: 'Expensive (-100 Cr)', RU: 'Дорогое (-100 Кр)' },
+        equipSlot: 'necklace',
+        maxEnergyBonus: 20
+    },
 
     // --- HEADGEAR ---
     {
@@ -384,6 +395,57 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectDuration: 10000,
         negativeEffectLabel: { EN: 'Obscured Vision', RU: 'Ограниченный Обзор' },
         equipSlot: 'head'
+    },
+    {
+        idPrefix: 'rusted_scanner',
+        rarity: 'COMMON',
+        name: { EN: 'Rusted Scanner', RU: 'Ржавый Сканер' },
+        description: { EN: 'Old screen taped to a handle. Permanent Range Boost.', RU: 'Старый экран. Увеличивает радиус обзора.' },
+        visualType: 'SCANNER',
+        visualColor: '#94a3b8',
+        iconUrl: 'I_Telescope.png',
+        effectType: 'STATUS_SCANNER_BUFF',
+        effectValue: 1, 
+        effectDuration: 86400000,
+        effectLabel: { EN: 'Active Scanner (Range +1)', RU: 'Активный Сканер (Радиус +1)' },
+        negativeEffectType: 'LOSE_RANK',
+        negativeEffectValue: 1,
+        negativeEffectLabel: { EN: '-1 Rank (Malfunction)', RU: '-1 Ранг (Ожог)' },
+        equipSlot: 'head'
+    },
+    {
+        idPrefix: 'scrap_visor',
+        rarity: 'COMMON',
+        name: { EN: 'Scrap Visor', RU: 'Визор из Металлолома' },
+        description: { EN: 'Protects eyes from dust. +1 Max HP.', RU: 'Защищает глаза от пыли. +1 Макс. Здоровье.' },
+        visualType: 'HELMET',
+        visualColor: '#64748b',
+        iconUrl: 'C_Elm03.png',
+        effectType: 'INCREASE_MAX_HP',
+        effectValue: 1,
+        effectLabel: { EN: '+1 Max HP', RU: '+1 Макс. Здоровье' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 5,
+        negativeEffectLabel: { EN: 'Uncomfortable (-5 Cr)', RU: 'Неудобно (-5 Кр)' },
+        equipSlot: 'head',
+        maxHpBonus: 1
+    },
+    {
+        idPrefix: 'helm_knight',
+        rarity: 'UNCOMMON',
+        name: { EN: 'Knight Helmet', RU: 'Рыцарский Шлем' },
+        description: { EN: 'Protects the head.', RU: 'Защищает голову.' },
+        visualType: 'HELMET',
+        visualColor: '#94a3b8',
+        iconUrl: 'C_Elm01.png',
+        effectType: 'INCREASE_MAX_HP',
+        effectValue: 10,
+        effectLabel: { EN: '+10 Max HP', RU: '+10 Макс. Здоровье' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 1,
+        negativeEffectLabel: { EN: '-1 Move', RU: '-1 Ход' },
+        equipSlot: 'head',
+        maxHpBonus: 10
     },
 
     // --- FOOD & CONSUMABLES ---
@@ -432,6 +494,66 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectDuration: 15000,
         negativeEffectLabel: { EN: 'Crash (15s)', RU: 'Откат (15с)' }
     },
+    {
+        idPrefix: 'potion_blue_01',
+        rarity: 'COMMON',
+        name: { EN: 'Blue Potion', RU: 'Синее Зелье' },
+        description: { EN: 'Restores energy.', RU: 'Восстанавливает энергию.' },
+        visualType: 'POTION',
+        visualColor: '#3b82f6',
+        iconUrl: 'P_Blue01.png',
+        effectType: 'ADD_MOVES',
+        effectValue: 10,
+        effectLabel: { EN: '+10 Moves', RU: '+10 Ходов' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 5,
+        negativeEffectLabel: { EN: '-5 Credits', RU: '-5 Кредитов' }
+    },
+    {
+        idPrefix: 'potion_red_01',
+        rarity: 'COMMON',
+        name: { EN: 'Red Potion', RU: 'Красное Зелье' },
+        description: { EN: 'Restores health.', RU: 'Восстанавливает здоровье.' },
+        visualType: 'POTION',
+        visualColor: '#ef4444',
+        iconUrl: 'P_Red01.png',
+        effectType: 'ADD_MOVES',
+        effectValue: 0,
+        effectLabel: { EN: '+20 HP', RU: '+20 ОЗ' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 2,
+        negativeEffectLabel: { EN: '-2 Moves', RU: '-2 Хода' }
+    },
+    {
+        idPrefix: 'food_cherry',
+        rarity: 'COMMON',
+        name: { EN: 'Fresh Cherries', RU: 'Свежая Вишня' },
+        description: { EN: 'A healthy snack.', RU: 'Здоровый перекус.' },
+        visualType: 'FOOD',
+        visualColor: '#ef4444',
+        iconUrl: 'I_C_Cherry.png',
+        effectType: 'ADD_MOVES',
+        effectValue: 3,
+        effectLabel: { EN: '+3 Moves', RU: '+3 Хода' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 2,
+        negativeEffectLabel: { EN: '-2 Credits', RU: '-2 Кредитов' }
+    },
+    {
+        idPrefix: 'food_bread_02',
+        rarity: 'COMMON',
+        name: { EN: 'Warm Bread', RU: 'Теплый Хлеб' },
+        description: { EN: 'Filling and tasty.', RU: 'Сытно и вкусно.' },
+        visualType: 'FOOD',
+        visualColor: '#b45309',
+        iconUrl: 'I_C_Bread.png',
+        effectType: 'ADD_MOVES',
+        effectValue: 5,
+        effectLabel: { EN: '+5 Moves', RU: '+5 Ходов' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 4,
+        negativeEffectLabel: { EN: '-4 Credits', RU: '-4 Кредитов' }
+    },
 
     // --- GEMS & MATERIALS ---
     {
@@ -465,56 +587,113 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectLabel: { EN: 'Greed (30s)', RU: 'Жадность (30с)' }
     },
     {
-        idPrefix: 'rusted_scanner',
-        rarity: 'COMMON',
-        name: { EN: 'Rusted Scanner', RU: 'Ржавый Сканер' },
-        description: { EN: 'Old screen taped to a handle. Permanent Range Boost.', RU: 'Старый экран. Увеличивает радиус обзора.' },
-        visualType: 'SCANNER',
-        visualColor: '#94a3b8',
-        iconUrl: 'I_Telescope.png',
-        effectType: 'STATUS_SCANNER_BUFF',
-        effectValue: 1, 
-        effectDuration: 86400000, // 24 Hours (Effectively Permanent)
-        effectLabel: { EN: 'Active Scanner (Range +1)', RU: 'Активный Сканер (Радиус +1)' },
-        negativeEffectType: 'LOSE_RANK',
-        negativeEffectValue: 1,
-        negativeEffectLabel: { EN: '-1 Rank (Malfunction)', RU: '-1 Ранг (Ожог)' },
-        equipSlot: 'head'
-    },
-    {
-        idPrefix: 'scrap_visor',
-        rarity: 'COMMON',
-        name: { EN: 'Scrap Visor', RU: 'Визор из Металлолома' },
-        description: { EN: 'Protects eyes from dust. +1 Max HP.', RU: 'Защищает глаза от пыли. +1 Макс. Здоровье.' },
-        visualType: 'HELMET',
-        visualColor: '#64748b',
-        iconUrl: 'C_Elm03.png',
-        effectType: 'ADD_MOVES', // Placeholder, handled by equipment logic
-        effectValue: 0,
-        effectLabel: { EN: '+1 Max HP', RU: '+1 Макс. Здоровье' },
-        negativeEffectType: 'LOSE_CREDITS',
+        idPrefix: 'mat_gold_bar_02',
+        rarity: 'RARE',
+        name: { EN: 'Gold Bar', RU: 'Золотой Слиток' },
+        description: { EN: 'Pure gold.', RU: 'Чистое золото.' },
+        visualType: 'BAR',
+        visualColor: '#fbbf24',
+        iconUrl: 'I_GoldBar.png',
+        effectType: 'ADD_CREDITS',
+        effectValue: 500,
+        effectLabel: { EN: '+500 Credits', RU: '+500 Кредитов' },
+        negativeEffectType: 'LOSE_MOVES',
         negativeEffectValue: 5,
-        negativeEffectLabel: { EN: 'Uncomfortable (-5 Cr)', RU: 'Неудобно (-5 Кр)' },
-        equipSlot: 'head',
-        maxHpBonus: 1
+        negativeEffectLabel: { EN: 'Heavy (-5 Moves)', RU: 'Тяжелый (-5 Ходов)' }
     },
     {
-        idPrefix: 'ablative_armor',
-        rarity: 'UNCOMMON',
-        name: { EN: 'Ablative Armor', RU: 'Абляционная Броня' },
-        description: { EN: 'Ceramic plates. +10 Max HP.', RU: 'Керамические плиты. +10 Макс. Здоровье.' },
-        visualType: 'ARMOR',
-        visualColor: '#94a3b8',
-        iconUrl: 'A_Armour03.png',
+        idPrefix: 'mat_ruby',
+        rarity: 'RARE',
+        name: { EN: 'Ruby', RU: 'Рубин' },
+        description: { EN: 'A precious red gem.', RU: 'Драгоценный красный камень.' },
+        visualType: 'GEM',
+        visualColor: '#ef4444',
+        iconUrl: 'I_Ruby.png',
+        effectType: 'ADD_CREDITS',
+        effectValue: 1000,
+        effectLabel: { EN: '+1000 Credits', RU: '+1000 Кредитов' },
+        negativeEffectType: 'LOSE_ENTROPY',
+        negativeEffectValue: 5,
+        negativeEffectLabel: { EN: '-5% Stability', RU: '-5% Стабильности' }
+    },
+
+    // --- CONSUMABLES / MISC ---
+    {
+        idPrefix: 'tutorial_mark',
+        rarity: 'RARE',
+        name: { EN: 'Syndicate Mark', RU: 'Метка Синдиката' },
+        description: { EN: 'A proof of completing a simulation level.', RU: 'Доказательство прохождения уровня симуляции.' },
+        visualType: 'CHIP',
+        visualColor: '#f59e0b',
+        iconUrl: 'I_Mark.png',
         effectType: 'ADD_MOVES',
         effectValue: 0,
-        effectLabel: { EN: '+10 Max HP', RU: '+10 Макс. Здоровье' },
-        negativeEffectType: 'STATUS_FATIGUE',
-        negativeEffectDuration: 60000,
-        negativeEffectLabel: { EN: 'Heavy (Fatigue)', RU: 'Тяжелая (Усталость)' },
-        equipSlot: 'body',
-        maxHpBonus: 10
+        effectLabel: { EN: 'Proof of Rank', RU: 'Доказательство Ранга' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 0,
+        negativeEffectLabel: { EN: '', RU: '' },
     },
+    {
+        idPrefix: 'fuel_cell',
+        rarity: 'COMMON',
+        name: { EN: 'Spent Fuel Cell', RU: 'Отработанный Элемент' },
+        description: { EN: 'Dull glass cylinder with green residue.', RU: 'Потускневший цилиндр с осадком.' },
+        visualType: 'CYLINDER',
+        visualColor: '#4ade80',
+        iconUrl: 'I_Bottle01.png',
+        effectType: 'ADD_MOVES',
+        effectValue: 3,
+        effectLabel: { EN: '+3 Moves', RU: '+3 Хода' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 5,
+        negativeEffectLabel: { EN: '-5 Credits (Fine)', RU: '-5 Кредитов (Штраф)' }
+    },
+    {
+        idPrefix: 'data_disc',
+        rarity: 'COMMON',
+        name: { EN: 'Fragmented Data Disc', RU: 'Битый Диск Данных' },
+        description: { EN: 'Orange chip with a crack.', RU: 'Оранжевый чип с трещиной.' },
+        visualType: 'CHIP',
+        visualColor: '#fb923c',
+        iconUrl: 'I_Scroll.png',
+        effectType: 'ADD_CREDITS',
+        effectValue: 15,
+        effectLabel: { EN: '+15 Credits', RU: '+15 Кредитов' },
+        negativeEffectType: 'RESET_MATERIALS',
+        negativeEffectLabel: { EN: 'System Error: Mat=0', RU: 'Сбой: Материалы=0' }
+    },
+    {
+        idPrefix: 'raw_container',
+        rarity: 'COMMON',
+        name: { EN: 'Raw Container', RU: 'Грубый Контейнер' },
+        description: { EN: 'Rusty metal box, dark inside.', RU: 'Ржавый ящик, внутри темнота.' },
+        visualType: 'BOX',
+        visualColor: '#78350f',
+        iconUrl: 'I_Chest01.png',
+        effectType: 'ADD_MATERIAL',
+        effectValue: 2,
+        effectLabel: { EN: '+2 Material', RU: '+2 Материала' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 1,
+        negativeEffectLabel: { EN: '-1 Move (Exhaustion)', RU: '-1 Ход (Вскрытие)' }
+    },
+    {
+        idPrefix: 'reality_patch',
+        rarity: 'COMMON',
+        name: { EN: 'Reality Patch', RU: 'Лоскут Реальности' },
+        description: { EN: 'Tape made of frozen light.', RU: 'Скотч из застывшего света.' },
+        visualType: 'PATCH',
+        visualColor: '#60a5fa',
+        iconUrl: 'I_Fabric.png',
+        effectType: 'ADD_ENTROPY',
+        effectValue: 3,
+        effectLabel: { EN: '+3% Stability', RU: '+3% Энтропии' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 2,
+        negativeEffectLabel: { EN: '-2 Credits (Waste)', RU: '-2 Кредита' }
+    },
+
+    // --- TOOLS & ARTIFACTS ---
     {
         idPrefix: 'plasma_drill',
         rarity: 'RARE',
@@ -540,8 +719,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualType: 'CORE',
         visualColor: '#0ea5e9',
         iconUrl: 'I_Clock.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
+        effectType: 'INCREASE_MAX_ENERGY',
+        effectValue: 20,
         effectLabel: { EN: '+20 Max Energy', RU: '+20 Макс. Энергии' },
         negativeEffectType: 'FULL_RESET',
         negativeEffectLabel: { EN: 'Time Paradox', RU: 'Временной Парадокс' },
@@ -556,8 +735,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualType: 'PARTICLES',
         visualColor: '#fbbf24',
         iconUrl: 'I_Jade.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
+        effectType: 'INCREASE_MAX_HP', 
+        effectValue: 25,
         effectLabel: { EN: '+25 HP, +10 Energy', RU: '+25 HP, +10 Энергия' },
         negativeEffectType: 'LOSE_CREDITS',
         negativeEffectValue: 100,
@@ -574,8 +753,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualType: 'CORE',
         visualColor: '#4c1d95',
         iconUrl: 'I_Amethist.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
+        effectType: 'INCREASE_MAX_ENERGY',
+        effectValue: 50,
         effectLabel: { EN: '+50 Energy, -20 HP', RU: '+50 Энергия, -20 HP' },
         negativeEffectType: 'LOSE_ENTROPY',
         negativeEffectValue: 15,
@@ -607,8 +786,8 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualType: 'CYLINDER',
         visualColor: '#3b82f6',
         iconUrl: 'I_Bottle02.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
+        effectType: 'INCREASE_MAX_ENERGY',
+        effectValue: 30,
         effectLabel: { EN: '+30 Max Energy', RU: '+30 Макс. Энергии' },
         negativeEffectType: 'LOSE_MOVES',
         negativeEffectValue: 5,
@@ -624,16 +803,14 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualType: 'PARTICLES',
         visualColor: '#10b981',
         iconUrl: 'I_Chest02.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
+        effectType: 'INCREASE_MAX_HP',
+        effectValue: 40,
         effectLabel: { EN: '+40 Max HP', RU: '+40 Макс. HP' },
         negativeEffectType: 'RESET_MATERIALS',
         negativeEffectLabel: { EN: 'Consumes Materials', RU: 'Потребляет материалы' },
         equipSlot: 'artifact',
         maxHpBonus: 40
     },
-
-    // --- UNCOMMON (Необычные) ---
     {
         idPrefix: 'cargo_prism',
         rarity: 'UNCOMMON',
@@ -646,7 +823,7 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectValue: 1,
         effectLabel: { EN: '+1 Max Storage', RU: '+1 Вместимость' },
         negativeEffectType: 'STATUS_FATIGUE',
-        negativeEffectDuration: 90000, // 90s
+        negativeEffectDuration: 90000,
         negativeEffectLabel: { EN: 'Fatigue (90s)', RU: 'Усталость (90с)' }
     },
     {
@@ -659,7 +836,7 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         iconUrl: 'W_Axe011.png',
         effectType: 'STATUS_GOLD_RUSH',
         effectValue: 2, 
-        effectDuration: 300000, // 5 minutes
+        effectDuration: 300000,
         effectLabel: { EN: 'Gold Rush (5m)', RU: 'Золотая Лихорадка (5м)' },
         negativeEffectType: 'STATUS_BREAKDOWN_RISK',
         negativeEffectDuration: 45000,
@@ -677,7 +854,7 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectValue: 55,
         effectLabel: { EN: '+55 Credits', RU: '+55 Кредитов' },
         negativeEffectType: 'STATUS_MINING_OFFLINE',
-        negativeEffectDuration: 75000, // 75s
+        negativeEffectDuration: 75000,
         negativeEffectLabel: { EN: 'No Income (75s)', RU: 'Нет Дохода (75с)' }
     },
     {
@@ -690,14 +867,12 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         iconUrl: 'I_Telescope.png',
         effectType: 'STATUS_ENTROPY_INVERSION',
         effectValue: 1,
-        effectDuration: 120000, // 2 minutes? Keeping generous for a strong buff. Let's stick to standard or match prompt. Prompt didn't specify duration for Buff, but debuff is 60s. Let's make Buff 60s too.
+        effectDuration: 120000,
         effectLabel: { EN: 'Entropy Inversion', RU: 'Инверсия Энтропии' },
         negativeEffectType: 'STATUS_TUNNEL_VISION',
-        negativeEffectDuration: 60000, // 60s
+        negativeEffectDuration: 60000,
         negativeEffectLabel: { EN: 'Tunnel Vision (60s)', RU: 'Туннельное Зрение (60с)' }
     },
-
-    // --- RARE (Редкие) ---
     {
         idPrefix: 'architect_nanites',
         rarity: 'RARE',
@@ -708,10 +883,10 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         iconUrl: 'I_Opal.png',
         effectType: 'STATUS_FREE_BUILD',
         effectValue: 1, 
-        effectDuration: 300000, // 300s
+        effectDuration: 300000,
         effectLabel: { EN: 'Free Build (5m)', RU: 'Беспл. Стройка (5м)' },
         negativeEffectType: 'LOSE_CREDITS', 
-        negativeEffectValue: 100, // 100% loss marker
+        negativeEffectValue: 100,
         negativeEffectLabel: { EN: 'Greed (-100% Cr)', RU: 'Жадность (-100% Кр)' }
     },
     {
@@ -740,11 +915,9 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectValue: 1,
         effectLabel: { EN: '+1 Inventory Slot', RU: '+1 Слот Инвентаря' },
         negativeEffectType: 'STATUS_SOIL_EATER',
-        negativeEffectDuration: 200000, // 200s
+        negativeEffectDuration: 200000,
         negativeEffectLabel: { EN: 'Soil Eater (200s)', RU: 'Пожиратель (200с)' }
     },
-
-    // --- LEGENDARY (Легендарные) ---
     {
         idPrefix: 'apex_core',
         rarity: 'LEGENDARY',
@@ -753,7 +926,7 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         visualType: 'CORE',
         visualColor: '#f43f5e',
         iconUrl: 'I_Eye.png',
-        effectType: 'GOD_MODE', // Modified behavior in Processor: +10 Rank, +100 Ent, +100 Moves
+        effectType: 'GOD_MODE',
         effectValue: 1,
         effectLabel: { EN: '+Rank, +Moves, +Stability', RU: '+Ранг, +Ходы, +Стаб.' },
         negativeEffectType: 'FULL_RESET',
@@ -771,7 +944,7 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         effectValue: 1000,
         effectLabel: { EN: '+1000 Credits', RU: '+1000 Кредитов' },
         negativeEffectType: 'STATUS_GOLD_CURSE',
-        negativeEffectDuration: 300000, // 5 minutes
+        negativeEffectDuration: 300000,
         negativeEffectLabel: { EN: 'Gold Curse (5m)', RU: 'Проклятие (5м)' }
     },
     {
@@ -790,10 +963,57 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectLabel: { EN: '', RU: '' },
         equipSlot: 'artifact'
     },
+    {
+        idPrefix: 'tool_pickaxe',
+        rarity: 'COMMON',
+        name: { EN: 'Mining Pickaxe', RU: 'Кирка' },
+        description: { EN: 'Essential for digging.', RU: 'Необходима для копания.' },
+        visualType: 'AXE',
+        visualColor: '#64748b',
+        iconUrl: 'W_Axe011.png',
+        effectType: 'BUFF_DIG',
+        effectValue: 2,
+        effectLabel: { EN: 'Mining Luck', RU: 'Удача в добыче' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 3,
+        negativeEffectLabel: { EN: '-3 Moves', RU: '-3 Хода' },
+        equipSlot: 'tool'
+    },
+    {
+        idPrefix: 'artifact_crystal',
+        rarity: 'RARE',
+        name: { EN: 'Energy Crystal', RU: 'Энергетический Кристалл' },
+        description: { EN: 'Vibrates with power.', RU: 'Вибрирует от мощи.' },
+        visualType: 'GEM',
+        visualColor: '#3b82f6',
+        iconUrl: 'I_Crystal01.png',
+        effectType: 'ADD_MOVES',
+        effectValue: 20,
+        effectLabel: { EN: '+20 Moves', RU: '+20 Ходов' },
+        negativeEffectType: 'LOSE_ENTROPY',
+        negativeEffectValue: 8,
+        negativeEffectLabel: { EN: '-8% Stability', RU: '-8% Стабильности' },
+        equipSlot: 'artifact'
+    },
+    {
+        idPrefix: 'skill_fire_01',
+        rarity: 'RARE',
+        name: { EN: 'Fire Essence', RU: 'Эссенция Огня' },
+        description: { EN: 'Warm to the touch.', RU: 'Теплая на ощупь.' },
+        visualType: 'GEM',
+        visualColor: '#ef4444',
+        iconUrl: 'S_Fire01.png',
+        effectType: 'STATUS_GOLD_RUSH',
+        effectValue: 1,
+        effectDuration: 120000,
+        effectLabel: { EN: 'Fire Rush (2m)', RU: 'Огненная Спешка (2м)' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 5,
+        negativeEffectLabel: { EN: '-5 Moves', RU: '-5 Ходов' },
+        equipSlot: 'artifact'
+    },
 
-    // --- WEAPONS (Оружие) ---
-    
-    // Daggers (Common/Uncommon)
+    // --- WEAPONS ---
     {
         idPrefix: 'dagger_rusty',
         rarity: 'COMMON',
@@ -840,8 +1060,21 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectDuration: 60000,
         negativeEffectLabel: { EN: 'Nausea (Fatigue)', RU: 'Тошнота (Усталость)' }
     },
-
-    // Swords (Uncommon/Rare)
+    {
+        idPrefix: 'dagger_steel_02',
+        rarity: 'UNCOMMON',
+        name: { EN: 'Steel Dagger', RU: 'Стальной Кинжал' },
+        description: { EN: 'Quick strikes.', RU: 'Быстрые удары.' },
+        visualType: 'DAGGER',
+        visualColor: '#cbd5e1',
+        iconUrl: 'W_Dagger002.png',
+        effectType: 'ADD_MOVES',
+        effectValue: 4,
+        effectLabel: { EN: '+4 Moves', RU: '+4 Хода' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 15,
+        negativeEffectLabel: { EN: '-15 Credits', RU: '-15 Кредитов' }
+    },
     {
         idPrefix: 'sword_soldier',
         rarity: 'UNCOMMON',
@@ -872,245 +1105,6 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectValue: 10,
         negativeEffectLabel: { EN: '-10 Moves', RU: '-10 Ходов' }
     },
-
-    // Axes (Common/Uncommon)
-    {
-        idPrefix: 'axe_wood',
-        rarity: 'COMMON',
-        name: { EN: 'Woodcutter Axe', RU: 'Топор Лесоруба' },
-        description: { EN: 'Good for materials.', RU: 'Хорош для добычи материалов.' },
-        visualType: 'AXE',
-        visualColor: '#78350f',
-        iconUrl: 'W_Axe001.png',
-        effectType: 'ADD_MATERIAL',
-        effectValue: 3,
-        effectLabel: { EN: '+3 Materials', RU: '+3 Материала' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 4,
-        negativeEffectLabel: { EN: '-4 Moves', RU: '-4 Хода' }
-    },
-    {
-        idPrefix: 'axe_battle',
-        rarity: 'UNCOMMON',
-        name: { EN: 'Battle Axe', RU: 'Боевой Топор' },
-        description: { EN: 'Heavy and destructive.', RU: 'Тяжелый и разрушительный.' },
-        visualType: 'AXE',
-        visualColor: '#475569',
-        iconUrl: 'W_Axe008.png',
-        effectType: 'ADD_MATERIAL',
-        effectValue: 6,
-        effectLabel: { EN: '+6 Materials', RU: '+6 Материалов' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 8,
-        negativeEffectLabel: { EN: '-8 Moves', RU: '-8 Ходов' }
-    },
-
-    // Maces (Uncommon/Rare)
-    {
-        idPrefix: 'mace_iron',
-        rarity: 'UNCOMMON',
-        name: { EN: 'Iron Mace', RU: 'Железная Булава' },
-        description: { EN: 'Crushes through defenses.', RU: 'Пробивает защиту.' },
-        visualType: 'MACE',
-        visualColor: '#64748b',
-        iconUrl: 'W_Mace001.png',
-        effectType: 'ADD_ENTROPY',
-        effectValue: 5,
-        effectLabel: { EN: '+5% Stability', RU: '+5% Стабильности' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 30,
-        negativeEffectLabel: { EN: '-30 Credits', RU: '-30 Кредитов' }
-    },
-    {
-        idPrefix: 'mace_heavy',
-        rarity: 'RARE',
-        name: { EN: 'Heavy Mace', RU: 'Тяжелая Булава' },
-        description: { EN: 'Impact that ripples reality.', RU: 'Удар, искажающий реальность.' },
-        visualType: 'MACE',
-        visualColor: '#334155',
-        iconUrl: 'W_Mace010.png',
-        effectType: 'ADD_ENTROPY',
-        effectValue: 12,
-        effectLabel: { EN: '+12% Stability', RU: '+12% Стабильности' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 60,
-        negativeEffectLabel: { EN: '-60 Credits', RU: '-60 Кредитов' }
-    },
-
-    // Spears (Common/Uncommon)
-    {
-        idPrefix: 'spear_simple',
-        rarity: 'COMMON',
-        name: { EN: 'Simple Spear', RU: 'Простое Копье' },
-        description: { EN: 'Long reach.', RU: 'Длинная дистанция.' },
-        visualType: 'SPEAR',
-        visualColor: '#94a3b8',
-        iconUrl: 'W_Spear001.png',
-        effectType: 'STATUS_SCANNER_BUFF',
-        effectValue: 1,
-        effectDuration: 60000,
-        effectLabel: { EN: 'Eagle Eye (1m)', RU: 'Глаз Орла (1м)' },
-        negativeEffectType: 'LOSE_RANK',
-        negativeEffectValue: 1,
-        negativeEffectLabel: { EN: '-1 Rank', RU: '-1 Ранг' }
-    },
-
-    // Staffs (Rare/Legendary)
-    {
-        idPrefix: 'staff_mage',
-        rarity: 'RARE',
-        name: { EN: 'Mage Staff', RU: 'Посох Мага' },
-        description: { EN: 'Glows with arcane energy.', RU: 'Светится магической энергией.' },
-        visualType: 'STAFF',
-        visualColor: '#a855f7',
-        iconUrl: 'W_Staff01.png',
-        effectType: 'STATUS_ENTROPY_INVERSION',
-        effectValue: 1,
-        effectDuration: 60000,
-        effectLabel: { EN: 'Arcane Flux (1m)', RU: 'Магический Поток (1м)' },
-        negativeEffectType: 'STATUS_TUNNEL_VISION',
-        negativeEffectDuration: 30000,
-        negativeEffectLabel: { EN: 'Mana Burn (Tunnel Vision)', RU: 'Выгорание маны' }
-    },
-
-    // Bows (Uncommon/Rare)
-    {
-        idPrefix: 'bow_short',
-        rarity: 'UNCOMMON',
-        name: { EN: 'Short Bow', RU: 'Короткий Лук' },
-        description: { EN: 'Quick and light.', RU: 'Быстрый и легкий.' },
-        visualType: 'BOW',
-        visualColor: '#78350f',
-        iconUrl: 'W_Bow01.png',
-        effectType: 'REVEAL_MAP',
-        effectValue: 5,
-        effectLabel: { EN: 'Scout Area', RU: 'Разведка' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 3,
-        negativeEffectLabel: { EN: '-3 Moves', RU: '-3 Хода' }
-    },
-
-    // Guns (Legendary)
-    {
-        idPrefix: 'gun_plasma',
-        rarity: 'LEGENDARY',
-        name: { EN: 'Plasma Gun', RU: 'Плазменная Пушка' },
-        description: { EN: 'High-tech destruction.', RU: 'Высокотехнологичное разрушение.' },
-        visualType: 'GUN',
-        visualColor: '#0ea5e9',
-        iconUrl: 'W_Gun001.png',
-        effectType: 'GOD_MODE',
-        effectValue: 1,
-        effectLabel: { EN: 'Overdrive', RU: 'Перегрузка' },
-        negativeEffectType: 'FULL_RESET',
-        negativeEffectLabel: { EN: 'Meltdown', RU: 'Расплавление' }
-    },
-
-    // Gold Weapons (Legendary)
-    {
-        idPrefix: 'gold_sword',
-        rarity: 'LEGENDARY',
-        name: { EN: 'Golden Sword', RU: 'Золотой Меч' },
-        description: { EN: 'A masterpiece of craftsmanship.', RU: 'Шедевр мастерства.' },
-        visualType: 'SWORD',
-        visualColor: '#fbbf24',
-        iconUrl: 'W_Gold_Sword.png',
-        effectType: 'ADD_CREDITS',
-        effectValue: 1500,
-        effectLabel: { EN: '+1500 Credits', RU: '+1500 Кредитов' },
-        negativeEffectType: 'STATUS_GOLD_CURSE',
-        negativeEffectDuration: 600000,
-        negativeEffectLabel: { EN: 'Midas Curse (10m)', RU: 'Проклятие Мидаса (10м)' }
-    },
-
-    // Fists (Common)
-    {
-        idPrefix: 'fist_brass',
-        rarity: 'COMMON',
-        name: { EN: 'Brass Knuckles', RU: 'Кастет' },
-        description: { EN: 'Brutal and direct.', RU: 'Грубо и эффективно.' },
-        visualType: 'FIST',
-        visualColor: '#94a3b8',
-        iconUrl: 'W_Fist001.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 2,
-        effectLabel: { EN: '+2 Moves', RU: '+2 Хода' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 5,
-        negativeEffectLabel: { EN: '-5 Credits', RU: '-5 Кредитов' }
-    },
-
-    // Throwables (Common/Uncommon)
-    {
-        idPrefix: 'throw_knife',
-        rarity: 'COMMON',
-        name: { EN: 'Throwing Knife', RU: 'Метательный Нож' },
-        description: { EN: 'Lightweight and balanced.', RU: 'Легкий и сбалансированный.' },
-        visualType: 'THROWING',
-        visualColor: '#cbd5e1',
-        iconUrl: 'W_Throw001.png',
-        effectType: 'REVEAL_MAP',
-        effectValue: 3,
-        effectLabel: { EN: 'Quick Scout', RU: 'Быстрая Разведка' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 1,
-        negativeEffectLabel: { EN: '-1 Move', RU: '-1 Ход' }
-    },
-
-    // Books (Rare)
-    {
-        idPrefix: 'book_ancient',
-        rarity: 'RARE',
-        name: { EN: 'Ancient Grimoire', RU: 'Древний Гримуар' },
-        description: { EN: 'Contains forbidden knowledge.', RU: 'Содержит запретные знания.' },
-        visualType: 'BOOK',
-        visualColor: '#818cf8',
-        iconUrl: 'W_Book01.png',
-        effectType: 'LEVEL_UP',
-        effectValue: 1,
-        effectLabel: { EN: 'Forbidden Wisdom', RU: 'Запретная Мудрость' },
-        negativeEffectType: 'LOSE_ENTROPY',
-        negativeEffectValue: 10,
-        negativeEffectLabel: { EN: '-10% Stability', RU: '-10% Стабильности' }
-    },
-
-    // --- AUTO-GENERATED OVERWORLD ASSETS ---
-    // Armor
-    {
-        idPrefix: 'armor_heavy_04',
-        rarity: 'RARE',
-        name: { EN: 'Heavy Plate Armor', RU: 'Тяжелый Доспех' },
-        description: { EN: 'Superior protection.', RU: 'Превосходная защита.' },
-        visualType: 'ARMOR',
-        visualColor: '#475569',
-        iconUrl: 'A_Armor04.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
-        effectLabel: { EN: '+40 Max HP', RU: '+40 Макс. Здоровье' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 2,
-        negativeEffectLabel: { EN: '-2 Moves', RU: '-2 Хода' },
-        equipSlot: 'body',
-        maxHpBonus: 40
-    },
-    {
-        idPrefix: 'armor_heavy_05',
-        rarity: 'LEGENDARY',
-        name: { EN: 'Royal Guardian Plate', RU: 'Королевский Доспех' },
-        description: { EN: 'The ultimate defense.', RU: 'Ультимативная защита.' },
-        visualType: 'ARMOR',
-        visualColor: '#fbbf24',
-        iconUrl: 'A_Armor05.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
-        effectLabel: { EN: '+60 Max HP', RU: '+60 Макс. Здоровье' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 3,
-        negativeEffectLabel: { EN: '-3 Moves', RU: '-3 Хода' },
-        equipSlot: 'body',
-        maxHpBonus: 60
-    },
-    // Weapons - Swords
     {
         idPrefix: 'sword_knight_01',
         rarity: 'UNCOMMON',
@@ -1141,135 +1135,51 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectValue: 20,
         negativeEffectLabel: { EN: '-20 Credits', RU: '-20 Кредитов' }
     },
-    // Potions
     {
-        idPrefix: 'potion_blue_01',
-        rarity: 'COMMON',
-        name: { EN: 'Blue Potion', RU: 'Синее Зелье' },
-        description: { EN: 'Restores energy.', RU: 'Восстанавливает энергию.' },
-        visualType: 'POTION',
-        visualColor: '#3b82f6',
-        iconUrl: 'P_Blue01.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 10,
-        effectLabel: { EN: '+10 Moves', RU: '+10 Ходов' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 5,
-        negativeEffectLabel: { EN: '-5 Credits', RU: '-5 Кредитов' }
+        idPrefix: 'gold_sword',
+        rarity: 'LEGENDARY',
+        name: { EN: 'Golden Sword', RU: 'Золотой Меч' },
+        description: { EN: 'A masterpiece of craftsmanship.', RU: 'Шедевр мастерства.' },
+        visualType: 'SWORD',
+        visualColor: '#fbbf24',
+        iconUrl: 'W_Gold_Sword.png',
+        effectType: 'ADD_CREDITS',
+        effectValue: 1500,
+        effectLabel: { EN: '+1500 Credits', RU: '+1500 Кредитов' },
+        negativeEffectType: 'STATUS_GOLD_CURSE',
+        negativeEffectDuration: 600000,
+        negativeEffectLabel: { EN: 'Midas Curse (10m)', RU: 'Проклятие Мидаса (10м)' }
     },
     {
-        idPrefix: 'potion_red_01',
+        idPrefix: 'axe_wood',
         rarity: 'COMMON',
-        name: { EN: 'Red Potion', RU: 'Красное Зелье' },
-        description: { EN: 'Restores health.', RU: 'Восстанавливает здоровье.' },
-        visualType: 'POTION',
-        visualColor: '#ef4444',
-        iconUrl: 'P_Red01.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
-        effectLabel: { EN: '+20 HP', RU: '+20 ОЗ' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 2,
-        negativeEffectLabel: { EN: '-2 Moves', RU: '-2 Хода' }
-    },
-    // Food
-    {
-        idPrefix: 'food_cherry',
-        rarity: 'COMMON',
-        name: { EN: 'Fresh Cherries', RU: 'Свежая Вишня' },
-        description: { EN: 'A healthy snack.', RU: 'Здоровый перекус.' },
-        visualType: 'FOOD',
-        visualColor: '#ef4444',
-        iconUrl: 'I_C_Cherry.png',
-        effectType: 'ADD_MOVES',
+        name: { EN: 'Woodcutter Axe', RU: 'Топор Лесоруба' },
+        description: { EN: 'Good for materials.', RU: 'Хорош для добычи материалов.' },
+        visualType: 'AXE',
+        visualColor: '#78350f',
+        iconUrl: 'W_Axe001.png',
+        effectType: 'ADD_MATERIAL',
         effectValue: 3,
-        effectLabel: { EN: '+3 Moves', RU: '+3 Хода' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 2,
-        negativeEffectLabel: { EN: '-2 Credits', RU: '-2 Кредитов' }
-    },
-    {
-        idPrefix: 'food_bread_02',
-        rarity: 'COMMON',
-        name: { EN: 'Warm Bread', RU: 'Теплый Хлеб' },
-        description: { EN: 'Filling and tasty.', RU: 'Сытно и вкусно.' },
-        visualType: 'FOOD',
-        visualColor: '#b45309',
-        iconUrl: 'I_C_Bread.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 5,
-        effectLabel: { EN: '+5 Moves', RU: '+5 Ходов' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 4,
-        negativeEffectLabel: { EN: '-4 Credits', RU: '-4 Кредитов' }
-    },
-    // Accessories
-    {
-        idPrefix: 'ring_gold_01',
-        rarity: 'UNCOMMON',
-        name: { EN: 'Gold Ring', RU: 'Золотое Кольцо' },
-        description: { EN: 'A simple gold ring.', RU: 'Простое золотое кольцо.' },
-        visualType: 'RING',
-        visualColor: '#fbbf24',
-        iconUrl: 'Ac_Ring01.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
-        effectLabel: { EN: '+10 Max Energy', RU: '+10 Макс. Энергия' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 50,
-        negativeEffectLabel: { EN: 'Expensive (-50 Cr)', RU: 'Дорогое (-50 Кр)' },
-        equipSlot: 'ring',
-        maxEnergyBonus: 10
-    },
-    {
-        idPrefix: 'necklace_silver_01',
-        rarity: 'RARE',
-        name: { EN: 'Silver Necklace', RU: 'Серебряное Ожерелье' },
-        description: { EN: 'A beautiful silver necklace.', RU: 'Красивое серебряное ожерелье.' },
-        visualType: 'NECKLACE',
-        visualColor: '#cbd5e1',
-        iconUrl: 'Ac_Necklace01.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 0,
-        effectLabel: { EN: '+20 Max Energy', RU: '+20 Макс. Энергия' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 100,
-        negativeEffectLabel: { EN: 'Expensive (-100 Cr)', RU: 'Дорогое (-100 Кр)' },
-        equipSlot: 'necklace',
-        maxEnergyBonus: 20
-    },
-    // Materials
-    {
-        idPrefix: 'mat_gold_bar_02',
-        rarity: 'RARE',
-        name: { EN: 'Gold Bar', RU: 'Золотой Слиток' },
-        description: { EN: 'Pure gold.', RU: 'Чистое золото.' },
-        visualType: 'BAR',
-        visualColor: '#fbbf24',
-        iconUrl: 'I_GoldBar.png',
-        effectType: 'ADD_CREDITS',
-        effectValue: 500,
-        effectLabel: { EN: '+500 Credits', RU: '+500 Кредитов' },
+        effectLabel: { EN: '+3 Materials', RU: '+3 Материала' },
         negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 5,
-        negativeEffectLabel: { EN: 'Heavy (-5 Moves)', RU: 'Тяжелый (-5 Ходов)' }
+        negativeEffectValue: 4,
+        negativeEffectLabel: { EN: '-4 Moves', RU: '-4 Хода' }
     },
     {
-        idPrefix: 'mat_ruby',
-        rarity: 'RARE',
-        name: { EN: 'Ruby', RU: 'Рубин' },
-        description: { EN: 'A precious red gem.', RU: 'Драгоценный красный камень.' },
-        visualType: 'GEM',
-        visualColor: '#ef4444',
-        iconUrl: 'I_Ruby.png',
-        effectType: 'ADD_CREDITS',
-        effectValue: 1000,
-        effectLabel: { EN: '+1000 Credits', RU: '+1000 Кредитов' },
-        negativeEffectType: 'LOSE_ENTROPY',
-        negativeEffectValue: 5,
-        negativeEffectLabel: { EN: '-5% Stability', RU: '-5% Стабильности' }
+        idPrefix: 'axe_battle',
+        rarity: 'UNCOMMON',
+        name: { EN: 'Battle Axe', RU: 'Боевой Топор' },
+        description: { EN: 'Heavy and destructive.', RU: 'Тяжелый и разрушительный.' },
+        visualType: 'AXE',
+        visualColor: '#475569',
+        iconUrl: 'W_Axe008.png',
+        effectType: 'ADD_MATERIAL',
+        effectValue: 6,
+        effectLabel: { EN: '+6 Materials', RU: '+6 Материалов' },
+        negativeEffectType: 'LOSE_MOVES',
+        negativeEffectValue: 8,
+        negativeEffectLabel: { EN: '-8 Moves', RU: '-8 Ходов' }
     },
-    // Weapons - Axes & Daggers
     {
         idPrefix: 'axe_iron_02',
         rarity: 'UNCOMMON',
@@ -1286,134 +1196,166 @@ export const ITEM_REGISTRY: ItemDefinition[] = [
         negativeEffectLabel: { EN: '-4 Moves', RU: '-4 Хода' }
     },
     {
-        idPrefix: 'dagger_steel_02',
+        idPrefix: 'mace_iron',
         rarity: 'UNCOMMON',
-        name: { EN: 'Steel Dagger', RU: 'Стальной Кинжал' },
-        description: { EN: 'Quick strikes.', RU: 'Быстрые удары.' },
-        visualType: 'DAGGER',
-        visualColor: '#cbd5e1',
-        iconUrl: 'W_Dagger002.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 4,
-        effectLabel: { EN: '+4 Moves', RU: '+4 Хода' },
-        negativeEffectType: 'LOSE_CREDITS',
-        negativeEffectValue: 15,
-        negativeEffectLabel: { EN: '-15 Credits', RU: '-15 Кредитов' }
-    },
-    // Tools & Artifacts
-    {
-        idPrefix: 'tool_pickaxe',
-        rarity: 'COMMON',
-        name: { EN: 'Mining Pickaxe', RU: 'Кирка' },
-        description: { EN: 'Essential for digging.', RU: 'Необходима для копания.' },
-        visualType: 'AXE',
+        name: { EN: 'Iron Mace', RU: 'Железная Булава' },
+        description: { EN: 'Crushes through defenses.', RU: 'Пробивает защиту.' },
+        visualType: 'MACE',
         visualColor: '#64748b',
-        iconUrl: 'W_Axe011.png',
-        effectType: 'BUFF_DIG',
-        effectValue: 2,
-        effectLabel: { EN: 'Mining Luck', RU: 'Удача в добыче' },
+        iconUrl: 'W_Mace001.png',
+        effectType: 'ADD_ENTROPY',
+        effectValue: 5,
+        effectLabel: { EN: '+5% Stability', RU: '+5% Стабильности' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 30,
+        negativeEffectLabel: { EN: '-30 Credits', RU: '-30 Кредитов' }
+    },
+    {
+        idPrefix: 'mace_heavy',
+        rarity: 'RARE',
+        name: { EN: 'Heavy Mace', RU: 'Тяжелая Булава' },
+        description: { EN: 'Impact that ripples reality.', RU: 'Удар, искажающий реальность.' },
+        visualType: 'MACE',
+        visualColor: '#334155',
+        iconUrl: 'W_Mace010.png',
+        effectType: 'ADD_ENTROPY',
+        effectValue: 12,
+        effectLabel: { EN: '+12% Stability', RU: '+12% Стабильности' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 60,
+        negativeEffectLabel: { EN: '-60 Credits', RU: '-60 Кредитов' }
+    },
+    {
+        idPrefix: 'spear_simple',
+        rarity: 'COMMON',
+        name: { EN: 'Simple Spear', RU: 'Простое Копье' },
+        description: { EN: 'Long reach.', RU: 'Длинная дистанция.' },
+        visualType: 'SPEAR',
+        visualColor: '#94a3b8',
+        iconUrl: 'W_Spear001.png',
+        effectType: 'STATUS_SCANNER_BUFF',
+        effectValue: 1,
+        effectDuration: 60000,
+        effectLabel: { EN: 'Eagle Eye (1m)', RU: 'Глаз Орла (1м)' },
+        negativeEffectType: 'LOSE_RANK',
+        negativeEffectValue: 1,
+        negativeEffectLabel: { EN: '-1 Rank', RU: '-1 Ранг' }
+    },
+    {
+        idPrefix: 'staff_mage',
+        rarity: 'RARE',
+        name: { EN: 'Mage Staff', RU: 'Посох Мага' },
+        description: { EN: 'Glows with arcane energy.', RU: 'Светится магической энергией.' },
+        visualType: 'STAFF',
+        visualColor: '#a855f7',
+        iconUrl: 'W_Staff01.png',
+        effectType: 'STATUS_ENTROPY_INVERSION',
+        effectValue: 1,
+        effectDuration: 60000,
+        effectLabel: { EN: 'Arcane Flux (1m)', RU: 'Магический Поток (1м)' },
+        negativeEffectType: 'STATUS_TUNNEL_VISION',
+        negativeEffectDuration: 30000,
+        negativeEffectLabel: { EN: 'Mana Burn (Tunnel Vision)', RU: 'Выгорание маны' }
+    },
+    {
+        idPrefix: 'bow_short',
+        rarity: 'UNCOMMON',
+        name: { EN: 'Short Bow', RU: 'Короткий Лук' },
+        description: { EN: 'Quick and light.', RU: 'Быстрый и легкий.' },
+        visualType: 'BOW',
+        visualColor: '#78350f',
+        iconUrl: 'W_Bow01.png',
+        effectType: 'REVEAL_MAP',
+        effectValue: 5,
+        effectLabel: { EN: 'Scout Area', RU: 'Разведка' },
         negativeEffectType: 'LOSE_MOVES',
         negativeEffectValue: 3,
-        negativeEffectLabel: { EN: '-3 Moves', RU: '-3 Хода' },
-        equipSlot: 'tool'
+        negativeEffectLabel: { EN: '-3 Moves', RU: '-3 Хода' }
     },
     {
-        idPrefix: 'artifact_crystal',
-        rarity: 'RARE',
-        name: { EN: 'Energy Crystal', RU: 'Энергетический Кристалл' },
-        description: { EN: 'Vibrates with power.', RU: 'Вибрирует от мощи.' },
-        visualType: 'GEM',
-        visualColor: '#3b82f6',
-        iconUrl: 'I_Crystal01.png',
-        effectType: 'ADD_MOVES',
-        effectValue: 20,
-        effectLabel: { EN: '+20 Moves', RU: '+20 Ходов' },
-        negativeEffectType: 'LOSE_ENTROPY',
-        negativeEffectValue: 8,
-        negativeEffectLabel: { EN: '-8% Stability', RU: '-8% Стабильности' },
-        equipSlot: 'artifact'
+        idPrefix: 'gun_plasma',
+        rarity: 'LEGENDARY',
+        name: { EN: 'Plasma Gun', RU: 'Плазменная Пушка' },
+        description: { EN: 'High-tech destruction.', RU: 'Высокотехнологичное разрушение.' },
+        visualType: 'GUN',
+        visualColor: '#0ea5e9',
+        iconUrl: 'W_Gun001.png',
+        effectType: 'GOD_MODE',
+        effectValue: 1,
+        effectLabel: { EN: 'Overdrive', RU: 'Перегрузка' },
+        negativeEffectType: 'FULL_RESET',
+        negativeEffectLabel: { EN: 'Meltdown', RU: 'Расплавление' }
     },
-    // Headgear
     {
-        idPrefix: 'helm_knight',
-        rarity: 'UNCOMMON',
-        name: { EN: 'Knight Helmet', RU: 'Рыцарский Шлем' },
-        description: { EN: 'Protects the head.', RU: 'Защищает голову.' },
-        visualType: 'HELMET',
+        idPrefix: 'fist_brass',
+        rarity: 'COMMON',
+        name: { EN: 'Brass Knuckles', RU: 'Кастет' },
+        description: { EN: 'Brutal and direct.', RU: 'Грубо и эффективно.' },
+        visualType: 'FIST',
         visualColor: '#94a3b8',
-        iconUrl: 'C_Elm01.png',
+        iconUrl: 'W_Fist001.png',
         effectType: 'ADD_MOVES',
-        effectValue: 0,
-        effectLabel: { EN: '+10 Max HP', RU: '+10 Макс. Здоровье' },
+        effectValue: 2,
+        effectLabel: { EN: '+2 Moves', RU: '+2 Хода' },
+        negativeEffectType: 'LOSE_CREDITS',
+        negativeEffectValue: 5,
+        negativeEffectLabel: { EN: '-5 Credits', RU: '-5 Кредитов' }
+    },
+    {
+        idPrefix: 'throw_knife',
+        rarity: 'COMMON',
+        name: { EN: 'Throwing Knife', RU: 'Метательный Нож' },
+        description: { EN: 'Lightweight and balanced.', RU: 'Легкий и сбалансированный.' },
+        visualType: 'THROWING',
+        visualColor: '#cbd5e1',
+        iconUrl: 'W_Throw001.png',
+        effectType: 'REVEAL_MAP',
+        effectValue: 3,
+        effectLabel: { EN: 'Quick Scout', RU: 'Быстрая Разведка' },
         negativeEffectType: 'LOSE_MOVES',
         negativeEffectValue: 1,
-        negativeEffectLabel: { EN: '-1 Move', RU: '-1 Ход' },
-        equipSlot: 'head',
-        maxHpBonus: 10
+        negativeEffectLabel: { EN: '-1 Move', RU: '-1 Ход' }
     },
-    // Skill Artifacts
     {
-        idPrefix: 'skill_fire_01',
+        idPrefix: 'book_ancient',
         rarity: 'RARE',
-        name: { EN: 'Fire Essence', RU: 'Эссенция Огня' },
-        description: { EN: 'Warm to the touch.', RU: 'Теплая на ощупь.' },
-        visualType: 'GEM',
-        visualColor: '#ef4444',
-        iconUrl: 'S_Fire01.png',
-        effectType: 'STATUS_GOLD_RUSH',
+        name: { EN: 'Ancient Grimoire', RU: 'Древний Гримуар' },
+        description: { EN: 'Contains forbidden knowledge.', RU: 'Содержит запретные знания.' },
+        visualType: 'BOOK',
+        visualColor: '#818cf8',
+        iconUrl: 'W_Book01.png',
+        effectType: 'LEVEL_UP',
         effectValue: 1,
-        effectDuration: 120000,
-        effectLabel: { EN: 'Fire Rush (2m)', RU: 'Огненная Спешка (2м)' },
-        negativeEffectType: 'LOSE_MOVES',
-        negativeEffectValue: 5,
-        negativeEffectLabel: { EN: '-5 Moves', RU: '-5 Ходов' },
-        equipSlot: 'artifact'
+        effectLabel: { EN: 'Forbidden Wisdom', RU: 'Запретная Мудрость' },
+        negativeEffectType: 'LOSE_ENTROPY',
+        negativeEffectValue: 10,
+        negativeEffectLabel: { EN: '-10% Stability', RU: '-10% Стабильности' }
     }
 ];
 
-export const getRandomItem = (rarity: ItemRarity, language: Language): Item => {
-    const candidates = ITEM_REGISTRY.filter(i => i.rarity === rarity);
-    
-    if (candidates.length === 0) {
-        return ITEM_REGISTRY[0] as unknown as Item;
-    }
+// --- OPTIMIZATIONS & UTILITIES ---
 
-    const def = candidates[Math.floor(Math.random() * candidates.length)];
-    
-    return {
-        id: `${def.idPrefix}-${Date.now()}-${Math.floor(Math.random() * 9999)}`,
-        baseId: def.idPrefix, // NEW: Type identifier
-        rarity: def.rarity,
-        name: def.name[language],
-        description: def.description[language],
-        timestamp: Date.now(),
-        visualType: def.visualType,
-        effectType: def.effectType,
-        effectValue: def.effectValue,
-        effectDescription: def.effectLabel[language],
-        effectDuration: def.effectDuration,
-        maxHpBonus: def.maxHpBonus,
-        maxEnergyBonus: def.maxEnergyBonus,
-        equipSlot: def.equipSlot,
-        negativeEffectType: def.negativeEffectType,
-        negativeEffectValue: def.negativeEffectValue,
-        negativeEffectLabel: def.negativeEffectLabel[language],
-        negativeEffectDuration: def.negativeEffectDuration
-    };
-};
+// 1. O(1) lookup map for getItemDef
+export const ITEM_MAP = new Map<string, ItemDefinition>(ITEM_REGISTRY.map(item => [item.idPrefix, item]));
 
-export const createSpecificItem = (baseId: string, language: Language = 'EN'): Item => {
-    const def = ITEM_REGISTRY.find(i => i.idPrefix === baseId);
-    if (!def) {
-        return getRandomItem('COMMON', language);
-    }
+// 2. Pre-grouped items by rarity for fast random generation
+const ITEMS_BY_RARITY: Record<ItemRarity, ItemDefinition[]> = ITEM_REGISTRY.reduce((acc, item) => {
+    if (!acc[item.rarity]) acc[item.rarity] = [];
+    acc[item.rarity].push(item);
+    return acc;
+}, {} as Record<ItemRarity, ItemDefinition[]>);
+
+// 3. Factory function to prevent code duplication (DRY)
+const instantiateItem = (def: ItemDefinition, language: Language): Item => {
+    const timestamp = Date.now();
+    const randomSuffix = Math.floor(Math.random() * 9999);
     return {
-        id: `${def.idPrefix}-${Date.now()}-${Math.floor(Math.random() * 9999)}`,
+        id: `${def.idPrefix}-${timestamp}-${randomSuffix}`,
         baseId: def.idPrefix,
         rarity: def.rarity,
         name: def.name[language],
         description: def.description[language],
-        timestamp: Date.now(),
+        timestamp: timestamp,
         visualType: def.visualType,
         effectType: def.effectType,
         effectValue: def.effectValue,
@@ -1429,25 +1371,56 @@ export const createSpecificItem = (baseId: string, language: Language = 'EN'): I
     };
 };
 
-export const getItemDef = (baseId: string): ItemDefinition | undefined => {
-    return ITEM_REGISTRY.find(i => i.idPrefix === baseId);
+/**
+ * Generates a random item of a specified rarity and language.
+ */
+export const getRandomItem = (rarity: ItemRarity, language: Language): Item => {
+    const candidates = ITEMS_BY_RARITY[rarity];
+    
+    // FIX: If no candidates found, fall back to the first item in the registry properly instantiated
+    if (!candidates || candidates.length === 0) {
+        return instantiateItem(ITEM_REGISTRY[0], language);
+    }
+
+    const def = candidates[Math.floor(Math.random() * candidates.length)];
+    return instantiateItem(def, language);
 };
 
+/**
+ * Creates a specific item based on its baseId.
+ */
+export const createSpecificItem = (baseId: string, language: Language = 'EN'): Item => {
+    const def = ITEM_MAP.get(baseId);
+    // FIX: If definition not found, return a random common item instead of crashing
+    if (!def) {
+        return getRandomItem('COMMON', language);
+    }
+    return instantiateItem(def, language);
+};
+
+/**
+ * Retrieves the definition of an item by its baseId.
+ */
+export const getItemDef = (baseId: string): ItemDefinition | undefined => {
+    return ITEM_MAP.get(baseId);
+};
+
+/**
+ * Generates a monument recipe based on the game difficulty.
+ */
 export const generateMonumentRecipe = (difficulty: Difficulty): string[] => {
     const pick = (rarity: ItemRarity) => {
-        const candidates = ITEM_REGISTRY.filter(i => i.rarity === rarity);
-        if (candidates.length === 0) return ITEM_REGISTRY[0].idPrefix;
+        const candidates = ITEMS_BY_RARITY[rarity];
+        if (!candidates || candidates.length === 0) return ITEM_REGISTRY[0].idPrefix; // Fallback
         return candidates[Math.floor(Math.random() * candidates.length)].idPrefix;
     };
 
     if (difficulty === 'EASY') {
-        // 2 Common, 1 Uncommon
         return [pick('COMMON'), pick('COMMON'), pick('UNCOMMON')];
     } else if (difficulty === 'MEDIUM') {
-        // 1 Common, 1 Uncommon, 1 Rare
         return [pick('COMMON'), pick('UNCOMMON'), pick('RARE')];
     } else {
-        // HARD: 2 Rare, 1 Legendary
+        // HARD
         return [pick('RARE'), pick('RARE'), pick('LEGENDARY')];
     }
 };

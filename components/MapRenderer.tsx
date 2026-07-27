@@ -34,6 +34,44 @@ const MAX_WALL_DEPTH = 200;
 const VOID_SKIRT_DEPTH = 28;
 const getHexVisualHeight = getHeightOffset;
 
+const ICON_MAP: Record<string, string> = { 
+    UP: '▲', 
+    DOWN: '▼', 
+    WARN: '⚠️', 
+    COIN: '🪙', 
+    PICKAXE: '⛏️', 
+    GEM: '💎', 
+    FOOTPRINTS: '👣', 
+    PLUS: '➕', 
+    SKULL: '💀' 
+};
+
+const FLOATING_TEXT_STYLE_CACHE = new Map<string, PIXI.TextStyle>();
+
+function getFloatingTextStyle(color: string): PIXI.TextStyle {
+    const key = (color || '#ffffff').toLowerCase();
+    let style = FLOATING_TEXT_STYLE_CACHE.get(key);
+    if (!style) {
+        style = new PIXI.TextStyle({
+            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            fontSize: 16,
+            fontWeight: '800',
+            fill: key,
+            align: 'center',
+            stroke: { color: 0x020617, width: 4.5, join: 'round' },
+            dropShadow: {
+                alpha: 0.85,
+                angle: Math.PI / 4,
+                blur: 4,
+                color: 0x000000,
+                distance: 2,
+            },
+        });
+        FLOATING_TEXT_STYLE_CACHE.set(key, style);
+    }
+    return style;
+}
+
 interface MapRendererProps {
     rotation: number;
     onHexClick: (q: number, r: number) => void;
@@ -321,8 +359,6 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         const counts: Record<string, number> = {};
         const activeEffectIds = new Set<string>();
 
-        const ICON_MAP: Record<string, string> = { UP: '▲', DOWN: '▼', WARN: '⚠️', COIN: '🪙', PICKAXE: '⛏️', GEM: '💎', FOOTPRINTS: '👣', PLUS: '➕', SKULL: '💀' };
-
         sorted.forEach(eff => {
             const key = `${eff.q},${eff.r}`;
             const idx = counts[key] || 0; counts[key] = idx + 1;
@@ -333,16 +369,10 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             let cached = effectCache.current.get(eff.id);
             if (!cached) {
                 const container = new PIXI.Container();
+                const textStyle = getFloatingTextStyle(eff.color);
                 const text = new PIXI.Text({ 
                     text: displayText, 
-                    style: { 
-                        fontFamily: 'Inter, system-ui, sans-serif', 
-                        fontSize: 16, 
-                        fontWeight: 'bold', 
-                        fill: eff.color, 
-                        align: 'center',
-                        stroke: { color: 0x0f172a, width: 4.0 },
-                    } 
+                    style: textStyle 
                 });
                 text.anchor.set(0.5, 0.5); container.addChild(text); parent.addChild(container);
                 let laserGraphics: PIXI.Graphics | undefined = undefined;
@@ -361,27 +391,34 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             const hexCell = grid ? grid[getHexKey(cached.q, cached.r)] : undefined;
             const yOffset = getHeightOffset(hexCell ? (hexCell.currentLevel || 0) : 0);
             const stackYOffset = idx * 26;
-            // getHeightOffset returns negative values for height elevation (e.g. -10 for L0, -20 for L1).
+            // getHeightOffset returns negative values for height elevation.
             // Adding yOffset adjusts for hex surface height, and subtracting 65 places the text above the player head.
             const currentY = basePy + yOffset - 65 - stackYOffset;
-            const floatRise = progress * 38;
+            
+            // Smooth ease-out cubic vertical floating curve
+            const floatEase = 1 - Math.pow(1 - progress, 2.2);
+            const floatRise = floatEase * 42;
 
             if (cached.container && !cached.container.destroyed) {
                 cached.container.x = basePx; 
                 cached.container.y = currentY - floatRise;
 
-                if (progress < 0.12) {
-                    const pop = progress / 0.12;
-                    const scale = 0.7 + pop * 0.3;
+                if (progress < 0.16) {
+                    // Elastic pop-in with smooth overshoot
+                    const popP = progress / 0.16;
+                    const scale = 0.4 + Math.sin(popP * Math.PI * 0.65) * 0.72;
                     cached.container.scale.set(scale, scale);
-                    cached.container.alpha = 1.0;
-                } else if (progress < 0.80) {
+                    cached.container.alpha = Math.min(1.0, popP * 1.5);
+                } else if (progress < 0.75) {
                     cached.container.scale.set(1.0, 1.0);
                     cached.container.alpha = 1.0;
                 } else {
-                    const fp = (progress - 0.80) / 0.20;
-                    cached.container.alpha = Math.max(0, 1.0 - fp);
-                    cached.container.scale.set(1.0, 1.0);
+                    // Smooth ease-out fade out
+                    const fadeP = (progress - 0.75) / 0.25;
+                    const alpha = Math.max(0, 1.0 - Math.pow(fadeP, 1.8));
+                    const scale = 1.0 - fadeP * 0.08;
+                    cached.container.alpha = alpha;
+                    cached.container.scale.set(scale, scale);
                 }
             }
             if (cached.laserGraphics && !cached.laserGraphics.destroyed && eff.sourceQ !== undefined && eff.sourceR !== undefined) {

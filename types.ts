@@ -87,6 +87,8 @@ export type ItemEffectType =
     | 'ADD_ENTROPY' 
     | 'REVEAL_MAP' 
     | 'INCREASE_STORAGE' 
+    | 'INCREASE_MAX_HP'
+    | 'INCREASE_MAX_ENERGY'
     | 'BUFF_DIG' 
     | 'FREE_UPGRADES' 
     | 'LEVEL_UP' 

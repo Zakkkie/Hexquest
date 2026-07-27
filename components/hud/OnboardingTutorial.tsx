@@ -25,6 +25,8 @@ export const OnboardingTutorial: React.FC = () => {
         setShowModal(false);
         setUIState('STORY_BUILDER');
         setIsStoryTutorialActive(true);
+        try { localStorage.setItem('hexopol_story_tutorial_completed', 'true'); } catch {}
+        try { sessionStorage.setItem('story_tutorial_seen', 'true'); } catch {}
     };
 
     const handleSkipAndClaim = () => {
@@ -35,6 +37,8 @@ export const OnboardingTutorial: React.FC = () => {
         addMinedHexes(starterHexes);
         
         setShowModal(false);
+        try { localStorage.setItem('hexopol_story_tutorial_completed', 'true'); } catch {}
+        try { sessionStorage.setItem('story_tutorial_seen', 'true'); } catch {}
     };
 
     return (

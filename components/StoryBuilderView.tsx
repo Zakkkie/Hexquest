@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { FIGURES_COLLECTION } from './StoryBuilderData.ts';
 import { textureService } from '../services/textureService.ts';
 import { getPixiTexture, getHeightOffset } from '../services/pixiHexRender.ts';
+import { audioService } from '../services/audioService.ts';
 
 
 
@@ -71,6 +72,22 @@ const TexturePreview: React.FC<{ level: number }> = ({ level }) => {
     }, [level]);
 
     return <div ref={containerRef} className="w-6 h-6 rounded bg-slate-900 border border-white/10 overflow-hidden flex items-center justify-center pointer-events-none select-none" />;
+};
+
+const getHexLevelStyle = (level: number) => {
+    switch (level) {
+        case 0: return { bg: 'bg-slate-800/90', border: 'border-slate-500', text: 'text-slate-200' };
+        case 1: return { bg: 'bg-emerald-950/90', border: 'border-emerald-500', text: 'text-emerald-300' };
+        case 2: return { bg: 'bg-cyan-950/90', border: 'border-cyan-500', text: 'text-cyan-300' };
+        case 3: return { bg: 'bg-blue-950/90', border: 'border-blue-500', text: 'text-blue-300' };
+        case 4: return { bg: 'bg-purple-950/90', border: 'border-purple-500', text: 'text-purple-300' };
+        case 5: return { bg: 'bg-fuchsia-950/90', border: 'border-fuchsia-500', text: 'text-fuchsia-300' };
+        case 6: return { bg: 'bg-rose-950/90', border: 'border-rose-500', text: 'text-rose-300' };
+        case 7: return { bg: 'bg-amber-950/90', border: 'border-amber-500', text: 'text-amber-300' };
+        case 8: return { bg: 'bg-orange-950/90', border: 'border-orange-500', text: 'text-orange-300' };
+        case 9: return { bg: 'bg-yellow-950/90', border: 'border-yellow-400', text: 'text-yellow-300' };
+        default: return { bg: 'bg-indigo-950/90', border: 'border-indigo-500', text: 'text-indigo-300' };
+    }
 };
 
 const EMPTY_ARRAY: string[] = [];
@@ -150,6 +167,7 @@ const StoryBuilderView: React.FC = () => {
     const storyMap = useGameStore(state => state.storyMap);
     const placeStoryHex = useGameStore(state => state.placeStoryHex);
     const addMinedHexes = useGameStore(state => state.addMinedHexes);
+    const addCollectedHexes = useGameStore(state => state.addCollectedHexes);
     const clearStoryMap = useGameStore(state => state.clearStoryMap);
     const startDefenseSiege = useGameStore(state => state.startDefenseSiege);
     const consumeStoryHexes = useGameStore(state => state.consumeStoryHexes);
@@ -340,6 +358,77 @@ const StoryBuilderView: React.FC = () => {
             ...prev
         ].slice(0, 50));
     }, []);
+
+    // QUANTUM ROULETTE STATE & HANDLER
+    const [showRoulette, setShowRoulette] = useState(false);
+    const [isRouletteSpinning, setIsRouletteSpinning] = useState(false);
+    const [rouletteValue, setRouletteValue] = useState<number | null>(null);
+    const [lastRouletteReward, setLastRouletteReward] = useState<{ level: number; count: number } | null>(null);
+
+    const handleSpinRoulette = useCallback(() => {
+        if (isRouletteSpinning) return;
+        
+        if (skillPoints < 1) {
+            playUiSound('ERROR');
+            const msg = language === 'RU' 
+                ? '⚠️ Недостаточно SP! Нужно минимум 1 SP для вращения.' 
+                : '⚠️ Not enough SP! Minimum 1 SP required to spin.';
+            setErrorMessage(msg);
+            addSystemLog(msg, msg, 'warning');
+            return;
+        }
+
+        playUiSound('CLICK');
+        setSkillPoints(skillPoints - 1);
+        setIsRouletteSpinning(true);
+        setLastRouletteReward(null);
+
+        let counter = 0;
+        const interval = setInterval(() => {
+            const randLvl = Math.floor(Math.random() * 10);
+            setRouletteValue(randLvl);
+            counter++;
+            if (counter % 3 === 0) {
+                audioService.play('UI_HOVER');
+            }
+            if (counter >= 18) {
+                clearInterval(interval);
+                setIsRouletteSpinning(false);
+
+                // Probability weights for levels
+                const r = Math.random();
+                let finalLevel = 0;
+                if (r < 0.25) finalLevel = 0;
+                else if (r < 0.45) finalLevel = 1;
+                else if (r < 0.62) finalLevel = 2;
+                else if (r < 0.75) finalLevel = 3;
+                else if (r < 0.85) finalLevel = 4;
+                else if (r < 0.92) finalLevel = 5;
+                else if (r < 0.96) finalLevel = 6;
+                else if (r < 0.98) finalLevel = 7;
+                else if (r < 0.99) finalLevel = 8;
+                else finalLevel = 9;
+
+                const countToGrant = finalLevel === 0 ? 20 
+                                   : finalLevel === 1 ? 15 
+                                   : finalLevel === 2 ? 12 
+                                   : finalLevel === 3 ? 10 
+                                   : finalLevel === 4 ? 8 
+                                   : finalLevel === 5 ? 6 
+                                   : 5;
+
+                addCollectedHexes({ [finalLevel]: countToGrant });
+                addMinedHexes({ [finalLevel]: countToGrant });
+                setRouletteValue(finalLevel);
+                setLastRouletteReward({ level: finalLevel, count: countToGrant });
+                audioService.play('LEVEL_UP');
+
+                const logRu = `КВАНТОВЫЙ СИНТЕЗ: Получено +${countToGrant} плит L${finalLevel} за 1 SP!`;
+                const logEn = `QUANTUM SYNTHESIS: Obtained +${countToGrant} L${finalLevel} tiles for 1 SP!`;
+                addSystemLog(logRu, logEn, 'success');
+            }
+        }, 60);
+    }, [isRouletteSpinning, skillPoints, language, setSkillPoints, addCollectedHexes, addMinedHexes, playUiSound, addSystemLog]);
 
     const [diagnosticsRun, setDiagnosticsRun] = useState<{
         status: 'IDLE' | 'SUCCESS' | 'FAILED';
@@ -1106,32 +1195,32 @@ const StoryBuilderView: React.FC = () => {
             
             {/* TOP HEADER STATUS MENU BAR (ABOVE ALL OTHER WINDOWS) */}
             <div 
-                className="absolute top-0 left-0 right-0 p-2 sm:p-4 md:p-8 pt-[calc(env(safe-area-inset-top)+8px)] pointer-events-none"
+                className="absolute top-0 left-0 right-0 p-2 sm:p-4 md:p-6 pt-[calc(env(safe-area-inset-top)+6px)] pointer-events-none"
                 style={{ zIndex: isSettingsOpen ? 100 + panelZOrder.indexOf('settings') * 10 : 9999 }}
             >
                 <motion.div 
                     animate={{ y: isUiHidden ? -100 : 0, opacity: isUiHidden ? 0 : 1 }}
                     transition={{ duration: 0.3 }}
-                    className="flex justify-between items-center w-full pointer-events-auto h-14 relative z-[9999]"
+                    className="flex justify-between items-center w-full pointer-events-auto h-12 sm:h-14 relative z-[9999] gap-1.5 sm:gap-2"
                 >
-                    <div className="flex items-center gap-2 h-full">
+                    <div className="flex items-center gap-1.5 sm:gap-2 h-full shrink-0">
                         <button 
                             onClick={() => { playUiSound('CLICK'); setExitTargetState('MENU'); setIsExitDialogOpen(true); }}
-                            className="flex items-center justify-center w-10 h-10 bg-slate-900/90 border border-slate-800 rounded-xl hover:bg-slate-800/90 hover:border-indigo-500/30 text-slate-400 hover:text-white transition-all duration-250 shadow-md backdrop-blur-md cursor-pointer active:scale-95"
+                            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 bg-slate-900/90 border border-slate-800 rounded-xl hover:bg-slate-800/90 hover:border-indigo-500/30 text-slate-400 hover:text-white transition-all duration-250 shadow-md backdrop-blur-md cursor-pointer active:scale-95 shrink-0"
                         >
-                            <ArrowLeft className="w-5 h-5" /> 
+                            <ArrowLeft className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> 
                         </button>
                     </div>
 
                     {/* STATIC TITLE FOR SANDBOX WORKSPACE (SWAPS TO PULSING LAUNCH SIEGE BUTTON IF EVENT IS ACTIVE) */}
-                    <div className="flex-1 mx-2 flex items-center justify-center text-center">
+                    <div className="flex-1 min-w-0 mx-1 sm:mx-2 flex items-center justify-center text-center overflow-hidden">
                         {(() => {
                             if (isSiegeActive) {
                                 return (
                                     <motion.button
                                         initial={{ scale: 0.9, opacity: 0 }}
                                         animate={{ 
-                                            scale: [1, 1.05, 1],
+                                            scale: [1, 1.03, 1],
                                             opacity: 1
                                         }}
                                         transition={{ 
@@ -1143,10 +1232,12 @@ const StoryBuilderView: React.FC = () => {
                                             opacity: { duration: 0.3 }
                                         }}
                                         onClick={() => { playUiSound('CLICK'); startDefenseSiege(); }}
-                                        className="h-10 px-6 sm:px-10 bg-gradient-to-r from-red-650 via-rose-700 to-red-650 text-white font-black uppercase text-[10px] sm:text-[11px] tracking-[0.15em] sm:tracking-[0.25em] rounded-xl border-2 border-red-500 hover:border-white shadow-[0_0_25px_rgba(239,68,68,0.7)] flex items-center gap-2 cursor-pointer transition-all active:scale-95 select-none"
+                                        className="h-9 sm:h-10 px-3 sm:px-6 bg-gradient-to-r from-red-650 via-rose-700 to-red-650 text-white font-black uppercase text-[9px] sm:text-[11px] tracking-wider sm:tracking-[0.2em] rounded-xl border-2 border-red-500 hover:border-white shadow-[0_0_25px_rgba(239,68,68,0.7)] flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 select-none max-w-full overflow-hidden"
                                     >
-                                        <AlertTriangle className="w-4 h-4 text-white animate-bounce" />
-                                        <span>{language === 'RU' ? '💥 НАЧАТЬ ЗАЩИТУ ЯДРА! 💥' : '💥 LAUNCH CORE DEFENSE! 💥'}</span>
+                                        <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white animate-bounce shrink-0" />
+                                        <span className="whitespace-nowrap truncate">
+                                            {language === 'RU' ? '💥 ЗАЩИТА ЯДРА! 💥' : '💥 DEFEND CORE! 💥'}
+                                        </span>
                                     </motion.button>
                                 );
                             } else {
@@ -1154,14 +1245,14 @@ const StoryBuilderView: React.FC = () => {
                                     <button
                                         id="tutorial-blueprint-toggle"
                                         onClick={() => { playUiSound('CLICK'); toggleTablet(); }}
-                                        className="flex flex-col justify-center text-center px-4 py-1 rounded-full bg-slate-900/40 hover:bg-indigo-950/20 border border-indigo-500/10 hover:border-indigo-400/30 cursor-pointer transition-all duration-200 active:scale-95 select-none"
+                                        className="flex flex-col justify-center text-center px-3 sm:px-4 py-1 rounded-full bg-slate-900/60 hover:bg-indigo-950/30 border border-indigo-500/20 hover:border-indigo-400/40 cursor-pointer transition-all duration-200 active:scale-95 select-none max-w-full overflow-hidden"
                                     >
-                                        <span className="text-[8px] font-mono tracking-[0.2em] text-indigo-400 font-black uppercase leading-none">
+                                        <span className="text-[7.5px] sm:text-[8px] font-mono tracking-[0.15em] sm:tracking-[0.2em] text-indigo-400 font-black uppercase leading-none truncate">
                                             {language === 'RU' ? 'ПОЛИГОН НЕБЬЮЛА' : 'NEBULA PROVING GROUND'}
                                         </span>
-                                        <span className="text-[10.5px] leading-[13.5px] font-sans no-underline not-italic font-bold text-center tracking-tight text-white mt-1 shadow-sm uppercase flex items-center gap-1 justify-center">
+                                        <span className="text-[9.5px] sm:text-[10.5px] leading-tight font-sans font-bold text-center tracking-tight text-white mt-0.5 uppercase flex items-center gap-1 justify-center whitespace-nowrap truncate">
                                             {language === 'RU' ? 'Проектирование ядра' : 'Core Engineering'}
-                                            <span className="text-[8px] text-indigo-400 animate-pulse">▼</span>
+                                            <span className="text-[7px] sm:text-[8px] text-indigo-400 animate-pulse">▼</span>
                                         </span>
                                     </button>
                                 );
@@ -1169,32 +1260,80 @@ const StoryBuilderView: React.FC = () => {
                         })()}
                     </div>
 
-                    <div className="flex items-center gap-2 h-full">
-                        {/* Floating SP Island inside top header bar */}
-                        <button 
-                            id="tutorial-sp-badge"
-                            onClick={() => { playUiSound('CLICK'); setShowUpgrades(true); }}
-                            className={`h-10 px-3 rounded-xl flex items-center gap-1.5 shadow-md text-xs font-semibold cursor-pointer select-none backdrop-blur-md transition-all active:scale-95 duration-200 ${
+                    <div className="flex items-center gap-1.5 sm:gap-2 h-full shrink-0">
+                        {/* Unified SP & Quantum Roulette Hub Capsule */}
+                        <motion.div 
+                            id="tutorial-sp-hub"
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`h-9 sm:h-10 p-0.5 rounded-xl flex items-center shadow-lg backdrop-blur-md border transition-all duration-300 relative overflow-hidden shrink-0 ${
                                 skillPoints > 0
-                                    ? 'border-2 text-amber-300 hover:border-amber-400 hover:shadow-[0_0_25px_rgba(251,191,36,0.95)] animate-gold-blink font-black scale-105'
-                                    : 'bg-slate-900/95 border border-indigo-500/30 hover:border-indigo-400 hover:bg-indigo-950/40 text-indigo-300'
+                                    ? 'bg-slate-950/90 border-amber-500/50 hover:border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.25)]'
+                                    : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/30'
                             }`}
                         >
-                            <Trophy className={`w-3.5 h-3.5 shrink-0 ${skillPoints > 0 ? 'text-amber-400 drop-shadow-[0_0_4px_rgba(245,158,11,0.6)]' : 'text-indigo-400'}`} />
-                            <span className={`font-black text-[11px] md:text-xs ${skillPoints > 0 ? 'text-amber-100 font-extrabold' : 'text-white'}`}>{skillPoints} SP</span>
-                        </button>
+                            {/* Subtle light sheen animation when SP > 0 */}
+                            {skillPoints > 0 && (
+                                <motion.div 
+                                    animate={{ x: ['-100%', '250%'] }}
+                                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                                    className="absolute inset-y-0 w-16 bg-gradient-to-r from-transparent via-amber-400/20 to-transparent pointer-events-none"
+                                />
+                            )}
+
+                            {/* Segment 1: Quantum Roulette */}
+                            <motion.button
+                                id="tutorial-roulette-badge"
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => { playUiSound('CLICK'); setShowRoulette(true); }}
+                                className={`h-full px-2 sm:px-2.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer select-none ${
+                                    skillPoints > 0
+                                        ? 'hover:bg-amber-500/15 text-amber-300'
+                                        : 'hover:bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                                }`}
+                                title={language === 'RU' ? 'Квантовая рулетка (Синтез плит за 1 SP)' : 'Quantum Roulette (Tile Synthesis for 1 SP)'}
+                            >
+                                <Sparkles className={`w-3.5 h-3.5 shrink-0 ${skillPoints > 0 ? 'text-amber-400 animate-pulse' : 'text-slate-400'}`} />
+                                <span className="font-mono font-black text-[10px] sm:text-[10.5px] uppercase tracking-wider hidden sm:inline">
+                                    {language === 'RU' ? 'РУЛЕТКА' : 'ROULETTE'}
+                                </span>
+                            </motion.button>
+
+                            {/* Divider */}
+                            <div className={`h-4 w-[1px] shrink-0 mx-0.5 ${skillPoints > 0 ? 'bg-amber-500/30' : 'bg-slate-800'}`} />
+
+                            {/* Segment 2: SP / Skill Tree */}
+                            <motion.button
+                                id="tutorial-sp-badge"
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => { playUiSound('CLICK'); setShowUpgrades(true); }}
+                                className={`h-full px-2 sm:px-2.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer select-none ${
+                                    skillPoints > 0
+                                        ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.35)] font-black'
+                                        : 'hover:bg-indigo-950/40 text-indigo-300'
+                                }`}
+                                title={language === 'RU' ? 'Древо умений' : 'Skill Tree'}
+                            >
+                                <Trophy className={`w-3.5 h-3.5 shrink-0 ${skillPoints > 0 ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.9)]' : 'text-indigo-400'}`} />
+                                <span className={`font-black text-[10.5px] sm:text-xs font-mono whitespace-nowrap ${skillPoints > 0 ? 'text-amber-100 font-extrabold' : 'text-white'}`}>
+                                    {skillPoints} SP
+                                </span>
+                            </motion.button>
+                        </motion.div>
 
                         {/* Settings Button */}
-                        <div id="settings-container" className="relative h-full flex items-center" onPointerDown={() => bringToFront('settings')}>
+                        <div id="settings-container" className="relative h-full flex items-center shrink-0" onPointerDown={() => bringToFront('settings')}>
                             <button 
                                 onClick={() => { playUiSound('CLICK'); toggleSettings(); }}
-                                className={`w-10 h-10 flex items-center justify-center backdrop-blur-md border rounded-xl transition-all duration-200 shadow-md active:scale-95 cursor-pointer ${
+                                className={`w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center backdrop-blur-md border rounded-xl transition-all duration-200 shadow-md active:scale-95 cursor-pointer shrink-0 ${
                                     isSettingsOpen 
                                         ? 'bg-slate-800 border-indigo-500/50 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]' 
                                         : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-white'
                                 }`}
                             >
-                                <Settings className={`w-4.5 h-4.5 ${isSettingsOpen ? 'rotate-90 text-white' : ''} transition-transform duration-500`} />
+                                <Settings className={`w-4 h-4 sm:w-4.5 sm:h-4.5 ${isSettingsOpen ? 'rotate-90 text-white' : ''} transition-transform duration-500`} />
                             </button>
 
                             <AnimatePresence>
@@ -1329,7 +1468,7 @@ const StoryBuilderView: React.FC = () => {
                 {/* COMPACT FLOATING OPERATIONS LINK & LOGS PANEL (Centralized high-tech notification/info link, optimized for mobile screens) */}
                 <div 
                     id="operations-link-container" 
-                    className="absolute top-[76px] md:top-[100px] left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center w-[92vw] max-w-[340px] md:max-w-md select-none"
+                    className="absolute top-[58px] sm:top-[66px] md:top-[76px] left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center w-[92vw] max-w-[340px] md:max-w-md select-none"
                     style={{ zIndex: 100 + panelZOrder.indexOf('terminal') * 10 }}
                     onPointerDown={() => bringToFront('terminal')}
                 >
@@ -1339,17 +1478,16 @@ const StoryBuilderView: React.FC = () => {
                         <motion.button
                             initial={{ opacity: 0, scale: 0.95, y: -5 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            style={{ paddingBottom: '10px', marginRight: '0px', marginTop: '-6px' }}
                             onClick={() => { playUiSound('CLICK'); openTerminal(); }}
-                            className="w-full flex items-center gap-3 px-3.5 py-2.5 bg-slate-950/90 border border-indigo-500/30 hover:border-indigo-400 rounded-xl shadow-2xl backdrop-blur-md transition-all active:scale-98 group cursor-pointer text-left"
+                            className="w-full flex items-center gap-2.5 px-3 py-1.5 sm:py-2 bg-slate-950/90 border border-indigo-500/30 hover:border-indigo-400 rounded-xl shadow-xl backdrop-blur-md transition-all active:scale-98 group cursor-pointer text-left"
                         >
                             <div className="flex items-center gap-2 overflow-hidden w-full">
-                                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-cyan-400"></span>
                                 </span>
                                 <div className="flex flex-col overflow-hidden flex-1">
-                                    <span className="text-[13px] font-mono text-slate-100 font-semibold tracking-tight truncate leading-normal block">
+                                    <span className="text-[11px] sm:text-[12px] font-mono text-slate-100 font-semibold tracking-tight truncate leading-tight block">
                                         {systemLogs[0] ? (language === 'RU' ? systemLogs[0].textRU : systemLogs[0].textEN) : 'Initializing link...'}
                                     </span>
                                 </div>
@@ -2213,6 +2351,125 @@ const StoryBuilderView: React.FC = () => {
             <AnimatePresence>
                 {showUpgrades && (
                     <UpgradesTree onClose={() => setShowUpgrades(false)} key="upgrades-tree" />
+                )}
+            </AnimatePresence>
+
+            {/* QUANTUM ROULETTE MODAL */}
+            <AnimatePresence>
+                {showRoulette && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[99999] flex items-center justify-center p-4 pointer-events-auto"
+                        onClick={() => !isRouletteSpinning && setShowRoulette(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-slate-950 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full shadow-[0_0_60px_rgba(245,158,11,0.2)] relative flex flex-col items-center overflow-hidden"
+                        >
+                            {/* Background ambient glow */}
+                            <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                            {/* Close Button */}
+                            <button
+                                onClick={() => { playUiSound('CLICK'); setShowRoulette(false); }}
+                                disabled={isRouletteSpinning}
+                                className="absolute top-4 right-4 w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 flex items-center justify-center transition-all cursor-pointer disabled:opacity-50"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+
+                            {/* Header */}
+                            <div className="flex items-center gap-2 mb-1">
+                                <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" />
+                                <h2 className="text-lg font-black uppercase tracking-wider text-amber-300 font-mono">
+                                    {language === 'RU' ? 'КВАНТОВАЯ РУЛЕТКА' : 'QUANTUM ROULETTE'}
+                                </h2>
+                            </div>
+                            <p className="text-xs text-slate-400 text-center mb-5">
+                                {language === 'RU' 
+                                    ? 'Синтез строительных плит за Очки Навыков (1 SP = 1 Попытка)' 
+                                    : 'Synthesize building tiles using Skill Points (1 SP = 1 Spin)'}
+                            </p>
+
+                            {/* SP Balance Indicator */}
+                            <div className="flex items-center gap-2 bg-slate-900/90 border border-amber-500/30 px-4 py-2 rounded-2xl mb-6 shadow-inner">
+                                <Trophy className="w-4 h-4 text-amber-400" />
+                                <span className="text-xs font-bold text-slate-300">
+                                    {language === 'RU' ? 'Баланс SP:' : 'SP Balance:'}
+                                </span>
+                                <span className="text-sm font-black text-amber-300 font-mono">
+                                    {skillPoints} SP
+                                </span>
+                            </div>
+
+                            {/* Center Spin Slot */}
+                            <div className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[160px] mb-6 relative overflow-hidden shadow-inner">
+                                {isRouletteSpinning ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500/20 to-indigo-500/20 border-2 border-amber-400/80 flex items-center justify-center text-amber-300 font-mono font-black text-3xl shadow-[0_0_30px_rgba(245,158,11,0.5)] animate-bounce">
+                                            L{rouletteValue !== null ? rouletteValue : '?'}
+                                        </div>
+                                        <span className="text-xs font-mono font-bold text-amber-400 animate-pulse uppercase tracking-wider">
+                                            {language === 'RU' ? 'СИНТЕЗ МАТРИЦЫ...' : 'SYNTHESIZING MATRIX...'}
+                                        </span>
+                                    </div>
+                                ) : lastRouletteReward ? (
+                                    <motion.div 
+                                        initial={{ scale: 0.8, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className="flex flex-col items-center gap-2"
+                                    >
+                                        <div className={`px-4 py-1 rounded-lg text-lg font-black font-mono shadow-xl border ${
+                                            getHexLevelStyle(lastRouletteReward.level).bg
+                                        } ${getHexLevelStyle(lastRouletteReward.level).border} ${getHexLevelStyle(lastRouletteReward.level).text}`}>
+                                            L{lastRouletteReward.level}
+                                        </div>
+                                        <span className="text-lg font-black font-mono text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">
+                                            +{lastRouletteReward.count} {language === 'RU' ? 'ПЛИТ!' : 'TILES!'}
+                                        </span>
+                                        <span className="text-[11px] text-slate-400 font-mono">
+                                            {language === 'RU' ? 'Добавлено на склад' : 'Added to storage'}
+                                        </span>
+                                    </motion.div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2 text-center">
+                                        <div className="w-16 h-16 rounded-2xl bg-slate-800/90 border border-slate-700/80 flex items-center justify-center text-amber-400 font-black text-2xl shadow-md">
+                                            ?
+                                        </div>
+                                        <span className="text-xs text-slate-400 font-sans">
+                                            {language === 'RU' 
+                                                ? 'Нажмите кнопку ниже, чтобы начать синтез плит' 
+                                                : 'Click the button below to start tile synthesis'}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Spin Action Button */}
+                            <button
+                                onClick={handleSpinRoulette}
+                                disabled={isRouletteSpinning || skillPoints < 1}
+                                className={`w-full py-3.5 px-6 rounded-2xl font-black font-mono text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 cursor-pointer ${
+                                    skillPoints >= 1 && !isRouletteSpinning
+                                        ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 hover:brightness-110 shadow-[0_0_25px_rgba(245,158,11,0.4)]'
+                                        : 'bg-slate-900 border border-slate-800 text-slate-600 cursor-not-allowed'
+                                }`}
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                <span>
+                                    {isRouletteSpinning
+                                        ? (language === 'RU' ? 'СИНТЕЗИРУЕТСЯ...' : 'SYNTHESIZING...')
+                                        : (language === 'RU' ? 'КРУТИТЬ РУЛЕТКУ (1 SP)' : 'SPIN ROULETTE (1 SP)')}
+                                </span>
+                            </button>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
 

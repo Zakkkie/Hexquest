@@ -100,19 +100,23 @@ export class TurretSystem implements System {
           });
 
           // Add visual floating text effect on target bot cell
-          state.effects = state.effects || [];
-          state.effects.push({
-            id: `turret-text-${now}-${cell.q}-${cell.r}`,
-            q: targetBot.q,
-            r: targetBot.r,
-            text: isDestroyed ? `💥 DESTROYED!` : `-${finalDmg} RANK`,
-            color: isDestroyed ? '#EF4444' : '#F43F5E',
-            startTime: now,
-            lifetime: 2500,
-            icon: isDestroyed ? 'SKULL' : 'WARN',
-            sourceQ: cell.q,
-            sourceR: cell.r
-          });
+          if (finalDmg > 0 || isDestroyed) {
+            state.effects = state.effects || [];
+            state.effects.push({
+              id: `turret-text-${now}-${cell.q}-${cell.r}`,
+              q: targetBot.q,
+              r: targetBot.r,
+              text: isDestroyed 
+                ? (state.language === 'RU' ? '💥 УНИЧТОЖЕН!' : '💥 DESTROYED!')
+                : (state.language === 'RU' ? `-${finalDmg} РАНГ` : `-${finalDmg} RANK`),
+              color: isDestroyed ? '#EF4444' : '#F43F5E',
+              startTime: now,
+              lifetime: 2500,
+              icon: isDestroyed ? 'SKULL' : 'WARN',
+              sourceQ: cell.q,
+              sourceR: cell.r
+            });
+          }
 
           // Add a custom visual event so the map renderer can draw laser beam/pings
           events.push({
@@ -410,7 +414,7 @@ export class TurretSystem implements System {
           id: `recycle-text-${now}-${bot.id}`,
           q: bot.q,
           r: bot.r,
-          text: `RECYCLED! +15¢`,
+          text: state.language === 'RU' ? 'ПЕРЕРАБОТАН! +15 МОН' : 'RECYCLED! +15 COIN',
           color: '#10B981', // brilliant emerald green
           startTime: now,
           lifetime: 2500,

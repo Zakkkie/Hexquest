@@ -88,7 +88,7 @@ export const series6Levels: LevelConfig[] = [
             if (hex && hex.structureType !== 'VOID') {
               state.grid[key] = { ...hex, structureType: 'VOID', currentLevel: 0, maxLevel: 0, ownerId: undefined };
               state.effects = state.effects || [];
-              state.effects.push({ id: `mtr-62-${turn}`, q: behindQ, r: 0, text: '☄', color: '#F97316', startTime: Date.now(), lifetime: 1000, icon: 'WARN' } as any);
+              state.effects.push({ id: `mtr-62-${turn}`, q: behindQ, r: 0, text: state.language === 'RU' ? '☄️ МЕТЕОР' : '☄️ METEOR', color: '#F97316', startTime: Date.now(), lifetime: 1000, icon: 'WARN' } as any);
             }
           }
         }

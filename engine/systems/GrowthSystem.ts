@@ -469,7 +469,7 @@ export class GrowthSystem implements System {
                          id: `dig-mat-${Date.now()}-${Math.random()}`,
                          q: entity.q,
                          r: entity.r,
-                         text: `+${actualMatGain}⚙️`,
+                         text: state.language === 'RU' ? `+${actualMatGain} МАТ` : `+${actualMatGain} MAT`,
                          color: '#A855F7',
                          startTime: Date.now(),
                          lifetime: 2500
@@ -480,7 +480,7 @@ export class GrowthSystem implements System {
                          id: `dig-moves-${Date.now()}-${Math.random()}`,
                          q: entity.q,
                          r: entity.r,
-                         text: state.language === 'RU' ? `+${depthReward} Ходов` : `+${depthReward} Moves`,
+                         text: state.language === 'RU' ? `+${depthReward} ХОД` : `+${depthReward} MOVE`,
                          color: '#3B82F6',
                          startTime: Date.now(),
                          lifetime: 2500
@@ -660,7 +660,7 @@ export class GrowthSystem implements System {
                   id: `upgrade-float-${Date.now()}-${Math.random()}`,
                   q: entity.q,
                   r: entity.r,
-                  text: state.language === 'RU' ? `L${targetLevel} +1 Ход` : `L${targetLevel} +1 Move`,
+                  text: state.language === 'RU' ? `УР${targetLevel} +1 ХОД` : `L${targetLevel} +1 MOVE`,
                   color: '#10B981',
                   startTime: Date.now(),
                   lifetime: 2500
@@ -670,7 +670,7 @@ export class GrowthSystem implements System {
                       id: `upgrade-mat-${Date.now()}-${Math.random()}`,
                       q: entity.q,
                       r: entity.r,
-                      text: `-1⚙️`,
+                      text: state.language === 'RU' ? `-1 МАТ` : `-1 MAT`,
                       color: '#EF4444',
                       startTime: Date.now(),
                       lifetime: 2500

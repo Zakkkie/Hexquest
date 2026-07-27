@@ -570,9 +570,12 @@ const MainMenu: React.FC = () => {
     if (hasActiveSession) {
         setConfirmAction({ type: 'ABANDON_CAMPAIGN', payload: mode });
     } else {
+        if (mode === 'STORY' && (!hasProgress || localStorage.getItem('hexopol_story_tutorial_completed') !== 'true')) {
+            useGameStore.getState().setShowNewGameTutorialModal(true);
+        }
         setUIState(mode === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
     }
-  }, [user, ensureGuestUser, hasActiveSession, playUiSound, setCampaignMode, setUIState]);
+  }, [user, ensureGuestUser, hasActiveSession, playUiSound, setCampaignMode, setUIState, hasProgress]);
 
   const handleNewGameClick = useCallback(() => {
     playUiSound('CLICK');
@@ -660,6 +663,9 @@ const MainMenu: React.FC = () => {
 
     if (confirmAction.type === 'ABANDON_CAMPAIGN') {
       abandonSession();
+      if (confirmAction.payload === 'STORY' && (!hasProgress || localStorage.getItem('hexopol_story_tutorial_completed') !== 'true')) {
+        useGameStore.getState().setShowNewGameTutorialModal(true);
+      }
       setUIState(confirmAction.payload === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
     } else if (confirmAction.type === 'ABANDON_NEW_GAME') {
       setShowMissionConfig(true);

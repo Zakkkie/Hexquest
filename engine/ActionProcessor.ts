@@ -274,9 +274,11 @@ export class ActionProcessor {
   private applyEffect(state: SessionState, index: WorldIndex, actor: Entity, type: string, val: number | undefined, desc: string, duration?: number) {
       switch(type) {
           case 'ADD_MOVES': actor.moves += (val || 0); break;
+          case 'INCREASE_MAX_ENERGY': actor.moves += (val || 0); break;
           case 'ADD_CREDITS': actor.coins += (val || 0); break;
           case 'ADD_MATERIAL': actor.storage = Math.min(actor.maxStorage, actor.storage + (val || 0)); break;
           case 'ADD_ENTROPY': state.entropy.current = Math.min(state.entropy.max, state.entropy.current + (val || 0)); break;
+          case 'INCREASE_MAX_HP': state.entropy.current = Math.min(state.entropy.max, state.entropy.current + (val || 0)); break;
           case 'INCREASE_STORAGE': actor.maxStorage += (val || 0); break;
           case 'EXPAND_INVENTORY': actor.maxInventorySize = (actor.maxInventorySize || 3) + (val || 0); break;
           case 'LEVEL_UP': actor.playerLevel += (val || 0); break;
@@ -412,16 +414,18 @@ export class ActionProcessor {
           const restoredEntropyAmount = ENTROPY_CONFIG.GAIN_RESTORE_SUCCESS * totalHealed;
           state.entropy.current = Math.min(state.entropy.max, state.entropy.current + restoredEntropyAmount);
 
-          state.effects = state.effects || [];
-          state.effects.push({
-              id: `restore-float-${Date.now()}-${action.coord.q}-${action.coord.r}`,
-              q: actor.q,
-              r: actor.r,
-              text: state.language === 'RU' ? `x${totalHealed} восстановление` : `x${totalHealed} recovery`,
-              color: '#10B981',
-              startTime: Date.now(),
-              lifetime: 2500
-          });
+          if (totalHealed > 0) {
+              state.effects = state.effects || [];
+              state.effects.push({
+                  id: `restore-float-${Date.now()}-${action.coord.q}-${action.coord.r}`,
+                  q: actor.q,
+                  r: actor.r,
+                  text: state.language === 'RU' ? `x${totalHealed} ВОССТ.` : `x${totalHealed} RECOVERY`,
+                  color: '#10B981',
+                  startTime: Date.now(),
+                  lifetime: 2500
+              });
+          }
           
           this.applyEffect(state, index, actor, item.effectType, item.effectValue, item.effectDescription, item.effectDuration);
           

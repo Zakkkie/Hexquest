@@ -75,7 +75,7 @@ export const createGameplaySlice = (
     const stateUser = get().user || get().ensureGuestUser();
     const upgrades = get().campaignUpgrades;
     
-    set(() => ({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME', isCampaignLoading: true, showNewGameTutorialModal: true }));
+    set(() => ({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME', isCampaignLoading: true }));
     await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to render
     
     try {
@@ -299,7 +299,13 @@ export const createGameplaySlice = (
   resetProgress: () => {
     get().abandonSession();
     try { localStorage.removeItem('hexopol_figure_index'); } catch (e) { console.warn(e); }
-    set(() => ({ ...createDefaultProgress() }));
+    try { localStorage.removeItem('hexopol_story_tutorial_completed'); } catch (e) { console.warn(e); }
+    try { sessionStorage.removeItem('story_tutorial_seen'); } catch (e) { console.warn(e); }
+    set(() => ({ 
+      ...createDefaultProgress(), 
+      uiState: 'STORY_BUILDER', 
+      showNewGameTutorialModal: true 
+    }));
   },
 
   // --- ACTIONS ---
@@ -714,7 +720,15 @@ export const createGameplaySlice = (
           let icon: FloatingText['icon'] = undefined;
 
           switch (event.type) {
-            case 'LEVEL_UP': case 'SECTOR_ACQUIRED': text = lang === 'RU' ? "+1 УР" : "+1 LVL"; color = isPlayer ? "#818cf8" : "#f87171"; icon = 'UP'; break;
+            case 'LEVEL_UP': case 'SECTOR_ACQUIRED': {
+              const lvl = event.data?.level !== undefined ? Number(event.data.level) : 1;
+              if (lvl > 0) {
+                text = lang === 'RU' ? "+1 УР" : "+1 LVL";
+                color = isPlayer ? "#818cf8" : "#f87171";
+                icon = 'UP';
+              }
+              break;
+            }
             case 'SECTOR_EXCAVATED': {
               const hasEngineFx = result.state.effects.some(e => e.q === targetQ && e.r === targetR && (e.id.includes('dig') || e.id.includes('mat')));
               if (!hasEngineFx) {
@@ -743,9 +757,32 @@ export const createGameplaySlice = (
             case 'HEX_COLLAPSE': text = lang === 'RU' ? "-1 УР" : "-1 LVL"; color = "#ef4444"; icon = 'DOWN'; break;
             case 'METEOR_STRIKE': text = lang === 'RU' ? "☄️ УДАР!" : "☄️ IMPACT!"; color = "#f97316"; icon = 'DOWN'; break;
             case 'PLAYER_HIT_BY_METEOR': text = lang === 'RU' ? "💥 РАНГ -1!" : "💥 RANK -1!"; color = "#ef4444"; icon = 'WARN'; break;
-            case 'CORE_DAMAGED': text = lang === 'RU' ? `⚠️ ЯДРО -${Number(event.data?.damage || 10)}` : `⚠️ CORE -${Number(event.data?.damage || 10)}`; color = "#f43f5e"; icon = 'DOWN'; break;
+            case 'CORE_DAMAGED': {
+              const dmg = Number(event.data?.damage || 10);
+              if (dmg > 0) {
+                text = lang === 'RU' ? `⚠️ ЯДРО -${dmg}` : `⚠️ CORE -${dmg}`;
+                color = "#f43f5e";
+                icon = 'DOWN';
+              }
+              break;
+            }
             case 'ITEM_DROP': text = lang === 'RU' ? "ПРЕДМЕТ!" : "ITEM FOUND!"; color = "#fcd34d"; icon = 'GEM'; break;
-            case 'ACTION_DENIED': case 'ERROR': text = (event.message || '').toUpperCase(); color = "#f87171"; icon = 'WARN'; break;
+            case 'ACTION_DENIED': case 'ERROR': {
+              let rawMsg = (event.message || '').toUpperCase();
+              if (lang === 'RU') {
+                if (/storage full/i.test(rawMsg)) rawMsg = 'СКЛАД ПОЛОН!';
+                else if (/inventory full/i.test(rawMsg)) rawMsg = 'ИНВЕНТАРЬ ПОЛОН!';
+                else if (/path collapsed/i.test(rawMsg)) rawMsg = 'ПУТЬ РАЗРУШЕН';
+                else if (/path blocked/i.test(rawMsg)) rawMsg = 'ПУТЬ ЗАБЛОКИРОВАН';
+                else if (/cooldown/i.test(rawMsg)) rawMsg = 'ПЕРЕГРЕВ';
+                else if (/unstable/i.test(rawMsg)) rawMsg = 'НЕСТАБИЛЬНО!';
+                else if (/indestructible/i.test(rawMsg)) rawMsg = 'НЕРАЗРУШИМО!';
+              }
+              text = rawMsg;
+              color = "#f87171";
+              icon = 'WARN';
+              break;
+            }
           }
           if (text) newEffectsData.push({ q: targetQ, r: targetR, text, color, icon, lifetime: 2500 });
         }
