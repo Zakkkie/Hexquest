@@ -4,7 +4,7 @@ import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { LevelConfig } from '../types.ts';
 import { 
   Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers, Cpu, 
-  BatteryCharging, Coins, ArrowLeft, Terminal, Compass, Atom, Sparkles 
+  BatteryCharging, Coins, ArrowLeft, Terminal, Compass, Atom, Sparkles, Hexagon
 } from 'lucide-react';
 import { TEXT } from '../services/i18n.ts';
 import { UpgradesTree } from './UpgradesTree.tsx';
@@ -25,13 +25,11 @@ const CampaignBackground: React.FC = React.memo(() => {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0">
-      {/* Deep Space Indigo gradient base */}
       <div className="absolute inset-0 bg-slate-950" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,_rgba(99,102,241,0.16)_0%,_transparent_45%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_85%,_rgba(6,182,212,0.14)_0%,_transparent_55%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(15,23,42,0.75)_0%,_slate-950_100%)]" />
 
-      {/* Futuristic Holographic Grid Projection */}
       <div className="absolute inset-0 opacity-[0.12] mix-blend-screen"
            style={{ 
                backgroundImage: 'linear-gradient(rgba(99, 102, 241, 0.2) 1.5px, transparent 1.5px), linear-gradient(90deg, rgba(99, 102, 241, 0.2) 1.5px, transparent 1.5px)',
@@ -42,7 +40,6 @@ const CampaignBackground: React.FC = React.memo(() => {
            }} 
       />
 
-      {/* Twinkling Space dust particles */}
       {stars.map(star => (
         <div
           key={star.id}
@@ -58,13 +55,11 @@ const CampaignBackground: React.FC = React.memo(() => {
         />
       ))}
 
-      {/* Orbit paths representation */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110vmin] h-[110vmin] opacity-[0.06]">
         <div className="absolute inset-0 border border-indigo-500/20 rounded-full animate-[spin_100s_linear_infinite]" />
         <div className="absolute inset-12 border border-dashed border-cyan-500/15 rounded-full animate-[spin_60s_linear_infinite_reverse]" />
       </div>
 
-      {/* Interactive scanning horizontal laser bar */}
       <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent shadow-[0_0_12px_rgba(6,182,212,0.3)] animate-[laser-scan_12s_linear_infinite]" />
 
       <style>{`
@@ -94,12 +89,11 @@ const StoryTimeline: React.FC<{
   const t = TEXT[useGameStore.getState().language].CAMPAIGN_MAP;
   const language = useGameStore.getState().language;
 
-  // Stagger parameters optimized for snug layouts with symmetric header padding
   const timelineLayout = useMemo(() => {
-    const ITEM_HEIGHT = isMobile ? 160 : 260;
-    const CARD_HEIGHT = isMobile ? 135 : 175;
+    const ITEM_HEIGHT = isMobile ? 150 : 240;
+    const CARD_HEIGHT = isMobile ? 130 : 170;
     const HEADER_PADDING = isMobile ? 24 : 32;
-    const START_OFFSET = isMobile ? 32 : 48;
+    const START_OFFSET = isMobile ? 40 : 60;
     
     const positions: any[] = [];
     let currentY = START_OFFSET;
@@ -111,33 +105,28 @@ const StoryTimeline: React.FC<{
       let headerY = 0;
       
       if (index === 0) {
-        // Series 1 Header: placed with exactly HEADER_PADDING above and below
         headerY = START_OFFSET + HEADER_PADDING;
         currentY = headerY + HEADER_PADDING + CARD_HEIGHT / 2;
         hasHeader = true;
         lastSeries = series;
       } else if (series !== lastSeries) {
-        // Transition to next series with mathematically symmetric and snug padding around the header
         const prevY = currentY;
         headerY = prevY + CARD_HEIGHT / 2 + HEADER_PADDING;
         currentY = headerY + HEADER_PADDING + CARD_HEIGHT / 2;
         hasHeader = true;
         lastSeries = series;
       } else {
-        // Same Series: standard item spacing
         currentY += ITEM_HEIGHT;
       }
       
-      const isLeft = index % 2 === 0;
-      // On mobile, lock timeline to the left edge with precise margins to maximize card space
-      const x = isMobile ? 38 : (isLeft ? containerWidth * 0.28 : containerWidth * 0.72);
+      // Mobile: Left aligned strict. Desktop: Zigzag
+      const x = isMobile ? 32 : (index % 2 === 0 ? containerWidth * 0.28 : containerWidth * 0.72);
       positions.push({ x, y: currentY, hasHeader, headerY, seriesId: series, level, index });
     });
     
     return { positions, totalHeight: currentY + (isMobile ? 80 : 120) };
   }, [containerWidth, isMobile]);
 
-  // Center view on current active unlocked level node
   useEffect(() => {
     if (currentLevelRef.current) {
       const timer = setTimeout(() => {
@@ -152,7 +141,7 @@ const StoryTimeline: React.FC<{
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar pb-16 touch-pan-y"
     >
-      {/* Interactive Vector Connecting Paths */}
+      {/* SVG Connection Paths */}
       <svg className="absolute inset-0 w-full pointer-events-none z-0" style={{ height: timelineLayout.totalHeight }}>
         <defs>
           <linearGradient id="unlockedTrack" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -160,63 +149,27 @@ const StoryTimeline: React.FC<{
             <stop offset="50%" stopColor="#8b5cf6" />
             <stop offset="100%" stopColor="#10b981" />
           </linearGradient>
-          <linearGradient id="inactiveTrack" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#1e293b" />
-            <stop offset="100%" stopColor="#0f172a" />
-          </linearGradient>
         </defs>
         
         {timelineLayout.positions.map((pos, i) => {
           if (i === timelineLayout.positions.length - 1) return null;
           const nextPos = timelineLayout.positions[i + 1];
           const isPathUnlocked = i < campaignProgress;
-          const cpY1 = pos.y + (nextPos.y - pos.y) * 0.55;
-          const cpY2 = nextPos.y - (nextPos.y - pos.y) * 0.55;
-          const pathD = `M ${pos.x} ${pos.y} C ${pos.x} ${cpY1}, ${nextPos.x} ${cpY2}, ${nextPos.x} ${nextPos.y}`;
+          
+          // Straight lines for mobile, Bezier for desktop
+          const pathD = isMobile 
+            ? `M ${pos.x} ${pos.y} L ${nextPos.x} ${nextPos.y}` 
+            : `M ${pos.x} ${pos.y} C ${pos.x} ${pos.y + (nextPos.y - pos.y) * 0.55}, ${nextPos.x} ${nextPos.y - (nextPos.y - pos.y) * 0.55}, ${nextPos.x} ${nextPos.y}`;
           
           return (
             <g key={`path-${i}`}>
-              {/* Core physical support beam */}
-              <path 
-                d={pathD} 
-                fill="none" 
-                stroke="url(#inactiveTrack)" 
-                strokeWidth={isMobile ? "2.5" : "4"} 
-              />
-              
-              {/* Glowing holographic energy glow (Unlocks) */}
+              <path d={pathD} fill="none" stroke="#1e293b" strokeWidth={isMobile ? "3" : "5"} />
               {isPathUnlocked && (
-                <path 
-                  d={pathD} 
-                  fill="none" 
-                  stroke="url(#unlockedTrack)" 
-                  strokeWidth={isMobile ? "4.5" : "7"} 
-                  strokeOpacity="0.22" 
-                  className="blur-[4px]" 
-                />
+                <path d={pathD} fill="none" stroke="url(#unlockedTrack)" strokeWidth={isMobile ? "6" : "8"} strokeOpacity="0.25" className="blur-[5px]" />
               )}
-              
-              {/* Sharp foreground path line */}
-              <path 
-                d={pathD} 
-                fill="none" 
-                stroke={isPathUnlocked ? 'url(#unlockedTrack)' : '#334155'} 
-                strokeWidth={isMobile ? "1.2" : "2"} 
-                strokeDasharray={isPathUnlocked ? "0" : "4 4"} 
-                className="transition-all duration-300"
-              />
-              
-              {/* High energy current visual pulse */}
+              <path d={pathD} fill="none" stroke={isPathUnlocked ? 'url(#unlockedTrack)' : '#334155'} strokeWidth={isMobile ? "1.5" : "2.5"} strokeDasharray={isPathUnlocked ? "0" : "5 5"} />
               {isPathUnlocked && (
-                <path 
-                  d={pathD} 
-                  fill="none" 
-                  stroke="#22d3ee" 
-                  strokeWidth={isMobile ? "1.2" : "1.6"} 
-                  strokeDasharray="6 26" 
-                  className="animate-[pulse-dash_3s_linear_infinite]" 
-                  style={{ filter: 'drop-shadow(0 0 3px #22d3ee)' }}
-                />
+                <path d={pathD} fill="none" stroke="#22d3ee" strokeWidth={isMobile ? "1.5" : "2"} strokeDasharray="8 30" className="animate-[pulse-dash_3s_linear_infinite]" style={{ filter: 'drop-shadow(0 0 4px #22d3ee)' }} />
               )}
             </g>
           );
@@ -232,78 +185,63 @@ const StoryTimeline: React.FC<{
           const displayTitle = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${levelKey}_TITLE`] || pos.level.title).replace(/^(?:Simulation|Sim|Сим|SIM|SIMULATION)\s*[\d.]+:?\s*/i, '');
           const displayDesc = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${levelKey}_DESC`] || pos.level.description);
           const threat = pos.level.aiMode === 'none' ? 'NONE' : (pos.level.aiMode === 'basic' ? 'BASIC' : 'HIGH');
-
-          // Decide modular sub-icons representing different simulation setups
           const isDefenseLevel = pos.level.aiMode !== 'none';
-          const isHighGroundLevel = pos.level.startState.materials > 2 || pos.level.mapRadius >= 5;
 
           return (
             <div key={pos.level.id}>
-              {/* Neon Chapter Header Ribbon */}
+              {/* Series Header */}
               {pos.hasHeader && (
                 <div className="absolute left-0 right-0 flex items-center justify-center pointer-events-none transform -translate-y-1/2 z-20" style={{ top: pos.headerY }}>
-                  <div className="w-full max-w-sm flex items-center gap-2.5 px-4">
-                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-indigo-500/20" />
-                    <div className="flex items-center gap-2 px-3 py-1 bg-slate-950/90 backdrop-blur-xl border border-indigo-500/25 rounded-lg shadow-[0_0_15px_rgba(99,102,241,0.15)] shrink-0">
+                  <div className={`w-full flex items-center gap-2.5 ${isMobile ? 'pl-12 pr-4' : 'max-w-sm px-4'}`}>
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-indigo-500/30" />
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-950/90 backdrop-blur-xl border border-indigo-500/30 rounded-lg shadow-[0_0_20px_rgba(99,102,241,0.2)] shrink-0">
                       <Layers className="w-3 h-3 text-indigo-400" />
                       <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-200 font-mono">Series {pos.seriesId}</span>
                     </div>
-                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-indigo-500/20" />
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-indigo-500/30" />
                   </div>
                 </div>
               )}
 
-              {/* Main Interactive Node Wrap */}
+              {/* Level Node & Card */}
               <div ref={isCurrent ? currentLevelRef : null} className="absolute flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2" style={{ left: pos.x, top: pos.y }}>
-                <div className={`relative flex items-center justify-center group ${isUnlocked ? 'opacity-100' : 'opacity-85'}`}>
+                <div className={`relative flex items-center justify-center group ${isUnlocked ? 'opacity-100' : 'opacity-80'}`}>
                   
-                  {/* Dynamic Neon Anchor Point */}
-                  <div className="relative z-20 flex items-center justify-center pointer-events-none select-none w-8 h-8">
+                  {/* Hexagon Node Marker */}
+                  <div className="relative z-20 flex items-center justify-center pointer-events-none select-none w-10 h-10">
                     {isCurrent && (
                       <>
-                        <div className="absolute -inset-2.5 border border-amber-500/40 rounded-full animate-ping opacity-60" />
-                        <div className="absolute -inset-1 border border-dashed border-amber-400/30 rounded-full animate-[spin_8s_linear_infinite]" />
-                        <div className="absolute inset-1 bg-amber-500/10 rounded-full blur-sm" />
+                        <div className="absolute -inset-3 border border-amber-500/40 rounded-full animate-ping opacity-60" />
+                        <div className="absolute -inset-1.5 border border-dashed border-amber-400/40 rounded-full animate-[spin_8s_linear_infinite]" />
                       </>
                     )}
-                    {isCompleted && (
-                      <div className="absolute -inset-1.5 border border-emerald-500/15 rounded-full" />
-                    )}
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all duration-300 shadow-sm z-10 ${
-                      isCompleted ? 'bg-emerald-500 border-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.4)]' : 
-                      (isCurrent ? 'bg-amber-400 border-white text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.6)]' : 'bg-slate-900 border-slate-700/60')
+                    <div className={`relative w-7 h-7 flex items-center justify-center transition-all duration-300 z-10 ${
+                      isCompleted ? 'text-emerald-400' : isCurrent ? 'text-amber-400' : 'text-slate-600'
                     }`}>
-                      {isCompleted ? (
-                        <Check className="w-3 h-3 text-slate-950 stroke-[3.5]" />
-                      ) : (
-                        isCurrent ? (
-                          <div className="w-2 h-2 bg-slate-950 rounded-full animate-pulse" />
-                        ) : (
-                          <Lock className="w-2.5 h-2.5 text-slate-500" />
-                        )
-                      )}
+                      <Hexagon className="w-7 h-7 fill-slate-950/90 drop-shadow-[0_0_8px_currentColor]" strokeWidth={1.5} />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3.5]" /> : isCurrent ? <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" /> : <Lock className="w-2.5 h-2.5" />}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Frosted Cyber Level Interaction Deck */}
+                  {/* Mission Card */}
                   <motion.div 
-                    whileHover={isUnlocked ? { scale: 1.025, y: -1 } : {}}
+                    whileHover={isUnlocked ? { scale: 1.02, y: -2 } : {}}
                     whileTap={isUnlocked ? { scale: 0.98 } : {}}
                     onClick={() => isUnlocked && onSelect(pos.level.id)}
-                    className={`absolute flex flex-col bg-slate-950/65 backdrop-blur-2xl border p-3 rounded-2xl shadow-[0_8px_25px_rgba(0,0,0,0.5)] w-[calc(100vw-88px)] max-w-[245px] md:w-[270px] md:max-w-none transition-all duration-300 z-10 overflow-hidden group/card
-                      ${isUnlocked ? 'cursor-pointer hover:bg-slate-900/65 hover:shadow-[0_12px_28px_rgba(0,0,0,0.65)]' : 'cursor-not-allowed'}
-                      ${isCompleted ? 'border-emerald-500/25 hover:border-emerald-500/50' : (isCurrent ? 'border-amber-500/40 hover:border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'border-indigo-500/15')}
-                      ${isMobile ? 'left-full ml-3.5 text-left' : (i % 2 === 0 ? 'left-full ml-6 text-left' : 'right-full mr-6 text-right items-end')}
+                    className={`absolute flex flex-col bg-slate-950/70 backdrop-blur-2xl border p-3 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 z-10 overflow-hidden group/card
+                      ${isMobile ? 'w-[calc(100vw-70px)] left-10 ml-2 text-left' : 'w-[260px] max-w-none ' + (i % 2 === 0 ? 'left-full ml-5 text-left' : 'right-full mr-5 text-right items-end')}
+                      ${isUnlocked ? 'cursor-pointer hover:bg-slate-900/70 hover:shadow-[0_15px_35px_rgba(0,0,0,0.7)]' : 'cursor-not-allowed'}
+                      ${isCompleted ? 'border-emerald-500/30 hover:border-emerald-400/60' : (isCurrent ? 'border-amber-500/50 hover:border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.15)]' : 'border-indigo-500/15 hover:border-indigo-500/30')}
                     `}
                   >
-                    {/* Reflective light sheen overlay */}
+                    {/* Card Background Effects */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${isCompleted ? 'bg-emerald-500/70' : (isCurrent ? 'bg-amber-400/90 animate-pulse' : 'bg-slate-700/40')}`} />
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover/card:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
 
-                    {/* Left border-accent based on state */}
-                    <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${isCompleted ? 'bg-emerald-500/60' : (isCurrent ? 'bg-amber-400/80 animate-pulse' : 'bg-slate-700/30')}`} />
-
-                    {/* Top capsule info */}
-                    <div className="flex items-center justify-between w-full mb-1 gap-1.5 pl-1.5">
+                    {/* Header */}
+                    <div className={`flex items-center justify-between w-full mb-1.5 gap-1.5 ${isMobile ? '' : (i % 2 !== 0 ? 'flex-row-reverse' : '')}`}>
                       <span className={`text-[8.5px] font-black tracking-widest font-mono uppercase px-1.5 py-0.5 rounded ${
                         isCompleted ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
                         (isCurrent ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse' : 'bg-slate-900/85 text-slate-500 border border-slate-800/40')
@@ -317,28 +255,23 @@ const StoryTimeline: React.FC<{
                       )}
                     </div>
 
-                    {/* Level Title with integrated thematic icon */}
-                    <div className={`flex items-center gap-1.5 pl-1.5 ${isMobile ? '' : (i % 2 !== 0 ? 'flex-row-reverse' : '')}`}>
+                    {/* Title */}
+                    <div className={`flex items-center gap-1.5 ${isMobile ? '' : (i % 2 !== 0 ? 'flex-row-reverse' : '')}`}>
                       {isUnlocked && (
                         <div className={`shrink-0 ${isCompleted ? 'text-emerald-400' : isCurrent ? 'text-amber-400' : 'text-indigo-400'}`}>
-                          {isDefenseLevel ? <Atom className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} /> : isHighGroundLevel ? <Compass className="w-3.5 h-3.5" /> : <Terminal className="w-3.5 h-3.5" />}
+                          {isDefenseLevel ? <Atom className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} /> : <Terminal className="w-3.5 h-3.5" />}
                         </div>
                       )}
-                      <h3 className={`text-xs md:text-sm font-black uppercase tracking-wide leading-tight truncate ${
-                        isCurrent ? 'text-amber-200 group-hover/card:text-amber-100' : 'text-slate-100 group-hover/card:text-white'
-                      }`}>{displayTitle}</h3>
+                      <h3 className={`text-xs md:text-sm font-black uppercase tracking-wide leading-tight truncate ${isCurrent ? 'text-amber-200 group-hover/card:text-amber-100' : 'text-slate-100 group-hover/card:text-white'}`}>
+                        {displayTitle}
+                      </h3>
                     </div>
                     
                     {isUnlocked ? (
-                      <div className="pl-1.5 mt-1 flex flex-col gap-2">
-                        {/* Compact description view */}
-                        <p className="text-[9.5px] text-slate-400/90 font-mono leading-relaxed italic line-clamp-2">
-                          {displayDesc}
-                        </p>
+                      <div className="mt-1.5 flex flex-col gap-2">
+                        <p className="text-[9.5px] text-slate-400/90 font-mono leading-relaxed italic line-clamp-2">{displayDesc}</p>
                         
-                        {/* Control stats node summary */}
                         <div className="flex items-center justify-between gap-1.5 mt-1 pt-1.5 border-t border-white/5 w-full">
-                          {/* Mini dynamic threat indicator */}
                           <div className={`flex items-center gap-1 bg-black/45 px-2 py-0.5 rounded-full border text-[8px] font-black tracking-wider uppercase ${
                             threat === 'NONE' ? 'text-emerald-400 border-emerald-500/20' : 
                             (threat === 'BASIC' ? 'text-amber-400 border-amber-500/20' : 'text-red-400 border-red-500/20')
@@ -347,15 +280,12 @@ const StoryTimeline: React.FC<{
                             <span>{(t as any)[`LVL_THREAT_${threat}`]}</span>
                           </div>
                           
-                          {/* Starting Assets preview */}
                           <div className="flex items-center gap-1 shrink-0">
-                            <div className="flex items-center gap-0.5 text-[8.5px] font-bold font-mono text-indigo-300 bg-indigo-950/25 px-1 py-0.5 rounded border border-indigo-500/10">
-                              <BatteryCharging className="w-2.5 h-2.5 text-indigo-400" />
-                              <span>{pos.level.startState.moves}</span>
+                            <div className="flex items-center gap-0.5 text-[8.5px] font-bold font-mono text-indigo-300 bg-indigo-950/30 px-1.5 py-0.5 rounded border border-indigo-500/10">
+                              <BatteryCharging className="w-2.5 h-2.5 text-indigo-400" /> {pos.level.startState.moves}
                             </div>
-                            <div className="flex items-center gap-0.5 text-[8.5px] font-bold font-mono text-emerald-300 bg-emerald-950/25 px-1 py-0.5 rounded border border-emerald-500/10">
-                              <Coins className="w-2.5 h-2.5 text-emerald-400" />
-                              <span>{pos.level.startState.credits}</span>
+                            <div className="flex items-center gap-0.5 text-[8.5px] font-bold font-mono text-emerald-300 bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-500/10">
+                              <Coins className="w-2.5 h-2.5 text-emerald-400" /> {pos.level.startState.credits}
                             </div>
                           </div>
                         </div>
@@ -397,8 +327,8 @@ const LevelGrid: React.FC<{ levelsModeProgress: number; onSelect: (id: string) =
       <div className="max-w-6xl mx-auto pb-12 z-10 relative flex flex-col gap-6 md:gap-8">
         {Object.entries(levelsBySeries).map(([seriesId, seriesLevels]) => (
           <div key={`series-${seriesId}`} className="flex flex-col gap-3">
-            {/* Sector Header Block */}
-            <div className="flex items-center gap-2 border-b border-indigo-500/10 pb-1">
+            {/* Sector Header */}
+            <div className="flex items-center gap-2 border-b border-indigo-500/10 pb-1.5">
               <Layers className="w-3.5 h-3.5 text-indigo-400" />
               <h3 className="text-[11px] md:text-sm font-black uppercase tracking-[0.2em] text-indigo-200">
                 {language === 'RU' ? `Сектор ${seriesId}` : `Sector ${seriesId}`}
@@ -409,8 +339,8 @@ const LevelGrid: React.FC<{ levelsModeProgress: number; onSelect: (id: string) =
               </span>
             </div>
             
-            {/* Compact bento grids */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 content-start">
+            {/* Bento Grid - Optimized for Mobile (2 cols) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-3 content-start">
               {seriesLevels.map((level, idx) => {
                 const overallIndex = CAMPAIGN_LEVELS.findIndex(l => l.id === level.id);
                 const isUnlocked = overallIndex <= levelsModeProgress;
@@ -418,46 +348,54 @@ const LevelGrid: React.FC<{ levelsModeProgress: number; onSelect: (id: string) =
                 const isCurrent = overallIndex === levelsModeProgress;
                 const displayTitle = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_TITLE`] || level.title).replace(/^(?:Simulation|Sim|Сим|SIM|SIMULATION)\s*[\d.]+:?\s*/i, '');
                 const threat = level.aiMode === 'none' ? 'NONE' : (level.aiMode === 'basic' ? 'BASIC' : 'HIGH');
-                const glowColor = threat === 'NONE' ? 'emerald' : (threat === 'BASIC' ? 'amber' : 'red');
 
                 return (
                   <motion.div 
                     key={level.id} 
                     initial={{ opacity: 0, y: 10, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ delay: Math.min(10, idx) * 0.02, duration: 0.25 }}
-                    whileHover={isUnlocked ? { scale: 1.015, y: -1 } : {}}
+                    transition={{ delay: Math.min(10, idx) * 0.03, duration: 0.25 }}
+                    whileHover={isUnlocked ? { scale: 1.02, y: -2 } : {}}
                     whileTap={isUnlocked ? { scale: 0.98 } : {}}
                     onClick={() => isUnlocked && onSelect(level.id)}
-                    className={`group relative flex flex-col p-3 rounded-xl transition-all duration-300 h-[115px] overflow-hidden ${isUnlocked ? 'cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.5)]' : 'grayscale-[35%] cursor-not-allowed'}`}
+                    className={`group relative flex flex-col p-2.5 rounded-xl transition-all duration-300 h-[125px] md:h-[135px] overflow-hidden ${isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                   >
                     {/* Glass plate */}
-                    <div className={`absolute inset-0 bg-slate-950/60 backdrop-blur-2xl border rounded-xl overflow-hidden transition-all duration-300 ${isUnlocked ? 'group-hover:bg-slate-950/85 group-hover:border-indigo-500/30' : 'bg-slate-950/20'} ${isCurrent ? 'border-amber-500/35 shadow-[0_0_12px_rgba(245,158,11,0.12)]' : 'border-white/5'}`} />
+                    <div className={`absolute inset-0 bg-slate-950/70 backdrop-blur-xl border rounded-xl overflow-hidden transition-all duration-300 ${
+                      isUnlocked ? 'group-hover:bg-slate-950/90 group-hover:border-indigo-500/40' : 'bg-slate-950/30 border-white/5'
+                    } ${isCurrent ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.15)]' : 'border-white/5'}`} />
                     
-                    {/* Radial background glowing mesh */}
-                    <div className={`absolute -inset-[2px] rounded-xl bg-gradient-to-r ${glowColor === 'emerald' ? 'from-emerald-500/5' : (glowColor === 'amber' ? 'from-amber-500/10' : 'from-red-500/10')} to-transparent opacity-30 blur-[6px] -z-10 pointer-events-none group-hover:opacity-100`} />
+                    {/* HUD Brackets (Cyberpunk style) */}
+                    <div className={`absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 rounded-tl-lg transition-colors ${isUnlocked ? 'border-indigo-500/50 group-hover:border-indigo-400' : 'border-slate-700/50'}`} />
+                    <div className={`absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 rounded-br-lg transition-colors ${isUnlocked ? 'border-indigo-500/50 group-hover:border-indigo-400' : 'border-slate-700/50'}`} />
 
+                    {/* Content */}
                     <div className="relative z-10 flex flex-col h-full gap-1.5">
                       <div className="flex items-start gap-2">
-                        <div className={`flex items-center justify-center w-7 h-7 rounded-lg bg-slate-950 border shadow-inner shrink-0 ${isUnlocked ? (threat === 'NONE' ? 'text-emerald-400 border-emerald-400/15' : threat === 'BASIC' ? 'text-amber-400 border-amber-400/15' : 'text-red-400 border-red-400/15') : 'text-slate-600 border-slate-800'}`}>
-                          <MapPin className="w-3 h-3" />
+                        <div className={`flex items-center justify-center w-7 h-7 rounded-lg bg-slate-950 border shadow-inner shrink-0 ${
+                          isUnlocked ? (threat === 'NONE' ? 'text-emerald-400 border-emerald-400/20' : threat === 'BASIC' ? 'text-amber-400 border-amber-400/20' : 'text-red-400 border-red-400/20') : 'text-slate-600 border-slate-800'
+                        }`}>
+                          <MapPin className="w-3.5 h-3.5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className={`text-[11.5px] font-black uppercase tracking-wide leading-tight mb-0.5 truncate ${isUnlocked ? 'text-slate-100' : 'text-slate-500'}`}>{displayTitle}</h3>
-                          <div className={`inline-flex items-center px-1 py-0.2 rounded border text-[7.5px] font-mono uppercase font-bold leading-none ${isCompleted ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : (isCurrent ? 'bg-amber-500/20 text-amber-400 border-amber-500/25 animate-pulse' : 'bg-slate-900 text-slate-500 border-white/5')}`}>
+                          <h3 className={`text-[10.5px] md:text-[11.5px] font-black uppercase tracking-wide leading-tight mb-0.5 truncate ${isUnlocked ? 'text-slate-100' : 'text-slate-500'}`}>
+                            {displayTitle}
+                          </h3>
+                          <div className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[7px] font-mono uppercase font-bold leading-none ${
+                            isCompleted ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 
+                            (isCurrent ? 'bg-amber-500/20 text-amber-400 border-amber-500/25 animate-pulse' : 'bg-slate-900 text-slate-500 border-white/5')
+                          }`}>
                             {isCompleted ? t.LVL_STATUS_COMPLETED : (isCurrent ? t.LVL_STATUS_READY : t.LVL_STATUS_LOCKED)}
                           </div>
                         </div>
                       </div>
 
-                      {/* Brief Objectives statement */}
-                      <p className="text-[9px] text-slate-400/90 font-mono leading-relaxed italic line-clamp-1 truncate max-w-full px-1">
+                      <p className="text-[8.5px] text-slate-400/80 font-mono leading-relaxed italic line-clamp-1 truncate max-w-full hidden md:block">
                         {level.goalText || ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_DESC`] || '').split('\n\n')[0]}
                       </p>
 
-                      {/* Info indicators */}
-                      <div className="mt-auto flex items-center justify-between gap-1.5 pt-1 border-t border-white/5">
-                        <div className={`flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded-full border text-[7.5px] font-black tracking-wider uppercase ${
+                      <div className="mt-auto flex items-center justify-between gap-1.5 pt-1.5 border-t border-white/5">
+                        <div className={`flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded-full border text-[7px] font-black tracking-wider uppercase ${
                           threat === 'NONE' ? 'text-emerald-400 border-emerald-500/15' : 
                           (threat === 'BASIC' ? 'text-amber-400 border-amber-500/15' : 'text-red-400 border-red-500/15')
                         }`}>
@@ -465,11 +403,11 @@ const LevelGrid: React.FC<{ levelsModeProgress: number; onSelect: (id: string) =
                           <span>{(t as any)[`LVL_THREAT_${threat}`]}</span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <div className="flex items-center gap-0.5 text-[8px] font-bold font-mono text-indigo-300 bg-indigo-950/25 px-1 py-0.5 rounded border border-indigo-500/10">
+                          <div className="flex items-center gap-0.5 text-[7.5px] font-bold font-mono text-indigo-300 bg-indigo-950/30 px-1 py-0.5 rounded border border-indigo-500/10">
                             <BatteryCharging className="w-2.5 h-2.5 text-indigo-400" />
                             <span>{level.startState.moves}</span>
                           </div>
-                          <div className="flex items-center gap-0.5 text-[8px] font-bold font-mono text-emerald-300 bg-emerald-950/25 px-1 py-0.5 rounded border border-emerald-500/10">
+                          <div className="flex items-center gap-0.5 text-[7.5px] font-bold font-mono text-emerald-300 bg-emerald-950/30 px-1 py-0.5 rounded border border-emerald-500/10">
                             <Coins className="w-2.5 h-2.5 text-emerald-400" />
                             <span>{level.startState.credits}</span>
                           </div>
@@ -478,14 +416,14 @@ const LevelGrid: React.FC<{ levelsModeProgress: number; onSelect: (id: string) =
                     </div>
                     
                     {!isUnlocked && (
-                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/45 backdrop-blur-[1px] rounded-xl">
-                        <Lock className="w-3.5 h-3.5 text-slate-600/75" />
+                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/60 backdrop-blur-[2px] rounded-xl">
+                        <Lock className="w-4 h-4 text-slate-600/80" />
                       </div>
                     )}
                     {isUnlocked && !isCompleted && (
                       <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="w-3.5 h-3.5 rounded-full bg-indigo-500/25 flex items-center justify-center border border-indigo-500/40">
-                          <Play className="w-1.5 text-indigo-400 fill-current ml-0.5" />
+                        <div className="w-4 h-4 rounded-full bg-indigo-500/30 flex items-center justify-center border border-indigo-500/50">
+                          <Play className="w-2 text-indigo-400 fill-current ml-0.5" />
                         </div>
                       </div>
                     )}
@@ -517,8 +455,6 @@ const CampaignMap: React.FC = () => {
   const isSiegeActive = useMemo(() => {
     const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_') && !id.startsWith('siege_pending_')).length;
     if (completedNormalCount === 0) return false;
-    
-    // Check if any block has a pending siege that is not yet completed
     const currentBlock = Math.floor((completedNormalCount - 1) / 5) + 1;
     for (let b = 1; b <= currentBlock; b++) {
       if (claimedLevelRewards.includes(`siege_pending_${b}`) && !claimedLevelRewards.includes(`siege_completed_${b}`)) {
@@ -574,20 +510,13 @@ const CampaignMap: React.FC = () => {
       >
         {/* TOP SCI-FI BANNER MODULE */}
         <div className="relative px-3 md:px-6 py-2.5 md:py-3.5 border-b border-indigo-500/15 flex items-center justify-between bg-slate-900/35 shrink-0 z-20 backdrop-blur-xl gap-3">
-          
-          {/* Neon track gauge indicator */}
           <div className="absolute bottom-0 left-0 h-[1.5px] bg-slate-800/40 w-full">
-            <div 
-              className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 shadow-[0_0_8px_#6366f1] transition-all duration-700 ease-out" 
-              style={{ width: `${progressPercent}%` }}
-            />
+            <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 shadow-[0_0_8px_#6366f1] transition-all duration-700 ease-out" style={{ width: `${progressPercent}%` }} />
           </div>
 
           <div className="flex items-center gap-2.5 min-w-0">
-            {/* Standard tactile tactile back selector */}
             <motion.button 
-              whileHover={{ scale: 1.05 }} 
-              whileTap={{ scale: 0.95 }} 
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} 
               onClick={() => { useGameStore.getState().setUIState('STORY_BUILDER'); playUiSound('CLICK'); }} 
               className="p-2 md:p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-700/80 hover:bg-slate-900/80 text-slate-300 hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-md shrink-0 min-h-[40px] min-w-[40px]"
             >
@@ -599,9 +528,7 @@ const CampaignMap: React.FC = () => {
                 {campaignMode === 'STORY' ? TEXT[language].MENU.MODE_STORY : TEXT[language].MENU.MODE_LEVELS}
               </h2>
               <div className="flex items-center gap-1.5">
-                <p className="text-indigo-400/40 text-[7.5px] font-mono tracking-[0.25em] uppercase font-bold leading-none hidden sm:block">
-                  {t.HEADER_SUBTITLE}
-                </p>
+                <p className="text-indigo-400/40 text-[7.5px] font-mono tracking-[0.25em] uppercase font-bold leading-none hidden sm:block">{t.HEADER_SUBTITLE}</p>
                 <div className="flex items-center gap-1 bg-indigo-500/10 border border-indigo-400/15 rounded-full px-1.5 py-0.5 text-[7.5px] font-mono text-indigo-300 shadow-[0_0_8px_rgba(99,102,241,0.08)] leading-none">
                   <div className="w-0.5 h-0.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_4px_#10b981]" />
                   <span className="truncate max-w-[80px]">{user ? user.nickname : 'Guest'}</span>
@@ -610,24 +537,20 @@ const CampaignMap: React.FC = () => {
             </div>
           </div>
 
-          {/* Core progress layout label */}
           {!isMobile && (
             <div className="flex items-center gap-5 border-l border-white/5 pl-4 ml-auto">
               <div className="flex flex-col">
                 <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">{TEXT[language].HUD.MISSION_COMPLETE}</span>
                 <span className="text-base font-black text-white font-mono leading-none">
-                  {campaignMode === 'STORY' ? campaignProgress : levelsModeProgress} 
-                  <span className="text-slate-600 text-xs"> / {CAMPAIGN_LEVELS.length}</span>
+                  {campaignMode === 'STORY' ? campaignProgress : levelsModeProgress} <span className="text-slate-600 text-xs"> / {CAMPAIGN_LEVELS.length}</span>
                 </span>
               </div>
             </div>
           )}
 
-          {/* Engineering upgrades matrix node */}
           <div className="flex items-center gap-2 ml-auto shrink-0">
             <motion.button 
-              whileHover={{ scale: 1.03 }} 
-              whileTap={{ scale: 0.97 }} 
+              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} 
               onClick={() => { setShowUpgrades(true); playUiSound('CLICK'); }} 
               className="group relative flex items-center gap-1.5 px-2.5 py-2 bg-indigo-600/10 hover:bg-indigo-600/25 text-indigo-100 rounded-lg border border-indigo-500/25 transition-all text-[8.5px] md:text-[10px] font-black uppercase tracking-widest shadow-sm cursor-pointer min-h-[40px]"
             >
@@ -671,7 +594,6 @@ const CampaignMap: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* HUD WATERMARK */}
         <div className="absolute top-0 right-0 p-2 opacity-[0.02] pointer-events-none select-none text-[50px] font-black italic tracking-tighter text-white overflow-hidden whitespace-nowrap z-0">MISSION CONTROL</div>
 
         <AnimatePresence>
