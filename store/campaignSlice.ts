@@ -7,7 +7,11 @@ export const createCampaignSlice = (
 ) => ({
   setCampaignMode: (mode: 'STORY' | 'LEVELS') => set(() => ({ campaignMode: mode })),
   
-  setSkillPoints: (points: number) => set(() => ({ skillPoints: points })),
+  setSkillPoints: (points: number | ((prev: number) => number)) => set((state) => {
+    const current = typeof state.skillPoints === 'number' ? state.skillPoints : 0;
+    const nextVal = typeof points === 'function' ? points(current) : points;
+    return { skillPoints: Math.max(0, typeof nextVal === 'number' && !isNaN(nextVal) ? nextVal : 0) };
+  }),
   
   updateCampaignUpgrades: (partial: Partial<CampaignUpgrades>) => set((state) => ({
     campaignUpgrades: { ...state.campaignUpgrades, ...partial }

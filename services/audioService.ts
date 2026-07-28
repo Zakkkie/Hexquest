@@ -18,7 +18,8 @@ type SoundType =
   | 'CRACK' 
   | 'WARNING'
   | 'FIREWORK'
-  | 'TELEPORT';
+  | 'TELEPORT'
+  | 'JACKPOT';
 
 // --- MUSIC THEORY CONSTANTS ---
 
@@ -1145,6 +1146,50 @@ class AudioService {
              oscC.start(chimTime);
              oscC.stop(chimTime + 0.5);
              oscC.onended = () => { oscC.disconnect(); gainC.disconnect(); };
+         });
+         break;
+      }
+      case 'JACKPOT': {
+         // Grand Casino Jackpot Fanfare Chime with crystalline shimmer
+         const chord = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]; // C Major Triad across octaves
+         chord.forEach((freq, idx) => {
+             const noteTime = t + (idx * 0.05);
+             const osc = this.ctx!.createOscillator();
+             const g = this.ctx!.createGain();
+             osc.type = 'triangle';
+             osc.frequency.setValueAtTime(freq, noteTime);
+             osc.frequency.exponentialRampToValueAtTime(freq * 1.02, noteTime + 0.45);
+             
+             g.gain.setValueAtTime(0, noteTime);
+             g.gain.linearRampToValueAtTime(0.12, noteTime + 0.02);
+             g.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.5);
+             
+             osc.connect(g);
+             if (this.reverbNode) g.connect(this.reverbNode);
+             else g.connect(this.sfxBus!);
+             
+             osc.start(noteTime);
+             osc.stop(noteTime + 0.52);
+         });
+         
+         // High-pitched shimmering sparkles
+         const sparkles = [2093.00, 2637.02, 3135.96, 4186.01, 5274.04];
+         sparkles.forEach((freq, idx) => {
+             const noteTime = t + 0.25 + (idx * 0.05);
+             const osc = this.ctx!.createOscillator();
+             const g = this.ctx!.createGain();
+             osc.type = 'sine';
+             osc.frequency.setValueAtTime(freq, noteTime);
+             g.gain.setValueAtTime(0, noteTime);
+             g.gain.linearRampToValueAtTime(0.08, noteTime + 0.01);
+             g.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.35);
+             
+             osc.connect(g);
+             if (this.reverbNode) g.connect(this.reverbNode);
+             else g.connect(this.sfxBus!);
+             
+             osc.start(noteTime);
+             osc.stop(noteTime + 0.36);
          });
          break;
       }

@@ -82,7 +82,7 @@ export interface GameStore extends GameState {
   setLanguage: (lang: 'EN' | 'RU') => void;
   setCampaignMode: (mode: 'STORY' | 'LEVELS') => void;
   addMinedHexes: (hexes: Record<number, number>) => void;
-  setSkillPoints: (points: number) => void;
+  setSkillPoints: (points: number | ((prev: number) => number)) => void;
   updateCampaignUpgrades: (upgrades: Partial<import('../types.ts').CampaignUpgrades>) => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
