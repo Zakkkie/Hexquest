@@ -80,7 +80,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
 
   if (!player) return null;
 
-  const isHudVisible = victoryStage === 'HIDDEN' && gameStatus !== 'BRIEFING';
+  const isHudVisible = victoryStage === 'HIDDEN';
 
   return (
     <div 

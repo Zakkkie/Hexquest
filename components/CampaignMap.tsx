@@ -4,11 +4,207 @@ import { CAMPAIGN_LEVELS } from '../campaign/levels.ts';
 import { LevelConfig } from '../types.ts';
 import { 
   Check, Lock, Play, MapPin, ShieldAlert, Crosshair, Layers, Cpu, 
-  BatteryCharging, Coins, ArrowLeft, Terminal, Compass, Atom, Sparkles, Hexagon
+  BatteryCharging, Coins, ArrowLeft, Terminal, Compass, Atom, Sparkles, Hexagon,
+  X, Target, Package, ArrowRight
 } from 'lucide-react';
 import { TEXT } from '../services/i18n.ts';
 import { UpgradesTree } from './UpgradesTree.tsx';
 import { motion, AnimatePresence } from 'motion/react';
+
+// --- MISSION BRIEFING POPUP MODAL ---
+interface MissionBriefingModalProps {
+  level: LevelConfig;
+  campaignProgress: number;
+  levelsModeProgress: number;
+  campaignMode: 'STORY' | 'LEVELS';
+  onClose: () => void;
+  onStart: () => void;
+}
+
+const MissionBriefingModal: React.FC<MissionBriefingModalProps> = ({
+  level,
+  campaignProgress,
+  levelsModeProgress,
+  campaignMode,
+  onClose,
+  onStart,
+}) => {
+  const language = useGameStore(state => state.language);
+  const isRu = language === 'RU';
+  
+  const levelKey = level.id.replace('.', '_');
+  const displayTitle = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${levelKey}_TITLE`] || level.title).replace(/^(?:Simulation|Sim|Сим|SIM|SIMULATION)\s*[\d.]+:?\s*/i, '');
+  const displayDesc = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${levelKey}_DESC`] || level.description);
+  const seriesId = level.id.split('.')[0] || '1';
+  
+  const overallIndex = CAMPAIGN_LEVELS.findIndex(l => l.id === level.id);
+  const progress = campaignMode === 'STORY' ? campaignProgress : levelsModeProgress;
+  const isCompleted = overallIndex < progress;
+  const isCurrent = overallIndex === progress;
+  
+  const threat = level.aiMode === 'none' ? 'NONE' : (level.aiMode === 'basic' ? 'BASIC' : 'HIGH');
+  const t = TEXT[language].CAMPAIGN_MAP;
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md select-none font-sans"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg bg-slate-900 border border-indigo-500/30 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.25)] overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        {/* Glow Effects */}
+        <div className="absolute -top-20 -left-20 w-40 h-40 bg-indigo-600/20 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-cyan-600/20 blur-3xl rounded-full pointer-events-none" />
+
+        {/* Top Header */}
+        <div className="relative px-5 py-4 bg-gradient-to-r from-indigo-950/90 via-slate-900 to-slate-900 border-b border-indigo-500/20 flex items-center justify-between z-10">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.25)] shrink-0">
+              <Terminal className="w-5 h-5 text-cyan-300" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-widest">
+                  {isRu ? `СЕКТОР ${seriesId} • МИССИЯ ${level.id}` : `SECTOR ${seriesId} • MISSION ${level.id}`}
+                </span>
+                <span className={`px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase ${
+                  isCompleted ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                  isCurrent ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse' :
+                  'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                }`}>
+                  {isCompleted ? (isRu ? 'ПРОЙДЕНО' : 'COMPLETED') : isCurrent ? (isRu ? 'ТЕКУЩАЯ' : 'READY') : (isRu ? 'ДОСТУПНО' : 'UNLOCKED')}
+                </span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide truncate">
+                {displayTitle}
+              </h2>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-10">
+          {/* Mission Objective Box */}
+          {level.goalText && (
+            <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-3 flex flex-col gap-1.5">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-indigo-300 font-mono">
+                <Target className="w-3.5 h-3.5 text-cyan-400" />
+                <span>{isRu ? 'ЦЕЛЬ ОПЕРАЦИИ:' : 'OPERATION OBJECTIVE:'}</span>
+              </div>
+              <p className="text-xs font-mono font-bold text-cyan-200">
+                {level.goalText}
+              </p>
+            </div>
+          )}
+
+          {/* Tactical Briefing / Description */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>{isRu ? 'ТАКТИЧЕСКИЙ БРИФИНГ:' : 'TACTICAL BRIEFING:'}</span>
+            </div>
+            <div className="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-3.5 text-slate-200 font-mono text-xs leading-relaxed whitespace-pre-line max-h-[160px] overflow-y-auto no-scrollbar shadow-inner">
+              {displayDesc}
+            </div>
+          </div>
+
+          {/* Starting Parameters Grid */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
+              <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+              <span>{isRu ? 'НАЧАЛЬНЫЕ ПАРАМЕТРЫ:' : 'INITIAL PARAMETERS:'}</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
+                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
+                  <BatteryCharging className="w-3 h-3 text-indigo-400" />
+                  {isRu ? 'Ходы' : 'Moves'}
+                </span>
+                <span className="text-sm font-mono font-bold text-indigo-300">{level.startState.moves}</span>
+              </div>
+
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
+                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
+                  <Coins className="w-3 h-3 text-emerald-400" />
+                  {isRu ? 'Кредиты' : 'Credits'}
+                </span>
+                <span className="text-sm font-mono font-bold text-emerald-300">{level.startState.credits}</span>
+              </div>
+
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
+                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
+                  <Package className="w-3 h-3 text-amber-400" />
+                  {isRu ? 'Материалы' : 'Materials'}
+                </span>
+                <span className="text-sm font-mono font-bold text-amber-300">{level.startState.materials || 0}</span>
+              </div>
+
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
+                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
+                  <ShieldAlert className="w-3 h-3 text-red-400" />
+                  {isRu ? 'Угроза' : 'Threat'}
+                </span>
+                <span className={`text-xs font-mono font-bold ${
+                  threat === 'NONE' ? 'text-emerald-400' : threat === 'BASIC' ? 'text-amber-400' : 'text-red-400'
+                }`}>
+                  {(t as any)[`LVL_THREAT_${threat}`]}
+                </span>
+              </div>
+
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
+                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
+                  <Compass className="w-3 h-3 text-cyan-400" />
+                  {isRu ? 'Радиус карты' : 'Map Radius'}
+                </span>
+                <span className="text-sm font-mono font-bold text-cyan-300">R{level.mapRadius || level.mapConfig?.size || 5}</span>
+              </div>
+
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
+                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
+                  <Layers className="w-3 h-3 text-purple-400" />
+                  {isRu ? 'Ранг' : 'Rank'}
+                </span>
+                <span className="text-sm font-mono font-bold text-purple-300">Rank {level.startState.rank || 0}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="px-5 py-3.5 bg-slate-950/80 border-t border-slate-800 flex items-center justify-end gap-3 z-10">
+          <button
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white font-extrabold text-xs tracking-wider uppercase transition-all cursor-pointer border border-slate-700/60"
+          >
+            {isRu ? 'Отмена' : 'Cancel'}
+          </button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onStart}
+            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-black text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transition-all flex items-center gap-2 cursor-pointer border border-indigo-400/30 relative overflow-hidden group"
+          >
+            <span className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[400%] transition-transform duration-700 ease-out" />
+            <Play className="w-4 h-4 text-cyan-200 fill-current relative z-10" />
+            <span className="relative z-10">{isRu ? 'НАЧАТЬ ОПЕРАЦИЮ' : 'START OPERATION'}</span>
+            <ArrowRight className="w-4 h-4 text-cyan-200 relative z-10 transition-transform group-hover:translate-x-1" />
+          </motion.button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 // --- PREMIUM DECORATIVE COSMIC BACKGROUND ---
 const CampaignBackground: React.FC = React.memo(() => {
@@ -268,10 +464,13 @@ const StoryTimeline: React.FC<{
                     </div>
                     
                     {isUnlocked ? (
-                      <div className="mt-1.5 flex flex-col gap-2">
-                        <p className="text-[9.5px] text-slate-400/90 font-mono leading-relaxed italic line-clamp-2">{displayDesc}</p>
-                        
-                        <div className="flex items-center justify-between gap-1.5 mt-1 pt-1.5 border-t border-white/5 w-full">
+                      <div className="mt-1 flex flex-col gap-1">
+                        {displayDesc && (
+                          <p className={`text-[9.5px] font-mono text-slate-400/90 leading-snug line-clamp-2 my-0.5 ${isMobile ? 'text-left' : (i % 2 !== 0 ? 'text-right' : 'text-left')}`}>
+                            {displayDesc}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between gap-1.5 mt-0.5 pt-1.5 border-t border-white/5 w-full">
                           <div className={`flex items-center gap-1 bg-black/45 px-2 py-0.5 rounded-full border text-[8px] font-black tracking-wider uppercase ${
                             threat === 'NONE' ? 'text-emerald-400 border-emerald-500/20' : 
                             (threat === 'BASIC' ? 'text-amber-400 border-amber-500/20' : 'text-red-400 border-red-500/20')
@@ -287,6 +486,16 @@ const StoryTimeline: React.FC<{
                             <div className="flex items-center gap-0.5 text-[8.5px] font-bold font-mono text-emerald-300 bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-500/10">
                               <Coins className="w-2.5 h-2.5 text-emerald-400" /> {pos.level.startState.credits}
                             </div>
+                            {Boolean(pos.level.startState.materials) && (
+                              <div className="flex items-center gap-0.5 text-[8.5px] font-bold font-mono text-amber-300 bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-500/10">
+                                <Package className="w-2.5 h-2.5 text-amber-400" /> {pos.level.startState.materials}
+                              </div>
+                            )}
+                            {Boolean(pos.level.startState.rank) && (
+                              <div className="flex items-center gap-0.5 text-[8.5px] font-bold font-mono text-purple-300 bg-purple-950/30 px-1.5 py-0.5 rounded border border-purple-500/10">
+                                <Layers className="w-2.5 h-2.5 text-purple-400" /> L{pos.level.startState.rank}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -347,6 +556,7 @@ const LevelGrid: React.FC<{ levelsModeProgress: number; onSelect: (id: string) =
                 const isCompleted = overallIndex < levelsModeProgress;
                 const isCurrent = overallIndex === levelsModeProgress;
                 const displayTitle = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_TITLE`] || level.title).replace(/^(?:Simulation|Sim|Сим|SIM|SIMULATION)\s*[\d.]+:?\s*/i, '');
+                const displayDesc = ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_DESC`] || level.description);
                 const threat = level.aiMode === 'none' ? 'NONE' : (level.aiMode === 'basic' ? 'BASIC' : 'HIGH');
 
                 return (
@@ -358,7 +568,7 @@ const LevelGrid: React.FC<{ levelsModeProgress: number; onSelect: (id: string) =
                     whileHover={isUnlocked ? { scale: 1.02, y: -2 } : {}}
                     whileTap={isUnlocked ? { scale: 0.98 } : {}}
                     onClick={() => isUnlocked && onSelect(level.id)}
-                    className={`group relative flex flex-col p-2.5 rounded-xl transition-all duration-300 h-[125px] md:h-[135px] overflow-hidden ${isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                    className={`group relative flex flex-col p-2.5 rounded-xl transition-all duration-300 min-h-[118px] sm:min-h-[125px] overflow-hidden ${isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                   >
                     {/* Glass plate */}
                     <div className={`absolute inset-0 bg-slate-950/70 backdrop-blur-xl border rounded-xl overflow-hidden transition-all duration-300 ${
@@ -381,18 +591,19 @@ const LevelGrid: React.FC<{ levelsModeProgress: number; onSelect: (id: string) =
                           <h3 className={`text-[10.5px] md:text-[11.5px] font-black uppercase tracking-wide leading-tight mb-0.5 truncate ${isUnlocked ? 'text-slate-100' : 'text-slate-500'}`}>
                             {displayTitle}
                           </h3>
-                          <div className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[7px] font-mono uppercase font-bold leading-none ${
+                          <div className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[7px] font-mono uppercase font-bold leading-none mb-1 ${
                             isCompleted ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 
                             (isCurrent ? 'bg-amber-500/20 text-amber-400 border-amber-500/25 animate-pulse' : 'bg-slate-900 text-slate-500 border-white/5')
                           }`}>
                             {isCompleted ? t.LVL_STATUS_COMPLETED : (isCurrent ? t.LVL_STATUS_READY : t.LVL_STATUS_LOCKED)}
                           </div>
+                          {isUnlocked && displayDesc && (
+                            <p className="text-[8.5px] font-mono text-slate-400/80 leading-tight line-clamp-1">
+                              {displayDesc}
+                            </p>
+                          )}
                         </div>
                       </div>
-
-                      <p className="text-[8.5px] text-slate-400/80 font-mono leading-relaxed italic line-clamp-1 truncate max-w-full hidden md:block">
-                        {level.goalText || ((TEXT[language].CAMPAIGN as any)[`LEVEL_${level.id.replace('.','_')}_DESC`] || '').split('\n\n')[0]}
-                      </p>
 
                       <div className="mt-auto flex items-center justify-between gap-1.5 pt-1.5 border-t border-white/5">
                         <div className={`flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded-full border text-[7px] font-black tracking-wider uppercase ${
@@ -411,6 +622,18 @@ const LevelGrid: React.FC<{ levelsModeProgress: number; onSelect: (id: string) =
                             <Coins className="w-2.5 h-2.5 text-emerald-400" />
                             <span>{level.startState.credits}</span>
                           </div>
+                          {Boolean(level.startState.materials) && (
+                            <div className="flex items-center gap-0.5 text-[7.5px] font-bold font-mono text-amber-300 bg-amber-950/30 px-1 py-0.5 rounded border border-amber-500/10">
+                              <Package className="w-2.5 h-2.5 text-amber-400" />
+                              <span>{level.startState.materials}</span>
+                            </div>
+                          )}
+                          {Boolean(level.startState.rank) && (
+                            <div className="flex items-center gap-0.5 text-[7.5px] font-bold font-mono text-purple-300 bg-purple-950/30 px-1 py-0.5 rounded border border-purple-500/10">
+                              <Layers className="w-2.5 h-2.5 text-purple-400" />
+                              <span>L{level.startState.rank}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -467,6 +690,7 @@ const CampaignMap: React.FC = () => {
   const isMobile = deviceType === 'MOBILE';
   const [containerWidth, setContainerWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
   const [showUpgrades, setShowUpgrades] = useState(false);
+  const [selectedLevelConfig, setSelectedLevelConfig] = useState<LevelConfig | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const t = TEXT[language].CAMPAIGN_MAP;
@@ -482,15 +706,22 @@ const CampaignMap: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!selectedLevelConfig) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedLevelConfig(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedLevelConfig]);
+
   const handleSelectLevel = useCallback((levelId: string) => {
-    if (isSiegeActive) {
-      playUiSound('ERROR');
-      showToast(language === 'RU' ? 'АКТИВНА ЗАЩИТА ЯДРА! Завершите защиту.' : 'CORE DEFENSE ACTIVE! Complete the defense.', 'error');
-      return;
+    const level = CAMPAIGN_LEVELS.find(l => l.id === levelId);
+    if (level) {
+      playUiSound('CLICK');
+      setSelectedLevelConfig(level);
     }
-    playUiSound('CLICK');
-    startCampaignLevel(levelId);
-  }, [isSiegeActive, language, playUiSound, showToast, startCampaignLevel]);
+  }, [playUiSound]);
 
   const progressPercent = useMemo(() => {
     const currentProgress = campaignMode === 'STORY' ? campaignProgress : levelsModeProgress;
@@ -598,6 +829,27 @@ const CampaignMap: React.FC = () => {
 
         <AnimatePresence>
           {showUpgrades && <UpgradesTree onClose={() => setShowUpgrades(false)} key="upgrades-tree" />}
+          {selectedLevelConfig && (
+            <MissionBriefingModal
+              key="briefing-modal"
+              level={selectedLevelConfig}
+              campaignProgress={campaignProgress}
+              levelsModeProgress={levelsModeProgress}
+              campaignMode={campaignMode}
+              onClose={() => setSelectedLevelConfig(null)}
+              onStart={() => {
+                if (isSiegeActive) {
+                  playUiSound('ERROR');
+                  showToast(language === 'RU' ? 'АКТИВНА ЗАЩИТА ЯДРА! Завершите защиту.' : 'CORE DEFENSE ACTIVE! Complete the defense.', 'error');
+                  return;
+                }
+                playUiSound('CLICK');
+                const id = selectedLevelConfig.id;
+                setSelectedLevelConfig(null);
+                startCampaignLevel(id);
+              }}
+            />
+          )}
         </AnimatePresence>
       </motion.div>
     </motion.div>

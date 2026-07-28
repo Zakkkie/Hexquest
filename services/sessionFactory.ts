@@ -423,7 +423,7 @@ export const createInitialSessionData = async (
     messageLog: [initialLog],
     botActivityLog: [],
     fullBotHistory: [],
-    gameStatus: levelConfig ? 'BRIEFING' : 'PLAYING',
+    gameStatus: 'PLAYING',
     lastBotActionTime: Date.now(),
     isPlayerGrowing: false,
     playerGrowthIntent: null,

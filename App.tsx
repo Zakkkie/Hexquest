@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useGameStore } from './store';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, useSpring } from 'motion/react';
 import GameView from './components/GameView';
 import MainMenu from './components/MainMenu';
 import Leaderboard from './components/Leaderboard';
@@ -18,8 +18,10 @@ const App: React.FC = () => {
   const sessionId = useGameStore(state => state.session?.sessionId);
   const setDeviceType = useGameStore(state => state.setDeviceType);
 
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const rafRef = useRef<number | null>(null);
+  const cursorX = useMotionValue(-250);
+  const cursorY = useMotionValue(-250);
+  const smoothX = useSpring(cursorX, { stiffness: 150, damping: 25, mass: 0.5 });
+  const smoothY = useSpring(cursorY, { stiffness: 150, damping: 25, mass: 0.5 });
 
   const handleResize = useCallback(() => {
     const w = window.innerWidth;
@@ -28,16 +30,6 @@ const App: React.FC = () => {
     else if (w < 1024) type = 'TABLET';
     setDeviceType(type);
   }, [setDeviceType]);
-
-  // Throttled mouse move handler using requestAnimationFrame
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (rafRef.current) return; // Already scheduled
-    
-    rafRef.current = requestAnimationFrame(() => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-      rafRef.current = null;
-    });
-  }, []);
 
   useEffect(() => {
     // One-time migration: reset overworld progress for v1 users
@@ -50,6 +42,11 @@ const App: React.FC = () => {
       console.warn('localStorage unavailable or reset failed:', error);
     }
 
+    const handleMouseMove = (e: MouseEvent) => {
+      cursorX.set(e.clientX - 250);
+      cursorY.set(e.clientY - 250);
+    };
+
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
     window.addEventListener('mousemove', handleMouseMove);
@@ -60,11 +57,8 @@ const App: React.FC = () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
     };
-  }, [handleResize, handleMouseMove]);
+  }, [handleResize, cursorX, cursorY]);
 
   return (
     <div className="relative w-screen h-screen supports-[height:100dvh]:h-[100dvh] bg-slate-950 overflow-hidden font-sans select-none">
@@ -92,9 +86,7 @@ const App: React.FC = () => {
       {/* Global Dynamic Cursor Light Glow */}
       <motion.div
         className="hidden md:block absolute rounded-full bg-indigo-500/12 blur-[130px] pointer-events-none z-0 mix-blend-screen"
-        animate={{ x: mousePos.x - 250, y: mousePos.y - 250 }}
-        transition={{ type: "tween", ease: "backOut", duration: 0.6 }}
-        style={{ width: 500, height: 500, left: 0, top: 0 }}
+        style={{ x: smoothX, y: smoothY, width: 500, height: 500, left: 0, top: 0 }}
       />
 
       {/* Main Content Switcher */}

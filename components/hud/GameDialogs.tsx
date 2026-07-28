@@ -565,13 +565,13 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
 
 {/* MISSION BRIEFING / DETAILS */}
 <AnimatePresence>
-    {(activeModal === 'MISSION' || gameStatus === 'BRIEFING') && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
+    {activeModal === 'MISSION' && gameStatus !== 'VICTORY' && gameStatus !== 'DEFEAT' && (
         <div className="absolute inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 pointer-events-auto">
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={() => { if (gameStatus !== 'BRIEFING') closeModal(); }}
+                onClick={closeModal}
                 className="absolute inset-0 bg-black/95 backdrop-blur-md"
             />
             <motion.div 
@@ -610,11 +610,9 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             </div>
                         </div>
                     </div>
-                    {gameStatus !== 'BRIEFING' && (
-                        <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-white/10 active:scale-95 transition-all cursor-pointer shrink-0">
-                            <X className="w-5 h-5"/>
-                        </button>
-                    )}
+                    <button onClick={() => { closeModal(); playUiSound('CLICK'); }} className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-white/10 active:scale-95 transition-all cursor-pointer shrink-0">
+                        <X className="w-5 h-5"/>
+                    </button>
                 </div>
 
                 {/* Dashboard Content */}
@@ -777,25 +775,13 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                         whileHover={{ scale: 1.01, filter: "brightness(1.1)" }}
                         whileTap={{ scale: 0.99 }}
                         onClick={() => {
-                            if (gameStatus === 'BRIEFING') {
-                                if (activeLevelConfig?.id === '1.0') {
-                                    setTutorialLoading(true);
-                                    audioService.play('UI_CLICK');
-                                    setTimeout(() => { setTutorialLoading(false); startMission(); }, 1800);
-                                    closeModal();
-                                    return;
-                                }
-                                startMission();
-                            }
                             closeModal();
                         }} 
                         className="group/btn relative flex w-full flex-col items-center justify-center py-3 sm:py-3.5 bg-emerald-600 border border-emerald-400 hover:bg-emerald-500 text-white rounded-lg shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:shadow-[0_0_35px_rgba(16,185,129,0.45)] transition-all cursor-pointer overflow-hidden font-mono"
                     >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite] pointer-events-none" />
                         <div className="relative z-10 flex items-center justify-center gap-2 text-white font-black uppercase tracking-[0.2em] text-xs sm:text-sm">
-                            <span>
-                                {gameStatus === 'BRIEFING' ? (activeLevelConfig?.id === '1.0' ? (language === 'RU' ? 'НАЧАТЬ ТРЕНИРОВКУ' : 'START TRAINING') : t.BRIEFING_BTN_START) : t.BTN_READY}
-                            </span>
+                            <span>{t.BTN_READY}</span>
                             <ArrowRight className="w-4 h-4 text-white transition-transform group-hover/btn:translate-x-1" />
                         </div>
                     </motion.button>

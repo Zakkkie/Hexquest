@@ -257,7 +257,7 @@ export const createGameplaySlice = (
         survivalTimer: 60, currentWave: 1, maxWaves: siegeIndex,
       };
       
-      initialSessionState.gameStatus = 'BRIEFING';
+      initialSessionState.gameStatus = 'PLAYING';
 
       const maxPlacedHexLevel = Object.values(finalGrid).reduce((max: number, h: Hex) => Math.max(max, h.currentLevel ?? 0), 0);
       initialSessionState.player.playerLevel = Math.max(1, maxPlacedHexLevel);
