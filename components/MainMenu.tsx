@@ -570,12 +570,13 @@ const MainMenu: React.FC = () => {
     if (hasActiveSession) {
         setConfirmAction({ type: 'ABANDON_CAMPAIGN', payload: mode });
     } else {
-        if (mode === 'STORY' && (!hasProgress || localStorage.getItem('hexopol_story_tutorial_completed') !== 'true')) {
+        const isTutorialCompleted = localStorage.getItem('hexopol_story_tutorial_completed') === 'true';
+        if (mode === 'STORY' && !isTutorialCompleted) {
             useGameStore.getState().setShowNewGameTutorialModal(true);
         }
         setUIState(mode === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');
     }
-  }, [user, ensureGuestUser, hasActiveSession, playUiSound, setCampaignMode, setUIState, hasProgress]);
+  }, [user, ensureGuestUser, hasActiveSession, playUiSound, setCampaignMode, setUIState]);
 
   const handleNewGameClick = useCallback(() => {
     playUiSound('CLICK');
@@ -663,7 +664,8 @@ const MainMenu: React.FC = () => {
 
     if (confirmAction.type === 'ABANDON_CAMPAIGN') {
       abandonSession();
-      if (confirmAction.payload === 'STORY' && (!hasProgress || localStorage.getItem('hexopol_story_tutorial_completed') !== 'true')) {
+      const isTutorialCompleted = localStorage.getItem('hexopol_story_tutorial_completed') === 'true';
+      if (confirmAction.payload === 'STORY' && !isTutorialCompleted) {
         useGameStore.getState().setShowNewGameTutorialModal(true);
       }
       setUIState(confirmAction.payload === 'STORY' ? 'STORY_BUILDER' : 'CAMPAIGN_MAP');

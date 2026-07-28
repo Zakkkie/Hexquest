@@ -22,8 +22,24 @@ export const OnboardingTutorial: React.FC = () => {
     const claimRewardsAndClose = useCallback((startTutorial: boolean) => {
         playUiSound('CLICK');
         
-        addCollectedHexes(STARTER_HEXES);
-        addMinedHexes(STARTER_HEXES);
+        let isAlreadyCompleted = false;
+        try {
+            isAlreadyCompleted = localStorage.getItem('hexopol_story_tutorial_completed') === 'true';
+        } catch (e) {
+            console.warn("LocalStorage check failed", e);
+        }
+
+        // Выдаем стартовые гексы только 1 раз при первой инициализации
+        if (!isAlreadyCompleted) {
+            try { 
+                localStorage.setItem('hexopol_story_tutorial_completed', 'true'); 
+                sessionStorage.setItem('story_tutorial_seen', 'true'); 
+            } catch (e) {
+                console.warn("LocalStorage access denied", e);
+            }
+            addCollectedHexes(STARTER_HEXES);
+            addMinedHexes(STARTER_HEXES);
+        }
         
         if (startTutorial) {
             setUIState('STORY_BUILDER');
@@ -31,13 +47,6 @@ export const OnboardingTutorial: React.FC = () => {
         }
         
         setShowModal(false);
-
-        try { 
-            localStorage.setItem('hexopol_story_tutorial_completed', 'true'); 
-            sessionStorage.setItem('story_tutorial_seen', 'true'); 
-        } catch (e) {
-            console.warn("LocalStorage access denied", e);
-        }
     }, [playUiSound, addCollectedHexes, addMinedHexes, setUIState, setIsStoryTutorialActive, setShowModal]);
 
     // Закрытие по Escape

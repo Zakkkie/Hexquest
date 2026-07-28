@@ -8,7 +8,6 @@ import GameDialogs from './hud/GameDialogs';
 import InventoryModal from './InventoryModal';
 import SkirmishHintBanner from './hud/SkirmishHintBanner';
 import CentralTutorialBanner from './hud/CentralTutorialBanner';
-import { OnboardingTutorial } from './hud/OnboardingTutorial';
 import { DefenseSiegeBanner } from './hud/DefenseSiegeBanner';
 import { RadarWidget } from './hud/RadarWidget';
 import { Item } from '../types';
@@ -156,8 +155,6 @@ const GameHUD: React.FC<GameHUDProps> = ({ onCenterPlayer }) => {
         )}
 
         <InventoryModal isOpen={showInventory} onClose={() => setShowInventory(false)} />
-
-        <OnboardingTutorial />
 
         <GameDialogs 
             activeModal={activeModal}
