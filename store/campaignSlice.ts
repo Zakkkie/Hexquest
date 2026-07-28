@@ -66,17 +66,7 @@ export const createCampaignSlice = (
       }
     }
 
-    // 2. REFUND:
-    // Case A: Demolishing or downgrading (level === -999)
-    // Removed refunding logic for demolition per user request
-
-    // Case B: Overwriting or upgrading an existing block (level !== -999 and hasPrev)
-    if (level !== -999 && hasPrev) {
-      // Refund the previous block's level material
-      newMined[prevLevel] = (newMined[prevLevel] || 0) + 1;
-    }
-
-    // 3. MAP STATE UPDATE
+    // 2. MAP STATE UPDATE
     const newMap = { ...state.storyMap };
     if (level === -999) {
       if (hasPrev) {
