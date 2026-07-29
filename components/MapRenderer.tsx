@@ -27,6 +27,7 @@ import {
     areAllConditionsMet,
 } from '../services/mapRenderModel';
 import { useMapInput } from '../hooks/useMapInput';
+import { renderMeteorTelegraph } from '../services/meteorRenderer';
 
 export { THEME_PALETTE };
 
@@ -1473,26 +1474,16 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
                 }
 
                 const targetedMeteor = activeMeteors?.find(m => m.q === props.q && m.r === props.r);
-                let meteorTelegraph = curContainer.getChildByName('meteor_telegraph') as PIXI.Graphics;
-                if (targetedMeteor && isRevealed) {
-                    if (!meteorTelegraph) { meteorTelegraph = new PIXI.Graphics(); meteorTelegraph.name = 'meteor_telegraph'; meteorTelegraph.zIndex = 42; curContainer.addChild(meteorTelegraph); }
-                    meteorTelegraph.clear();
-                    const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.02);
-                    meteorTelegraph.beginPath();
-                    rotatedBasePoints.forEach((pt, j) => { const px = pt.x, py = pt.y * 0.8 + props.offsetY; if (j === 0) meteorTelegraph.moveTo(px, py); else meteorTelegraph.lineTo(px, py); });
-                    meteorTelegraph.closePath(); meteorTelegraph.stroke({ width: 3, color: 0xef4444, alpha: 0.8 + pulse * 0.2 }); meteorTelegraph.fill({ color: 0xef4444, alpha: 0.25 + pulse * 0.15 });
-                    const maxTicks = targetedMeteor.maxWarnTicks || 4, ticksLeft = targetedMeteor.warnTicksRemaining, collapseRatio = ticksLeft / maxTicks, progress = 1 - collapseRatio;
-                    meteorTelegraph.beginPath(); meteorTelegraph.ellipse(0, props.offsetY, 40 * progress, 25 * progress); meteorTelegraph.stroke({ width: 2, color: 0x000000, alpha: 0.5 }); meteorTelegraph.fill({ color: 0x000000, alpha: 0.7 * progress });
-                    const startY = props.offsetY - 800, currentY = startY + (props.offsetY - startY) * Math.pow(progress, 2);
-                    meteorTelegraph.beginPath(); meteorTelegraph.circle(0, currentY, 15); meteorTelegraph.fill({ color: 0xff5500, alpha: 1 });
-                    meteorTelegraph.beginPath(); meteorTelegraph.circle(0, currentY, 8); meteorTelegraph.fill({ color: 0xffaa00, alpha: 1 });
-                    meteorTelegraph.beginPath(); meteorTelegraph.moveTo(-10, currentY); meteorTelegraph.lineTo(10, currentY); meteorTelegraph.lineTo(0, currentY - 80 - 100 * collapseRatio); meteorTelegraph.closePath(); meteorTelegraph.fill({ color: 0xff4400, alpha: 0.6 });
-                    
-                    // Trigger screen shake if meteor is close
-                    if (progress > 0.8) shakeIntensityRef.current = 10;
-                } else {
-                    if (meteorTelegraph) meteorTelegraph.visible = false;
-                }
+                renderMeteorTelegraph({
+                    curContainer,
+                    targetedMeteor,
+                    offsetY: props.offsetY,
+                    rotatedBasePoints,
+                    isRevealed,
+                    onImpactClose: (intensity) => {
+                        shakeIntensityRef.current = intensity;
+                    },
+                });
 
                 const isHovered = hoveredHexId === `${props.q},${props.r}`;
                 const isUpgradeIntent = playerGrowthIntent === 'UPGRADE';

@@ -47,33 +47,33 @@ const MissionBriefingModal: React.FC<MissionBriefingModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md select-none font-sans"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md select-none font-sans"
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: "spring", stiffness: 300, damping: 25 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-lg bg-slate-900 border border-indigo-500/30 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.25)] overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-[94vw] max-w-xl sm:max-w-2xl bg-slate-900 border border-indigo-500/30 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.25)] overflow-hidden flex flex-col h-[82vh] sm:h-[86vh] max-h-[92vh] my-auto"
       >
         {/* Glow Effects */}
         <div className="absolute -top-20 -left-20 w-40 h-40 bg-indigo-600/20 blur-3xl rounded-full pointer-events-none" />
         <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-cyan-600/20 blur-3xl rounded-full pointer-events-none" />
 
         {/* Top Header */}
-        <div className="relative px-5 py-4 bg-gradient-to-r from-indigo-950/90 via-slate-900 to-slate-900 border-b border-indigo-500/20 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.25)] shrink-0">
-              <Terminal className="w-5 h-5 text-cyan-300" />
+        <div className="relative px-3.5 py-2.5 sm:px-5 sm:py-3.5 bg-gradient-to-r from-indigo-950/90 via-slate-900 to-slate-900 border-b border-indigo-500/20 flex items-center justify-between z-10 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.25)] shrink-0">
+              <Terminal className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-300" />
             </div>
             <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-widest">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-[9px] sm:text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-widest truncate">
                   {isRu ? `СЕКТОР ${seriesId} • МИССИЯ ${level.id}` : `SECTOR ${seriesId} • MISSION ${level.id}`}
                 </span>
-                <span className={`px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase ${
+                <span className={`px-1.5 py-0.5 rounded text-[7.5px] sm:text-[8px] font-mono font-bold uppercase shrink-0 ${
                   isCompleted ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                   isCurrent ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse' :
                   'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
@@ -81,7 +81,7 @@ const MissionBriefingModal: React.FC<MissionBriefingModalProps> = ({
                   {isCompleted ? (isRu ? 'ПРОЙДЕНО' : 'COMPLETED') : isCurrent ? (isRu ? 'ТЕКУЩАЯ' : 'READY') : (isRu ? 'ДОСТУПНО' : 'UNLOCKED')}
                 </span>
               </div>
-              <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide truncate">
+              <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide truncate mt-0.5">
                 {displayTitle}
               </h2>
             </div>
@@ -94,111 +94,111 @@ const MissionBriefingModal: React.FC<MissionBriefingModalProps> = ({
           </button>
         </div>
 
-        {/* Scrollable Body */}
-        <div className="p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-10">
+        {/* Content Body */}
+        <div className="p-3 sm:p-5 flex-1 min-h-0 flex flex-col gap-3 sm:gap-4 overflow-y-auto no-scrollbar z-10">
           {/* Mission Objective Box */}
           {level.goalText && (
-            <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-3 flex flex-col gap-1.5">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-indigo-300 font-mono">
-                <Target className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-2.5 sm:p-3 flex flex-col gap-1 shrink-0">
+              <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-indigo-300 font-mono">
+                <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                 <span>{isRu ? 'ЦЕЛЬ ОПЕРАЦИИ:' : 'OPERATION OBJECTIVE:'}</span>
               </div>
-              <p className="text-xs font-mono font-bold text-cyan-200">
+              <p className="text-xs sm:text-sm font-mono font-bold text-cyan-200 leading-snug">
                 {level.goalText}
               </p>
             </div>
           )}
 
           {/* Tactical Briefing / Description */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <div className="flex-1 min-h-0 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>{isRu ? 'ТАКТИЧЕСКИЙ БРИФИНГ:' : 'TACTICAL BRIEFING:'}</span>
             </div>
-            <div className="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-3.5 text-slate-200 font-mono text-xs leading-relaxed whitespace-pre-line max-h-[160px] overflow-y-auto no-scrollbar shadow-inner">
+            <div className="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-3 sm:p-3.5 text-slate-200 font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-line overflow-y-auto no-scrollbar shadow-inner flex-1 min-h-[100px]">
               {displayDesc}
             </div>
           </div>
 
           {/* Starting Parameters Grid */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
-              <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
+              <Cpu className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <span>{isRu ? 'НАЧАЛЬНЫЕ ПАРАМЕТРЫ:' : 'INITIAL PARAMETERS:'}</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
-                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
-                  <BatteryCharging className="w-3 h-3 text-indigo-400" />
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2">
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 flex flex-col gap-1 min-w-0">
+                <span className="text-[8px] sm:text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1 truncate">
+                  <BatteryCharging className="w-3 h-3 text-indigo-400 shrink-0" />
                   {isRu ? 'Ходы' : 'Moves'}
                 </span>
-                <span className="text-sm font-mono font-bold text-indigo-300">{level.startState.moves}</span>
+                <span className="text-sm sm:text-base font-mono font-bold text-indigo-300 truncate">{level.startState.moves}</span>
               </div>
 
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
-                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
-                  <Coins className="w-3 h-3 text-emerald-400" />
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 flex flex-col gap-1 min-w-0">
+                <span className="text-[8px] sm:text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1 truncate">
+                  <Coins className="w-3 h-3 text-emerald-400 shrink-0" />
                   {isRu ? 'Кредиты' : 'Credits'}
                 </span>
-                <span className="text-sm font-mono font-bold text-emerald-300">{level.startState.credits}</span>
+                <span className="text-sm sm:text-base font-mono font-bold text-emerald-300 truncate">{level.startState.credits}</span>
               </div>
 
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
-                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
-                  <Package className="w-3 h-3 text-amber-400" />
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 flex flex-col gap-1 min-w-0">
+                <span className="text-[8px] sm:text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1 truncate">
+                  <Package className="w-3 h-3 text-amber-400 shrink-0" />
                   {isRu ? 'Материалы' : 'Materials'}
                 </span>
-                <span className="text-sm font-mono font-bold text-amber-300">{level.startState.materials || 0}</span>
+                <span className="text-sm sm:text-base font-mono font-bold text-amber-300 truncate">{level.startState.materials || 0}</span>
               </div>
 
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
-                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
-                  <ShieldAlert className="w-3 h-3 text-red-400" />
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 flex flex-col gap-1 min-w-0">
+                <span className="text-[8px] sm:text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1 truncate">
+                  <ShieldAlert className="w-3 h-3 text-red-400 shrink-0" />
                   {isRu ? 'Угроза' : 'Threat'}
                 </span>
-                <span className={`text-xs font-mono font-bold ${
+                <span className={`text-xs sm:text-sm font-mono font-bold truncate ${
                   threat === 'NONE' ? 'text-emerald-400' : threat === 'BASIC' ? 'text-amber-400' : 'text-red-400'
                 }`}>
                   {(t as any)[`LVL_THREAT_${threat}`]}
                 </span>
               </div>
 
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
-                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
-                  <Compass className="w-3 h-3 text-cyan-400" />
-                  {isRu ? 'Радиус карты' : 'Map Radius'}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 flex flex-col gap-1 min-w-0">
+                <span className="text-[8px] sm:text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1 truncate">
+                  <Compass className="w-3 h-3 text-cyan-400 shrink-0" />
+                  {isRu ? 'Радиус' : 'Radius'}
                 </span>
-                <span className="text-sm font-mono font-bold text-cyan-300">R{level.mapRadius || level.mapConfig?.size || 5}</span>
+                <span className="text-sm sm:text-base font-mono font-bold text-cyan-300 truncate">R{level.mapRadius || level.mapConfig?.size || 5}</span>
               </div>
 
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-0.5">
-                <span className="text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-purple-400" />
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 flex flex-col gap-1 min-w-0">
+                <span className="text-[8px] sm:text-[9px] text-slate-500 font-mono uppercase font-bold flex items-center gap-1 truncate">
+                  <Layers className="w-3 h-3 text-purple-400 shrink-0" />
                   {isRu ? 'Ранг' : 'Rank'}
                 </span>
-                <span className="text-sm font-mono font-bold text-purple-300">Rank {level.startState.rank || 0}</span>
+                <span className="text-sm sm:text-base font-mono font-bold text-purple-300 truncate">Rank {level.startState.rank || 0}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-5 py-3.5 bg-slate-950/80 border-t border-slate-800 flex items-center justify-end gap-3 z-10">
+        <div className="px-3.5 py-3 sm:px-5 sm:py-3.5 bg-slate-950/90 border-t border-slate-800 flex items-center justify-end gap-3 z-10 shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white font-extrabold text-xs tracking-wider uppercase transition-all cursor-pointer border border-slate-700/60"
+            className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white font-extrabold text-xs sm:text-sm tracking-wider uppercase transition-all cursor-pointer border border-slate-700/60"
           >
             {isRu ? 'Отмена' : 'Cancel'}
           </button>
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={onStart}
-            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-black text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transition-all flex items-center gap-2 cursor-pointer border border-indigo-400/30 relative overflow-hidden group"
+            className="px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-black text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transition-all flex items-center gap-2 cursor-pointer border border-indigo-400/30 relative overflow-hidden group"
           >
             <span className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[400%] transition-transform duration-700 ease-out" />
             <Play className="w-4 h-4 text-cyan-200 fill-current relative z-10" />
             <span className="relative z-10">{isRu ? 'НАЧАТЬ ОПЕРАЦИЮ' : 'START OPERATION'}</span>
-            <ArrowRight className="w-4 h-4 text-cyan-200 relative z-10 transition-transform group-hover:translate-x-1" />
+            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-200 relative z-10 transition-transform group-hover:translate-x-1" />
           </motion.button>
         </div>
       </motion.div>

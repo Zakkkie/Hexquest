@@ -1967,12 +1967,11 @@ const StoryBuilderView: React.FC = () => {
                     
                     {/* "Levels" (Уровни) buttons down the bottom region */}
                     {!isUiHidden && (
-                        <div className="flex items-center justify-center gap-3 mb-3 pointer-events-auto">
+                        <div className="flex items-center justify-center gap-3 mb-2.5 pointer-events-auto">
                             <motion.button
                                 id="tutorial-levels-btn"
                                 initial={{ y: 20, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
-                                style={{ marginTop: '0px', marginBottom: '-6px' }}
                                 onClick={() => { playUiSound('CLICK'); setUIState('CAMPAIGN_MAP'); }}
                                 className="px-5 py-2.5 bg-gradient-to-r rounded-xl backdrop-blur-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2 from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-indigo-200 hover:text-white shadow-[0_4px_25px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]"
                             >
@@ -1997,13 +1996,13 @@ const StoryBuilderView: React.FC = () => {
                         <div 
                             id="tutorial-shape-list" 
                             ref={bottomToolbarRef}
-                            className="w-full bg-transparent border-0 rounded-2xl pt-2.5 pb-2 px-0 backdrop-blur-xl relative transition-all duration-300"
+                            className="w-full bg-transparent border-0 rounded-2xl pt-[2px] pb-0 px-0 backdrop-blur-xl relative transition-all duration-300"
                         >
                             {(() => {
                                 const P = 2; // Padding to avoid clipping of stroke
-                                const Ew = 20; // Ear width (w-5)
-                                const Eh = 48; // Ear height (h-12)
-                                const R = 16;  // Corner radius of central container
+                                const Ew = 22; // Ear width
+                                const Eh = 44; // Ear height
+                                const R = 14;  // Corner radius of central container
                                 const Re = 8;  // Corner radius of ear
 
                                 const tw = toolbarDimensions.width;
@@ -2023,26 +2022,26 @@ const StoryBuilderView: React.FC = () => {
                                     M ${xLeftMain + R} ${yMin}
                                     L ${xRightMain - R} ${yMin}
                                     A ${R} ${R} 0 0 1 ${xRightMain} ${yMin + R}
-                                    L ${xRightMain} ${yTop - 8}
-                                    C ${xRightMain} ${yTop - 4} ${xRightMain + 4} ${yTop} ${xRightMain + 8} ${yTop}
+                                    L ${xRightMain} ${yTop - 6}
+                                    C ${xRightMain} ${yTop - 3} ${xRightMain + 3} ${yTop} ${xRightMain + 6} ${yTop}
                                     L ${xRightEar - Re} ${yTop}
                                     A ${Re} ${Re} 0 0 1 ${xRightEar} ${yTop + Re}
                                     L ${xRightEar} ${yBottom - Re}
                                     A ${Re} ${Re} 0 0 1 ${xRightEar - Re} ${yBottom}
-                                    L ${xRightMain + 8} ${yBottom}
-                                    C ${xRightMain + 4} ${yBottom} ${xRightMain} ${yBottom + 4} ${xRightMain} ${yBottom + 8}
+                                    L ${xRightMain + 6} ${yBottom}
+                                    C ${xRightMain + 3} ${yBottom} ${xRightMain} ${yBottom + 3} ${xRightMain} ${yBottom + 6}
                                     L ${xRightMain} ${yMax - R}
                                     A ${R} ${R} 0 0 1 ${xRightMain - R} ${yMax}
                                     L ${xLeftMain + R} ${yMax}
                                     A ${R} ${R} 0 0 1 ${xLeftMain} ${yMax - R}
-                                    L ${xLeftMain} ${yBottom + 8}
-                                    C ${xLeftMain} ${yBottom + 4} ${xLeftMain - 4} ${yBottom} ${xLeftMain - 8} ${yBottom}
+                                    L ${xLeftMain} ${yBottom + 6}
+                                    C ${xLeftMain} ${yBottom + 3} ${xLeftMain - 3} ${yBottom} ${xLeftMain - 6} ${yBottom}
                                     L ${xLeftEar + Re} ${yBottom}
                                     A ${Re} ${Re} 0 0 1 ${xLeftEar} ${yBottom - Re}
                                     L ${xLeftEar} ${yTop + Re}
                                     A ${Re} ${Re} 0 0 1 ${xLeftEar + Re} ${yTop}
-                                    L ${xLeftMain - 8} ${yTop}
-                                    C ${xLeftMain - 4} ${yTop} ${xLeftMain} ${yTop - 4} ${xLeftMain} ${yTop - 8}
+                                    L ${xLeftMain - 6} ${yTop}
+                                    C ${xLeftMain - 3} ${yTop} ${xLeftMain} ${yTop - 3} ${xLeftMain} ${yTop - 6}
                                     L ${xLeftMain} ${yMin + R}
                                     A ${R} ${R} 0 0 1 ${xLeftMain + R} ${yMin}
                                     Z
@@ -2058,7 +2057,8 @@ const StoryBuilderView: React.FC = () => {
                                     >
                                         <path 
                                             d={svgPath}
-                                            fill="rgba(5, 8, 22, 0.75)"
+                                            fill="rgba(5, 8, 22, 0.85)"
+                                            stroke="rgba(34, 211, 238, 0.4)"
                                             strokeWidth="1.5"
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
@@ -2070,7 +2070,7 @@ const StoryBuilderView: React.FC = () => {
                             {/* Left Scroll Command - aligned perfectly inside left ear */}
                             <button
                                 onClick={handleScrollLeft}
-                                style={{ left: -20, width: 20, height: 48, paddingTop: '0px', marginTop: '-8px' }}
+                                style={{ left: -22, width: 22, height: 44 }}
                                 className="absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center text-cyan-400 hover:text-white hover:scale-110 active:scale-90 cursor-pointer transition-all duration-200"
                                 title={language === 'RU' ? 'Назад' : 'Prev'}
                             >
@@ -2080,18 +2080,10 @@ const StoryBuilderView: React.FC = () => {
                             {/* Scrolling container */}
                             <div 
                                 ref={carouselRef}
-                                className="w-full flex flex-row gap-5 overflow-x-auto scrollbar-none flex-nowrap scroll-smooth relative z-10"
+                                className="w-full flex flex-row items-center gap-[22px] overflow-x-auto scrollbar-none flex-nowrap scroll-smooth relative z-10 pt-2 pb-[7px] px-3 mb-2"
                                 style={{ 
                                     scrollbarWidth: 'none', 
-                                    msOverflowStyle: 'none',
-                                    paddingLeft: '16px',
-                                    paddingRight: '16px',
-                                    paddingTop: '0px',
-                                    marginTop: '0px',
-                                    marginLeft: '0px',
-                                    marginRight: '0px',
-                                    marginBottom: '17px',
-                                    paddingBottom: '0px'
+                                    msOverflowStyle: 'none'
                                 }}
                             >
                                 {Array.from({ length: 10 }).map((_, lvl) => {
@@ -2132,19 +2124,19 @@ const StoryBuilderView: React.FC = () => {
                                                     setSelectedBuildLevel(lvl); 
                                                 }}
                                                 title={tooltipText}
-                                                className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 p-1 rounded-xl border text-center transition-all w-13 h-17 relative cursor-pointer outline-none group ${
+                                                className={`flex-shrink-0 flex flex-col items-center justify-between p-1 rounded-xl border text-center transition-all w-[52px] h-[66px] relative cursor-pointer outline-none group ${
                                                     isSelected
                                                         ? isPlaceable
-                                                            ? 'bg-indigo-950/45 border-cyan-400/70 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.25)] scale-102 font-bold'
-                                                            : 'bg-slate-950/35 border-red-500/30 text-rose-400/60 scale-100'
+                                                            ? 'bg-indigo-950/70 border-cyan-400 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.35)] scale-105 font-bold'
+                                                            : 'bg-slate-950/60 border-red-500/50 text-rose-400 scale-100'
                                                         : qty > 0 
                                                             ? isPlaceable 
-                                                                ? 'bg-slate-950/50 border-white/5 text-slate-300 hover:bg-[#0f1530] hover:border-white/10'
-                                                                : 'bg-slate-950/20 border-white/5 text-slate-400 scale-98 hover:bg-[#0f1530]/20'
-                                                            : 'bg-slate-950/10 border-white/5 text-slate-500 scale-95 hover:bg-[#0f1530]/15'
+                                                                ? 'bg-slate-950/50 border-white/10 text-slate-300 hover:bg-[#0f1530] hover:border-cyan-400/30'
+                                                                : 'bg-slate-950/25 border-white/5 text-slate-400 scale-98 hover:bg-[#0f1530]/30'
+                                                            : 'bg-slate-950/15 border-white/5 text-slate-500 scale-95 hover:bg-[#0f1530]/20'
                                                 }`}
                                             >
-                                                <div className={`w-10 h-11 flex items-center justify-center select-none pointer-events-none transition-all ${
+                                                <div className={`w-9 h-10 flex items-center justify-center select-none pointer-events-none transition-all ${
                                                     isSelected
                                                         ? isPlaceable
                                                             ? ''
@@ -2158,12 +2150,12 @@ const StoryBuilderView: React.FC = () => {
                                                     {drawInventoryHex(lvl, theme)}
                                                 </div>
 
-                                                <span className={`text-[12.5px] mt-0.5 font-mono font-black leading-none tracking-tight select-none pointer-events-none transition-all ${
+                                                <span className={`text-[12px] font-mono font-black leading-none tracking-tight select-none pointer-events-none transition-all ${
                                                     qty > 0 
                                                         ? isPlaceable 
                                                             ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)] font-bold' 
                                                             : 'text-amber-500 font-medium' 
-                                                        : 'text-slate-300 font-medium opacity-90'
+                                                        : 'text-slate-400 font-medium opacity-80'
                                                 }`}>
                                                     x{qty}
                                                 </span>
@@ -2204,12 +2196,12 @@ const StoryBuilderView: React.FC = () => {
                                                         transmuteHexes(lvl, lvl + 1, 1);
                                                     }}
                                                     title={language === 'RU' ? `Сплавить 3 гекса L${lvl} в 1 гекс L${lvl + 1}` : `Transmute 3x L${lvl} into 1x L${lvl + 1}`}
-                                                    className={`absolute top-[38%] -translate-y-1/2 left-[calc(100%+10px)] -translate-x-1/2 rounded-full p-0.5 z-30 transition-all group overflow-hidden ${
+                                                    className={`absolute top-1/2 -translate-y-1/2 left-[calc(100%+11px)] -translate-x-1/2 rounded-full p-0.5 z-30 transition-all group overflow-hidden ${
                                                         canTransmute
                                                             ? "bg-[#0e2c3a] border border-cyan-400 hover:bg-cyan-700 hover:scale-110 active:scale-95 shadow-[0_0_10px_rgba(34,211,238,0.5)] cursor-pointer"
                                                             : "bg-slate-950/60 border border-slate-800/40 opacity-30 hover:opacity-60 cursor-pointer"
                                                     }`}
-                                                    style={{ width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                    style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 >
                                                     <RefreshCw className={`w-2.5 h-2.5 transition-all duration-500 group-hover:rotate-180 ${canTransmute ? "text-cyan-200 group-hover:text-white" : "text-slate-500"}`} />
                                                 </button>
@@ -2223,7 +2215,7 @@ const StoryBuilderView: React.FC = () => {
                             {/* Right Scroll Command - aligned perfectly inside right ear */}
                             <button
                                 onClick={handleScrollRight}
-                                style={{ right: -20, width: 20, height: 48, marginTop: '-8px' }}
+                                style={{ right: -22, width: 22, height: 44 }}
                                 className="absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center text-cyan-400 hover:text-white hover:scale-110 active:scale-90 cursor-pointer transition-all duration-200"
                                 title={language === 'RU' ? 'Вперед' : 'Next'}
                             >
