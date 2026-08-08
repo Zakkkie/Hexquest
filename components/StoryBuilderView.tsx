@@ -18,9 +18,10 @@ import { audioService } from '../services/audioService.ts';
 
 
 
-import { StoryTutorial } from './hud/StoryTutorial.tsx';
 import { LevelExitDialog } from './hud/LevelExitDialog.tsx';
 import { QuantumRouletteModal } from './QuantumRouletteModal.tsx';
+import { StoryBuilderTutorials } from './hud/StoryTutorial.tsx';
+import { StageRewardData } from './hud/TutorialStageRewardModal.tsx';
 
 const drawInventoryHex = (lvl: number, theme: any) => {
     return (
@@ -161,6 +162,7 @@ const StoryBuilderView: React.FC = () => {
     const setUIState = useGameStore(state => state.setUIState);
     const playUiSound = useGameStore(state => state.playUiSound);
     const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
+    const [l2SupportNeededHex, setL2SupportNeededHex] = useState<string | null>(null);
 
     const [exitTargetState, setExitTargetState] = useState<'MENU' | 'CAMPAIGN_MAP' | null>(null);
     const minedInSessionHexes = useGameStore(state => state.minedInSessionHexes);
@@ -185,6 +187,8 @@ const StoryBuilderView: React.FC = () => {
     const toggleSfx = useGameStore(state => state.toggleSfx);
     const contrastHighlighting = useGameStore(state => state.campaignUpgrades?.contrastHighlighting || 0);
     const claimedLevelRewards = useGameStore(state => state.claimedLevelRewards || EMPTY_ARRAY);
+    const campaignProgress = useGameStore(state => state.campaignProgress || 0);
+    const levelsModeProgress = useGameStore(state => state.levelsModeProgress || 0);
 
     const bottomToolbarRef = useRef<HTMLDivElement>(null);
     const [toolbarDimensions, setToolbarDimensions] = useState({ width: 448, height: 96 });
@@ -223,7 +227,12 @@ const StoryBuilderView: React.FC = () => {
         }
     });
 
+    const defenseTutorialState = useGameStore(state => state.defenseTutorialState);
+
     const isSiegeActive = useMemo(() => {
+        if (defenseTutorialState.isActive) {
+            return defenseTutorialState.step === 'STAGE3_SIEGE';
+        }
         const completedNormalCount = claimedLevelRewards.filter(id => !id.startsWith('siege_completed_') && !id.startsWith('siege_pending_')).length;
         if (completedNormalCount === 0) return false;
         
@@ -235,7 +244,7 @@ const StoryBuilderView: React.FC = () => {
             }
         }
         return false;
-    }, [claimedLevelRewards]);
+    }, [claimedLevelRewards, defenseTutorialState.isActive, defenseTutorialState.step]);
 
     useEffect(() => {
         if (isSiegeActive) {
@@ -283,6 +292,48 @@ const StoryBuilderView: React.FC = () => {
             useGameStore.getState().setZoomScale(cam.scale);
         }
     }, []);
+
+    // Helper to calculate target positions in absolute viewport coordinates
+    const getViewportTargetPos = useCallback((hexQ?: number, hexR?: number, elementId?: string) => {
+        // 1. Target specific DOM element if present
+        if (elementId) {
+            const elem = document.getElementById(elementId);
+            if (elem) {
+                const rect = elem.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2,
+                };
+            }
+        }
+
+        // 2. Calculate hex position relative to board container's absolute viewport bounding rect
+        if (hexQ !== undefined && hexR !== undefined) {
+            const boardElem = containerRef.current || document.getElementById('tutorial-hex-board');
+            const boardRect = boardElem ? boardElem.getBoundingClientRect() : { left: 0, top: 0 };
+
+            const hexPx = hexToPixel(hexQ, hexR);
+            const canvasX = storeCameraPos.x + hexPx.x * storeZoomScale;
+            const canvasY = storeCameraPos.y + (hexPx.y - 12) * storeZoomScale;
+
+            return {
+                x: boardRect.left + canvasX,
+                y: boardRect.top + canvasY,
+            };
+        }
+
+        // 3. Fallback to visualViewport center
+        const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+        const vWidth = vv ? vv.width : (typeof window !== 'undefined' ? window.innerWidth : 800);
+        const vHeight = vv ? vv.height : (typeof window !== 'undefined' ? window.innerHeight : 600);
+        const vLeft = vv ? vv.offsetLeft : 0;
+        const vTop = vv ? vv.offsetTop : 0;
+
+        return {
+            x: vLeft + vWidth / 2,
+            y: vTop + vHeight / 2,
+        };
+    }, [storeCameraPos, storeZoomScale]);
 
     const destroyTooltipRef = useRef<HTMLDivElement>(null);
 
@@ -335,6 +386,14 @@ const StoryBuilderView: React.FC = () => {
     const [failedClickCoord, setFailedClickCoord] = useState<{ q: number, r: number } | null>(null);
     const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
+    // Defense Tutorial state and actions
+    const setDefenseTutorialStep = useGameStore(state => state.setDefenseTutorialStep);
+    const startDefenseTutorial = useGameStore(state => state.startDefenseTutorial);
+    const completeDefenseTutorial = useGameStore(state => state.completeDefenseTutorial);
+
+    // Tutorial Stage Reward Modal State
+    const [stageReward, setStageReward] = useState<StageRewardData | null>(null);
+
     // CENTRALIZED HIGH-TECH NOTIFICATION LOGS
     const [isTerminalLogExpanded, setIsTerminalLogExpanded] = useState(false);
     const [systemLogs, setSystemLogs] = useState<{ id: string; textRU: string; textEN: string; time: string; type: 'info' | 'success' | 'warning' }[]>([
@@ -359,6 +418,91 @@ const StoryBuilderView: React.FC = () => {
             ...prev
         ].slice(0, 50));
     }, []);
+
+    // Auto-start defense tutorial if player has not completed it yet, or restore active step & inventory
+    useEffect(() => {
+        const completed = localStorage.getItem('hexopol_defense_tutorial_completed') === 'true';
+        if (!completed) {
+            if (!defenseTutorialState.isActive || defenseTutorialState.step === 'IDLE') {
+                const timer = setTimeout(() => {
+                    addMinedHexes({ 0: 13, 1: 7 });
+                    startDefenseTutorial();
+                }, 800);
+                return () => clearTimeout(timer);
+            } else {
+                // Restored from account/session memory: ensure inventory items are available for current step
+                if (defenseTutorialState.step === 'PLACE_L0') {
+                    addMinedHexes({ 0: Math.max(13, defenseTutorialState.targetHexes.length) });
+                    setSelectedBuildLevel(0);
+                } else if (defenseTutorialState.step === 'UPGRADE_CORE') {
+                    addMinedHexes({ 1: Math.max(7, defenseTutorialState.targetHexes.length) });
+                    setSelectedBuildLevel(1);
+                } else if (defenseTutorialState.step === 'UPGRADE_L2') {
+                    addMinedHexes({ 2: Math.max(7, defenseTutorialState.targetHexes.length) });
+                    setSelectedBuildLevel(2);
+                }
+            }
+        }
+    }, [defenseTutorialState.isActive, defenseTutorialState.step, defenseTutorialState.targetHexes.length, startDefenseTutorial, addMinedHexes]);
+
+    // Auto-detect Level 1.0 or Siege 1 completion for Tutorial Stages
+    useEffect(() => {
+        if (!defenseTutorialState.isActive) return;
+
+        if (defenseTutorialState.step === 'LEVEL_1_0') {
+            const level1Completed = claimedLevelRewards.includes('1.0') || campaignProgress >= 1 || levelsModeProgress >= 1;
+            if (level1Completed) {
+                playUiSound('SUCCESS');
+                const currentSP = useGameStore.getState().skillPoints;
+                useGameStore.getState().setSkillPoints(currentSP + 1);
+                
+                const msg = language === 'RU'
+                    ? '🏆 Уровень 1.0 успешно пройден! Начислено +1 SP (Очко развития).'
+                    : '🏆 Level 1.0 cleared! Awarded +1 SP (Skill Point).';
+                useGameStore.getState().showToast(msg, 'success');
+                addSystemLog(msg, msg, 'success');
+                
+                setDefenseTutorialStep('UPGRADE_STORAGE', []);
+                setStageReward({
+                    stage: 3,
+                    totalStages: 6,
+                    badge: '🏆',
+                    titleRU: 'ЭТАП 3 ИЗ 6 ЗАВЕРШЁН!',
+                    titleEN: 'STAGE 3 COMPLETED!',
+                    subtitleRU: 'Боевой Уровень 1.0 успешно пройден! Вам начислено 1 SP (Очко развития).',
+                    subtitleEN: 'Battle Level 1.0 successfully cleared! Awarded 1 SP (Skill Point).',
+                    rewardRU: 'ПЕРЕХОД К ЭТАПУ 4: АПГРЕЙД СКЛАДА В УЗЛАХ РАЗВИТИЯ',
+                    rewardEN: 'PROCEED TO STAGE 4: STORAGE UPGRADE IN DEVELOPMENT NODES'
+                });
+            }
+        } else if (defenseTutorialState.step === 'STAGE3_SIEGE') {
+            const siegeCompleted = claimedLevelRewards.some(id => id.startsWith('siege_completed_'));
+            if (siegeCompleted) {
+                playUiSound('SUCCESS');
+                const currentSP = useGameStore.getState().skillPoints;
+                useGameStore.getState().setSkillPoints(currentSP + 1);
+                
+                const msg = language === 'RU'
+                    ? '🏆 Обучение обороне успешно завершено! Осада отражена. Начислено +1 SP.'
+                    : '🏆 Defense tutorial completed! Siege repelled. Awarded +1 SP.';
+                useGameStore.getState().showToast(msg, 'success');
+                addSystemLog(msg, msg, 'success');
+                
+                completeDefenseTutorial();
+                setStageReward({
+                    stage: 6,
+                    totalStages: 6,
+                    badge: '🏆',
+                    titleRU: 'ОБУЧЕНИЕ ЗАЩИТЫ УСПЕШНО ЗАВЕРШЕНО!',
+                    titleEN: 'DEFENSE TUTORIAL COMPLETED!',
+                    subtitleRU: 'Первая осада базы отражена! Оборонительный комплекс возведён, боевая турель развернута и подступы к Ядру защищены.',
+                    subtitleEN: 'First base siege repelled! Two-tier defense complex constructed, combat turret deployed and core protected.',
+                    rewardRU: 'ГОТОВО! ОБОРОНА БАЗЫ ГОТОВА',
+                    rewardEN: 'COMPLETED! BASE DEFENSE READY'
+                });
+            }
+        }
+    }, [defenseTutorialState.isActive, defenseTutorialState.step, claimedLevelRewards, campaignProgress, levelsModeProgress, completeDefenseTutorial, setDefenseTutorialStep, addSystemLog, language, playUiSound]);
 
     // QUANTUM ROULETTE MODAL STATE
     const [showRoulette, setShowRoulette] = useState(false);
@@ -699,24 +843,6 @@ const StoryBuilderView: React.FC = () => {
         };
     }, []);
 
-    const autoTutorialTriggeredRef = useRef<boolean>(false);
-
-    useEffect(() => {
-        const hasSeenTutorial = sessionStorage.getItem('story_tutorial_seen') === 'true';
-        if (!hasAnyHex && unlockedFigureIndex <= 3 && !hasSeenTutorial) {
-            if (!autoTutorialTriggeredRef.current) {
-                const timer = setTimeout(() => {
-                    if ((window as any).startStoryTutorial) {
-                        (window as any).startStoryTutorial();
-                        autoTutorialTriggeredRef.current = true;
-                        sessionStorage.setItem('story_tutorial_seen', 'true');
-                    }
-                }, 500);
-                return () => clearTimeout(timer);
-            }
-        }
-    }, [hasAnyHex, unlockedFigureIndex]);
-
     // Pre-calculate and cache the neighbor levels for each coordinate in a flat lookup map
     const storyMapNeighboursCache = useMemo(() => {
         const cache: Record<string, number[]> = {};
@@ -752,10 +878,29 @@ const StoryBuilderView: React.FC = () => {
     // Direct placement eligibility calculation
     const isEligibleForPlacement = useCallback((q: number, r: number, forceLevel?: number) => {
         const lvlToBuild = forceLevel !== undefined ? forceLevel : selectedBuildLevel;
-        const currentMap = storyMap;
         if (lvlToBuild === -999) return false; // Demolish is not a placement
 
         const currentKey = getHexKey(q, r);
+
+        // Defense Tutorial Override: Highlighted tutorial targets are always eligible for placement/upgrade
+        if (defenseTutorialState.isActive) {
+            if (defenseTutorialState.step === 'PLACE_L0' && defenseTutorialState.targetHexes.includes(currentKey) && lvlToBuild === 0) {
+                return true;
+            }
+            if (defenseTutorialState.step === 'UPGRADE_CORE' && currentKey === '0,0' && lvlToBuild === 1) {
+                return true;
+            }
+            if (defenseTutorialState.step === 'UPGRADE_L2') {
+                if (l2SupportNeededHex && currentKey === l2SupportNeededHex && lvlToBuild === 1) {
+                    return true;
+                }
+                if (defenseTutorialState.targetHexes.includes(currentKey) && (lvlToBuild === 2 || lvlToBuild === 1)) {
+                    return true;
+                }
+            }
+        }
+
+        const currentMap = storyMap;
         const currentLvl = currentMap[currentKey];
         if (currentLvl === -999) return false; // Void tile cannot be built upon!
 
@@ -785,7 +930,7 @@ const StoryBuilderView: React.FC = () => {
             return false;
         }
 
-        // STABILITY CHECK (Strict Equal Level Rule for L1+)
+        // STABILITY CHECK (Strict Equal or Higher Level Rule for L1+)
         const currentLevel = currentlyBuilt ? currentLvl : 0;
         if (currentLevel >= 1) {
             // Check if there are at least 5 neighbors strictly higher than currentLevel (Depression rule)
@@ -793,7 +938,7 @@ const StoryBuilderView: React.FC = () => {
             const isDepressionRule = higherNeighborsCount >= 5;
 
             if (!isDepressionRule) {
-                const supportNeighborsCount = neighborLevels.filter(lvl => lvl === currentLevel).length;
+                const supportNeighborsCount = neighborLevels.filter(lvl => lvl >= currentLevel).length;
                 if (supportNeighborsCount < 2) {
                     return false;
                 }
@@ -801,7 +946,7 @@ const StoryBuilderView: React.FC = () => {
         }
 
         return true;
-    }, [storyMap, selectedBuildLevel, hasAnyHex, startCenterPoint, storyMapNeighboursCache]);
+    }, [storyMap, selectedBuildLevel, hasAnyHex, startCenterPoint, storyMapNeighboursCache, defenseTutorialState, l2SupportNeededHex]);
 
     const gridPoints = useMemo(() => {
         const points = [];
@@ -887,6 +1032,15 @@ const StoryBuilderView: React.FC = () => {
     const isPanning = useRef(false);
 
     const handleCellDemolish = useCallback((q: number, r: number) => {
+        if (defenseTutorialState.isActive) {
+            playUiSound('ERROR');
+            const alertMsg = language === 'RU'
+                ? 'Снос блоков запрещён во время обучения!'
+                : 'Demolishing blocks is disabled during tutorial!';
+            setErrorMessage(alertMsg);
+            setTimeout(() => setErrorMessage(curr => curr === alertMsg ? null : curr), 3000);
+            return;
+        }
         if (q === 0 && r === 0) {
             playUiSound('ERROR');
             setErrorMessage(language === 'RU' ? 'Главное ядро (0,0) неуязвимо и не может быть удалено!' : 'The Core Matrix (0,0) is invulnerable and cannot be demolished!');
@@ -900,7 +1054,7 @@ const StoryBuilderView: React.FC = () => {
             `Hex (${q}, ${r}) demolished.`,
             'info'
         );
-    }, [language, playUiSound, placeStoryHex, setErrorMessage, addSystemLog]);
+    }, [defenseTutorialState.isActive, language, playUiSound, placeStoryHex, setErrorMessage, addSystemLog]);
 
     const handleCellClick = useCallback((q: number, r: number) => {
         if (isPanning.current) return;
@@ -916,6 +1070,258 @@ const StoryBuilderView: React.FC = () => {
                 setErrorMessage(curr => curr === alertMsg ? null : curr);
             }, 5000);
             return;
+        }
+
+        // Defense Tutorial Step Interception
+        if (defenseTutorialState.isActive) {
+            if (defenseTutorialState.step === 'HIGHLIGHT_CORE') {
+                playUiSound('ERROR');
+                const msg = language === 'RU'
+                    ? 'Ознакомьтесь с информацией и нажмите "ДАЛЕЕ"!'
+                    : 'Read the briefing and tap "NEXT"!';
+                setErrorMessage(msg);
+                setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 3000);
+                return;
+            }
+
+            if (defenseTutorialState.step === 'HIGHLIGHT_TOOLBAR') {
+                playUiSound('ERROR');
+                const msg = language === 'RU'
+                    ? 'Выберите Уровень 0 на панели внизу!'
+                    : 'Select Level 0 on the bottom panel!';
+                setErrorMessage(msg);
+                setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 3000);
+                return;
+            }
+
+            if (defenseTutorialState.step === 'PLACE_L0') {
+                const key = getHexKey(q, r);
+                if (!defenseTutorialState.targetHexes.includes(key)) {
+                    playUiSound('ERROR');
+                    setFailedClickCoord({ q, r });
+                    setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
+                    const msg = language === 'RU'
+                        ? 'Стройте только на подсвеченных звёздных позициях!'
+                        : 'Build only on highlighted star positions!';
+                    setErrorMessage(msg);
+                    setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 4000);
+                    return;
+                }
+                playUiSound('SUCCESS');
+                placeStoryHex(q, r, 0);
+                setLastPlacedKey(key);
+                const remaining = defenseTutorialState.targetHexes.filter(k => k !== key);
+                if (remaining.length === 0) {
+                    playUiSound('SUCCESS');
+                    addMinedHexes({ 1: 7 });
+                    setSelectedBuildLevel(1);
+                    const ring1Targets = ['0,0', '1,0', '1,-1', '0,-1', '-1,0', '-1,1', '0,1'];
+                    setDefenseTutorialStep('UPGRADE_CORE', ring1Targets);
+                    setStageReward({
+                        stage: 1,
+                        totalStages: 6,
+                        badge: '★',
+                        titleRU: 'ЭТАП 1 ИЗ 6 ЗАВЕРШЁН!',
+                        titleEN: 'STAGE 1 COMPLETED!',
+                        subtitleRU: 'Постройка Звезды из 13 плит L0 полностью завершена! База готова к подъему на 2 уровень (L1).',
+                        subtitleEN: 'Star contour foundation of 13 L0 tiles fully built! Ready for Level 2 elevation.',
+                        rewardRU: 'ПЕРЕХОД К ЭТАПУ 2: ПОДЪЕМ НА УРОВЕНЬ 2 (L1)',
+                        rewardEN: 'PROCEED TO STAGE 2: LEVEL 2 (L1)'
+                    });
+                } else {
+                    setDefenseTutorialStep('PLACE_L0', remaining);
+                }
+                return;
+            }
+
+            if (defenseTutorialState.step === 'UPGRADE_CORE') {
+                const key = getHexKey(q, r);
+                if (!defenseTutorialState.targetHexes.includes(key)) {
+                    playUiSound('ERROR');
+                    setFailedClickCoord({ q, r });
+                    setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
+                    const msg = language === 'RU'
+                        ? '⚠️ Размещайте плиты L1 только на подсвеченном Ядре и 6 позициях вокруг него!'
+                        : '⚠️ Place L1 tiles only on the highlighted Core and 6 positions around it!';
+                    setErrorMessage(msg);
+                    setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 4000);
+                    return;
+                }
+
+                if (selectedBuildLevel !== 1) {
+                    playUiSound('ERROR');
+                    setSelectedBuildLevel(1);
+                    const msg = language === 'RU'
+                        ? '⚠️ Выберите Уровень 1 в нижней панели!'
+                        : '⚠️ Select Level 1 hex in the bottom panel!';
+                    setErrorMessage(msg);
+                    useGameStore.getState().showToast(msg, 'warning');
+                    setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 4000);
+                    return;
+                }
+
+                playUiSound('SUCCESS');
+                placeStoryHex(q, r, 1);
+                setLastPlacedKey(key);
+
+                const remaining = defenseTutorialState.targetHexes.filter(k => k !== key);
+                if (remaining.length === 0) {
+                    playUiSound('SUCCESS');
+                    const readyMsg = language === 'RU'
+                        ? '🎉 Оборонительное кольцо 2-го уровня построено! Следующий этап: Прохождение Уровня 1.0.'
+                        : '🎉 Level 2 defense ring constructed! Next stage: Pass Level 1.0.';
+                    useGameStore.getState().showToast(readyMsg, 'success');
+                    addSystemLog(readyMsg, readyMsg, 'success');
+                    setDefenseTutorialStep('LEVEL_1_0', []);
+                    setStageReward({
+                        stage: 2,
+                        totalStages: 6,
+                        badge: '⭐',
+                        titleRU: 'ЭТАП 2 ИЗ 6 ЗАВЕРШЁН!',
+                        titleEN: 'STAGE 2 COMPLETED!',
+                        subtitleRU: 'Подъем 2-го уровня (L1) из 7 плит полностью выполнен! Оборонительная структура готова.',
+                        subtitleEN: 'Level 2 (L1) ring of 7 tiles completed! Defense structure ready.',
+                        rewardRU: 'ПЕРЕХОД К ЭТАПУ 3: ПРОХОЖДЕНИЕ УРОВНЯ 1.0',
+                        rewardEN: 'PROCEED TO STAGE 3: PASS LEVEL 1.0'
+                    });
+                } else {
+                    setDefenseTutorialStep('UPGRADE_CORE', remaining);
+                }
+                return;
+            }
+
+            if (defenseTutorialState.step === 'UPGRADE_L2') {
+                const key = getHexKey(q, r);
+
+                // If player currently needs to place an L1 support on a hex (e.g. 1,1):
+                if (l2SupportNeededHex) {
+                    if (key !== l2SupportNeededHex) {
+                        playUiSound('ERROR');
+                        setFailedClickCoord({ q, r });
+                        setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
+                        const msg = language === 'RU'
+                            ? `⚠️ Сначала нажмите на подсвеченный гекс (${l2SupportNeededHex}) и установите опору L1!`
+                            : `⚠️ Tap highlighted hex (${l2SupportNeededHex}) first to place the L1 support!`;
+                        setErrorMessage(msg);
+                        useGameStore.getState().showToast(msg, 'warning');
+                        setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 4000);
+                        return;
+                    }
+
+                    if (selectedBuildLevel !== 1) {
+                        playUiSound('ERROR');
+                        setSelectedBuildLevel(1);
+                        const msg = language === 'RU'
+                            ? '⚠️ Выберите Уровень 1 (L1) в нижней панели для постройки опоры!'
+                            : '⚠️ Select Level 1 (L1) in the bottom panel to build the support!';
+                        setErrorMessage(msg);
+                        useGameStore.getState().showToast(msg, 'warning');
+                        setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 4000);
+                        return;
+                    }
+
+                    // Place L1 support on (1,1)
+                    playUiSound('SUCCESS');
+                    placeStoryHex(q, r, 1);
+                    setLastPlacedKey(key);
+                    setL2SupportNeededHex(null);
+                    setSelectedBuildLevel(2);
+
+                    const supportDoneMsg = language === 'RU'
+                        ? `🎉 Опора L1 построена на гексе (${key})! Теперь у гекса (2,0) есть 2 необходимые опоры (1,0 и 1,1). Поднимите его до L2!`
+                        : `🎉 L1 support constructed on hex (${key})! Hex (2,0) now has 2 required supports (1,0 & 1,1). Elevate it to L2!`;
+                    useGameStore.getState().showToast(supportDoneMsg, 'success');
+                    addSystemLog(supportDoneMsg, supportDoneMsg, 'success');
+                    return;
+                }
+
+                // If no support is needed, check if target hex is valid
+                if (!defenseTutorialState.targetHexes.includes(key)) {
+                    playUiSound('ERROR');
+                    setFailedClickCoord({ q, r });
+                    setTimeout(() => setFailedClickCoord(curr => (curr?.q === q && curr?.r === r) ? null : curr), 1500);
+                    const msg = language === 'RU'
+                        ? '⚠️ Нажмите на один из подсвеченных гексов для постройки L2!'
+                        : '⚠️ Tap one of the highlighted hexes to build L2!';
+                    setErrorMessage(msg);
+                    setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 4000);
+                    return;
+                }
+
+                // Check Support Rule: count adjacent hexes with level >= 1
+                const neighborKeys = [
+                    getHexKey(q + 1, r),
+                    getHexKey(q, r + 1),
+                    getHexKey(q - 1, r + 1),
+                    getHexKey(q - 1, r),
+                    getHexKey(q, r - 1),
+                    getHexKey(q + 1, r - 1),
+                ];
+                let supportCount = 0;
+                for (const nk of neighborKeys) {
+                    const neighborLvl = storyMap[nk];
+                    if (neighborLvl !== undefined && neighborLvl >= 1) {
+                        supportCount++;
+                    }
+                }
+
+                // IF supportCount < 2, the hex fails the 2-Support Rule!
+                if (supportCount < 2) {
+                    playUiSound('ERROR');
+                    setL2SupportNeededHex('1,1');
+                    setSelectedBuildLevel(1);
+                    const supportFailMsg = language === 'RU'
+                        ? `⚠️ ПРАВИЛО 2 ОПОР: Гекс (${key}) имеет только ${supportCount} опору! Для постройки L2 требуется минимум 2 смежные плиты 1-го уровня (L1). Поставьте дополнительную опору L1 на подсвеченный гекс (1,1)!`
+                        : `⚠️ 2-SUPPORT RULE: Hex (${key}) has only ${supportCount} support! Building L2 requires at least 2 adjacent L1 tiles. Place an additional L1 support on highlighted hex (1,1)!`;
+                    setErrorMessage(supportFailMsg);
+                    useGameStore.getState().showToast(supportFailMsg, 'warning');
+                    addSystemLog(supportFailMsg, supportFailMsg, 'warning');
+                    setTimeout(() => setErrorMessage(curr => curr === supportFailMsg ? null : curr), 6000);
+                    return;
+                }
+
+                if (selectedBuildLevel !== 2) {
+                    playUiSound('ERROR');
+                    setSelectedBuildLevel(2);
+                    const msg = language === 'RU'
+                        ? '⚠️ Выберите Уровень 2 (L2) в нижней панели!'
+                        : '⚠️ Select Level 2 (L2) hex in the bottom panel!';
+                    setErrorMessage(msg);
+                    useGameStore.getState().showToast(msg, 'warning');
+                    setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 4000);
+                    return;
+                }
+
+                playUiSound('SUCCESS');
+                placeStoryHex(q, r, 2);
+                setLastPlacedKey(key);
+
+                const remaining = defenseTutorialState.targetHexes.filter(k => k !== key);
+                if (remaining.length === 0) {
+                    playUiSound('SUCCESS');
+                    const readyMsg = language === 'RU'
+                        ? '🎉 Все 7 гексов L2 успешно возведены! Правило 2 Опор освоено. Следующий этап: Оборона Базы (Осада).'
+                        : '🎉 All 7 L2 tiles constructed! 2-Support rule mastered. Next stage: Base Defense (Siege).';
+                    useGameStore.getState().showToast(readyMsg, 'success');
+                    addSystemLog(readyMsg, readyMsg, 'success');
+                    setDefenseTutorialStep('STAGE3_SIEGE', ['1,0']);
+                    useGameStore.getState().claimLevelReward('siege_pending_1');
+                    setStageReward({
+                        stage: 5,
+                        totalStages: 6,
+                        badge: '⚡',
+                        titleRU: 'ЭТАП 5 ИЗ 6 ЗАВЕРШЁН!',
+                        titleEN: 'STAGE 5 COMPLETED!',
+                        subtitleRU: '7 гексов подняты на 2 уровень (L2)! Продемонстрировано и освоено Правило 2 Опор (необходимость 2 смежных опор L1).',
+                        subtitleEN: '7 hexes elevated to Level 2 (L2)! Demonstrated and mastered 2-Support Rule (requires 2 adjacent L1 supports).',
+                        rewardRU: 'ПЕРЕХОД К ЭТАПУ 6: ОБОРОНА БАЗЫ (ОСАДА)',
+                        rewardEN: 'PROCEED TO STAGE 6: BASE DEFENSE (SIEGE)'
+                    });
+                } else {
+                    setDefenseTutorialStep('UPGRADE_L2', remaining);
+                }
+                return;
+            }
         }
         
         const map = storyMap;
@@ -1025,7 +1431,7 @@ const StoryBuilderView: React.FC = () => {
         setLastPlacedKey(key);
         setTimeout(() => setLastPlacedKey(prev => prev === key ? null : prev), 600);
         setErrorMessage(null); // clear any previous warning
-    }, [isPanning, isSiegeActive, playUiSound, language, setErrorMessage, storyMap, selectedBuildLevel, isEligibleForPlacement, setFailedClickCoord, minedInSessionHexes, collectedHexes, placeStoryHex, setLastPlacedKey]);
+    }, [isPanning, isSiegeActive, playUiSound, language, setErrorMessage, storyMap, selectedBuildLevel, isEligibleForPlacement, setFailedClickCoord, minedInSessionHexes, collectedHexes, placeStoryHex, setLastPlacedKey, defenseTutorialState, setDefenseTutorialStep, addSystemLog, l2SupportNeededHex, addMinedHexes]);
 
     const handleCellDblClick = useCallback((q: number, r: number) => {
         const key = getHexKey(q, r);
@@ -1107,6 +1513,7 @@ const StoryBuilderView: React.FC = () => {
                     }}
                     contrastHighlighting={contrastHighlighting}
                     figureIndex={unlockedFigureIndex}
+                    tutorialTargetHexes={defenseTutorialState.isActive ? (l2SupportNeededHex ? [...defenseTutorialState.targetHexes, l2SupportNeededHex] : defenseTutorialState.targetHexes) : []}
                     onCellClick={handleCellClick}
                     onCellDblClick={handleCellDblClick}
                     onCellDemolish={handleCellDemolish}
@@ -1177,7 +1584,19 @@ const StoryBuilderView: React.FC = () => {
                                 return (
                                     <button
                                         id="tutorial-blueprint-toggle"
-                                        onClick={() => { playUiSound('CLICK'); toggleTablet(); }}
+                                        onClick={() => {
+                                            if (defenseTutorialState.isActive) {
+                                                playUiSound('ERROR');
+                                                const alertMsg = language === 'RU'
+                                                    ? 'Завершите текущее обучение защиты ядра!'
+                                                    : 'Complete the current core defense tutorial!';
+                                                setErrorMessage(alertMsg);
+                                                setTimeout(() => setErrorMessage(curr => curr === alertMsg ? null : curr), 3000);
+                                                return;
+                                            }
+                                            playUiSound('CLICK');
+                                            toggleTablet();
+                                        }}
                                         className="flex flex-col justify-center text-center px-3 sm:px-4 py-1 rounded-full bg-slate-900/60 hover:bg-indigo-950/30 border border-indigo-500/20 hover:border-indigo-400/40 cursor-pointer transition-all duration-200 active:scale-95 select-none max-w-full overflow-hidden"
                                     >
                                         <span className="text-[7.5px] sm:text-[8px] font-mono tracking-[0.15em] sm:tracking-[0.2em] text-indigo-400 font-black uppercase leading-none truncate">
@@ -1219,7 +1638,19 @@ const StoryBuilderView: React.FC = () => {
                                 id="tutorial-roulette-badge"
                                 whileHover={{ scale: 1.03 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => { playUiSound('CLICK'); setShowRoulette(true); }}
+                                onClick={() => {
+                                    if (defenseTutorialState.isActive) {
+                                        playUiSound('ERROR');
+                                        const alertMsg = language === 'RU'
+                                            ? 'Завершите текущее обучение защиты ядра!'
+                                            : 'Complete the current core defense tutorial!';
+                                        setErrorMessage(alertMsg);
+                                        setTimeout(() => setErrorMessage(curr => curr === alertMsg ? null : curr), 3000);
+                                        return;
+                                    }
+                                    playUiSound('CLICK');
+                                    setShowRoulette(true);
+                                }}
                                 className={`h-full px-2 sm:px-2.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer select-none ${
                                     skillPoints > 0
                                         ? 'hover:bg-amber-500/15 text-amber-300'
@@ -1241,7 +1672,19 @@ const StoryBuilderView: React.FC = () => {
                                 id="tutorial-sp-badge"
                                 whileHover={{ scale: 1.03 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => { playUiSound('CLICK'); setShowUpgrades(true); }}
+                                onClick={() => {
+                                    if (defenseTutorialState.isActive) {
+                                        playUiSound('ERROR');
+                                        const alertMsg = language === 'RU'
+                                            ? 'Завершите текущее обучение защиты ядра!'
+                                            : 'Complete the current core defense tutorial!';
+                                        setErrorMessage(alertMsg);
+                                        setTimeout(() => setErrorMessage(curr => curr === alertMsg ? null : curr), 3000);
+                                        return;
+                                    }
+                                    playUiSound('CLICK');
+                                    setShowUpgrades(true);
+                                }}
                                 className={`h-full px-2 sm:px-2.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer select-none ${
                                     skillPoints > 0
                                         ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.35)] font-black'
@@ -1278,7 +1721,12 @@ const StoryBuilderView: React.FC = () => {
                                         className="absolute top-full right-0 mt-2 p-3 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2 min-w-[200px] max-w-[calc(100vw-24px)] z-[9999] origin-top-right"
                                     > 
                                         <button 
-                                            onClick={() => { playUiSound('CLICK'); (window as any).startStoryTutorial && (window as any).startStoryTutorial(); setIsSettingsOpen(false); }}
+                                            onClick={() => {
+                                                playUiSound('CLICK');
+                                                localStorage.removeItem('hexopol_defense_tutorial_completed');
+                                                startDefenseTutorial();
+                                                setIsSettingsOpen(false);
+                                            }}
                                             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all w-full text-left font-black uppercase text-[9px] tracking-[0.1em]"
                                         >
                                             <HelpCircle className="w-4 h-4 shrink-0" />
@@ -1399,6 +1847,7 @@ const StoryBuilderView: React.FC = () => {
                 <div className="absolute inset-0 pointer-events-none flex flex-col justify-end overflow-hidden">
 
                 {/* COMPACT FLOATING OPERATIONS LINK & LOGS PANEL (Centralized high-tech notification/info link, optimized for mobile screens) */}
+                {!defenseTutorialState.isActive && (
                 <div 
                     id="operations-link-container" 
                     className="absolute top-[58px] sm:top-[66px] md:top-[76px] left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center w-[92vw] max-w-[340px] md:max-w-md select-none"
@@ -1503,6 +1952,7 @@ const StoryBuilderView: React.FC = () => {
                         </motion.div>
                     )}
                 </div>
+                )}
 
 
 
@@ -1972,7 +2422,19 @@ const StoryBuilderView: React.FC = () => {
                                 id="tutorial-levels-btn"
                                 initial={{ y: 20, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
-                                onClick={() => { playUiSound('CLICK'); setUIState('CAMPAIGN_MAP'); }}
+                                onClick={() => {
+                                    if (defenseTutorialState.isActive) {
+                                        playUiSound('ERROR');
+                                        const alertMsg = language === 'RU'
+                                            ? 'Завершите текущее обучение защиты ядра!'
+                                            : 'Complete the current core defense tutorial!';
+                                        setErrorMessage(alertMsg);
+                                        setTimeout(() => setErrorMessage(curr => curr === alertMsg ? null : curr), 3000);
+                                        return;
+                                    }
+                                    playUiSound('CLICK');
+                                    setUIState('CAMPAIGN_MAP');
+                                }}
                                 className="px-5 py-2.5 bg-gradient-to-r rounded-xl backdrop-blur-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2 from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-indigo-200 hover:text-white shadow-[0_4px_25px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]"
                             >
                                 <Map className="w-4 h-4 text-indigo-400" />
@@ -2079,6 +2541,7 @@ const StoryBuilderView: React.FC = () => {
 
                             {/* Scrolling container */}
                             <div 
+                                id="build-toolbar-container"
                                 ref={carouselRef}
                                 className="w-full flex flex-row items-center gap-[22px] overflow-x-auto scrollbar-none flex-nowrap scroll-smooth relative z-10 pt-2 pb-[7px] px-3 mb-2"
                                 style={{ 
@@ -2105,7 +2568,23 @@ const StoryBuilderView: React.FC = () => {
                                     return (
                                         <div key={lvl} className="flex flex-col items-center shrink-0">
                                             <div className="relative">
-                                            <button
+                                                {defenseTutorialState.isActive && defenseTutorialState.step === 'UPGRADE_CORE' && lvl === 1 && (
+                                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-amber-950/90 border border-amber-400 text-[10px] font-mono font-bold text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.9)] whitespace-nowrap animate-bounce z-40 flex items-center gap-1 pointer-events-none">
+                                                        <span>★ {language === 'RU' ? 'УРОВЕНЬ 1' : 'LEVEL 1'}</span>
+                                                    </div>
+                                                )}
+                                                {defenseTutorialState.isActive && defenseTutorialState.step === 'UPGRADE_L2' && lvl === 1 && l2SupportNeededHex && (
+                                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-amber-950/90 border border-amber-400 text-[10px] font-mono font-bold text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.9)] whitespace-nowrap animate-bounce z-40 flex items-center gap-1 pointer-events-none">
+                                                        <span>★ {language === 'RU' ? 'ОПОРА L1' : 'L1 SUPPORT'}</span>
+                                                    </div>
+                                                )}
+                                                {defenseTutorialState.isActive && defenseTutorialState.step === 'UPGRADE_L2' && lvl === 2 && !l2SupportNeededHex && (
+                                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-cyan-950/90 border border-cyan-400 text-[10px] font-mono font-bold text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.9)] whitespace-nowrap animate-bounce z-40 flex items-center gap-1 pointer-events-none">
+                                                        <span>⚡ {language === 'RU' ? 'УРОВЕНЬ 2' : 'LEVEL 2'}</span>
+                                                    </div>
+                                                )}
+                                                <button
+                                                id={`toolbar-build-level-${lvl}`}
                                                 onClick={() => {
                                                     if (isSiegeActive) {
                                                         playUiSound('ERROR');
@@ -2119,12 +2598,73 @@ const StoryBuilderView: React.FC = () => {
                                                         }, 5000);
                                                         return;
                                                     }
+
+                                                    if (defenseTutorialState.isActive && defenseTutorialState.step === 'UPGRADE_CORE' && lvl !== 1) {
+                                                        playUiSound('ERROR');
+                                                        setSelectedBuildLevel(1);
+                                                        const msg = language === 'RU'
+                                                            ? '⚠️ Необходимо выбрать гекс 1-го уровня в нижней панели и улучшить Ядро!'
+                                                            : '⚠️ Select Level 1 hex in the bottom panel to upgrade the Core!';
+                                                        setErrorMessage(msg);
+                                                        useGameStore.getState().showToast(msg, 'warning');
+                                                        setTimeout(() => {
+                                                            setErrorMessage(curr => curr === msg ? null : curr);
+                                                        }, 4000);
+                                                        return;
+                                                    }
+
+                                                    if (defenseTutorialState.isActive && defenseTutorialState.step === 'UPGRADE_L2') {
+                                                        if (l2SupportNeededHex) {
+                                                            if (lvl !== 1) {
+                                                                playUiSound('ERROR');
+                                                                setSelectedBuildLevel(1);
+                                                                const msg = language === 'RU'
+                                                                    ? `⚠️ Выберите Уровень 1 (L1) для постройки опорного блока (${l2SupportNeededHex})!`
+                                                                    : `⚠️ Select Level 1 (L1) to build the support block (${l2SupportNeededHex})!`;
+                                                                setErrorMessage(msg);
+                                                                useGameStore.getState().showToast(msg, 'warning');
+                                                                setTimeout(() => {
+                                                                    setErrorMessage(curr => curr === msg ? null : curr);
+                                                                }, 4000);
+                                                                return;
+                                                            }
+                                                        } else {
+                                                            if (lvl !== 2) {
+                                                                playUiSound('ERROR');
+                                                                setSelectedBuildLevel(2);
+                                                                const msg = language === 'RU'
+                                                                    ? '⚠️ Необходимо выбрать гекс 2-го уровня (L2) в нижней панели!'
+                                                                    : '⚠️ Select Level 2 (L2) hex in the bottom panel!';
+                                                                setErrorMessage(msg);
+                                                                useGameStore.getState().showToast(msg, 'warning');
+                                                                setTimeout(() => {
+                                                                    setErrorMessage(curr => curr === msg ? null : curr);
+                                                                }, 4000);
+                                                                return;
+                                                            }
+                                                        }
+                                                    }
                                                     
                                                     playUiSound('CLICK'); 
                                                     setSelectedBuildLevel(lvl); 
+
+                                                    if (defenseTutorialState.isActive && defenseTutorialState.step === 'HIGHLIGHT_TOOLBAR' && lvl === 0) {
+                                                        addMinedHexes({ 0: 13 });
+                                                        setDefenseTutorialStep('PLACE_L0', STAR_FOUNDATION_KEYS);
+                                                    }
                                                 }}
                                                 title={tooltipText}
                                                 className={`flex-shrink-0 flex flex-col items-center justify-between p-1 rounded-xl border text-center transition-all w-[52px] h-[66px] relative cursor-pointer outline-none group ${
+                                                    (lvl === 0 && defenseTutorialState.isActive && (defenseTutorialState.step === 'HIGHLIGHT_TOOLBAR' || defenseTutorialState.step === 'PLACE_L0'))
+                                                        ? 'ring-4 ring-amber-400 border-2 border-amber-300 shadow-[0_0_35px_rgba(245,158,11,0.95)] animate-pulse z-30 scale-105 bg-amber-500/25'
+                                                        : (lvl === 1 && defenseTutorialState.isActive && defenseTutorialState.step === 'UPGRADE_CORE')
+                                                            ? 'ring-4 ring-amber-400 border-2 border-amber-300 shadow-[0_0_35px_rgba(245,158,11,0.95)] animate-pulse z-30 scale-105 bg-amber-500/25'
+                                                            : (lvl === 1 && defenseTutorialState.isActive && defenseTutorialState.step === 'UPGRADE_L2' && l2SupportNeededHex)
+                                                                ? 'ring-4 ring-amber-400 border-2 border-amber-300 shadow-[0_0_35px_rgba(245,158,11,0.95)] animate-pulse z-30 scale-105 bg-amber-500/25'
+                                                                : (lvl === 2 && defenseTutorialState.isActive && defenseTutorialState.step === 'UPGRADE_L2' && !l2SupportNeededHex)
+                                                                    ? 'ring-4 ring-cyan-400 border-2 border-cyan-300 shadow-[0_0_35px_rgba(6,182,212,0.95)] animate-pulse z-30 scale-105 bg-cyan-500/25'
+                                                                    : ''
+                                                } ${
                                                     isSelected
                                                         ? isPlaceable
                                                             ? 'bg-indigo-950/70 border-cyan-400 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.35)] scale-105 font-bold'
@@ -2293,7 +2833,16 @@ const StoryBuilderView: React.FC = () => {
                 playUiSound={playUiSound}
             />
 
-            <StoryTutorial />
+            {/* ALL TUTORIAL OVERLAYS & MODALS FOR STORYBUILDER */}
+            <StoryBuilderTutorials
+                getViewportTargetPos={getViewportTargetPos}
+                setSelectedBuildLevel={setSelectedBuildLevel}
+                l2SupportNeededHex={l2SupportNeededHex}
+                startDefenseSiege={startDefenseSiege}
+                stageReward={stageReward}
+                setStageReward={setStageReward}
+                setShowUpgrades={setShowUpgrades}
+            />
 
             <LevelExitDialog 
                 isOpen={isExitDialogOpen}

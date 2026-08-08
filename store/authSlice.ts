@@ -44,7 +44,8 @@ export function saveProfileProgress(nickname: string, state: any) {
     totalMinedMaterial: state.totalMinedMaterial,
     storyMap: state.storyMap,
     campaignUpgrades: state.campaignUpgrades,
-    claimedLevelRewards: state.claimedLevelRewards
+    claimedLevelRewards: state.claimedLevelRewards,
+    defenseTutorialState: state.defenseTutorialState
   };
   try {
     localStorage.setItem(`hexquest_progress_${nickname.toLowerCase()}`, JSON.stringify(progress));
@@ -68,7 +69,8 @@ export function loadProfileProgress(nickname: string) {
         totalMinedMaterial: typeof parsed.totalMinedMaterial === 'number' ? parsed.totalMinedMaterial : 0,
         storyMap: parsed.storyMap || {},
         campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES, ...parsed.campaignUpgrades },
-        claimedLevelRewards: Array.isArray(parsed.claimedLevelRewards) ? parsed.claimedLevelRewards : []
+        claimedLevelRewards: Array.isArray(parsed.claimedLevelRewards) ? parsed.claimedLevelRewards : [],
+        defenseTutorialState: parsed.defenseTutorialState || { isActive: false, step: 'IDLE', targetHexes: [] }
       };
     }
   } catch (e) {
@@ -158,6 +160,9 @@ export const createAuthSlice = (
     try {
       localStorage.removeItem(`hexquest_progress_${cleanedNickname.toLowerCase()}`);
       localStorage.removeItem('hexopol_figure_index');
+      localStorage.removeItem('hexopol_story_tutorial_completed');
+      localStorage.removeItem('hexopol_defense_tutorial_completed');
+      sessionStorage.removeItem('story_tutorial_seen');
     } catch (e) {
       console.warn("localStorage clear failed during guest login:", e);
     }
@@ -168,6 +173,8 @@ export const createAuthSlice = (
       user: { isAuthenticated: true, isGuest: true, nickname: cleanedNickname, avatarColor, headIndex, bodyIndex },
       session: null,
       hasActiveSession: false,
+      showNewGameTutorialModal: false,
+      uiState: 'STORY_BUILDER',
       ...loaded
     }));
     return { success: true };
@@ -200,16 +207,21 @@ export const createAuthSlice = (
     MOCK_USER_DB[key] = { passwordHash, avatarColor, headIndex, bodyIndex };
     try {
       localStorage.setItem('hexquest_user_db', JSON.stringify(MOCK_USER_DB));
+      localStorage.removeItem('hexopol_story_tutorial_completed');
+      localStorage.removeItem('hexopol_defense_tutorial_completed');
+      sessionStorage.removeItem('story_tutorial_seen');
     } catch (e) {
       console.error("Failed to persist user db in localStorage:", e);
     }
 
-    const loaded = loadProfileProgress(cleanedNickname) || DEFAULT_PROGRESS;
+    const loaded = DEFAULT_PROGRESS;
 
     set(() => ({ 
       user: { isAuthenticated: true, isGuest: false, nickname: cleanedNickname, avatarColor, headIndex, bodyIndex },
       session: null,
       hasActiveSession: false,
+      showNewGameTutorialModal: false,
+      uiState: 'STORY_BUILDER',
       ...loaded
     }));
     return { success: true };

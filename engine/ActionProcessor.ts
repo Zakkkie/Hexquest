@@ -89,8 +89,9 @@ export class ActionProcessor {
       return result;
   }
 
-  private handleMove(state: SessionState, _index: WorldIndex, actor: Entity, action: MoveAction): ValidationResult {
-      const cost = calculateMovementCost(actor, action.path, state.grid, state);
+  private handleMove(state: SessionState, _index: WorldIndex, actor: Entity, action: any): ValidationResult {
+      const path = action.path || (action.targetQ !== undefined && action.targetR !== undefined ? [{ q: action.targetQ, r: action.targetR }] : []);
+      const cost = calculateMovementCost(actor, path, state.grid, state);
       if (!cost.canAfford) {
           return { ok: false, reason: cost.reason || 'Cannot afford move' };
       }
@@ -113,7 +114,7 @@ export class ActionProcessor {
           });
       } 
 
-      actor.movementQueue = [...action.path.map(p => ({ q: p.q, r: p.r }))];
+      actor.movementQueue = [...path.map((p: any) => ({ q: p.q, r: p.r }))];
       actor.state = EntityState.MOVING;
       actor.lastMoveTime = 0; 
 
@@ -131,7 +132,7 @@ export class ActionProcessor {
           
           let entropyCost = baseCost;
           
-          for (const step of action.path) {
+          for (const step of path) {
               const hex = state.grid[getHexKey(step.q, step.r)];
               if (hex && hex.currentLevel < 0) {
                   entropyCost += baseCost;
@@ -153,13 +154,14 @@ export class ActionProcessor {
       if (isPlayer && state.defense?.isDefenseMode && action.intent !== 'RECOVER') {
           return { ok: false, reason: 'Only Recharge action is enabled during siege' };
       }
-      const isSameTile = actor.q === action.coord.q && actor.r === action.coord.r;
+      const coord = action.coord || { q: actor.q, r: actor.r };
+      const isSameTile = actor.q === coord.q && actor.r === coord.r;
       
       if (isPlayer && !isSameTile) {
           return { ok: false, reason: 'Must be on target to upgrade' };
       }
       
-      actor.movementQueue = [{ q: action.coord.q, r: action.coord.r, upgrade: true, intent: action.intent || 'UPGRADE' }];
+      actor.movementQueue = [{ q: coord.q, r: coord.r, upgrade: true, intent: action.intent || 'UPGRADE' }];
       return { ok: true };
   }
 
@@ -168,12 +170,13 @@ export class ActionProcessor {
       if (isPlayer && state.defense?.isDefenseMode) {
           return { ok: false, reason: 'Only Recharge action is enabled during siege' };
       }
-      const isSameTile = actor.q === action.coord.q && actor.r === action.coord.r;
+      const coord = action.coord || { q: actor.q, r: actor.r };
+      const isSameTile = actor.q === coord.q && actor.r === coord.r;
 
       if (isPlayer && !isSameTile) {
           return { ok: false, reason: 'Must be on target to dig' };
       }
-      actor.movementQueue = [{ q: action.coord.q, r: action.coord.r, upgrade: true, intent: 'DIG' }];
+      actor.movementQueue = [{ q: coord.q, r: coord.r, upgrade: true, intent: 'DIG' }];
       return { ok: true };
   }
 
@@ -352,9 +355,10 @@ export class ActionProcessor {
       ];
 
       let chance = 0.25;
-      if (item.rarity === 'UNCOMMON') chance = 0.40;
-      if (item.rarity === 'RARE') chance = 0.65;
-      if (item.rarity === 'LEGENDARY') chance = 0.90;
+      if (item.baseId === 'reality_patch' || item.id?.includes('reality_patch')) chance = 1.0;
+      else if (item.rarity === 'UNCOMMON') chance = 0.40;
+      else if (item.rarity === 'RARE') chance = 0.65;
+      else if (item.rarity === 'LEGENDARY') chance = 0.90;
 
       const { restorationMaster } = getStatusModifiers(actor, state);
       chance += restorationMaster;

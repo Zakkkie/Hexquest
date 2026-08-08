@@ -3,6 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '../../store.ts';
 import { audioService } from '../../services/audioService.ts';
 import { X, Sparkles, ChevronRight, Terminal, Lock, Unlock, Activity } from 'lucide-react';
+import { CometSpotlight } from './CometSpotlight.tsx';
+import { STAR_FOUNDATION_KEYS } from '../../services/tutorialConstants.ts';
+import { OnboardingTutorial } from './OnboardingTutorial.tsx';
+import { TutorialStageRewardModal, StageRewardData } from './TutorialStageRewardModal.tsx';
 
 // --- TYPES & CONSTANTS ---
 
@@ -295,6 +299,12 @@ export const StoryTutorial: React.FC = () => {
 
     useEffect(() => {
         if (isTutorialActive) {
+            setStep(0);
+        }
+    }, [isTutorialActive]);
+
+    useEffect(() => {
+        if (isTutorialActive) {
             const setCollapsed = step !== 2; 
             if (typeof (window as any).setStoryNarrativeCollapsed === 'function') {
                 (window as any).setStoryNarrativeCollapsed(setCollapsed);
@@ -306,7 +316,10 @@ export const StoryTutorial: React.FC = () => {
         audioService.play('UI_CLICK');
         setIsTutorialActive(false);
         setStep(0);
-        try { localStorage.setItem('hexopol_story_tutorial_completed', 'true'); } catch { /* storage disabled */ }
+        try { 
+            localStorage.setItem('hexopol_story_tutorial_completed', 'true'); 
+            sessionStorage.setItem('story_tutorial_seen', 'true');
+        } catch { /* storage disabled */ }
     }, [setIsTutorialActive]);
 
     const handleNext = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
@@ -561,5 +574,212 @@ export const StoryTutorial: React.FC = () => {
                 <X className="w-4 h-4 text-slate-400 group-hover:text-rose-400 transition-colors" />
             </button>
         </div>
+    );
+};
+
+// --- DEFENSE TUTORIAL OVERLAY ---
+
+export interface DefenseTutorialOverlayProps {
+    getViewportTargetPos: (q?: number, r?: number, elementId?: string) => { x: number; y: number; width: number; height: number };
+    setSelectedBuildLevel: (lvl: number) => void;
+    setShowUpgrades: (open: boolean) => void;
+    l2SupportNeededHex: string | null;
+    startDefenseSiege: () => void;
+}
+
+export const DefenseTutorialOverlay: React.FC<DefenseTutorialOverlayProps> = ({
+    getViewportTargetPos,
+    setSelectedBuildLevel,
+    setShowUpgrades,
+    l2SupportNeededHex,
+    startDefenseSiege,
+}) => {
+    const defenseTutorialState = useGameStore(state => state.defenseTutorialState);
+    const language = useGameStore(state => state.language);
+    const playUiSound = useGameStore(state => state.playUiSound);
+    const setDefenseTutorialStep = useGameStore(state => state.setDefenseTutorialStep);
+    const addMinedHexes = useGameStore(state => state.addMinedHexes);
+    const setUIState = useGameStore(state => state.setUIState);
+    const completeDefenseTutorial = useGameStore(state => state.completeDefenseTutorial);
+
+    if (!defenseTutorialState.isActive) return null;
+
+    let targetPos = getViewportTargetPos();
+    let title = '';
+    let description = '';
+    let actionText: string | undefined = undefined;
+    let onAction: (() => void) | undefined = undefined;
+    let isStrictActionRequired = false;
+    let isToolbarTarget = false;
+
+    if (defenseTutorialState.step === 'HIGHLIGHT_CORE') {
+        targetPos = getViewportTargetPos(0, 0);
+        title = language === 'RU' ? 'ЯДРО УПРАВЛЕНИЯ (0,0)' : 'CORE MATRIX (0,0)';
+        description = language === 'RU'
+            ? 'Это Ядро — сердце вашей платформы. Все оборонительные рубежи исходят от него.'
+            : 'This Core is the heart of your platform. All defense lines originate here.';
+        actionText = language === 'RU' ? 'ДАЛЕЕ' : 'NEXT';
+        onAction = () => {
+            playUiSound('CLICK');
+            setDefenseTutorialStep('HIGHLIGHT_TOOLBAR');
+        };
+    } else if (defenseTutorialState.step === 'HIGHLIGHT_TOOLBAR') {
+        targetPos = getViewportTargetPos(undefined, undefined, 'toolbar-build-level-0');
+        isToolbarTarget = true;
+        title = language === 'RU' ? 'ПАНЕЛЬ СТРОИТЕЛЬСТВА' : 'BUILD TOOLBAR';
+        description = language === 'RU'
+            ? 'Плиты L0 используются для создания фундамента. Выберите плиту L0 внизу экрана.'
+            : 'L0 plates form the foundation. Select an L0 plate at the bottom.';
+        actionText = language === 'RU' ? 'НАЧАТЬ СТРОИТЕЛЬСТВО' : 'START BUILDING';
+        onAction = () => {
+            playUiSound('SUCCESS');
+            addMinedHexes({ 0: 13 });
+            setSelectedBuildLevel(0);
+            setDefenseTutorialStep('PLACE_L0', STAR_FOUNDATION_KEYS);
+        };
+    } else if (defenseTutorialState.step === 'PLACE_L0') {
+        isStrictActionRequired = true;
+        const targets = defenseTutorialState.targetHexes;
+        if (targets.length > 0) {
+            const [tq, tr] = targets[0].split(',').map(Number);
+            targetPos = getViewportTargetPos(tq, tr);
+        } else {
+            targetPos = getViewportTargetPos(0, 0);
+        }
+        title = language === 'RU' ? 'ЭТАП 1 ИЗ 6: ЗВЁЗДНЫЙ ФУНДАМЕНТ' : 'STAGE 1 OF 6: STAR FOUNDATION';
+        description = language === 'RU'
+            ? `Установите 13 плит L0 на подсвеченные звёздные позиции вокруг Ядра.\n(Осталось разместить: ${defenseTutorialState.targetHexes.length})`
+            : `Place 13 L0 plates on illuminated star positions around the Core.\n(Remaining: ${defenseTutorialState.targetHexes.length})`;
+    } else if (defenseTutorialState.step === 'UPGRADE_CORE') {
+        isStrictActionRequired = true;
+        const targets = defenseTutorialState.targetHexes;
+        if (targets.length > 0) {
+            const [tq, tr] = targets[0].split(',').map(Number);
+            targetPos = getViewportTargetPos(tq, tr);
+        } else {
+            targetPos = getViewportTargetPos(0, 0);
+        }
+        title = language === 'RU' ? 'ЭТАП 2 ИЗ 6: ПОДЪЕМ НА 2 УРОВЕНЬ' : 'STAGE 2 OF 6: LEVEL 2 ELEVATION';
+        description = language === 'RU'
+            ? `Установите 7 плит L1 в круг: 1 в центре (где Ядро) и 6 вокруг него.\n(Осталось разместить: ${defenseTutorialState.targetHexes.length})`
+            : `Place 7 L1 tiles in a ring: 1 in the center (where Core is) and 6 around it.\n(Remaining: ${defenseTutorialState.targetHexes.length})`;
+    } else if (defenseTutorialState.step === 'LEVEL_1_0') {
+        targetPos = getViewportTargetPos(0, 0);
+        title = language === 'RU' ? 'ЭТАП 3 ИЗ 6: КАРТА УРОВНЕЙ И УРОВЕНЬ 1.0' : 'STAGE 3 OF 6: LEVEL MAP & LEVEL 1.0';
+        description = language === 'RU'
+            ? 'Оборонительный комплекс возведён! Откройте Карту Уровней, выберите подсвеченную карточку Уровня 1.0 и пройдите боевое испытание для получения 1 SP!'
+            : 'Defense complex ready! Open Level Map, select highlighted Level 1.0 card and pass trial battle to earn 1 SP!';
+        actionText = language === 'RU' ? 'ОТКРЫТЬ КАРТУ УРОВНЕЙ' : 'OPEN LEVEL MAP';
+        onAction = () => {
+            playUiSound('CLICK');
+            setUIState('CAMPAIGN_MAP');
+        };
+    } else if (defenseTutorialState.step === 'UPGRADE_STORAGE') {
+        targetPos = getViewportTargetPos(0, 0);
+        title = language === 'RU' ? 'ЭТАП 4 ИЗ 6: АПГРЕЙД СКЛАДА (1 SP)' : 'STAGE 4 OF 6: STORAGE UPGRADE (1 SP)';
+        description = language === 'RU'
+            ? 'За прохождение Уровня 1.0 вы получили 1 SP! Откройте Узлы развития и повысьте вместимость Склада до 1 уровня!'
+            : 'You earned 1 SP from Level 1.0! Open Development Nodes and upgrade Material Storage to level 1!';
+        actionText = language === 'RU' ? 'ОТКРЫТЬ УЗЛЫ РАЗВИТИЯ' : 'OPEN DEVELOPMENT NODES';
+        onAction = () => {
+            playUiSound('CLICK');
+            setShowUpgrades(true);
+        };
+    } else if (defenseTutorialState.step === 'UPGRADE_L2') {
+        isStrictActionRequired = true;
+        if (l2SupportNeededHex) {
+            const [sq, sr] = l2SupportNeededHex.split(',').map(Number);
+            targetPos = getViewportTargetPos(sq, sr);
+            title = language === 'RU'
+                ? '⚠️ НЕХВАТАЕТ ОПОР! ПРАВИЛО 2 ОПОР'
+                : '⚠️ LACKS SUPPORTS! 2-SUPPORT RULE';
+            description = language === 'RU'
+                ? 'Гексу (2,0) не хватает опор! Для подъёма на L2 необходимо минимум 2 смежные плиты 1-го уровня (L1).\nНажмите на гекс (1,1) и установите дополнительную опору L1.'
+                : 'Hex (2,0) lacks supports! Building Level 2 requires at least 2 adjacent Level 1 tiles.\nTap hex (1,1) to place an additional L1 support.';
+        } else {
+            const targets = defenseTutorialState.targetHexes;
+            if (targets.length > 0) {
+                const [tq, tr] = targets[0].split(',').map(Number);
+                targetPos = getViewportTargetPos(tq, tr);
+            } else {
+                targetPos = getViewportTargetPos(0, 0);
+            }
+            title = language === 'RU'
+                ? 'ЭТАП 5 ИЗ 6: ПРАВИЛО 2 ОПОР И ПОСТРОЙКА L2'
+                : 'STAGE 5 OF 6: 2-SUPPORT RULE & L2 ELEVATION';
+            description = language === 'RU'
+                ? `Для постройки уровня L2 под ним должно быть минимум 2 смежные опоры L1!\nПоднимите 7 подсвеченных гексов до 2-го уровня (L2).\n(Осталось поднять гексов: ${defenseTutorialState.targetHexes.length})`
+                : `To build an L2 tile, at least 2 adjacent L1 support tiles must be underneath!\nElevate 7 highlighted hexes to Level 2 (L2).\n(Remaining hexes: ${defenseTutorialState.targetHexes.length})`;
+        }
+    } else if (defenseTutorialState.step === 'STAGE3_SIEGE') {
+        targetPos = getViewportTargetPos(1, 0);
+        title = language === 'RU' ? 'ЭТАП 6 ИЗ 6: ОБОРОНА БАЗЫ (ОСАДА)' : 'STAGE 6 OF 6: BASE DEFENSE (SIEGE)';
+        description = language === 'RU'
+            ? 'Склад расширен и ядро укреплено! На вашу базу совершено нападение 3 вражеских ботов. Запустите Осаду и разместите боевую турель на подсвеченном стрелкой гексе (1,0)!'
+            : 'Storage upgraded and Core reinforced! Base under attack by 3 hostile bots. Start Siege and place a combat turret on highlighted hex (1,0)!';
+        actionText = language === 'RU' ? 'НАЧАТЬ ОСАДУ БАЗЫ' : 'START BASE SIEGE';
+        onAction = () => {
+            playUiSound('CLICK');
+            startDefenseSiege();
+        };
+    }
+
+    return (
+        <CometSpotlight
+            targetPos={targetPos}
+            title={title}
+            description={description}
+            actionText={actionText}
+            onAction={onAction}
+            isStrictActionRequired={isStrictActionRequired}
+            isToolbarTarget={isToolbarTarget}
+            showElevationGraphic={defenseTutorialState.step === 'UPGRADE_CORE'}
+            showSupportRuleGraphic={defenseTutorialState.step === 'UPGRADE_L2'}
+            onClose={isStrictActionRequired ? undefined : () => completeDefenseTutorial()}
+        />
+    );
+};
+
+// --- UNIFIED STORY BUILDER TUTORIALS CONTAINER ---
+
+export interface StoryBuilderTutorialsProps extends DefenseTutorialOverlayProps {
+    stageReward: StageRewardData | null;
+    setStageReward: (reward: StageRewardData | null) => void;
+    setShowUpgrades: (show: boolean) => void;
+}
+
+export const StoryBuilderTutorials: React.FC<StoryBuilderTutorialsProps> = ({
+    getViewportTargetPos,
+    setSelectedBuildLevel,
+    l2SupportNeededHex,
+    startDefenseSiege,
+    stageReward,
+    setStageReward,
+    setShowUpgrades,
+}) => {
+    const language = useGameStore(state => state.language);
+
+    return (
+        <>
+            <OnboardingTutorial />
+            <DefenseTutorialOverlay
+                getViewportTargetPos={getViewportTargetPos}
+                setSelectedBuildLevel={setSelectedBuildLevel}
+                setShowUpgrades={setShowUpgrades}
+                l2SupportNeededHex={l2SupportNeededHex}
+                startDefenseSiege={startDefenseSiege}
+            />
+            <TutorialStageRewardModal
+                reward={stageReward}
+                language={language}
+                onClose={() => {
+                    const isFinal = stageReward?.stage === 3;
+                    setStageReward(null);
+                    if (isFinal) {
+                        setShowUpgrades(true);
+                    }
+                }}
+            />
+        </>
     );
 };

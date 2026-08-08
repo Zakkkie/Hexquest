@@ -48,7 +48,8 @@ export const createDefaultProgress = () => ({
   savedSiegeMap: {},
   unlockedBlueprintIndices: [0],
   campaignUpgrades: { ...DEFAULT_CAMPAIGN_UPGRADES },
-  claimedLevelRewards: [] as string[]
+  claimedLevelRewards: [] as string[],
+  defenseTutorialState: { isActive: false, step: 'IDLE' as const, targetHexes: [] as string[] }
 });
 
 export interface AuthResponse {
@@ -58,6 +59,24 @@ export interface AuthResponse {
 
 export type UiSoundType = 'HOVER' | 'CLICK' | 'ERROR' | 'WARNING' | 'SUCCESS';
 
+export type DefenseTutorialStep =
+  | 'IDLE'
+  | 'HIGHLIGHT_CORE'
+  | 'HIGHLIGHT_TOOLBAR'
+  | 'PLACE_L0'
+  | 'SHOW_DEFENSE_POPUP'
+  | 'UPGRADE_CORE'
+  | 'LEVEL_1_0'
+  | 'UPGRADE_STORAGE'
+  | 'UPGRADE_L2'
+  | 'STAGE3_SIEGE';
+
+export interface DefenseTutorialState {
+  isActive: boolean;
+  step: DefenseTutorialStep;
+  targetHexes: string[];
+}
+
 export interface GameStore extends GameState {
   session: SessionState | null;
   isCampaignLoading: boolean;
@@ -66,6 +85,12 @@ export interface GameStore extends GameState {
   isStoryTutorialActive?: boolean;
   showNewGameTutorialModal: boolean;
   setShowNewGameTutorialModal: (show: boolean) => void;
+  
+  // Defense / StoryBuilder Core Defense Tutorial State
+  defenseTutorialState: DefenseTutorialState;
+  setDefenseTutorialStep: (step: DefenseTutorialStep, targetHexes?: string[]) => void;
+  startDefenseTutorial: () => void;
+  completeDefenseTutorial: () => void;
   
   // Camera & Zoom Zustand Store integrations (Bypassing React re-renders)
   cameraPos: { x: number; y: number };

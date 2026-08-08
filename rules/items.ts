@@ -1348,7 +1348,7 @@ const ITEMS_BY_RARITY: Record<ItemRarity, ItemDefinition[]> = ITEM_REGISTRY.redu
 // 3. Factory function to prevent code duplication (DRY)
 const instantiateItem = (def: ItemDefinition, language: Language): Item => {
     const timestamp = Date.now();
-    const randomSuffix = Math.floor(Math.random() * 9999);
+    const randomSuffix = `${Math.random().toString(36).substring(2, 9)}-${Math.floor(Math.random() * 1000000)}`;
     return {
         id: `${def.idPrefix}-${timestamp}-${randomSuffix}`,
         baseId: def.idPrefix,

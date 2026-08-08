@@ -3,7 +3,7 @@ import { useGameStore } from '../store.ts';
 import { 
     Zap, Coins, Box, Star, X, Gauge, Radar, Shield, 
     Clock, Layers, TrendingUp, Gem, Copy, Battery, 
-    BatteryCharging, Infinity as InfinityIcon, Wrench 
+    BatteryCharging, Infinity as InfinityIcon, Wrench, Sparkles 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CampaignUpgrades } from '../types.ts';
@@ -17,12 +17,12 @@ interface Props {
 // ---------------------------------------------------------------------
 
 const getUpgradeCost = (key: string, level: number): number => {
-    if (key === 'inventorySlots') return 5 * (level + 1);
-    if (key === 'startingEnergy') return 3 * (level + 1);
-    if (key === 'maxMaterials') return 2 * (level + 1);
-    if (key === 'startingGold') return 2 * (level + 1);
-    if (key === 'startingMoves') return 2 + level;
-    if (key === 'startingMaterials') return 2 + Math.floor(level / 2);
+    if (key === 'maxMaterials') return level + 1;
+    if (key === 'startingMaterials') return level + 1;
+    if (key === 'startingGold') return level + 1;
+    if (key === 'startingMoves') return level + 1;
+    if (key === 'inventorySlots') return 3 + level * 2;
+    if (key === 'startingEnergy') return 2 * (level + 1);
     if ([
         'fuelEfficiency', 'scanRadius', 'fatigueResistance', 'growthAccelerator', 
         'diggerLuck', 'doubleDigChance', 'reserveCapacitor', 'turboRecharge', 
@@ -50,16 +50,6 @@ interface SectorConfig {
 
 const SECTORS: SectorConfig[] = [
     {
-        id: 'generation',
-        labelRU: 'ЯДРО ГЕНЕРАЦИИ',
-        labelEN: 'GENERATION CORE',
-        descRU: 'Управление пусковой мощностью, энергией, ходами и кулдаунами батарей.',
-        descEN: 'Controls starting power, movement points, fuel flow, and recovery batteries.',
-        color: 'cyan',
-        icon: Zap,
-        keys: ['startingEnergy', 'startingMoves', 'fuelEfficiency', 'reserveCapacitor', 'turboRecharge'] as const
-    },
-    {
         id: 'matter',
         labelRU: 'МАТРИЦА ВЕЩЕСТВА',
         labelEN: 'MATTER MATRIX',
@@ -68,6 +58,16 @@ const SECTORS: SectorConfig[] = [
         color: 'purple',
         icon: Box,
         keys: ['startingMaterials', 'maxMaterials', 'startingGold', 'inventorySlots', 'doubleDigChance', 'economicMultiplier'] as const
+    },
+    {
+        id: 'generation',
+        labelRU: 'ЯДРО ГЕНЕРАЦИИ',
+        labelEN: 'GENERATION CORE',
+        descRU: 'Управление пусковой мощностью, энергией, ходами и кулдаунами батарей.',
+        descEN: 'Controls starting power, movement points, fuel flow, and recovery batteries.',
+        color: 'cyan',
+        icon: Zap,
+        keys: ['startingEnergy', 'startingMoves', 'fuelEfficiency', 'reserveCapacitor', 'turboRecharge'] as const
     },
     {
         id: 'integrity',
@@ -273,6 +273,7 @@ const UpgradeNode = React.memo(({
     const dynamicCost = getUpgradeCost(upgradeKey as string, level);
     const isMaxed = level >= config.maxLevel;
     const canAfford = skillPoints >= dynamicCost;
+    const isTutorialTarget = upgradeKey === 'maxMaterials' && skillPoints > 0;
 
     const resolvedDescription = typeof config.descRU === 'function' 
         ? (language === 'RU' ? config.descRU(level + 1) : config.descEN(level + 1))
@@ -280,7 +281,11 @@ const UpgradeNode = React.memo(({
 
     return (
         <div 
-            className={`group relative flex flex-col justify-between p-2.5 sm:p-3.5 rounded-xl transition-all duration-200 select-none border border-slate-900/80 bg-slate-900/30 hover:bg-slate-900/60 h-auto
+            className={`group relative flex flex-col justify-between p-2.5 sm:p-3.5 rounded-xl transition-all duration-200 select-none border bg-slate-900/30 hover:bg-slate-900/60 h-auto
+                ${isTutorialTarget 
+                    ? 'border-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.4)] ring-1 ring-amber-400 bg-amber-950/20' 
+                    : 'border-slate-900/80'
+                }
                 ${canAfford && !isMaxed ? 'cursor-pointer hover:border-slate-800 shadow-md' : 'opacity-85 cursor-not-allowed'}
             `}
         >
@@ -298,6 +303,11 @@ const UpgradeNode = React.memo(({
                             `}>
                                 {language === 'RU' ? config.labelRU : config.labelEN}
                             </h3>
+                            {isTutorialTarget && (
+                                <span className="text-[7px] font-mono font-black text-amber-300 uppercase px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/50 animate-pulse tracking-wider shrink-0">
+                                    ★ {language === 'RU' ? 'ОБУЧЕНИЕ' : 'TUTORIAL'}
+                                </span>
+                            )}
                         </div>
 
                         <div className="mt-1.5 sm:mt-2 flex items-center justify-between gap-1 leading-none">
@@ -390,17 +400,33 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
     const playSound = useGameStore(state => state.playUiSound);
     const language = useGameStore(state => state.language);
 
-    const [activeSector, setActiveSector] = React.useState<SectorId>('generation');
+    const defenseTutorialState = useGameStore(state => state.defenseTutorialState);
+
+    const [activeSector, setActiveSector] = React.useState<SectorId>(() => {
+        return (defenseTutorialState && defenseTutorialState.isActive) ? 'matter' : 'generation';
+    });
 
     const handleUpgrade = useCallback((key: keyof CampaignUpgrades, amount: number, cost: number) => {
         if (skillPoints >= cost) {
             playSound('SUCCESS');
             setSkillPoints(skillPoints - cost);
             updateUpgrades({ [key]: upgrades[key] + amount });
+
+            if (key === 'maxMaterials') {
+                const defenseTutorialState = useGameStore.getState().defenseTutorialState;
+                if (defenseTutorialState?.isActive) {
+                    useGameStore.getState().setDefenseTutorialStep('UPGRADE_L2', ['0,0', '1,0', '1,-1', '0,-1', '-1,0', '-1,1', '0,1']);
+                    const msg = language === 'RU'
+                        ? '🎉 Емкость склада повышена! Следующий этап: Правило 2 Опор и постройка L2.'
+                        : '🎉 Storage capacity upgraded! Next stage: 2-Support Rule & L2 Elevation.';
+                    useGameStore.getState().showToast(msg, 'success');
+                    onClose();
+                }
+            }
         } else {
             playSound('ERROR');
         }
-    }, [skillPoints, playSound, setSkillPoints, updateUpgrades, upgrades]);
+    }, [skillPoints, playSound, setSkillPoints, updateUpgrades, upgrades, language, onClose]);
 
     // Memoized calculation of progress for all sectors to prevent lag on every render
     const sectorProgresses = useMemo(() => {
@@ -505,21 +531,8 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                                 <div className="absolute inset-2 rounded-full border border-dashed border-indigo-500/15 animate-reverse-spin pointer-events-none" />
                                 
                                 <button 
-                                    onClick={() => { setActiveSector('generation'); playSound('CLICK'); }}
-                                    className={`absolute top-0 left-0 w-[48%] h-[48%] rounded-tl-full border-t border-l flex flex-col items-center justify-center transition-all duration-300 group/quad cursor-pointer
-                                        ${activeSector === 'generation' 
-                                            ? 'bg-cyan-500/10 border-cyan-400 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] scale-[1.03]' 
-                                            : 'bg-slate-900/30 border-slate-800 text-slate-500 hover:bg-slate-800/40 hover:text-slate-300'
-                                        }
-                                    `}
-                                >
-                                    <Zap className="w-5 h-5 mb-1 group-hover/quad:scale-110 transition-transform duration-200" />
-                                    <span className="text-[7px] font-mono tracking-wider uppercase font-black">GEN</span>
-                                </button>
-                                
-                                <button 
                                     onClick={() => { setActiveSector('matter'); playSound('CLICK'); }}
-                                    className={`absolute top-0 right-0 w-[48%] h-[48%] rounded-tr-full border-t border-r flex flex-col items-center justify-center transition-all duration-300 group/quad cursor-pointer
+                                    className={`absolute top-0 left-0 w-[48%] h-[48%] rounded-tl-full border-t border-l flex flex-col items-center justify-center transition-all duration-300 group/quad cursor-pointer
                                         ${activeSector === 'matter' 
                                             ? 'bg-purple-500/10 border-purple-400 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.15)] scale-[1.03]' 
                                             : 'bg-slate-900/30 border-slate-800 text-slate-500 hover:bg-slate-800/40 hover:text-slate-300'
@@ -528,6 +541,19 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                                 >
                                     <Box className="w-5 h-5 mb-1 group-hover/quad:scale-110 transition-transform duration-200" />
                                     <span className="text-[7px] font-mono tracking-wider uppercase font-black">MATTER</span>
+                                </button>
+                                
+                                <button 
+                                    onClick={() => { setActiveSector('generation'); playSound('CLICK'); }}
+                                    className={`absolute top-0 right-0 w-[48%] h-[48%] rounded-tr-full border-t border-r flex flex-col items-center justify-center transition-all duration-300 group/quad cursor-pointer
+                                        ${activeSector === 'generation' 
+                                            ? 'bg-cyan-500/10 border-cyan-400 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] scale-[1.03]' 
+                                            : 'bg-slate-900/30 border-slate-800 text-slate-500 hover:bg-slate-800/40 hover:text-slate-300'
+                                        }
+                                    `}
+                                >
+                                    <Zap className="w-5 h-5 mb-1 group-hover/quad:scale-110 transition-transform duration-200" />
+                                    <span className="text-[7px] font-mono tracking-wider uppercase font-black">GEN</span>
                                 </button>
 
                                 <button 
@@ -623,6 +649,22 @@ export const UpgradesTree: React.FC<Props> = ({ onClose }) => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-2 sm:p-5 lg:p-6 bg-slate-950/15 no-scrollbar min-h-0">
+                        {skillPoints > 0 && (
+                            <div className="mb-3 p-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-purple-900/40 to-amber-500/20 border border-amber-400/50 shadow-[0_0_20px_rgba(245,158,11,0.25)] flex items-center justify-between gap-2 animate-pulse shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+                                    <span className="text-[10px] sm:text-xs font-black text-amber-200 uppercase font-mono tracking-wide">
+                                        {language === 'RU' 
+                                            ? '💡 ОБУЧЕНИЕ: Потратьте 1 SP на повышение емкости для материалов (Склад)!' 
+                                            : '💡 TUTORIAL: Spend 1 SP on Material Capacity (Storage)!'}
+                                    </span>
+                                </div>
+                                <span className="px-2 py-0.5 rounded bg-amber-500/30 text-amber-200 text-[10px] font-mono font-bold shrink-0">
+                                    +1 SP
+                                </span>
+                            </div>
+                        )}
+
                         <div className="md:hidden mb-2 px-1 py-1 flex items-center justify-between border-b border-white/5 pb-1 shrink-0">
                             <span className={`text-[8px] font-mono tracking-widest uppercase font-bold ${activeStyle.textActive}`}>
                                 {language === 'RU' ? activeSectorObj.labelRU : activeSectorObj.labelEN}

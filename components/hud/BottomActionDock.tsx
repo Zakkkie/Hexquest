@@ -7,7 +7,8 @@ import HexButton from '../HexButton';
 import { getHexKey, getNeighbors, getSecondsToGrow } from '../../services/hexUtils';
 import { checkGrowthCondition, checkDigCondition } from '../../rules/growth';
 import { Item } from '../../types';
-import { ItemIcon, StatusIcon, getRarityBorder } from './HudShared';
+import { ItemIcon, StatusIcon } from './HudShared';
+import { getRarityBorder } from './hudUtils';
 import { GAME_CONFIG, getLevelConfig } from '../../rules/config';
 
 interface BottomActionDockProps {

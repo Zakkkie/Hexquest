@@ -564,27 +564,35 @@ export const VictorySequence: React.FC<VictorySequenceProps> = ({ isActive, leve
                                 whileTap={{ scale: 0.98 }} 
                                 onClick={onNext}
                                 className="w-full py-3 sm:py-3.5 font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 text-xs sm:text-sm shadow-xl transition-all"
-                                style={{ backgroundColor: theme.primaryColor, color: '#000', boxShadow: `0 0 25px ${theme.primaryColor}50` }}
+                                style={levelId === '1.0' ? {
+                                    background: 'linear-gradient(135deg, #FFE07D 0%, #F5B041 50%, #C97D16 100%)',
+                                    color: '#0e1111',
+                                    boxShadow: '0 0 30px rgba(245, 176, 65, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                                    textShadow: '0 1px 0 rgba(255, 255, 255, 0.2)',
+                                    border: '1px solid #D39E45'
+                                } : { backgroundColor: theme.primaryColor, color: '#000', boxShadow: `0 0 25px ${theme.primaryColor}50` }}
                             >
-                                {language === 'RU' ? 'СЛЕДУЮЩИЙ УРОВЕНЬ' : 'NEXT LEVEL'}
+                                {levelId === '1.0' ? (language === 'RU' ? 'ПРОДОЛЖИТЬ ОБУЧЕНИЕ' : 'CONTINUE TUTORIAL') : (language === 'RU' ? 'СЛЕДУЮЩИЙ УРОВЕНЬ' : 'NEXT LEVEL')}
                                 <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                             </motion.button>
                             
                             <div className="grid grid-cols-2 gap-2.5">
                                 <motion.button 
-                                    whileHover={{ scale: 1.02 }} 
-                                    whileTap={{ scale: 0.98 }} 
+                                    whileHover={levelId === '1.0' ? undefined : { scale: 1.02 }} 
+                                    whileTap={levelId === '1.0' ? undefined : { scale: 0.98 }} 
                                     onClick={onRetry}
-                                    className="py-2.5 bg-slate-800/90 hover:bg-slate-700 text-white font-bold uppercase tracking-wider text-xs rounded-lg flex items-center justify-center gap-2 transition-all border border-white/10"
+                                    disabled={levelId === '1.0'}
+                                    className={`py-2.5 bg-slate-800/90 hover:bg-slate-700 text-white font-bold uppercase tracking-wider text-xs rounded-lg flex items-center justify-center gap-2 transition-all border border-white/10 ${levelId === '1.0' ? 'opacity-30 cursor-not-allowed pointer-events-none' : ''}`}
                                 >
                                     <RotateCcw className="w-3.5 h-3.5" />
                                     {language === 'RU' ? 'ЗАНОВО' : 'RETRY'}
                                 </motion.button>
                                 <motion.button 
-                                    whileHover={{ scale: 1.02 }} 
-                                    whileTap={{ scale: 0.98 }} 
+                                    whileHover={levelId === '1.0' ? undefined : { scale: 1.02 }} 
+                                    whileTap={levelId === '1.0' ? undefined : { scale: 0.98 }} 
                                     onClick={onMenu}
-                                    className="py-2.5 bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-white font-bold uppercase tracking-wider text-xs rounded-lg flex items-center justify-center gap-2 transition-all border border-white/5"
+                                    disabled={levelId === '1.0'}
+                                    className={`py-2.5 bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-white font-bold uppercase tracking-wider text-xs rounded-lg flex items-center justify-center gap-2 transition-all border border-white/5 ${levelId === '1.0' ? 'opacity-30 cursor-not-allowed pointer-events-none' : ''}`}
                                 >
                                     <LogOut className="w-3.5 h-3.5" />
                                     {language === 'RU' ? 'ВЫХОД' : 'EXIT'}

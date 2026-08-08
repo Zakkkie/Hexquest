@@ -177,11 +177,16 @@ export const createGameplaySlice = (
     const claimedLevelRewards = get().claimedLevelRewards || [];
     const completedSiegesCount = claimedLevelRewards.filter(id => id.startsWith('siege_completed_')).length;
     const siegeIndex = completedSiegesCount + 1;
+    const defenseTutorialState = get().defenseTutorialState;
+    const isFirstSiege = siegeIndex === 1 || 
+                         defenseTutorialState?.step === 'STAGE3_SIEGE' || 
+                         !claimedLevelRewards.includes('siege_completed_1');
 
     const winCondition: WinCondition = {
       levelId: -1, targetLevel: 99, targetCoins: 9999, 
       label: get().language === 'RU' ? `Оборона Ядра (Осада ${siegeIndex})` : `Core Defense (Siege ${siegeIndex})`,
-      botCount: 4, difficulty: 'HARD', queueSize: 2, winType: 'SIEGE', mapType: 'FLAT'
+      botCount: isFirstSiege ? 3 : Math.min(8, 3 + siegeIndex), 
+      difficulty: 'HARD', queueSize: 2, winType: 'SIEGE', mapType: 'FLAT'
     };
 
     set(() => ({ uiState: 'CAMPAIGN_LOADING', introNextState: 'GAME', isCampaignLoading: true }));
@@ -191,6 +196,46 @@ export const createGameplaySlice = (
       const initialSessionState = await createInitialSessionData(winCondition, undefined, get().language, stateUser, upgrades);
       initialSessionState.player.coins = 0;
       initialSessionState.player.totalCoinsEarned = 0;
+      
+      // Setup LevelConfig with objective arrow for turret placement in 1st siege
+      const isRu = get().language === 'RU';
+      const siegeLevelConfig: LevelConfig = {
+        id: `siege-${siegeIndex}`,
+        title: isFirstSiege 
+          ? (isRu ? 'Осада 1.0: Обучение Обороне' : 'Siege 1.0: Defense Tutorial')
+          : (isRu ? `Осада ${siegeIndex}: Защита Ядра` : `Siege ${siegeIndex}: Base Defense`),
+        description: isRu ? 'Отразите атаку дронов на ваш центральный комплекс.' : 'Defend your central core from incoming drone waves.',
+        goalText: isRu ? 'Отразите атаку дронов' : 'Defend the Core',
+        mapConfig: { size: mapRadius, type: 'procedural' },
+        objectiveHexes: isFirstSiege ? [
+          { q: 1, r: 0, targetLevel: 1, label: isRu ? 'ТУРЕЛЬ' : 'TURRET', color: 'amber' }
+        ] : [],
+        getTutorialHint: (sessionState: any) => {
+          if (isFirstSiege) {
+            const hex = sessionState.grid?.['1,0'];
+            if (!hex || hex.structureType !== 'TURRET') {
+              return isRu 
+                ? '🎯 ОБУЧЕНИЕ ОСАДЫ: Нажмите «Турель» на панели снизу и разместите её на подсвеченном гексе (1,0)!'
+                : '🎯 SIEGE TUTORIAL: Select «Turret» below and place it on hex (1,0)!';
+            } else {
+              return isRu 
+                ? '⚡ ТУРЕЛЬ ПОСТРОЕНА! Она автоматически ведёт огонь по подбирающимся врагам.'
+                : '⚡ TURRET BUILT! It automatically fires at approaching hostiles.';
+            }
+          }
+          return isRu
+            ? `🛡️ ОСАДА (Уровень ${siegeIndex}): Защитите Ядро (0,0) от вражеских дронов!`
+            : `🛡️ SIEGE (Level ${siegeIndex}): Defend Central Core (0,0) from enemy drones!`;
+        }
+      };
+      initialSessionState.activeLevelConfig = siegeLevelConfig;
+
+      // Provide 3 materials to player for turret placement during first siege / tutorial
+      if (isFirstSiege) {
+        initialSessionState.player.storage = Math.max(3, initialSessionState.player.storage || 0);
+        if (!initialSessionState.minedHexes) initialSessionState.minedHexes = {};
+        initialSessionState.minedHexes[0] = Math.max(3, initialSessionState.minedHexes[0] || 0);
+      }
       
       const finalGrid = { ...initialGrid };
       
@@ -300,11 +345,12 @@ export const createGameplaySlice = (
     get().abandonSession();
     try { localStorage.removeItem('hexopol_figure_index'); } catch (e) { console.warn(e); }
     try { localStorage.removeItem('hexopol_story_tutorial_completed'); } catch (e) { console.warn(e); }
+    try { localStorage.removeItem('hexopol_defense_tutorial_completed'); } catch (e) { console.warn(e); }
     try { sessionStorage.removeItem('story_tutorial_seen'); } catch (e) { console.warn(e); }
     set(() => ({ 
       ...createDefaultProgress(), 
       uiState: 'STORY_BUILDER', 
-      showNewGameTutorialModal: true 
+      showNewGameTutorialModal: false 
     }));
   },
 

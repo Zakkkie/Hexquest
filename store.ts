@@ -129,7 +129,8 @@ export const useGameStore = create<GameStore>()(
         isSfxMuted: state.isSfxMuted,
         isLiteMode: state.isLiteMode,
         language: state.language,
-        uiScale: state.uiScale
+        uiScale: state.uiScale,
+        defenseTutorialState: state.defenseTutorialState
         // Ephemeral properties like toast, session, dialog states are intentionally excluded
       })
     }

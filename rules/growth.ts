@@ -101,14 +101,14 @@ export function checkDigCondition(
           if (!neighborHex || neighborHex.structureType === 'VOID') return false;
           
           const neighborLevel = neighborHex.currentLevel ?? 0;
-          // Reverse Staircase Rule: Neighbors must be at exactly CurrentLevel
+          // Reverse Staircase Rule: Neighbors must be strictly equal to CurrentLevel
           return neighborLevel === currentLevel;
       });
 
       if (deepNeighbors.length < 2) {
           return { 
               canGrow: false, 
-              reason: `Нет опоры: нужны 2 соседа на уровне L${currentLevel} (UNSTABLE)`,
+              reason: `Нет опоры: нужны 2 соседа строго на уровне L${currentLevel} (UNSTABLE)`,
           };
       }
   }
@@ -194,7 +194,7 @@ export function checkGrowthCondition(
       if (!isDepressionRule) {
         const supportNeighbors = neighbors.filter(n => {
            const h = grid[getHexKey(n.q, n.r)];
-           return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) === currentLevel;
+           return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) >= currentLevel;
          });
 
         if (supportNeighbors.length < 2) {

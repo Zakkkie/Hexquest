@@ -6,7 +6,8 @@ import { CAMPAIGN_LEVELS } from '../../campaign/levels';
 import { ITEM_REGISTRY, getItemDef } from '../../rules/items';
 import { getCampaignMetric } from '../../campaign/getCampaignMetric';
 import { LogOut, X, Trophy, ArrowRight, RotateCcw, Target, Crown, Zap, HelpCircle, AlertTriangle, CheckCircle, Trash2, BookOpen, Lock, FileText, RefreshCw, Terminal, Timer, Coins, Sparkles, Info, Cpu, ShieldAlert, Layers, Download, Activity } from 'lucide-react';
-import { ItemIcon, resolveItemText, getRarityBorder } from './HudShared';
+import { ItemIcon } from './HudShared';
+import { resolveItemText, getRarityBorder } from './hudUtils';
 import { Item } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Fireworks from '../Fireworks';
@@ -180,6 +181,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const grid = useGameStore(state => state.session?.grid);
     const addCollectedHexes = useGameStore(state => state.addCollectedHexes);
     const addMinedHexes = useGameStore(state => state.addMinedHexes);
+    const defenseTutorialState = useGameStore(state => state.defenseTutorialState);
 
     const [selectedRewardItem, setSelectedRewardItem] = useState<import('../../types.ts').Item | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -344,6 +346,12 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     const handleNextLevel = () => {
         playUiSound('CLICK');
         
+        if (activeLevelConfig?.id === '1.0' || (defenseTutorialState?.isActive && defenseTutorialState?.step === 'STAGE3_SIEGE')) {
+            abandonSession();
+            setUIState('STORY_BUILDER');
+            return;
+        }
+
         const levelsToUse = CAMPAIGN_LEVELS;
 
         if (activeLevelConfig) {
@@ -384,6 +392,10 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
         playUiSound('CLICK');
         
         abandonSession();
+        if (defenseTutorialState?.isActive && defenseTutorialState?.step === 'STAGE3_SIEGE') {
+            setUIState('STORY_BUILDER');
+            return;
+        }
         if (campaignMode === 'LEVELS' && activeLevelConfig) {
             setUIState('CAMPAIGN_MAP');
         }
@@ -392,18 +404,18 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
     // Rankings Logic
     const liveRankings = useMemo(() => {
         if (!player) return [];
-        const botList = bots || [];
+        const botList = (bots || []).filter(b => b && b.id);
         const list = [
             {
-                id: player.id, nickname: user?.nickname || (language === 'RU' ? 'Вы' : 'You'), isPlayer: true,
-                level: player.playerLevel, coins: player.coins, moves: player.moves, color: player.avatarColor || '#3b82f6'
+                id: player.id || 'player', nickname: user?.nickname || (language === 'RU' ? 'Вы' : 'You'), isPlayer: true,
+                level: player.playerLevel ?? 0, coins: player.coins ?? 0, moves: player.moves ?? 0, color: player.avatarColor || '#3b82f6'
             },
             ...botList.map(b => ({
                 id: b.id, nickname: language === 'RU' ? `Ривал ${b.id.replace('bot-', '')}` : `Rival ${b.id.replace('bot-', '')}`,
-                isPlayer: false, level: b.playerLevel, coins: b.coins, moves: b.moves, color: b.avatarColor || '#ef4444'
+                isPlayer: false, level: b.playerLevel ?? 0, coins: b.coins ?? 0, moves: b.moves ?? 0, color: b.avatarColor || '#ef4444'
             }))
         ];
-        return list.sort((a, b) => b.level !== a.level ? b.level - a.level : b.coins - a.coins);
+        return list.sort((a, b) => (b.level ?? 0) !== (a.level ?? 0) ? (b.level ?? 0) - (a.level ?? 0) : (b.coins ?? 0) - (a.coins ?? 0));
     }, [player, bots, user, language]);
 
     // Help Content
@@ -639,22 +651,22 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                 <div className="bg-black/40 border border-slate-800/60 p-1 sm:p-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5">
                                     <Timer className="w-3 h-3 text-sky-400" />
                                     <span className="text-[7.5px] sm:text-[8px] text-slate-500 uppercase font-black">Moves</span>
-                                    <span className="text-[10px] sm:text-[11px] font-black text-sky-300 font-mono leading-none">{activeLevelConfig?.startState.moves ?? winCondition?.queueSize ?? 0}</span>
+                                    <span className="text-[10px] sm:text-[11px] font-black text-sky-300 font-mono leading-none">{activeLevelConfig?.startState?.moves ?? winCondition?.queueSize ?? 0}</span>
                                 </div>
                                 <div className="bg-black/40 border border-slate-800/60 p-1 sm:p-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5">
                                     <Coins className="w-3 h-3 text-amber-400" />
                                     <span className="text-[7.5px] sm:text-[8px] text-slate-500 uppercase font-black">Credits</span>
-                                    <span className="text-[10px] sm:text-[11px] font-black text-amber-300 font-mono leading-none">{activeLevelConfig?.startState.credits ?? 0}</span>
+                                    <span className="text-[10px] sm:text-[11px] font-black text-amber-300 font-mono leading-none">{activeLevelConfig?.startState?.credits ?? 0}</span>
                                 </div>
                                 <div className="bg-black/40 border border-slate-800/60 p-1 sm:p-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5">
                                     <Layers className="w-3 h-3 text-emerald-400" />
                                     <span className="text-[7.5px] sm:text-[8px] text-slate-500 uppercase font-black">Mats</span>
-                                    <span className="text-[10px] sm:text-[11px] font-black text-emerald-300 font-mono leading-none">{activeLevelConfig?.startState.materials ?? 5}</span>
+                                    <span className="text-[10px] sm:text-[11px] font-black text-emerald-300 font-mono leading-none">{activeLevelConfig?.startState?.materials ?? 5}</span>
                                 </div>
                                 <div className="bg-black/40 border border-slate-800/60 p-1 sm:p-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5">
                                     <Crown className="w-3 h-3 text-indigo-400" />
                                     <span className="text-[7.5px] sm:text-[8px] text-slate-500 uppercase font-black">Limit</span>
-                                    <span className="text-[10px] sm:text-[11px] font-black text-indigo-300 font-mono leading-none">{activeLevelConfig?.startState.rank ?? 5}</span>
+                                    <span className="text-[10px] sm:text-[11px] font-black text-indigo-300 font-mono leading-none">{activeLevelConfig?.startState?.rank ?? 5}</span>
                                 </div>
                             </div>
 
@@ -835,29 +847,29 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                             <div className="flex-1 overflow-y-auto no-scrollbar p-3 z-20 bg-slate-950/40">
                                 {liveRankings.length === 0 ? <div className="p-8 text-center text-slate-500 text-xs font-mono uppercase tracking-widest opacity-40">NO_DATA_STREAM</div> : 
                                     <div className="flex flex-col gap-2">{liveRankings.map((entry, idx) => (
-                                        <div key={entry.id} className={`grid grid-cols-12 gap-2 items-center p-3 rounded-lg border-l-4 transition-all ${entry.isPlayer ? 'bg-indigo-900/20 border-indigo-500/60 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'bg-slate-900/40 border-slate-700/60 hover:bg-slate-800'}`}>
+                                        <div key={entry?.id || idx} className={`grid grid-cols-12 gap-2 items-center p-3 rounded-lg border-l-4 transition-all ${entry?.isPlayer ? 'bg-indigo-900/20 border-indigo-500/60 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'bg-slate-900/40 border-slate-700/60 hover:bg-slate-800'}`}>
                                             <div className="col-span-1 flex justify-center">
                                                 <div className={`text-[10px] font-black font-mono ${idx === 0 ? 'text-amber-400 font-extrabold' : 'text-slate-500'}`}>
                                                     {String(idx + 1).padStart(2, '0')}
                                                 </div>
                                             </div>
                                             <div className="col-span-5 flex items-center gap-2 overflow-hidden">
-                                                <div className="w-1.5 h-4 shrink-0 rounded-sm" style={{ backgroundColor: entry.color }}></div>
-                                                <span className={`text-[11px] font-black uppercase truncate tracking-tight ${entry.isPlayer ? 'text-indigo-300' : 'text-slate-300'}`}>
-                                                    {entry.nickname}
+                                                <div className="w-1.5 h-4 shrink-0 rounded-sm" style={{ backgroundColor: entry?.color || '#ef4444' }}></div>
+                                                <span className={`text-[11px] font-black uppercase truncate tracking-tight ${entry?.isPlayer ? 'text-indigo-300' : 'text-slate-300'}`}>
+                                                    {entry?.nickname}
                                                 </span>
                                             </div>
                                             <div className="col-span-2 text-right">
                                                 <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5 leading-none">LVL</div>
-                                                <span className="text-[10px] font-mono text-emerald-400 font-bold">{entry.level}</span>
+                                                <span className="text-[10px] font-mono text-emerald-400 font-bold">{entry?.level ?? 0}</span>
                                             </div>
                                             <div className="col-span-2 text-right">
                                                 <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5 leading-none">CRD</div>
-                                                <span className="text-[10px] font-mono text-amber-400 font-bold">{entry.coins}</span>
+                                                <span className="text-[10px] font-mono text-amber-400 font-bold">{entry?.coins ?? 0}</span>
                                             </div>
                                             <div className="col-span-2 text-right">
                                                 <div className="text-[8px] font-black text-slate-600 uppercase mb-0.5 leading-none">MOV</div>
-                                                <span className="text-[10px] font-mono text-blue-400 font-bold">{entry.moves}</span>
+                                                <span className="text-[10px] font-mono text-blue-400 font-bold">{entry?.moves ?? 0}</span>
                                             </div>
                                         </div>
                                     ))}</div>
@@ -1012,7 +1024,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                            {bots.map((bot: any) => {
+                                            {(bots || []).filter((b: any) => b && b.id).map((bot: any) => {
                                                 const hasPlan = bot.memory?.plan && bot.memory.plan.steps.length > 0;
                                                 const currentLevel = session?.grid?.[`${bot.q},${bot.r}`]?.currentLevel ?? 0;
                                                 return (
@@ -1037,7 +1049,7 @@ const GameDialogs: React.FC<GameDialogsProps> = ({
                                                         <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-slate-400 bg-slate-950/50 p-2 rounded-lg border border-slate-900">
                                                             <div>POS: <span className="text-white font-bold">({bot.q}, {bot.r})</span></div>
                                                             <div>ELEV: <span className="text-emerald-400 font-bold">L{currentLevel}</span></div>
-                                                            <div>MOVES: <span className="text-blue-400 font-bold">{bot.moves}</span></div>
+                                                            <div>MOVES: <span className="text-blue-400 font-bold">{bot?.moves ?? 0}</span></div>
                                                         </div>
                                                         <div className="flex items-center justify-between text-[10px] font-mono">
                                                             <span className="text-slate-500">PLAN: <span className="text-amber-400 font-semibold">{bot.memory?.plan?.label || 'IDLE'}</span></span>

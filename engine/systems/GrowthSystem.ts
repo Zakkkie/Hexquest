@@ -51,7 +51,7 @@ export class GrowthSystem implements System {
     let targetQ = entity.q;
     let targetR = entity.r;
     
-    if (hasUpgradeCmd && entity.type !== 'PLAYER') {
+    if (hasUpgradeCmd && entity.movementQueue[0].q !== undefined && entity.movementQueue[0].r !== undefined) {
          targetQ = entity.movementQueue[0].q;
          targetR = entity.movementQueue[0].r;
     }
@@ -120,10 +120,12 @@ export class GrowthSystem implements System {
     // Determine Effective Intent
     let effectiveIntent: 'UPGRADE' | 'RECOVER' | 'DIG' | 'TURRET' = 'RECOVER';
     
-    if (entity.type === EntityType.PLAYER) {
+    if (queuedIntent) {
+        effectiveIntent = queuedIntent;
+    } else if (entity.type === EntityType.PLAYER) {
         effectiveIntent = userIntentType || 'RECOVER';
     } else {
-        effectiveIntent = queuedIntent || 'UPGRADE';
+        effectiveIntent = 'UPGRADE';
     }
 
     // === BRANCH 1: RECOVERY ACTION (Timed) ===
@@ -401,7 +403,15 @@ export class GrowthSystem implements System {
                              if (!entity.inventory) entity.inventory = [];
                              
                              const maxInv = entity.maxInventorySize || GAME_CONFIG.MAX_INVENTORY_SIZE;
-                             if (entity.inventory.length < maxInv) {
+                             if (secretMatch || entity.inventory.length < maxInv) {
+                                 if (entity.inventory.length >= maxInv) {
+                                     const nonQuestIdx = entity.inventory.findIndex(i => i.baseId !== 'reality_patch');
+                                     if (nonQuestIdx !== -1) {
+                                         entity.inventory.splice(nonQuestIdx, 1);
+                                     } else {
+                                         entity.inventory.pop();
+                                     }
+                                 }
                                  entity.inventory = [...entity.inventory, loot.item];
                                  const lootMsg = `FOUND: ${loot.item.name}!`;
                                  state.messageLog.unshift({ id: `loot-item-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, text: lootMsg, type: 'SUCCESS', source: 'LOOT', timestamp: Date.now() });

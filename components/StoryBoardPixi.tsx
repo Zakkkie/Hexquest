@@ -61,6 +61,7 @@ interface StoryBoardPixiProps {
     };
     contrastHighlighting?: number;
     figureIndex?: number;
+    tutorialTargetHexes?: string[];
     onCellClick: (q: number, r: number) => void;
     onCellDblClick: (q: number, r: number) => void;
     onCellDemolish?: (q: number, r: number) => void;
@@ -73,6 +74,7 @@ interface StoryBoardPixiProps {
 interface CellAnim {
     spawnT?: number;      // 0.5s spawn drop+fade (isNew)
     rippleT?: number;     // 0.65s ripple (isNew)
+    spawnedFor?: string;  // key of the cell we already spawned/rippled for
     flareT?: number;      // 1.6s flare glow (isFlaring)
     collapseStartMs?: number; // wall-clock ms when isFlaring began (collapse starts +1000ms)
     collapseT?: number;   // 0.6s collapse (isFlaring after 1000ms)
@@ -159,6 +161,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     transient,
     contrastHighlighting = 0,
     figureIndex = 9999,
+    tutorialTargetHexes = [],
     onCellClick,
     onCellDblClick,
     onCellDemolish,
@@ -183,6 +186,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     const dimsRef = useRef(dimensions);
     const contrastRef = useRef(contrastHighlighting);
     const figureIndexRef = useRef(figureIndex);
+    const tutorialTargetHexesRef = useRef(tutorialTargetHexes);
     const onCellClickRef = useRef(onCellClick);
     const onCellDblClickRef = useRef(onCellDblClick);
     const onCellDemolishRef = useRef(onCellDemolish);
@@ -196,6 +200,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
     dimsRef.current = dimensions;
     contrastRef.current = contrastHighlighting;
     figureIndexRef.current = figureIndex;
+    tutorialTargetHexesRef.current = tutorialTargetHexes;
     onCellClickRef.current = onCellClick;
     onCellDblClickRef.current = onCellDblClick;
     onCellDemolishRef.current = onCellDemolish;
@@ -654,7 +659,9 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             }
 
             // High Performance Cache Key Check
-            const stateKey = `${lvl}_${isBlueprint}_${blueprintLevel}_${isEligible}_${isCenterInitially}_${canPlaceHex}_${isCore}`;
+            const isTutorialTarget = Boolean(tutorialTargetHexesRef.current?.includes(key));
+            const hasActiveTutorial = Boolean(tutorialTargetHexesRef.current && tutorialTargetHexesRef.current.length > 0);
+            const stateKey = `${lvl}_${isBlueprint}_${blueprintLevel}_${isEligible}_${isCenterInitially}_${canPlaceHex}_${isCore}_${isTutorialTarget}_${hasActiveTutorial}`;
             const mustRedraw = isNewContainer || (container as any).stateKey !== stateKey;
 
             if (mustRedraw) {
@@ -767,20 +774,21 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                     isBuilt ? colors.top
                     : isCore ? 'rgba(244, 63, 94, 0.22)'
                     : isCenterInitially ? 'rgba(16, 185, 129, 0.18)'
+                    : isBlueprint ? 'rgba(245, 158, 11, 0.35)'
                     : canPlaceHex ? 'rgba(34, 211, 238, 0.15)'
                     : 'rgba(255,255,255,0.03)';
                 const strokeColor =
                     isBuilt ? (isCore ? '#f43f5e' : '#06b6d4')
                     : isCore ? '#f43f5e'
                     : isCenterInitially ? '#10b981'
-                    : isBlueprint ? 'rgba(168, 85, 247, 0.75)'
+                    : isBlueprint ? '#fbbf24'
                     : canPlaceHex ? 'rgba(34, 211, 238, 0.85)'
                     : 'rgba(255,255,255,0.15)';
                 const strokeWidth =
                     isBuilt ? (isCore ? 3.0 : 2.0)
                     : isCore ? 3.0
                     : isCenterInitially ? 3.0
-                    : isBlueprint ? 1.5
+                    : isBlueprint ? 2.5
                     : canPlaceHex ? 2.5
                     : 1.0;
                 const dash = (canPlaceHex || isBlueprint) && !isCore;
@@ -841,6 +849,47 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 plus.visible = true;
             } else if (plus) {
                 plus.visible = false;
+            }
+
+            // ---- tutorial target glow (pulsing neon ring for star foundation hexes) ----
+            const hasActiveTutorial = Boolean(tutorialTargetHexesRef.current && tutorialTargetHexesRef.current.length > 0);
+            const isTutorialTarget = tutorialTargetHexesRef.current?.includes(key);
+
+            // Dim non-target hexes when tutorial target is active
+            if (hasActiveTutorial) {
+                container.alpha = isTutorialTarget ? 1.0 : 0.25;
+            } else {
+                container.alpha = 1.0;
+            }
+
+            let tutorialGlow = topGroup.getChildByName('tutorialGlow') as PIXI.Graphics;
+            if (isTutorialTarget) {
+                if (!tutorialGlow) {
+                    tutorialGlow = new PIXI.Graphics();
+                    tutorialGlow.name = 'tutorialGlow';
+                    topGroup.addChild(tutorialGlow);
+                }
+                tutorialGlow.clear();
+                // Outer expanded glowing border (wider outline gold)
+                const outerPoints = BASE_POINTS.map(p => ({ x: p.x * 1.10, y: p.y * 1.10 }));
+                tracePoly(tutorialGlow, outerPoints);
+                tutorialGlow.fill({ color: 0xf59e0b, alpha: 0.18 });
+                tracePoly(tutorialGlow, outerPoints);
+                tutorialGlow.stroke({ width: 2.5, color: 0xfbbf24, alpha: 0.9 });
+
+                // Inner highlighted core (bright gold-white border)
+                tracePoly(tutorialGlow, BASE_POINTS);
+                tutorialGlow.stroke({ width: 1.8, color: 0xfffbeb, alpha: 1.0 });
+
+                // Central pulsing star beacon cross
+                tutorialGlow.beginPath();
+                tutorialGlow.moveTo(-6, 0); tutorialGlow.lineTo(6, 0);
+                tutorialGlow.moveTo(0, -6); tutorialGlow.lineTo(0, 6);
+                tutorialGlow.stroke({ width: 1.5, color: 0xfffbeb, alpha: 1.0 });
+
+                tutorialGlow.visible = true;
+            } else if (tutorialGlow) {
+                tutorialGlow.visible = false;
             }
 
             // bevels (top light, bottom dark) for built cells
@@ -1102,11 +1151,15 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             (container as any).targetAlpha = targetAlpha;
 
             if (isNew) {
-                if (st.spawnT === undefined) st.spawnT = 0;
-                if (st.rippleT === undefined) st.rippleT = 0;
+                if (st.spawnedFor !== key) {
+                    st.spawnT = 0;
+                    st.rippleT = 0;
+                    st.spawnedFor = key;
+                }
             } else {
                 st.spawnT = undefined;
                 st.rippleT = undefined;
+                st.spawnedFor = undefined;
                 // ensure resting position/opacity
                 container.y = px.y;
                 container.alpha = targetAlpha;
@@ -1175,7 +1228,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
             });
         }
         prevFlareKeysSize.current = currentSize;
-    }, [cells, transient, contrastHighlighting, figureIndex, isReady]);
+    }, [cells, transient, contrastHighlighting, figureIndex, tutorialTargetHexes, isReady]);
 
     // ---------- Ticker: advance animations + nebula drift ----------
     const updateLoop = () => {
@@ -1217,6 +1270,20 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
         if (nebula) {
             nebulaTimeRef.current += 0.0018 * (dtMs / 16.6667); // Accelerated from 0.0003 for high-speed dynamic background
             const time = nebulaTimeRef.current;
+
+            // Pulse tutorial glow elements if present
+            if (tutorialTargetHexesRef.current && tutorialTargetHexesRef.current.length > 0) {
+                const glowPulse = 0.55 + 0.45 * Math.sin(time * 12);
+                cellCache.current.forEach((cellContainer: PIXI.Container) => {
+                    const collapse = cellContainer.getChildByName('collapse') as PIXI.Container;
+                    const topGroup = collapse?.getChildByName('topGroup') as PIXI.Container;
+                    const glow = topGroup?.getChildByName('tutorialGlow');
+                    if (glow && glow.visible) {
+                        glow.alpha = glowPulse;
+                    }
+                });
+            }
+
             const w = dimsRef.current.width || 1000;
             const h = dimsRef.current.height || 1000;
             const driftX = Math.sin(time * 1.4) * 65; // increased drift amplitude

@@ -1315,3 +1315,63 @@ export const TEXT: Record<Language, Dictionary> = {
         }
     }
 })();
+
+const GOAL_TRANSLATIONS: Record<string, { en: string; ru: string }> = {
+  'Reach the Portal': { en: 'Reach the Portal', ru: 'Доберитесь до Портала' },
+  'Доберитесь до Столицы': { en: 'Reach the Capital', ru: 'Доберитесь до Столицы' },
+  'Срежьте центральный сектор до базового уровня': { en: 'Flatten central sector to base level', ru: 'Срежьте центральный сектор до базового уровня' },
+  'Накопите требуемые кредиты': { en: 'Collect required credits', ru: 'Накопите требуемые кредиты' },
+  'Возведите башню уровня L3 в центре': { en: 'Build L3 tower in center', ru: 'Возведите башню уровня L3 в центре' },
+  'Заделайте разлом и углубите шахту в центре до -2': { en: 'Patch rift and dig center pit to -2', ru: 'Заделайте разлом и углубите шахту в центре до -2' },
+  'Доберитесь до Столицы на 3-м столпе': { en: 'Reach Capital on 3rd pillar', ru: 'Доберитесь до Столицы на 3-м столпе' },
+  'Возведите центральную плиту до уровня L4': { en: 'Raise central plate to Level L4', ru: 'Возведите центральную плиту до уровня L4' },
+  'Activate the Monument': { en: 'Activate the Monument', ru: 'Активируйте Монумент' },
+  'Activate the 2-slot Monument': { en: 'Activate the 2-slot Monument', ru: 'Активируйте 2-слотовый Монумент' },
+  'Activate the Monument (UNCOMMON item)': { en: 'Activate Monument (UNCOMMON item)', ru: 'Активируйте Монумент (НЕОБЫЧНЫЙ предмет)' },
+  'Activate the Monument (fast)': { en: 'Activate Monument (fast)', ru: 'Быстро активируйте Монумент' },
+  'Activate the Monument (RARE item)': { en: 'Activate Monument (RARE item)', ru: 'Активируйте Монумент (РЕДКИЙ предмет)' },
+  'Activate the Monument (1 of 3 items)': { en: 'Activate Monument (1 of 3 items)', ru: 'Активируйте Монумент (1 из 3 предметов)' },
+  'Activate the 3-slot Monument': { en: 'Activate the 3-slot Monument', ru: 'Активируйте 3-слотовый Монумент' },
+  'Build a Level 2+ STAR_7 shape': { en: 'Build a Level 2+ STAR_7 shape', ru: 'Постройте Звезду (STAR_7) Ур. 2+' },
+  'Activate Monument with 3 Items': { en: 'Activate Monument with 3 Items', ru: 'Активируйте Монумент 3 предметами' },
+  'Activate Monument (Requires Fuel Cell and Data Disc)': { en: 'Activate Monument (Requires Fuel Cell and Data Disc)', ru: 'Активируйте Монумент (Нужны Fuel Cell и Data Disc)' },
+  'Build a Level 3 TRIANGLE_3 shape': { en: 'Build a Level 3 TRIANGLE_3 shape', ru: 'Постройте Треугольник (TRIANGLE_3) Ур. 3' },
+  'Build a Level 2 DIAMOND_4 shape': { en: 'Build a Level 2 DIAMOND_4 shape', ru: 'Постройте Ромб (DIAMOND_4) Ур. 2' },
+  'Build a Level 4 SQUARE_4 shape': { en: 'Build a Level 4 SQUARE_4 shape', ru: 'Постройте Квадрат (SQUARE_4) Ур. 4' },
+  'Build a Level 3 RING_6 shape': { en: 'Build a Level 3 RING_6 shape', ru: 'Постройте Кольцо (RING_6) Ур. 3' },
+  'Build a Level 4 LINE_3 shape': { en: 'Build a Level 4 LINE_3 shape', ru: 'Постройте Линию (LINE_3) Ур. 4' },
+  'Dig to -10 and Activate Monument': { en: 'Dig to -10 and Activate Monument', ru: 'Пробурите до -10 и активируйте Монумент' },
+  'Build a Level 4 HEXAGON_7 shape': { en: 'Build a Level 4 HEXAGON_7 shape', ru: 'Постройте Гексагон (HEXAGON_7) Ур. 4' },
+  'Build L3 LINE_3 and L2 DIAMOND_4': { en: 'Build L3 LINE_3 and L2 DIAMOND_4', ru: 'Постройте Линию L3 и Ромб L2' },
+  'Build Level 3 RING_6 and Activate Monument': { en: 'Build Level 3 RING_6 and Activate Monument', ru: 'Постройте Кольцо L3 и активируйте Монумент' },
+  'Survive 30 turns against bot': { en: 'Survive 30 turns against bot', ru: 'Выживите 30 ходов против бота' },
+  'Build and hold 2 Level 4 hexes': { en: 'Build and hold 2 Level 4 hexes', ru: 'Постройте и удерживайте 2 плиты Ур. 4' },
+  'Build Level 5 hex before bot': { en: 'Build Level 5 hex before bot', ru: 'Постройте плиту Ур. 5 раньше бота' },
+  'Activate Monument before bot': { en: 'Activate Monument before bot', ru: 'Активируйте Монумент раньше бота' },
+  'Build STAR_7 shape (Level 2)': { en: 'Build STAR_7 shape (Level 2)', ru: 'Постройте Звезду (STAR_7) Ур. 2' },
+  'Find Apex Core and Activate Monument': { en: 'Find Apex Core and Activate Monument', ru: 'Найдите Apex Core и активируйте Монумент' },
+  'Collect 300 Credits': { en: 'Collect 300 Credits', ru: 'Накопите 300 Кредитов' },
+  'Build HEXAGON_7 (Level 3)': { en: 'Build HEXAGON_7 (Level 3)', ru: 'Постройте Гексагон (HEXAGON_7) Ур. 3' },
+  'Destroy all Bot L3+ hexes': { en: 'Destroy all Bot L3+ hexes', ru: 'Уничтожьте все плиты бота Ур. 3+' },
+  'Defeat the Guardian Bot': { en: 'Defeat the Guardian Bot', ru: 'Победите бота-стража (Guardian)' },
+  'Deliver Stability Scanner to Monument': { en: 'Deliver Stability Scanner to Monument', ru: 'Доставьте Stability Scanner к Монументу' },
+  'Build DIAMOND_4 (Level 3)': { en: 'Build DIAMOND_4 (Level 3)', ru: 'Постройте Ромб (DIAMOND_4) Ур. 3' },
+  'Build RING_6 (Level 2)': { en: 'Build RING_6 (Level 2)', ru: 'Постройте Кольцо (RING_6) Ур. 2' },
+  'Survive 30 turns without losing L2 hexes': { en: 'Survive 30 turns without losing L2 hexes', ru: 'Выживите 30 ходов, не теряя плиты Ур. 2' },
+  'Destroy bot L5 hex and build your own L5': { en: 'Destroy bot L5 hex and build your own L5', ru: 'Уничтожьте плиту бота Ур. 5 и постройте свою Ур. 5' },
+  'Build two LINE_3 shapes (Level 3)': { en: 'Build two LINE_3 shapes (Level 3)', ru: 'Постройте две Линии (LINE_3) Ур. 3' },
+  'Build TRIANGLE_3 (Level 4)': { en: 'Build TRIANGLE_3 (Level 4)', ru: 'Постройте Треугольник (TRIANGLE_3) Ур. 4' },
+  'Deliver Void Core to Monument': { en: 'Deliver Void Core to Monument', ru: 'Доставьте Void Core к Монументу' },
+  'Build HEXAGON_7 (Level 3) before bot': { en: 'Build HEXAGON_7 (Level 3) before bot', ru: 'Постройте Гексагон (HEXAGON_7) Ур. 3 раньше бота' },
+  'Activate Monument against the swarm': { en: 'Activate Monument against the swarm', ru: 'Активируйте Монумент вопреки рою' },
+};
+
+export function getLocalizedGoalText(levelConfig?: import('../types').LevelConfig | null, language: Language = 'EN'): string {
+  if (!levelConfig) return '';
+  if (language === 'RU' && levelConfig.goalTextRu) return levelConfig.goalTextRu;
+  const raw = levelConfig.goalText || '';
+  if (!raw) return '';
+  const match = GOAL_TRANSLATIONS[raw];
+  if (match) return language === 'RU' ? match.ru : match.en;
+  return raw;
+}

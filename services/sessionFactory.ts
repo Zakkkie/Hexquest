@@ -227,7 +227,9 @@ export const createInitialSessionData = async (
 
   // --- BOT SETUP & CUSTOM SPAWNS ---
   let botCount = 0;
-  if (levelConfig) {
+  if (winCondition?.winType === 'SIEGE') {
+      botCount = 0;
+  } else if (levelConfig) {
       if (levelConfig.aiMode !== 'none') {
           if (levelConfig.id === '2.5') botCount = 2;
           else if (levelConfig.botRoutes) botCount = levelConfig.botRoutes.length;

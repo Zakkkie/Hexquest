@@ -462,6 +462,9 @@ export interface LevelConfig {
 
   /** Короткий текст цели миссии (≤35 символов), отображается в нижнем тулбаре */
   goalText?: string;
+  goalTextRu?: string;
+  titleRu?: string;
+  descriptionRu?: string;
 
   objectiveHexes?: ObjectiveHex[];
   blueprints?: Blueprint[];

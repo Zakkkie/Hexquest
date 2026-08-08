@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useGameStore } from '../../store';
 import { Hourglass, Crosshair, HeartPulse, ChevronDown, ChevronUp, Terminal, RotateCcw, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getLocalizedGoalText } from '../../services/i18n.ts';
 
 export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ onOpenBriefing }) => {
     const session = useGameStore(state => state.session);
@@ -152,7 +153,7 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
                                         {language === 'RU' ? 'ЦЕЛЬ УРОВНЯ' : 'LEVEL OBJECTIVE'}
                                     </span>
                                     <span className="text-[11px] font-bold text-slate-200 font-sans uppercase leading-tight">
-                                        {session?.activeLevelConfig?.goalText || session?.activeLevelConfig?.description || (
+                                        {getLocalizedGoalText(session?.activeLevelConfig, language) || session?.activeLevelConfig?.description || (
                                             language === 'RU'
                                                 ? 'Защищайте центральное Ядро (CORE) от наступающих волн противника. Не дайте прочности ядра упасть до нуля. Продержитесь 3 минуты!'
                                                 : 'Protect the central CORE from incoming enemy waves. Do not let the core health reach zero. Survive for 3 minutes!'
@@ -281,7 +282,7 @@ export const DefenseSiegeBanner: React.FC<{ onOpenBriefing?: () => void }> = ({ 
                                     {language === 'RU' ? 'ЦЕЛЬ УРОВНЯ' : 'LEVEL OBJECTIVE'}
                                 </span>
                                 <span className="text-xs font-bold text-slate-100 font-sans uppercase leading-tight">
-                                    {session?.activeLevelConfig?.goalText || session?.activeLevelConfig?.description || (
+                                    {getLocalizedGoalText(session?.activeLevelConfig, language) || session?.activeLevelConfig?.description || (
                                         language === 'RU'
                                             ? 'Защищайте центральное Ядро (CORE) от наступающих волн противника. Не дайте прочности ядра упасть до нуля. Продержитесь 3 минуты!'
                                             : 'Protect the central CORE from incoming enemy waves. Do not let the core health reach zero. Survive for 3 minutes!'

@@ -6,6 +6,7 @@ import { useCollapsibleHint } from './useCollapsibleHint.ts';
 
 import { getCampaignMetric } from '../../campaign/getCampaignMetric';
 import { useMonumentProgress } from './useMonumentProgress.ts';
+import { getLocalizedGoalText } from '../../services/i18n.ts';
 
 interface CentralTutorialBannerProps {
     onOpenHelpDetail?: () => void;
@@ -69,8 +70,8 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
                 console.error("Error evaluating getTutorialHint", e);
             }
         }
-        return activeLevelConfig.goalText;
-    }, [grid, player, activeLevelConfig, session]);
+        return getLocalizedGoalText(activeLevelConfig, language);
+    }, [grid, player, activeLevelConfig, session, language]);
 
     // Metrics computation matching getCampaignMetric precisely
     const metrics = useMemo(() => {

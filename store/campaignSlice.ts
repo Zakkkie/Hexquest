@@ -202,7 +202,7 @@ export const createCampaignSlice = (
       const isSiegeTriggeredForBlock = newClaimedRewards.includes(`siege_completed_${currentBlock}`) || 
                                        newClaimedRewards.includes(`siege_pending_${currentBlock}`);
                                        
-      if (completedNormalCount > 0 && !isSiegeTriggeredForBlock) {
+      if (completedNormalCount > 0 && currentBlock > 1 && !isSiegeTriggeredForBlock) {
         const chance = indexInBlock * 0.2;
         const roll = Math.random();
         if (roll <= chance) {

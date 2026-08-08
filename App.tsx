@@ -10,7 +10,6 @@ import LevelEditorView from './components/LevelEditorView';
 import IntroSequence from './components/IntroSequence';
 import CampaignLoading from './components/CampaignLoading';
 import Background from './components/Background';
-import { OnboardingTutorial } from './components/hud/OnboardingTutorial';
 import { DeviceType } from './types';
 
 const App: React.FC = () => {
@@ -134,8 +133,6 @@ const App: React.FC = () => {
           )}
         </AnimatePresence>
       </div>
-
-      <OnboardingTutorial />
     </div>
   );
 };

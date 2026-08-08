@@ -22,32 +22,28 @@ export const OnboardingTutorial: React.FC = () => {
     const claimRewardsAndClose = useCallback((startTutorial: boolean) => {
         playUiSound('CLICK');
         
-        let isAlreadyCompleted = false;
-        try {
-            isAlreadyCompleted = localStorage.getItem('hexopol_story_tutorial_completed') === 'true';
-        } catch (e) {
-            console.warn("LocalStorage check failed", e);
-        }
-
-        // Выдаем стартовые гексы только 1 раз при первой инициализации
-        if (!isAlreadyCompleted) {
+        // Выдаем стартовые гексы
+        addCollectedHexes(STARTER_HEXES);
+        addMinedHexes(STARTER_HEXES);
+        
+        if (startTutorial) {
             try { 
-                localStorage.setItem('hexopol_story_tutorial_completed', 'true'); 
-                sessionStorage.setItem('story_tutorial_seen', 'true'); 
+                localStorage.removeItem('hexopol_defense_tutorial_completed'); 
             } catch (e) {
                 console.warn("LocalStorage access denied", e);
             }
-            addCollectedHexes(STARTER_HEXES);
-            addMinedHexes(STARTER_HEXES);
-        }
-        
-        if (startTutorial) {
             setUIState('STORY_BUILDER');
-            setIsStoryTutorialActive(true);
+            useGameStore.getState().startDefenseTutorial();
+        } else {
+            try { 
+                localStorage.setItem('hexopol_defense_tutorial_completed', 'true'); 
+            } catch (e) {
+                console.warn("LocalStorage access denied", e);
+            }
         }
         
         setShowModal(false);
-    }, [playUiSound, addCollectedHexes, addMinedHexes, setUIState, setIsStoryTutorialActive, setShowModal]);
+    }, [playUiSound, addCollectedHexes, addMinedHexes, setUIState, setShowModal]);
 
     // Закрытие по Escape
     useEffect(() => {
@@ -66,16 +62,16 @@ export const OnboardingTutorial: React.FC = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md select-none font-sans"
-                    onClick={() => claimRewardsAndClose(false)} // Закрытие по клику на фон
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md select-none font-sans pointer-events-none"
+                    onClick={() => claimRewardsAndClose(false)} // Backdrop click handler
                 >
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                        onClick={(e) => e.stopPropagation()} // Предотвращаем закрытие при клике на само окно
-                        className="relative w-full max-w-lg bg-slate-900 border border-indigo-500/30 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.25)] overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()} // Prevent close on modal body click
+                        className="relative w-full max-w-lg bg-slate-900 border border-indigo-500/30 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.25)] overflow-hidden flex flex-col pointer-events-auto"
                     >
                         {/* Декоративный фоновый блик */}
                         <div className="absolute -top-20 -left-20 w-40 h-40 bg-indigo-600/20 blur-3xl rounded-full pointer-events-none" />

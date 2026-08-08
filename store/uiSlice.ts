@@ -16,6 +16,37 @@ export const createUiSlice = (
   setIsStoryTutorialActive: (active: boolean) => set(() => ({ isStoryTutorialActive: active })),
   setShowNewGameTutorialModal: (show: boolean) => set(() => ({ showNewGameTutorialModal: show })),
   
+  // Defense / StoryBuilder Tutorial State & Actions
+  defenseTutorialState: {
+    isActive: false,
+    step: 'IDLE',
+    targetHexes: [],
+  },
+  setDefenseTutorialStep: (step, targetHexes) => set((state) => ({
+    defenseTutorialState: {
+      ...state.defenseTutorialState,
+      step,
+      targetHexes: targetHexes !== undefined ? targetHexes : state.defenseTutorialState.targetHexes,
+    }
+  })),
+  startDefenseTutorial: () => set(() => ({
+    defenseTutorialState: {
+      isActive: true,
+      step: 'HIGHLIGHT_CORE',
+      targetHexes: ['0,0'],
+    }
+  })),
+  completeDefenseTutorial: () => {
+    try { localStorage.setItem('hexopol_defense_tutorial_completed', 'true'); } catch {}
+    set(() => ({
+      defenseTutorialState: {
+        isActive: false,
+        step: 'IDLE',
+        targetHexes: [],
+      }
+    }));
+  },
+  
   showToast: (message: string, type: 'error' | 'success' | 'info') => {
     // Sanitize string to bypass potential injection bugs or too large messages
     const sanitizedMsg = message.slice(0, 150);

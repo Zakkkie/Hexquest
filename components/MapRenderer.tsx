@@ -507,7 +507,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
             const lr = p.age / p.maxAge; p.container.alpha = 1.0 - lr; p.container.scale.set(0.75 + lr * 0.45);
             return true;
         });
-    }, [player, grid, simpleHexToPixel]);
+    }, [grid, simpleHexToPixel]);
 
     const updateSceneLoop = () => {
         const nowTime = Date.now();
@@ -1597,7 +1597,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({ rotation, onHexClick, 
         for (const [id, container] of unitCache.current.entries()) {
             if (!activeUnitIds.has(id)) { parent.removeChild(container); container.destroy({ children: true }); unitCache.current.delete(id); unitAnimStates.current.delete(id); }
         }
-    }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors, pendingConfirmation, recentGradientLock, playerGrowthIntent, session, simpleHexToPixel, sessionLanguage]);
+    }, [activeRenderItems, rotation, grid, isPixiReady, player, bots, isDefenseMode, activeLevelConfig, activatedMiniMonuments, portalActive, activeMeteors, pendingConfirmation, recentGradientLock, playerGrowthIntent, session, simpleHexToPixel, sessionLanguage, forceReveal]);
 
     const { handleCanvasClick, handleCanvasMouseMove, handleCanvasMouseLeave } = useMapInput({ grid, rotation, activeLevelConfig, camera, onHexClick, onHover, pixiAppRef });
 

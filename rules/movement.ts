@@ -109,7 +109,6 @@ export const calculateMovementCost = (
     
     // Exchange Rate
     const deductCoins = Math.ceil(movesDeficit * exchangeRate);
-    console.log(`MOVEMENT DEBUG: totalPoints=${totalPoints}, movesAvailable=${movesAvailable}, movesDeficit=${movesDeficit}, deductCoins=${deductCoins}, coinsAvailable=${coinsAvailable}, exchangeRate=${exchangeRate}`);
 
     const canAfford = coinsAvailable >= deductCoins;
 

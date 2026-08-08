@@ -190,7 +190,7 @@ describe('checkGrowthCondition', () => {
       expect(result.canGrow).toBe(true);
     });
 
-    it('4 high-level neighbors + 0 same-level neighbors → canGrow: false (does not pass support check since strict level is required)', () => {
+    it('4 high-level neighbors + 0 same-level neighbors → canGrow: true (passes support check since high-level neighbors are >= currentLevel)', () => {
       const hex = makeHex(0, 0, 1, 1);
       const entity = makeEntity({ storage: 2, playerLevel: 1 });
 
@@ -213,7 +213,7 @@ describe('checkGrowthCondition', () => {
       ]);
 
       const result = checkGrowthCondition(hex, entity, neighbors, grid);
-      expect(result.canGrow).toBe(false);
+      expect(result.canGrow).toBe(true);
     });
   });
 
@@ -358,6 +358,19 @@ describe('checkDigCondition', () => {
 
       const result = checkDigCondition(hex, entity, neighbors, grid);
       expect(result.canGrow).toBe(true);
+    });
+
+    it('cannot dig -1 to -2 with neighbors that are not strictly equal to current level (e.g., -1 and -2)', () => {
+      const hex = makeHex(0, 0, -1, 0);
+      const entity = makeEntity();
+      const n1 = makeHex(1, 0, -2, 0);
+      const n2 = makeHex(-1, 0, -1, 0);
+      const neighbors = [{ q: 1, r: 0 }, { q: -1, r: 0 }];
+      const grid = buildGrid([hex, n1, n2]);
+
+      const result = checkDigCondition(hex, entity, neighbors, grid);
+      expect(result.canGrow).toBe(false);
+      expect(result.reason).toContain('UNSTABLE');
     });
 
     it('cannot dig -2 to -3 without enough support at -2', () => {
