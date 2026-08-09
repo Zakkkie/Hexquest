@@ -419,31 +419,27 @@ const StoryBuilderView: React.FC = () => {
         ].slice(0, 50));
     }, []);
 
-    // Auto-start defense tutorial if player has not completed it yet, or restore active step & inventory
+    // Auto-start defense tutorial if player has not completed it yet, or restore active step
     useEffect(() => {
         const completed = localStorage.getItem('hexopol_defense_tutorial_completed') === 'true';
         if (!completed) {
             if (!defenseTutorialState.isActive || defenseTutorialState.step === 'IDLE') {
                 const timer = setTimeout(() => {
-                    addMinedHexes({ 0: 13, 1: 7 });
                     startDefenseTutorial();
                 }, 800);
                 return () => clearTimeout(timer);
             } else {
-                // Restored from account/session memory: ensure inventory items are available for current step
+                // Restored from account/session memory: set active build level for current step
                 if (defenseTutorialState.step === 'PLACE_L0') {
-                    addMinedHexes({ 0: Math.max(13, defenseTutorialState.targetHexes.length) });
                     setSelectedBuildLevel(0);
                 } else if (defenseTutorialState.step === 'UPGRADE_CORE') {
-                    addMinedHexes({ 1: Math.max(7, defenseTutorialState.targetHexes.length) });
                     setSelectedBuildLevel(1);
                 } else if (defenseTutorialState.step === 'UPGRADE_L2') {
-                    addMinedHexes({ 2: Math.max(7, defenseTutorialState.targetHexes.length) });
                     setSelectedBuildLevel(2);
                 }
             }
         }
-    }, [defenseTutorialState.isActive, defenseTutorialState.step, defenseTutorialState.targetHexes.length, startDefenseTutorial, addMinedHexes]);
+    }, [defenseTutorialState.isActive, defenseTutorialState.step, startDefenseTutorial]);
 
     // Auto-detect Level 1.0 or Siege 1 completion for Tutorial Stages
     useEffect(() => {
@@ -930,18 +926,20 @@ const StoryBuilderView: React.FC = () => {
             return false;
         }
 
-        // STABILITY CHECK (Strict Equal or Higher Level Rule for L1+)
+        // LEVEL 4 STRICT LIMIT CHECK (Max 4 Level-4 hexes allowed, zero exceptions)
+        if (lvlToBuild === 4) {
+            const l4Count = Object.values(storyMap).filter(lvl => lvl === 4).length;
+            if (l4Count >= 4 && currentLvl !== 4) {
+                return false;
+            }
+        }
+
+        // STABILITY CHECK (Strict Equal or Higher Level Rule for L1+ with ZERO exceptions)
         const currentLevel = currentlyBuilt ? currentLvl : 0;
         if (currentLevel >= 1) {
-            // Check if there are at least 5 neighbors strictly higher than currentLevel (Depression rule)
-            const higherNeighborsCount = neighborLevels.filter(lvl => lvl > currentLevel).length;
-            const isDepressionRule = higherNeighborsCount >= 5;
-
-            if (!isDepressionRule) {
-                const supportNeighborsCount = neighborLevels.filter(lvl => lvl >= currentLevel).length;
-                if (supportNeighborsCount < 2) {
-                    return false;
-                }
+            const supportNeighborsCount = neighborLevels.filter(lvl => lvl >= currentLevel).length;
+            if (supportNeighborsCount < 2) {
+                return false;
             }
         }
 
@@ -1113,7 +1111,6 @@ const StoryBuilderView: React.FC = () => {
                 const remaining = defenseTutorialState.targetHexes.filter(k => k !== key);
                 if (remaining.length === 0) {
                     playUiSound('SUCCESS');
-                    addMinedHexes({ 1: 7 });
                     setSelectedBuildLevel(1);
                     const ring1Targets = ['0,0', '1,0', '1,-1', '0,-1', '-1,0', '-1,1', '0,1'];
                     setDefenseTutorialStep('UPGRADE_CORE', ring1Targets);
@@ -1368,7 +1365,12 @@ const StoryBuilderView: React.FC = () => {
                 const currentLevel = currentLvl;
                 let blockBuildErrorMsg = '';
 
-                if (buildLevel !== currentLevel + 1) {
+                const l4Count = Object.values(storyMap).filter(lvl => lvl === 4).length;
+                if (buildLevel === 4 && l4Count >= 4 && currentLevel !== 4) {
+                    blockBuildErrorMsg = language === 'RU'
+                        ? `ЛИМИТ L4: Разрешено разместить максимум 4 гекса Уровня 4!`
+                        : `MAX L4 LIMIT: Maximum 4 Level-4 hexes allowed!`;
+                } else if (buildLevel !== currentLevel + 1) {
                     blockBuildErrorMsg = language === 'RU'
                         ? `Стройте пошагово! Высоту можно повысить только на +1 (нужно поставить Уровень ${currentLevel + 1}).`
                         : `Build step-by-step! Height can only be raised by +1 (you should select Level ${currentLevel + 1}).`;
@@ -1431,7 +1433,7 @@ const StoryBuilderView: React.FC = () => {
         setLastPlacedKey(key);
         setTimeout(() => setLastPlacedKey(prev => prev === key ? null : prev), 600);
         setErrorMessage(null); // clear any previous warning
-    }, [isPanning, isSiegeActive, playUiSound, language, setErrorMessage, storyMap, selectedBuildLevel, isEligibleForPlacement, setFailedClickCoord, minedInSessionHexes, collectedHexes, placeStoryHex, setLastPlacedKey, defenseTutorialState, setDefenseTutorialStep, addSystemLog, l2SupportNeededHex, addMinedHexes]);
+    }, [isPanning, isSiegeActive, playUiSound, language, setErrorMessage, storyMap, selectedBuildLevel, isEligibleForPlacement, setFailedClickCoord, minedInSessionHexes, collectedHexes, placeStoryHex, setLastPlacedKey, defenseTutorialState, setDefenseTutorialStep, addSystemLog, l2SupportNeededHex]);
 
     const handleCellDblClick = useCallback((q: number, r: number) => {
         const key = getHexKey(q, r);
@@ -2649,7 +2651,6 @@ const StoryBuilderView: React.FC = () => {
                                                     setSelectedBuildLevel(lvl); 
 
                                                     if (defenseTutorialState.isActive && defenseTutorialState.step === 'HIGHLIGHT_TOOLBAR' && lvl === 0) {
-                                                        addMinedHexes({ 0: 13 });
                                                         setDefenseTutorialStep('PLACE_L0', STAR_FOUNDATION_KEYS);
                                                     }
                                                 }}

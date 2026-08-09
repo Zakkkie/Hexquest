@@ -25,7 +25,9 @@ export class TurretSystem implements System {
         // Enforce cooldown with turretSpeed upgrade reduction (-500ms per upgrade level, min 1000ms)
         const baseCooldown = cell.turretCooldown ?? 5000;
         const cooldown = Math.max(1000, baseCooldown - turretSpeedUpgrade * 500);
-        const lastFired = cell.lastRecoveryUseTime ?? 0; // abuse this timestamp slot for firing cooldown
+        
+        const lastFired = cell.lastTurretFireTime ?? cell.lastRecoveryUseTime ?? 0; 
+        
         if (now - lastFired < cooldown) {
           continue;
         }
@@ -47,12 +49,11 @@ export class TurretSystem implements System {
           const botHex = grid[`${bot.q},${bot.r}`];
           const L_tgt = botHex ? (botHex.currentLevel ?? 0) : 0;
 
-          // Dynamic range modifier based on attacker (L_att) and target (L_tgt)
-          // Placing turrets on peaks (L_att >= 2) increases range by +1
-          const peakRangeBonus = L_att >= 2 ? 1 : 0;
-          // High Ground Advantage: +1 range for every 2 levels of height difference (L_att - L_tgt)
+          // Turret height directly increases its attack range (+1 range per turret height level L_att)
+          const turretHeightModifier = L_att;
+          // High Ground Advantage: +1 range for every 2 levels of height difference above target (L_att - L_tgt)
           const heightDiffRangeBonus = Math.max(0, Math.floor((L_att - L_tgt) / 2));
-          const effectiveRange = baseRange + peakRangeBonus + heightDiffRangeBonus;
+          const effectiveRange = baseRange + turretHeightModifier + heightDiffRangeBonus;
 
           const dist = cubeDistance({ q: cell.q, r: cell.r }, { q: bot.q, r: bot.r });
           if (dist <= effectiveRange && dist < bestDistance) {
@@ -62,11 +63,7 @@ export class TurretSystem implements System {
 
             // Height bonus damage: if turret is significantly higher (+2 levels), deal 2 rank damage
             const heightDiff = L_att - L_tgt;
-            if (heightDiff >= 2) {
-              finalDmg = 2;
-            } else {
-              finalDmg = 1;
-            }
+            finalDmg = heightDiff >= 2 ? 2 : 1;
           }
         }
 
@@ -77,10 +74,11 @@ export class TurretSystem implements System {
           const isDestroyed = targetBot.playerLevel < 1;
 
           if (isDestroyed) {
-            targetBot.moves = 0; // Trigger recycling
+            targetBot.moves = 0; // Trigger recycling for the next tick
           }
           
-          cell.lastRecoveryUseTime = now; // set fired cooldown ts
+          // Сохраняем время выстрела
+          cell.lastTurretFireTime = now;
 
           const isRu = state.language === 'RU';
           const msg = isDestroyed
@@ -107,8 +105,8 @@ export class TurretSystem implements System {
               q: targetBot.q,
               r: targetBot.r,
               text: isDestroyed 
-                ? (state.language === 'RU' ? '💥 УНИЧТОЖЕН!' : '💥 DESTROYED!')
-                : (state.language === 'RU' ? `-${finalDmg} РАНГ` : `-${finalDmg} RANK`),
+                ? (isRu ? '💥 УНИЧТОЖЕН!' : '💥 DESTROYED!')
+                : (isRu ? `-${finalDmg} РАНГ` : `-${finalDmg} RANK`),
               color: isDestroyed ? '#EF4444' : '#F43F5E',
               startTime: now,
               lifetime: 2500,
@@ -134,8 +132,8 @@ export class TurretSystem implements System {
             timestamp: now
           });
 
-          // Immediately recycle this bot if dead
-          this.recycleDeadBots(state, now, events);
+          // FIX: Убран вызов this.recycleDeadBots() отсюда. 
+          // Мертвые боты будут убраны в начале следующего тика (шаг 2).
         }
       }
     }
@@ -144,7 +142,6 @@ export class TurretSystem implements System {
   private handleWaveSpawning(state: SessionState, now: number, events: GameEvent[]): void {
     if (!state.defense?.isDefenseMode) return;
 
-    // Check if wave timer is working. Initialize if missing and spawn Wave 1 immediately!
     let triggerSpawn = false;
     if (!state.defense.waveSpawnTimer) {
       state.defense.waveSpawnTimer = now;
@@ -162,7 +159,6 @@ export class TurretSystem implements System {
         triggerSpawn = true;
       }
     } else if (state.bots.length === 0 && hasMoreWaves) {
-      // Player cleared all bots early! Trigger next wave immediately!
       state.defense.waveSpawnTimer = now;
       state.defense.currentWave = (state.defense.currentWave ?? 1) + 1;
       triggerSpawn = true;
@@ -185,7 +181,6 @@ export class TurretSystem implements System {
       const waveGroup = Math.floor((waveIndex - 1) / 3) + 1;
       const spawnCount = waveGroup * 3;
 
-      // Determine dynamic radius based on player owned hexes or map size
       const playerOwned = Object.values(state.grid).filter((h: any) => h.ownerId === 'player-1' || h.structureType === 'CORE' || h.isCore);
       let maxBuiltDist = 0;
       for (const ph of playerOwned) {
@@ -194,56 +189,39 @@ export class TurretSystem implements System {
       }
       const mapRadius = Math.max(7, Math.min(10, maxBuiltDist + 6));
 
-      const getSiegeSpawnPoint = (): { q: number; r: number } => {
-          const candidates: { q: number; r: number }[] = [];
-          for (let q = -mapRadius; q <= mapRadius; q++) {
-              for (let r = -mapRadius; r <= mapRadius; r++) {
-                  if (Math.abs(q + r) <= mapRadius) {
-                      let isEligible = true;
-                      for (const ph of playerOwned) {
-                          if (cubeDistance({ q: ph.q, r: ph.r }, { q, r }) <= 4) {
-                              isEligible = false;
-                              break;
-                          }
+      // FIX: Выносим генерацию кандидатов за цикл. Считаем 1 раз, а не для каждого бота.
+      const candidates: { q: number; r: number }[] = [];
+      for (let q = -mapRadius; q <= mapRadius; q++) {
+          for (let r = -mapRadius; r <= mapRadius; r++) {
+              if (Math.abs(q + r) <= mapRadius) {
+                  let isEligible = true;
+                  for (const ph of playerOwned) {
+                      if (cubeDistance({ q: ph.q, r: ph.r }, { q, r }) <= 4) {
+                          isEligible = false;
+                          break;
                       }
-                      if (isEligible) {
-                          candidates.push({ q, r });
-                      }
+                  }
+                  if (isEligible) {
+                      candidates.push({ q, r });
                   }
               }
           }
+      }
+
+      const getSiegeSpawnPoint = (): { q: number; r: number } => {
           if (candidates.length > 0) {
               return candidates[Math.floor(Math.random() * candidates.length)];
           }
-          // Fallback: spawn on outer rim (exact hexagonal boundary coordinates)
           const side = Math.floor(Math.random() * 6);
           const i = Math.floor(Math.random() * mapRadius);
           let q = 0, r = 0;
           switch (side) {
-              case 0:
-                  q = mapRadius - i;
-                  r = i;
-                  break;
-              case 1:
-                  q = -i;
-                  r = mapRadius;
-                  break;
-              case 2:
-                  q = -mapRadius;
-                  r = mapRadius - i;
-                  break;
-              case 3:
-                  q = -mapRadius + i;
-                  r = -i;
-                  break;
-              case 4:
-                  q = i;
-                  r = -mapRadius;
-                  break;
-              case 5:
-                  q = mapRadius;
-                  r = -mapRadius + i;
-                  break;
+              case 0: q = mapRadius - i; r = i; break;
+              case 1: q = -i; r = mapRadius; break;
+              case 2: q = -mapRadius; r = mapRadius - i; break;
+              case 3: q = -mapRadius + i; r = -i; break;
+              case 4: q = i; r = -mapRadius; break;
+              case 5: q = mapRadius; r = -mapRadius + i; break;
           }
           return { q, r };
       };
@@ -252,7 +230,6 @@ export class TurretSystem implements System {
       for (let i = 0; i < spawnCount; i++) {
         const pt = getSiegeSpawnPoint();
         
-        // Ensure hex exists in grid
         const key = `${pt.q},${pt.r}`;
         if (!state.grid[key] || state.grid[key].structureType === 'VOID') {
           const randomDepth = -1 - Math.floor(Math.random() * 3);
@@ -271,24 +248,18 @@ export class TurretSystem implements System {
         }
 
         let botRole: 'SIEGE_GRINDER' | 'SIEGE_RUNNER' | 'SIEGE_TANK' = 'SIEGE_GRINDER';
-        let botColor = '#EF4444'; // Red
+        let botColor = '#EF4444'; 
         let botMoves = 15;
         let botHead = 4;
         let botBody = 4;
-        let baseRank = 2;
-
-        const waveRankBonus = Math.floor((state.defense.currentWave - 1) / 3);
 
         if (waveSubIndex === 0) {
-          // Simple wave: only Grinders
           botRole = 'SIEGE_GRINDER';
           botColor = '#EF4444';
           botMoves = 15;
           botHead = 4;
           botBody = 4;
-          baseRank = 2;
         } else if (waveSubIndex === 1) {
-          // Mixed wave: cycle Grinder, Runner, Tank
           const r = i % 3;
           if (r === 0) {
             botRole = 'SIEGE_GRINDER';
@@ -296,24 +267,20 @@ export class TurretSystem implements System {
             botMoves = 15;
             botHead = 4;
             botBody = 4;
-            baseRank = 2;
           } else if (r === 1) {
             botRole = 'SIEGE_RUNNER';
-            botColor = '#EAB308'; // Yellow
+            botColor = '#EAB308'; 
             botMoves = 6;
             botHead = 2;
             botBody = 1;
-            baseRank = 1;
           } else {
             botRole = 'SIEGE_TANK';
-            botColor = '#8B5CF6'; // Purple
+            botColor = '#8B5CF6'; 
             botMoves = 40;
             botHead = 3;
             botBody = 3;
-            baseRank = 3;
           }
         } else {
-          // Hard wave: cycle Tank, Tank, Grinder
           const r = i % 3;
           if (r === 0 || r === 1) {
             botRole = 'SIEGE_TANK';
@@ -321,18 +288,15 @@ export class TurretSystem implements System {
             botMoves = 40;
             botHead = 3;
             botBody = 3;
-            baseRank = 3;
           } else {
             botRole = 'SIEGE_GRINDER';
             botColor = '#EF4444';
             botMoves = 15;
             botHead = 4;
             botBody = 4;
-            baseRank = 2;
           }
         }
 
-        // Base wave rank starts at Rank 4 on Wave 1 (3 + wave)
         const waveBaseRank = 3 + state.defense.currentWave;
         let roleOffset = 0;
         if (botRole === 'SIEGE_RUNNER') roleOffset = -1;
@@ -340,7 +304,6 @@ export class TurretSystem implements System {
 
         const initialBotRank = Math.min(10, Math.max(1, waveBaseRank + roleOffset));
 
-        // Spawn specialized bot
         const botId = `saboteur-w${state.defense.currentWave}-${i+1}`;
         state.bots.push({
           id: botId,
@@ -391,14 +354,24 @@ export class TurretSystem implements System {
 
   private recycleDeadBots(state: SessionState, now: number, events: GameEvent[]): void {
     const originalCount = state.bots.length;
-    const survivingBots = state.bots.filter(bot => bot.moves > 0);
+    if (originalCount === 0) return;
 
-    if (survivingBots.length < originalCount) {
-      const deadBots = state.bots.filter(bot => bot.moves <= 0);
+    // FIX: ОДИН проход по массиву вместо двух filter()
+    const survivingBots: any[] = [];
+    const deadBots: any[] = [];
+    
+    for (const bot of state.bots) {
+      if (bot.moves > 0) {
+        survivingBots.push(bot);
+      } else {
+        deadBots.push(bot);
+      }
+    }
+
+    if (deadBots.length > 0) {
       state.bots = survivingBots;
 
       for (const bot of deadBots) {
-        // Award Player: +15 Credits and +1 Material
         state.player.coins += 15;
         state.player.totalCoinsEarned += 15;
 
@@ -408,20 +381,18 @@ export class TurretSystem implements System {
           matGained = 1;
         }
 
-        // Add visual floating text effect for recycled bot
         state.effects = state.effects || [];
         state.effects.push({
           id: `recycle-text-${now}-${bot.id}`,
           q: bot.q,
           r: bot.r,
           text: state.language === 'RU' ? 'ПЕРЕРАБОТАН! +15 МОН' : 'RECYCLED! +15 COIN',
-          color: '#10B981', // brilliant emerald green
+          color: '#10B981',
           startTime: now,
           lifetime: 2500,
           icon: 'SKULL'
         });
 
-        // Update defense stats for threat neutralized tracking
         if (state.defense) {
           state.defense.totalEliminated = (state.defense.totalEliminated ?? 0) + 1;
         }

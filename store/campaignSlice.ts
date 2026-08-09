@@ -187,8 +187,9 @@ export const createCampaignSlice = (
     };
   }),
 
-  claimLevelReward: (levelId: string) => set((state) => {
+  claimLevelReward: (levelId: string) => set((state: any) => {
     const claimedSet = new Set(state.claimedLevelRewards || []);
+    if (claimedSet.has(levelId)) return {};
     claimedSet.add(levelId);
     const newClaimedRewards = Array.from(claimedSet);
 
@@ -212,7 +213,8 @@ export const createCampaignSlice = (
     }
 
     return {
-      claimedLevelRewards: newClaimedRewards
+      claimedLevelRewards: newClaimedRewards,
+      skillPoints: (state.skillPoints || 0) + 1
     };
   })
 });

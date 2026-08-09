@@ -169,41 +169,33 @@ export function checkGrowthCondition(
       };
   }
 
-  // 4. STABILITY CHECK (Strict Equal Level Rule for non-L0)
+  // 3. LEVEL 4 STRICT LIMIT CHECK
+  if (targetLevel === 4) {
+    const l4Count = Object.values(grid).filter(h => h && h.structureType !== 'VOID' && h.currentLevel === 4).length;
+    if (l4Count >= 4 && currentLevel !== 4) {
+      return {
+        canGrow: false,
+        reason: useGameStore.getState().language === 'RU'
+          ? "ЛИМИТ L4: Достигнут максимум из 4 гексов Уровня 4!"
+          : "MAX L4 LIMIT: Maximum 4 Level-4 hexes allowed!"
+      };
+    }
+  }
+
+  // 4. STABILITY CHECK (Strict Equal Level Rule for non-L0 with ZERO exceptions)
   if (currentLevel !== 0) {
-    // Exception 2: Valley Rule Exception
-    // If the cell being upgraded is located in a deep ravine, surrounded by 5 or more neighbors whose heights strictly exceed the historical level of the upgraded hex:
-    // Neighbors with Level > Hex.maxLevel >= 5
-    // The requirement for two support neighbors is waived.
-    const historicalMax = hex.maxLevel ?? currentLevel;
-    const valleyNeighbors = neighbors.filter(n => {
+    const supportNeighbors = neighbors.filter(n => {
        const h = grid[getHexKey(n.q, n.r)];
-       return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) > historicalMax;
-    });
+       return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) >= currentLevel;
+     });
 
-    const isValleyRule = valleyNeighbors.length >= 5;
-
-    if (!isValleyRule) {
-      const higherNeighbors = neighbors.filter(n => {
-         const h = grid[getHexKey(n.q, n.r)];
-         return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) > currentLevel;
-      });
-
-      const isDepressionRule = higherNeighbors.length >= 5;
-
-      if (!isDepressionRule) {
-        const supportNeighbors = neighbors.filter(n => {
-           const h = grid[getHexKey(n.q, n.r)];
-           return h && h.structureType !== 'VOID' && (h.currentLevel ?? 0) >= currentLevel;
-         });
-
-        if (supportNeighbors.length < 2) {
-          return {
-            canGrow: false, 
-            reason: `Нет опоры: нужны 2 соседа минимум на уровне L${currentLevel} или 5 более высоких соседей (правило впадины). (UNSTABLE)`,
-          };
-        }
-      }
+    if (supportNeighbors.length < 2) {
+      return {
+        canGrow: false, 
+        reason: useGameStore.getState().language === 'RU'
+          ? `Нет опоры: требуется минимум 2 смежные плиты уровня L${currentLevel} или выше (Правило 2 Опор).`
+          : `Unstable: Level L${targetLevel} requires at least 2 adjacent support tiles of Level L${currentLevel} or higher (2-Support Rule).`,
+      };
     }
   }
 

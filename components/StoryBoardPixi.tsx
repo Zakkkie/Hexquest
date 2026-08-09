@@ -1100,7 +1100,7 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 bpDashed.visible = false;
             }
 
-            // ---- hover overlay (green/red) ----
+            // ---- hover overlay (green for valid, red for invalid) ----
             let hover = collapse.getChildByName('hover') as PIXI.Graphics;
             if (isHovered) {
                 if (!hover) {
@@ -1112,10 +1112,19 @@ const StoryBoardPixi: React.FC<StoryBoardPixiProps> = ({
                 hover.y = yOffset;
                 hover.scale.set(1, 0.8);
                 const ok = canPlaceHex;
+                const strokeCol = ok ? 0x10b981 : 0xef4444; // Green for valid, Red for invalid
+                const fillCol = ok ? 0x10b981 : 0xef4444;
+                
                 tracePoly(hover, BASE_POINTS);
-                hover.fill({ color: ok ? C('#10b981') : C('#ef4444'), alpha: 0.4 });
+                hover.fill({ color: fillCol, alpha: ok ? 0.35 : 0.45 });
                 tracePoly(hover, BASE_POINTS);
-                hover.stroke({ width: 4, color: ok ? C('#10b981') : C('#ef4444') });
+                hover.stroke({ width: 3.5, color: strokeCol, alpha: 0.95 });
+                
+                // Inner accent line
+                const innerPoints = BASE_POINTS.map(p => ({ x: p.x * 0.92, y: p.y * 0.92 }));
+                tracePoly(hover, innerPoints);
+                hover.stroke({ width: 1.5, color: ok ? 0xa7f3d0 : 0xfca5a5, alpha: 0.8 });
+
                 hover.visible = true;
             } else if (hover) {
                 hover.visible = false;

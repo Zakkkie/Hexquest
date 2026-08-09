@@ -633,7 +633,6 @@ export const DefenseTutorialOverlay: React.FC<DefenseTutorialOverlayProps> = ({
         actionText = language === 'RU' ? 'НАЧАТЬ СТРОИТЕЛЬСТВО' : 'START BUILDING';
         onAction = () => {
             playUiSound('SUCCESS');
-            addMinedHexes({ 0: 13 });
             setSelectedBuildLevel(0);
             setDefenseTutorialStep('PLACE_L0', STAR_FOUNDATION_KEYS);
         };

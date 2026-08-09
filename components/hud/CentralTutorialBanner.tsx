@@ -167,38 +167,47 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
     const isRu = language === 'RU';
 
     return (
-        <AnimatePresence mode="wait">
-            {isCollapsed ? (
-                <motion.div
-                    key="collapsed"
-                    initial={{ opacity: 0, scale: 0.98, y: -5 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.98, y: -5 }}
-                    transition={{ duration: 0.2 }}
-                    onClick={handleToggleCollapse}
-                    className="w-full bg-slate-950/92 border-transparent rounded-xl backdrop-blur-md flex items-center justify-between px-3.5 py-2.5 pointer-events-auto cursor-pointer relative shadow-lg select-none transition-all bg-gradient-to-r from-emerald-950/10 to-teal-950/5"
-                    id="central-tutorial-banner-collapsed"
-                >
-                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <span className="relative flex h-2 w-2 shrink-0">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="text-[10px] font-black tracking-widest font-mono text-emerald-400 uppercase shrink-0">
-                                {isRu ? 'ИНСТРУКТАЖ' : 'TUTORIAL'}
-                            </span>
-                            <div className="text-[11px] text-slate-300 font-semibold truncate flex items-center gap-1">
-                                {tutorialHint.replace(/\(.*\)/, '')}
-                                {tutorialHint.match(/\(.*\)/) && <Crown className="w-3.5 h-3.5 text-amber-400 inline mb-0.5" />}
-                            </div>
-                        </div>
-                    </div>
+        <motion.div
+            layout
+            initial={{ opacity: 0, scale: 0.98, y: -5 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: -5 }}
+            transition={{ 
+                layout: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+                duration: 0.25 
+            }}
+            onClick={handleToggleCollapse}
+            className="w-full bg-slate-950/92 border border-emerald-500/25 hover:border-emerald-500/40 rounded-xl md:rounded-2xl backdrop-blur-md p-3 pointer-events-auto relative shadow-2xl cursor-pointer select-none transition-colors bg-gradient-to-br from-emerald-950/20 via-slate-950/90 to-teal-950/15 overflow-hidden"
+            id={isCollapsed ? "central-tutorial-banner-collapsed" : "central-tutorial-banner-expanded"}
+        >
+            {/* Scanner/Grid lines details overlay */}
+            <div className="absolute inset-0 rounded-2xl bg-scanlines opacity-10 pointer-events-none" />
 
-                    <div className="flex items-center gap-2.5 shrink-0">
-                        {/* Inline current progress metrics in collapsed state */}
-                        {monument && monumentInfo ? (
+            {/* ALWAYS-VISIBLE TOP HEADER BAR ("верхняя плошка") */}
+            <div className="flex items-center justify-between gap-2.5 relative z-10 min-w-0">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="relative flex h-2 w-2 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    
+                    <span className="text-[10px] font-black tracking-widest font-mono text-emerald-400 uppercase shrink-0">
+                        {isRu ? (isCollapsed ? 'ИНСТРУКТАЖ' : 'ИНСТРУКТАЖ СИСТЕМЫ') : (isCollapsed ? 'TUTORIAL' : 'SYSTEM TUTORIAL PROTOCOL')}
+                    </span>
+
+                    {/* Truncated hint preview when collapsed */}
+                    {isCollapsed && (
+                        <div className="text-[11px] text-slate-300 font-semibold truncate flex items-center gap-1 min-w-0 flex-1">
+                            <span className="truncate">{tutorialHint.replace(/\(.*\)/, '')}</span>
+                            {tutorialHint.match(/\(.*\)/) && <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0 inline mb-0.5" />}
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                    {/* Collapsed state metric badge or Expanded state distance badge */}
+                    {isCollapsed ? (
+                        monument && monumentInfo ? (
                             <span className="text-[10px] font-mono font-bold text-amber-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
                                 {progressValueText}
                             </span>
@@ -206,182 +215,175 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
                             <span className="text-[10px] font-mono font-bold text-amber-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
                                 {metrics.current} / {metrics.target} {metrics.label}
                             </span>
-                        ) : null}
+                        ) : null
+                    ) : (
+                        targetDistanceData && !targetDistanceData.reached && (
+                            <div className="flex items-center gap-1 text-[9.5px] font-mono font-bold text-amber-400 bg-amber-950/40 border border-amber-500/20 px-1.5 py-0.5 rounded-md leading-none">
+                                <Navigation className="w-2.5 h-2.5 rotate-45 animate-pulse" />
+                                <span>
+                                    {isRu ? 'ДИСТАНЦИЯ:' : 'DISTANCE:'} {targetDistanceData.distance} {isRu ? 'шаг.' : 'steps'}
+                                </span>
+                            </div>
+                        )
+                    )}
 
-                        <div className="p-0.5 rounded bg-slate-900/60 border border-slate-800 text-slate-400">
-                            <ChevronDown className="w-3.5 h-3.5" />
-                        </div>
-                    </div>
-                </motion.div>
-            ) : (
-                <motion.div
-                    key="expanded"
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                    animate={{ 
-                        opacity: 1, 
-                        scale: 1, 
-                        y: 0,
-                        borderColor: 'transparent',
-                        boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.5)'
-                    }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="w-full bg-slate-950/92 border-transparent rounded-xl md:rounded-2xl backdrop-blur-md flex flex-col gap-2.5 p-3 md:p-3.5 pointer-events-auto relative shadow-2xl cursor-pointer select-none transition-all bg-gradient-to-br from-emerald-950/15 to-teal-950/10"
-                    onClick={handleToggleCollapse}
-                    id="central-tutorial-banner-expanded"
-                >
-                    {/* Scanner/Grid lines details overlay */}
-                    <div className="absolute inset-0 rounded-2xl bg-scanlines opacity-10 pointer-events-none" />
+                    {/* Chevron expand/collapse toggle */}
+                    <motion.div 
+                        animate={{ rotate: isCollapsed ? 0 : 180 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center shrink-0"
+                    >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                    </motion.div>
+                </div>
+            </div>
 
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                            <span className="text-[9px] font-black tracking-[0.2em] font-mono uppercase text-emerald-400">
-                                {isRu ? 'ИНСТРУКТАЖ СИСТЕМЫ' : 'SYSTEM TUTORIAL PROTOCOL'}
-                            </span>
+            {/* SMOOTH EXPANDABLE TUTORIAL DETAILS SECTION */}
+            <AnimatePresence initial={false}>
+                {!isCollapsed && (
+                    <motion.div
+                        key="expanded-tutorial-content"
+                        initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                        animate={{ 
+                            height: 'auto', 
+                            opacity: 1, 
+                            marginTop: 10,
+                            transition: {
+                                height: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+                                opacity: { duration: 0.25, delay: 0.08 }
+                            }
+                        }}
+                        exit={{ 
+                            height: 0, 
+                            opacity: 0, 
+                            marginTop: 0,
+                            transition: {
+                                height: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
+                                opacity: { duration: 0.15 }
+                            }
+                        }}
+                        className="overflow-hidden flex flex-col gap-2.5 pt-2.5 border-t border-emerald-500/20 relative z-10"
+                    >
+                        <div className="flex items-start gap-2.5">
+                            <div className="p-2 bg-emerald-950/30 border border-emerald-500/20 rounded-xl text-emerald-400 flex items-center justify-center shrink-0">
+                                <Compass className="w-5 h-5 animate-spin-slow" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[10px] uppercase font-black tracking-widest text-slate-400 font-mono mb-0.5">
+                                    {isRu ? 'ТЕКУЩИЙ ШАГ' : 'CURRENT OBJECTIVE STEP'}
+                                </div>
+                                <p className="text-xs md:text-sm font-black font-sans tracking-tight leading-normal uppercase flex flex-wrap items-center gap-1 text-slate-100">
+                                    {tutorialHint.replace(/\(.*\)/, '')}
+                                    {tutorialHint.match(/\(.*\)/) && <Crown className="w-4 h-4 text-amber-400 inline drop-shadow-md pb-0.5" />}
+                                </p>
+                                {onOpenHelpDetail && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            playUiSound('CLICK');
+                                            onOpenHelpDetail();
+                                        }}
+                                        className="mt-2 text-[10px] md:text-[11px] font-mono font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase cursor-pointer flex items-center gap-1 select-none tracking-wider underline decoration-dotted underline-offset-4"
+                                    >
+                                        <span>{isRu ? 'ПОДРОБНЕЕ О ПРАВИЛАХ И ЦЕЛЯХ →' : 'MORE INFO / MISSION BRIEFING →'}</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        
-                        <div className="flex items-center gap-2">
-                            {targetDistanceData && !targetDistanceData.reached && (
-                                <div className="flex items-center gap-1 text-[9.5px] font-mono font-bold text-amber-400 bg-amber-950/40 border border-amber-500/20 px-1.5 py-0.5 rounded-md leading-none">
-                                    <Navigation className="w-2.5 h-2.5 rotate-45 animate-pulse" />
-                                    <span>
-                                        {isRu ? 'ДИСТАНЦИЯ:' : 'DISTANCE:'} {targetDistanceData.distance} {isRu ? 'шаг.' : 'steps'}
+
+                        {/* Unified campaign goal progress indicator */}
+                        {(metrics || monument) && (
+                            <div 
+                                className="p-2 rounded-lg bg-slate-900/50 border border-slate-800/80 flex flex-col gap-1.5"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex items-center justify-between text-[10px] font-mono font-bold leading-none">
+                                    <span className="text-slate-400 uppercase">
+                                        {monument && monumentInfo ? monumentInfo.title : isRu ? 'ТЕКУЩАЯ ЗАДАЧА' : 'CURRENT GOAL'}
+                                    </span>
+                                    <span className="text-amber-400 font-bold font-mono flex items-center gap-1">
+                                        {monument && monumentInfo ? progressValueText : `${metrics?.current} / ${metrics?.target}`}
+                                        {!monument && <span className="text-slate-400 uppercase text-[9px] ml-0.5">{metrics?.label}</span>}
                                     </span>
                                 </div>
-                            )}
+                                
+                                <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-900/60">
+                                    <div 
+                                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-500"
+                                        style={{ width: `${monument ? currentProgressPercent : Math.min(100, (metrics!.current / metrics!.target) * 100)}%` }}
+                                    />
+                                </div>
+                                
+                                {monument && monumentInfo && (
+                                    <p className="text-[9px] text-slate-400 font-mono mt-0.5 opacity-80 leading-tight">
+                                        {monumentInfo.text}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
-                            <button 
-                                onClick={handleToggleCollapse}
-                                className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
+                        {/* Loss Condition Indicator */}
+                        {activeLevelConfig && (
+                            <div 
+                                className="p-2 rounded-lg bg-rose-950/15 border border-rose-500/15 flex flex-col gap-1.5"
+                                onClick={(e) => e.stopPropagation()}
                             >
-                                <ChevronUp className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex items-start gap-2.5 mt-0.5">
-                        <div className="p-2 bg-emerald-950/30 border border-emerald-500/20 rounded-xl text-emerald-400 flex items-center justify-center shrink-0">
-                            <Compass className="w-5 h-5 animate-spin-slow" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="text-[10px] uppercase font-black tracking-widest text-slate-400 font-mono mb-0.5">
-                                {isRu ? 'ТЕКУЩИЙ ШАГ' : 'CURRENT OBJECTIVE STEP'}
-                            </div>
-                            <p className="text-xs md:text-sm font-black font-sans tracking-tight leading-normal uppercase flex flex-wrap items-center gap-1 text-slate-100">
-                                {tutorialHint.replace(/\(.*\)/, '')}
-                                {tutorialHint.match(/\(.*\)/) && <Crown className="w-4 h-4 text-amber-400 inline drop-shadow-md pb-0.5" />}
-                            </p>
-                            {onOpenHelpDetail && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        playUiSound('CLICK');
-                                        onOpenHelpDetail();
-                                    }}
-                                    className="mt-2 text-[10px] md:text-[11px] font-mono font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase cursor-pointer flex items-center gap-1 select-none tracking-wider underline decoration-dotted underline-offset-4"
-                                >
-                                    <span>{isRu ? 'ПОДРОБНЕЕ О ПРАВИЛАХ И ЦЕЛЯХ →' : 'MORE INFO / MISSION BRIEFING →'}</span>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Unified campaign goal progress indicator */}
-                    {(metrics || monument) && (
-                        <div 
-                            className="mt-1.5 p-2 rounded-lg bg-slate-900/50 border border-slate-800/80 flex flex-col gap-1.5"
-                            onClick={(e) => e.stopPropagation()} /* Do not collapse when clicking individual metrics area */
-                        >
-                            <div className="flex items-center justify-between text-[10px] font-mono font-bold leading-none">
-                                <span className="text-slate-400 uppercase">
-                                    {monument && monumentInfo ? monumentInfo.title : isRu ? 'ТЕКУЩАЯ ЗАДАЧА' : 'CURRENT GOAL'}
-                                </span>
-                                <span className="text-amber-400 font-bold font-mono flex items-center gap-1">
-                                    {monument && monumentInfo ? progressValueText : `${metrics?.current} / ${metrics?.target}`}
-                                    {!monument && <span className="text-slate-400 uppercase text-[9px] ml-0.5">{metrics?.label}</span>}
-                                </span>
-                            </div>
-                            
-                            <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-900/60">
-                                <div 
-                                    className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-500"
-                                    style={{ width: `${monument ? currentProgressPercent : Math.min(100, (metrics!.current / metrics!.target) * 100)}%` }}
-                                />
-                            </div>
-                            
-                            {monument && monumentInfo && (
-                                <p className="text-[9px] text-slate-400 font-mono mt-0.5 opacity-80 leading-tight">
-                                    {monumentInfo.text}
+                                <div className="flex items-center gap-1.5 text-[9px] font-mono font-black text-rose-400 uppercase leading-none">
+                                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                                    </span>
+                                    <span>{isRu ? 'Критерий поражения' : 'Loss Conditions'}</span>
+                                </div>
+                                <p className="text-[10px] text-slate-300 font-sans leading-relaxed mt-0.5">
+                                    {(() => {
+                                        const lvlId = activeLevelConfig.id;
+                                        const isSiege = activeLevelConfig.botObjective === 'DESTROY_PLAYER';
+                                        const isRace = activeLevelConfig.botObjective === 'MONUMENT_RACE';
+                                        
+                                        if (lvlId === '2.9') {
+                                            return isRu
+                                                ? 'Окончание времени раунда (таймер), крах ранга до 0 или уничтожение плитки под вами.'
+                                                : 'Round time limit reached, rank collapse to 0, or destruction of the hex under you.';
+                                        }
+                                        if (lvlId === '3.2') {
+                                            return isRu
+                                                ? 'Превышение лимита времени в 180 секунд, крах ранга до 0 или уничтожение плитки под вами.'
+                                                : 'Time limit of 180 seconds exceeded, rank collapse to 0, or destruction of the hex under you.';
+                                        }
+                                        if (lvlId === '5.5') {
+                                            return isRu
+                                                ? 'Превышение предела в 20 ходов, крах ранга до 0 или уничтожение плитки под вами.'
+                                                : 'Exceeding the 20-turn limit, rank collapse to 0, or destruction of the hex under you.';
+                                        }
+                                        if (isSiege) {
+                                            return isRu
+                                                ? 'Разрушение защищаемого ядра вашей базы, крах ранга до 0 или уничтожение плитки под вами.'
+                                                : 'Destruction of your base core, rank collapse to 0, or destruction of the hex under you.';
+                                        }
+                                        if (isRace) {
+                                            return isRu
+                                                ? 'Соперник занял и активировал Монумент первым, крах ранга до 0 или уничтожение плитки под вами.'
+                                                : 'Rival activates the final Monument first, rank collapse to 0, or destruction of the hex under you.';
+                                        }
+                                        return isRu
+                                            ? 'Крах инженерного ранга до 0 или уничтожение опорной плитки непосредственно под вашим вектором.'
+                                            : 'Engineering rank collapse to 0 or destruction of the support hex directly beneath your vector.';
+                                    })()}
                                 </p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Loss Condition Indicator */}
-                    {activeLevelConfig && (
-                        <div 
-                            className="mt-1.5 p-2 rounded-lg bg-rose-950/15 border border-rose-500/15 flex flex-col gap-1.5"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex items-center gap-1.5 text-[9px] font-mono font-black text-rose-400 uppercase leading-none">
-                                <span className="relative flex h-1.5 w-1.5 shrink-0">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
-                                </span>
-                                <span>{isRu ? 'Критерий поражения' : 'Loss Conditions'}</span>
                             </div>
-                            <p className="text-[10px] text-slate-300 font-sans leading-relaxed mt-0.5">
-                                {(() => {
-                                    const lvlId = activeLevelConfig.id;
-                                    const isSiege = activeLevelConfig.botObjective === 'DESTROY_PLAYER';
-                                    const isRace = activeLevelConfig.botObjective === 'MONUMENT_RACE';
-                                    
-                                    if (lvlId === '2.9') {
-                                        return isRu
-                                            ? 'Окончание времени раунда (таймер), крах ранга до 0 или уничтожение плитки под вами.'
-                                            : 'Round time limit reached, rank collapse to 0, or destruction of the hex under you.';
-                                    }
-                                    if (lvlId === '3.2') {
-                                        return isRu
-                                            ? 'Превышение лимита времени в 180 секунд, крах ранга до 0 или уничтожение плитки под вами.'
-                                            : 'Time limit of 180 seconds exceeded, rank collapse to 0, or destruction of the hex under you.';
-                                    }
-                                    if (lvlId === '5.5') {
-                                        return isRu
-                                            ? 'Превышение предела в 20 ходов, крах ранга до 0 или уничтожение плитки под вами.'
-                                            : 'Exceeding the 20-turn limit, rank collapse to 0, or destruction of the hex under you.';
-                                    }
-                                    if (isSiege) {
-                                        return isRu
-                                            ? 'Разрушение защищаемого ядра вашей базы, крах ранга до 0 или уничтожение плитки под вами.'
-                                            : 'Destruction of your base core, rank collapse to 0, or destruction of the hex under you.';
-                                    }
-                                    if (isRace) {
-                                        return isRu
-                                            ? 'Соперник занял и активировал Монумент первым, крах ранга до 0 или уничтожение плитки под вами.'
-                                            : 'Rival activates the final Monument first, rank collapse to 0, or destruction of the hex under you.';
-                                    }
-                                    return isRu
-                                        ? 'Крах инженерного ранга до 0 или уничтожение опорной плитки непосредственно под вашим вектором.'
-                                        : 'Engineering rank collapse to 0 or destruction of the support hex directly beneath your vector.';
-                                })()}
-                            </p>
-                        </div>
-                    )}
- 
-                    {isPulsing && (
-                        <div className="absolute top-1 right-2 flex items-center gap-1 text-[8px] font-mono text-emerald-300 uppercase select-none pointer-events-none">
-                            <Sparkles className="w-3 h-3 animate-pulse" />
-                            <span>{isRu ? 'Обновлено' : 'Updated'}</span>
-                        </div>
-                    )}
-                </motion.div>
-            )}
-        </AnimatePresence>
+                        )}
+
+                        {isPulsing && (
+                            <div className="absolute top-1 right-2 flex items-center gap-1 text-[8px] font-mono text-emerald-300 uppercase select-none pointer-events-none">
+                                <Sparkles className="w-3 h-3 animate-pulse" />
+                                <span>{isRu ? 'Обновлено' : 'Updated'}</span>
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 };
 

@@ -120,109 +120,99 @@ const SkirmishHintBanner: React.FC = () => {
     if (winCondition.winType === 'SUMMIT') return null;
 
     return (
-        <AnimatePresence mode="wait">
-            {isCollapsed ? (
-                <motion.div
-                    key="collapsed-skirmish"
-                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.2 }}
-                    onClick={handleToggleCollapse}
-                    className={`pointer-events-auto cursor-pointer w-full p-2.5 rounded-xl border-transparent bg-slate-950/45 backdrop-blur-xl shadow-none flex items-center justify-between gap-3 text-white transition-all select-none group relative overflow-hidden ${
-                        isAccomplished ? 'text-emerald-300' : 'text-indigo-300'
-                    }`}
-                    title={language === 'RU' ? 'Развернуть' : 'Expand'}
-                >
-                    {/* Scanlines layer */}
-                    <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: -10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ 
+                layout: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+                duration: 0.2 
+            }}
+            onClick={handleToggleCollapse}
+            className={`pointer-events-auto cursor-pointer w-full p-3 rounded-xl border border-white/10 bg-slate-950/85 backdrop-blur-xl shadow-xl flex flex-col transition-all select-none relative overflow-hidden group ${
+                isAccomplished ? 'text-emerald-300' : 'text-indigo-300'
+            }`}
+            id={isCollapsed ? "skirmish-hint-banner-collapsed" : "skirmish-hint-banner-expanded"}
+        >
+            {/* Scanlines layer */}
+            <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
 
-                    <div className="flex items-center gap-2.5 flex-1 min-w-0 relative z-10">
-                        <div className="p-1.5 rounded-lg bg-slate-950/60 border border-white/5 shrink-0">
-                            {isAccomplished ? (
-                                <Trophy className="w-4 h-4 text-emerald-400 animate-bounce" />
-                            ) : (
-                                <Swords className="w-4 h-4 text-indigo-400 animate-pulse" />
-                            )}
+            {/* Always-visible top header bar */}
+            <div className="flex items-center justify-between gap-2.5 relative z-10 min-w-0">
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <div className="p-1.5 rounded-lg bg-slate-950/60 border border-white/5 shrink-0">
+                        {isAccomplished ? (
+                            <Trophy className="w-4 h-4 text-emerald-400 animate-bounce" />
+                        ) : (
+                            <Swords className="w-4 h-4 text-indigo-400 animate-pulse" />
+                        )}
+                    </div>
+                    <div className="flex flex-col min-w-0 justify-center flex-1">
+                        <div className="flex items-center justify-between gap-2 leading-none">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 truncate">
+                                {title}
+                            </span>
+                            <span className={`text-[10px] font-mono font-bold whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-950/60 border border-white/5 leading-none ${isAccomplished ? 'text-emerald-400' : 'text-amber-450'}`}>
+                                {isAccomplished ? (language === 'RU' ? 'ВЫПОЛНЕНО' : 'COMPLETE') : `${Math.floor(progressPercent)}%`}
+                            </span>
                         </div>
-                        <div className="flex-1 min-w-0 pr-1 flex flex-col justify-center">
-                            <div className="flex items-center justify-between gap-2.5 leading-none">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 truncate">
-                                    {title}
-                                </span>
-                                <span className={`text-[10px] font-mono font-bold whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-950/60 border border-white/5 leading-none ${isAccomplished ? 'text-emerald-400' : 'text-amber-450'}`}>
-                                    {isAccomplished ? (language === 'RU' ? 'ВЫПОЛНЕНО' : 'COMPLETE') : `${Math.floor(progressPercent)}%`}
-                                </span>
-                            </div>
-                            
-                            {/* Horizontal progress bar */}
-                            <div className="w-full bg-slate-950/60 h-1.5 rounded-full mt-2 overflow-hidden border border-white/5">
+                        
+                        {/* Compact progress bar when collapsed */}
+                        {isCollapsed && (
+                            <div className="w-full bg-slate-950/60 h-1.5 rounded-full mt-1.5 overflow-hidden border border-white/5">
                                 <div 
                                     className={`h-full rounded-full transition-all duration-500 ${isAccomplished ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                                     style={{ width: `${progressPercent}%` }}
                                 />
                             </div>
-                        </div>
+                        )}
                     </div>
-                    {/* Expand indicator */}
-                    <div className="p-1 rounded bg-slate-950/60 border border-white/5 text-slate-400 group-hover:text-white transition-colors shrink-0 flex items-center justify-center relative z-10">
-                        <ChevronDown className="w-3.5 h-3.5" />
-                    </div>
-                </motion.div>
-            ) : (
-                <motion.div
-                    key="expanded-skirmish"
-                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.2 }}
-                    className="pointer-events-auto w-full"
-                    id="skirmish-hint-banner-expanded"
+                </div>
+
+                {/* Chevron expand indicator */}
+                <motion.div 
+                    animate={{ rotate: isCollapsed ? 0 : 180 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="p-1 rounded bg-slate-950/60 border border-white/5 text-slate-400 group-hover:text-white transition-colors shrink-0 flex items-center justify-center relative z-10"
                 >
-                    <div className={`p-4 rounded-xl border-transparent bg-slate-950/45 backdrop-blur-xl shadow-none flex flex-col gap-3 transition-all duration-300 relative overflow-hidden group ${
-                        isAccomplished ? '' : ''
-                    }`}>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                </motion.div>
+            </div>
 
-                        {/* Scanlines layer */}
-                        <div className="absolute inset-0 bg-scanlines opacity-[0.03] pointer-events-none" />
-
-                        {/* Header container */}
-                        <div className="flex items-center justify-between gap-2.5 border-b border-white/5 pb-2.5 relative z-10">
-                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                <div className="p-1.5 rounded-lg bg-slate-950/60 border border-white/5 shrink-0">
-                                    {isAccomplished ? (
-                                        <Trophy className="w-5 h-5 text-emerald-400 animate-bounce" />
-                                    ) : (
-                                        <Swords className="w-5 h-5 text-indigo-400 animate-pulse" />
-                                    )}
-                                </div>
-                                <div className="flex flex-col min-w-0 justify-center">
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400 leading-none mb-1">
-                                        {title}
-                                    </span>
-                                    <span className="text-[8.5px] text-slate-500 uppercase font-bold tracking-widest leading-none">
-                                        {badge}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            {/* Collapse Button */}
-                            <button 
-                                onClick={handleToggleCollapse}
-                                className="p-1 rounded bg-slate-950/60 border border-white/5 text-slate-400 hover:text-white hover:bg-slate-800 transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
-                                title={language === 'RU' ? 'Свернуть' : 'Collapse'}
-                            >
-                                <ChevronUp className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-
+            {/* Expandable details body */}
+            <AnimatePresence initial={false}>
+                {!isCollapsed && (
+                    <motion.div
+                        key="expanded-skirmish-details"
+                        initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                        animate={{ 
+                            height: 'auto', 
+                            opacity: 1, 
+                            marginTop: 12,
+                            transition: {
+                                height: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+                                opacity: { duration: 0.25, delay: 0.08 }
+                            }
+                        }}
+                        exit={{ 
+                            height: 0, 
+                            opacity: 0, 
+                            marginTop: 0,
+                            transition: {
+                                height: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
+                                opacity: { duration: 0.15 }
+                            }
+                        }}
+                        className="overflow-hidden flex flex-col gap-3 border-t border-white/5 pt-3 relative z-10"
+                    >
                         {/* Text explanation */}
-                        <p className="text-xs text-slate-200 font-medium leading-relaxed font-mono relative z-10">
+                        <p className="text-xs text-slate-200 font-medium leading-relaxed font-mono">
                             {progressText}
                         </p>
 
-                        {/* Rich Split Progress bar for Rank & Credits if WinType is and/or */}
-                        <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-slate-950/40 border border-white/5 mt-0.5 relative z-10">
+                        {/* Rich Split Progress bar for Rank & Credits */}
+                        <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-slate-950/40 border border-white/5 mt-0.5">
                             {/* Rank Tracker */}
                             <div className="flex flex-col gap-1">
                                 <div className="flex items-center justify-between text-[10px] font-mono font-bold leading-none">
@@ -258,14 +248,14 @@ const SkirmishHintBanner: React.FC = () => {
                             )}
                         </div>
 
-                        <span className="text-[8.5px] text-slate-500 font-bold uppercase tracking-wider font-mono select-none flex items-center gap-1.5 relative z-10">
+                        <span className="text-[8.5px] text-slate-500 font-bold uppercase tracking-wider font-mono select-none flex items-center gap-1.5">
                             <HelpCircle className="w-3 h-3 text-slate-600" /> 
                             {language === 'RU' ? 'Выполните требования для активации выхода' : 'Meet the parameters to establish exit portal trace'}
                         </span>
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 };
 

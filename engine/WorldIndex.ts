@@ -71,7 +71,11 @@ export class WorldIndex {
 
   private initEntities(entities: Entity[]) {
       this.entities.clear();
-      entities.forEach(e => this.entities.set(e.id, e));
+      (entities || []).forEach(e => {
+        if (e && e.id) {
+          this.entities.set(e.id, e);
+        }
+      });
   }
 
   // Full Rebuild (Fallback)

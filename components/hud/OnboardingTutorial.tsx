@@ -4,7 +4,7 @@ import { useGameStore } from '../../store.ts';
 import { Sparkles, Hexagon, X, Award, CheckCircle2, ArrowRight } from 'lucide-react';
 
 // Выносим стартовые плиты в константу, чтобы не дублировать
-const STARTER_HEXES = { 0: 10, 1: 5, 2: 3, 3: 1 };
+const STARTER_HEXES = { 0: 13, 1: 9, 2: 7, 3: 1 };
 
 export const OnboardingTutorial: React.FC = () => {
     const showModal = useGameStore(state => state.showNewGameTutorialModal);

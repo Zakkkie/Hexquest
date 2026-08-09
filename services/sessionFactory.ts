@@ -127,8 +127,8 @@ export const createInitialSessionData = async (
   }
   
   // Apply Overworld Equipment Bonuses & Campaign Upgrades
-  let startCredits = levelConfig ? levelConfig.startState.credits : GAME_CONFIG.INITIAL_COINS;
-  let startMoves = levelConfig ? levelConfig.startState.moves : GAME_CONFIG.INITIAL_MOVES;
+  let startCredits = levelConfig?.startState?.credits ?? GAME_CONFIG.INITIAL_COINS;
+  let startMoves = levelConfig?.startState?.moves ?? GAME_CONFIG.INITIAL_MOVES;
   
   if (winCondition?.startingCreditsBonus) {
       startCredits += winCondition.startingCreditsBonus;
@@ -137,8 +137,8 @@ export const createInitialSessionData = async (
       startMoves += winCondition.startingMovesBonus;
   }
 
-  const startRank = levelConfig ? levelConfig.startState.rank : 1;
-  let startStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0;
+  const startRank = levelConfig?.startState?.rank ?? 1;
+  let startStorage = levelConfig?.startState?.materials ?? 0;
 
   if (levelConfig && campaignUpgrades) {
       startCredits += campaignUpgrades.startingGold;
@@ -200,7 +200,7 @@ export const createInitialSessionData = async (
           });
       }
   }
-  if (levelConfig && levelConfig.startState.startInventory) {
+  if (levelConfig && levelConfig.startState?.startInventory) {
       levelConfig.startState.startInventory.forEach(baseId => {
           const def = getItemDef(baseId);
           if (def) {
@@ -237,7 +237,7 @@ export const createInitialSessionData = async (
           else botCount = 1;
       }
   } else {
-      botCount = winCondition?.botCount || 0;
+      botCount = winCondition?.botCount ?? (mode === 'pvp' ? 1 : 0);
   }
 
   const bots: Entity[] = [];
@@ -278,7 +278,7 @@ export const createInitialSessionData = async (
     }
 
     const botStartMoves = levelConfig ? Math.max(5, startMoves) : Math.max(10, startMoves);
-    const botStartStorage = levelConfig ? (levelConfig.startState.materials || 0) : 0; 
+    const botStartStorage = levelConfig?.startState?.materials || 0; 
     const botRoute = levelConfig?.botRoutes && levelConfig.botRoutes[i] ? levelConfig.botRoutes[i] : undefined;
 
     bots.push({
@@ -381,7 +381,7 @@ export const createInitialSessionData = async (
       monumentRequirements = generateMonumentRecipe(difficulty);
   }
 
-  const initialEntropy = levelConfig?.startState.initialEntropy ?? ENTROPY_CONFIG.INITIAL_MAX;
+  const initialEntropy = levelConfig?.startState?.initialEntropy ?? ENTROPY_CONFIG.INITIAL_MAX;
 
   const initialLog: LogEntry = {
     id: 'init-0',

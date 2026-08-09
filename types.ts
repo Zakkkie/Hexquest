@@ -55,6 +55,7 @@ export interface Hex extends HexView {
   turretRange?: number;
   turretDamage?: number;
   turretCooldown?: number;
+  lastTurretFireTime?: number;
 }
 
 export enum SpecialStructureType {

@@ -311,13 +311,13 @@ export const generateLevel11Map = (_levelConfig: LevelConfig): Record<string, He
 
 export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTIC' = 'FLAT'): Record<string, Hex> => {
   let initialGrid: Record<string, Hex> = {};
-  const baseRadius = levelConfig?.mapConfig.size ?? 50;
-  const wallStartRadius = levelConfig?.mapConfig.wallStartRadius ?? baseRadius;
+  const baseRadius = levelConfig?.mapConfig?.size ?? 50;
+  const wallStartRadius = levelConfig?.mapConfig?.wallStartRadius ?? baseRadius;
 
   // 1. Generate core area
   if (levelConfig?.id === '1.1') {
     initialGrid = generateLevel11Map(levelConfig);
-  } else if (levelConfig?.mapConfig.type !== 'fixed') {
+  } else if (levelConfig?.mapConfig?.type !== 'fixed') {
       for (let q = -wallStartRadius; q <= wallStartRadius; q++) {
           const r1 = Math.max(-wallStartRadius, -q - wallStartRadius);
           const r2 = Math.min(wallStartRadius, -q + wallStartRadius);
@@ -329,7 +329,7 @@ export const generateMap = (levelConfig?: LevelConfig, mapType: 'FLAT' | 'CHAOTI
   }
 
   // 2. Overlay custom layout
-  if (levelConfig && levelConfig.mapConfig.customLayout) {
+  if (levelConfig && levelConfig.mapConfig?.customLayout) {
       levelConfig.mapConfig.customLayout.forEach(hexDef => {
           if (hexDef.q === undefined || hexDef.r === undefined) return;
           const key = getHexKey(hexDef.q, hexDef.r);

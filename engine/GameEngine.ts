@@ -32,8 +32,9 @@ export class GameEngine {
   constructor(initialState: SessionState) {
     this._state = { ...initialState };
     this._state.stateVersion = this._state.stateVersion || 0;
+    this._state.bots = this._state.bots || [];
     
-    this._index = new WorldIndex(this._state!.grid, [this._state!.player, ...this._state!.bots]);
+    this._index = new WorldIndex(this._state.grid, [this._state.player, ...this._state.bots]);
     this._actionProcessor = new ActionProcessor();
     this._transactionQueue = new TransactionQueue();
     

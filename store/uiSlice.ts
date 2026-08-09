@@ -38,7 +38,8 @@ export const createUiSlice = (
   })),
   completeDefenseTutorial: () => {
     try { localStorage.setItem('hexopol_defense_tutorial_completed', 'true'); } catch {}
-    set(() => ({
+    set((state: any) => ({
+      skillPoints: (state.skillPoints || 0) + 1,
       defenseTutorialState: {
         isActive: false,
         step: 'IDLE',

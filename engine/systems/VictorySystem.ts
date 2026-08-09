@@ -50,6 +50,11 @@ export class VictorySystem implements System {
         return;
     }
 
+    // --- CLEAN UP DEAD BOTS ---
+    if (state.bots && state.bots.length > 0) {
+        state.bots = state.bots.filter(b => b.moves > 0);
+    }
+
     // --- CHECK PLAYER DESTRUCTION (COLLAPSE/METEOR OR RANK DROP) ---
     if (state.player.playerLevel <= 0) {
         state.gameStatus = 'DEFEAT';

@@ -3,7 +3,7 @@ import { GameState, UIState, WinCondition, SessionState, DeviceType, Item, Campa
 export const INITIAL_PLAYGROUND_SEED: Record<number, number> = {
   0: 13,
   1: 9,
-  2: 4,
+  2: 7,
   3: 1,
   4: 0,
   5: 0,
