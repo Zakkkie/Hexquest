@@ -147,7 +147,6 @@ const GameView: React.FC = () => {
 
   useEffect(() => {
       audioService.startMusic();
-      return () => { audioService.stopMusic(); };
   }, []);
 
   // --- PORTAL HUMMING LOOP ---

@@ -57,7 +57,7 @@ export interface AuthResponse {
   message?: string;
 }
 
-export type UiSoundType = 'HOVER' | 'CLICK' | 'ERROR' | 'WARNING' | 'SUCCESS';
+export type UiSoundType = 'HOVER' | 'CLICK' | 'ERROR' | 'WARNING' | 'SUCCESS' | 'TILE_PLACE';
 
 export type DefenseTutorialStep =
   | 'IDLE'
@@ -112,7 +112,7 @@ export interface GameStore extends GameState {
   toggleMusic: () => void;
   toggleSfx: () => void;
   toggleLiteMode: () => void;
-  playUiSound: (type: UiSoundType) => void;
+  playUiSound: (type: UiSoundType, level?: number) => void;
   showToast: (msg: string, type: 'error' | 'success' | 'info') => void;
   hideToast: () => void;
   

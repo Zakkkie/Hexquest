@@ -193,8 +193,8 @@ export function checkGrowthCondition(
       return {
         canGrow: false, 
         reason: useGameStore.getState().language === 'RU'
-          ? `Нет опоры: требуется минимум 2 смежные плиты уровня L${currentLevel} или выше (Правило 2 Опор).`
-          : `Unstable: Level L${targetLevel} requires at least 2 adjacent support tiles of Level L${currentLevel} or higher (2-Support Rule).`,
+          ? `UNSTABLE: Нет опоры: требуется минимум 2 смежные плиты уровня L${currentLevel} или выше (Правило 2 Опор).`
+          : `UNSTABLE: Level L${targetLevel} requires at least 2 adjacent support tiles of Level L${currentLevel} or higher (2-Support Rule).`,
       };
     }
   }

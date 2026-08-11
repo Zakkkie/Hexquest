@@ -62,21 +62,21 @@ const GLOBAL_CSS = `
 `;
 
 const MENU_BUTTON_STYLES = {
-  primary: 'bg-gradient-to-r from-indigo-950/50 to-indigo-900/30 border-indigo-500/40 hover:from-indigo-900/60 hover:to-indigo-800/40 text-white hover:border-indigo-400 shadow-[0_4px_24px_rgba(99,102,241,0.15)] hover:shadow-[0_4px_30px_rgba(99,102,241,0.35)]',
-  campaign: 'bg-gradient-to-r from-violet-950/50 via-purple-950/40 to-violet-950/50 border-purple-500/40 hover:border-purple-400 hover:from-purple-900/60 hover:via-indigo-900/40 hover:to-purple-900/60 text-white shadow-[0_4px_24px_rgba(168,85,247,0.15)] hover:shadow-[0_4px_30px_rgba(168,85,247,0.35)]',
-  battle: 'bg-gradient-to-r from-rose-950/50 via-red-950/40 to-rose-950/50 border-rose-500/40 hover:border-red-400 hover:from-red-900/60 hover:via-rose-900/40 hover:to-red-900/60 text-white shadow-[0_4px_24px_rgba(244,63,94,0.15)] hover:shadow-[0_4px_30px_rgba(244,63,94,0.35)]',
-  resume: 'bg-gradient-to-r from-amber-950/60 via-yellow-950/50 to-amber-950/60 border-amber-500/60 hover:border-amber-400 hover:from-amber-900/70 hover:to-amber-900/60 text-amber-50 shadow-[0_0_25px_rgba(245,158,11,0.25)] hover:shadow-[0_0_35px_rgba(245,158,11,0.45)] border-t-amber-400/20',
-  danger: 'bg-red-950/25 border-red-900/30 hover:bg-red-900/30 hover:border-red-500/50 text-red-100',
-  default: 'bg-slate-900/50 border-slate-700/60 hover:bg-slate-800/60 hover:border-indigo-500/50 text-slate-200 hover:text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)]'
+  primary: 'bg-gradient-to-r from-indigo-950/80 via-indigo-900/60 to-indigo-950/80 border border-indigo-500/50 hover:from-indigo-900/90 hover:to-indigo-800/80 text-white hover:border-indigo-400 shadow-[0_4px_20px_rgba(99,102,241,0.2)] hover:shadow-[0_4px_30px_rgba(99,102,241,0.4)]',
+  campaign: 'bg-gradient-to-r from-indigo-950/80 via-purple-950/70 to-indigo-950/80 border border-indigo-400/60 hover:border-indigo-300 hover:from-indigo-900/90 hover:to-purple-900/80 text-white shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_4px_32px_rgba(129,140,248,0.5)]',
+  battle: 'bg-gradient-to-r from-rose-950/60 via-red-950/50 to-rose-950/60 border border-rose-500/50 hover:border-red-400 hover:from-red-900/70 hover:via-rose-900/50 hover:to-red-900/70 text-white shadow-[0_4px_20px_rgba(244,63,94,0.2)] hover:shadow-[0_4px_30px_rgba(244,63,94,0.4)]',
+  resume: 'bg-gradient-to-r from-amber-950/80 via-yellow-950/70 to-amber-950/80 border border-amber-400/80 hover:border-amber-300 hover:from-amber-900/90 hover:to-amber-900/80 text-amber-50 shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_32px_rgba(245,158,11,0.5)]',
+  danger: 'bg-red-950/25 border border-red-900/30 hover:bg-red-900/30 hover:border-red-500/50 text-red-100',
+  default: 'bg-slate-900/50 border border-slate-700/60 hover:bg-slate-800/60 hover:border-indigo-500/50 text-slate-200 hover:text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)]'
 };
 
 const MENU_ICON_STYLES = {
-  primary: 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 group-hover:bg-indigo-500/25 group-hover:text-white group-hover:scale-110',
-  campaign: 'bg-purple-500/10 border border-purple-500/30 text-purple-300 group-hover:bg-purple-500/25 group-hover:text-white group-hover:scale-110',
-  battle: 'bg-rose-500/10 border border-rose-500/30 text-rose-300 group-hover:bg-rose-500/25 group-hover:text-white group-hover:scale-110',
-  resume: 'bg-amber-500/15 border border-amber-500/40 text-amber-300 group-hover:bg-amber-500/30 group-hover:text-white group-hover:scale-110 animate-pulse',
+  primary: 'bg-indigo-500/20 border border-indigo-400/40 text-indigo-200 group-hover:bg-indigo-500/30 group-hover:text-white group-hover:scale-105 shadow-[0_0_10px_rgba(99,102,241,0.2)]',
+  campaign: 'bg-indigo-500/25 border border-indigo-400/50 text-indigo-100 group-hover:bg-indigo-400/35 group-hover:text-white group-hover:scale-105 shadow-[0_0_12px_rgba(129,140,248,0.4)]',
+  battle: 'bg-rose-500/15 border border-rose-500/40 text-rose-300 group-hover:bg-rose-500/30 group-hover:text-white group-hover:scale-105',
+  resume: 'bg-amber-500/20 border border-amber-400/60 text-amber-200 group-hover:bg-amber-500/35 group-hover:text-white group-hover:scale-105 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.4)]',
   danger: 'bg-red-500/10 border border-red-500/20 text-red-400 group-hover:bg-red-500/20 group-hover:text-red-200',
-  default: 'bg-slate-800/40 border border-slate-700/50 text-slate-400 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/30 group-hover:text-indigo-300 group-hover:scale-110'
+  default: 'bg-slate-800/40 border border-slate-700/50 text-slate-400 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/30 group-hover:text-indigo-300 group-hover:scale-105'
 };
 
 const LED_COLORS = {
@@ -114,35 +114,34 @@ const MainMenuStyleBlock = React.memo(() => (
 ));
 
 const NebulaBackground = React.memo(() => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-    <div className="absolute inset-0 bg-transparent" />
-    <div className="absolute top-[-10%] left-[-15%] w-[70vw] h-[70vw] rounded-full bg-indigo-900/20 blur-[120px]" style={{ animation: 'nebula-slow-1 30s infinite ease-in-out', willChange: 'transform' }} />
-    <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-fuchsia-950/20 blur-[130px]" style={{ animation: 'nebula-slow-2 25s infinite ease-in-out', willChange: 'transform' }} />
-    <div className="absolute top-[40%] right-[20%] w-[50vw] h-[50vw] rounded-full bg-cyan-950/15 blur-[100px]" style={{ animation: 'nebula-slow-3 22s infinite ease-in-out', willChange: 'transform' }} />
-  </div>
+  <div 
+    className="absolute inset-0 overflow-hidden pointer-events-none z-0"
+    style={{
+      background: 'radial-gradient(ellipse 65% 55% at 20% 20%, rgba(49, 46, 129, 0.22), transparent 70%), radial-gradient(ellipse 55% 65% at 80% 80%, rgba(88, 28, 135, 0.18), transparent 70%)'
+    }}
+  />
 ));
 
 const FloatingParticles = React.memo(() => {
-  // Generate particles only once using useMemo to prevent GC spikes on re-renders
-  const particles = useMemo(() => Array.from({ length: 25 }).map(() => ({
-    size: Math.random() * 3 + 1.5,
+  // Generate lightweight particles to prevent GC spikes
+  const particles = useMemo(() => Array.from({ length: 8 }).map(() => ({
+    size: Math.random() * 2 + 1.5,
     initialX: Math.random() * 100,
     initialY: Math.random() * 100,
-    duration: Math.random() * 12 + 10,
-    delay: Math.random() * -12,
-    floatX: Math.random() * 30 - 15,
+    duration: Math.random() * 16 + 14,
+    delay: Math.random() * -14,
+    floatX: Math.random() * 20 - 10,
   })), []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-60">
       {particles.map((p, i) => (
         <div
           key={i}
-          className="absolute rounded-full bg-indigo-400/20 blur-[0.5px]"
+          className="absolute rounded-full bg-indigo-300/30"
           style={{
             width: p.size, height: p.size,
             left: `${p.initialX}%`, top: `${p.initialY}%`,
-            boxShadow: '0 0 6px rgba(129, 140, 248, 0.5)',
             animation: `float-particle ${p.duration}s infinite ease-in-out`,
             animationDelay: `${p.delay}s`,
             willChange: 'transform, opacity',
@@ -156,35 +155,32 @@ const FloatingParticles = React.memo(() => {
 
 const GridAtmosphere = React.memo(() => (
   <div 
-    className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-15"
+    className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-10"
     style={{
       backgroundImage: `linear-gradient(rgba(79, 70, 229, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(79, 70, 229, 0.08) 1px, transparent 1px)`,
       backgroundSize: '40px 40px',
       backgroundPosition: 'center',
-      perspective: '1000px',
     }}
-  >
-    <div className="absolute inset-0" style={{ transformStyle: "preserve-3d", animation: 'grid-slow 20s infinite ease-in-out', willChange: 'transform' }} />
-  </div>
+  />
 ));
 
 const FloatingHexagons = React.memo(() => {
-  const hexes = useMemo(() => Array.from({ length: 6 }).map(() => ({
-    size: Math.random() * 40 + 20,
+  const hexes = useMemo(() => Array.from({ length: 3 }).map(() => ({
+    size: Math.random() * 30 + 20,
     initialX: Math.random() * 100,
     initialY: Math.random() * 100,
-    duration: Math.random() * 20 + 20,
-    delay: Math.random() * -20,
+    duration: Math.random() * 25 + 25,
+    delay: Math.random() * -25,
     rotate: Math.random() * 360,
-    hexX: Math.random() * 40 - 20,
+    hexX: Math.random() * 30 - 15,
   })), []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 select-none">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 select-none opacity-40">
       {hexes.map((h, i) => (
         <div
           key={i}
-          className="absolute text-indigo-500/15"
+          className="absolute text-indigo-500/10"
           style={{
             width: h.size, height: h.size,
             left: `${h.initialX}%`, top: `${h.initialY}%`,
@@ -366,9 +362,11 @@ const MenuButton = React.memo<{
   label: string; 
   subLabel?: string; 
   variant?: 'primary' | 'battle' | 'campaign' | 'danger' | 'default' | 'resume';
+  isPrimaryCTA?: boolean;
+  badgeText?: string;
   className?: string;
   style?: React.CSSProperties;
-}>(({ onClick, icon, label, subLabel, variant = 'default', className = '', style }) => {
+}>(({ onClick, icon, label, subLabel, variant = 'default', isPrimaryCTA = false, badgeText, className = '', style }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
@@ -385,6 +383,9 @@ const MenuButton = React.memo<{
   const ledClass = LED_COLORS[variant] || LED_COLORS.default;
   const spotlightColor = SPOTLIGHT_COLORS[variant] || SPOTLIGHT_COLORS.default;
 
+  const sizePadding = isPrimaryCTA ? 'p-3.5 sm:p-4' : 'p-3.5 sm:p-4';
+  const labelSize = 'text-sm sm:text-base';
+
   return (
     <motion.button 
       ref={buttonRef}
@@ -392,13 +393,13 @@ const MenuButton = React.memo<{
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      whileHover={{ scale: 1.02, x: 4 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.015, x: 3 }}
+      whileTap={{ scale: 0.985 }}
       transition={{ type: "spring", stiffness: 350, damping: 14 }}
-      className={`group w-full flex items-center gap-4 p-4 md:p-5 rounded-2xl border backdrop-blur-xl transition-all duration-300 relative overflow-hidden touch-manipulation cursor-pointer ${styleClass} ${className}`}
+      className={`group w-full flex items-center gap-3.5 ${sizePadding} rounded-2xl border backdrop-blur-xl transition-all duration-300 relative overflow-hidden touch-manipulation cursor-pointer ${styleClass} ${className}`}
       style={style}
     >
-      <div className={`absolute left-0 top-0 bottom-0 w-[4px] transition-all duration-300 ${ledClass}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300 ${ledClass}`} />
 
       <AnimatePresence>
         {isHovered && (
@@ -415,27 +416,32 @@ const MenuButton = React.memo<{
         )}
       </AnimatePresence>
 
-      <div className={`p-3 rounded-xl transition-all duration-300 relative z-10 ${iconClass}`}>
-        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-5 h-5 md:w-5 md:h-5 drop-shadow-md' })}
+      <div className={`p-2.5 rounded-xl transition-all duration-300 relative z-10 shrink-0 ${iconClass}`}>
+        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-5 h-5 drop-shadow-md' })}
       </div>
 
-      <div className="flex flex-col items-start relative z-10 text-left">
-        <span className="text-sm md:text-sm font-black uppercase tracking-wider transition-all duration-300">
+      <div className="flex flex-col items-start relative z-10 text-left flex-1 min-w-0">
+        {badgeText && (
+          <span className="mb-0.5 px-1.5 py-0.5 rounded text-[8.5px] font-mono font-extrabold tracking-wider bg-indigo-500/20 border border-indigo-400/40 text-indigo-200 uppercase shadow-sm inline-block w-fit">
+            {badgeText}
+          </span>
+        )}
+        <span className={`${labelSize} font-black uppercase tracking-wider transition-all duration-300 leading-tight`}>
           {label}
         </span>
         {subLabel && (
-          <span className="text-[11px] font-mono text-slate-400/80 group-hover:text-slate-200 transition-colors mt-0.5 max-w-[200px] md:max-w-xs break-words">
+          <span className="text-[10.5px] font-mono text-slate-300/80 group-hover:text-slate-100 transition-colors mt-0.5 break-words">
             {subLabel}
           </span>
         )}
       </div>
       
-      <div className="ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300 text-white/50 relative z-10">
+      <div className="ml-auto opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300 text-white/70 relative z-10 shrink-0 pl-1">
         <ChevronRight className="w-4 h-4" />
       </div>
 
       <motion.div 
-         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" 
+         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" 
          initial={{ x: '-100%' }}
          animate={{ x: '200%' }}
          transition={{ repeat: Infinity, duration: 2.5, ease: "linear", repeatDelay: 1.5 }}
@@ -939,7 +945,7 @@ const MainMenu: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:grid md:grid-cols-12 gap-8 md:gap-14 lg:gap-16 w-full max-w-sm md:max-w-4xl lg:max-w-5xl px-6 md:px-10 z-10 max-h-screen overflow-y-auto no-scrollbar py-24 md:py-6 items-center justify-center">
+      <div className="flex flex-col md:grid md:grid-cols-12 gap-6 md:gap-12 lg:gap-16 w-full max-w-sm md:max-w-4xl lg:max-w-5xl px-4 sm:px-6 md:px-10 z-10 max-h-screen overflow-y-auto no-scrollbar pt-20 pb-10 md:py-6 items-center justify-center my-auto">
         
         <motion.div 
             initial={{ opacity: 0, x: -30, scale: 0.95 }}
@@ -949,39 +955,33 @@ const MainMenu: React.FC = () => {
         >
             <motion.div 
                 whileHover="hover"
-                className="relative w-28 h-28 md:w-36 md:h-36 mb-5 flex items-center justify-center select-none group cursor-pointer"
+                className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-36 md:h-36 mb-3 md:mb-5 flex items-center justify-center select-none group cursor-pointer"
             >
-                <div className="absolute w-32 h-32 md:w-44 md:h-44 bg-indigo-500/20 blur-[30px] md:blur-[45px] rounded-full animate-[pulse_4s_ease-in-out_infinite]" />
+                <div className="absolute w-20 h-20 sm:w-24 sm:h-24 md:w-36 md:h-36 bg-indigo-500/10 blur-2xl rounded-full opacity-60" />
 
                 <motion.svg 
-                    variants={{ hover: { rotate: 360, transition: { duration: 15, repeat: Infinity, ease: "linear" } } }}
-                    className="absolute w-full h-full animate-[spin_25s_linear_infinite]" 
+                    variants={{ hover: { rotate: 360, transition: { duration: 30, repeat: Infinity, ease: "linear" } } }}
+                    className="absolute w-full h-full animate-[spin_60s_linear_infinite]" 
                     viewBox="0 0 100 100"
                 >
-                    <circle cx="50" cy="50" r="44" stroke="#4f46e5" strokeWidth="1.2" strokeDasharray="6 8 36 8 16 12" fill="none" opacity="0.4" />
-                    <circle cx="50" cy="50" r="44" stroke="#c084fc" strokeWidth="2" strokeDasharray="2 18" fill="none" opacity="0.6" />
+                    <circle cx="50" cy="50" r="44" stroke="#4f46e5" strokeWidth="1" strokeDasharray="6 12 36 12" fill="none" opacity="0.3" />
                 </motion.svg>
 
-                <motion.div 
-                    variants={{ hover: { rotate: -360, transition: { duration: 8, repeat: Infinity, ease: "linear" } } }}
-                    className="absolute inset-1.5 border border-dotted border-indigo-400/30 rounded-full animate-[spin_12s_linear_infinite_reverse]" 
-                />
-
-                <div className="absolute inset-3 border border-dashed border-indigo-500/20 rounded-full animate-[spin_18s_linear_infinite]" />
+                <div className="absolute inset-3 border border-dashed border-indigo-500/20 rounded-full animate-[spin_80s_linear_infinite_reverse]" />
 
                 <motion.div 
-                    variants={{ hover: { scale: 1.1, borderColor: "rgba(129, 140, 248, 0.8)", boxShadow: "0 0 20px rgba(99, 102, 241, 0.6)" } }}
+                    variants={{ hover: { scale: 1.05, borderColor: "rgba(129, 140, 248, 0.6)", boxShadow: "0 0 15px rgba(99, 102, 241, 0.4)" } }}
                     transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                    className="relative z-10 p-1 bg-[#060714]/90 rounded-2xl border-2 border-indigo-500/40 shadow-[inset_0_0_15px_rgba(99,102,241,0.4)] transition-all duration-300"
+                    className="relative z-10 p-1 bg-[#060714]/90 rounded-2xl border border-indigo-500/30 shadow-[inset_0_0_12px_rgba(99,102,241,0.25)] transition-all duration-300"
                 >
-                    <Hexagon className="w-14 h-14 md:w-16 md:h-16 text-indigo-400 drop-shadow-[0_0_12px_rgba(99,102,241,0.6)] fill-indigo-950/50" strokeWidth={1} />
-                    <div className="absolute inset-0 flex items-center justify-center animate-pulse">
-                        <Target className="w-5 h-5 md:w-6 md:h-6 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                    <Hexagon className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-indigo-400 drop-shadow-[0_0_10px_rgba(99,102,241,0.4)] fill-indigo-950/50" strokeWidth={1} />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-80">
+                        <Target className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]" />
                     </div>
                 </motion.div>
 
-                <div className="absolute top-1 left-1 text-[7px] text-indigo-400/40 font-mono">X+12.4</div>
-                <div className="absolute bottom-1 right-1 text-[7px] text-indigo-400/40 font-mono">Y-45.9</div>
+                <div className="absolute top-0.5 left-0.5 text-[6px] sm:text-[7px] text-indigo-400/30 font-mono">X+12.4</div>
+                <div className="absolute bottom-0.5 right-0.5 text-[6px] sm:text-[7px] text-indigo-400/30 font-mono">Y-45.9</div>
             </motion.div>
 
             <div className="flex flex-col items-center md:items-start mt-2 relative">
@@ -1061,6 +1061,8 @@ const MainMenu: React.FC = () => {
               <MenuButton 
                   onClick={() => startCampaignWithMode('STORY')} 
                   variant="campaign" 
+                  isPrimaryCTA={true}
+                  badgeText={hasProgress ? (language === 'RU' ? 'ПРОДОЛЖИТЬ' : 'CONTINUE') : (language === 'RU' ? 'ОСНОВНОЙ РЕЖИМ' : 'PRIMARY MODE')}
                   icon={<BookOpen className="w-5 h-5" />} 
                   label={hasProgress ? t.CONTINUE_GAME : t.CAMPAIGN} 
                   subLabel={hasProgress ? t.CONTINUE_GAME_SUB : t.CAMPAIGN_SUB} 
@@ -1079,10 +1081,12 @@ const MainMenu: React.FC = () => {
 
             {hasActiveSession && (
               <motion.div variants={itemVariants} className="relative">
-                <div className="absolute -inset-1 bg-amber-500/10 rounded-2xl blur-md animate-pulse pointer-events-none" />
+                <div className="absolute -inset-1 bg-amber-500/20 rounded-2xl blur-md animate-pulse pointer-events-none" />
                 <MenuButton 
                     onClick={() => { setUIState('GAME'); playUiSound('CLICK'); }} 
                     variant="resume"
+                    isPrimaryCTA={true}
+                    badgeText={language === 'RU' ? 'АКТИВНЫЙ БОЙ' : 'IN PROGRESS'}
                     icon={<Compass className="w-5 h-5" />} 
                     label={t.RESUME} 
                     subLabel={t.RESUME_SUB} 

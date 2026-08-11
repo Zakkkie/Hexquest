@@ -132,8 +132,9 @@ export class TurretSystem implements System {
             timestamp: now
           });
 
-          // FIX: Убран вызов this.recycleDeadBots() отсюда. 
-          // Мертвые боты будут убраны в начале следующего тика (шаг 2).
+          if (isDestroyed) {
+            this.recycleDeadBots(state, now, events);
+          }
         }
       }
     }

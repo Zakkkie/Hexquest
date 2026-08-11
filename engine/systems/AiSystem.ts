@@ -29,6 +29,7 @@ export class AiSystem implements System {
     // Process all bots, but let their individual action rate limit (interval check) throttle them.
     for (const bot of state.bots) {
       if (!bot) continue;
+      if (bot.moves <= 0 || (bot.playerLevel ?? 1) < 1) continue;
       if (bot.state !== EntityState.IDLE) continue;
 
       // --- SPEED THROTTLE ---

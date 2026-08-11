@@ -110,12 +110,12 @@ const MissionBriefingModal: React.FC<MissionBriefingModalProps> = ({
           )}
 
           {/* Tactical Briefing / Description */}
-          <div className="flex-1 min-h-0 flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 shrink-0">
             <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono shrink-0">
               <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>{isRu ? 'ТАКТИЧЕСКИЙ БРИФИНГ:' : 'TACTICAL BRIEFING:'}</span>
             </div>
-            <div className="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-3 sm:p-3.5 text-slate-200 font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-line overflow-y-auto no-scrollbar shadow-inner flex-1 min-h-[100px]">
+            <div className="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-3 sm:p-3.5 text-slate-200 font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-line overflow-y-auto no-scrollbar shadow-inner max-h-36 sm:max-h-48">
               {displayDesc}
             </div>
           </div>

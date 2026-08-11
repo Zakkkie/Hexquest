@@ -1105,7 +1105,7 @@ const StoryBuilderView: React.FC = () => {
                     setTimeout(() => setErrorMessage(curr => curr === msg ? null : curr), 4000);
                     return;
                 }
-                playUiSound('SUCCESS');
+                playUiSound('TILE_PLACE', 0);
                 placeStoryHex(q, r, 0);
                 setLastPlacedKey(key);
                 const remaining = defenseTutorialState.targetHexes.filter(k => k !== key);
@@ -1157,7 +1157,7 @@ const StoryBuilderView: React.FC = () => {
                     return;
                 }
 
-                playUiSound('SUCCESS');
+                playUiSound('TILE_PLACE', 1);
                 placeStoryHex(q, r, 1);
                 setLastPlacedKey(key);
 
@@ -1218,7 +1218,7 @@ const StoryBuilderView: React.FC = () => {
                     }
 
                     // Place L1 support on (1,1)
-                    playUiSound('SUCCESS');
+                    playUiSound('TILE_PLACE', 1);
                     placeStoryHex(q, r, 1);
                     setLastPlacedKey(key);
                     setL2SupportNeededHex(null);
@@ -1289,7 +1289,7 @@ const StoryBuilderView: React.FC = () => {
                     return;
                 }
 
-                playUiSound('SUCCESS');
+                playUiSound('TILE_PLACE', 2);
                 placeStoryHex(q, r, 2);
                 setLastPlacedKey(key);
 
@@ -1429,7 +1429,7 @@ const StoryBuilderView: React.FC = () => {
 
         // Place new block!
         placeStoryHex(q, r, buildLevel);
-        playUiSound('SUCCESS');
+        playUiSound('TILE_PLACE', buildLevel);
         setLastPlacedKey(key);
         setTimeout(() => setLastPlacedKey(prev => prev === key ? null : prev), 600);
         setErrorMessage(null); // clear any previous warning
@@ -1599,14 +1599,14 @@ const StoryBuilderView: React.FC = () => {
                                             playUiSound('CLICK');
                                             toggleTablet();
                                         }}
-                                        className="flex flex-col justify-center text-center px-3 sm:px-4 py-1 rounded-full bg-slate-900/60 hover:bg-indigo-950/30 border border-indigo-500/20 hover:border-indigo-400/40 cursor-pointer transition-all duration-200 active:scale-95 select-none max-w-full overflow-hidden"
+                                        className="flex flex-col justify-center text-center px-2.5 sm:px-4 py-1 rounded-full bg-slate-900/80 hover:bg-indigo-950/40 border border-indigo-500/20 hover:border-indigo-400/40 cursor-pointer transition-all duration-200 active:scale-95 select-none max-w-[160px] xs:max-w-[200px] sm:max-w-none overflow-hidden shrink-0"
                                     >
-                                        <span className="text-[7.5px] sm:text-[8px] font-mono tracking-[0.15em] sm:tracking-[0.2em] text-indigo-400 font-black uppercase leading-none truncate">
+                                        <span className="text-[7px] xs:text-[7.5px] sm:text-[8px] font-mono tracking-[0.1em] sm:tracking-[0.2em] text-indigo-400 font-black uppercase leading-none block truncate">
                                             {language === 'RU' ? 'ПОЛИГОН НЕБЬЮЛА' : 'NEBULA PROVING GROUND'}
                                         </span>
-                                        <span className="text-[9.5px] sm:text-[10.5px] leading-tight font-sans font-bold text-center tracking-tight text-white mt-0.5 uppercase flex items-center gap-1 justify-center whitespace-nowrap truncate">
+                                        <span className="text-[9px] xs:text-[9.5px] sm:text-[10.5px] leading-tight font-sans font-bold text-center tracking-tight text-white mt-0.5 uppercase flex items-center gap-1 justify-center whitespace-nowrap block truncate">
                                             {language === 'RU' ? 'Проектирование ядра' : 'Core Engineering'}
-                                            <span className="text-[7px] sm:text-[8px] text-indigo-400 animate-pulse">▼</span>
+                                            <span className="text-[7px] sm:text-[8px] text-indigo-400 animate-pulse shrink-0">▼</span>
                                         </span>
                                     </button>
                                 );

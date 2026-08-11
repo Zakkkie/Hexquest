@@ -80,14 +80,19 @@ export const createUiSlice = (
     get().showToast(msg, 'success');
   },
   
-  playUiSound: (type: UiSoundType) => {
+  playUiSound: (type: UiSoundType, level?: number) => {
+    if (type === 'TILE_PLACE') {
+      audioService.playTilePlace(level ?? 0);
+      return;
+    }
     const map: Record<UiSoundType, string> = {
       'HOVER': 'UI_HOVER', 
       'CLICK': 'UI_CLICK', 
       'ERROR': 'ERROR', 
       'WARNING': 'WARNING', 
-      'SUCCESS': 'SUCCESS'
+      'SUCCESS': 'SUCCESS',
+      'TILE_PLACE': 'TILE_PLACE'
     };
-    audioService.play(map[type] as any);
+    audioService.play(map[type] as any, level);
   }
 });

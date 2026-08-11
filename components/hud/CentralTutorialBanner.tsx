@@ -191,8 +191,8 @@ const CentralTutorialBanner: React.FC<CentralTutorialBannerProps> = ({ onOpenHel
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
                     
-                    <span className="text-[10px] font-black tracking-widest font-mono text-emerald-400 uppercase shrink-0">
-                        {isRu ? (isCollapsed ? 'ИНСТРУКТАЖ' : 'ИНСТРУКТАЖ СИСТЕМЫ') : (isCollapsed ? 'TUTORIAL' : 'SYSTEM TUTORIAL PROTOCOL')}
+                    <span className="text-[9px] sm:text-[10px] font-black tracking-wider font-mono text-emerald-400 uppercase shrink-0 px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30">
+                        {isRu ? (isCollapsed ? 'ЦЕЛЬ' : 'ИНСТРУКТАЖ СИСТЕМЫ') : (isCollapsed ? 'GOAL' : 'SYSTEM TUTORIAL PROTOCOL')}
                     </span>
 
                     {/* Truncated hint preview when collapsed */}

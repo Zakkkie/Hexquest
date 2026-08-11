@@ -317,7 +317,7 @@ const TopStatsBar: React.FC<TopStatsBarProps> = ({ onOpenModal, setHelpTopic }) 
                 
                 {/* STATS STRIP */}
                 <div className="flex flex-col gap-1 flex-1 min-w-0 md:flex-none md:w-fit relative pointer-events-auto" ref={statsBarRef} id="top-stats-bar">
-                    <div className="flex items-center justify-between md:justify-start bg-slate-950/80 backdrop-blur-2xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-1.5 py-1 sm:px-3 sm:py-2 md:px-5 md:py-3 gap-0.5 sm:gap-2 md:gap-6 transition-all duration-300 hover:border-slate-700/60 overflow-x-auto overflow-y-hidden stats-scroll-hide w-full h-[38px] sm:h-[42px] md:h-auto md:shrink-0 relative">
+                    <div className="flex items-center justify-between md:justify-start bg-slate-950/80 backdrop-blur-2xl rounded-xl md:rounded-[1.25rem] border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)] px-2 py-1 sm:px-3 sm:py-2 md:px-5 md:py-3 pr-3 sm:pr-4 gap-1 sm:gap-2 md:gap-6 transition-all duration-300 hover:border-slate-700/60 overflow-x-auto overflow-y-hidden stats-scroll-hide w-full h-[38px] sm:h-[42px] md:h-auto md:shrink-0 relative">
                         
                         {/* Entropy Background */}
                         {entropy && (

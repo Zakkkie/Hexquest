@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
 import { useGameStore } from './store';
+import { audioService } from './services/audioService';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'motion/react';
 import GameView from './components/GameView';
 import MainMenu from './components/MainMenu';
@@ -51,6 +52,7 @@ const App: React.FC = () => {
     window.addEventListener('mousemove', handleMouseMove);
     
     handleResize(); // Init
+    audioService.startMusic();
 
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -74,13 +76,13 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Global Glowing Light Blobs */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none mix-blend-screen opacity-55">
-        <div className="absolute top-[-30%] left-[-10%] w-[90vw] h-[90vw] rounded-full bg-cyan-600/35 blur-[140px] animate-blob animate-delay-2000" />
-        <div className="absolute bottom-[-30%] right-[-10%] w-[90vw] h-[90vw] rounded-full bg-indigo-600/35 blur-[140px] animate-blob" />
-        <div className="absolute top-[15%] left-[25%] w-[60vw] h-[60vw] rounded-full bg-fuchsia-700/25 blur-[120px] animate-blob animation-delay-4000" />
-        <div className="absolute bottom-[20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-pink-700/15 blur-[110px] animate-blob" />
-      </div>
+      {/* Global Glowing Atmospheric Gradient */}
+      <div 
+        className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-45 mix-blend-screen"
+        style={{
+          background: 'radial-gradient(circle at 10% 10%, rgba(8, 145, 178, 0.25) 0%, transparent 60%), radial-gradient(circle at 90% 90%, rgba(79, 70, 229, 0.25) 0%, transparent 60%), radial-gradient(circle at 50% 30%, rgba(168, 85, 247, 0.15) 0%, transparent 50%)'
+        }}
+      />
 
       {/* Global Dynamic Cursor Light Glow */}
       <motion.div

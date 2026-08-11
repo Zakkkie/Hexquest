@@ -40,6 +40,7 @@ const EVENT_SOUND_MAP: Partial<Record<GameEventType, string>> = {
   'METEOR_WARN': 'WARNING',
   'METEOR_STRIKE': 'COLLAPSE',
   'PLAYER_HIT_BY_METEOR': 'WARNING',
+  'TURRET_FIRED': 'TURRET_FIRE',
 };
 
 export const createGameplaySlice = (
@@ -684,7 +685,7 @@ export const createGameplaySlice = (
         const isPlayer = event.entityId === playerId;
         const isMeteor = (event.message && /meteor|метеор/i.test(event.message)) || (event.data?.type && /meteor|метеор/i.test(event.data.type as string));
 
-        if (isPlayer || !event.entityId) {
+        if (isPlayer || !event.entityId || event.entityId === 'SYSTEM') {
           const sound = EVENT_SOUND_MAP[event.type];
           if (sound) audioService.play(sound as any);
         }
